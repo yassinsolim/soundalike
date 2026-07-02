@@ -359,6 +359,81 @@ def cmd_learned_similar(args: argparse.Namespace) -> int:
     return 0
 
 
+# ------------------------------------------------------- vibe engine (bands + dynamics)
+def _vibe_index_path(args):
+    from pathlib import Path
+
+    from .audio.vibe_index import VibeIndex
+
+    return Path(args.index) if getattr(args, "index", None) else VibeIndex.default_path()
+
+
+def cmd_vibe_build(args: argparse.Namespace) -> int:
+    from pathlib import Path
+
+    from .audio.vibe_index import VibeIndex, build_index
+
+    # Writes go to a writable location (the user cache) unless --index is given.
+    path = Path(args.index) if args.index else VibeIndex.user_path()
+    existing = VibeIndex.load(path) if path.exists() and args.append else None
+    index = build_index(
+        per_genre=args.per_genre, per_artist=args.per_artist,
+        existing=existing, progress=print,
+    )
+    index.save(path)
+    print(f"\nSaved vibe index with {len(index)} tracks -> {path}")
+    return 0
+
+
+def cmd_vibe_similar(args: argparse.Namespace) -> int:
+    from pathlib import Path
+    from tempfile import TemporaryDirectory
+
+    from .audio import DeezerClient, VibeIndex, VibeRecommender, vibe_from_file
+    from .audio.vibe import DEFAULT_WEIGHTS, FEATURE_NAMES
+
+    path = _vibe_index_path(args)
+    if not path.exists():
+        print(f"No vibe library found at {path}. Build one first:\n  soundalike vibe-build")
+        return 1
+    index = VibeIndex.load(path)
+
+    client = DeezerClient()
+    track = client.search_track(args.title, args.artist)
+    if track is None or not track.has_preview:
+        print(f"No previewable track found for '{args.title}'"
+              + (f" by {args.artist}" if args.artist else "") + ".")
+        return 1
+
+    with TemporaryDirectory() as tmp:
+        dest = Path(tmp) / f"{track.id}.mp3"
+        client.download_preview(track, dest)
+        seed_feats = vibe_from_file(str(dest))
+
+    weights = dict(DEFAULT_WEIGHTS)
+    for pair in args.weight or []:
+        if "=" not in pair:
+            raise SystemExit(f"Invalid --weight '{pair}'. Use NAME=VALUE.")
+        name, value = pair.split("=", 1)
+        if name not in FEATURE_NAMES:
+            raise SystemExit(f"Unknown vibe feature '{name}'. Valid: {', '.join(FEATURE_NAMES)}")
+        weights[name] = float(value)
+
+    rec = VibeRecommender(index, weights=weights)
+    results = rec.recommend(
+        seed_feats, n=args.num, exclude_ids={track.id},
+        exclude_artist=track.artist if args.exclude_artist else None,
+    )
+
+    v = seed_feats.describe()
+    print(f"\nSeed: {track.title} — {track.artist}")
+    print(f"  vibe: {v['tempo']}, {v['dynamics']}, {v['low_end']}, {v['tone']}")
+    print(f"\nSongs with a similar vibe (from a {len(index)}-track library):")
+    for i, r in enumerate(results, 1):
+        print(f"  {i:>2}. {r.title} — {r.artist}   [{r.score:.3f}]")
+    return 0
+
+
 # ------------------------------------------------------------------------ parser
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -500,6 +575,31 @@ def build_parser() -> argparse.ArgumentParser:
                            help="Directory holding encoder.pt + embeddings.npz.")
     p_learned.add_argument("-n", "--num", type=int, default=15, help="Number of results.")
     p_learned.set_defaults(func=cmd_learned_similar)
+
+    p_vbuild = sub.add_parser(
+        "vibe-build",
+        help="Build a real-song library for the vibe engine (harvests + analyzes previews).",
+    )
+    p_vbuild.add_argument("--index", help="Where to save the library (default: ~/.soundalike).")
+    p_vbuild.add_argument("--per-genre", type=int, default=120, help="Tracks per genre.")
+    p_vbuild.add_argument("--per-artist", type=int, default=12, help="Tracks per artist.")
+    p_vbuild.add_argument("--append", action="store_true", help="Add to an existing library.")
+    p_vbuild.set_defaults(func=cmd_vibe_build)
+
+    p_vsim = sub.add_parser(
+        "vibe-similar",
+        help="Find songs with a similar VIBE — bass profile + dynamics + tempo + timbre.",
+    )
+    p_vsim.add_argument("--title", required=True, help="Seed song title.")
+    p_vsim.add_argument("--artist", help="Seed artist, to disambiguate.")
+    p_vsim.add_argument("--index", help="Path to the vibe library.")
+    p_vsim.add_argument("-n", "--num", type=int, default=15, help="Number of results.")
+    p_vsim.add_argument("--exclude-artist", action="store_true", help="Exclude the seed's artist.")
+    p_vsim.add_argument(
+        "--weight", action="append", metavar="NAME=VALUE",
+        help="Override a vibe-feature weight, e.g. --weight band_sub=4 (repeatable).",
+    )
+    p_vsim.set_defaults(func=cmd_vibe_similar)
 
     return parser
 
