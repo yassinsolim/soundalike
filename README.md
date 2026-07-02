@@ -7,6 +7,16 @@ terminal script that read a static CSV of top songs and printed min/max/mean sta
 repo evolves it into a real, working recommendation engine that finds songs matching your
 taste — built to work *around* Spotify's 2024 API lockdown rather than depending on it.
 
+It combines four engines — offline audio-feature similarity, an acoustic DSP engine that
+measures features straight from the waveform, live Spotify (OAuth PKCE), and a **self-supervised
+neural network trained on 106,000 songs** whose genre-probe accuracy climbs from 0.25 → 0.641 as
+the training set scales from 475 to 106k tracks.
+
+> **📖 Want the engineering story?** The [**Case Study**](docs/CASE_STUDY.md) walks through the
+> design decisions, the machine-learning scaling experiment, and the GPU/systems challenges I
+> solved (data-loading bottlenecks, VRAM-aware training, 11x download speedups, cuDNN kernel
+> inspection). It's written as a portfolio-style deep dive.
+
 ---
 
 ## Why this exists (and why it's built the way it is)
