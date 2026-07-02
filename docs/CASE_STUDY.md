@@ -13,13 +13,17 @@ run it" lives in the [README](../README.md); this is the "how it was built and w
 
 - **Started with:** a ~180-line first-year terminal script that read a static CSV of songs and
   printed min/max/mean statistics.
-- **Ended with:** an installable Python package with **five recommendation engines**, a live
-  Spotify integration (OAuth PKCE, no passwords), and a **self-supervised audio-embedding neural
-  network** trained on the GPU.
+- **Ended with:** an installable Python package with **six recommendation engines**, a live
+  Spotify integration (OAuth PKCE, no passwords), and **two self-supervised audio-embedding neural
+  networks** trained on the GPU — including a **vibe-aware encoder** that learns a song's bass
+  profile and dynamics.
 - **Headline result:** the learned model's genre-probe accuracy scales with data —
   **0.25 → 0.601 → 0.641** as the training set grows **475 → 25,000 → 106,000** tracks — going
   from *losing* to a no-ML baseline to beating it by **+13 points**.
-- **Built and validated on:** an NVIDIA RTX 5080 (Blackwell), 49 automated tests, a clean
+- **Vibe result:** a multi-task "vibe-aware" encoder raises how much vibe its embedding space
+  encodes from **linear-probe R² 0.82 → 0.94** on 1,738 held-out real songs, with the biggest
+  gains on bass and dynamics — the qualities that define whether two songs *feel* the same.
+- **Built and validated on:** an NVIDIA RTX 5080 (Blackwell), 73 automated tests, a clean
   packaged wheel.
 
 ---
@@ -51,6 +55,7 @@ and with different tradeoffs.
 
 | Engine | Signal | Credentials | Coverage |
 |--------|--------|-------------|----------|
+| **Deep-vibe** ⭐ | Vibe-aware neural embedding **fused** with measured bass/dynamics | None | Bundled ~1,700-song library |
 | **Vibe** | Frequency-band balance + dynamics, vs a ~1,500-song library | None | Real, listenable songs |
 | **Acoustic DSP** | Features measured from the raw waveform (librosa) | None | Any track with a preview |
 | **Content-based** | Audio-feature vectors, standardized + weighted | None | Bundled dataset |
@@ -201,6 +206,46 @@ bundled library of ~1,500 real, diverse songs. The result: the same query now co
 right scene (aldn, Flume, Slow Magic). This is the engineering habit that matters most —
 **diagnose with data before you change code**, and let the measurement design the fix.
 
+### From hand-crafted vibe to *learned* vibe
+
+The hand-crafted vibe vector works, but it raised a sharper question: could the **neural encoder
+itself** learn to represent vibe, instead of relying on hand-weighted features bolted on
+afterwards? The plain contrastive encoder is good at timbre but, as the R² numbers below show,
+only partly captures bass and dynamics.
+
+So I trained a **vibe-aware encoder** with a multi-task objective: the self-supervised contrastive
+loss **plus** an auxiliary head that must predict a 10-dim *vibe target* — seven frequency-band
+fractions, loudness dynamics (std + range), and spectral centroid — computed directly from each
+song's mel-spectrogram. Predicting that target from a short crop forces the embedding to encode
+*how the whole song sounds and moves*. Crucially, the target is derived from the **already-packed
+FMA spectrograms**, so the vibe-aware model trains on all 106k songs with **zero re-downloading**
+(~131 min on the 5080).
+
+To measure whether it worked, I used a **linear probe**: fit a ridge regression from each
+encoder's frozen embeddings to the vibe target on 1,738 held-out real songs, and report
+cross-validated R². A linear probe is the standard, honest test of "is this information linearly
+present in the representation?"
+
+| Vibe dimension | Baseline encoder | Vibe-aware encoder |
+|----------------|------------------|--------------------|
+| **Overall (10-dim)** | **0.82** | **0.94** |
+| Bass | 0.73 | **0.96** |
+| Loudness dynamics | 0.70 | **0.89** |
+| Drop size (dynamic range) | 0.70 | **0.85** |
+
+The vibe-aware encoder wins on *every* dimension, and the largest gains are exactly on **bass and
+dynamics** — the qualities the original engine was blind to and the ones that decide whether two
+songs feel the same. That encoder is what ships in the package and powers the deep-vibe engine.
+
+![Vibe-aware encoder results](vibe_aware_results.png)
+
+A second engineering payoff came out of building this: I split "download a preview" from "embed
+it" with a **spec cache**. The library's mel-spectrograms are harvested from Deezer *once* (rate
+-limited, resumable, checkpointed) and stored; re-embedding the whole 1,738-song library with a
+newly trained encoder is then a local, offline, seconds-long operation. Swapping in a better model
+no longer costs an hour of rate-limited downloading — which is what made the baseline-vs-vibe-aware
+comparison above a fair, apples-to-apples test on an identical song set.
+
 ---
 
 ## 6. Security & correctness
@@ -212,8 +257,9 @@ right scene (aldn, Flume, Slow Magic). This is the engineering habit that matter
 - **No data leakage in evaluation.** The encoder trains self-supervised on the train split only;
   the kNN probe splits *within* validation and *within* test, never crossing into the training
   set. This was independently verified in code review.
-- **58 automated tests** cover the recommenders, OAuth/PKCE, the DSP and vibe engines, and the ML
-  pipeline (including the augmentation, contrastive loss, and dataset-split logic).
+- **73 automated tests** cover the recommenders, OAuth/PKCE, the DSP, vibe and vibe-aware engines,
+  the spec cache, and the ML pipeline (including the augmentation, contrastive loss, vibe-target,
+  and dataset-split logic).
 
 
 ---
@@ -222,10 +268,12 @@ right scene (aldn, Flume, Slow Magic). This is the engineering habit that matter
 
 - **Persist a personal acoustic-feature store** so the engines cover a user's entire Spotify
   library, not just what's in a preview catalog.
-- **Hybrid ranking** that blends the learned embedding with the hand-crafted DSP features.
 - **Human-in-the-loop evaluation** — let a user rate recommendations to measure real-world
-  quality beyond the genre proxy.
-- **FMA-large with a larger encoder** and longer training, now that the pipeline scales.
+  quality beyond the genre proxy, and use those ratings to tune the fusion blend.
+- **A larger vibe-aware encoder** and longer multi-task training, now that the pipeline scales
+  and the spec cache makes re-embedding a library free.
+- **Contrastive-on-vibe** — mine positive pairs by vibe similarity, not just augmented crops, so
+  the contrastive objective itself pulls same-vibe songs together.
 
 ---
 
@@ -233,20 +281,20 @@ right scene (aldn, Flume, Slow Magic). This is the engineering habit that matter
 
 For anyone evaluating this as a portfolio piece, the work spans:
 
-- **Machine learning:** self-supervised contrastive learning (SimCLR/NT-Xent), CNN and ResNet
-  encoders, mixed-precision training, embedding evaluation (kNN probe, silhouette, retrieval),
-  UMAP visualization — with an honest, measured account of when deep learning does and doesn't
-  help.
-- **Digital signal processing:** mel-spectrograms, MFCC/timbre features, tempo and spectral
-  analysis from raw audio.
+- **Machine learning:** self-supervised contrastive learning (SimCLR/NT-Xent), **multi-task
+  learning** (contrastive + auxiliary regression), CNN and ResNet encoders, mixed-precision
+  training, embedding evaluation (kNN probe, silhouette, retrieval, **linear probing**), UMAP
+  visualization — with an honest, measured account of when deep learning does and doesn't help.
+- **Digital signal processing:** mel-spectrograms, MFCC/timbre features, frequency-band energy
+  analysis, loudness dynamics, tempo and spectral analysis from raw audio.
 - **GPU / systems performance:** diagnosing data-loading bottlenecks, VRAM-aware data residency,
   CUDA memory-layout and precision tuning, reading cuDNN kernel selection.
 - **API integration & security:** OAuth 2.0 PKCE, token lifecycle management, rate-limit handling,
   secret hygiene.
-- **Software engineering:** clean package design, a 49-test suite, packaging, a documented CLI,
-  and a reviewed, merged pull request.
+- **Software engineering:** clean package design, a 73-test suite, packaging, a documented CLI,
+  decoupling I/O from compute (the harvest-once spec cache), and reviewed, merged pull requests.
 - **Data engineering:** multi-connection downloading, parallel preprocessing across CPU cores,
-  compact on-disk formats, robust handling of corrupt inputs.
+  compact on-disk formats (float16 caches + models), robust handling of corrupt inputs.
 
 Every result in this document was measured on real hardware and is reproducible from the commands
 in the [README](../README.md).
