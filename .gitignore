@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets / local config
+.env
+.cache/
+.soundalike/
+*.token.json
+
+# Personal data exports (from `soundalike pull`)
+*_tracks.csv
+
+# ML artifacts (datasets, checkpoints, embeddings, plots)
+ml_data/
+*.pt
+*.ckpt
+*.npy
+*.npz
+
+# OS
+.DS_Store
+Thumbs.db

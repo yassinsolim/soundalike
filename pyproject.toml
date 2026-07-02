@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "soundalike"
+version = "0.1.0"
+description = "Open-source music recommender: find songs similar to the ones you like, without Spotify's deprecated recommendation endpoints."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Yassin Soliman" }]
+keywords = ["spotify", "music", "recommender", "similarity", "lastfm"]
+
+dependencies = [
+    "numpy>=1.23",
+    "pandas>=1.5",
+    "scikit-learn>=1.2",
+]
+
+[project.optional-dependencies]
+# Charts for the personal-stats / visualization features.
+viz = ["matplotlib>=3.6"]
+# Live integrations (Spotify OAuth + Last.fm).
+live = ["requests>=2.28", "python-dotenv>=1.0"]
+# Acoustic (DSP) engine: measure features from real audio.
+audio = ["librosa>=0.10", "soundfile>=0.12", "requests>=2.28"]
+# Local ML: GPU-trained audio embedding model.
+# NOTE: for a CUDA (GPU) build, install torch/torchaudio from the matching
+# PyTorch index first, e.g.:
+#   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu130
+ml = [
+    "torch>=2.6",
+    "torchaudio>=2.6",
+    "librosa>=0.10",
+    "soundfile>=0.12",
+    "scikit-learn>=1.2",
+    "umap-learn>=0.5",
+    "matplotlib>=3.6",
+    "requests>=2.28",
+]
+# Everything, for development.
+dev = [
+    "matplotlib>=3.6",
+    "requests>=2.28",
+    "python-dotenv>=1.0",
+    "librosa>=0.10",
+    "soundfile>=0.12",
+    "pytest>=7.0",
+]
+
+[project.scripts]
+soundalike = "soundalike.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/yassinsolim/Spotify-Statistics"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+soundalike = ["data/*.csv"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
