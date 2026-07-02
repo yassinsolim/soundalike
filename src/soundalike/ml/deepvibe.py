@@ -51,19 +51,26 @@ class DeepVibeIndex:
     def __len__(self) -> int:
         return len(self.track_ids)
 
-    def save(self, path: Path) -> None:
+    def save(self, path: Path, half: bool = False) -> None:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        np.savez(
+        # For the bundled artifact, storing the neural embeddings as float16 and
+        # compressing halves the file with no effect on ranking (cosine on
+        # L2-normalized vectors is insensitive to that precision).
+        neural = self.neural.astype(np.float16) if half else self.neural
+        saver = np.savez_compressed if half else np.savez
+        saver(
             path, track_ids=self.track_ids, titles=self.titles.astype(str),
-            artists=self.artists.astype(str), neural=self.neural, vibe=self.vibe,
+            artists=self.artists.astype(str), neural=neural, vibe=self.vibe,
             feature_names=np.array(FEATURE_NAMES),
         )
 
     @classmethod
     def load(cls, path: Path) -> "DeepVibeIndex":
         d = np.load(Path(path), allow_pickle=True)
-        return cls(d["track_ids"], d["titles"], d["artists"], d["neural"], d["vibe"])
+        # Neural may be stored float16 (bundled) — upcast for downstream math.
+        return cls(d["track_ids"], d["titles"], d["artists"],
+                   d["neural"].astype(np.float32), d["vibe"])
 
     @classmethod
     def bundled_path(cls) -> Optional[Path]:
@@ -97,8 +104,9 @@ class DeepVibeRecommender:
     def __init__(
         self,
         index: DeepVibeIndex,
-        alpha: float = 0.5,
+        alpha: float = 0.8,
         vibe_weights: Optional[Dict[str, float]] = None,
+        whiten: bool = True,
     ):
         if len(index) < 2:
             raise ValueError("Deep-vibe index is empty — build it first.")
@@ -106,7 +114,26 @@ class DeepVibeRecommender:
         self.alpha = float(np.clip(alpha, 0.0, 1.0))
 
         # Neural: L2-normalize so a dot product is cosine similarity.
-        self._neural = index.neural / (np.linalg.norm(index.neural, axis=1, keepdims=True) + 1e-9)
+        neural = index.neural / (np.linalg.norm(index.neural, axis=1, keepdims=True) + 1e-9)
+
+        # The learned embeddings pile into a tight cone (every pair ~0.9 cosine),
+        # so at a large library size raw cosine can't rank finely and surfaces
+        # cross-genre false matches. ZCA-whitening removes the dominant shared
+        # direction and equalizes the variance of each dimension, so similarity
+        # keys on what's *distinctive* about a track (its scene/vibe) — which
+        # makes retrieval dramatically more coherent on a big, diverse library.
+        self._whiten = whiten
+        if whiten:
+            self._nmean = neural.mean(axis=0)
+            centered = neural - self._nmean
+            cov = np.cov(centered.T)
+            evals, evecs = np.linalg.eigh(cov)
+            self._W = evecs @ np.diag(1.0 / np.sqrt(np.clip(evals, 1e-5, None))) @ evecs.T
+            self._neural = self._apply_whiten(neural)
+        else:
+            self._nmean = np.zeros(neural.shape[1], np.float32)
+            self._W = None
+            self._neural = neural
 
         # Vibe: standardize across the library, then sqrt-weight.
         self._vmean = index.vibe.mean(axis=0)
@@ -114,6 +141,11 @@ class DeepVibeRecommender:
         w = np.sqrt(np.clip(weight_vector(vibe_weights or DEFAULT_WEIGHTS), 0.0, None))
         self._vscaled = ((index.vibe - self._vmean) / self._vstd) * w
         self._w = w
+
+    def _apply_whiten(self, vecs: np.ndarray) -> np.ndarray:
+        """Center + ZCA-whiten + re-normalize (rows) of one or many embeddings."""
+        x = (vecs - self._nmean) @ self._W
+        return x / (np.linalg.norm(x, axis=-1, keepdims=True) + 1e-9)
 
     def _project_vibe(self, feats: VibeFeatures) -> np.ndarray:
         return ((feats.vector() - self._vmean) / self._vstd) * self._w
@@ -134,6 +166,8 @@ class DeepVibeRecommender:
         exclude_artist = (exclude_artist or "").casefold()
 
         qn = seed_neural / (np.linalg.norm(seed_neural) + 1e-9)
+        if self._whiten:
+            qn = self._apply_whiten(qn)
         neural_sim = self._neural @ qn                                   # cosine, -1..1
         qv = self._project_vibe(seed_vibe)
         vibe_sim = 1.0 / (1.0 + np.linalg.norm(self._vscaled - qv, axis=1))
