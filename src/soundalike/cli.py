@@ -663,9 +663,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_dv.add_argument("--title", required=True, help="Seed song title.")
     p_dv.add_argument("--artist", help="Seed artist, to disambiguate.")
-    p_dv.add_argument("--index", help="Path to the deep-vibe library (.npz).")
-    p_dv.add_argument("--model-dir", default="ml_data/model_fma_large",
-                      help="Trained encoder directory.")
+    p_dv.add_argument("--index", help="Path to the deep-vibe library (.npz). "
+                      "Defaults to the bundled vibe-aware library.")
+    p_dv.add_argument("--model-dir", default=None,
+                      help="Trained encoder directory. Defaults to the bundled "
+                      "vibe-aware encoder (works with no local training).")
     p_dv.add_argument("--alpha", type=float, default=0.5,
                       help="Blend: 1.0=pure learned texture, 0.0=pure bass/dynamics.")
     p_dv.add_argument("-n", "--num", type=int, default=15, help="Number of results.")
