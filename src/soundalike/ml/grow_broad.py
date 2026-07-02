@@ -88,6 +88,100 @@ BROAD_SEED_ARTISTS: List[str] = [
 ]
 
 
+# A deliberately deep, genre-and-region-spanning list of niches the broad seeds
+# above don't reach: whole scenes (world/regional, electronic subgenres, rock /
+# metal / punk subgenres, jazz, classical, blues, gospel, reggae, experimental)
+# that a listener might seed from and currently find no close neighbours for.
+NICHE_SEED_ARTISTS: List[str] = [
+    # K-pop / K-R&B / K-hiphop
+    "NewJeans", "LE SSERAFIM", "SEVENTEEN", "Stray Kids", "aespa", "IVE", "TWICE",
+    "BLACKPINK", "(G)I-DLE", "DEAN", "Crush", "Zico", "Jay Park", "RM",
+    # J-pop / city pop / J-rock
+    "Fujii Kaze", "YOASOBI", "Kenshi Yonezu", "Vaundy", "King Gnu", "Yorushika",
+    "Official HIGE DANdism", "Tatsuro Yamashita", "Mariya Takeuchi", "Ado", "Aimer",
+    # Afrobeats / Amapiano / African
+    "Burna Boy", "Wizkid", "Davido", "Rema", "Asake", "Tems", "Ayra Starr",
+    "Fireboy DML", "Omah Lay", "CKay", "Kabza De Small", "DJ Maphorisa", "Uncle Waffles",
+    # French rap / pop
+    "PNL", "Ninho", "Aya Nakamura", "Stromae", "Angèle", "Damso", "Orelsan",
+    # Latin (reggaeton / trap / regional)
+    "J Balvin", "Karol G", "Ozuna", "Anuel AA", "Myke Towers", "Anitta", "Grupo Frontera",
+    # Brazilian / bossa / MPB
+    "Gilberto Gil", "Caetano Veloso", "João Gilberto", "Tim Maia", "Racionais MC's",
+    # reggae / dancehall / dub
+    "Bob Marley & The Wailers", "Chronixx", "Koffee", "Popcaan", "Protoje",
+    "Lee Scratch Perry", "Toots & The Maytals",
+    # techno / house / deep
+    "Charlotte de Witte", "Amelie Lens", "Boris Brejcha", "Nina Kraviz", "Peggy Gou",
+    "Fisher", "John Summit", "Chris Lake", "Black Coffee", "Kaytranada",
+    # trance / DnB / jungle / garage
+    "Above & Beyond", "Armin van Buuren", "Netsky", "Sub Focus", "Chase & Status",
+    "Pendulum", "Goldie", "Overmono",
+    # ambient / modern classical / drone
+    "Brian Eno", "Tim Hecker", "William Basinski", "Grouper", "Nils Frahm",
+    "Ólafur Arnalds", "Max Richter", "Ludovico Einaudi", "Stars of the Lid",
+    # synthwave / vaporwave / phonk
+    "The Midnight", "Gunship", "Carpenter Brut", "Perturbator", "Kordhell", "DVRST",
+    "Freddie Dredd", "Ghostface Playa",
+    # breakcore / hardstyle / experimental electronic
+    "Sewerslvt", "Machine Girl", "Headhunterz", "Da Tweekaz", "Oneohtrix Point Never",
+    "Arca", "Death Grips", "JPEGMAFIA", "clipping.", "Black Midi",
+    # dubstep / riddim / bass
+    "Excision", "Virtual Riot", "SVDDEN DEATH", "Subtronics", "Zomboy", "Au5",
+    # lofi / chillhop / instrumental hip-hop
+    "Nujabes", "J Dilla", "Tomppabeats", "idealism",
+    # punk / pop-punk / hardcore
+    "Ramones", "The Clash", "Dead Kennedys", "Bad Religion", "Blink-182", "Green Day",
+    "Sum 41", "Descendents", "Turnstile",
+    # emo / midwest emo / screamo / post-hardcore
+    "American Football", "Sunny Day Real Estate", "Modern Baseball", "Mom Jeans.",
+    "La Dispute", "Touché Amoré", "The Hotelier",
+    # post-rock / math rock
+    "Explosions in the Sky", "Godspeed You! Black Emperor", "Mogwai", "Sigur Rós",
+    "This Will Destroy You", "toe", "tricot", "CHON", "Covet",
+    # shoegaze / dream-pop (deeper)
+    "My Bloody Valentine", "Ride", "Whirr", "Nothing", "Cocteau Twins", "Duster",
+    # grunge / post-punk / new wave / industrial
+    "Soundgarden", "Alice in Chains", "Pearl Jam", "Joy Division", "The Cure",
+    "New Order", "Talking Heads", "Nine Inch Nails",
+    # psychedelic / garage rock / prog
+    "King Gizzard & The Lizard Wizard", "Pond", "The Black Keys", "King Crimson",
+    "Tool", "Porcupine Tree",
+    # black / death / doom / djent metal
+    "Mayhem", "Darkthrone", "Emperor", "Death", "Cannibal Corpse", "Electric Wizard",
+    "Sleep", "Periphery", "Meshuggah", "Animals as Leaders", "Lorna Shore",
+    "Architects", "Parkway Drive", "Slipknot", "Slayer", "Megadeth",
+    # jazz (classic / spiritual / modern)
+    "Miles Davis", "John Coltrane", "Bill Evans", "Thelonious Monk", "Charles Mingus",
+    "Alice Coltrane", "Pharoah Sanders", "Herbie Hancock", "GoGo Penguin",
+    "Snarky Puppy", "Nubya Garcia", "Ezra Collective",
+    # classical / film scores
+    "Johann Sebastian Bach", "Ludwig van Beethoven", "Frédéric Chopin", "Claude Debussy",
+    "Philip Glass", "Steve Reich", "Hans Zimmer", "Ennio Morricone", "Ludwig Göransson",
+    # blues / soul / motown / funk
+    "B.B. King", "Muddy Waters", "John Lee Hooker", "Gary Clark Jr.", "Marvin Gaye",
+    "Stevie Wonder", "Aretha Franklin", "Al Green", "Otis Redding", "James Brown",
+    "Parliament", "Sly & The Family Stone",
+    # country / americana / bluegrass
+    "Johnny Cash", "Willie Nelson", "Dolly Parton", "Sturgill Simpson", "Tyler Childers",
+    "Colter Wall", "Chris Stapleton", "Billy Strings", "Nickel Creek",
+    # indie folk / freak folk
+    "Iron & Wine", "The Tallest Man on Earth", "Sufjan Stevens", "Angel Olsen",
+    "Adrianne Lenker",
+    # drill / cloud rap / emo rap / underground
+    "Central Cee", "Digga D", "Chief Keef", "Lil Durk", "Lil Peep", "Bones",
+    "Ghostemane", "$uicideboy$", "Yeat", "Ken Carson", "Destroy Lonely",
+    "Westside Gunn", "Griselda", "MIKE",
+    # indie / electronic pop
+    "CHVRCHES", "Purity Ring", "Grimes", "Caroline Polachek", "Magdalena Bay",
+    "Jessie Ware", "Rina Sawayama", "Sylvan Esso", "SOPHIE", "FKA twigs",
+    # gospel / christian
+    "Kirk Franklin", "Hillsong UNITED",
+    # soundtrack / game
+    "Toby Fox", "C418", "Nobuo Uematsu",
+]
+
+
 def _global_chart_artists(client: DeezerClient, limit: int,
                           progress: Callable[[str], None]) -> List[int]:
     """Deezer's public genre endpoints ignore the genre id (they all return the
@@ -124,8 +218,9 @@ def _gather_artist_ids(
 
     # Roots: curated seeds (resolved) + mainstream global chart.
     roots: set = set(_global_chart_artists(client, per_genre_artists, progress))
-    progress(f"Resolving {len(BROAD_SEED_ARTISTS)} curated seeds...")
-    for nm in BROAD_SEED_ARTISTS:
+    all_seeds = BROAD_SEED_ARTISTS + NICHE_SEED_ARTISTS
+    progress(f"Resolving {len(all_seeds)} curated seeds...")
+    for nm in all_seeds:
         aid = _artist_id(session, nm)
         if aid:
             roots.add(aid)
