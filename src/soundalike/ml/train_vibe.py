@@ -54,9 +54,12 @@ def train_vibe(
     progress(f"Loaded packed dataset {X.shape} ({X.nbytes/1e9:.1f} GB)")
 
     # Vibe targets from the FULL spectrogram (captures the whole song's dynamics).
+    # Pass X as-is: vibe_target_from_mel casts each (n_mels, frames) slice to
+    # float32 on the fly, so we avoid a transient float32 copy of the whole
+    # (multi-GB) packed dataset that would otherwise double peak host RAM.
     progress("Computing vibe targets from mel-spectrograms...")
     t_targets = time.time()
-    targets = vibe_targets_for_batch(X.astype(np.float32))
+    targets = vibe_targets_for_batch(X)
     # Standardize targets so the regression loss is well-scaled.
     tmean, tstd = targets.mean(0), targets.std(0) + 1e-6
     targets = ((targets - tmean) / tstd).astype(np.float32)
