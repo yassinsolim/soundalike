@@ -27,9 +27,6 @@ from .model import ProjectionHead, ResNetAudioEncoder, nt_xent_loss
 def _stratified_idx(genres: np.ndarray, val_frac=0.1, test_frac=0.1, seed=0):
     rng = np.random.default_rng(seed)
     train, val, test = [], [], []
-def _stratified_idx(genres, val_frac=0.1, test_frac=0.1, seed=0):
-    rng = np.random.default_rng(seed)
-    train, val, test = [], [], []
     for g in np.unique(genres):
         idx = np.where(genres == g)[0]
         rng.shuffle(idx)
