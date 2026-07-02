@@ -15,6 +15,8 @@ from .features import (
 from .previews import DeezerClient, DeezerTrack
 from .recommender import AudioRecommendation, AudioSimilarityRecommender
 from .store import FeatureStore
+from .vibe import VibeFeatures, vibe_from_file, vibe_from_signal
+from .vibe_index import VibeIndex, VibeRecommendation, VibeRecommender, build_index
 
 __all__ = [
     "AcousticFeatures",
@@ -27,4 +29,11 @@ __all__ = [
     "FeatureStore",
     "AudioRecommendation",
     "AudioSimilarityRecommender",
+    "VibeFeatures",
+    "vibe_from_file",
+    "vibe_from_signal",
+    "VibeIndex",
+    "VibeRecommender",
+    "VibeRecommendation",
+    "build_index",
 ]
