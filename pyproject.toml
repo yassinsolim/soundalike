@@ -59,7 +59,7 @@ Homepage = "https://github.com/yassinsolim/Spotify-Statistics"
 where = ["src"]
 
 [tool.setuptools.package-data]
-soundalike = ["data/*.csv", "data/*.json"]
+soundalike = ["data/*.csv", "data/*.json", "data/*.npz"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
