@@ -12,10 +12,14 @@ from soundalike.ml.grow_broad import (
 
 def test_seed_list_spans_many_scenes():
     # A broad list is the whole point — guard against it shrinking back to one
-    # scene. Should be large and unique-ish.
-    assert len(BROAD_SEED_ARTISTS) >= 100
-    # de-dup ratio sane (a couple accidental repeats are fine)
-    assert len(set(BROAD_SEED_ARTISTS)) >= len(BROAD_SEED_ARTISTS) - 3
+    # scene. Broad + niche together should be large and unique-ish.
+    from soundalike.ml.grow_broad import BROAD_SEED_ARTISTS, NICHE_SEED_ARTISTS
+
+    combined = BROAD_SEED_ARTISTS + NICHE_SEED_ARTISTS
+    assert len(combined) >= 300
+    # A few duplicate names across the broad/niche lists are harmless — the crawl
+    # dedups by resolved artist id — so only guard against gross duplication.
+    assert len(set(combined)) >= len(combined) * 0.9
 
 
 def test_candidates_roundtrip(tmp_path):
