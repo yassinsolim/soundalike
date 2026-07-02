@@ -200,11 +200,12 @@ scene, chosen by the shape of the sound.
 
 ## Deep-vibe engine — the best matcher ⭐⭐⭐
 
-The vibe engine knows about bass and dynamics but has no *learned* sense of texture; the neural
-model has deep texture understanding but is partly blind to energy. The **deep-vibe engine fuses
-both**: it embeds a song with the trained neural encoder (texture) *and* measures its vibe vector
-(bass profile + dynamics), then ranks a **bundled library of ~1,600 real songs** by a tunable
-blend of the two similarities.
+The vibe engine knows about bass and dynamics but has no *learned* sense of texture; a plain
+neural model has deep texture understanding but is partly blind to energy. The **deep-vibe engine
+fuses both**: it embeds a song with a **vibe-aware neural encoder** (texture *and* learned
+dynamics) *and* measures its vibe vector (bass profile + dynamics), then ranks a **bundled library
+of ~1,700 real songs** by a tunable blend of the two similarities. Everything needed ships with
+the package — the encoder and the library — so it works with **zero setup and no local training**.
 
 ```bash
 # Fused recommendation (works out of the box):
@@ -221,13 +222,14 @@ Seed: Wasting Time — eric404
   vibe: 123 BPM, very dynamic (big drops), bass-heavy, warm
   blend: 60% learned-texture + 40% bass/dynamics
 
-   1. Never Be Like You — Flume        [blend +2.29 | texture 0.68 | vibe 0.26]
-   2. Blink Twice — Cecile Believe     [blend +2.10 | texture 0.72 | vibe 0.24]
-   3. idontcareanymore — Alice Gas     [blend +1.96 | texture 0.84 | vibe 0.19]
+   1. Broken — AViVA                    [blend +2.52 | texture 0.82 | vibe 0.27]
+   2. popstar (with angelus) — Internet Girl  [blend +2.41 | texture 0.69 | vibe 0.30]
+   4. happy ever after — aldn           [blend +2.34 | texture 0.69 | vibe 0.29]
+   5. Never Be Like You — Flume         [blend +2.25 | texture 0.77 | vibe 0.26]
 ```
 
-The library pairs the 106k-song neural encoder with a curated set of real tracks (genre charts
-plus hyperpop / underground / electronic artists that charts miss), so a niche seed has close
+The library pairs the vibe-aware encoder with a curated set of real tracks (genre charts plus
+hyperpop / underground / electronic artists that charts miss), so a niche seed has close
 neighbours. Matching the *feel* of a track is genuinely hard — this is the frontier the project
 is still pushing on — but the fusion is a clear step past matching timbre or dynamics alone.
 
@@ -272,6 +274,41 @@ Engineering notes for the 106k run: the 14 GB packed dataset exceeds the 5080's 
 training auto-switches to a **CPU-resident** mode (dataset pinned in RAM, batches streamed to
 the GPU) that still keeps it at 99% utilization. The download used aria2 with 16 connections
 (~138 MB/s vs ~13 MB/s single-stream). Spectrogram precompute runs across all CPU cores.
+
+### Teaching the model *vibe* (the encoder behind deep-vibe)
+
+The contrastive encoder above learns *timbre* well, but "vibe" is really about a song's
+**frequency-band balance and its dynamics** (how hard the drop hits). So I trained a dedicated
+**vibe-aware encoder** with a multi-task objective: the usual contrastive loss **plus** a
+regression head that must predict a 10-dim *vibe target* (7 frequency-band fractions + loudness
+dynamics + spectral centroid) computed straight from each song's mel-spectrogram. That auxiliary
+task forces the embedding to encode *how a song sounds and moves*, not just its genre.
+
+The vibe target is computed from the packed FMA spectrograms with **no re-downloading**, so the
+whole vibe-aware model trains on all 106k songs in ~131 min on the 5080.
+
+**Does it actually encode more vibe?** Yes — measurably. On 1,738 held-out real songs, a *linear*
+probe decoding the vibe target from each encoder's embeddings improves from **R² 0.82 → 0.94**,
+and the biggest gains are exactly on the vibe-defining dimensions: bass (0.73 → 0.96), loudness
+dynamics (0.70 → 0.89) and drop size (0.70 → 0.85). In other words, nearest neighbours in the
+vibe-aware space are far more likely to share the seed's bass profile and energy.
+
+![Vibe-aware encoder results](docs/vibe_aware_results.png)
+
+*Left: multi-task training — val genre-probe accuracy rises as the vibe-target loss falls.
+Right: per-dimension linear-probe R² of decoding vibe from the embedding; the vibe-aware encoder
+(blue) beats the plain contrastive one (grey) on every band and every dynamics measure.*
+
+This vibe-aware encoder is the one bundled with the package and used by `deep-vibe-similar`.
+
+```bash
+# Train it yourself (needs the packed FMA data from the steps below):
+python -m soundalike.ml.train_vibe --packed packed.npz --out-dir ml_data/model_vibe
+
+# Harvest a real-song library once, then re-embed it with any encoder (fast, offline):
+python -m soundalike.ml.spec_cache harvest --cache ml_data/spec_cache.npz
+python -m soundalike.ml.spec_cache build --cache ml_data/spec_cache.npz --model-dir ml_data/model_vibe --out ml_data/deepvibe_vibeaware.npz
+```
 
 ### Reproduce it
 
@@ -360,7 +397,9 @@ src/soundalike/
   ml/               # GPU research track: gpu (cuDNN inspector), collect, spectrogram,
                     #    model (CNN/ResNet + NT-Xent), data, train, supervised, evaluate,
                     #    fma (dataset loader), precompute, pack, train_fast (GPU-resident),
-                    #    map, visualize, recommend
+                    #    vibe_target + train_vibe (vibe-aware multi-task encoder),
+                    #    spec_cache (harvest-once/re-embed), deepvibe (fusion), map, visualize
+  data/             # bundled artifacts: vibe-aware encoder + deep-vibe/vibe libraries
 tests/              # pytest suite (offline + network-free live/audio/ml logic)
 spotify_program.py  # the original first-year project, kept for posterity
 ```
@@ -382,9 +421,8 @@ pytest -q
 - [x] **GPU training pipeline** — dataset harvest, CNN/ResNet encoder, contrastive + supervised, cuDNN inspector
 - [x] **Scaled to FMA-medium (25k)** — kNN 0.601; beats the no-ML baseline by +8 pts
 - [x] **Scaled to FMA-large (106k)** — kNN 0.641; beats the baseline by +13 pts (CPU-resident training)
-- [ ] Persist an acoustic-feature store so results play/save back to Spotify at scale
-- [ ] Human-in-the-loop rating loop to score recommendation quality
-- [ ] Hybrid ranking (acoustic + learned embedding) and DJ-style harmonic sequencing
+- [x] **Vibe-aware encoder** — multi-task (contrastive + vibe-target); linear-probe vibe R² 0.82 → 0.94
+- [x] **Hybrid ranking** — deep-vibe fuses learned texture with measured bass/dynamics (ships out of the box)
 - [ ] Optional web UI
 
 Contributions welcome — this is meant to be community-built.
