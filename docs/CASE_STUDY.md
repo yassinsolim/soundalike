@@ -14,16 +14,21 @@ run it" lives in the [README](../README.md); this is the "how it was built and w
 - **Started with:** a ~180-line first-year terminal script that read a static CSV of songs and
   printed min/max/mean statistics.
 - **Ended with:** an installable Python package with **six recommendation engines**, a live
-  Spotify integration (OAuth PKCE, no passwords), and **two self-supervised audio-embedding neural
-  networks** trained on the GPU — including a **vibe-aware encoder** that learns a song's bass
-  profile and dynamics.
+  Spotify integration (OAuth PKCE, no passwords), and **three GPU-trained audio-embedding neural
+  networks** — a contrastive FMA encoder, a **vibe-aware** encoder that learns a song's bass profile
+  and dynamics, and an **artist-aware** encoder fine-tuned on ~25,000 real songs — feeding a
+  bundled, out-of-the-box recommender.
 - **Headline result:** the learned model's genre-probe accuracy scales with data —
   **0.25 → 0.601 → 0.641** as the training set grows **475 → 25,000 → 106,000** tracks — going
   from *losing* to a no-ML baseline to beating it by **+13 points**.
 - **Vibe result:** a multi-task "vibe-aware" encoder raises how much vibe its embedding space
   encodes from **linear-probe R² 0.82 → 0.94** on 1,738 held-out real songs, with the biggest
   gains on bass and dynamics — the qualities that define whether two songs *feel* the same.
-- **Built and validated on:** an NVIDIA RTX 5080 (Blackwell), 73 automated tests, a clean
+- **Scale result:** growing the library to ~25k songs exposed the *encoder* as the bottleneck;
+  a domain-matched **artist-aware** fine-tune plus embedding **whitening** turned incoherent
+  cross-genre matches into scene-coherent ones (TV Girl → Vacations/Foals/Paradis, not
+  Creed/Metallica).
+- **Built and validated on:** an NVIDIA RTX 5080 (Blackwell), 81 automated tests, a clean
   packaged wheel.
 
 ---
@@ -248,7 +253,53 @@ comparison above a fair, apples-to-apples test on an identical song set.
 
 ---
 
-## 6. Security & correctness
+## 6. Scaling the library exposed the real bottleneck (and how I fixed it)
+
+Testing on a niche seed (*Lovers Rock* by TV Girl) returned generic pop — because the bundled
+library, curated for the earlier hyperpop test, simply had no dream-pop neighbours. So I **grew the
+library from ~1,700 to ~25,000 songs** across every scene, crawling the Deezer **related-artist
+graph** two hops out from a broad multi-genre seed list. (Deezer's genre endpoints turned out to be
+useless — they ignore the id and return the same global list — so the related-artist graph, which
+*is* genre-coherent, did the work.) Three engineering details made the harvest practical: a
+**candidate sidecar** so a restart never re-does the slow gather; **thread-pool downloads** (the
+box was 93% idle at 0.8/s single-threaded → ~5/s across 12 workers); and the discovery that Deezer
+**preview URLs are signed and expire**, so the worker fetches a fresh URL by track id right before
+downloading (this alone took the success rate from 0% back to 100%).
+
+But growing the library made recommendations **worse**, which was the most instructive result of
+the whole project. A bigger, more diverse pool contained more songs that were *texture-similar but
+vibe-wrong*, and the FMA-trained encoder — trained on mostly instrumental Creative-Commons music —
+happily surfaced them (a dream-pop seed matched Creed and Metallica). **The library was never the
+ceiling; the encoder was.** Two fixes, one at train time and one at inference:
+
+1. **An artist-aware encoder.** I fine-tuned the encoder on the 25k harvested songs with a
+   **supervised-contrastive** objective using the *artist* as the label (PK-sampled batches; songs
+   by the same artist are positives), plus the vibe-target auxiliary. "Same artist ⇒ similar" is a
+   free, strong style signal, and because the library was crawled through related artists it
+   generalizes to *neighbouring* artists. It trains on the cached spectrograms in ~18 min on the
+   5080.
+
+2. **Whitening.** The embeddings piled into a tight cone (every pair ~0.9 cosine), so raw cosine
+   couldn't rank finely. ZCA-whitening the space at load time removes the dominant shared direction
+   so similarity keys on what's *distinctive*.
+
+The combined effect, on identical seeds:
+
+| Seed | FMA encoder, raw cosine (25k) | Artist-aware + whitening |
+|------|-------------------------------|--------------------------|
+| *Lovers Rock* — TV Girl | Creed, Metallica, Korn | Vacations, Foals, Paradis, Chapterhouse |
+| *Bags* — Clairo | mixed pop/rock | Jordana, Men I Trust, Sharon Van Etten |
+| *HUMBLE.* — Kendrick | mixed | Kodak Black, 21 Savage, JID, Baby Keem |
+
+It's now genuinely scene-coherent across indie, bedroom-pop, hip-hop, R&B and electronic. A few
+corners (rock, synth-pop, hyperpop-with-vocals) are still weaker — an honest, documented frontier
+rather than a hidden one. The throughline is the same engineering habit as the vibe engine:
+**let the failure tell you where the real bottleneck is**, and don't mistake "more data" for
+"better model."
+
+---
+
+## 7. Security & correctness
 
 - **No passwords, ever.** Live Spotify access uses OAuth 2.0 **Authorization Code + PKCE** with a
   local loopback callback, CSRF `state` validation, and cached auto-refreshing tokens.
@@ -257,14 +308,14 @@ comparison above a fair, apples-to-apples test on an identical song set.
 - **No data leakage in evaluation.** The encoder trains self-supervised on the train split only;
   the kNN probe splits *within* validation and *within* test, never crossing into the training
   set. This was independently verified in code review.
-- **73 automated tests** cover the recommenders, OAuth/PKCE, the DSP, vibe and vibe-aware engines,
+- **81 automated tests** cover the recommenders, OAuth/PKCE, the DSP, vibe and vibe-aware engines,
   the spec cache, and the ML pipeline (including the augmentation, contrastive loss, vibe-target,
   and dataset-split logic).
 
 
 ---
 
-## 7. What I'd build next
+## 8. What I'd build next
 
 - **Persist a personal acoustic-feature store** so the engines cover a user's entire Spotify
   library, not just what's in a preview catalog.
@@ -277,7 +328,7 @@ comparison above a fair, apples-to-apples test on an identical song set.
 
 ---
 
-## 8. Skills demonstrated
+## 9. Skills demonstrated
 
 For anyone evaluating this as a portfolio piece, the work spans:
 
@@ -291,7 +342,7 @@ For anyone evaluating this as a portfolio piece, the work spans:
   CUDA memory-layout and precision tuning, reading cuDNN kernel selection.
 - **API integration & security:** OAuth 2.0 PKCE, token lifecycle management, rate-limit handling,
   secret hygiene.
-- **Software engineering:** clean package design, a 73-test suite, packaging, a documented CLI,
+- **Software engineering:** clean package design, an 81-test suite, packaging, a documented CLI,
   decoupling I/O from compute (the harvest-once spec cache), and reviewed, merged pull requests.
 - **Data engineering:** multi-connection downloading, parallel preprocessing across CPU cores,
   compact on-disk formats (float16 caches + models), robust handling of corrupt inputs.

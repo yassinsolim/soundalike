@@ -200,38 +200,48 @@ scene, chosen by the shape of the sound.
 
 ## Deep-vibe engine — the best matcher ⭐⭐⭐
 
-The vibe engine knows about bass and dynamics but has no *learned* sense of texture; a plain
-neural model has deep texture understanding but is partly blind to energy. The **deep-vibe engine
-fuses both**: it embeds a song with a **vibe-aware neural encoder** (texture *and* learned
-dynamics) *and* measures its vibe vector (bass profile + dynamics), then ranks a **bundled library
-of ~1,700 real songs** by a tunable blend of the two similarities. Everything needed ships with
-the package — the encoder and the library — so it works with **zero setup and no local training**.
+The deep-vibe engine embeds a song with an **artist-aware neural encoder** and blends that with the
+song's **vibe vector** (bass profile + dynamics), then ranks a **bundled library of ~25,000 real
+songs spanning every genre** by a tunable mix of the two. Everything ships with the package — the
+encoder *and* the library — so it works with **zero setup and no local training**.
 
 ```bash
 # Fused recommendation (works out of the box):
-soundalike deep-vibe-similar --title "Wasting Time" --artist "eric404"
+soundalike deep-vibe-similar --title "Lovers Rock" --artist "TV Girl"
 
 # Dial the blend: 1.0 = pure learned texture, 0.0 = pure bass/dynamics:
-soundalike deep-vibe-similar --title "Wasting Time" --artist "eric404" --alpha 0.35
+soundalike deep-vibe-similar --title "Bangarang" --artist "Skrillex" --alpha 0.6
 ```
 
 Each result shows its breakdown so you can see *why* it matched:
 
 ```
-Seed: Wasting Time — eric404
-  vibe: 123 BPM, very dynamic (big drops), bass-heavy, warm
-  blend: 60% learned-texture + 40% bass/dynamics
+Seed: Lovers Rock — TV Girl
+  vibe: 103 BPM, steady/flat, bass-heavy, bright
+  blend: 80% learned-texture + 20% bass/dynamics
 
-   1. Broken — AViVA                    [blend +2.52 | texture 0.82 | vibe 0.27]
-   2. popstar (with angelus) — Internet Girl  [blend +2.41 | texture 0.69 | vibe 0.30]
-   4. happy ever after — aldn           [blend +2.34 | texture 0.69 | vibe 0.29]
-   5. Never Be Like You — Flume         [blend +2.25 | texture 0.77 | vibe 0.26]
+   1. Relax — Vacations           [blend +4.59 | texture 0.34 | vibe 0.17]
+   2. Recto Verso — Paradis        [blend +4.35 | texture 0.34 | vibe 0.12]
+   3. A Knife in the Ocean — Foals  [blend +4.29 | texture 0.30 | vibe 0.20]
+   4. Love Forever — Chapterhouse   [blend +3.92 | texture 0.26 | vibe 0.22]  (shoegaze)
 ```
 
-The library pairs the vibe-aware encoder with a curated set of real tracks (genre charts plus
-hyperpop / underground / electronic artists that charts miss), so a niche seed has close
-neighbours. Matching the *feel* of a track is genuinely hard — this is the frontier the project
-is still pushing on — but the fusion is a clear step past matching timbre or dynamics alone.
+Three things make this work at scale, and each was driven by a concrete failure (see the
+[case study](docs/CASE_STUDY.md)):
+
+- **Coverage** — the library was grown from ~1,700 to ~25,000 real songs across every scene via a
+  2-hop related-artist crawl, so a niche seed (dream-pop, shoegaze, drill, hyperpop…) actually has
+  close neighbours to match.
+- **An artist-aware encoder** — the FMA-trained encoder confused scenes on real vocal music, so it
+  was fine-tuned on the harvested songs with a *supervised-contrastive* objective (same artist =
+  similar), which taught it "sounds like the same kind of thing" on the real domain.
+- **Whitening** — the embeddings piled into a tight cone (every pair ~0.9 cosine); ZCA-whitening
+  the space makes similarity key on what's *distinctive* about a track, which sharply improves
+  ranking on a big, diverse library.
+
+Matching the *feel* of a track is genuinely hard — some corners (rock, synth-pop, hyperpop with
+vocals) are still an honest frontier — but across indie, bedroom-pop, hip-hop, R&B and electronic
+it now returns genuinely scene-coherent picks.
 
 ---
 
@@ -308,6 +318,40 @@ python -m soundalike.ml.train_vibe --packed packed.npz --out-dir ml_data/model_v
 # Harvest a real-song library once, then re-embed it with any encoder (fast, offline):
 python -m soundalike.ml.spec_cache harvest --cache ml_data/spec_cache.npz
 python -m soundalike.ml.spec_cache build --cache ml_data/spec_cache.npz --model-dir ml_data/model_vibe --out ml_data/deepvibe_vibeaware.npz
+```
+
+### Domain-matching: the artist-aware encoder
+
+Growing the recommendation library from ~1,700 to ~25,000 songs exposed the encoder as the real
+ceiling: trained on FMA (mostly instrumental, Creative-Commons music), it confused *scenes* on
+real vocal music — a dream-pop seed pulled in random pop, a hyperpop track pulled in smooth R&B.
+More data made it *worse*, because the bigger pool contained more texture-similar-but-vibe-wrong
+songs.
+
+The fix uses the strongest free style signal on the harvested library — **the artist**. Two songs
+by the same artist share a sonic identity, so the encoder is fine-tuned with a **supervised
+contrastive** objective (PK-sampled batches; same-artist songs are positives) plus the
+vibe-target auxiliary, all on the cached real-song mel-spectrograms (no re-downloading, ~18 min on
+the 5080). That teaches "sounds like the same kind of thing" directly on the domain users query,
+and — because the library was crawled through the related-artist graph — it generalizes to
+*neighbouring* artists, not just the same one.
+
+A second, cheap inference-time fix mattered just as much: the embeddings pile into a tight cone
+(every pair ~0.9 cosine), so raw cosine can't rank finely at scale. **ZCA-whitening** the space at
+load time removes the dominant shared direction, and retrieval goes from incoherent to
+scene-coherent:
+
+| Seed | Before (FMA encoder, raw cosine, 25k) | After (artist-aware + whitening) |
+|------|----------------------------------------|-----------------------------------|
+| *Lovers Rock* — TV Girl | Creed, Metallica, Korn | Vacations, Foals, Paradis, Chapterhouse |
+| *Bags* — Clairo | (mixed pop) | Jordana, Men I Trust, Sharon Van Etten |
+| *HUMBLE.* — Kendrick | (mixed) | Kodak Black, 21 Savage, JID, Baby Keem |
+
+```bash
+# Grow the library broadly (2-hop related-artist crawl), then fine-tune on it:
+python -m soundalike.ml.grow_broad --cache ml_data/spec_cache.npz --workers 12 --target 25000
+python -m soundalike.ml.train_artist --cache ml_data/spec_cache.npz --init-model ml_data/model_vibe --out-dir ml_data/model_artist
+python -m soundalike.ml.spec_cache build --cache ml_data/spec_cache.npz --model-dir ml_data/model_artist --out src/soundalike/data/deepvibe_index.npz --half
 ```
 
 ### Reproduce it
@@ -398,8 +442,9 @@ src/soundalike/
                     #    model (CNN/ResNet + NT-Xent), data, train, supervised, evaluate,
                     #    fma (dataset loader), precompute, pack, train_fast (GPU-resident),
                     #    vibe_target + train_vibe (vibe-aware multi-task encoder),
-                    #    spec_cache (harvest-once/re-embed), deepvibe (fusion), map, visualize
-  data/             # bundled artifacts: vibe-aware encoder + deep-vibe/vibe libraries
+                    #    grow_broad (2-hop related-artist crawl), spec_cache (harvest-once),
+                    #    train_artist (artist-aware fine-tune), deepvibe (fusion + whitening)
+  data/             # bundled artifacts: artist-aware encoder + ~25k-song deep-vibe library
 tests/              # pytest suite (offline + network-free live/audio/ml logic)
 spotify_program.py  # the original first-year project, kept for posterity
 ```
@@ -422,6 +467,8 @@ pytest -q
 - [x] **Scaled to FMA-medium (25k)** — kNN 0.601; beats the no-ML baseline by +8 pts
 - [x] **Scaled to FMA-large (106k)** — kNN 0.641; beats the baseline by +13 pts (CPU-resident training)
 - [x] **Vibe-aware encoder** — multi-task (contrastive + vibe-target); linear-probe vibe R² 0.82 → 0.94
+- [x] **Grown the library to ~25k songs** — 2-hop related-artist crawl for genre-wide coverage
+- [x] **Artist-aware encoder + whitening** — domain-matched fine-tune (same-artist supervised contrastive) fixes scene precision at scale
 - [x] **Hybrid ranking** — deep-vibe fuses learned texture with measured bass/dynamics (ships out of the box)
 - [ ] Optional web UI
 
