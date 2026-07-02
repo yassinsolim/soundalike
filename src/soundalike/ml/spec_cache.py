@@ -200,13 +200,15 @@ def main(argv: Optional[list] = None) -> int:
     pb.add_argument("--cache", default="ml_data/spec_cache.npz")
     pb.add_argument("--model-dir", default="ml_data/model_vibe")
     pb.add_argument("--out", default="ml_data/deepvibe_vibeaware.npz")
+    pb.add_argument("--half", action="store_true",
+                    help="Store neural embeddings float16 + compress (for bundling).")
 
     args = parser.parse_args(argv)
     if args.cmd == "harvest":
         harvest_to_cache(Path(args.cache), SEED_ARTISTS, per_artist=args.per_artist)
     elif args.cmd == "build":
         idx = build_index_from_cache(Path(args.cache), Path(args.model_dir))
-        idx.save(Path(args.out))
+        idx.save(Path(args.out), half=args.half)
         print(f"Saved -> {args.out}")
     return 0
 
