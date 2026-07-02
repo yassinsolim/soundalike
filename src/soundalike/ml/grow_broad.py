@@ -308,10 +308,11 @@ def harvest_broad_to_cache(
                     progress(f"Reached target {target}; stopping.")
                     break
         finally:
-            # Cancel any not-yet-started downloads so stopping is immediate
-            # (otherwise the pool would drain all remaining futures).
-            ex.shutdown(wait=False, cancel_futures=True)
-    cache.save(cache_path)
+            # Persist freshly-added tracks before anything can raise, then cancel
+            # pending downloads and wait for the few in-flight workers so the temp
+            # dir isn't cleaned while they're still reading/writing files in it.
+            cache.save(cache_path)
+            ex.shutdown(wait=True, cancel_futures=True)
     progress(f"Done. Cache now {len(cache)} tracks -> {cache_path}")
     return cache
 

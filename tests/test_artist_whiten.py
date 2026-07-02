@@ -69,6 +69,15 @@ def test_pk_batches_shape():
         assert set(counts.tolist()) == {4}
 
 
+def test_pk_batches_empty_when_too_few_artists():
+    # Regression: fewer eligible artists than p_artists yields no batches (the
+    # trainer guards this by reducing p_artists / raising a clear error).
+    from soundalike.ml.train_artist import _pk_batches
+
+    labels = np.array([i // 5 for i in range(30)])  # 6 artists
+    assert list(_pk_batches(labels, p_artists=128, k_songs=4, seed=0)) == []
+
+
 def test_supcon_loss_rewards_grouping():
     import torch
 

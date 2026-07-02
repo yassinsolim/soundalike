@@ -146,8 +146,22 @@ def train_artist(
     opt = torch.optim.AdamW(params, lr=lr, weight_decay=1e-4)
     scaler = torch.amp.GradScaler("cuda", enabled=device == "cuda")
 
+    # Guard: PK sampling needs at least `p_artists` artists with >=2 songs in the
+    # train split. On a small cache, reduce p_artists (and fail clearly if even
+    # that can't form a batch) rather than dividing by zero later.
+    from collections import Counter
+
+    eligible = sum(1 for c in Counter(labels[train_idx].tolist()).values() if c >= 2)
+    if eligible < p_artists:
+        p_artists = max(2, eligible)
+        progress(f"Only {eligible} artists have >=2 songs; reducing p_artists to {p_artists}")
     steps = sum(1 for _ in _pk_batches(labels[train_idx], p_artists, k_songs, 0))
-    total = epochs * max(1, steps)
+    if steps == 0:
+        raise ValueError(
+            f"Not enough artists with >=2 songs to form a PK batch "
+            f"(need >= {p_artists}, have {eligible})."
+        )
+    total = epochs * steps
     warmup = max(1, steps)
     aug_rng = np.random.default_rng(seed)
 
@@ -190,6 +204,7 @@ def train_artist(
             ep_c += float(contrast.item()); ep_v += float(vibe_loss.item()); nb += 1
             step += 1
 
+        nb = max(1, nb)
         msg = (f"epoch {epoch:3d}/{epochs}  supcon {ep_c/nb:.3f}  vibe {ep_v/nb:.3f}  "
                f"({time.time()-t0:.1f}s)")
         if epoch % 5 == 0 or epoch == 1 or epoch == epochs:
