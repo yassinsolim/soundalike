@@ -434,6 +434,62 @@ def cmd_vibe_similar(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_deep_vibe_similar(args: argparse.Namespace) -> int:
+    from pathlib import Path
+    from tempfile import TemporaryDirectory
+
+    from .audio import DeezerClient, vibe_from_file
+    from .audio.vibe import DEFAULT_WEIGHTS, FEATURE_NAMES
+    from .ml.deepvibe import DeepVibeIndex, DeepVibeRecommender
+    from .ml.encoder_infer import EncoderExtractor
+    from .ml.spectrogram import SpectrogramConfig, _fit_frames, load_audio, log_mel_full
+
+    index_path = Path(args.index) if args.index else DeepVibeIndex.default_path()
+    if not index_path.exists():
+        print(f"No deep-vibe library found at {index_path}. Build one first "
+              "(see soundalike.ml.deepvibe.build_from_vibe_index).")
+        return 1
+    index = DeepVibeIndex.load(index_path)
+
+    client = DeezerClient()
+    track = client.search_track(args.title, args.artist)
+    if track is None or not track.has_preview:
+        print(f"No previewable track found for '{args.title}'"
+              + (f" by {args.artist}" if args.artist else "") + ".")
+        return 1
+
+    extractor = EncoderExtractor(args.model_dir)
+    cfg = SpectrogramConfig()
+    with TemporaryDirectory() as tmp:
+        dest = Path(tmp) / f"{track.id}.mp3"
+        client.download_preview(track, dest)
+        y = load_audio(dest, cfg.sample_rate)
+        seed_neural = extractor.embed_spec(_fit_frames(log_mel_full(y, cfg), cfg.target_frames))
+        seed_vibe = vibe_from_file(str(dest))
+
+    weights = dict(DEFAULT_WEIGHTS)
+    for pair in args.weight or []:
+        name, value = pair.split("=", 1)
+        if name not in FEATURE_NAMES:
+            raise SystemExit(f"Unknown vibe feature '{name}'.")
+        weights[name] = float(value)
+
+    rec = DeepVibeRecommender(index, alpha=args.alpha, vibe_weights=weights)
+    results = rec.recommend(
+        seed_neural, seed_vibe, n=args.num, exclude_ids={track.id},
+        exclude_artist=track.artist if args.exclude_artist else None,
+    )
+    v = seed_vibe.describe()
+    print(f"\nSeed: {track.title} — {track.artist}")
+    print(f"  vibe: {v['tempo']}, {v['dynamics']}, {v['low_end']}, {v['tone']}")
+    print(f"  blend: {args.alpha:.0%} learned-texture + {1-args.alpha:.0%} bass/dynamics")
+    print(f"\nDeep-vibe matches (from a {len(index)}-track library):")
+    for i, r in enumerate(results, 1):
+        print(f"  {i:>2}. {r.title} — {r.artist}   "
+              f"[blend {r.score:+.2f} | texture {r.neural_sim:.2f} | vibe {r.vibe_sim:.2f}]")
+    return 0
+
+
 # ------------------------------------------------------------------------ parser
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -600,6 +656,23 @@ def build_parser() -> argparse.ArgumentParser:
         help="Override a vibe-feature weight, e.g. --weight band_sub=4 (repeatable).",
     )
     p_vsim.set_defaults(func=cmd_vibe_similar)
+
+    p_dv = sub.add_parser(
+        "deep-vibe-similar",
+        help="Best matcher: fuses the learned neural embedding with bass/dynamics.",
+    )
+    p_dv.add_argument("--title", required=True, help="Seed song title.")
+    p_dv.add_argument("--artist", help="Seed artist, to disambiguate.")
+    p_dv.add_argument("--index", help="Path to the deep-vibe library (.npz).")
+    p_dv.add_argument("--model-dir", default="ml_data/model_fma_large",
+                      help="Trained encoder directory.")
+    p_dv.add_argument("--alpha", type=float, default=0.5,
+                      help="Blend: 1.0=pure learned texture, 0.0=pure bass/dynamics.")
+    p_dv.add_argument("-n", "--num", type=int, default=15, help="Number of results.")
+    p_dv.add_argument("--exclude-artist", action="store_true", help="Exclude the seed's artist.")
+    p_dv.add_argument("--weight", action="append", metavar="NAME=VALUE",
+                      help="Override a vibe-feature weight (repeatable).")
+    p_dv.set_defaults(func=cmd_deep_vibe_similar)
 
     return parser
 

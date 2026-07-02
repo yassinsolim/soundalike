@@ -27,6 +27,10 @@ ml_data/
 *.npy
 *.npz
 
+# ...but the small bundled libraries that ship with the package ARE tracked.
+!src/soundalike/data/*.npz
+!src/soundalike/data/*.json
+
 # OS
 .DS_Store
 Thumbs.db

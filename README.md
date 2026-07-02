@@ -7,11 +7,12 @@ terminal script that read a static CSV of top songs and printed min/max/mean sta
 repo evolves it into a real, working recommendation engine that finds songs matching your
 taste — built to work *around* Spotify's 2024 API lockdown rather than depending on it.
 
-It combines five engines — offline audio-feature similarity, an acoustic DSP engine that
+It combines several engines — offline audio-feature similarity, an acoustic DSP engine that
 measures features straight from the waveform, a **vibe engine** that matches a song's bass
-profile and dynamics (the drops) against a bundled ~1,500-song library, live Spotify (OAuth
-PKCE), and a **self-supervised neural network trained on 106,000 songs** whose genre-probe
-accuracy climbs from 0.25 → 0.641 as the training set scales from 475 to 106k tracks.
+profile and dynamics (the drops), a **deep-vibe engine** that fuses the neural embedding with
+that vibe signal, live Spotify (OAuth PKCE), and a **self-supervised neural network trained on
+106,000 songs** whose genre-probe accuracy climbs from 0.25 → 0.641 as the training set scales
+from 475 to 106k tracks.
 
 > **📖 Want the engineering story?** The [**Case Study**](docs/CASE_STUDY.md) walks through the
 > design decisions, the machine-learning scaling experiment, and the GPU/systems challenges I
@@ -34,6 +35,7 @@ solves discovery with its own engines instead:
 
 | Engine | Signal | Needs credentials? | Coverage |
 |--------|--------|--------------------|----------|
+| **Deep-vibe** ⭐⭐⭐ | **Fusion** of the learned neural embedding + bass/dynamics, vs a ~1,600-song library | No | Real, listenable songs |
 | **Vibe** ⭐⭐ | Frequency-band balance (sub→air) + **dynamics** (the drops), vs a ~1,500-song library | No | Real, listenable songs |
 | **Acoustic DSP** ⭐ | Features measured from the **actual audio waveform** (tempo, energy, timbre…) | No | Any track with a preview |
 | **Content-based** | Audio-feature similarity on a bundled dataset | No | Songs in the dataset (~855) |
@@ -193,6 +195,41 @@ dubstep drop (crest 2.2). The plain acoustic engine, averaging that away, return
 bedroom-pop. The vibe engine reads the drops and the sub-bass correctly and returns
 hyperpop/electronic tracks that actually match — **aldn**, **Flume**, **Slow Magic** — the right
 scene, chosen by the shape of the sound.
+
+---
+
+## Deep-vibe engine — the best matcher ⭐⭐⭐
+
+The vibe engine knows about bass and dynamics but has no *learned* sense of texture; the neural
+model has deep texture understanding but is partly blind to energy. The **deep-vibe engine fuses
+both**: it embeds a song with the trained neural encoder (texture) *and* measures its vibe vector
+(bass profile + dynamics), then ranks a **bundled library of ~1,600 real songs** by a tunable
+blend of the two similarities.
+
+```bash
+# Fused recommendation (works out of the box):
+soundalike deep-vibe-similar --title "Wasting Time" --artist "eric404"
+
+# Dial the blend: 1.0 = pure learned texture, 0.0 = pure bass/dynamics:
+soundalike deep-vibe-similar --title "Wasting Time" --artist "eric404" --alpha 0.35
+```
+
+Each result shows its breakdown so you can see *why* it matched:
+
+```
+Seed: Wasting Time — eric404
+  vibe: 123 BPM, very dynamic (big drops), bass-heavy, warm
+  blend: 60% learned-texture + 40% bass/dynamics
+
+   1. Never Be Like You — Flume        [blend +2.29 | texture 0.68 | vibe 0.26]
+   2. Blink Twice — Cecile Believe     [blend +2.10 | texture 0.72 | vibe 0.24]
+   3. idontcareanymore — Alice Gas     [blend +1.96 | texture 0.84 | vibe 0.19]
+```
+
+The library pairs the 106k-song neural encoder with a curated set of real tracks (genre charts
+plus hyperpop / underground / electronic artists that charts miss), so a niche seed has close
+neighbours. Matching the *feel* of a track is genuinely hard — this is the frontier the project
+is still pushing on — but the fusion is a clear step past matching timbre or dynamics alone.
 
 ---
 
