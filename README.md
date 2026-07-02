@@ -7,10 +7,11 @@ terminal script that read a static CSV of top songs and printed min/max/mean sta
 repo evolves it into a real, working recommendation engine that finds songs matching your
 taste — built to work *around* Spotify's 2024 API lockdown rather than depending on it.
 
-It combines four engines — offline audio-feature similarity, an acoustic DSP engine that
-measures features straight from the waveform, live Spotify (OAuth PKCE), and a **self-supervised
-neural network trained on 106,000 songs** whose genre-probe accuracy climbs from 0.25 → 0.641 as
-the training set scales from 475 to 106k tracks.
+It combines five engines — offline audio-feature similarity, an acoustic DSP engine that
+measures features straight from the waveform, a **vibe engine** that matches a song's bass
+profile and dynamics (the drops) against a bundled ~1,500-song library, live Spotify (OAuth
+PKCE), and a **self-supervised neural network trained on 106,000 songs** whose genre-probe
+accuracy climbs from 0.25 → 0.641 as the training set scales from 475 to 106k tracks.
 
 > **📖 Want the engineering story?** The [**Case Study**](docs/CASE_STUDY.md) walks through the
 > design decisions, the machine-learning scaling experiment, and the GPU/systems challenges I
@@ -33,17 +34,19 @@ solves discovery with its own engines instead:
 
 | Engine | Signal | Needs credentials? | Coverage |
 |--------|--------|--------------------|----------|
+| **Vibe** ⭐⭐ | Frequency-band balance (sub→air) + **dynamics** (the drops), vs a ~1,500-song library | No | Real, listenable songs |
 | **Acoustic DSP** ⭐ | Features measured from the **actual audio waveform** (tempo, energy, timbre…) | No | Any track with a preview |
 | **Content-based** | Audio-feature similarity on a bundled dataset | No | Songs in the dataset (~855) |
 | **Learned model** | A CNN trained on your GPU to embed audio (research track) | No | What you train it on |
 | **Live Spotify taste** | Your liked / top / recent tracks as seeds | Free Spotify app (OAuth) | Your library |
 | Last.fm *(optional)* | Crowd-sourced "similar tracks" | Free API key | Any track |
 
-The **Acoustic DSP engine is the heart of the project**: instead of trusting anyone's
-precomputed numbers, it downloads a 30-second preview and *measures* the sound itself with
-digital signal processing, then ranks by those measurements. Similarity by the physics of the
-audio — not by "people who listened to X also listened to Y" (which is all Spotify radio and
-Last.fm do).
+The **acoustic engines are the heart of the project**: instead of trusting anyone's precomputed
+numbers, they download a 30-second preview and *measure* the sound itself with digital signal
+processing, then rank by those measurements. Similarity by the physics of the audio — not by
+"people who listened to X also listened to Y" (which is all Spotify radio and Last.fm do). The
+**vibe engine** goes furthest, explicitly modelling a track's bass profile and its dynamics (the
+drops) so recommendations match the *feel*, not just the timbre.
 
 What Spotify *still* allows (and we use): your library/top/recent tracks, artist genres,
 search, and **playlist creation** — so results can be saved straight back to your account.
@@ -148,6 +151,48 @@ is 100% your measured acoustics, never a crowd "also-liked" signal.
 
 Example: seed *Babydoll — Dominic Fike* → Omar Apollo, Malcolm Todd, more Dominic Fike. A
 tight bedroom-pop/indie cluster chosen purely from waveform features.
+
+---
+
+## Vibe engine — match the *feel* of a track ⭐⭐
+
+The acoustic engine above averages each feature over the whole clip, which works for
+consistent songs but washes out **dynamics**: a track with quiet verses and a heavy drop ends
+up looking "medium" everywhere. The **vibe engine** fixes that by measuring the two things that
+actually define a song's feel:
+
+- **Frequency-band balance** — how energy splits across **sub / bass / low-mid / mid / high-mid
+  / presence / air**. This is the literal "how much sub-bass, how much highs" of a track.
+- **Dynamics** — how much the loudness *moves* (standard deviation, dynamic range, and crest =
+  peak / average). This is what separates a steady mellow song from one with a big drop.
+
+It ranks against a **bundled library of ~1,500 real songs** across hip-hop, EDM, electro, pop
+and hyperpop (built from Deezer previews), with the low-end and dynamics **weighted highest** so
+bass-heavy drop tracks match other bass-heavy drop tracks.
+
+```bash
+# Find songs with a similar vibe (works out of the box — library ships with the package):
+soundalike vibe-similar --title "Wasting Time" --artist "eric404"
+
+# Emphasize a specific quality, e.g. sub-bass, even more:
+soundalike vibe-similar --title "HUMBLE." --artist "Kendrick Lamar" --weight band_sub=4
+
+# Build/refresh your own library (saved to ~/.soundalike):
+soundalike vibe-build --per-genre 150
+```
+
+It also prints a plain-English read of the seed's vibe, e.g.:
+
+```
+Seed: Wasting Time — eric404
+  vibe: 123 BPM, very dynamic (big drops), bass-heavy, warm
+```
+
+**Why this matters (a worked example).** *Wasting Time* by eric404 is 73% sub-bass with a big
+dubstep drop (crest 2.2). The plain acoustic engine, averaging that away, returned soft
+bedroom-pop. The vibe engine reads the drops and the sub-bass correctly and returns
+hyperpop/electronic tracks that actually match — **aldn**, **Flume**, **Slow Magic** — the right
+scene, chosen by the shape of the sound.
 
 ---
 
@@ -273,7 +318,8 @@ src/soundalike/
   spotify/          # OAuth PKCE + Web API client (no deprecated endpoints)
   lastfm/           # similar-tracks client + cross-catalog recommender (optional)
   audio/            # ⭐ acoustic DSP engine: previews (Deezer), librosa features,
-                    #    feature cache, acoustic-similarity recommender
+                    #    feature cache, acoustic-similarity recommender;
+                    #    vibe engine (bands + dynamics) + a bundled ~1,500-song library
   ml/               # GPU research track: gpu (cuDNN inspector), collect, spectrogram,
                     #    model (CNN/ResNet + NT-Xent), data, train, supervised, evaluate,
                     #    fma (dataset loader), precompute, pack, train_fast (GPU-resident),

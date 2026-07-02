@@ -13,7 +13,7 @@ run it" lives in the [README](../README.md); this is the "how it was built and w
 
 - **Started with:** a ~180-line first-year terminal script that read a static CSV of songs and
   printed min/max/mean statistics.
-- **Ended with:** an installable Python package with **four recommendation engines**, a live
+- **Ended with:** an installable Python package with **five recommendation engines**, a live
   Spotify integration (OAuth PKCE, no passwords), and a **self-supervised audio-embedding neural
   network** trained on the GPU.
 - **Headline result:** the learned model's genre-probe accuracy scales with data —
@@ -44,19 +44,20 @@ the whole point of what makes this interesting.
 
 ---
 
-## 2. Architecture: four engines, one idea
+## 2. Architecture: five engines, one idea
 
 Every engine answers the same question — "what sounds like this?" — but from a different signal
 and with different tradeoffs.
 
 | Engine | Signal | Credentials | Coverage |
 |--------|--------|-------------|----------|
-| **Content-based** | Audio-feature vectors, standardized + weighted | None | Bundled dataset |
+| **Vibe** | Frequency-band balance + dynamics, vs a ~1,500-song library | None | Real, listenable songs |
 | **Acoustic DSP** | Features measured from the raw waveform (librosa) | None | Any track with a preview |
+| **Content-based** | Audio-feature vectors, standardized + weighted | None | Bundled dataset |
 | **Learned model** | A CNN trained to embed audio (contrastive) | None | Whatever it's trained on |
 | **Live Spotify / Last.fm** | Your real listening + optional crowd data | Free API keys | Your library / any track |
 
-A deliberate design principle runs through the two flagship engines: **ranking is done purely by
+A deliberate design principle runs through the acoustic engines: **ranking is done purely by
 the sound.** A music catalog (Deezer) is used *only* to enumerate candidate songs and fetch their
 audio — never to decide what's "similar." That keeps the recommendations grounded in acoustics
 rather than "people who listened to X also listened to Y," which is what every existing tool
@@ -168,7 +169,41 @@ peak.
 
 ---
 
-## 5. Security & correctness
+## 5. Iterating from real feedback: the "vibe" engine
+
+The best case study material comes from a feature that *didn't* work at first.
+
+A test query — "find songs like *Wasting Time* by eric404," a hyperpop track with quiet vocals
+and a heavy dubstep drop — returned soft acoustic bedroom-pop. Wrong vibe entirely. Rather than
+hand-tune, I **measured why**. I analysed the seed and the bad recommendations directly:
+
+| Song | sub-bass % | dynamic range | crest (peak/avg) |
+|------|-----------|---------------|------------------|
+| *Wasting Time* (the seed) | **73%** | **0.39** | **2.21** |
+| a "soft" recommendation | 45% | 0.25 | 1.61 |
+
+The data made the bug obvious. The seed is overwhelmingly **sub-bass** and has **~2× the dynamic
+range and crest** (the peak-vs-average spikiness that *is* the drop). But the original engine
+**averaged every feature over the whole 30-second clip** — so the quiet intro and the loud drop
+blurred into a bland "medium," and the sub-bass dominance wasn't modelled at all. It was blind to
+exactly the qualities that define the vibe.
+
+**The fix** was a new feature set that measures what the averages hide:
+
+- **Frequency-band balance** — energy split across seven bands (sub → air), i.e. the literal
+  "how much bass, how much highs."
+- **Dynamics** — standard deviation, dynamic range, and crest factor of the loudness envelope,
+  which capture "does this track have drops?"
+
+These are weighted so the low-end and the dynamics dominate the match, and ranked against a
+bundled library of ~1,500 real, diverse songs. The result: the same query now correctly reads
+*"123 BPM, very dynamic (big drops), bass-heavy"* and returns hyperpop/electronic tracks in the
+right scene (aldn, Flume, Slow Magic). This is the engineering habit that matters most —
+**diagnose with data before you change code**, and let the measurement design the fix.
+
+---
+
+## 6. Security & correctness
 
 - **No passwords, ever.** Live Spotify access uses OAuth 2.0 **Authorization Code + PKCE** with a
   local loopback callback, CSRF `state` validation, and cached auto-refreshing tokens.
@@ -177,12 +212,13 @@ peak.
 - **No data leakage in evaluation.** The encoder trains self-supervised on the train split only;
   the kNN probe splits *within* validation and *within* test, never crossing into the training
   set. This was independently verified in code review.
-- **49 automated tests** cover the recommenders, OAuth/PKCE, the DSP engine, and the ML pipeline
-  (including the augmentation, contrastive loss, and dataset-split logic).
+- **58 automated tests** cover the recommenders, OAuth/PKCE, the DSP and vibe engines, and the ML
+  pipeline (including the augmentation, contrastive loss, and dataset-split logic).
+
 
 ---
 
-## 6. What I'd build next
+## 7. What I'd build next
 
 - **Persist a personal acoustic-feature store** so the engines cover a user's entire Spotify
   library, not just what's in a preview catalog.
@@ -193,7 +229,7 @@ peak.
 
 ---
 
-## 7. Skills demonstrated
+## 8. Skills demonstrated
 
 For anyone evaluating this as a portfolio piece, the work spans:
 
