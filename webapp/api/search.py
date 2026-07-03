@@ -5,9 +5,12 @@ autocomplete in the web UI. Returns up to `limit` {row, title, artist}.
 """
 
 import json
+import os
+import sys
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _reco import get_recommender
 
 
