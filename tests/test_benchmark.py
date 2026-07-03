@@ -7,6 +7,7 @@ import numpy as np
 from soundalike.ml.benchmark import (
     balance_point,
     coverage_score,
+    cross_artist_agreement,
     find_sweet_spot,
     fixed_pair_precision,
     library_size_sweep,
@@ -115,4 +116,49 @@ def test_score_embeddings_reports_all_metrics():
     assert 0.0 <= out["recall_at_k"] <= 1.0
     # Clustered space should retrieve siblings well above chance.
     assert out["recall_at_k"] > 0.5
+
+
+def _synthetic_with_neighbors(n_groups=20, artists_per_group=4, per_artist=5,
+                              dim=32, seed=0):
+    """Artists cluster into 'genre' groups: same-group artists are neighbors.
+
+    Returns (neural, artists, related_map) where related_map ties each artist to
+    the OTHER artists in its group — a synthetic 'people also like' ground truth.
+    """
+    rng = np.random.default_rng(seed)
+    group_centers = rng.standard_normal((n_groups, dim)) * 3.0
+    neural, artists, groups = [], [], {}
+    for g in range(n_groups):
+        members = []
+        for a in range(artists_per_group):
+            name = f"g{g}_a{a}"
+            members.append(name)
+            offset = 0.3 * rng.standard_normal(dim)  # artist within genre
+            for _ in range(per_artist):
+                neural.append(group_centers[g] + offset + 0.05 * rng.standard_normal(dim))
+                artists.append(name)
+        for name in members:
+            groups[name] = set(members) - {name}
+    return (np.asarray(neural, np.float32),
+            np.asarray(artists, dtype=object), groups)
+
+
+def test_cross_artist_agreement_rewards_neighbor_geometry():
+    neural, artists, related = _synthetic_with_neighbors(seed=1)
+    good = cross_artist_agreement(neural, artists, related, topn=5)
+    assert good["n_artists"] > 0
+    # Same-genre artists cluster, so top neighbors should be genuine relateds.
+    assert good["agreement"] > 0.5
+    # Shuffling embeddings vs artist labels destroys the geometry -> agreement drops.
+    rng = np.random.default_rng(1)
+    scrambled = neural[rng.permutation(len(neural))]
+    bad = cross_artist_agreement(scrambled, artists, related, topn=5)
+    assert bad["agreement"] < good["agreement"] - 0.2
+
+
+def test_cross_artist_agreement_handles_no_overlap():
+    neural, artists, _ = _synthetic_with_neighbors(seed=2)
+    # related_map referencing artists not in the library -> nothing to score.
+    out = cross_artist_agreement(neural, artists, {"unknown": {"nobody"}}, topn=5)
+    assert out["n_artists"] == 0
 
