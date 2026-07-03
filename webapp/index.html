@@ -101,15 +101,20 @@ function randStr(n){const a=new Uint8Array(n);crypto.getRandomValues(a);return b
 async function login(){
   if(!SPOTIFY_CLIENT_ID){ alert("Set SPOTIFY_CLIENT_ID at the top of index.html to enable Spotify login. Recommendations work without it."); return; }
   const verifier=randStr(64); sessionStorage.setItem("sa_verifier",verifier);
+  const state=randStr(8); sessionStorage.setItem("sa_state",state);
   const challenge=b64url(await sha256(verifier));
   const p=new URLSearchParams({client_id:SPOTIFY_CLIENT_ID,response_type:"code",
     redirect_uri:REDIRECT_URI,code_challenge_method:"S256",code_challenge:challenge,
-    scope:SCOPES,state:randStr(8)});
+    scope:SCOPES,state:state});
   location.href="https://accounts.spotify.com/authorize?"+p.toString();
 }
 async function handleRedirect(){
   const q=new URLSearchParams(location.search); const code=q.get("code");
   if(!code) return;
+  // CSRF: the returned state must match the one we stored before redirecting.
+  const expected=sessionStorage.getItem("sa_state")||"";
+  if(!expected || q.get("state")!==expected){ history.replaceState({},"",REDIRECT_URI); return; }
+  sessionStorage.removeItem("sa_state");
   const verifier=sessionStorage.getItem("sa_verifier")||"";
   try{
     const r=await fetch("https://accounts.spotify.com/api/token",{method:"POST",
