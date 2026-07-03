@@ -1,0 +1,141 @@
+# Deploying soundalike as a hosted web app (Vercel)
+
+This directory is a **self-contained Vercel deployment**: a static frontend + two
+tiny Python serverless functions that recommend from the 87k-song library using
+**numpy only** (no PyTorch). You can host it on a subdomain like
+`soundalike.yassin.app` and let anyone try it in the browser.
+
+---
+
+## Can this really run on Vercel? (the honest version)
+
+**The full model can't** — embedding an *arbitrary* song needs PyTorch (~2.9 GB),
+which is ~12× over Vercel's 250 MB serverless limit. **But it doesn't need to.**
+
+Every song in the 87k library already has a precomputed embedding, and ranking is
+pure numpy (whiten → cosine → vibe-blend → MMR). So the hosted app recommends
+from the **library** with just numpy + the 71 MB index. A test
+(`tests/test_webapp.py`) pins the numpy path to the desktop recommender so results
+are **byte-identical**.
+
+| | Hosted (Vercel) | Desktop (`soundalike serve`) |
+|---|---|---|
+| Recommend from a library song (87k) | ✅ instant, numpy | ✅ |
+| Recommend from *any* song (on-the-fly neural embedding) | ❌ needs torch | ✅ |
+| Save to Spotify playlist | ✅ (browser → Spotify) | ✅ |
+| Cost / maintenance | free, serverless | your machine |
+
+So: **host the library demo on Vercel; keep the desktop app for arbitrary songs.**
+87k songs is a huge catalog — most searches hit it.
+
+---
+
+## What runs where
+
+```
+webapp/
+  index.html          # the whole UI (static) — search, results, Spotify login, save
+  api/
+    _reco.py          # numpy recommender (fetches the index from the GitHub Release)
+    recommend.py      # POST /api/recommend
+    search.py         # GET  /api/search?q=
+  requirements.txt    # numpy   (that's the entire backend dependency)
+  vercel.json
+  dev_server.py       # local-only: mimics Vercel routing for testing
+```
+
+The index is **not** committed here — on first request the function downloads
+`deepvibe_index.npz` (71 MB) from the public GitHub Release into `/tmp` and caches
+it for the life of the warm instance. Override with the `SOUNDALIKE_INDEX_URL` or
+`SOUNDALIKE_INDEX_PATH` env vars.
+
+---
+
+## Deploy it (≈5 minutes)
+
+1. **Create the Vercel project** from your `soundalike` GitHub repo.
+2. In **Project → Settings → General**, set **Root Directory = `webapp`**.
+   (Framework preset: *Other*. Vercel auto-detects `api/*.py` as Python functions
+   and installs `requirements.txt`.)
+3. Deploy. You'll get `https://<project>.vercel.app`.
+4. **Custom domain:** Project → Settings → Domains → add `soundalike.yassin.app`
+   (Vercel shows the CNAME to add at your DNS provider). Your existing
+   `yassin.app` / `os.yassin.app` / `strafe.yassin.app` projects are untouched —
+   this is just another subdomain pointing at a different project.
+
+That's the whole recommendation app. **No Spotify setup is needed** for search +
+recommendations — only for the optional "Save as playlist".
+
+---
+
+## The "log in with Spotify, without giving us your password" part
+
+Your instinct was exactly right — and it's a standard, safe flow called **OAuth
+2.0 Authorization Code + PKCE**. Here's what actually happens when someone clicks
+**Log in with Spotify**:
+
+1. We send them to **accounts.spotify.com** (Spotify's own site).
+2. If they're **already logged in** on spotify.com, Spotify just shows a small
+   *"soundalike wants to create playlists — Agree?"* screen. If they're **not**,
+   Spotify shows its own login page first.
+3. They approve **on Spotify's site** and get redirected back to us with a
+   one-time `code`, which the browser exchanges for a scoped **access token**.
+4. **"Save as playlist" runs entirely in the browser → Spotify.** The token never
+   touches our server (the frontend is static; there's no server to touch). Vercel
+   never sees it.
+
+**The user never gives us their password.** Credentials only ever go to Spotify;
+we only ever receive a token limited to `playlist-modify-*`. That's the whole
+point of OAuth, and it's what "Login with Spotify" buttons everywhere do.
+
+Because it's PKCE (a *public* client), there is **no client secret** — nothing
+secret ships in the frontend. A Spotify **Client ID is not a secret** (it's
+visible in the OAuth URL by design).
+
+### Enabling it
+1. In the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard),
+   open your app → **Settings**.
+2. Add the **Redirect URI**: `https://soundalike.yassin.app/`
+   (exactly your deployed URL, trailing slash included; add
+   `http://127.0.0.1:8788/` too if you test locally).
+3. Copy the **Client ID** and set it at the top of `webapp/index.html`:
+   ```js
+   const SPOTIFY_CLIENT_ID = "your_client_id_here";
+   ```
+   (Safe to commit — it's public. Leave it empty to ship a recommend-only demo
+   with no login.)
+
+### The one real limitation (be aware)
+Spotify apps start in **Development Mode**, which only lets **up to 25 Spotify
+accounts that you manually add** (Dashboard → *User Management*) log in and save
+playlists. This is why the desktop "Save playlist" returned 403 earlier — your own
+account just needs to be added there.
+
+For the *general public* to log in and save, Spotify requires **Extended Quota
+Mode**, which means submitting the app for their review. For a personal project
+that approval is not guaranteed. So realistically:
+
+- **Recommendations: truly public** (no login, works for everyone). ✅
+- **Save-to-playlist: you + up to 25 people you allowlist**, unless/until Spotify
+  grants extended quota. ✅ (for you and friends) / ⏳ (fully public)
+
+Everyone else still gets an **Open in Spotify** link on every result and can copy
+the list — no login required.
+
+---
+
+## What I need from you to finish the public deployment
+
+1. **Connect the repo to Vercel** and set Root Directory = `webapp` (or give me
+   access and I'll prepare the project config).
+2. **DNS:** add the CNAME Vercel gives you for `soundalike.yassin.app`.
+3. **Spotify Dashboard:** add the redirect URI above, add your account under User
+   Management, and paste the Client ID into `index.html` (or tell me to).
+4. *(Optional)* If you want fully-public playlist saving, apply for Extended Quota
+   in the dashboard.
+
+Run it locally first to see it work end-to-end:
+
+```bash
+python webapp/dev_server.py      # → http://127.0.0.1:8788
+```

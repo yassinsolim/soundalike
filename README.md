@@ -40,6 +40,12 @@ Want the recommendations *inside* the Spotify app — a right-click **“Find so
 item? That's the [**Spicetify extension**](integrations/spicetify/README.md) (needs the
 standalone Spotify client). Everything runs locally; nothing leaves your machine.
 
+**Prefer a hosted, no-install demo?** The 87k-song library runs as a **numpy-only Vercel app**
+(no PyTorch needed for library songs) — deploy it to a subdomain and let anyone try it in the
+browser, with an optional client-side "Log in with Spotify" (OAuth PKCE — users authorize on
+Spotify's own site, never hand over a password) to save results as a playlist. See
+[`webapp/DEPLOY.md`](webapp/DEPLOY.md).
+
 ---
 
 ## Why this exists (and why it's built the way it is)
