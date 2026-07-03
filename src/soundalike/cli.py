@@ -542,6 +542,22 @@ def cmd_deep_vibe_similar(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_serve(args: argparse.Namespace) -> int:
+    from pathlib import Path
+
+    from .server import serve
+
+    def progress(msg):
+        print(msg, flush=True)
+
+    return serve(
+        host=args.host, port=args.port,
+        index_path=Path(args.index) if args.index else None,
+        model_dir=Path(args.model_dir) if args.model_dir else None,
+        open_browser=not args.no_browser, progress=progress,
+    )
+
+
 # ------------------------------------------------------------------------ parser
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -742,6 +758,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_fi.add_argument("--force", action="store_true",
                       help="Re-download even if a matching copy is already cached.")
     p_fi.set_defaults(func=cmd_fetch_index)
+
+    p_serve = sub.add_parser(
+        "serve",
+        help="Run the local web app: paste a song (or Spotify link) → get soundalikes.",
+    )
+    p_serve.add_argument("--host", default="127.0.0.1", help="Bind host (default 127.0.0.1).")
+    p_serve.add_argument("--port", type=int, default=8787, help="Bind port (default 8787).")
+    p_serve.add_argument("--index", default=None, help="Path to a deep-vibe index .npz.")
+    p_serve.add_argument("--model-dir", default=None, help="Path to an encoder dir.")
+    p_serve.add_argument("--no-browser", action="store_true",
+                         help="Don't auto-open the browser.")
+    p_serve.set_defaults(func=cmd_serve)
 
     return parser
 
