@@ -1,6 +1,6 @@
 {
   "version": "2026.07.02-87k-384d",
-  "repo": "yassinsolim/Spotify-Statistics",
+  "repo": "yassinsolim/soundalike",
   "release_tag": "index-2026.07.02",
   "encoder": {
     "asset": "vibe_encoder.pt",
