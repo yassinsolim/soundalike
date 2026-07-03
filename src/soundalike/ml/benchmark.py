@@ -172,6 +172,78 @@ def score_embeddings(
             "coverage": cov, "dim": int(neural.shape[1]), "n_lib": int(len(lib_idx))}
 
 
+def _artist_centroids(neural_w: np.ndarray, artists: np.ndarray, min_songs: int = 3):
+    """Mean (re-normalized) embedding per artist that has >= min_songs tracks.
+
+    `neural_w` should already be whitened + L2-normalized. Returns (names, C)
+    where C[i] is the unit centroid of names[i]. Averaging over an artist's songs
+    gives a stable point for that artist in the space, so nearest-centroid ranking
+    measures *inter-artist* geometry rather than single-song noise.
+    """
+    by: Dict[str, List[int]] = {}
+    for i, a in enumerate(artists):
+        by.setdefault(str(a).casefold(), []).append(i)
+    names, cents = [], []
+    for a, rows in by.items():
+        if len(rows) >= min_songs:
+            c = neural_w[rows].mean(axis=0)
+            c /= np.linalg.norm(c) + 1e-9
+            names.append(a)
+            cents.append(c)
+    return names, np.asarray(cents, dtype=np.float32)
+
+
+def cross_artist_agreement(
+    neural: np.ndarray,
+    artists: np.ndarray,
+    related_map: Dict[str, set],
+    topn: int = 20,
+    min_songs: int = 3,
+    whiten: bool = True,
+) -> Dict[str, float]:
+    """How well an encoder's *inter-artist* geometry matches human ground truth.
+
+    Same-artist mAP only asks "are a song's own siblings near it" — it rewards
+    packing each artist into a tight ball, which does NOT guarantee that *different
+    but similar* artists land near each other (the thing recommendation actually
+    needs). This metric fixes that blind spot: for each artist, it ranks all OTHER
+    artist centroids by cosine and measures how many of the top-N appear in that
+    artist's externally-defined related set (e.g. Deezer related-artists or
+    ListenBrainz co-listening). `related_map` maps a casefolded artist name to a
+    set of casefolded related names; only artists present in both the library and
+    the map (with >=1 rankable related artist) are scored.
+
+    Returns mean overlap@topn plus the number of artists scored.
+    """
+    if whiten:
+        mean, W = _fit_whiten(neural)
+        nw = _whiten(neural, mean, W)
+    else:
+        nw = neural / (np.linalg.norm(neural, axis=1, keepdims=True) + 1e-9)
+
+    names, cents = _artist_centroids(nw, artists, min_songs=min_songs)
+    if len(names) < 2:
+        return {"agreement": float("nan"), "n_artists": 0}
+    pos = {a: i for i, a in enumerate(names)}
+    sims = cents @ cents.T
+    np.fill_diagonal(sims, -np.inf)
+
+    scores = []
+    for a, related in related_map.items():
+        if a not in pos:
+            continue
+        rel = {r for r in related if r in pos and r != a}
+        if not rel:
+            continue
+        row = sims[pos[a]]
+        kk = min(topn, len(row) - 1)
+        top = np.argpartition(-row, kk)[:kk]
+        got = {names[i] for i in top}
+        scores.append(len(got & rel) / min(topn, len(rel)))
+    return {"agreement": float(np.mean(scores)) if scores else float("nan"),
+            "n_artists": len(scores)}
+
+
 def fixed_pair_precision(
     lib_w: np.ndarray,
     active: np.ndarray,
