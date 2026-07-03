@@ -201,7 +201,7 @@ scene, chosen by the shape of the sound.
 ## Deep-vibe engine — the best matcher ⭐⭐⭐
 
 The deep-vibe engine embeds a song with an **artist-aware neural encoder** and blends that with the
-song's **vibe vector** (bass profile + dynamics), then ranks a **bundled library of ~55,000 real
+song's **vibe vector** (bass profile + dynamics), then ranks a **bundled library of ~87,000 real
 songs spanning every genre** by a tunable mix of the two. Everything ships with the package — the
 encoder *and* the library — so it works with **zero setup and no local training**.
 
@@ -226,26 +226,29 @@ Seed: Lovers Rock — TV Girl
    4. Love Forever — Chapterhouse   [blend +3.92 | texture 0.26 | vibe 0.22]  (shoegaze)
 ```
 
-Three things make this work at scale, and each was driven by a concrete failure (see the
+Four things make this work at scale, and each was driven by a concrete failure (see the
 [case study](docs/CASE_STUDY.md)):
 
-- **Coverage** — the library was grown from ~1,700 to ~55,000 real songs across every scene via a
-  2-hop related-artist crawl seeded from ~400 curated artists spanning world/regional (K-pop,
-  city-pop, Afrobeats, French/Latin, reggae), electronic subgenres (techno, house, DnB, phonk,
-  synthwave, ambient), rock/metal/punk (post-rock, shoegaze, black/death metal, emo), jazz,
-  classical, blues and gospel — so a niche seed actually has close neighbours to match.
+- **Coverage** — the library was grown to ~87,000 real songs across every scene via a 2-hop
+  related-artist crawl seeded from ~400 curated artists spanning world/regional (K-pop, city-pop,
+  Afrobeats, French/Latin, reggae), electronic subgenres (techno, house, DnB, phonk, synthwave,
+  ambient), rock/metal/punk (post-rock, shoegaze, black/death metal, emo), jazz, classical, blues
+  and gospel — deduplicated to one row per song — so a niche seed actually has close neighbours.
 - **An artist-aware encoder** — the FMA-trained encoder confused scenes on real vocal music, so it
   was fine-tuned on the harvested songs with a *supervised-contrastive* objective (same artist =
   similar), which taught it "sounds like the same kind of thing" on the real domain.
+- **A higher-dimensional embedding** — as the library grew past ~50k, songs crowded together and
+  precision softened; widening the embedding from 256 to 384 dimensions gives the space more room to
+  separate ~87k songs, which recovered precision without hurting coverage.
 - **Whitening** — the embeddings piled into a tight cone (every pair ~0.9 cosine); ZCA-whitening
   the space makes similarity key on what's *distinctive* about a track, which sharply improves
   ranking on a big, diverse library.
 
 Matching the *feel* of a track is genuinely hard — some corners are still an honest frontier — but
 across jazz, post-rock, metal, hip-hop, R&B, electronic, indie and bedroom-pop it now returns
-genuinely scene-coherent picks. For example, *So What* by Miles Davis returns Brad Mehldau, Gerry
-Mulligan and Nancy Wilson; *Your Hand in Mine* by Explosions in the Sky returns Mogwai, Mono and
-This Will Destroy You.
+genuinely scene-coherent picks. For example, *So What* by Miles Davis returns Brad Mehldau, Lee
+Morgan and Ahmad Jamal; *Your Hand in Mine* by Explosions in the Sky returns If These Trees Could
+Talk, This Will Destroy You and Mono; *Ditto* by NewJeans returns CHUU and LOONA.
 
 ---
 
@@ -326,7 +329,7 @@ python -m soundalike.ml.spec_cache build --cache ml_data/spec_cache.npz --model-
 
 ### Domain-matching: the artist-aware encoder
 
-Growing the recommendation library (ultimately to ~55,000 songs) exposed the encoder as the real
+Growing the recommendation library (ultimately to ~87,000 songs) exposed the encoder as the real
 ceiling: trained on FMA (mostly instrumental, Creative-Commons music), it confused *scenes* on
 real vocal music — a dream-pop seed pulled in random pop, a hyperpop track pulled in smooth R&B.
 More data made it *worse*, because the bigger pool contained more texture-similar-but-vibe-wrong
@@ -335,27 +338,30 @@ songs.
 The fix uses the strongest free style signal on the harvested library — **the artist**. Two songs
 by the same artist share a sonic identity, so the encoder is fine-tuned with a **supervised
 contrastive** objective (PK-sampled batches; same-artist songs are positives) plus the
-vibe-target auxiliary, all on the cached real-song mel-spectrograms (no re-downloading, ~30 min on
+vibe-target auxiliary, all on the cached real-song mel-spectrograms (no re-downloading, ~40 min on
 the 5080). That teaches "sounds like the same kind of thing" directly on the domain users query,
 and — because the library was crawled through the related-artist graph — it generalizes to
 *neighbouring* artists, not just the same one.
 
-A second, cheap inference-time fix mattered just as much: the embeddings pile into a tight cone
-(every pair ~0.9 cosine), so raw cosine can't rank finely at scale. **ZCA-whitening** the space at
-load time removes the dominant shared direction, and retrieval goes from incoherent to
-scene-coherent:
+Two more fixes mattered as the library grew. **A higher-dimensional embedding** (256 → 384) gives
+the space more room to separate ~87k songs, which recovered the precision that had softened at 55k.
+And a cheap inference-time trick — **ZCA-whitening** the embedding at load time (the raw embeddings
+pile into a tight ~0.9-cosine cone) — makes similarity key on what's *distinctive*. Together,
+retrieval goes from incoherent to scene-coherent:
 
-| Seed | Before (FMA encoder, raw cosine) | After (artist-aware + whitening) |
-|------|-----------------------------------|-----------------------------------|
-| *So What* — Miles Davis | (mixed) | Brad Mehldau, Gerry Mulligan, Nancy Wilson |
-| *Your Hand in Mine* — Explosions in the Sky | (mixed) | Mogwai, Mono, This Will Destroy You |
-| *HUMBLE.* — Kendrick | (mixed) | Kodak Black, 21 Savage, JID, Baby Keem |
+| Seed | Before (FMA encoder, raw cosine) | After (artist-aware 384-d + whitening) |
+|------|-----------------------------------|-----------------------------------------|
+| *So What* — Miles Davis | (mixed) | Brad Mehldau, Lee Morgan, Ahmad Jamal |
+| *Your Hand in Mine* — Explosions in the Sky | (mixed) | If These Trees Could Talk, This Will Destroy You, Mono |
+| *Ditto* — NewJeans | (mixed) | CHUU, LOONA (K-pop) |
+| *HUMBLE.* — Kendrick | (mixed) | Kodak Black, JID, $uicideboy$ |
 
 ```bash
-# Grow the library broadly (2-hop related-artist crawl), then fine-tune on it:
-python -m soundalike.ml.grow_broad --cache ml_data/spec_cache.npz --workers 10 --target 55000
-python -m soundalike.ml.train_artist --cache ml_data/spec_cache.npz --init-model ml_data/model_vibe --out-dir ml_data/model_artist
-python -m soundalike.ml.spec_cache build --cache ml_data/spec_cache.npz --model-dir ml_data/model_artist --out src/soundalike/data/deepvibe_index.npz --half
+# Grow the library broadly (2-hop related-artist crawl), fine-tune at 384-d, then bundle:
+python -m soundalike.ml.grow_broad --cache ml_data/spec_cache.npz --workers 10 --target 90000
+python -m soundalike.ml.train_vibe --packed packed.npz --out-dir ml_data/model_vibe384 --width 64 --embedding-dim 384
+python -m soundalike.ml.train_artist --cache ml_data/spec_cache.npz --init-model ml_data/model_vibe384 --embedding-dim 384 --out-dir ml_data/model_artist384
+python -m soundalike.ml.spec_cache build --cache ml_data/spec_cache.npz --model-dir ml_data/model_artist384 --out src/soundalike/data/deepvibe_index.npz --half
 ```
 
 ### Reproduce it
@@ -448,7 +454,7 @@ src/soundalike/
                     #    vibe_target + train_vibe (vibe-aware multi-task encoder),
                     #    grow_broad (2-hop related-artist crawl), spec_cache (harvest-once),
                     #    train_artist (artist-aware fine-tune), deepvibe (fusion + whitening)
-  data/             # bundled artifacts: artist-aware encoder + ~55k-song deep-vibe library
+  data/             # bundled artifacts: artist-aware 384-d encoder + ~87k-song deep-vibe library
 tests/              # pytest suite (offline + network-free live/audio/ml logic)
 spotify_program.py  # the original first-year project, kept for posterity
 ```
@@ -471,7 +477,8 @@ pytest -q
 - [x] **Scaled to FMA-medium (25k)** — kNN 0.601; beats the no-ML baseline by +8 pts
 - [x] **Scaled to FMA-large (106k)** — kNN 0.641; beats the baseline by +13 pts (CPU-resident training)
 - [x] **Vibe-aware encoder** — multi-task (contrastive + vibe-target); linear-probe vibe R² 0.82 → 0.94
-- [x] **Grown the library to ~55k songs** — 2-hop related-artist crawl from ~400 multi-genre seeds for genre-wide coverage
+- [x] **Grown the library to ~87k songs** — 2-hop related-artist crawl from ~400 multi-genre seeds, deduplicated
+- [x] **Higher-dim embedding (384-d)** — recovers precision at scale so coverage and precision both improve
 - [x] **Artist-aware encoder + whitening** — domain-matched fine-tune (same-artist supervised contrastive) fixes scene precision at scale
 - [x] **Hybrid ranking** — deep-vibe fuses learned texture with measured bass/dynamics (ships out of the box)
 - [ ] Optional web UI
