@@ -48,6 +48,30 @@ class AudioEncoder(nn.Module):
         return F.normalize(z, dim=1) if normalize else z
 
 
+class GeMPool(nn.Module):
+    """Generalized-mean pooling (Radenovic et al. 2018).
+
+    Average pooling weights every time-frequency cell equally; max pooling keeps
+    only the single loudest cell. GeM interpolates between them with a learnable
+    exponent ``p``: ``(mean(x**p))**(1/p)``. p=1 is average pooling, p->inf
+    approaches max. Letting the network learn ``p`` lets it decide how peaky the
+    pooled summary should be, which is a well-known retrieval win because the
+    discriminative evidence in a spectrogram is often concentrated (a drop, a
+    vocal run) rather than spread evenly across the clip.
+    """
+
+    def __init__(self, p: float = 3.0, eps: float = 1e-6):
+        super().__init__()
+        self.p = nn.Parameter(torch.ones(1) * float(p))
+        self.eps = eps
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x: (B, C, H, W) -> (B, C, 1, 1), matching AdaptiveAvgPool2d(1).
+        clamped = x.clamp(min=self.eps).pow(self.p)
+        pooled = F.avg_pool2d(clamped, (x.size(-2), x.size(-1)))
+        return pooled.pow(1.0 / self.p)
+
+
 class ResidualBlock(nn.Module):
     """A pre-activation residual block with an optional downsample."""
 
@@ -77,7 +101,7 @@ class ResNetAudioEncoder(nn.Module):
     or large model. Produces an L2-normalized embedding.
     """
 
-    def __init__(self, embedding_dim: int = 256, width: int = 64):
+    def __init__(self, embedding_dim: int = 256, width: int = 64, pool_type: str = "avg"):
         super().__init__()
         w = width
         # Downsample early (like ResNet's stem): 7x7 stride-2 conv + maxpool takes
@@ -97,7 +121,8 @@ class ResNetAudioEncoder(nn.Module):
             ResidualBlock(4 * w, 4 * w),
             ResidualBlock(4 * w, 8 * w, stride=2),
         )
-        self.pool = nn.AdaptiveAvgPool2d(1)
+        self.pool_type = pool_type
+        self.pool = GeMPool() if pool_type == "gem" else nn.AdaptiveAvgPool2d(1)
         self.embed = nn.Linear(8 * w, embedding_dim)
 
     def forward(self, x: torch.Tensor, normalize: bool = True) -> torch.Tensor:

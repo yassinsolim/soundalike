@@ -106,6 +106,47 @@ def test_resnet_width_scales_params():
     assert big > small * 3  # wider network has many more params
 
 
+def test_gem_pool_equals_avg_at_p1():
+    from soundalike.ml.model import GeMPool
+    import torch.nn.functional as F
+
+    x = torch.randn(2, 8, 5, 7)
+    gem = GeMPool(p=1.0)
+    avg = F.adaptive_avg_pool2d(x.clamp(min=1e-6), 1)  # GeM clamps to its domain
+    assert torch.allclose(gem(x), avg, atol=1e-5)
+
+
+def test_gem_pool_p_is_learnable():
+    from soundalike.ml.model import GeMPool
+
+    gem = GeMPool(p=3.0)
+    assert gem.p.requires_grad
+    x = torch.randn(2, 4, 6, 6, requires_grad=True)
+    gem(x).sum().backward()
+    assert gem.p.grad is not None  # gradient flows to the exponent
+
+
+def test_gem_encoder_output_normalized():
+    enc = ResNetAudioEncoder(embedding_dim=64, width=16, pool_type="gem").eval()
+    x = torch.randn(3, 1, 128, 256)
+    with torch.no_grad():
+        z = enc(x)
+    assert z.shape == (3, 64)
+    norms = z.norm(dim=1)
+    assert torch.allclose(norms, torch.ones_like(norms), atol=1e-4)
+
+
+def test_gem_encoder_warm_starts_from_avg():
+    # A GeM encoder must load an average-pool checkpoint (strict=False), with the
+    # only fresh parameter being the learnable exponent — so we can warm-start.
+    avg = ResNetAudioEncoder(embedding_dim=32, width=16, pool_type="avg")
+    gem = ResNetAudioEncoder(embedding_dim=32, width=16, pool_type="gem")
+    missing, unexpected = gem.load_state_dict(avg.state_dict(), strict=False)
+    assert set(missing) == {"pool.p"}
+    assert unexpected == []
+
+
+
 def test_knn_probe_and_metrics_recover_clusters():
     from soundalike.ml.evaluate import (
         chance_accuracy,
