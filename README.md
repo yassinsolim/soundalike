@@ -21,6 +21,27 @@ from 475 to 106k tracks.
 
 ---
 
+## Try it in 10 seconds — the web app 🎧
+
+```bash
+pip install -e ".[ml]"
+soundalike serve            # opens http://127.0.0.1:8787
+```
+
+Type a song (`Title — Artist`), pick one of your own Spotify top tracks, or — the
+frictionless way — **right-click a song in Spotify → Share → Copy Song Link** and paste it.
+You instantly get songs that *sound* like it, with the seed's detected vibe (tempo, dynamics,
+bass, tone) and an **Open in Spotify** button on every result. It works with **any** Spotify,
+including the Microsoft-Store build.
+
+![soundalike web app](docs/soundalike-results.png)
+
+Want the recommendations *inside* the Spotify app — a right-click **“Find soundalikes”** menu
+item? That's the [**Spicetify extension**](integrations/spicetify/README.md) (needs the
+standalone Spotify client). Everything runs locally; nothing leaves your machine.
+
+---
+
 ## Why this exists (and why it's built the way it is)
 
 On **2024-11-27, Spotify removed** several Web API endpoints for all *new* apps
@@ -569,7 +590,8 @@ pytest -q
 - [x] **Hybrid ranking** — deep-vibe fuses learned texture with measured bass/dynamics (ships out of the box)
 - [x] **Recommendation benchmark** — label-free precision/coverage metrics + measured library-size trade-off
 - [x] **Diversity + multi-seed** — MMR re-ranking, per-artist caps, and blend several songs into one taste
-- [ ] Optional web UI
+- [x] **Web app + right-click integration** — `soundalike serve` (paste a song / Spotify "Copy Song Link" → instant soundalikes) and a Spicetify extension for an in-app right-click menu
+- [ ] Inline audio previews in the web UI
 
 Contributions welcome — this is meant to be community-built.
 
