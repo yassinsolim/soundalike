@@ -91,6 +91,7 @@ def train_artist(
     crop: int = 224,
     width: int = 64,
     embedding_dim: int = 256,
+    pool_type: str = "avg",
     vibe_lambda: float = 0.5,
     temperature: float = 0.1,
     seed: int = 0,
@@ -131,12 +132,26 @@ def train_artist(
         s = torch.as_tensor(sel, device=device)
         return X_res[s], tgt_res[s], lab_res[s]
 
-    encoder = ResNetAudioEncoder(embedding_dim=embedding_dim, width=width).to(
-        device, memory_format=mem
-    )
+    encoder = ResNetAudioEncoder(
+        embedding_dim=embedding_dim, width=width, pool_type=pool_type
+    ).to(device, memory_format=mem)
     if init_model is not None:
         ck = torch.load(Path(init_model) / "encoder.pt", map_location="cpu")
-        encoder.load_state_dict({k: v.float() for k, v in ck["state_dict"].items()})
+        # strict=False so a GeM pool (which adds a learnable `pool.p`) can warm-start
+        # from an average-pool base: every conv/embed weight transfers, only the new
+        # scalar starts fresh.
+        missing, unexpected = encoder.load_state_dict(
+            {k: v.float() for k, v in ck["state_dict"].items()}, strict=(pool_type != "gem")
+        )
+        if pool_type == "gem" and (set(missing) - {"pool.p"} or unexpected):
+            raise RuntimeError(f"Unexpected warm-start mismatch: missing={missing} unexpected={unexpected}")
+        if pool_type == "gem":
+            # Start the learnable exponent at p=1 (== average pooling) so the warm
+            # start begins exactly equivalent to the avg-pool base the conv weights
+            # were trained for; the optimizer then discovers whether peakier pooling
+            # helps, rather than jolting the features with a p=3 shock at epoch 0.
+            with torch.no_grad():
+                encoder.pool.p.fill_(1.0)
         progress(f"Initialized encoder from {init_model}")
     head = ProjectionHead(in_dim=embedding_dim, hidden=512, out_dim=128).to(device)
     vibe_head = nn.Sequential(
@@ -214,11 +229,12 @@ def train_artist(
             if nn_acc > best_nn:
                 best_nn = nn_acc
                 torch.save({"state_dict": encoder.state_dict(), "embedding_dim": embedding_dim,
-                            "width": width, "arch": "resnet"}, out_dir / "encoder_best.pt")
+                            "width": width, "arch": "resnet", "pool_type": pool_type},
+                           out_dir / "encoder_best.pt")
         progress(msg)
 
     torch.save({"state_dict": encoder.state_dict(), "embedding_dim": embedding_dim,
-                "width": width, "arch": "resnet"}, out_dir / "encoder.pt")
+                "width": width, "arch": "resnet", "pool_type": pool_type}, out_dir / "encoder.pt")
     report = {"artists": len(uniq), "songs": len(X), "best_val_nn": best_nn,
               "minutes": round((time.time() - t_start) / 60, 1)}
     (out_dir / "history.json").write_text(json.dumps(history, indent=2))
@@ -248,6 +264,8 @@ def main(argv: Optional[list] = None) -> int:
     parser.add_argument("--epochs", type=int, default=40)
     parser.add_argument("--width", type=int, default=64)
     parser.add_argument("--embedding-dim", type=int, default=256)
+    parser.add_argument("--pool-type", default="avg", choices=["avg", "gem"],
+                        help="Spatial pooling: 'avg' (default) or 'gem' (learnable generalized mean).")
     parser.add_argument("--log", default=None)
     args = parser.parse_args(argv)
 
@@ -264,7 +282,8 @@ def main(argv: Optional[list] = None) -> int:
         train_artist(Path(args.cache), Path(args.out_dir),
                      init_model=Path(args.init_model) if args.init_model else None,
                      epochs=args.epochs, width=args.width,
-                     embedding_dim=args.embedding_dim, progress=progress)
+                     embedding_dim=args.embedding_dim, pool_type=args.pool_type,
+                     progress=progress)
     finally:
         if log_fh:
             log_fh.close()

@@ -1,18 +1,18 @@
 {
-  "version": "2026.07.02-87k-384d",
+  "version": "2026.07.03-87k-384d-arcface-gem",
   "repo": "yassinsolim/Spotify-Statistics",
-  "release_tag": "index-2026.07.02",
+  "release_tag": "index-2026.07.03",
   "encoder": {
     "asset": "vibe_encoder.pt",
-    "sha256": "7b8a175d3b3a9fffcc10a6f4f6170ab76916af7c72cee784d6239303e5904662",
+    "sha256": "7eb060b2d38c28a1dab30919da1ed732315fcc24d9ed897b4323c0360b02c04d",
     "embedding_dim": 384,
     "width": 64,
-    "bytes": 13189893
+    "bytes": 13190215
   },
   "index": {
     "asset": "deepvibe_index.npz",
-    "sha256": "185391811695ff352071be6500d8cd191feda553af2b0c7bfc5bd032b11b5a29",
+    "sha256": "a12490338954c483dfca5a948622c797163167b5e0550f707bee36ef76256185",
     "n_tracks": 86933,
-    "bytes": 74729301
+    "bytes": 74523070
   }
 }

@@ -29,7 +29,11 @@ run it" lives in the [README](../README.md); this is the "how it was built and w
   (256→384) and embedding **whitening** turned incoherent cross-genre matches into scene-coherent
   ones (Miles Davis → Brad Mehldau/Lee Morgan; Explosions in the Sky → This Will Destroy You/Mono;
   NewJeans → CHUU/LOONA, not random pop).
-- **Built and validated on:** an NVIDIA RTX 5080 (Blackwell), 92 automated tests, a clean
+- **Objective result:** a controlled 5-seed sweep proved the *training objective*, not model size,
+  is the lever — an **ArcFace + GeM** encoder lifts same-artist mean average precision **+23%** over
+  the supervised-contrastive one (a 512-d encoder and ensembles were measured and *rejected*), and
+  fixes the exact weak spot users noticed (Mac DeMarco → Tame Impala/black midi, not soft soul).
+- **Built and validated on:** an NVIDIA RTX 5080 (Blackwell), 104 automated tests, a clean
   packaged wheel.
 
 ---
@@ -338,6 +342,37 @@ without throwing away whole scenes. The bundle is also GitHub-capped near ~100 M
 to the practical ceiling regardless. The point isn't the exact size; it's that the decision is now
 *measured and defensible* instead of a hunch.
 
+### The objective is the lever — a controlled encoder sweep
+
+If the encoder is the ceiling, the obvious question is *how do you raise it?* Rather than guess, I
+built a trustworthy head-to-head metric — same-artist **mean average precision** (`score_embeddings`
+whitens exactly as production does, then reports mAP + recall@10 + coverage in one call) — fixed a
+5-seed baseline, and ran each idea as a controlled experiment where the objective is the only
+variable. The result overturned my intuition: **capacity is not the bottleneck; the objective is.**
+
+| Variation | mean mAP (5 seeds) | vs baseline | verdict |
+|-----------|:---:|:---:|---|
+| Supervised-contrastive, 384-d *(previous ship)* | 0.0396 | — | baseline |
+| 512-d encoder | — | worse | ❌ capacity isn't the lever (see §8 note) |
+| 3-encoder ensemble (concat) | 0.038–0.040 | −2 to −7% | ❌ combining encoders hurt precision |
+| **ArcFace** (additive angular margin) | 0.0477 | **+20%** | ✅ objective *is* the lever |
+| **ArcFace + GeM pooling** | **0.0486** | **+23%** | ✅ **shipped** |
+| ArcFace + GeM, margin 0.3 | 0.0488 | +23% | ➖ tie on mAP, *worse* on the NN probe → rejected |
+
+Two findings made the ship. **ArcFace** replaces the plain contrastive push/pull with an additive
+angular margin, forcing each song tighter around its artist prototype and further from every other —
+a +20% mAP jump on its own. **GeM pooling** swaps the encoder's flat spatial average for a learnable
+generalized mean, so the network chooses how peaky its per-clip summary is; interestingly it learned
+an exponent *below* 1 (softer than average), and added another ~2%. Pushing the margin higher (0.3)
+was a statistical tie on mAP but *regressed* the independent same-artist NN probe — a clean signal
+that 0.2 is the sweet spot for noisy related-artist labels, not a number to keep cranking.
+
+It shows up qualitatively, exactly where the old encoder was weakest. *For the First Time* — Mac
+DeMarco went from drifting soft (Quincy Jones, smooth soul) to **Tame Impala, black midi, Hiroshi
+Sato** (psych/indie-coherent, and higher similarity scores); *OMG* — NewJeans surfaced **aespa and
+BLACKPINK**. The whole sweep — including the negatives — is worth more than any single win: it turns
+"try a bigger model" into a measured claim about *which* change actually moves retrieval.
+
 ---
 
 ## 7. Security & correctness
@@ -349,9 +384,10 @@ to the practical ceiling regardless. The point isn't the exact size; it's that t
 - **No data leakage in evaluation.** The encoder trains self-supervised on the train split only;
   the kNN probe splits *within* validation and *within* test, never crossing into the training
   set. This was independently verified in code review.
-- **92 automated tests** cover the recommenders, OAuth/PKCE, the DSP, vibe and vibe-aware engines,
-  the spec cache, the recommendation benchmark, diversity/MMR re-ranking, and the ML pipeline
-  (augmentation, contrastive loss, vibe-target, and dataset-split logic).
+- **104 automated tests** cover the recommenders, OAuth/PKCE, the DSP, vibe and vibe-aware engines,
+  the spec cache, the recommendation benchmark (including same-artist mAP), diversity/MMR re-ranking,
+  GeM pooling, and the ML pipeline (augmentation, contrastive loss, vibe-target, and dataset-split
+  logic).
 
 
 ---
@@ -364,10 +400,12 @@ to the practical ceiling regardless. The point isn't the exact size; it's that t
   quality beyond the label-free benchmark, and use those ratings to tune the fusion blend.
 - **A 512-d or a downloadable (non-bundled) index** — the downloadable index now exists (fetched from
   a GitHub Release past the 100 MB bundle cap), so library coverage can grow further; a wider encoder,
-  though, was measured *not* to help (512-d matched 384-d), so future quality gains should come from a
-  better *objective* (below) rather than more capacity.
-- **Contrastive-on-vibe** — mine positive pairs by vibe similarity, not just augmented crops, so
-  the contrastive objective itself pulls same-vibe songs together.
+  though, was measured *not* to help (512-d matched 384-d). Acting on that, the last encoder upgrade
+  came from a better **objective** (ArcFace + GeM, +23% mAP — §6), not more capacity, which is the
+  direction future gains should keep taking.
+- **Contrastive-on-vibe** — mine positive pairs by vibe similarity, not just augmented crops or
+  same-artist labels, so the objective pulls same-*vibe* songs together directly (the natural next
+  step after ArcFace, since the artist signal is a proxy for vibe, not vibe itself).
 
 ---
 
