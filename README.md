@@ -259,6 +259,26 @@ genuinely scene-coherent picks. For example, *So What* by Miles Davis returns Br
 Morgan and Ahmad Jamal; *Your Hand in Mine* by Explosions in the Sky returns If These Trees Could
 Talk, This Will Destroy You and Mono; *Ditto* by NewJeans returns CHUU and LOONA.
 
+### Growing the library past the bundle limit
+
+The ~87k-song index ships bundled (75 MB, under GitHub's 100 MB per-file cap), so the tool works
+offline out of the box. But a bigger or higher-dimensional library won't fit in the repo — so the
+pack (encoder + index) can also live on a **GitHub Release**, which allows up to 2 GB per file and
+doesn't bloat the repo or every clone. A tiny `data/index_manifest.json` names the canonical pack,
+and the package resolves it in order: an explicit `--index`/`--model-dir`, then a matching copy in
+your cache, then the bundled copy, then a download from the Release (verified by SHA-256, with a
+graceful offline fallback to the bundle). Nothing downloads unless the bundle is missing or the
+manifest points to a newer pack, so the default experience stays zero-friction.
+
+```bash
+# Pre-fetch / refresh the hosted pack (otherwise it's fetched lazily on first use):
+soundalike fetch-index
+```
+
+To publish a larger library: build the index, upload it plus the encoder to a Release, and update
+the manifest's `release_tag` + SHA-256s. This is what lets the library scale to hundreds of
+thousands of songs without ever hitting the repo file-size limit.
+
 ---
 
 ## Learned-model research track (GPU)
@@ -492,7 +512,8 @@ src/soundalike/
                     #    vibe_target + train_vibe (vibe-aware multi-task encoder),
                     #    grow_broad (2-hop related-artist crawl), spec_cache (harvest-once),
                     #    train_artist (artist-aware fine-tune), deepvibe (fusion + whitening + MMR),
-                    #    benchmark (recommendation-quality + library-size sweep)
+                    #    benchmark (recommendation-quality + library-size sweep),
+                    #    index_store (fetch the pack from a GitHub Release past the bundle limit)
   data/             # bundled artifacts: artist-aware 384-d encoder + ~87k-song deep-vibe library
 tests/              # pytest suite (offline + network-free live/audio/ml logic)
 spotify_program.py  # the original first-year project, kept for posterity

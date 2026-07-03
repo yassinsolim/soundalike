@@ -434,6 +434,20 @@ def cmd_vibe_similar(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_fetch_index(args: argparse.Namespace) -> int:
+    from .ml.index_store import describe, ensure_pack
+
+    print(describe())
+    enc, idx = ensure_pack(force=args.force)
+    if idx is None:
+        print("Could not obtain the deep-vibe index (offline and nothing bundled).")
+        return 1
+    print(f"\nEncoder: {enc}")
+    print(f"Index:   {idx}")
+    print("Ready — `soundalike deep-vibe-similar` will use it.")
+    return 0
+
+
 def cmd_deep_vibe_similar(args: argparse.Namespace) -> int:
     from pathlib import Path
     from tempfile import TemporaryDirectory
@@ -444,12 +458,21 @@ def cmd_deep_vibe_similar(args: argparse.Namespace) -> int:
     from .audio.vibe import DEFAULT_WEIGHTS, FEATURE_NAMES, VibeFeatures
     from .ml.deepvibe import DeepVibeIndex, DeepVibeRecommender
     from .ml.encoder_infer import EncoderExtractor
+    from .ml.index_store import ensure_pack
     from .ml.spectrogram import SpectrogramConfig, _fit_frames, load_audio, log_mel_full
 
-    index_path = Path(args.index) if args.index else DeepVibeIndex.default_path()
-    if not index_path.exists():
-        print(f"No deep-vibe library found at {index_path}. Build one first "
-              "(see soundalike.ml.deepvibe.build_from_vibe_index).")
+    # Resolve the encoder + index. Explicit flags win; otherwise use the
+    # bundled/cached/downloaded pack (downloads from the Release only if the
+    # bundle is absent or the manifest points to a newer pack).
+    enc_default, idx_default = (None, None)
+    if args.index is None or args.model_dir is None:
+        enc_default, idx_default = ensure_pack()
+
+    index_path = Path(args.index) if args.index else (
+        Path(idx_default) if idx_default else DeepVibeIndex.default_path())
+    if not index_path or not Path(index_path).exists():
+        print(f"No deep-vibe library available at {index_path}. "
+              "Try `soundalike fetch-index` to download it.")
         return 1
     index = DeepVibeIndex.load(index_path)
 
@@ -462,7 +485,7 @@ def cmd_deep_vibe_similar(args: argparse.Namespace) -> int:
         parts = [p.strip() for p in s.split("::")]
         seed_specs.append((parts[0], parts[1] if len(parts) > 1 else None))
 
-    extractor = EncoderExtractor(args.model_dir)
+    extractor = EncoderExtractor(args.model_dir or enc_default)
     cfg = SpectrogramConfig()
     neural_list, vibe_list, seed_ids, seed_labels = [], [], set(), []
     with TemporaryDirectory() as tmp:
@@ -711,6 +734,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_dv.add_argument("--weight", action="append", metavar="NAME=VALUE",
                       help="Override a vibe-feature weight (repeatable).")
     p_dv.set_defaults(func=cmd_deep_vibe_similar)
+
+    p_fi = sub.add_parser(
+        "fetch-index",
+        help="Download (or refresh) the hosted deep-vibe pack from its Release.",
+    )
+    p_fi.add_argument("--force", action="store_true",
+                      help="Re-download even if a matching copy is already cached.")
+    p_fi.set_defaults(func=cmd_fetch_index)
 
     return parser
 
