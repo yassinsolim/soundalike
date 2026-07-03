@@ -110,7 +110,9 @@ def _download(url: str, dest: Path, expected_sha: Optional[str],
 def _resolve_one(spec: Dict, manifest: Dict, cache: Path,
                  force: bool, progress: Callable[[str], None]) -> Optional[Path]:
     """Resolve a single asset (encoder or index) to a local path."""
-    name = spec["asset"]
+    # Use only the bare filename so a manifest asset can never write outside the
+    # cache dir (defense-in-depth; the manifest is repo-tracked, not user input).
+    name = Path(str(spec["asset"])).name
     sha = spec.get("sha256")
 
     cached = cache / name
