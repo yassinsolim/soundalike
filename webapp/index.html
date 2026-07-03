@@ -43,6 +43,10 @@
   .save{background:transparent;border:1px solid var(--grn);color:var(--grn);border-radius:10px;
     padding:9px 13px;font-weight:600;cursor:pointer;font-size:13px;white-space:nowrap}
   .save:disabled{opacity:.5;cursor:default}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .copy{background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;
+    padding:9px 13px;font-weight:600;cursor:pointer;font-size:13px;white-space:nowrap}
+  .copy:hover{border-color:var(--vio)}
   ol{list-style:none;margin:0;padding:0}
   li.row{display:flex;align-items:center;gap:14px;padding:11px 12px;border-radius:12px}
   li.row:hover{background:var(--card)}
@@ -172,34 +176,60 @@ function render(d){
   let html=`<div class="seed"><div>
       <h2>${esc(d.seed.title)}</h2><div class="art">${esc(d.seed.artist)}</div>
       <div class="tags"><span class="tag">${esc(v.low_end)}</span><span class="tag">${esc(v.dynamics)}</span><span class="tag">${esc(v.tone)}</span></div>
-    </div><button class="save" id="save">＋ Save as Spotify playlist</button></div><ol>`;
+    </div><div class="actions">
+      <button class="copy" id="copy">⧉ Copy list</button>
+      <button class="save" id="save">＋ Save to Spotify</button>
+    </div></div><ol>`;
   d.results.forEach((x,i)=>{ const w=Math.round(100*x.neural_sim/mx);
     html+=`<li class="row"><div class="rank">${i+1}</div>
       <div class="meta"><div class="t">${esc(x.title)}</div><div class="a">${esc(x.artist)}</div></div>
       <div class="bar"><i style="width:${w}%"></i></div>
       <a class="play" href="${x.spotify_url}" target="_blank" rel="noopener">Open in Spotify ▸</a></li>`;});
   html+="</ol>";
-  $("#out").innerHTML=html; $("#save").onclick=savePlaylist;
+  $("#out").innerHTML=html; $("#save").onclick=savePlaylist; $("#copy").onclick=copyList;
   $("#foot").textContent=`Matched from a ${d.library_size.toLocaleString()}-track library.`;
 }
 
+// ---------- copy list (no login, works for EVERYONE) ----------
+async function copyList(){
+  const b=$("#copy"); const text=lastResults.map(x=>`${x.title} — ${x.artist}`).join("\n");
+  try{ await navigator.clipboard.writeText(text);
+    const old=b.textContent; b.textContent=`✓ Copied ${lastResults.length} songs`;
+    setTimeout(()=>{b.textContent=old;},2200);
+  }catch(e){ window.prompt("Copy your soundalikes:", text); }
+}
+function saveNote(msg){
+  let n=$("#savenote");
+  if(!n){ n=document.createElement("div"); n.id="savenote"; n.className="hint"; n.style.marginTop="10px"; n.style.color="#ffb4b4"; const s=document.querySelector(".seed"); if(s) s.after(n); }
+  n.textContent=msg;
+}
 // ---------- save playlist (browser → Spotify, no server, no credentials to us) ----------
 async function spSearch(t,a){
   const r=await fetch("https://api.spotify.com/v1/search?type=track&limit=1&q="+encodeURIComponent(`${t} ${a}`),
     {headers:{Authorization:"Bearer "+token}}); const d=await r.json();
   return (((d.tracks||{}).items||[])[0]||{}).uri||null;
 }
+function saveBlocked(b){
+  b.disabled=false; b.textContent="⧉ Copy list instead"; b.onclick=copyList;
+  saveNote("Spotify limits new apps to 5 approved testers, so one-click save only works for allowlisted accounts. Everyone can use “Copy list” and paste into a new Spotify playlist, and every result has an Open-in-Spotify link.");
+}
 async function savePlaylist(){
   const b=$("#save");
-  if(!token){ b.textContent="Log in first…"; login(); return; }
+  if(!SPOTIFY_CLIENT_ID){ saveNote("Spotify login isn't set up on this instance — use “Copy list”."); return; }
+  if(!token){ login(); return; }
   b.disabled=true; b.textContent="Resolving…";
   try{
-    const me=await(await fetch("https://api.spotify.com/v1/me",{headers:{Authorization:"Bearer "+token}})).json();
+    const meRes=await fetch("https://api.spotify.com/v1/me",{headers:{Authorization:"Bearer "+token}});
+    if(meRes.status===401){ logout(); return saveBlocked(b); }
+    if(meRes.status===403) return saveBlocked(b);
+    const me=await meRes.json();
     const uris=[]; for(const x of lastResults){ const u=await spSearch(x.title,x.artist); if(u)uris.push(u); }
-    if(!uris.length){ b.textContent="✕ none resolved"; return; }
-    const pl=await(await fetch(`https://api.spotify.com/v1/users/${me.id}/playlists`,{method:"POST",
+    if(!uris.length){ b.textContent="✕ none resolved"; b.disabled=false; return; }
+    const plRes=await fetch(`https://api.spotify.com/v1/users/${me.id}/playlists`,{method:"POST",
       headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},
-      body:JSON.stringify({name:`soundalike · ${lastSeed.title}`,description:"Made with soundalike.",public:false})})).json();
+      body:JSON.stringify({name:`soundalike · ${lastSeed.title}`,description:"Made with soundalike.",public:false})});
+    if(plRes.status===403) return saveBlocked(b);
+    const pl=await plRes.json();
     for(let i=0;i<uris.length;i+=100){ await fetch(`https://api.spotify.com/v1/playlists/${pl.id}/tracks`,{method:"POST",
       headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},
       body:JSON.stringify({uris:uris.slice(i,i+100)})}); }
