@@ -232,7 +232,6 @@ class DeepVibeRecommender:
         rel_raw = blended[cand]
         rel = (rel_raw - rel_raw.min()) / (rel_raw.max() - rel_raw.min() + 1e-9)
         vecs = self._neural[cand]  # unit-norm rows
-        rel_by_pos = {p: rel[p] for p in range(len(cand))}
 
         chosen_pos = [int(np.argmax(rel))]
         best_sim = vecs @ vecs[chosen_pos[0]]  # running max similarity to chosen

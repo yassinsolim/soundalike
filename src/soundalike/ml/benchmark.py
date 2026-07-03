@@ -180,7 +180,8 @@ def library_size_sweep(
 
 
 def find_sweet_spot(rows: List[Dict[str, float]], coverage_frac: float = 0.95) -> int:
-    """Smallest library size that reaches `coverage_frac` of the max coverage.
+    """Smallest library size whose coverage reaches `coverage_frac` of the way
+    up the swept coverage *range* (min-max normalized).
 
     Beyond this point coverage has largely saturated, so additional songs mostly
     add distractors that erode precision — the practical "balance" point.
