@@ -191,10 +191,27 @@ def main(argv: Optional[list] = None) -> int:
     parser.add_argument("--epochs", type=int, default=45)
     parser.add_argument("--batch-size", type=int, default=512)
     parser.add_argument("--vibe-lambda", type=float, default=1.0)
+    parser.add_argument("--width", type=int, default=64)
+    parser.add_argument("--embedding-dim", type=int, default=256)
+    parser.add_argument("--log", default=None)
     args = parser.parse_args(argv)
-    print("Device: cuda")
-    train_vibe(Path(args.packed), Path(args.out_dir), epochs=args.epochs,
-               batch_size=args.batch_size, vibe_lambda=args.vibe_lambda)
+
+    log_fh = open(args.log, "a", encoding="utf-8", buffering=1) if args.log else None
+
+    def progress(msg):
+        line = f"{time.strftime('%H:%M:%S')} {msg}"
+        print(line, flush=True)
+        if log_fh:
+            log_fh.write(line + "\n")
+
+    progress("Device: cuda")
+    try:
+        train_vibe(Path(args.packed), Path(args.out_dir), epochs=args.epochs,
+                   batch_size=args.batch_size, vibe_lambda=args.vibe_lambda,
+                   width=args.width, embedding_dim=args.embedding_dim, progress=progress)
+    finally:
+        if log_fh:
+            log_fh.close()
     return 0
 
 
