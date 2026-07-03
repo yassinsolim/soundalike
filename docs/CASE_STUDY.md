@@ -289,7 +289,12 @@ ceiling; the encoder was.** Three fixes, two at train time and one at inference:
    fixed-size space. Widening the embedding from 256 to 384 dimensions (which barely changes compute
    — it's just the final projection — and keeps the bundled index under GitHub's 100 MB limit) gave
    the space room to separate ~87k songs, and precision recovered while coverage kept improving. The
-   384-d base also scored higher on the held-out genre probe (kNN 0.617 vs 0.606).
+   384-d base also scored higher on the held-out genre probe (kNN 0.617 vs 0.606). I also tried
+   **512-d** to see if bigger was better still — it wasn't: on the recommendation benchmark it matched
+   384-d on precision and was *slightly worse* on coverage (0.445 vs 0.463), at +33% size and memory,
+   and its genre-probe kNN actually dropped to 0.609. So 384-d is the measured sweet spot, and the
+   encoder's *capacity* is no longer the bottleneck — a useful negative result that says "don't just
+   make it bigger."
 
 3. **Whitening.** The embeddings piled into a tight cone (every pair ~0.9 cosine), so raw cosine
    couldn't rank finely. ZCA-whitening the space at load time removes the dominant shared direction
@@ -357,8 +362,10 @@ to the practical ceiling regardless. The point isn't the exact size; it's that t
   library, not just what's in a preview catalog.
 - **Human-in-the-loop evaluation** — let a user rate recommendations to measure real-world
   quality beyond the label-free benchmark, and use those ratings to tune the fusion blend.
-- **A 512-d encoder or a downloadable (non-bundled) index** to push past the ~100 MB GitHub cap and
-  the ~87k-song bundle ceiling, if coverage ever needs to grow further.
+- **A 512-d or a downloadable (non-bundled) index** — the downloadable index now exists (fetched from
+  a GitHub Release past the 100 MB bundle cap), so library coverage can grow further; a wider encoder,
+  though, was measured *not* to help (512-d matched 384-d), so future quality gains should come from a
+  better *objective* (below) rather than more capacity.
 - **Contrastive-on-vibe** — mine positive pairs by vibe similarity, not just augmented crops, so
   the contrastive objective itself pulls same-vibe songs together.
 
