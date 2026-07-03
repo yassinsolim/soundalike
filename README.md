@@ -244,8 +244,9 @@ Four things make this work at scale, and each was driven by a concrete failure (
   ambient), rock/metal/punk (post-rock, shoegaze, black/death metal, emo), jazz, classical, blues
   and gospel — deduplicated to one row per song — so a niche seed actually has close neighbours.
 - **An artist-aware encoder** — the FMA-trained encoder confused scenes on real vocal music, so it
-  was fine-tuned on the harvested songs with a *supervised-contrastive* objective (same artist =
-  similar), which taught it "sounds like the same kind of thing" on the real domain.
+  was fine-tuned on the harvested songs with an *ArcFace + GeM* objective (same artist = similar;
+  additive angular margin + learnable pooling), which taught it "sounds like the same kind of thing"
+  on the real domain — a measured **+23%** in same-artist retrieval mAP over plain contrastive.
 - **A higher-dimensional embedding** — as the library grew past ~50k, songs crowded together and
   precision softened; widening the embedding from 256 to 384 dimensions gives the space more room to
   separate ~87k songs, which recovered precision without hurting coverage.
@@ -385,12 +386,28 @@ retrieval goes from incoherent to scene-coherent:
 | *Ditto* — NewJeans | (mixed) | CHUU, LOONA (K-pop) |
 | *HUMBLE.* — Kendrick | (mixed) | Kodak Black, JID, $uicideboy$ |
 
+**Upgrading the objective (what currently ships).** Supervised-contrastive was a big
+step, but the *objective* — not the network size — turned out to be the real lever (a
+512-d encoder and encoder ensembles both failed to beat 384-d). Replacing the plain
+contrastive loss with **ArcFace** (additive angular margin) forces each song tighter
+around its artist and further from everyone else, and adding **GeM pooling** (a learnable
+generalized-mean over the spectrogram, instead of a flat average) lets the network decide
+how peaky its summary should be. Measured head-to-head on same-artist **mean average
+precision** (`soundalike.ml.benchmark.score_embeddings`, averaged over 5 seeds), the
+ArcFace + GeM encoder scores **mAP 0.0486 vs 0.0396 — +23%** over the shipped
+supervised-contrastive encoder, and it shows up qualitatively too: *For the First Time* —
+Mac DeMarco now pulls Tame Impala, black midi and Hiroshi Sato (psych/indie-coherent)
+instead of drifting soft. A larger margin (0.3) and encoder ensembling were both measured
+and **rejected** as ties/regressions — the full experiment log lives in `CASE_STUDY.md`.
+
 ```bash
-# Grow the library broadly (2-hop related-artist crawl), fine-tune at 384-d, then bundle:
+# Grow the library broadly (2-hop related-artist crawl), pre-train the vibe base at 384-d,
+# then fine-tune the artist encoder with the ArcFace + GeM objective, and bundle:
 python -m soundalike.ml.grow_broad --cache ml_data/spec_cache.npz --workers 10 --target 90000
 python -m soundalike.ml.train_vibe --packed packed.npz --out-dir ml_data/model_vibe384 --width 64 --embedding-dim 384
-python -m soundalike.ml.train_artist --cache ml_data/spec_cache.npz --init-model ml_data/model_vibe384 --embedding-dim 384 --out-dir ml_data/model_artist384
-python -m soundalike.ml.spec_cache build --cache ml_data/spec_cache.npz --model-dir ml_data/model_artist384 --out src/soundalike/data/deepvibe_index.npz --half
+python -m soundalike.ml.train_arcface --cache ml_data/spec_cache_dedup.npz --init-model ml_data/model_vibe384 \
+    --embedding-dim 384 --pool-type gem --arc-margin 0.2 --arc-scale 24 --out-dir ml_data/model_arcface_gem
+python -m soundalike.ml.spec_cache build --cache ml_data/spec_cache_dedup.npz --model-dir ml_data/model_arcface_gem --out src/soundalike/data/deepvibe_index.npz --half
 ```
 
 ### How big should the library be? (measured, not guessed)
@@ -540,6 +557,7 @@ pytest -q
 - [x] **Grown the library to ~87k songs** — 2-hop related-artist crawl from ~400 multi-genre seeds, deduplicated
 - [x] **Higher-dim embedding (384-d)** — recovers precision at scale so coverage and precision both improve
 - [x] **Artist-aware encoder + whitening** — domain-matched fine-tune (same-artist supervised contrastive) fixes scene precision at scale
+- [x] **ArcFace + GeM objective** — a controlled 5-seed sweep picked an angular-margin + learnable-pooling encoder: **+23%** same-artist retrieval mAP (512-d and ensembles were measured and rejected)
 - [x] **Hybrid ranking** — deep-vibe fuses learned texture with measured bass/dynamics (ships out of the box)
 - [x] **Recommendation benchmark** — label-free precision/coverage metrics + measured library-size trade-off
 - [x] **Diversity + multi-seed** — MMR re-ranking, per-artist caps, and blend several songs into one taste
