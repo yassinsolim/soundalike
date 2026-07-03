@@ -33,7 +33,11 @@ class EncoderExtractor:
         ckpt = torch.load(ckpt_path, map_location="cpu")
         dim = int(ckpt["embedding_dim"])
         if ckpt.get("arch") == "resnet":
-            self.encoder = ResNetAudioEncoder(embedding_dim=dim, width=int(ckpt.get("width", 64)))
+            self.encoder = ResNetAudioEncoder(
+                embedding_dim=dim,
+                width=int(ckpt.get("width", 64)),
+                pool_type=str(ckpt.get("pool_type", "avg")),
+            )
         else:
             self.encoder = AudioEncoder(embedding_dim=dim)
         # Bundled checkpoints are stored float16 to save space; upcast to match.

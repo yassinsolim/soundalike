@@ -10,6 +10,8 @@ from soundalike.ml.benchmark import (
     find_sweet_spot,
     fixed_pair_precision,
     library_size_sweep,
+    same_artist_map,
+    score_embeddings,
     _fit_whiten,
     _whiten,
 )
@@ -79,3 +81,38 @@ def test_balance_and_sweet_spot_return_swept_sizes():
     ]
     assert find_sweet_spot(rows) in {1000, 5000, 9000}
     assert balance_point(rows) in {1000, 5000, 9000}
+
+
+def test_same_artist_map_rewards_clustered_space():
+    # Tight per-artist clusters -> siblings rank first -> mAP near 1.
+    good, artists = _synthetic(n_artists=80, per_artist=5, seed=3)
+    mean, W = _fit_whiten(good)
+    good_w = _whiten(good, mean, W)
+    map_good = same_artist_map(good_w, artists, n_queries=200, seed=3)
+    # Shuffle rows vs artists -> destroys structure -> mAP collapses.
+    rng = np.random.default_rng(3)
+    scrambled = good_w[rng.permutation(len(good_w))]
+    map_bad = same_artist_map(scrambled, artists, n_queries=200, seed=3)
+    assert 0.0 <= map_bad <= map_good <= 1.0
+    assert map_good > 0.5
+    assert map_good > map_bad + 0.2  # structure clearly beats noise
+
+
+def test_same_artist_map_zero_when_no_multi_artist():
+    # Every artist appears once -> no relevant siblings -> mAP defined as 0.
+    neural = np.random.default_rng(0).standard_normal((10, 8)).astype(np.float32)
+    artists = np.asarray([f"solo{i}" for i in range(10)], dtype=object)
+    assert same_artist_map(neural, artists, n_queries=10) == 0.0
+
+
+def test_score_embeddings_reports_all_metrics():
+    neural, artists = _synthetic(n_artists=120, per_artist=5, seed=4)
+    out = score_embeddings(neural, artists, n_queries=200, n_probe=100, seed=4)
+    for key in ("map", "recall_at_k", "mrr", "coverage", "dim", "n_lib"):
+        assert key in out
+    assert out["dim"] == neural.shape[1]
+    assert 0.0 <= out["map"] <= 1.0
+    assert 0.0 <= out["recall_at_k"] <= 1.0
+    # Clustered space should retrieve siblings well above chance.
+    assert out["recall_at_k"] > 0.5
+

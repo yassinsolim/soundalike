@@ -92,6 +92,86 @@ def coverage_score(probe_w: np.ndarray, lib_w: np.ndarray) -> float:
     return float(best.mean())
 
 
+def same_artist_map(
+    neural_w: np.ndarray,
+    artists: np.ndarray,
+    n_queries: int = 2000,
+    max_rank: int = 100,
+    seed: int = 0,
+) -> float:
+    """Mean average precision for same-artist retrieval — the headline metric.
+
+    For each query (a song whose artist has >=2 tracks), rank all other songs by
+    cosine and treat same-artist songs as the relevant set. Average precision
+    rewards putting *all* of a song's siblings high, not just one — so it's far
+    more sensitive to ranking quality than recall@K. `neural_w` must be whitened
+    + L2-normalized. Averaged over a random query sample.
+    """
+    art = np.asarray([str(a).casefold() for a in artists])
+    uniq, counts = np.unique(art, return_counts=True)
+    multi = set(uniq[counts >= 2].tolist())
+    eligible = np.array([i for i, a in enumerate(art) if a in multi])
+    if len(eligible) == 0:
+        return 0.0
+    rng = np.random.default_rng(seed)
+    q_idx = rng.choice(eligible, size=min(n_queries, len(eligible)), replace=False)
+
+    aps = []
+    for qi in q_idx:
+        sims = neural_w @ neural_w[qi]
+        sims[qi] = -np.inf
+        rel_total = int((art == art[qi]).sum()) - 1  # exclude self
+        if rel_total <= 0:
+            continue
+        # Only need the top max_rank for a stable AP estimate on huge libraries.
+        top = np.argpartition(-sims, max_rank)[:max_rank]
+        top = top[np.argsort(-sims[top])]
+        rel = (art[top] == art[qi]).astype(np.float32)
+        if rel.sum() == 0:
+            aps.append(0.0)
+            continue
+        cum = np.cumsum(rel)
+        ranks = np.arange(1, len(rel) + 1)
+        precision_at_hits = (cum / ranks) * rel
+        aps.append(float(precision_at_hits.sum() / min(rel_total, max_rank)))
+    return float(np.mean(aps)) if aps else 0.0
+
+
+def score_embeddings(
+    neural: np.ndarray,
+    artists: np.ndarray,
+    whiten: bool = True,
+    k: int = 10,
+    n_queries: int = 2000,
+    n_probe: int = 1500,
+    seed: int = 0,
+) -> Dict[str, float]:
+    """One-call quality report for any embedding matrix (the experiment scorer).
+
+    Whitens (as production does), then reports same-artist mAP + recall@K
+    (precision-side) and held-out nearest-neighbour cosine (coverage-side).
+    """
+    rng = np.random.default_rng(seed)
+    perm = rng.permutation(len(neural))
+    probe_idx = perm[:n_probe]
+    lib_idx = perm[n_probe:]
+
+    if whiten:
+        mean, W = _fit_whiten(neural[lib_idx])
+        lib_w = _whiten(neural[lib_idx], mean, W)
+        probe_w = _whiten(neural[probe_idx], mean, W)
+    else:
+        lib_w = neural[lib_idx] / (np.linalg.norm(neural[lib_idx], axis=1, keepdims=True) + 1e-9)
+        probe_w = neural[probe_idx] / (np.linalg.norm(neural[probe_idx], axis=1, keepdims=True) + 1e-9)
+
+    lib_artists = np.asarray(artists)[lib_idx]
+    mapv = same_artist_map(lib_w, lib_artists, n_queries=n_queries, seed=seed)
+    rec = same_artist_recall(lib_w, lib_artists, k=k, n_queries=n_queries, seed=seed)
+    cov = coverage_score(probe_w, lib_w)
+    return {"map": mapv, "recall_at_k": rec["recall_at_k"], "mrr": rec["mrr"],
+            "coverage": cov, "dim": int(neural.shape[1]), "n_lib": int(len(lib_idx))}
+
+
 def fixed_pair_precision(
     lib_w: np.ndarray,
     active: np.ndarray,
