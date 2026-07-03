@@ -438,8 +438,10 @@ def cmd_deep_vibe_similar(args: argparse.Namespace) -> int:
     from pathlib import Path
     from tempfile import TemporaryDirectory
 
+    import numpy as np
+
     from .audio import DeezerClient, vibe_from_file
-    from .audio.vibe import DEFAULT_WEIGHTS, FEATURE_NAMES
+    from .audio.vibe import DEFAULT_WEIGHTS, FEATURE_NAMES, VibeFeatures
     from .ml.deepvibe import DeepVibeIndex, DeepVibeRecommender
     from .ml.encoder_infer import EncoderExtractor
     from .ml.spectrogram import SpectrogramConfig, _fit_frames, load_audio, log_mel_full
@@ -452,20 +454,38 @@ def cmd_deep_vibe_similar(args: argparse.Namespace) -> int:
     index = DeepVibeIndex.load(index_path)
 
     client = DeezerClient()
-    track = client.search_track(args.title, args.artist)
-    if track is None or not track.has_preview:
-        print(f"No previewable track found for '{args.title}'"
-              + (f" by {args.artist}" if args.artist else "") + ".")
-        return 1
+
+    # Collect seeds: the primary --title/--artist plus any repeatable --seed
+    # "Title :: Artist" entries. Their embeddings are averaged into one "taste".
+    seed_specs = [(args.title, args.artist)]
+    for s in args.seed or []:
+        parts = [p.strip() for p in s.split("::")]
+        seed_specs.append((parts[0], parts[1] if len(parts) > 1 else None))
 
     extractor = EncoderExtractor(args.model_dir)
     cfg = SpectrogramConfig()
+    neural_list, vibe_list, seed_ids, seed_labels = [], [], set(), []
     with TemporaryDirectory() as tmp:
-        dest = Path(tmp) / f"{track.id}.mp3"
-        client.download_preview(track, dest)
-        y = load_audio(dest, cfg.sample_rate)
-        seed_neural = extractor.embed_spec(_fit_frames(log_mel_full(y, cfg), cfg.target_frames))
-        seed_vibe = vibe_from_file(str(dest))
+        for title, artist in seed_specs:
+            track = client.search_track(title, artist)
+            if track is None or not track.has_preview:
+                print(f"No previewable track found for '{title}'"
+                      + (f" by {artist}" if artist else "") + ".")
+                continue
+            dest = Path(tmp) / f"{track.id}.mp3"
+            client.download_preview(track, dest)
+            y = load_audio(dest, cfg.sample_rate)
+            neural_list.append(extractor.embed_spec(_fit_frames(log_mel_full(y, cfg), cfg.target_frames)))
+            vibe_list.append(vibe_from_file(str(dest)).vector())
+            seed_ids.add(track.id)
+            seed_labels.append(f"{track.title} — {track.artist}")
+
+    if not neural_list:
+        print("No usable seeds found.")
+        return 1
+
+    seed_neural = np.mean(neural_list, axis=0)
+    seed_vibe = VibeFeatures.from_vector(np.mean(vibe_list, axis=0))
 
     weights = dict(DEFAULT_WEIGHTS)
     for pair in args.weight or []:
@@ -476,13 +496,22 @@ def cmd_deep_vibe_similar(args: argparse.Namespace) -> int:
 
     rec = DeepVibeRecommender(index, alpha=args.alpha, vibe_weights=weights)
     results = rec.recommend(
-        seed_neural, seed_vibe, n=args.num, exclude_ids={track.id},
-        exclude_artist=track.artist if args.exclude_artist else None,
+        seed_neural, seed_vibe, n=args.num, exclude_ids=seed_ids,
+        exclude_artist=(seed_labels[0].split(" — ")[-1] if args.exclude_artist and len(seed_labels) == 1 else None),
+        diversity=args.diversity, max_per_artist=args.max_per_artist,
     )
-    v = seed_vibe.describe()
-    print(f"\nSeed: {track.title} — {track.artist}")
-    print(f"  vibe: {v['tempo']}, {v['dynamics']}, {v['low_end']}, {v['tone']}")
-    print(f"  blend: {args.alpha:.0%} learned-texture + {1-args.alpha:.0%} bass/dynamics")
+    if len(seed_labels) == 1:
+        v = seed_vibe.describe()
+        print(f"\nSeed: {seed_labels[0]}")
+        print(f"  vibe: {v['tempo']}, {v['dynamics']}, {v['low_end']}, {v['tone']}")
+    else:
+        print(f"\nBlend of {len(seed_labels)} seeds:")
+        for lbl in seed_labels:
+            print(f"  • {lbl}")
+    blend_note = f"  blend: {args.alpha:.0%} learned-texture + {1-args.alpha:.0%} bass/dynamics"
+    if args.diversity > 0:
+        blend_note += f"  |  diversity {args.diversity:.0%}"
+    print(blend_note)
     print(f"\nDeep-vibe matches (from a {len(index)}-track library):")
     for i, r in enumerate(results, 1):
         print(f"  {i:>2}. {r.title} — {r.artist}   "
@@ -663,6 +692,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_dv.add_argument("--title", required=True, help="Seed song title.")
     p_dv.add_argument("--artist", help="Seed artist, to disambiguate.")
+    p_dv.add_argument("--seed", action="append", metavar="TITLE :: ARTIST",
+                      help="Extra seed song to blend in (repeatable). Averages the "
+                      "seeds into one taste, e.g. --seed \"Bags :: Clairo\".")
     p_dv.add_argument("--index", help="Path to the deep-vibe library (.npz). "
                       "Defaults to the bundled vibe-aware library.")
     p_dv.add_argument("--model-dir", default=None,
@@ -670,6 +702,10 @@ def build_parser() -> argparse.ArgumentParser:
                       "vibe-aware encoder (works with no local training).")
     p_dv.add_argument("--alpha", type=float, default=0.8,
                       help="Blend: 1.0=pure learned texture, 0.0=pure bass/dynamics.")
+    p_dv.add_argument("--diversity", type=float, default=0.0,
+                      help="0=pure relevance, ~0.3=avoid near-identical picks (MMR).")
+    p_dv.add_argument("--max-per-artist", type=int, default=0,
+                      help="Cap how many songs one artist can contribute (0=no cap).")
     p_dv.add_argument("-n", "--num", type=int, default=15, help="Number of results.")
     p_dv.add_argument("--exclude-artist", action="store_true", help="Exclude the seed's artist.")
     p_dv.add_argument("--weight", action="append", metavar="NAME=VALUE",

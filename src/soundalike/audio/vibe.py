@@ -105,6 +105,20 @@ class VibeFeatures:
             mfcc=[float(x) for x in d["mfcc"]],
         )
 
+    @classmethod
+    def from_vector(cls, vec) -> "VibeFeatures":
+        """Rebuild from the ordered vector() layout (see FEATURE_NAMES).
+
+        Used to average several seeds into one "taste" vibe for multi-seed
+        recommendations.
+        """
+        v = [float(x) for x in vec]
+        return cls(
+            tempo=v[0], brightness=v[1], rolloff=v[2], onset_rate=v[3],
+            rms_mean=v[4], rms_std=v[5], dynamic_range=v[6], crest=v[7],
+            low_end_ratio=v[8], bands=v[9:16], mfcc=v[16:29],
+        )
+
     def describe(self) -> Dict[str, str]:
         """A human-readable summary of the vibe (for the CLI)."""
         loud = "very dynamic (big drops)" if self.crest > 2.0 else (

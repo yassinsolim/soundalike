@@ -211,6 +211,15 @@ soundalike deep-vibe-similar --title "Lovers Rock" --artist "TV Girl"
 
 # Dial the blend: 1.0 = pure learned texture, 0.0 = pure bass/dynamics:
 soundalike deep-vibe-similar --title "Bangarang" --artist "Skrillex" --alpha 0.6
+
+# Blend several songs into one "taste" (find what sits in the middle of them):
+soundalike deep-vibe-similar --title "Lovers Rock" --artist "TV Girl" \
+    --seed "Bags :: Clairo" --seed "Show Me How :: Men I Trust"
+
+# Add variety so you don't get five near-identical songs (MMR re-ranking),
+# and cap how many songs any one artist can contribute:
+soundalike deep-vibe-similar --title "HUMBLE." --artist "Kendrick Lamar" \
+    --diversity 0.3 --max-per-artist 1
 ```
 
 Each result shows its breakdown so you can see *why* it matched:
@@ -364,6 +373,35 @@ python -m soundalike.ml.train_artist --cache ml_data/spec_cache.npz --init-model
 python -m soundalike.ml.spec_cache build --cache ml_data/spec_cache.npz --model-dir ml_data/model_artist384 --out src/soundalike/data/deepvibe_index.npz --half
 ```
 
+### How big should the library be? (measured, not guessed)
+
+"Just add more songs" sounds like a free win, but it isn't — and rather than guess, I measured it.
+`soundalike.ml.benchmark` scores the library with two label-free metrics as its size grows:
+
+* **fixed-pair recall@10** (precision) — hold a song and one same-artist sibling fixed, then only
+  add *distractors*; how often does the sibling stay in the top-10? This falls as the pool grows.
+* **held-out nearest-neighbour cosine** (coverage) — for songs held out of the library, how close
+  is their nearest match? This rises as the pool grows.
+
+![Library size vs quality](docs/library_size_sweep.png)
+
+The curves cross around 20k and both flatten past ~40k: a bigger library **buries a specific song's
+sibling under distractors (precision ↓) but makes it more likely *something* close exists
+(coverage ↑)**. An equal-weight F1 of the two peaks near ~20k; pure coverage saturates near the top.
+
+So why ship ~87k? Because the failures users actually notice are **coverage** failures — a jazz or
+K-pop seed returning nothing in-scene — and those are exactly what a big, broad library fixes. The
+precision cost (a specific sibling slipping out of the top-10) is real but subtler, and it's better
+addressed by **smarter ranking than by discarding whole scenes**: the `--diversity` (MMR) and
+`--max-per-artist` flags keep the top-10 varied and useful without shrinking coverage. The bundle is
+also capped near ~100 MB by GitHub, so ~87k is close to the practical ceiling anyway. It's a
+deliberate, measured choice — coverage-first, with ranking to recover precision.
+
+```bash
+# Reproduce the sweep on the bundled library (or your own --index):
+python -m soundalike.ml.benchmark --k 10 --sizes 5000,10000,20000,40000,60000,86000
+```
+
 ### Reproduce it
 
 ```bash
@@ -453,7 +491,8 @@ src/soundalike/
                     #    fma (dataset loader), precompute, pack, train_fast (GPU-resident),
                     #    vibe_target + train_vibe (vibe-aware multi-task encoder),
                     #    grow_broad (2-hop related-artist crawl), spec_cache (harvest-once),
-                    #    train_artist (artist-aware fine-tune), deepvibe (fusion + whitening)
+                    #    train_artist (artist-aware fine-tune), deepvibe (fusion + whitening + MMR),
+                    #    benchmark (recommendation-quality + library-size sweep)
   data/             # bundled artifacts: artist-aware 384-d encoder + ~87k-song deep-vibe library
 tests/              # pytest suite (offline + network-free live/audio/ml logic)
 spotify_program.py  # the original first-year project, kept for posterity
@@ -481,6 +520,8 @@ pytest -q
 - [x] **Higher-dim embedding (384-d)** — recovers precision at scale so coverage and precision both improve
 - [x] **Artist-aware encoder + whitening** — domain-matched fine-tune (same-artist supervised contrastive) fixes scene precision at scale
 - [x] **Hybrid ranking** — deep-vibe fuses learned texture with measured bass/dynamics (ships out of the box)
+- [x] **Recommendation benchmark** — label-free precision/coverage metrics + measured library-size trade-off
+- [x] **Diversity + multi-seed** — MMR re-ranking, per-artist caps, and blend several songs into one taste
 - [ ] Optional web UI
 
 Contributions welcome — this is meant to be community-built.

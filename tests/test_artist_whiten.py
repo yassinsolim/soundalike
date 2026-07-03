@@ -91,3 +91,48 @@ def test_supcon_loss_rewards_grouping():
     bad = torch.tensor([[1.0, 0.0], [-1.0, 0.0], [0.99, 0.14], [-0.99, 0.14]])
     bad = torch.nn.functional.normalize(bad, dim=1)
     assert float(_supcon_loss(good, labels)) < float(_supcon_loss(bad, labels))
+
+
+def test_max_per_artist_caps_repeats():
+    # Build an index where every song is by one of 3 artists.
+    import numpy as np
+    from soundalike.ml.deepvibe import DeepVibeIndex, DeepVibeRecommender
+    rng = np.random.default_rng(3)
+    n = 60
+    neural = rng.standard_normal((n, 64)).astype(np.float32)
+    vibe = rng.standard_normal((n, len(FEATURE_NAMES))).astype(np.float32)
+    artists = [f"A{i % 3}" for i in range(n)]
+    idx = DeepVibeIndex(list(range(n)), [f"t{i}" for i in range(n)], artists, neural, vibe)
+    rec = DeepVibeRecommender(idx, alpha=1.0, whiten=True)
+    out = rec.recommend(idx.neural[0], _vibe_from_vec(idx.vibe[0]), n=6, max_per_artist=1)
+    seen = [r.artist for r in out]
+    assert len(seen) == len(set(seen))  # no artist repeats
+
+
+def test_diversity_changes_ranking():
+    # Clustered embeddings: several near-identical songs so MMR has duplicates to
+    # push apart (random/orthogonal vectors give it nothing to diversify).
+    import numpy as np
+    from soundalike.ml.deepvibe import DeepVibeIndex, DeepVibeRecommender
+    rng = np.random.default_rng(7)
+    clusters = rng.standard_normal((12, 64))
+    neural = np.repeat(clusters, 10, axis=0) + 0.02 * rng.standard_normal((120, 64))
+    neural = neural.astype(np.float32)
+    vibe = rng.standard_normal((120, len(FEATURE_NAMES))).astype(np.float32)
+    idx = DeepVibeIndex(list(range(120)), [f"t{i}" for i in range(120)],
+                        [f"art{i}" for i in range(120)], neural, vibe)
+    rec = DeepVibeRecommender(idx, alpha=1.0, whiten=True)
+    base = [r.track_id for r in rec.recommend(idx.neural[5], _vibe_from_vec(idx.vibe[5]), n=10)]
+    div = [r.track_id for r in rec.recommend(idx.neural[5], _vibe_from_vec(idx.vibe[5]),
+                                             n=10, diversity=0.7)]
+    assert base != div  # MMR re-ranking should reorder/replace some picks
+    assert len(div) == 10
+
+
+def test_diversity_zero_matches_plain():
+    idx = _rand_index(n=80, seed=8)
+    rec = DeepVibeRecommender(idx, alpha=0.8, whiten=True)
+    a = [r.track_id for r in rec.recommend(idx.neural[2], _vibe_from_vec(idx.vibe[2]), n=8)]
+    b = [r.track_id for r in rec.recommend(idx.neural[2], _vibe_from_vec(idx.vibe[2]),
+                                           n=8, diversity=0.0)]
+    assert a == b  # diversity=0 is the original behaviour

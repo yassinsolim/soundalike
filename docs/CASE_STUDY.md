@@ -29,7 +29,7 @@ run it" lives in the [README](../README.md); this is the "how it was built and w
   (256→384) and embedding **whitening** turned incoherent cross-genre matches into scene-coherent
   ones (Miles Davis → Brad Mehldau/Lee Morgan; Explosions in the Sky → This Will Destroy You/Mono;
   NewJeans → CHUU/LOONA, not random pop).
-- **Built and validated on:** an NVIDIA RTX 5080 (Blackwell), 84 automated tests, a clean
+- **Built and validated on:** an NVIDIA RTX 5080 (Blackwell), 92 automated tests, a clean
   packaged wheel.
 
 ---
@@ -313,6 +313,26 @@ the same engineering habit as the vibe engine:
 **let the failure tell you where the real bottleneck is**, and don't mistake "more data" for
 "better model."
 
+### Putting a number on "how big should the library be?"
+
+Rather than keep guessing, I built a label-free benchmark (`soundalike.ml.benchmark`) that measures
+the trade-off directly. Holding a song and one same-artist sibling fixed and adding only
+*distractors*, **fixed-pair recall@10 falls from 0.17 at 5k to 0.04 at 86k** — a bigger pool does
+bury a specific sibling. Meanwhile **held-out nearest-neighbour cosine (coverage) rises from 0.36 to
+0.46** — a bigger pool means something close almost always exists. The curves cross near 20k and both
+flatten past ~40k.
+
+![Library size vs quality](library_size_sweep.png)
+
+So the "perfect balance" isn't a single number — it depends on which failure you care about. I chose
+**coverage-first (~87k)** deliberately: the failures users actually notice are coverage failures (a
+niche seed returning nothing in-scene), and the precision cost is better recovered with **smarter
+ranking than with a smaller library**. That's what the new `--diversity` (MMR re-ranking),
+`--max-per-artist`, and multi-seed *taste-blend* features do — keep the top-K varied and on-point
+without throwing away whole scenes. The bundle is also GitHub-capped near ~100 MB, so ~87k is close
+to the practical ceiling regardless. The point isn't the exact size; it's that the decision is now
+*measured and defensible* instead of a hunch.
+
 ---
 
 ## 7. Security & correctness
@@ -324,9 +344,9 @@ the same engineering habit as the vibe engine:
 - **No data leakage in evaluation.** The encoder trains self-supervised on the train split only;
   the kNN probe splits *within* validation and *within* test, never crossing into the training
   set. This was independently verified in code review.
-- **84 automated tests** cover the recommenders, OAuth/PKCE, the DSP, vibe and vibe-aware engines,
-  the spec cache, and the ML pipeline (including the augmentation, contrastive loss, vibe-target,
-  and dataset-split logic).
+- **92 automated tests** cover the recommenders, OAuth/PKCE, the DSP, vibe and vibe-aware engines,
+  the spec cache, the recommendation benchmark, diversity/MMR re-ranking, and the ML pipeline
+  (augmentation, contrastive loss, vibe-target, and dataset-split logic).
 
 
 ---
@@ -336,9 +356,9 @@ the same engineering habit as the vibe engine:
 - **Persist a personal acoustic-feature store** so the engines cover a user's entire Spotify
   library, not just what's in a preview catalog.
 - **Human-in-the-loop evaluation** — let a user rate recommendations to measure real-world
-  quality beyond the genre proxy, and use those ratings to tune the fusion blend.
-- **A larger vibe-aware encoder** and longer multi-task training, now that the pipeline scales
-  and the spec cache makes re-embedding a library free.
+  quality beyond the label-free benchmark, and use those ratings to tune the fusion blend.
+- **A 512-d encoder or a downloadable (non-bundled) index** to push past the ~100 MB GitHub cap and
+  the ~87k-song bundle ceiling, if coverage ever needs to grow further.
 - **Contrastive-on-vibe** — mine positive pairs by vibe similarity, not just augmented crops, so
   the contrastive objective itself pulls same-vibe songs together.
 
@@ -358,7 +378,7 @@ For anyone evaluating this as a portfolio piece, the work spans:
   CUDA memory-layout and precision tuning, reading cuDNN kernel selection.
 - **API integration & security:** OAuth 2.0 PKCE, token lifecycle management, rate-limit handling,
   secret hygiene.
-- **Software engineering:** clean package design, an 84-test suite, packaging, a documented CLI,
+- **Software engineering:** clean package design, a 92-test suite, packaging, a documented CLI,
   decoupling I/O from compute (the harvest-once spec cache), and reviewed, merged pull requests.
 - **Data engineering:** multi-connection downloading, parallel preprocessing across CPU cores,
   compact on-disk formats (float16 caches + models), robust handling of corrupt inputs.
