@@ -246,6 +246,8 @@ def main(argv: Optional[list] = None) -> int:
     parser.add_argument("--out-dir", default="ml_data/model_artist")
     parser.add_argument("--init-model", default="ml_data/model_vibe")
     parser.add_argument("--epochs", type=int, default=40)
+    parser.add_argument("--width", type=int, default=64)
+    parser.add_argument("--embedding-dim", type=int, default=256)
     parser.add_argument("--log", default=None)
     args = parser.parse_args(argv)
 
@@ -261,7 +263,8 @@ def main(argv: Optional[list] = None) -> int:
     try:
         train_artist(Path(args.cache), Path(args.out_dir),
                      init_model=Path(args.init_model) if args.init_model else None,
-                     epochs=args.epochs, progress=progress)
+                     epochs=args.epochs, width=args.width,
+                     embedding_dim=args.embedding_dim, progress=progress)
     finally:
         if log_fh:
             log_fh.close()

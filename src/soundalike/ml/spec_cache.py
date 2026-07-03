@@ -85,6 +85,39 @@ class SpecCache:
             specs=list(d["specs"]), vibe=list(d["vibe"]),
         )
 
+    def deduped(self) -> "SpecCache":
+        """Return a copy with near-duplicate tracks removed.
+
+        The harvest already dedups by Deezer track id, but the same song still
+        appears as separate ids across masters/remasters/sped-up/remix/karaoke
+        uploads. Those clutter recommendations (a seed matches five copies of one
+        song), so we collapse to one row per normalized (title, artist) key.
+        """
+        import re
+
+        def norm(title: str, artist: str) -> str:
+            t = title.lower()
+            t = re.sub(r"\((feat|ft|with)[^)]*\)", "", t)
+            t = re.sub(
+                r"[-(\[]\s*(remaster|remastered|sped[\s-]?up|slowed|reverb|remix|"
+                r"radio edit|live|acoustic|instrumental|karaoke|cover|version|mix|"
+                r"edit|demo|mono|stereo|deluxe|bonus)\b[^)\]]*[)\]]?.*",
+                "", t,
+            )
+            t = re.sub(r"[^a-z0-9]", "", t)
+            a = re.sub(r"[^a-z0-9]", "", artist.lower())
+            return f"{t}|{a}"
+
+        seen: set = set()
+        out = SpecCache()
+        for i, (tid, title, artist) in enumerate(zip(self.track_ids, self.titles, self.artists)):
+            key = norm(str(title), str(artist))
+            if key in seen or not key.strip("|"):
+                continue
+            seen.add(key)
+            out.add(tid, title, artist, self.specs[i], self.vibe[i])
+        return out
+
 
 def _artist_id(session: requests.Session, name: str) -> Optional[int]:
     try:

@@ -14,9 +14,9 @@ run it" lives in the [README](../README.md); this is the "how it was built and w
 - **Started with:** a ~180-line first-year terminal script that read a static CSV of songs and
   printed min/max/mean statistics.
 - **Ended with:** an installable Python package with **six recommendation engines**, a live
-  Spotify integration (OAuth PKCE, no passwords), and **three GPU-trained audio-embedding neural
+  Spotify integration (OAuth PKCE, no passwords), and **GPU-trained audio-embedding neural
   networks** — a contrastive FMA encoder, a **vibe-aware** encoder that learns a song's bass profile
-  and dynamics, and an **artist-aware** encoder fine-tuned on ~55,000 real songs — feeding a
+  and dynamics, and an **artist-aware** encoder fine-tuned on ~87,000 real songs — feeding a
   bundled, out-of-the-box recommender.
 - **Headline result:** the learned model's genre-probe accuracy scales with data —
   **0.25 → 0.601 → 0.641** as the training set grows **475 → 25,000 → 106,000** tracks — going
@@ -24,11 +24,12 @@ run it" lives in the [README](../README.md); this is the "how it was built and w
 - **Vibe result:** a multi-task "vibe-aware" encoder raises how much vibe its embedding space
   encodes from **linear-probe R² 0.82 → 0.94** on 1,738 held-out real songs, with the biggest
   gains on bass and dynamics — the qualities that define whether two songs *feel* the same.
-- **Scale result:** growing the library to ~55k songs across every genre exposed the *encoder* as
-  the bottleneck; a domain-matched **artist-aware** fine-tune plus embedding **whitening** turned
-  incoherent cross-genre matches into scene-coherent ones (Miles Davis → Brad Mehldau/Gerry
-  Mulligan; Explosions in the Sky → Mogwai/Mono, not random pop).
-- **Built and validated on:** an NVIDIA RTX 5080 (Blackwell), 81 automated tests, a clean
+- **Scale result:** growing the library to ~87k songs across every genre exposed the *encoder* as
+  the bottleneck; a domain-matched **artist-aware** fine-tune, a **higher-dimensional embedding**
+  (256→384) and embedding **whitening** turned incoherent cross-genre matches into scene-coherent
+  ones (Miles Davis → Brad Mehldau/Lee Morgan; Explosions in the Sky → This Will Destroy You/Mono;
+  NewJeans → CHUU/LOONA, not random pop).
+- **Built and validated on:** an NVIDIA RTX 5080 (Blackwell), 84 automated tests, a clean
   packaged wheel.
 
 ---
@@ -257,49 +258,58 @@ comparison above a fair, apples-to-apples test on an identical song set.
 
 Testing on a niche seed (*Lovers Rock* by TV Girl) returned generic pop — because the bundled
 library, curated for the earlier hyperpop test, simply had no dream-pop neighbours. So I **grew the
-library in two waves — from ~1,700 to ~25,000 and then to ~55,000 songs** across every scene,
-crawling the Deezer **related-artist graph** two hops out from a ~400-artist multi-genre seed list
-(deliberately over-sampling niches the charts miss: K-pop and city-pop, Afrobeats, French and Latin
-rap, techno/house/DnB, phonk and synthwave, post-rock, shoegaze, black/death metal, jazz, classical,
-blues, gospel, reggae). (Deezer's genre endpoints turned out to be useless — they ignore the id and
-return the same global list — so the related-artist graph, which *is* genre-coherent, did the work.)
-Three engineering details made the harvest practical: a **candidate sidecar** so a restart never
-re-does the slow gather; **thread-pool downloads** (the box was 93% idle at 0.8/s single-threaded →
-~6/s across 10 workers); and the discovery that Deezer **preview URLs are signed and expire**, so
-the worker fetches a fresh URL by track id right before downloading (this alone took the success
-rate from 0% back to 100%).
+library in waves — ~1,700 → ~25,000 → ~55,000 → ~87,000 songs** across every scene, crawling the
+Deezer **related-artist graph** two hops out from a ~400-artist multi-genre seed list (deliberately
+over-sampling niches the charts miss: K-pop and city-pop, Afrobeats, French and Latin rap, techno/
+house/DnB, phonk and synthwave, post-rock, shoegaze, black/death metal, jazz, classical, blues,
+gospel, reggae). (Deezer's genre endpoints turned out to be useless — they ignore the id and return
+the same global list — so the related-artist graph, which *is* genre-coherent, did the work.) Four
+engineering details made the harvest practical: a **candidate sidecar** so a restart never re-does
+the slow gather; **thread-pool downloads** (the box was 93% idle at 0.8/s single-threaded → ~6/s
+across 10 workers); the discovery that Deezer **preview URLs are signed and expire**, so the worker
+fetches a fresh URL by track id right before downloading (this alone took the success rate from 0%
+back to 100%); and a **dedup pass** that collapses remaster/sped-up/remix/karaoke variants of the
+same song to one row, so a seed can't match five copies of one track.
 
 But growing the library made recommendations **worse**, which was the most instructive result of
 the whole project. A bigger, more diverse pool contained more songs that were *texture-similar but
 vibe-wrong*, and the FMA-trained encoder — trained on mostly instrumental Creative-Commons music —
 happily surfaced them (a dream-pop seed matched Creed and Metallica). **The library was never the
-ceiling; the encoder was.** Two fixes, one at train time and one at inference:
+ceiling; the encoder was.** Three fixes, two at train time and one at inference:
 
 1. **An artist-aware encoder.** I fine-tuned the encoder on the harvested songs with a
    **supervised-contrastive** objective using the *artist* as the label (PK-sampled batches; songs
    by the same artist are positives), plus the vibe-target auxiliary. "Same artist ⇒ similar" is a
    free, strong style signal, and because the library was crawled through related artists it
-   generalizes to *neighbouring* artists. It trains on the cached spectrograms in ~30 min on the
+   generalizes to *neighbouring* artists. It trains on the cached spectrograms in ~40 min on the
    5080.
 
-2. **Whitening.** The embeddings piled into a tight cone (every pair ~0.9 cosine), so raw cosine
+2. **A higher-dimensional embedding.** When the library passed ~50k songs, precision on
+   already-strong seeds *softened* — a bigger pool means more competing look-alikes crowding a
+   fixed-size space. Widening the embedding from 256 to 384 dimensions (which barely changes compute
+   — it's just the final projection — and keeps the bundled index under GitHub's 100 MB limit) gave
+   the space room to separate ~87k songs, and precision recovered while coverage kept improving. The
+   384-d base also scored higher on the held-out genre probe (kNN 0.617 vs 0.606).
+
+3. **Whitening.** The embeddings piled into a tight cone (every pair ~0.9 cosine), so raw cosine
    couldn't rank finely. ZCA-whitening the space at load time removes the dominant shared direction
    so similarity keys on what's *distinctive*.
 
 The combined effect, on identical seeds:
 
-| Seed | FMA encoder, raw cosine | Artist-aware + whitening |
-|------|--------------------------|--------------------------|
-| *So What* — Miles Davis | mixed | Brad Mehldau, Gerry Mulligan, Nancy Wilson |
-| *Your Hand in Mine* — Explosions in the Sky | mixed | Mogwai, Mono, This Will Destroy You |
-| *HUMBLE.* — Kendrick | mixed | Kodak Black, 21 Savage, JID, Baby Keem |
+| Seed | FMA encoder, raw cosine | Artist-aware 384-d + whitening |
+|------|--------------------------|--------------------------------|
+| *So What* — Miles Davis | mixed | Brad Mehldau, Lee Morgan, Ahmad Jamal |
+| *Your Hand in Mine* — Explosions in the Sky | mixed | If These Trees Could Talk, This Will Destroy You, Mono |
+| *Ditto* — NewJeans | mixed | CHUU, LOONA (K-pop) |
+| *HUMBLE.* — Kendrick | mixed | Kodak Black, JID, $uicideboy$ |
 
-It's now genuinely scene-coherent across jazz, post-rock, metal, hip-hop, R&B, electronic, indie and
-bedroom-pop — including whole scenes (jazz, post-rock, phonk, city-pop) that simply weren't in the
-library before. There's an honest tension worth naming: the second wave to 55k songs made the
-niches viable but slightly *softened* a few already-strong indie seeds, because a bigger pool means
-more competing attractors — the same coverage-vs-precision trade every retrieval system faces. The
-throughline is the same engineering habit as the vibe engine:
+It's now genuinely scene-coherent across jazz, post-rock, metal, hip-hop, R&B, electronic, indie,
+bedroom-pop, K-pop and ambient — including whole scenes (jazz, post-rock, phonk, city-pop) that
+simply weren't in the library before. The instructive arc is the coverage-vs-precision tension:
+scaling the library helped coverage but *hurt* precision until the encoder was given more capacity
+to match — a reminder that "more data" and "better model" are different levers. The throughline is
+the same engineering habit as the vibe engine:
 **let the failure tell you where the real bottleneck is**, and don't mistake "more data" for
 "better model."
 
@@ -314,7 +324,7 @@ throughline is the same engineering habit as the vibe engine:
 - **No data leakage in evaluation.** The encoder trains self-supervised on the train split only;
   the kNN probe splits *within* validation and *within* test, never crossing into the training
   set. This was independently verified in code review.
-- **81 automated tests** cover the recommenders, OAuth/PKCE, the DSP, vibe and vibe-aware engines,
+- **84 automated tests** cover the recommenders, OAuth/PKCE, the DSP, vibe and vibe-aware engines,
   the spec cache, and the ML pipeline (including the augmentation, contrastive loss, vibe-target,
   and dataset-split logic).
 
@@ -348,7 +358,7 @@ For anyone evaluating this as a portfolio piece, the work spans:
   CUDA memory-layout and precision tuning, reading cuDNN kernel selection.
 - **API integration & security:** OAuth 2.0 PKCE, token lifecycle management, rate-limit handling,
   secret hygiene.
-- **Software engineering:** clean package design, an 81-test suite, packaging, a documented CLI,
+- **Software engineering:** clean package design, an 84-test suite, packaging, a documented CLI,
   decoupling I/O from compute (the harvest-once spec cache), and reviewed, merged pull requests.
 - **Data engineering:** multi-connection downloading, parallel preprocessing across CPU cores,
   compact on-disk formats (float16 caches + models), robust handling of corrupt inputs.

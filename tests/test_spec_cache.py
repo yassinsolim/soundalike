@@ -64,3 +64,30 @@ def test_load_numpy_array_ids(tmp_path):
     d = SpecCache.load(p)
     assert isinstance(d.track_ids[0], int)
     assert d.has(100)
+
+
+def test_deduped_collapses_variants():
+    c = SpecCache()
+    c.add(1, "Bags", "Clairo", _spec(), _vibe())
+    c.add(2, "Bags - Sped Up", "Clairo", _spec(), _vibe())
+    c.add(3, "Bags (Remastered 2020)", "Clairo", _spec(), _vibe())
+    c.add(4, "Bags (feat. Someone)", "Clairo", _spec(), _vibe())
+    c.add(5, "Different Song", "Clairo", _spec(), _vibe())
+    c.add(6, "Bags", "Other Artist", _spec(), _vibe())
+    d = c.deduped()
+    # The four Clairo "Bags" variants collapse to one; distinct title/artist kept.
+    assert len(d) == 3
+    keys = {(t, a) for t, a in zip(d.titles, d.artists)}
+    assert ("Bags", "Clairo") in keys
+    assert ("Different Song", "Clairo") in keys
+    assert ("Bags", "Other Artist") in keys
+
+
+def test_deduped_preserves_spec_shape():
+    c = SpecCache()
+    c.add(1, "X", "A", _spec(), _vibe())
+    c.add(2, "Y", "B", _spec(), _vibe())
+    d = c.deduped()
+    assert len(d) == 2
+    assert d.specs[0].shape == (128, 256)
+    assert d.vibe[0].shape == (29,)
