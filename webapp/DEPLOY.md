@@ -106,21 +106,29 @@ visible in the OAuth URL by design).
    with no login.)
 
 ### The one real limitation (be aware)
-Spotify apps start in **Development Mode**, which only lets **up to 25 Spotify
+Spotify apps start in **Development Mode**, which only lets **up to 5 Spotify
 accounts that you manually add** (Dashboard → *User Management*) log in and save
 playlists. This is why the desktop "Save playlist" returned 403 earlier — your own
 account just needs to be added there.
 
 For the *general public* to log in and save, Spotify requires **Extended Quota
-Mode**, which means submitting the app for their review. For a personal project
-that approval is not guaranteed. So realistically:
+Mode** — and **as of May 15 2025 they only accept applications from organizations,
+not individuals** (a registered business, a launched service with ≥250k monthly
+active users, applied via a company email, ~6-week review). For a personal project
+that's effectively unavailable. So realistically:
 
 - **Recommendations: truly public** (no login, works for everyone). ✅
-- **Save-to-playlist: you + up to 25 people you allowlist**, unless/until Spotify
-  grants extended quota. ✅ (for you and friends) / ⏳ (fully public)
+- **One-click Save-to-playlist: you + up to 4 accounts you allowlist** (5 total).
+  Public one-click save isn't attainable for a solo dev under Spotify's policy.
+- **Everyone else** gets a no-login **"Copy list"** button (paste into a new Spotify
+  playlist) and an **Open in Spotify** link on every result. ✅
 
-Everyone else still gets an **Open in Spotify** link on every result and can copy
-the list — no login required.
+If you want *any* visitor to get a real playlist without logging in, the only route
+is an **owner-account model**: store your own refresh token as a server-side secret
+and have a serverless function create public playlists in your account, returning a
+shareable link. It sidesteps the 5-user cap (visitors are listeners, not API users)
+but every playlist lives under your account — a deliberate tradeoff, not enabled by
+default.
 
 ---
 
@@ -131,8 +139,8 @@ the list — no login required.
 2. **DNS:** add the CNAME Vercel gives you for `soundalike.yassin.app`.
 3. **Spotify Dashboard:** add the redirect URI above, add your account under User
    Management, and paste the Client ID into `index.html` (or tell me to).
-4. *(Optional)* If you want fully-public playlist saving, apply for Extended Quota
-   in the dashboard.
+4. *(Optional)* Enable the owner-account model above for public one-click saving
+   (Extended Quota is org-only, so this is the realistic path).
 
 Run it locally first to see it work end-to-end:
 
