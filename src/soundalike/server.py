@@ -238,6 +238,7 @@ class SoundalikeEngine:
 
 # ============================================================ HTTP server layer
 _ENGINE: Optional[SoundalikeEngine] = None
+_TOKEN: str = ""  # per-process token gating the state-changing playlist endpoint
 
 DEMO_SEEDS = [
     {"title": "Chamber of Reflection", "artist": "Mac DeMarco"},
@@ -331,7 +332,8 @@ class _Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = self.path.split("?", 1)[0]
         if path in ("/", "/index.html"):
-            self._send(200, INDEX_HTML.encode("utf-8"), "text/html; charset=utf-8")
+            html = INDEX_HTML.replace("__SA_TOKEN__", _TOKEN)
+            self._send(200, html.encode("utf-8"), "text/html; charset=utf-8")
         elif path == "/health":
             self._json(200, {"ok": True, "library": len(_ENGINE.index) if _ENGINE else 0})
         elif path == "/api/seeds":
@@ -340,8 +342,11 @@ class _Handler(BaseHTTPRequestHandler):
             self._json(404, {"ok": False, "error": "not found"})
 
     def _body(self) -> Dict:
-        n = int(self.headers.get("Content-Length", "0") or "0")
-        if not n:
+        try:
+            n = int(self.headers.get("Content-Length", "0") or "0")
+        except ValueError:
+            return {}
+        if n <= 0:
             return {}
         try:
             return json.loads(self.rfile.read(n).decode("utf-8"))
@@ -350,8 +355,8 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = self.path.split("?", 1)[0]
-        data = self._body()
         try:
+            data = self._body()
             if path == "/api/recommend":
                 q = (data.get("query") or "").strip()
                 if not q:
@@ -362,6 +367,11 @@ class _Handler(BaseHTTPRequestHandler):
                     max_per_artist=int(data.get("max_per_artist", 1)))
                 return self._json(200 if res.get("ok") else 422, res)
             if path == "/api/playlist":
+                # State-changing (writes to the user's Spotify). Require the
+                # per-process token that only the served UI knows, so a random
+                # website open in the browser can't drive playlist creation.
+                if _TOKEN and self.headers.get("X-Soundalike-Token") != _TOKEN:
+                    return self._json(403, {"ok": False, "error": "bad or missing token"})
                 return self._json(200, _make_playlist(
                     data.get("name", "soundalike mix"), data.get("tracks", [])))
             self._json(404, {"ok": False, "error": "not found"})
@@ -373,7 +383,9 @@ def serve(host: str = "127.0.0.1", port: int = 8787,
           index_path: Optional[Path] = None, model_dir: Optional[Path] = None,
           open_browser: bool = True, progress=print) -> int:
     """Warm-load the models and run the local server until interrupted."""
-    global _ENGINE
+    global _ENGINE, _TOKEN
+    import secrets
+    _TOKEN = secrets.token_urlsafe(16)
     progress("Loading encoder + deep-vibe library (one-time)…")
     _ENGINE = SoundalikeEngine(index_path=index_path, model_dir=model_dir)
     progress(f"Ready — {len(_ENGINE.index):,} tracks in the library.")
@@ -478,6 +490,7 @@ INDEX_HTML = r"""<!doctype html>
 </div>
 <script>
 const $=s=>document.querySelector(s);
+const TOKEN="__SA_TOKEN__";
 let lastResults=[], lastSeed=null;
 
 async function loadSeeds(){
@@ -485,7 +498,7 @@ async function loadSeeds(){
     const c=$('#chips'); c.innerHTML='';
     (d.seeds||[]).slice(0,8).forEach(s=>{
       const b=document.createElement('button'); b.className='chip';
-      b.innerHTML=`${s.title} <b>· ${s.artist}</b>`;
+      b.innerHTML=`${esc(s.title)} <b>· ${esc(s.artist)}</b>`;
       b.onclick=()=>{ $('#q').value=`${s.title} — ${s.artist}`; run(); };
       c.appendChild(b);
     });
@@ -536,7 +549,7 @@ async function savePlaylist(){
   const b=$('#save'); b.disabled=true; const old=b.textContent; b.textContent='Saving…';
   try{
     const name=`soundalike · ${lastSeed.title}`;
-    const r=await fetch('/api/playlist',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch('/api/playlist',{method:'POST',headers:{'Content-Type':'application/json','X-Soundalike-Token':TOKEN},
       body:JSON.stringify({name, tracks:lastResults})});
     const d=await r.json();
     if(d.ok){ b.textContent=`✓ Saved ${d.added} songs`;
