@@ -53,7 +53,7 @@ dev = [
 soundalike = "soundalike.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/yassinsolim/Spotify-Statistics"
+Homepage = "https://github.com/yassinsolim/soundalike"
 
 [tool.setuptools.packages.find]
 where = ["src"]
