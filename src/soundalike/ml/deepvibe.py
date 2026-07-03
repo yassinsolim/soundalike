@@ -161,6 +161,8 @@ class DeepVibeRecommender:
         n: int = 15,
         exclude_ids: Optional[set] = None,
         exclude_artist: Optional[str] = None,
+        diversity: float = 0.0,
+        max_per_artist: int = 0,
     ) -> List[DeepVibeRecommendation]:
         exclude_ids = exclude_ids or set()
         exclude_artist = (exclude_artist or "").casefold()
@@ -176,27 +178,71 @@ class DeepVibeRecommender:
         blended = self.alpha * self._zscore(neural_sim) + (1 - self.alpha) * self._zscore(vibe_sim)
 
         order = np.argsort(blended)[::-1]
-        results: List[DeepVibeRecommendation] = []
+
+        # Build a filtered candidate pool (dedup by title/artist, honour excludes,
+        # optionally cap songs per artist so one artist can't dominate).
+        cand: List[int] = []
         seen: set = set()
+        artist_count: Dict[str, int] = {}
+        pool_cap = max(n * 25, 500) if (diversity > 0 or max_per_artist) else n
         for idx in order:
             i = int(idx)
             tid = int(self.index.track_ids[i])
             if tid in exclude_ids:
                 continue
             title, artist = str(self.index.titles[i]), str(self.index.artists[i])
-            key = f"{title.casefold()}::{artist.casefold()}"
+            akey = artist.casefold()
+            if exclude_artist and exclude_artist in akey:
+                continue
+            key = f"{title.casefold()}::{akey}"
             if key in seen:
                 continue
-            if exclude_artist and exclude_artist in artist.casefold():
+            if max_per_artist and artist_count.get(akey, 0) >= max_per_artist:
                 continue
             seen.add(key)
+            artist_count[akey] = artist_count.get(akey, 0) + 1
+            cand.append(i)
+            if len(cand) >= pool_cap:
+                break
+
+        chosen = self._mmr(cand, blended, n, diversity) if diversity > 0 else cand[:n]
+
+        results: List[DeepVibeRecommendation] = []
+        for i in chosen:
             results.append(DeepVibeRecommendation(
-                title=title, artist=artist, score=float(blended[i]), track_id=tid,
+                title=str(self.index.titles[i]), artist=str(self.index.artists[i]),
+                score=float(blended[i]), track_id=int(self.index.track_ids[i]),
                 neural_sim=float(neural_sim[i]), vibe_sim=float(vibe_sim[i]),
             ))
-            if len(results) >= n:
-                break
         return results
+
+    def _mmr(self, cand: List[int], blended: np.ndarray, n: int, diversity: float) -> List[int]:
+        """Maximal Marginal Relevance re-ranking of candidate indices.
+
+        Greedily picks the item maximizing ``(1-d)*relevance - d*max_similarity``
+        to what's already chosen, so the list stays relevant but stops returning
+        five near-identical songs. Similarity is cosine in the (whitened) neural
+        space. ``diversity`` d in (0, 1]: 0 = pure relevance, ~0.3 = a good mix.
+        """
+        if not cand:
+            return []
+        d = float(np.clip(diversity, 0.0, 1.0))
+        cand = list(cand)
+        # Relevance normalized to [0, 1] over the candidate pool for a fair trade.
+        rel_raw = blended[cand]
+        rel = (rel_raw - rel_raw.min()) / (rel_raw.max() - rel_raw.min() + 1e-9)
+        vecs = self._neural[cand]  # unit-norm rows
+
+        chosen_pos = [int(np.argmax(rel))]
+        best_sim = vecs @ vecs[chosen_pos[0]]  # running max similarity to chosen
+        while len(chosen_pos) < min(n, len(cand)):
+            scores = (1 - d) * rel - d * best_sim
+            for p in chosen_pos:
+                scores[p] = -np.inf
+            nxt = int(np.argmax(scores))
+            chosen_pos.append(nxt)
+            best_sim = np.maximum(best_sim, vecs @ vecs[nxt])
+        return [cand[p] for p in chosen_pos]
 
 
 def build_deepvibe_index(
