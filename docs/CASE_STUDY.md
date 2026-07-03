@@ -29,11 +29,13 @@ run it" lives in the [README](../README.md); this is the "how it was built and w
   (256→384) and embedding **whitening** turned incoherent cross-genre matches into scene-coherent
   ones (Miles Davis → Brad Mehldau/Lee Morgan; Explosions in the Sky → This Will Destroy You/Mono;
   NewJeans → CHUU/LOONA, not random pop).
-- **Objective result:** a controlled 5-seed sweep proved the *training objective*, not model size,
-  is the lever — an **ArcFace + GeM** encoder lifts same-artist mean average precision **+23%** over
-  the supervised-contrastive one (a 512-d encoder and ensembles were measured and *rejected*), and
-  fixes the exact weak spot users noticed (Mac DeMarco → Tame Impala/black midi, not soft soul).
-- **Built and validated on:** an NVIDIA RTX 5080 (Blackwell), 104 automated tests, a clean
+- **Objective + validation result:** a controlled 5-seed sweep found an **ArcFace + GeM** encoder
+  that beat supervised-contrastive by **+23% on same-artist mAP** — but validating it against
+  *independent human behavior* (ListenBrainz co-listening + Deezer related-artists) revealed it
+  **regressed real cross-artist recommendation** (and botched niche genres like city pop/hyperpop).
+  An internal metric had rewarded the wrong thing, so I **reverted** and built a `cross_artist_agreement`
+  metric that measures inter-artist geometry — the honest "measure, ship, re-measure, revert" loop.
+- **Built and validated on:** an NVIDIA RTX 5080 (Blackwell), 106 automated tests, a clean
   packaged wheel.
 
 ---
@@ -356,22 +358,55 @@ variable. The result overturned my intuition: **capacity is not the bottleneck; 
 | 512-d encoder | — | worse | ❌ capacity isn't the lever (see §8 note) |
 | 3-encoder ensemble (concat) | 0.038–0.040 | −2 to −7% | ❌ combining encoders hurt precision |
 | **ArcFace** (additive angular margin) | 0.0477 | **+20%** | ✅ objective *is* the lever |
-| **ArcFace + GeM pooling** | **0.0486** | **+23%** | ✅ **shipped** |
+| **ArcFace + GeM pooling** | **0.0486** | **+23%** | ⚠️ shipped, then **reverted** (see below) |
 | ArcFace + GeM, margin 0.3 | 0.0488 | +23% | ➖ tie on mAP, *worse* on the NN probe → rejected |
 
-Two findings made the ship. **ArcFace** replaces the plain contrastive push/pull with an additive
-angular margin, forcing each song tighter around its artist prototype and further from every other —
-a +20% mAP jump on its own. **GeM pooling** swaps the encoder's flat spatial average for a learnable
-generalized mean, so the network chooses how peaky its per-clip summary is; interestingly it learned
-an exponent *below* 1 (softer than average), and added another ~2%. Pushing the margin higher (0.3)
-was a statistical tie on mAP but *regressed* the independent same-artist NN probe — a clean signal
-that 0.2 is the sweet spot for noisy related-artist labels, not a number to keep cranking.
+Two findings drove the (initial) ship. **ArcFace** replaces the plain contrastive push/pull with an
+additive angular margin, forcing each song tighter around its artist prototype and further from every
+other — a +20% mAP jump on its own. **GeM pooling** swaps the encoder's flat spatial average for a
+learnable generalized mean, so the network chooses how peaky its per-clip summary is; interestingly it
+learned an exponent *below* 1 (softer than average), and added another ~2%. Pushing the margin higher
+(0.3) was a statistical tie on mAP but *regressed* the independent same-artist NN probe — a clean
+signal that 0.2 is the sweet spot for noisy related-artist labels, not a number to keep cranking.
 
-It shows up qualitatively, exactly where the old encoder was weakest. *For the First Time* — Mac
-DeMarco went from drifting soft (Quincy Jones, smooth soul) to **Tame Impala, black midi, Hiroshi
-Sato** (psych/indie-coherent, and higher similarity scores); *OMG* — NewJeans surfaced **aespa and
-BLACKPINK**. The whole sweep — including the negatives — is worth more than any single win: it turns
-"try a bigger model" into a measured claim about *which* change actually moves retrieval.
+On same-artist mAP and on a first qualitative glance it looked great — so I shipped it. Then I did
+what you should always do with an *internal* metric: I checked it against the outside world.
+
+### Ship, re-measure, revert: external validation caught a regression
+
+Same-artist mAP asks "are a song's own siblings near it?" That rewards packing each artist into a tight
+ball — but a recommender never returns the seed's own artist; it returns *other* artists. So I validated
+the shipped encoder against two **independent human-behavior** ground truths, over 24 mainstream *and*
+niche seeds: **ListenBrainz** co-listening (people who listen to X also listen to Y) and **Deezer**
+related-artists. For each seed I measured the fraction of our recommended artists that real listeners
+corroborate, against a random-library baseline.
+
+| Ground truth (independent of our audio) | ArcFace+GeM (shipped) | Supervised-contrastive (old) | Random |
+|---|:---:|:---:|:---:|
+| ListenBrainz co-listening (24 seeds) | 0.117 | **0.161** | 0.004 |
+| Deezer related-artists (24 seeds) | 0.058 | **0.100** | 0.001 |
+| Deezer centroid geometry (116 artists) | 0.233 | **0.252** | — |
+
+Both encoders are 26–135× better than random, so both are genuinely sensible — but the **old
+supervised-contrastive encoder agreed with real listeners more, on every measure.** Qualitatively the
+gap was worst exactly where it hurts: **city pop** (*Plastic Love* — Mariya Takeuchi: old → Hiroshi
+Sato, T-Square, Anri, Momoko Kikuchi; ArcFace → Dream Theater, Eric Clapton) and **hyperpop** (*100
+gecs*: old → SOPHIE, Dorian Electra; ArcFace → Rezz, Diplo). ArcFace's aggressive artist-separation had
+sharpened same-artist retrieval while *distorting the inter-artist geometry that recommendation depends
+on* — a metric optimizing the wrong thing.
+
+So I **reverted to the supervised-contrastive encoder** and added `cross_artist_agreement` to the
+benchmark: it builds each artist's centroid, ranks the nearest *other*-artist centroids, and scores
+overlap against a human related-artist map — the North Star same-artist mAP had missed. The ArcFace/GeM
+trainer and pooling stay in the tree as a documented negative result. The lesson is the most valuable
+artifact here: **an internal metric is a hypothesis, not a verdict — validate against the real world
+before you trust it, and be willing to unship.**
+
+It shows up qualitatively for the *kept* (supervised-contrastive) encoder, exactly where the FMA
+encoder was weakest. *Plastic Love* — Mariya Takeuchi returns genuine city pop (Hiroshi Sato,
+T-Square, Anri); *OMG* — NewJeans surfaces K-pop neighbours; jazz and black-metal seeds return
+scene-royalty. The remaining weak spot (both encoders): ultra-niche breakcore seeds (*Sewerslvt*) leak
+into trance — a candidate for the next objective iteration, now measurable via `cross_artist_agreement`.
 
 ---
 
@@ -384,10 +419,10 @@ BLACKPINK**. The whole sweep — including the negatives — is worth more than 
 - **No data leakage in evaluation.** The encoder trains self-supervised on the train split only;
   the kNN probe splits *within* validation and *within* test, never crossing into the training
   set. This was independently verified in code review.
-- **104 automated tests** cover the recommenders, OAuth/PKCE, the DSP, vibe and vibe-aware engines,
-  the spec cache, the recommendation benchmark (including same-artist mAP), diversity/MMR re-ranking,
-  GeM pooling, and the ML pipeline (augmentation, contrastive loss, vibe-target, and dataset-split
-  logic).
+- **106 automated tests** cover the recommenders, OAuth/PKCE, the DSP, vibe and vibe-aware engines,
+  the spec cache, the recommendation benchmark (same-artist mAP *and* the cross-artist agreement
+  metric), diversity/MMR re-ranking, GeM pooling, and the ML pipeline (augmentation, contrastive
+  loss, vibe-target, and dataset-split logic).
 
 
 ---
@@ -400,9 +435,12 @@ BLACKPINK**. The whole sweep — including the negatives — is worth more than 
   quality beyond the label-free benchmark, and use those ratings to tune the fusion blend.
 - **A 512-d or a downloadable (non-bundled) index** — the downloadable index now exists (fetched from
   a GitHub Release past the 100 MB bundle cap), so library coverage can grow further; a wider encoder,
-  though, was measured *not* to help (512-d matched 384-d). Acting on that, the last encoder upgrade
-  came from a better **objective** (ArcFace + GeM, +23% mAP — §6), not more capacity, which is the
-  direction future gains should keep taking.
+  though, was measured *not* to help (512-d matched 384-d). The next encoder gain should come from a
+  better **objective** *selected on the right metric* — `cross_artist_agreement`, not same-artist mAP
+  (§6 explains why the ArcFace mAP win didn't survive external validation).
+- **Fix the niche weak spot** — external validation showed ultra-niche breakcore seeds (*Sewerslvt*)
+  leak into trance. Now that `cross_artist_agreement` can score it against ListenBrainz/Deezer, it's a
+  measurable target for the next fine-tune (e.g. harder negatives from the related-artist graph).
 - **Contrastive-on-vibe** — mine positive pairs by vibe similarity, not just augmented crops or
   same-artist labels, so the objective pulls same-*vibe* songs together directly (the natural next
   step after ArcFace, since the artist signal is a proxy for vibe, not vibe itself).
