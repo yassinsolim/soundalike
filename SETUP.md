@@ -46,7 +46,8 @@ you'll approve access in your browser via OAuth.
    automatically. Verify with `soundalike whoami`.
 
 > **Development mode is fine.** New apps start in development mode, which is all you need for
-> your own account (up to 25 allowlisted users). You do *not* need to request a quota extension.
+> your own account (up to 5 allowlisted users). You do *not* need to request a quota extension
+> for personal use.
 
 > **Redirect URI must match exactly**, including `http`, `127.0.0.1` (not `localhost`), the
 > port `8888`, and `/callback`. A mismatch is the #1 cause of login errors.
