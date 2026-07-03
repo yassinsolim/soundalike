@@ -81,8 +81,8 @@ We never ask for your password. Live access uses OAuth 2.0 with PKCE.
 ## Install
 
 ```bash
-git clone https://github.com/yassinsolim/Spotify-Statistics.git
-cd Spotify-Statistics
+git clone https://github.com/yassinsolim/soundalike.git
+cd soundalike
 python -m venv .venv
 # Windows:
 .\.venv\Scripts\Activate.ps1
