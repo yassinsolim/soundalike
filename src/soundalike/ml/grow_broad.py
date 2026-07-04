@@ -182,6 +182,33 @@ NICHE_SEED_ARTISTS: List[str] = [
 ]
 
 
+# Deliberately-popular artists that user testing surfaced as missing or thin —
+# mainstream names people actually search for. This is objective "everyone knows
+# them" coverage (charts/most-streamed), NOT any single listener's taste, added so
+# a first-time visitor's obvious searches land. Related-BFS fans these out too.
+POPULAR_SEED_ARTISTS: List[str] = [
+    # the specific gaps found in testing + adjacent
+    "Joji", "88rising", "Rich Brian", "Keshi", "Dhruv", "Beabadoobee",
+    # mainstream rap / trap (the "rap is rough" gap)
+    "Future", "Metro Boomin", "21 Savage", "Young Thug", "Gunna", "Lil Baby",
+    "Don Toliver", "Juice WRLD", "Trippie Redd", "XXXTENTACION", "Ski Mask The Slump God",
+    "Lil Uzi Vert", "Lil Yachty", "Roddy Ricch", "DaBaby", "Polo G", "NBA YoungBoy",
+    "Rod Wave", "Lil Tjay", "Nav", "Metro", "Sheck Wes", "Sremmurd", "Rae Sremmurd",
+    "2Pac", "The Notorious B.I.G.", "Nas", "JAY-Z", "50 Cent", "Eminem", "Snoop Dogg",
+    "OutKast", "Wu-Tang Clan", "A Tribe Called Quest", "Gang Starr",
+    # mainstream pop / r&b people search
+    "Doja Cat", "Megan Thee Stallion", "Nicki Minaj", "Cardi B", "Ice Spice",
+    "Post Malone", "Bruno Mars", "The Kid LAROI", "Justin Bieber", "Ed Sheeran",
+    "Beyoncé", "Rihanna", "Michael Jackson", "Usher", "Chris Brown", "Miguel",
+    "Summer Walker", "Jhené Aiko", "Bryson Tiller", "PARTYNEXTDOOR", "6LACK",
+    "Steve Lacy", "Dominic Fike", "Omar Apollo", "Kevin Abstract", "BROCKHAMPTON",
+    # afrobeats / amapiano crossover that charts globally
+    "Rema", "Tems", "Libianca", "Tyla",
+    # hyperpop-adjacent the user vibes with (objective scene, not their playlists)
+    "osquinn", "twikipedia", "quinnie", "5v", "food house", "Fraxiom",
+]
+
+
 def _global_chart_artists(client: DeezerClient, limit: int,
                           progress: Callable[[str], None]) -> List[int]:
     """Deezer's public genre endpoints ignore the genre id (they all return the
@@ -218,7 +245,7 @@ def _gather_artist_ids(
 
     # Roots: curated seeds (resolved) + mainstream global chart.
     roots: set = set(_global_chart_artists(client, per_genre_artists, progress))
-    all_seeds = BROAD_SEED_ARTISTS + NICHE_SEED_ARTISTS
+    all_seeds = BROAD_SEED_ARTISTS + NICHE_SEED_ARTISTS + POPULAR_SEED_ARTISTS
     progress(f"Resolving {len(all_seeds)} curated seeds...")
     for nm in all_seeds:
         aid = _artist_id(session, nm)
