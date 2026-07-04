@@ -35,10 +35,14 @@ import numpy as np
 
 
 def _norm(s: str) -> str:
-    """Canonical match key: strip accents, casefold, drop featuring clauses."""
+    """Canonical match key: strip accents, parenthetical credits/versions, and
+    '- Remaster' suffixes — but keep ordinary words like 'with' (so 'Stay With Me'
+    doesn't collapse to 'stay')."""
     s = unicodedata.normalize("NFKD", str(s)).encode("ascii", "ignore").decode()
-    s = s.casefold().strip()
-    for sep in (" feat", " ft.", " ft ", " featuring", " (feat", " with "):
+    s = s.casefold()
+    s = re.sub(r"[\(\[][^\)\]]*[\)\]]", " ", s)   # (feat...)/(Remaster)/[Explicit]
+    s = re.sub(r"\s+-\s+.*$", "", s)               # "- 2011 Remaster" suffix
+    for sep in (" feat. ", " feat ", " ft. ", " ft ", " featuring "):
         i = s.find(sep)
         if i > 0:
             s = s[:i]
