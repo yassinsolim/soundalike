@@ -182,6 +182,7 @@ function render(d){
       <h2>${esc(d.seed.title)}</h2><div class="art">${esc(d.seed.artist)}</div>
       <div class="tags"><span class="tag">${esc(v.low_end)}</span><span class="tag">${esc(v.dynamics)}</span><span class="tag">${esc(v.tone)}</span></div>
     </div><div class="actions">
+      <button class="copy" id="share">🔗 Share</button>
       <button class="copy" id="copy">⧉ Copy list</button>
       <button class="save" id="save">＋ Save to Spotify</button>
     </div></div><ol>`;
@@ -192,8 +193,29 @@ function render(d){
       <a class="play" href="${x.spotify_url}" target="_blank" rel="noopener">Open in Spotify ▸</a></li>`;});
   html+="</ol>";
   $("#out").innerHTML=html; $("#save").onclick=savePlaylist; $("#copy").onclick=copyList;
+  $("#share").onclick=shareLink;
   document.querySelectorAll(".pv").forEach(b=>b.onclick=()=>togglePreview(b.dataset.id,b));
   $("#foot").textContent=`Matched from a ${d.library_size.toLocaleString()}-track library. ▶ = 30-second preview.`;
+  // make this result shareable: reflect the seed in the URL (no history spam)
+  try{ history.replaceState({},"","#s="+encodeURIComponent(`${d.seed.title} — ${d.seed.artist}`)); }catch(e){}
+}
+
+// ---------- shareable deep links ----------
+async function shareLink(){
+  const b=$("#share");
+  try{ await navigator.clipboard.writeText(location.href); b.textContent="✓ Link copied"; }
+  catch(e){ b.textContent="✕ copy failed"; }
+  setTimeout(()=>{ b.textContent="🔗 Share"; },1600);
+}
+function splitSeed(q){
+  for(const sep of [" — "," – "," - "," by "]){ const i=q.indexOf(sep); if(i>0) return [q.slice(0,i).trim(),q.slice(i+sep.length).trim()]; }
+  return [q.trim(),""];
+}
+function loadFromHash(){
+  const m=(location.hash||"").match(/^#s=(.+)$/);
+  if(!m) return;
+  const [t,a]=splitSeed(decodeURIComponent(m[1]));
+  if(t) pick({title:t,artist:a,row:null});
 }
 
 // ---------- 30-second audio previews (fetched fresh from Deezer on demand) ----------
@@ -288,7 +310,8 @@ $("#q").addEventListener("keydown",e=>{
   else if(e.key==="Enter"){ pick(acItems[acSel<0?0:acSel]); }
 });
 document.addEventListener("click",e=>{ if(!e.target.closest(".search")) hideAc(); });
-handleRedirect(); updateSpBtn(); loadChips(); loadStats();
+window.addEventListener("hashchange",loadFromHash);
+handleRedirect(); updateSpBtn(); loadChips(); loadStats(); loadFromHash();
 </script>
 </body>
 </html>
