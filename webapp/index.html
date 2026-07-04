@@ -49,6 +49,9 @@
   .chip{background:var(--card);border:1px solid var(--line);color:var(--txt);
     padding:7px 12px;border-radius:999px;font-size:13px;cursor:pointer}
   .chip:hover{border-color:var(--vio)} .chip b{color:var(--mut);font-weight:500}
+  .chip.surprise{background:linear-gradient(90deg,rgba(29,185,84,.18),rgba(139,108,255,.18));
+    border-color:transparent;font-weight:600}
+  .chip.surprise:hover{border-color:var(--grn)}
   .seed{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);
     border-radius:16px;padding:18px;margin:22px 0 14px;display:flex;justify-content:space-between;
     align-items:flex-start;gap:16px}
@@ -303,11 +306,27 @@ async function savePlaylist(){
   }catch(e){ b.textContent="✕ save failed"; b.disabled=false; }
 }
 
-// ---------- demo seed chips ----------
+// ---------- demo seed chips + surprise ----------
 const DEMO=[["Plastic Love","Mariya Takeuchi"],["Redbone","Childish Gambino"],["Only Shallow","My Bloody Valentine"],
   ["money machine","100 gecs"],["Chamber of Reflection","Mac DeMarco"],["Close Eyes","DVRST"]];
-function loadChips(){ $("#chips").innerHTML=DEMO.map((s,i)=>`<button class="chip" data-i="${i}">${esc(s[0])} <b>· ${esc(s[1])}</b></button>`).join("");
-  $("#chips").querySelectorAll("button").forEach(el=>el.onclick=()=>{const s=DEMO[+el.dataset.i];pick({title:s[0],artist:s[1],row:null});}); }
+// curated, verified in-library seeds spanning many scenes — every one gives a strong result
+const SURPRISE=[["Redbone","Childish Gambino"],["Plastic Love","Mariya Takeuchi"],["Only Shallow","My Bloody Valentine"],
+  ["money machine","100 gecs"],["Chamber of Reflection","Mac DeMarco"],["Close Eyes","DVRST"],["Mask Off","Future"],
+  ["Snooze","SZA"],["So What","Miles Davis"],["Master of Puppets","Metallica"],["Last Last","Burna Boy"],["Ditto","NewJeans"],
+  ["Space Song","Beach House"],["Nights","Frank Ocean"],["Sweater Weather","The Neighbourhood"],["HUMBLE.","Kendrick Lamar"],
+  ["EARFQUAKE","Tyler, The Creator"],["Windowlicker","Aphex Twin"],["Reptilia","The Strokes"],["Tití Me Preguntó","Bad Bunny"],
+  ["Svefn-g-englar","Sigur Rós"],["Teardrop","Massive Attack"],["Sicko Mode","Travis Scott"],["Provenza","Karol G"],
+  ["Bangarang","Skrillex"],["Doomsday","MF DOOM"]];
+let lastSurprise=-1;
+function surpriseMe(){ let i; do{ i=Math.floor(Math.random()*SURPRISE.length); }while(i===lastSurprise&&SURPRISE.length>1);
+  lastSurprise=i; const s=SURPRISE[i]; pick({title:s[0],artist:s[1],row:null}); window.scrollTo({top:0,behavior:"smooth"}); }
+function loadChips(){
+  const chips=$("#chips");
+  chips.innerHTML=`<button class="chip surprise" id="surprise">🎲 Surprise me</button>`+
+    DEMO.map((s,i)=>`<button class="chip" data-i="${i}">${esc(s[0])} <b>· ${esc(s[1])}</b></button>`).join("");
+  $("#surprise").onclick=surpriseMe;
+  chips.querySelectorAll("button[data-i]").forEach(el=>el.onclick=()=>{const s=DEMO[+el.dataset.i];pick({title:s[0],artist:s[1],row:null});});
+}
 
 // ---------- init ----------
 async function loadStats(){
