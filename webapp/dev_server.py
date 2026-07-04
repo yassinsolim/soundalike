@@ -56,6 +56,10 @@ class H(BaseHTTPRequestHandler):
         elif u.path == "/api/search":
             q = parse_qs(u.query).get("q", [""])[0]
             self._json(200, {"ok": True, "results": get_recommender().search(q, 8) if q else []})
+        elif u.path == "/api/stats":
+            from _reco import _INDEX_VERSION
+            reco = get_recommender()
+            self._json(200, {"ok": True, "library_size": len(reco), "version": _INDEX_VERSION})
         elif u.path == "/api/preview":
             import urllib.request
             tid = parse_qs(u.query).get("id", [""])[0]
