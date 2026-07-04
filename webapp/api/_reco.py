@@ -175,6 +175,7 @@ class WebRecommender:
         for i in chosen:
             results.append({
                 "title": str(self.titles[i]), "artist": str(self.artists[i]),
+                "deezer_id": int(self.track_ids[i]),
                 "neural_sim": round(float(neural_sim[i]), 4),
                 "vibe_sim": round(float(vibe_sim[i]), 4),
                 "spotify_url": f"https://open.spotify.com/search/{quote(str(self.titles[i]) + ' ' + str(self.artists[i]))}",

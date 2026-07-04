@@ -74,6 +74,19 @@ def test_web_recommender_search_and_findrow(tmp_path):
     assert hits and all("title" in h and "row" in h for h in hits)
 
 
+def test_results_include_deezer_id_for_previews(tmp_path):
+    # The preview feature needs each result to carry its Deezer track id so the
+    # frontend can fetch a 30s preview by id.
+    from _reco import WebRecommender
+
+    path, idx = _synthetic_index(tmp_path)
+    web = WebRecommender(str(path))
+    out = web.recommend(0, n=8)
+    assert out["results"], "expected some results"
+    for r in out["results"]:
+        assert "deezer_id" in r and isinstance(r["deezer_id"], int)
+
+
 def test_split_query_parsing():
     import recommend as rec
     assert rec._split("Plastic Love — Mariya Takeuchi") == ("Plastic Love", "Mariya Takeuchi")
