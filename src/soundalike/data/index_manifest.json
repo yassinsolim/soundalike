@@ -1,7 +1,7 @@
 {
-  "version": "2026.07.02-87k-384d",
+  "version": "2026.07.04-144k-384d",
   "repo": "yassinsolim/soundalike",
-  "release_tag": "index-2026.07.02",
+  "release_tag": "index-2026.07.04",
   "encoder": {
     "asset": "vibe_encoder.pt",
     "sha256": "7b8a175d3b3a9fffcc10a6f4f6170ab76916af7c72cee784d6239303e5904662",
@@ -11,8 +11,8 @@
   },
   "index": {
     "asset": "deepvibe_index.npz",
-    "sha256": "185391811695ff352071be6500d8cd191feda553af2b0c7bfc5bd032b11b5a29",
-    "n_tracks": 86933,
-    "bytes": 74729301
+    "sha256": "1b1d2930af9a7eac8d4c2988ef1419c91fffc75d14341873a2fe5bacea82cfaa",
+    "n_tracks": 143729,
+    "bytes": 123737992
   }
 }

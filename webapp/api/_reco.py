@@ -26,8 +26,11 @@ import numpy as np
 _INDEX_URL = os.environ.get(
     "SOUNDALIKE_INDEX_URL",
     "https://github.com/yassinsolim/soundalike/releases/download/"
-    "index-2026.07.02/deepvibe_index.npz",
+    "index-2026.07.04/deepvibe_index.npz",
 )
+# Bump this when the index changes so warm instances with an old /tmp copy
+# re-download instead of serving stale data.
+_INDEX_VERSION = "2026.07.04"
 _INDEX_PATH = os.environ.get("SOUNDALIKE_INDEX_PATH", "")
 
 _LOCK = threading.Lock()
@@ -227,7 +230,7 @@ def get_recommender() -> WebRecommender:
             return _RECO
         path = _INDEX_PATH
         if not path:
-            path = "/tmp/deepvibe_index.npz"
+            path = f"/tmp/deepvibe_index_{_INDEX_VERSION}.npz"
             if not os.path.exists(path):
                 urllib.request.urlretrieve(_INDEX_URL, path)
         _RECO = WebRecommender(path)
