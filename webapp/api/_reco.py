@@ -26,11 +26,11 @@ import numpy as np
 _INDEX_URL = os.environ.get(
     "SOUNDALIKE_INDEX_URL",
     "https://github.com/yassinsolim/soundalike/releases/download/"
-    "index-2026.07.04/deepvibe_index.npz",
+    "index-2026.07.04-272k/deepvibe_index.npz",
 )
 # Bump this when the index changes so warm instances with an old /tmp copy
 # re-download instead of serving stale data.
-_INDEX_VERSION = "2026.07.04"
+_INDEX_VERSION = "2026.07.04-272k"
 _INDEX_PATH = os.environ.get("SOUNDALIKE_INDEX_PATH", "")
 
 _LOCK = threading.Lock()
@@ -80,14 +80,34 @@ class WebRecommender:
         vibe = d["vibe"].astype(np.float32)
         self.alpha = float(alpha)
 
-        # --- neural: L2-normalize, then ZCA-whiten (identical to production) ---
+        # --- neural: L2-normalize, then ZCA-whiten (chunked + float32 to keep
+        # peak memory well under a serverless function's limit on a large index;
+        # mathematically the same transform the canonical recommender applies) ---
         neural /= np.linalg.norm(neural, axis=1, keepdims=True) + 1e-9
         self._nmean = neural.mean(axis=0)
-        centered = neural - self._nmean
-        cov = np.cov(centered.T)
+        n, dim = neural.shape
+        CH = 16384
+        # Covariance via chunk accumulation (avoids a full centered copy / np.cov's
+        # float64 temporary of the whole matrix).
+        cov = np.zeros((dim, dim), dtype=np.float64)
+        for i in range(0, n, CH):
+            c = (neural[i:i + CH] - self._nmean).astype(np.float64)
+            cov += c.T @ c
+        cov /= max(n - 1, 1)
         evals, evecs = np.linalg.eigh(cov)
-        self._W = evecs @ np.diag(1.0 / np.sqrt(np.clip(evals, 1e-5, None))) @ evecs.T
-        self._neural = self._apply_whiten(neural)
+        self._W = (evecs @ np.diag(1.0 / np.sqrt(np.clip(evals, 1e-5, None)))
+                   @ evecs.T).astype(np.float32)
+        # Whiten in place, chunk by chunk (each row's transform is independent, so
+        # overwriting as we go is safe and avoids a second full-size array), then
+        # drop the on-disk npz. Only the whitened matrix stays resident.
+        for i in range(0, n, CH):
+            x = (neural[i:i + CH] - self._nmean) @ self._W
+            x /= np.linalg.norm(x, axis=1, keepdims=True) + 1e-9
+            neural[i:i + CH] = x
+        self._neural = neural
+        del d
+        import gc
+        gc.collect()
 
         # --- vibe: standardize, sqrt-weight (identical to production) ---
         self._vmean = vibe.mean(axis=0)
