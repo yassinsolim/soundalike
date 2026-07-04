@@ -82,7 +82,7 @@
     <input id="q" placeholder="Search a song…  (e.g. Plastic Love, or Redbone Childish Gambino)" autocomplete="off"/>
     <div class="ac" id="ac"></div>
   </div>
-  <div class="hint" id="hint">Type a song and pick it from the list. This hosted demo covers ~87,000 songs.</div>
+  <div class="hint" id="hint">Type a song and pick it from the list. This hosted demo covers a large, growing library.</div>
 
   <div class="chips" id="chips"></div>
   <div id="out"></div>
@@ -273,6 +273,13 @@ function loadChips(){ $("#chips").innerHTML=DEMO.map((s,i)=>`<button class="chip
   $("#chips").querySelectorAll("button").forEach(el=>el.onclick=()=>{const s=DEMO[+el.dataset.i];pick({title:s[0],artist:s[1],row:null});}); }
 
 // ---------- init ----------
+async function loadStats(){
+  try{ const r=await fetch("/api/stats"); const d=await r.json();
+    if(d.ok&&d.library_size){
+      $("#hint").textContent=`Type a song and pick it from the list. This hosted demo covers ${d.library_size.toLocaleString()} songs.`;
+    }
+  }catch(e){}
+}
 $("#q").addEventListener("input",onType);
 $("#q").addEventListener("keydown",e=>{
   if(!acItems.length) return;
@@ -281,7 +288,7 @@ $("#q").addEventListener("keydown",e=>{
   else if(e.key==="Enter"){ pick(acItems[acSel<0?0:acSel]); }
 });
 document.addEventListener("click",e=>{ if(!e.target.closest(".search")) hideAc(); });
-handleRedirect(); updateSpBtn(); loadChips();
+handleRedirect(); updateSpBtn(); loadChips(); loadStats();
 </script>
 </body>
 </html>
