@@ -40,7 +40,7 @@ Want the recommendations *inside* the Spotify app — a right-click **“Find so
 item? That's the [**Spicetify extension**](integrations/spicetify/README.md) (needs the
 standalone Spotify client). Everything runs locally; nothing leaves your machine.
 
-**Prefer a hosted, no-install demo?** The ~144k-song library runs as a **numpy-only Vercel app**
+**Prefer a hosted, no-install demo?** The ~273k-song library runs as a **numpy-only Vercel app**
 (no PyTorch needed for library songs) — deploy it to a subdomain and let anyone try it in the
 browser, with an optional client-side "Log in with Spotify" (OAuth PKCE — users authorize on
 Spotify's own site, never hand over a password) to save results as a playlist. See
@@ -588,7 +588,7 @@ pytest -q
 - [x] **Scaled to FMA-medium (25k)** — kNN 0.601; beats the no-ML baseline by +8 pts
 - [x] **Scaled to FMA-large (106k)** — kNN 0.641; beats the baseline by +13 pts (CPU-resident training)
 - [x] **Vibe-aware encoder** — multi-task (contrastive + vibe-target); linear-probe vibe R² 0.82 → 0.94
-- [x] **Grown the library to ~144k songs** — 2-hop related-artist crawl from ~480 multi-genre seeds, deduplicated (hosted; the git-bundled fallback index is ~87k)
+- [x] **Grown the library to ~273k songs** — 2-hop related-artist crawl + full-discography deep pass from ~480 multi-genre seeds, deduplicated (hosted; the git-bundled fallback index is ~87k)
 - [x] **Higher-dim embedding (384-d)** — recovers precision at scale so coverage and precision both improve
 - [x] **Artist-aware encoder + whitening** — domain-matched fine-tune (same-artist supervised contrastive) fixes scene precision at scale
 - [x] **ArcFace + GeM objective (tried, reverted)** — won +23% same-artist mAP but external validation (ListenBrainz + Deezer) showed it *regressed* real cross-artist recommendation, so it was reverted; drove a new `cross_artist_agreement` metric
