@@ -3,6 +3,7 @@
   "functions": {
     "api/recommend.py": { "maxDuration": 60 },
     "api/search.py": { "maxDuration": 30 },
+    "api/stats.py": { "maxDuration": 30 },
     "api/preview.py": { "maxDuration": 15 }
   }
 }
