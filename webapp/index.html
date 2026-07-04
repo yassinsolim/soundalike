@@ -58,6 +58,11 @@
   .play{background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:9px;
     padding:8px 12px;font-size:13px;cursor:pointer;text-decoration:none;white-space:nowrap}
   .play:hover{border-color:var(--grn)}
+  .pv{width:34px;height:34px;flex:none;border-radius:50%;border:1px solid var(--line);
+    background:var(--card2);color:var(--txt);cursor:pointer;font-size:13px;display:grid;place-items:center}
+  .pv:hover{border-color:var(--grn);color:var(--grn)}
+  .pv.playing{background:var(--grn);border-color:var(--grn);color:#06210f}
+  li.row.playing{background:var(--card)}
   .state{color:var(--mut);padding:26px 4px}.err{color:#ff8a8a}
   .foot{color:var(--mut);font-size:12px;margin-top:28px;border-top:1px solid var(--line);padding-top:14px}
   .spin{display:inline-block;width:15px;height:15px;border:2px solid var(--line);
@@ -181,13 +186,36 @@ function render(d){
       <button class="save" id="save">＋ Save to Spotify</button>
     </div></div><ol>`;
   d.results.forEach((x,i)=>{ const w=Math.round(100*x.neural_sim/mx);
-    html+=`<li class="row"><div class="rank">${i+1}</div>
+    html+=`<li class="row" data-id="${x.deezer_id}"><button class="pv" title="Preview" data-id="${x.deezer_id}">▶</button><div class="rank">${i+1}</div>
       <div class="meta"><div class="t">${esc(x.title)}</div><div class="a">${esc(x.artist)}</div></div>
       <div class="bar"><i style="width:${w}%"></i></div>
       <a class="play" href="${x.spotify_url}" target="_blank" rel="noopener">Open in Spotify ▸</a></li>`;});
   html+="</ol>";
   $("#out").innerHTML=html; $("#save").onclick=savePlaylist; $("#copy").onclick=copyList;
-  $("#foot").textContent=`Matched from a ${d.library_size.toLocaleString()}-track library.`;
+  document.querySelectorAll(".pv").forEach(b=>b.onclick=()=>togglePreview(b.dataset.id,b));
+  $("#foot").textContent=`Matched from a ${d.library_size.toLocaleString()}-track library. ▶ = 30-second preview.`;
+}
+
+// ---------- 30-second audio previews (fetched fresh from Deezer on demand) ----------
+const audio=new Audio(); let playingId=null;
+audio.addEventListener("ended",resetPreviewUI);
+audio.addEventListener("pause",()=>{ if(audio.ended) return; });
+function resetPreviewUI(){
+  document.querySelectorAll(".pv.playing").forEach(b=>{b.classList.remove("playing");b.textContent="▶";});
+  document.querySelectorAll("li.row.playing").forEach(r=>r.classList.remove("playing"));
+  playingId=null;
+}
+async function togglePreview(id,btn){
+  if(playingId===id){ audio.pause(); resetPreviewUI(); return; }
+  resetPreviewUI(); playingId=id; btn.textContent="…";
+  try{
+    const r=await fetch("/api/preview?id="+encodeURIComponent(id)); const d=await r.json();
+    if(!d.ok||!d.preview){ btn.textContent="✕"; setTimeout(()=>{btn.textContent="▶";},1500); playingId=null; return; }
+    if(playingId!==id) return;                 // user clicked elsewhere while fetching
+    audio.src=d.preview; await audio.play();
+    btn.textContent="⏸"; btn.classList.add("playing");
+    const row=btn.closest("li.row"); if(row) row.classList.add("playing");
+  }catch(e){ btn.textContent="▶"; playingId=null; }
 }
 
 // ---------- copy list (no login, works for EVERYONE) ----------
