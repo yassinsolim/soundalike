@@ -92,3 +92,38 @@ def test_split_query_parsing():
     assert rec._split("Plastic Love — Mariya Takeuchi") == ("Plastic Love", "Mariya Takeuchi")
     assert rec._split("Redbone by Childish Gambino") == ("Redbone", "Childish Gambino")
     assert rec._split("Windowlicker") == ("Windowlicker", "")
+
+
+def test_norm_keeps_with_and_strips_credits():
+    from _reco import _norm
+    # 'with' is a normal word — must NOT be stripped (the old bug collapsed it).
+    assert _norm("Stay With Me") == "stay with me"
+    # parenthetical credits / version suffixes are stripped for matching.
+    assert _norm("Master of Puppets (Remastered)") == "master of puppets"
+    assert _norm("Idol (From The Idol Vol. 1)") == "idol"
+    assert _norm("Song - 2011 Remaster") == "song"
+    assert _norm("Track (feat. Someone)") == "track"
+
+
+def test_search_ranks_and_finds_titles_with_with(tmp_path):
+    from _reco import WebRecommender
+    from soundalike.ml.deepvibe import DeepVibeIndex
+    import numpy as np
+
+    # Tiny hand-made index including a 'with' title and a decoy.
+    titles = np.array(["Mayonaka no Door / Stay With Me", "Stay Awake",
+                       "Dancing", "Money Machine"], dtype=object)
+    artists = np.array(["Miki Matsubara", "Decoy", "Decoy", "100 gecs"], dtype=object)
+    idx = DeepVibeIndex(np.array([1, 2, 3, 4]), titles, artists,
+                        np.random.default_rng(0).standard_normal((4, 16)).astype("float32"),
+                        np.random.default_rng(1).standard_normal((4, 29)).astype("float32"))
+    p = tmp_path / "mini.npz"; idx.save(p)
+    rec = WebRecommender(str(p))
+    # find_row locates the 'with' title (old bug returned None / wrong row).
+    assert rec.find_row("Stay With Me", "Miki Matsubara") == 0
+    # token search: 'miki stay' surfaces the right song.
+    hits = rec.search("miki stay", 3)
+    assert hits and hits[0]["artist"] == "Miki Matsubara"
+    # a query that is an exact title ranks that title first.
+    hits2 = rec.search("money machine", 3)
+    assert hits2[0]["title"] == "Money Machine"
