@@ -288,33 +288,41 @@ genuinely scene-coherent picks. For example, *So What* by Miles Davis returns Br
 Morgan and Ahmad Jamal; *Your Hand in Mine* by Explosions in the Sky returns If These Trees Could
 Talk, This Will Destroy You and Mono; *Ditto* by NewJeans returns CHUU and LOONA.
 
-### Three ranking quality improvements (Approaches 1–3)
+### Real-world retrieval benchmark and guarded ranking
 
-Even with a scene-coherent encoder and a 272k-song library, a structural audit of actual ranked
-output found two persistent problems: **junk derivatives** (slowed/reverb, nightcore, karaoke,
-tribute versions) in the top positions, and **genre-incoherent candidates** that share spectral
-texture but belong to a different scene. Three targeted fixes address each failure mode, validated
-by a reproducible evaluation suite covering 55 seeds across 13 scenes + a 20-seed held-out set:
+The earlier synthetic ranking evidence was discarded. The versioned
+[`soundalike_pairs.v1.json`](benchmarks/soundalike_pairs.v1.json) benchmark contains **50 publicly
+sourced sound-alike pairs** across more than 12 scenes, with URLs, retrieval dates, and evidence
+context. Its 30 development and 20 held-out pairs are credited-artist-disjoint; static manual graph
+pairs were removed because they leaked evaluation artists.
 
-- **Approach 1 — Quality filter** (`soundalike.ml.quality_filter`): a fast regex pre-filter removes
-  junk derivatives — slowed/reverb edits, nightcore, karaoke, tribute bands, medleys, mashups — from
-  the candidate pool before ranking. Pre-computed once at load time as a boolean mask.  Junk rate in
-  top-5 falls to ~0% for contaminated seeds (metal, jazz, city-pop).
+The frozen 272,853-song production result is honest but weak: the raw RTX-5080-trained encoder gets
+held-out Recall@20 **0.00**, Recall@50 **0.05**, and MRR **0.0013**. Production neural+vibe fusion
+reaches R@50 **0.10** and MRR **0.0111**. The full top-50 lists are versioned under
+`.goals/human-quality-recommendations/artifacts/`.
 
-- **Approach 2 — Artist-centroid genre reranker** (`soundalike.ml.genre_rerank`): builds a per-artist
-  centroid in whitened embedding space and adds a genre-coherence term to the blend (γ = 0.25). Boosts
-  candidates whose artist is in the same embedding neighbourhood as the seed, using acoustic geometry
-  rather than explicit labels. +8–12% relative scene coherence on genre-ambiguous seeds.
+Four materially different production-index approaches were tested independently:
 
-- **Approach 3 — Related-artist collaborative graph** (`soundalike.ml.related_artists_rerank`): a
-  bidirectional artist-relationship graph (Deezer editorial + curated manual pairs covering all 13
-  evaluation scenes) boosts candidates whose artist is editorially related to the seed. Orthogonal to
-  the acoustic signal. +5–10% relative on seeds with rich editorial coverage.
+| Method | Pair primary vs baseline | Result |
+|---|---:|---|
+| Quality/recording filter | 0.0% | retained as a safety rule |
+| Full artist-centroid rerank | +6.2% | rejected: one held-out scene regressed |
+| Hubness correction | +2.4% | rejected: too small |
+| Query expansion | −54.0% | rejected: query drift |
 
-All three are enabled by default (`enhance=True`) in both the canonical **desktop recommender**
-(`DeepVibeRecommender`) and the **hosted Vercel path** (`WebRecommender`), with parity tests
-ensuring the two paths are equivalent. Rejected approaches (query-expansion, k-reciprocal
-re-ranking, per-genre alpha tuning) are documented in [`docs/CASE_STUDY.md`](docs/CASE_STUDY.md) §7.
+The selected **guarded centroid** method prefers original-looking seed rows over remix/live matches,
+filters slowed/reverb, karaoke, tribute, covers, mashups, duplicates, and seed-title variants, then
+centroid-reranks only the first 20 already-retrieved candidates. Ranks 21–50 are frozen, so
+known-pair Recall@50 cannot regress. Direct inspection passes
+**17/20** difficult held-out top fives versus **11/20** for baseline. A predeclared 50/50 score of
+sourced-pair retrieval and direct top-five judgment improves **0.3028 → 0.4534 (+49.7%)**, with
+paired-bootstrap absolute-gain 95% CI **+0.0506..+0.2506** and no scene below −10%.
+
+The desktop and hosted numpy code paths implement the same winner and have an exact parity test.
+The public site was browser-checked on ten seeds, but still serves the old baseline because this
+checkout has no Vercel credentials and pushing is intentionally disabled; no deployment success is
+claimed. Full methodology, negative results, resource measurements, and reproduce commands are in
+[`docs/CASE_STUDY.md`](docs/CASE_STUDY.md) §7.
 
 ### Growing the library past the bundle limit
 
@@ -625,7 +633,9 @@ pytest -q
 - [x] **Recommendation benchmark** — label-free precision/coverage metrics + measured library-size trade-off
 - [x] **Diversity + multi-seed** — MMR re-ranking, per-artist caps, and blend several songs into one taste
 - [x] **Web app + right-click integration** — `soundalike serve` (paste a song / Spotify "Copy Song Link" → instant soundalikes) and a Spicetify extension for an in-app right-click menu
-- [x] **Human-aligned quality improvements** — quality filter (removes junk), artist-centroid genre reranker, related-artist collaborative graph; validated on a 55-seed / 13-scene eval suite + held-out 20 difficult seeds
+- [x] **Sourced real-world benchmark** — 50 cited sound-alike pairs, strict artist-disjoint held-out split, frozen 272,853-song ranked lists, bootstrap uncertainty, and 20 explicit top-five judgments
+- [x] **Guarded human-quality ranking** — derivative/seed-title filtering + top-20 centroid rerank; 17/20 held-out top fives pass vs 11/20 baseline without losing a baseline Recall@50 hit
+- [ ] **Deploy guarded ranking** — desktop/hosted parity is tested, but the public Vercel project still serves the frozen baseline pending an authorized deployment
 - [ ] Inline audio previews in the web UI
 
 Contributions welcome — this is meant to be community-built.

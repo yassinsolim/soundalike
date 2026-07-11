@@ -22,37 +22,29 @@ class TestRelatedArtistGraph:
         # Graph built from MANUAL_PAIRS only (no acc_cache directory needed).
         self.graph = RelatedArtistGraph(acc_cache_dir=None, use_manual=True, boost=0.15)
 
-    def test_manual_pairs_loaded(self):
-        """Graph must contain entries for seed artists in the MANUAL_PAIRS list."""
-        assert self.graph.n_artists > 0
-        assert self.graph.n_edges > 0
+    def test_manual_pairs_retired(self):
+        """Static pairs stay empty because they leaked benchmark artists."""
+        assert MANUAL_PAIRS == []
+        assert self.graph.n_artists == 0
+        assert self.graph.n_edges == 0
 
     def test_shoegaze_cluster_connected(self):
         """My Bloody Valentine ↔ Slowdive must be related."""
-        rel = self.graph.related_set("My Bloody Valentine")
-        assert "slowdive" in rel, "MBV should be related to Slowdive"
+        assert self.graph.related_set("My Bloody Valentine") == set()
 
     def test_jazz_cluster_connected(self):
         """Miles Davis ↔ John Coltrane must be related."""
-        rel = self.graph.related_set("Miles Davis")
-        assert "john coltrane" in rel
+        assert self.graph.related_set("Miles Davis") == set()
 
     def test_metal_cluster_connected(self):
         """Metallica ↔ Megadeth must be related."""
-        rel = self.graph.related_set("Metallica")
-        assert "megadeth" in rel
+        assert self.graph.related_set("Metallica") == set()
 
     def test_bidirectional_edge(self):
         """Every edge must be bidirectional."""
-        # If A → B then B → A (all manual pairs are added bidirectionally).
-        for a_raw, b_raw in MANUAL_PAIRS[:20]:
-            ra = self.graph.related_set(a_raw)
-            rb = self.graph.related_set(b_raw)
-            import unicodedata
-            a_cf = unicodedata.normalize("NFKD", a_raw).encode("ascii", "ignore").decode().casefold()
-            b_cf = unicodedata.normalize("NFKD", b_raw).encode("ascii", "ignore").decode().casefold()
-            assert b_cf in ra, f"{a_raw} should list {b_raw} as related"
-            assert a_cf in rb, f"{b_raw} should list {a_raw} as related"
+        self.graph._add_edge("artist a", "artist b")
+        assert "artist b" in self.graph.related_set("artist a")
+        assert "artist a" in self.graph.related_set("artist b")
 
     def test_unknown_artist_returns_empty_set(self):
         rel = self.graph.related_set("Nonexistent Artist XYZ123")
@@ -75,6 +67,7 @@ class TestScoreBoost:
 
     def setup_method(self):
         self.graph = RelatedArtistGraph(acc_cache_dir=None, use_manual=True, boost=0.2)
+        self.graph._add_edge("my bloody Valentine", "slowdive")
         n = 50
         rng = np.random.default_rng(0)
         self.blended = rng.random(n).astype(np.float32)
@@ -161,14 +154,13 @@ class TestAccCacheLoading:
         (cache_dir / "dz_bad.json").write_bytes(b"{broken json!!!}")
         # Should not raise.
         graph = RelatedArtistGraph(acc_cache_dir=cache_dir, use_manual=True, boost=0.1)
-        assert graph.n_artists > 0  # Manual pairs still loaded.
+        assert graph.n_artists == 0
 
     def test_missing_acc_cache_directory(self, tmp_path):
         """Passing a non-existent directory is handled gracefully."""
         missing = tmp_path / "does_not_exist"
         graph = RelatedArtistGraph(acc_cache_dir=missing, use_manual=True, boost=0.1)
-        # Manual pairs still loaded, no crash.
-        assert graph.n_artists > 0
+        assert graph.n_artists == 0
 
 
 def test_graph_no_manual_pairs():
@@ -186,7 +178,7 @@ def test_graph_no_manual_pairs():
 def test_comma_separated_artist_lookup():
     """Artists with comma (features) are matched by primary name."""
     g = RelatedArtistGraph(acc_cache_dir=None, use_manual=True, boost=0.1)
-    # Rap cluster: Kendrick Lamar is related to Drake.
+    g._add_edge("kendrick lamar", "drake")
     rel = g.related_set("Kendrick Lamar, Drake")  # comma-separated
     # Primary name before comma should work.
-    assert len(rel) > 0 or g.related_set("Kendrick Lamar") == g.related_set("Kendrick Lamar")
+    assert "drake" in rel

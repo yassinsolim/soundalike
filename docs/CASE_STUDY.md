@@ -35,7 +35,7 @@ run it" lives in the [README](../README.md); this is the "how it was built and w
   **regressed real cross-artist recommendation** (and botched niche genres like city pop/hyperpop).
   An internal metric had rewarded the wrong thing, so I **reverted** and built a `cross_artist_agreement`
   metric that measures inter-artist geometry — the honest "measure, ship, re-measure, revert" loop.
-- **Built and validated on:** an NVIDIA RTX 5080 (Blackwell), 106 automated tests, a clean
+- **Built and validated on:** an NVIDIA RTX 5080 (Blackwell), 285 automated tests, a clean
   packaged wheel.
 
 ---
@@ -410,154 +410,138 @@ into trance — a candidate for the next objective iteration, now measurable via
 
 ---
 
-## 7. Ranking quality: a human-aligned evaluation suite and three improvements
+## 7. Ranking quality: replacing synthetic evidence with a sourced benchmark
 
-With a scene-coherent encoder and a 272k-song library, the *encoder* is no longer the primary
-limiting factor — the *ranking* can still surface junk derivatives and genre-incoherent candidates
-that undermine the user experience. This section describes how I measured the baseline failure mode
-and shipped three complementary improvements.
+The first ranking iteration was not acceptable evidence. It scored a synthetic clustered index,
+counted unknown artists as coherent, and let a hand-written related-artist list contain evaluation
+artists. The claimed production gains could not be reproduced. That graph is now retired
+(`MANUAL_PAIRS` is empty), and method selection uses the immutable 272,853-row release index.
 
-### The baseline failure mode: what "subjectively weak" actually means
+### A real, source-auditable benchmark
 
-The encoder improvement in §6 made recommendations dramatically better on niche and genre-coherent
-seeds. But a rigorous inspection of the ranked output for difficult seeds revealed two structural
-problems that persist even with the best encoder:
+`benchmarks/soundalike_pairs.v1.json` freezes **50 recording pairs** spanning more than 12 scenes.
+Each row names the public source, URL, retrieval date, evidence mode, and a short context summary.
+Sources include editorial comparisons, artist acknowledgements, reported listener comparisons,
+samples/interpolations, and explicit sound-alike databases. Examples include:
 
-1. **Junk derivatives** — slowed/reverb TikTok edits, nightcore, karaoke versions, tribute-band
-   recordings, and seed-title mashups regularly appeared in top-5 positions. For a seed like
-   *Master of Puppets* (Metallica), up to two of the first five results could be tribute or karaoke
-   versions of the same song. These aren't recommendations — they're noise.
+- *This Means War* / *Sad but True* — multi-feature comparison and artist acknowledgement in
+  [WatchMojo's sound-alike list](https://www.watchmojo.com/articles/top-20-sound-alike-songs).
+- *Bubble Gum* / *Easier Said Than Done* — the documented, disputed rhythm/melody/tempo claim in
+  [Yonhap](https://en.yna.co.kr/view/AEN20240718008000315).
+- *Safaera* / *Get Ur Freak On* — the tumbi sample identified by
+  [Pitchfork](https://pitchfork.com/reviews/tracks/bad-bunny-safaera-ft-jowell-and-randy-and-nengo-flow/).
+- *Jogodo* / *Kpolongo* — listeners and the earlier recording's artists identifying the similarity
+  in [Music In Africa](https://musicinafrica.net/magazine/controversial-tekno-song-gets-video/).
 
-2. **Genre-incoherent candidates** — even with whitening, a large and diverse library produces
-   false positives: songs that share spectral texture with the seed's genre but belong to a
-   different scene entirely. A shoegaze seed might surface a metal track with similar guitar
-   distortion before it finds another shoegaze track; a jazz seed might return neo-soul before
-   bebop. The encoder is strong but not perfect on cross-genre separation.
+The split is **30 development pairs / 20 held-out pairs**, disjoint at pair and credited-artist
+level. Tests fail if a held-out artist appears in development, `MANUAL_PAIRS`, or graph inputs.
+No source labels are used by the winning reranker. The benchmark records the real top 50, not just
+scores, and reports Recall@1/5/10/20/50, MRR, NDCG@50, reciprocal-rank distributions, and catalogue
+misses. A limitation surfaced immediately: 25% of held-out pairs and 73.3% of development pairs
+have a missing side in this Deezer-derived catalogue. Missing pairs score zero; they are not dropped.
 
-### The evaluation suite
+### What the RTX-5080-trained encoder actually retrieves
 
-To measure the baseline and validate improvements objectively, I built a reproducible evaluation
-suite (`soundalike.ml.eval_suite`) covering **55 seed songs across 13 distinct scenes** (RAP, R&B,
-indie, shoegaze, hyperpop, electronic, metal, jazz, city-pop, K-pop, Latin, Afrobeats, and
-genre-blending/difficult cases). For each seed the suite records the actual top-5 recommendations
-(not just scalar metrics), labels each result for junk, seed-title mashups, same-artist leakage,
-and scene coherence, and reports per-scene breakdowns so no scene can quietly regress.
+The answer is sobering. On held-out pairs, the **raw encoder** retrieves no counterpart in the first
+20, one in the first 50, and has MRR 0.0013. The current production fusion is better but still weak:
 
-A separate **held-out set of 20 difficult seeds** (deep cuts, niche artists, and songs with heavy
-junk contamination in the Deezer catalog) is kept disjoint from the main suite and used only for
-final evaluation to prevent evaluation leakage.
+| Method on the real 272,853-song index | R@1 | R@5 | R@10 | R@20 | R@50 | MRR | NDCG@50 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Raw trained encoder | 0.000 | 0.000 | 0.000 | 0.000 | 0.050 | 0.0013 | 0.0095 |
+| Frozen production baseline (`enhance=False`) | 0.000 | 0.050 | 0.050 | 0.050 | 0.100 | 0.0111 | 0.0284 |
 
-The primary quality score is **mean scene coherence@5** — fraction of the top-5 recommendations
-that belong to the seed's scene (or an allowed adjacent scene). This directly captures "does the
-recommender stay in the right vibe?" rather than proxy metrics like same-artist mAP.
+This directly contradicts the earlier implication that encoder metrics proved human-quality
+retrieval. The model catches the metal counterpart (*Sad but True*) and ranks the indie comparison
+(*Take Me Out*) at 45, but misses most known counterparts. Sample location, 30-second preview
+coverage, cross-genre pairs, and missing catalogue recordings are important limitations.
 
-### Three approaches compared against the baseline
+### Independent approaches on the production index
 
-**Approach 1 — Quality filter (TitleQualityFilter, `quality_filter.py`)**
+The experiments follow modern retrieval work rather than counting alpha/diversity sweeps as
+approaches. Hubness correction is motivated by
+[Schnitzer et al.](https://jmlr.org/papers/v13/schnitzer12a.html); reciprocal reranking was considered
+from [Zhong et al.](https://openaccess.thecvf.com/content_cvpr_2017/html/Zhong_Re-Ranking_Person_Re-Identification_CVPR_2017_paper.html);
+automatic query expansion follows the retrieval literature
+([Chum et al.](https://doi.org/10.1109/ICCV.2007.4408891)).
 
-A fast regex filter pre-screens the candidate pool before ranking, removing tracks whose title or
-artist name matches patterns for: slowed/reverb/nightcore/sped-up edits, karaoke, tribute bands,
-karaoke publishers, cover-version labels, medleys, mashups, and sing-alongs. It also removes tracks
-where the seed's own title appears inside a candidate title (seed-title mashups). A pre-computed
-boolean mask over the full 272k-song library makes this O(1) per candidate.
+| Independent method | Held-out pair primary | Relative to baseline | Decision |
+|---|---:|---:|---|
+| Quality/recording filter only | 0.0556 | 0.0% | Keep as a safety rule; no pair gain |
+| Full artist-centroid rerank | 0.0590 | +6.2% | Reject: regressed the indie held-out pair |
+| Inverted-softmax hubness correction | 0.0569 | +2.4% | Reject: too small, CI includes zero |
+| Three-neighbor query expansion | 0.0255 | −54.0% | Reject: query drift |
+| Raw encoder only | 0.0257 | −53.8% | Reject as serving ranker |
 
-*Evaluation:* In controlled testing on junk-contaminated synthetic indices, the filter removes 100%
-of junk derivatives from the top-5 while preserving all genuine recommendations. On the production
-library, the filter removes ~2–5% of candidates per seed (depending on genre popularity) and is the
-single highest-signal improvement for scenes with heavy tribute/cover contamination (metal, jazz,
-city-pop). **Junk rate in top-5 falls from ~8% to ~0%** for contaminated seeds.
+The earlier manual graph is not an experiment result: it was contaminated and removed. A future
+learned projection or graph method must train only on development artists and be tested on a new
+unopened artist-disjoint split.
 
-**Approach 2 — Artist-centroid genre coherence (ArtistCentroidIndex, `genre_rerank.py`)**
+### Selected method: quality filter + guarded centroid top-20 rerank
 
-Builds a per-artist centroid in whitened embedding space (one centroid per artist with ≥2 songs
-in the library). For a given seed, the cross-artist centroid cosine is added as a third term to the
-existing neural+vibe blend:
+The full centroid method made lists visibly more coherent but could push an existing counterpart
+out of the first 50. The guarded version first resolves an original-looking seed row instead of
+silently choosing a remix/live variant, freezes the production candidate list, removes
+slowed/reverb, karaoke, tribute, cover/mashup, duplicate, and fuzzy seed-title variants, then
+reorders **only positions 1–20** by artist-centroid coherence. Positions 21–50 never move. This
+preserves every baseline Recall@50 hit while improving the part users see.
 
+All 20 held-out top fives are preserved in `held-out-winner-v1.json` and individually reviewed in
+`heldout_top5_judgments.v1.json`. The explicit pass rule is: at least four coherent results and no
+obvious wrong-scene item at positions 1–3; any prohibited derivative automatically fails.
+
+| Held-out result | Frozen baseline | Guarded winner |
+|---|---:|---:|
+| Sourced-pair primary | 0.0556 | 0.0568 |
+| Direct top-five passes | 11/20 (55%) | **17/20 (85%)** |
+| Combined primary (50% pair retrieval, 50% direct judgment) | 0.3028 | **0.4534** |
+| Relative combined gain | — | **+49.7%** |
+| Paired bootstrap 95% CI, absolute gain | — | **+0.0506 to +0.2506** |
+| Scene guardrail | — | no scene below −10% |
+
+The three honest failures are *stupid horse* (an R&B item remains at rank two), *Harder Better
+Faster Stronger* (the frozen pool lacks French-house candidates), and *Treasure* (a title/artist
+collision promotes the K-pop group TREASURE). These remain documented rather than relabelled.
+
+Independent validation uses 12 artists absent from both benchmark splits and fresh
+ListenBrainz/Deezer responses that are never read by the reranker. ListenBrainz overlap@15 moves
+0.1389→0.1556 (delta CI −0.0111..0.0444: statistically equivalent); Deezer overlap@15 moves
+0.0667→0.0833 (delta CI 0..0.0333). Thus supporting evidence does not regress.
+
+### Resource, parity, and deployment evidence
+
+On the actual index: 233,744,489-byte artifact; 3.73 s local cold load; 450,753,156 bytes for
+neural+vibe arrays (1.124 GB full-process RSS including strings/lookups); 19,747,113 bytes of
+retained numeric reranker arrays and a measured 45,117,440-byte RSS increase for the compact
+11,968-centroid reranker (down from the old 419 MB duplicate matrix); and guarded recommendation
+latency of 118 ms mean / 195 ms p95.
+Desktop and hosted numpy implementations share the same guarded algorithm and have an exact parity
+test.
+
+Live browser evidence over ten diverse seeds is saved in `live-browser-10-seeds-v1.json`. It
+measured a 13.5 s cold request and 222–300 ms warm requests; all ten ordered top fives exactly match
+the frozen local baseline. This proves the public site still serves the **old baseline** (for
+example, the slowed derivative remains for *stupid horse*).
+No Vercel credentials are available in this checkout and pushing is explicitly prohibited, so this
+iteration does **not** claim that the winner is deployed. The code and parity gate are ready, but
+production release remains a documented deployment blocker rather than an invented success.
+
+### Reproduce
+
+```powershell
+$env:PYTHONPATH = "src;."
+.\.venv\Scripts\python.exe -m soundalike.ml.real_benchmark `
+  --index ml_data\deepvibe_index_v3.npz `
+  --benchmark benchmarks\soundalike_pairs.v1.json `
+  --split held_out --methods production_baseline,guarded_centroid `
+  --judgments benchmarks\heldout_top5_judgments.v1.json `
+  --out .goals\human-quality-recommendations\artifacts\held-out-winner-v1.json
+
+.\.venv\Scripts\python.exe -m soundalike.ml.external_validation `
+  --index ml_data\deepvibe_index_v3.npz `
+  --benchmark benchmarks\soundalike_pairs.v1.json `
+  --truth benchmarks\external_artist_truth.v1.json `
+  --out .goals\human-quality-recommendations\artifacts\external-validation-v1.json
 ```
-final = (1 − γ) × blend_norm + γ × genre_norm
-```
-
-where `genre_norm` is the centroid similarity re-normalised to [0, 1] and γ = 0.25. This directly
-boosts candidates whose artist is in the same scene as the seed, using the embedding geometry
-(artists from the same scene cluster near each other after whitening) rather than explicit genre
-labels.
-
-*Evaluation:* On the 272k library, `cross_artist_agreement` (nearest-other-artist centroid overlap
-vs ListenBrainz/Deezer ground truth) confirmed that genre-coherent seeds improve: jazz seeds that
-had a mix of jazz and neo-soul in the top-5 shifted to mostly jazz. No regression observed on seeds
-that already ranked cleanly. **Primary quality score gain: +8–12% relative on genre-ambiguous seeds;
-no regression on genre-pure seeds.** *(Centroid count: ~12k artists on the 272k library.)*
-
-**Approach 3 — Related-artist collaborative graph (RelatedArtistGraph, `related_artists_rerank.py`)**
-
-Builds a bidirectional artist-relationship graph from editorial/co-listening data: pre-cached Deezer
-related-artist responses (`ml_data/acc_cache/dz_*.json`) and a hand-curated `MANUAL_PAIRS` list
-covering the 13 evaluation scenes. When the seed artist is known to the graph, candidates whose
-artist is in the related set receive a multiplicative score boost (`score × (1 + boost)` where
-`boost = 0.15`). A complementary `blend_with_related()` method uses a gamma-weighted linear
-combination (default γ = 0.20) for smoother integration with the existing blend.
-
-This signal is *orthogonal* to Approaches 1 and 2: Approach 1 removes junk, Approach 2 uses acoustic
-centroid geometry, Approach 3 uses editorial/social graph data.
-
-*Evaluation:* On shoegaze, jazz, metal, and K-pop seeds (where the manual pairs are densest), the
-collaborative boost reliably moves one or two editorially-related artists up from positions 6–10 to
-the top-5. On seeds with no matching graph entry, the score is unchanged (graceful degradation).
-**Primary quality score gain: +5–10% relative on seeds with rich editorial data; 0% change otherwise.**
-
-### Combined improvement
-
-The three approaches are applied in sequence: genre reranker modifies the blend first, then the
-related-artist boost, then quality-filter exclusions prune the ordered candidate pool. Together they
-target different failure modes:
-
-| Approach | Failure addressed | Signal type |
-|---|---|---|
-| Quality filter | Junk derivatives in top-5 | Title/artist pattern |
-| Genre reranker | Genre-incoherent top-5 | Acoustic centroid geometry |
-| Related-artist graph | Missing editorially-known neighbors | Editorial/co-listening graph |
-
-On the held-out 20 difficult seeds, the combined system achieves **≥80% top-5 scene coherence**
-with **no obvious wrong-scene result at positions 1–3**. Junk derivatives are eliminated from all
-positions.
-
-### Rejected approaches and honest negative results
-
-Several approaches were explored but not shipped:
-
-- **Query-expansion (neural + neural+vibe):** Expanding the seed by averaging embeddings of its
-  nearest neighbours then re-querying. On 36 seeds it traded a small Deezer-agreement gain for
-  ListenBrainz and vibe-metric losses. Rejected — the loss was on the more reliable ground truth.
-
-- **k-reciprocal re-ranking (adapted from person re-ID):** Re-scores candidates by computing
-  reciprocal neighbourhood overlap with the seed's top-K results. On the 272k library it was a
-  no-op on top-15 results (seeds already had strong reciprocal neighbourhoods from whitening).
-  Rejected as computational overhead with no measured gain.
-
-- **Per-genre alpha tuning:** A sweep of alpha (0.0–1.0) on 36 seeds found that alpha = 0.8
-  was already optimal on both external metrics (ListenBrainz 0.122, Deezer 0.076). alpha = 0.6
-  won only on the self-referential vibe metric and on 24 seeds (a fluke of that specific subset).
-  No change — the default 0.8 is the honest measured optimum.
-
-- **3-encoder ensemble (concat):** Concatenating three differently-initialised encoder outputs
-  into one query. mAP 0.038–0.040, vs 0.0396 for the single encoder — the combination *hurt*
-  precision. Rejected.
-
-- **512-d encoder:** Already measured in §6 — no improvement over 384-d on the recommendation
-  benchmark; slightly worse coverage at +33% size. Rejected.
-
-### Parity and deployment
-
-All three improvements are wired identically into the canonical **desktop recommender**
-(`DeepVibeRecommender` in `soundalike.ml.deepvibe`, `enhance=True` by default) and the
-**hosted Vercel / numpy path** (`WebRecommender` in `webapp/api/_reco.py`, `enhance=True` by
-default). Tests verify that the baseline (unenhanced) paths produce byte-identical results, and
-integration tests confirm the enhanced paths apply all three filters without junk leakage.
-
-The filter state — the quality-mask boolean array, the artist centroid matrix, and the related-artist
-graph adjacency set — is precomputed once at load time and adds **< 500 ms** to cold-start on the
-272k index, with **zero per-request overhead** for the quality mask and O(related-set size) per
-request for the boost vector.
 
 ---
 
@@ -567,14 +551,14 @@ request for the boost vector.
   local loopback callback, CSRF `state` validation, and cached auto-refreshing tokens.
 - **No secrets in git.** Credentials live only in a git-ignored `.env`; the repo ships a
   `.env.example` template.
-- **No data leakage in evaluation.** The encoder trains self-supervised on the train split only;
-  the kNN probe splits *within* validation and *within* test, never crossing into the training
-  set. This was independently verified in code review.
-- **264 automated tests** cover the recommenders, OAuth/PKCE, the DSP, vibe and vibe-aware engines,
+- **No data leakage in evaluation.** The 50-pair benchmark is pair- and credited-artist-disjoint;
+  tests reject held-out artists in development, manual pairs, and graph inputs. The contaminated
+  static graph is retired rather than grandfathered in.
+- **285 automated tests** cover the recommenders, OAuth/PKCE, the DSP, vibe and vibe-aware engines,
   the spec cache, the recommendation benchmark (same-artist mAP *and* the cross-artist agreement
   metric), diversity/MMR re-ranking, GeM pooling, the ML pipeline (augmentation, contrastive
-  loss, vibe-target, and dataset-split logic), the human-aligned evaluation suite, the quality
-  filter, genre reranker, and related-artist graph.
+  loss, vibe-target, and dataset-split logic), the sourced production benchmark, derivative
+  filter, guarded centroid reranker, parity, and retired-graph leakage regression.
 
 
 ---
@@ -583,8 +567,8 @@ request for the boost vector.
 
 - **Persist a personal acoustic-feature store** so the engines cover a user's entire Spotify
   library, not just what's in a preview catalog.
-- **Human-in-the-loop evaluation** — let a user rate recommendations to measure real-world
-  quality beyond the label-free benchmark, and use those ratings to tune the fusion blend.
+- **Blind multi-reviewer listening panel** — add preview-level judgments beyond the sourced-pair
+  benchmark and publish agreement, rather than letting one reviewer tune and test the same list.
 - **A 512-d or a downloadable (non-bundled) index** — the downloadable index now exists (fetched from
   a GitHub Release past the 100 MB bundle cap), so library coverage can grow further; a wider encoder,
   though, was measured *not* to help (512-d matched 384-d). The next encoder gain should come from a
@@ -592,9 +576,9 @@ request for the boost vector.
   (§6 explains why the ArcFace mAP win didn't survive external validation).
 - **Fix the niche weak spot** — external validation showed ultra-niche breakcore seeds (*Sewerslvt*)
   leak into trance. Now that `cross_artist_agreement` can score it against ListenBrainz/Deezer, it's a
-  measurable target for the next fine-tune (e.g. harder negatives from the related-artist graph).
-- **Extend the human-aligned evaluation suite** with live scores from the 272k production library
-  (§7) to track absolute primary score regressions as the library and ranking evolve.
+  measurable target for the next fine-tune (e.g. harder negatives from a development-only graph).
+- **Rotate a new unopened held-out split** after any training on the current development pairs, and
+  improve catalogue coverage before claiming known-pair Recall@20 is solved.
 - **Contrastive-on-vibe** — mine positive pairs by vibe similarity, not just augmented crops or
   same-artist labels, so the objective pulls same-*vibe* songs together directly (the natural next
   step after ArcFace, since the artist signal is a proxy for vibe, not vibe itself).
@@ -615,7 +599,7 @@ For anyone evaluating this as a portfolio piece, the work spans:
   CUDA memory-layout and precision tuning, reading cuDNN kernel selection.
 - **API integration & security:** OAuth 2.0 PKCE, token lifecycle management, rate-limit handling,
   secret hygiene.
-- **Software engineering:** clean package design, a 264-test suite, packaging, a documented CLI,
+- **Software engineering:** clean package design, a 285-test suite, packaging, a documented CLI,
   decoupling I/O from compute (the harvest-once spec cache), and reviewed, merged pull requests.
   Includes a reproducible human-aligned evaluation suite, three ranking improvements (quality
   filter, genre reranker, collaborative graph), and desktop/hosted parity tests.

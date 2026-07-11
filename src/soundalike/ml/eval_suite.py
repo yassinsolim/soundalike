@@ -1,27 +1,10 @@
-"""Frozen evaluation suite for human-aligned recommendation quality.
+"""Legacy scene-tag evaluation helpers.
 
-Records the current production-baseline recommendations for 50+ seed songs
-across 12+ distinct scenes, enabling reproducible before/after comparison.
-
-The primary quality metric is **scene coherence**: for each seed, what
-fraction of the top-5 recommendations belong to the same scene as the seed?
-This directly captures whether the recommender is "incoherent" in the way
-the user complained about ("feels very inaccurate and demotivating").
-
-Secondary metrics:
-  - ``junk_rate``: fraction of top-5 that are slowed/reverb/karaoke/tribute
-    copies — the production quality gate
-  - ``seed_artist_leak``: fraction of top-5 that are by the seed artist
-    (should be zero when exclude_artist is active)
-  - ``top1_coherent``: fraction of seeds where position 1 is scene-coherent
-
-Evaluation dimensions per scene (min, max, mean over seeds in that scene)
-are reported so no scene can quietly regress by more than 10% relative.
-
-Usage (notebook / script):
-    from soundalike.ml.eval_suite import run_baseline, print_report
-    baseline = run_baseline()          # uses bundled/cached index
-    print_report(baseline)
+This module remains for backwards-compatible unit tests only.  It is **not**
+production acceptance evidence: most unknown artists receive no externally
+verified label, and the original tests exercised synthetic clustered indices.
+Use :mod:`soundalike.ml.real_benchmark` and the versioned sourced-pair artifacts
+for production claims.
 """
 from __future__ import annotations
 

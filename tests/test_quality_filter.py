@@ -108,9 +108,15 @@ class TestTitleQualityFilter:
         # Seed "Money Trees" — result "Money Trees x Blinding Lights"
         assert self.f.seed_title_in_result("Money Trees", "Money Trees x Blinding Lights")
 
-    def test_seed_title_in_result_exact_match_not_flagged(self):
-        # Exact same title should return False (that's a duplicate, not a mashup).
-        assert not self.f.seed_title_in_result("Money Trees", "Money Trees")
+    def test_seed_title_in_result_exact_match_flagged(self):
+        # Same-title covers/alternate originals are prohibited recommendations.
+        assert self.f.seed_title_in_result("Money Trees", "Money Trees")
+
+    def test_seed_title_typo_variant_flagged(self):
+        assert self.f.seed_title_in_result("Ornithology", "Orinthology")
+
+    def test_legitimate_tribute_title_is_not_globally_suppressed(self):
+        assert not self.f.is_junk("A Tribute To Someone", "Herbie Hancock")
 
     def test_seed_title_not_in_unrelated_result(self):
         assert not self.f.seed_title_in_result("Money Trees", "Alright")

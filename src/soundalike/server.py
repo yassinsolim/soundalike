@@ -49,6 +49,16 @@ def _norm(s: str) -> str:
     return " ".join(s.split())
 
 
+def _version_penalty(title: str) -> Tuple[int, int]:
+    derivative = int(bool(re.search(
+        r"\b(?:karaoke|tribute|slowed|reverb|nightcore|instrumental|"
+        r"remix|cover|live|acoustic)\b",
+        str(title),
+        re.IGNORECASE,
+    )))
+    return derivative, len(str(title))
+
+
 _SPOTIFY_RE = re.compile(r"open\.spotify\.com/track/([A-Za-z0-9]+)")
 _SPOTIFY_URI_RE = re.compile(r"spotify:track:([A-Za-z0-9]+)")
 _DEEZER_RE = re.compile(r"deezer\.com/(?:[a-z]{2}/)?track/(\d+)")
@@ -89,9 +99,8 @@ class SoundalikeEngine:
 
         self.index = DeepVibeIndex.load(ipath)
         self.extractor = EncoderExtractor(model_dir or enc_default)
-        # enhance=True applies quality filter (Approach 1), artist-centroid genre
-        # reranker (Approach 2), and related-artist collaborative boost (Approach 3)
-        # — identical to the hosted Vercel path for canonical desktop/hosted parity.
+        # enhance=True applies the quality filter and leakage-free guarded
+        # artist-centroid reranker, identical to the hosted numpy path.
         self.recommender = DeepVibeRecommender(self.index, alpha=alpha, enhance=True)
         self.cfg = SpectrogramConfig()
         self._lock = threading.Lock()          # torch inference: serialize to be safe
@@ -104,7 +113,11 @@ class SoundalikeEngine:
         self._by_title: Dict[str, List[int]] = {}
         for i in range(len(self.index)):
             t, a = _norm(self.index.titles[i]), _norm(self.index.artists[i])
-            self._by_pair.setdefault((t, a), i)
+            previous = self._by_pair.get((t, a))
+            if previous is None or _version_penalty(self.index.titles[i]) < _version_penalty(
+                self.index.titles[previous]
+            ):
+                self._by_pair[(t, a)] = i
             self._by_title.setdefault(t, []).append(i)
 
     # ---------------------------------------------------------------- spotify
@@ -219,7 +232,7 @@ class SoundalikeEngine:
 
             results = self.recommender.recommend(
                 seed_neural, seed_vibe, n=n, exclude_ids=exclude_ids,
-                exclude_artist=seed_artist, diversity=diversity,
+                exclude_artist=seed_artist, seed_title=seed_title, diversity=diversity,
                 max_per_artist=max_per_artist)
 
         vibe = seed_vibe.describe()

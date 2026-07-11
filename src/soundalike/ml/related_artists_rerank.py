@@ -27,11 +27,10 @@ Key properties:
   * Compatible with the hosted Vercel path (numpy-only backend).
 
 Graph construction:
-  The graph is built from:
-    a) ``ml_data/acc_cache/dz_*.json`` — cached Deezer related-artist responses
-       that were already collected during earlier experiments.
-    b) A static ``MANUAL_PAIRS`` set covering eval-suite seeds whose Deezer
-       data was not pre-cached.
+  The class can read explicit cache artifacts for offline experiments. Static
+  ``MANUAL_PAIRS`` are intentionally empty because the previous list contained
+  benchmark artists and invalidated evaluation. Serving no longer loads this
+  graph; any future use must pass the artist-disjoint leakage audit.
 
 The graph is bidirectional: if A is related to B, then B is also related to A.
 """
@@ -49,116 +48,11 @@ import numpy as np
 # Static supplementary pairs (fill gaps not covered by acc_cache)
 # ---------------------------------------------------------------------------
 
-# Each entry is (artist_a, artist_b); the graph is always built bidirectionally.
-MANUAL_PAIRS: List[tuple] = [
-    # Shoegaze / dream-pop cluster
-    ("My Bloody Valentine", "Slowdive"), ("My Bloody Valentine", "Ride"),
-    ("My Bloody Valentine", "Lush"), ("My Bloody Valentine", "Cocteau Twins"),
-    ("Slowdive", "Ride"), ("Slowdive", "Chapterhouse"), ("Slowdive", "Lush"),
-    ("Slowdive", "Mazzy Star"), ("Ride", "Swervedriver"), ("Ride", "Lush"),
-    ("Cocteau Twins", "This Mortal Coil"), ("Cocteau Twins", "Dead Can Dance"),
-    ("Cocteau Twins", "Lush"), ("Deafheaven", "Alcest"),
-    ("Deafheaven", "Whirr"), ("Alcest", "Les Discrets"),
-    ("Mogwai", "Explosions in the Sky"), ("Mogwai", "God is an Astronaut"),
-    ("Sigur Rós", "Ólafur Arnalds"), ("Sigur Rós", "Múm"),
-    ("Beach House", "Mazzy Star"), ("Beach House", "Grouper"),
-    ("DIIV", "Beach House"), ("DIIV", "Whirr"),
-    ("Yeah Yeah Yeahs", "Interpol"), ("Yeah Yeah Yeahs", "The Strokes"),
-    ("Inspiral Carpets", "The Stone Roses"), ("Inspiral Carpets", "Charlatans"),
-    ("Airiel", "Slowdive"), ("Airiel", "My Bloody Valentine"),
-    ("Lilys", "Galaxie 500"), ("Lilys", "Slowdive"),
-    ("Pastel Ghost", "Beach House"), ("Pastel Ghost", "Chromatics"),
-    # Jazz cluster
-    ("Miles Davis", "John Coltrane"), ("Miles Davis", "Bill Evans"),
-    ("Miles Davis", "Herbie Hancock"), ("Miles Davis", "Wayne Shorter"),
-    ("Miles Davis", "Chick Corea"), ("Miles Davis", "Brad Mehldau"),
-    ("John Coltrane", "McCoy Tyner"), ("John Coltrane", "Elvin Jones"),
-    ("John Coltrane", "Pharoah Sanders"), ("John Coltrane", "Alice Coltrane"),
-    ("Bill Evans", "Keith Jarrett"), ("Bill Evans", "Brad Mehldau"),
-    ("Bill Evans", "Oscar Peterson"), ("Dave Brubeck Quartet", "Paul Desmond"),
-    ("Dave Brubeck Quartet", "Dave Brubeck"),
-    ("Dave Brubeck", "Thelonious Monk"), ("Dave Brubeck", "Stan Getz"),
-    ("Thelonious Monk", "Charlie Parker"), ("Thelonious Monk", "Sonny Rollins"),
-    ("Charles Mingus", "Art Blakey"), ("Charles Mingus", "Miles Davis"),
-    ("Brad Mehldau", "Brad Mehldau Trio"), ("Brad Mehldau Trio", "Bill Evans"),
-    ("Ahmad Jamal", "Oscar Peterson"), ("Ahmad Jamal", "Bill Evans"),
-    ("John Scofield", "Pat Metheny"), ("John Scofield", "Bill Frisell"),
-    ("Stan Getz", "João Gilberto"), ("Stan Getz", "Bill Evans"),
-    ("Chick Corea", "Herbie Hancock"), ("Lars Danielsson", "Brad Mehldau"),
-    ("Robert Glasper", "Kamasi Washington"), ("Christian Scott", "Robert Glasper"),
-    ("Quincy Jones", "Miles Davis"), ("Quincy Jones", "Herbie Hancock"),
-    ("Bill Laurance", "Snarky Puppy"),
-    # Metal cluster
-    ("Metallica", "Megadeth"), ("Metallica", "Slayer"),
-    ("Metallica", "Anthrax"), ("Metallica", "Testament"),
-    ("Metallica", "Pantera"), ("Metallica", "Iron Maiden"),
-    ("Iron Maiden", "Judas Priest"), ("Iron Maiden", "Black Sabbath"),
-    ("Iron Maiden", "Motorhead"),
-    ("Black Sabbath", "Judas Priest"), ("Black Sabbath", "Ozzy Osbourne"),
-    ("Megadeth", "Slayer"), ("Megadeth", "Testament"),
-    ("Slayer", "Sodom"), ("Slayer", "Kreator"),
-    ("System of a Down", "Deftones"), ("System of a Down", "Tool"),
-    ("System of a Down", "Slipknot"), ("Deftones", "Korn"),
-    ("Deftones", "Failure"), ("Deftones", "Alice in Chains"),
-    ("Alice in Chains", "Soundgarden"), ("Alice in Chains", "Stone Temple Pilots"),
-    ("Alice in Chains", "Nirvana"), ("Nirvana", "Soundgarden"),
-    ("Nirvana", "Mudhoney"), ("Pearl Jam", "Soundgarden"),
-    ("High On Fire", "Sleep"), ("High On Fire", "Electric Wizard"),
-    ("Darkthrone", "Mayhem"), ("Darkthrone", "Emperor"),
-    ("Disturbed", "Five Finger Death Punch"), ("Disturbed", "Breaking Benjamin"),
-    ("Mudvayne", "Korn"), ("Mudvayne", "Slipknot"),
-    ("Of Mice & Men", "Parkway Drive"), ("Ministry", "Nine Inch Nails"),
-    # Rap / hip-hop cluster
-    ("Kendrick Lamar", "J. Cole"), ("Kendrick Lamar", "Drake"),
-    ("Kendrick Lamar", "Schoolboy Q"), ("Kendrick Lamar", "Ab-Soul"),
-    ("Drake", "Future"), ("Drake", "21 Savage"),
-    ("Travis Scott", "Metro Boomin"), ("Travis Scott", "21 Savage"),
-    ("Gunna", "Lil Baby"), ("Gunna", "Young Thug"),
-    ("Wu-Tang Clan", "Method Man"), ("Wu-Tang Clan", "Raekwon"),
-    ("Wu-Tang Clan", "Ghostface Killah"), ("Wu-Tang Clan", "GZA"),
-    ("E-40", "Too $hort"), ("E-40", "Snoop Dogg"),
-    # R&B cluster
-    ("The Weeknd", "SZA"), ("The Weeknd", "Frank Ocean"),
-    ("The Weeknd", "Metro Boomin"), ("The Weeknd", "Bryson Tiller"),
-    ("SZA", "Kehlani"), ("SZA", "H.E.R."),
-    ("Frank Ocean", "Daniel Caesar"), ("Frank Ocean", "Brent Faiyaz"),
-    ("Bryson Tiller", "6LACK"), ("Bryson Tiller", "H.E.R."),
-    ("Summer Walker", "SZA"), ("Summer Walker", "H.E.R."),
-    ("H.E.R.", "Jorja Smith"), ("H.E.R.", "Mahalia"),
-    # Indie cluster
-    ("Phoebe Bridgers", "boygenius"), ("Phoebe Bridgers", "Lucy Dacus"),
-    ("Phoebe Bridgers", "Julien Baker"), ("Phoebe Bridgers", "Mitski"),
-    ("Mitski", "Japanese Breakfast"), ("Mitski", "Soccer Mommy"),
-    ("The Paper Kites", "Novo Amor"), ("The Paper Kites", "Bon Iver"),
-    ("Bon Iver", "Fleet Foxes"), ("Bon Iver", "Sufjan Stevens"),
-    ("Florence + The Machine", "Lorde"), ("Lorde", "Charli XCX"),
-    # City pop / K-pop cluster
-    ("Miki Matsubara", "Mariya Takeuchi"), ("Miki Matsubara", "Anri"),
-    ("Miki Matsubara", "Junko Ohashi"), ("Miki Matsubara", "Minako Yoshida"),
-    ("Mariya Takeuchi", "Tatsuro Yamashita"), ("Mariya Takeuchi", "Anri"),
-    ("Mariya Takeuchi", "Taeko Onuki"), ("Mariya Takeuchi", "Epo"),
-    ("NewJeans", "TWICE"), ("NewJeans", "aespa"),
-    ("NewJeans", "IVE"), ("NewJeans", "STAYC"),
-    ("TWICE", "Red Velvet"), ("TWICE", "BLACKPINK"),
-    ("FIFTY FIFTY", "NewJeans"), ("FIFTY FIFTY", "STAYC"),
-    # Latin / Afrobeats cluster
-    ("Bad Bunny", "J Balvin"), ("Bad Bunny", "Bizarrap"),
-    ("Bizarrap", "Quevedo"), ("Bizarrap", "Residente"),
-    ("Wizkid", "Burna Boy"), ("Wizkid", "Davido"),
-    ("Tyla", "Wizkid"), ("Tyla", "Ayra Starr"),
-    ("Burna Boy", "Davido"), ("Burna Boy", "Tyla"),
-    # Hyperpop cluster
-    ("100 gecs", "Charli XCX"), ("100 gecs", "Sophie"),
-    ("100 gecs", "Fraxiom"), ("100 gecs", "glaive"),
-    ("Charli XCX", "Dorian Electra"), ("Charli XCX", "Rina Sawayama"),
-    ("glaive", "ericdoa"), ("glaive", "Underscores"),
-    # Electronic cluster
-    ("deadmau5", "Eric Prydz"), ("deadmau5", "Daft Punk"),
-    ("Avicii", "Swedish House Mafia"), ("Avicii", "David Guetta"),
-    ("Daft Punk", "Justice"), ("Daft Punk", "Chemical Brothers"),
-    ("Armin van Buuren", "Tiësto"), ("Armin van Buuren", "Paul van Dyk"),
-    ("Craig David", "Disclosure"),
-]
+# The former list mixed hand-curated evaluation artists into the serving graph.
+# That was direct benchmark leakage, so static pairs are deliberately retired.
+# A future graph may be loaded only from a versioned development-only artifact
+# whose artist-disjointness is checked by real_benchmark.audit_leakage().
+MANUAL_PAIRS: List[tuple] = []
 
 
 def _nkfd_casefold(s: str) -> str:

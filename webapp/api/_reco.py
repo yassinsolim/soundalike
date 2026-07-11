@@ -2,8 +2,8 @@
 
 The full model needs PyTorch (~2.9 GB) to embed an *arbitrary* song, which can't
 live in a serverless function. But recommending from a song that's already in the
-87k-track library needs **no torch at all** — every embedding is precomputed, and
-ranking is pure numpy (whiten + cosine + vibe-blend + MMR).
+272,853-track library needs **no torch at all** — every embedding is precomputed,
+and ranking is pure numpy (whiten + cosine + vibe-blend + guarded reranking).
 
 This module mirrors `soundalike.ml.deepvibe.DeepVibeRecommender` exactly (a test
 asserts identical top-k), so the hosted library-mode results match the desktop
@@ -14,9 +14,11 @@ app. The index is fetched once from the public GitHub Release and cached in
 from __future__ import annotations
 
 import os
+import re
 import threading
 import unicodedata
 import urllib.request
+from difflib import SequenceMatcher
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -37,8 +39,6 @@ _LOCK = threading.Lock()
 _RECO: Optional["WebRecommender"] = None
 
 
-import re
-
 _PAREN = re.compile(r"[\(\[][^\)\]]*[\)\]]")   # (feat...)/(Remaster)/[Explicit]
 _DASH_SUFFIX = re.compile(r"\s+-\s+.*$")        # "- 2011 Remaster" style suffix
 
@@ -58,6 +58,17 @@ def _norm(s: str) -> str:
     return " ".join(s.split())
 
 
+def _version_penalty(title: str) -> Tuple[int, int]:
+    """Prefer an original-looking catalogue row over remix/live derivatives."""
+    derivative = int(bool(re.search(
+        r"\b(?:karaoke|tribute|slowed|reverb|nightcore|instrumental|"
+        r"remix|cover|live|acoustic)\b",
+        str(title),
+        re.IGNORECASE,
+    )))
+    return derivative, len(str(title))
+
+
 # Vibe feature weights — must match soundalike.audio.vibe.DEFAULT_WEIGHTS exactly
 # (verified against weight_vector(DEFAULT_WEIGHTS)). Anything not listed is 1.0.
 _DEFAULT_WEIGHTS = {
@@ -66,11 +77,111 @@ _DEFAULT_WEIGHTS = {
     "band_sub": 2.5, "band_bass": 2.0,
 }
 
+_TITLE_JUNK_RE = re.compile(
+    r"\b(?:slowed|reverb|sped[- ]up|speed[- ]up|nightcore|karaoke|karaōke|"
+    r"backing\s+track|instrumental\s+(?:version|mix|cover|track)|a\s+cappella|"
+    r"tribute\s+version|cover\s+version|piano\s+version|"
+    r"string\s+(?:quartet|version)|orchestral\s+version|remake|"
+    r"marimba\s+remix|ringtone|8\s*bit\s+(?:version|cover)|"
+    r"x\s+\w.*\bx\s+\w|medley|mashup|"
+    r"sing(?:-|\s)?along|lo-?fi\s+(?:version|remix|cover|study))\b",
+    re.IGNORECASE,
+)
+_ARTIST_JUNK_RE = re.compile(
+    r"\b(?:karaoke|karaōke|tribute|covers?\s+band|sound-?alike|"
+    r"instrumental\s+all\s+stars?|marimba\s+remix|nightcore|slowed)\b",
+    re.IGNORECASE,
+)
+_MULTI_X_MASHUP_RE = re.compile(r"\bx\s+\w.*\bx\s+\w", re.IGNORECASE)
+_LEADING_TRIBUTE_RE = re.compile(r"^tribute\s+to\b", re.IGNORECASE)
+
+
+class _TitleQualityFilter:
+    """Self-contained hosted copy; keeps Vercel independent of the torch package."""
+
+    @staticmethod
+    def _plain(value: str) -> str:
+        return unicodedata.normalize("NFKD", str(value)).encode("ascii", "ignore").decode()
+
+    def keep_mask(self, titles, artists) -> np.ndarray:
+        return np.asarray([
+            not (
+                _TITLE_JUNK_RE.search(self._plain(title))
+                or _MULTI_X_MASHUP_RE.search(self._plain(title))
+                or _LEADING_TRIBUTE_RE.search(self._plain(title))
+                or _ARTIST_JUNK_RE.search(self._plain(artist))
+            )
+            for title, artist in zip(titles, artists)
+        ], dtype=bool)
+
+    def seed_title_in_result(self, seed_title: str, result_title: str) -> bool:
+        def title_key(value: str) -> str:
+            value = self._plain(value).casefold()
+            value = _PAREN.sub(" ", value)
+            value = _DASH_SUFFIX.sub("", value)
+            return " ".join(value.split())
+
+        seed = title_key(seed_title)
+        result = title_key(result_title)
+        if not seed or not result:
+            return False
+        if seed == result or seed in result or result in seed:
+            return True
+        return (
+            min(len(seed), len(result)) >= 8
+            and SequenceMatcher(None, seed, result).ratio() >= 0.90
+        )
+
+
+class _ArtistCentroidIndex:
+    """Compact numpy-only centroid index shared by warm hosted requests."""
+
+    def __init__(self, neural: np.ndarray, artists, min_songs: int = 2):
+        names = np.asarray([str(artist).casefold() for artist in artists])
+        groups: Dict[str, List[int]] = {}
+        for row, name in enumerate(names):
+            groups.setdefault(name, []).append(row)
+        centroid_names, values = [], []
+        for name, rows in groups.items():
+            if len(rows) < min_songs:
+                continue
+            centroid = neural[rows].mean(axis=0)
+            centroid /= np.linalg.norm(centroid) + 1e-9
+            centroid_names.append(name)
+            values.append(centroid.astype(np.float32))
+        self.positions = {name: i for i, name in enumerate(centroid_names)}
+        self.matrix = (
+            np.asarray(values, dtype=np.float32)
+            if values else np.empty((0, neural.shape[1]), dtype=np.float32)
+        )
+        self.song_centroid = np.asarray(
+            [self.positions.get(name, -1) for name in names], dtype=np.int32
+        )
+        self.neural = neural
+        self.n_centroids = len(self.matrix)
+
+    def blend_with_genre(
+        self, blend: np.ndarray, seed_artist: str,
+        seed_neural_w: np.ndarray, gamma: float,
+    ) -> np.ndarray:
+        position = self.positions.get(str(seed_artist).casefold())
+        query = self.matrix[position] if position is not None else seed_neural_w
+        centroid_scores = self.matrix @ query
+        genre = np.empty(len(self.song_centroid), dtype=np.float32)
+        mapped = self.song_centroid >= 0
+        genre[mapped] = centroid_scores[self.song_centroid[mapped]]
+        if (~mapped).any():
+            genre[~mapped] = self.neural[~mapped] @ query
+        genre = (genre - genre.min()) / (genre.max() - genre.min() + 1e-9)
+        normalized = (blend - blend.min()) / (blend.max() - blend.min() + 1e-9)
+        return ((1.0 - gamma) * normalized + gamma * genre).astype(np.float32)
+
 
 class WebRecommender:
     """Loads a DeepVibeIndex .npz and ranks library songs, numpy-only.
 
-    By default, all three quality improvements are enabled (see ``recommend()``).
+    By default, the leakage-free quality filter and guarded centroid reranker
+    are enabled (see ``recommend()``).
     Pass ``enhance=False`` to get the original unmodified baseline for ablation.
     """
 
@@ -129,74 +240,32 @@ class WebRecommender:
         self._by_title: Dict[str, List[int]] = {}
         for i in range(len(self.titles)):
             t, a = self._nt[i], self._naprim[i]
-            self._by_pair.setdefault((t, a), i)
+            previous = self._by_pair.get((t, a))
+            if previous is None or _version_penalty(self.titles[i]) < _version_penalty(
+                self.titles[previous]
+            ):
+                self._by_pair[(t, a)] = i
             self._by_title.setdefault(t, []).append(i)
 
         # ── Enhancement modules (loaded only when enhance=True) ──────────────
         self._qfilter = None
         self._centroid_idx = None
-        self._related_graph = None
 
         if enhance:
             self._load_enhancements(acc_cache_dir)
 
     def _load_enhancements(self, acc_cache_dir: Optional[str]) -> None:
-        """Lazily load the three quality-improvement modules.
+        """Lazily load the two validated quality-improvement modules.
 
-        Designed to degrade gracefully: each module is skipped silently if its
-        dependency is unavailable (e.g. the soundalike package is not installed,
-        or the acc_cache directory doesn't exist on the hosted runtime).
+        These implementations intentionally live in this self-contained Vercel
+        module.  The deployment installs numpy only and cannot import the desktop
+        package from outside the ``webapp`` root.
         """
-        try:
-            import sys
-            import os
-            # Add the src directory to path for soundalike package access.
-            # In the Vercel runtime the package is installed; locally we also
-            # search the development tree.
-            _here = os.path.dirname(os.path.abspath(__file__))
-            for candidate in (
-                os.path.join(_here, "..", "..", "src"),  # local dev: webapp/api/../../src
-                os.path.join(_here, "..", "..", "..", "src"),  # deeper nesting
-            ):
-                if os.path.isdir(os.path.join(candidate, "soundalike")):
-                    if candidate not in sys.path:
-                        sys.path.insert(0, candidate)
-                    break
-
-            # Approach 1: quality filter
-            from soundalike.ml.quality_filter import TitleQualityFilter
-            self._qfilter = TitleQualityFilter()
-            # Pre-compute mask for the whole library once (fast boolean array)
-            self._qmask = self._qfilter.keep_mask(self.titles, self.artists)
-        except Exception:
-            self._qmask = None
-
-        try:
-            # Approach 2: artist-centroid genre reranker
-            from soundalike.ml.genre_rerank import ArtistCentroidIndex
-            self._centroid_idx = ArtistCentroidIndex(
-                self._neural, self.artists, min_songs=2)
-        except Exception:
-            pass
-
-        try:
-            # Approach 3: related-artist collaborative graph
-            from soundalike.ml.related_artists_rerank import RelatedArtistGraph
-            from pathlib import Path
-            acd = Path(acc_cache_dir) if acc_cache_dir else None
-            if acd is None:
-                # Guess common locations (local dev)
-                for candidate in (
-                    Path(__file__).resolve().parents[3] / "ml_data" / "acc_cache",
-                    Path(__file__).resolve().parents[2] / "ml_data" / "acc_cache",
-                ):
-                    if candidate.exists():
-                        acd = candidate
-                        break
-            self._related_graph = RelatedArtistGraph(
-                acc_cache_dir=acd, use_manual=True, boost=0.15)
-        except Exception:
-            pass
+        self._qfilter = _TitleQualityFilter()
+        self._qmask = self._qfilter.keep_mask(self.titles, self.artists)
+        self._centroid_idx = _ArtistCentroidIndex(
+            self._neural, self.artists, min_songs=2
+        )
 
     def _apply_whiten(self, vecs: np.ndarray) -> np.ndarray:
         x = (vecs - self._nmean) @ self._W
@@ -213,7 +282,7 @@ class WebRecommender:
         if aprim and (t, aprim) in self._by_pair:
             return self._by_pair[(t, aprim)]
         if not a and len(self._by_title.get(t, [])) >= 1:
-            return self._by_title[t][0]
+            return min(self._by_title[t], key=lambda row: _version_penalty(self.titles[row]))
         # loose: title substring, optionally constrained to the artist
         best = None
         for i in range(len(self._nt)):
@@ -274,25 +343,22 @@ class WebRecommender:
                   # Enhancement flags (all True by default = best validated method)
                   quality_filter: bool = True,
                   genre_rerank: bool = True,
-                  related_boost: bool = True,
+                  related_boost: bool = False,
                   genre_gamma: float = 0.25,
                   related_gamma: float = 0.20,
                   ) -> Dict:
         """Rank library songs for a seed row.
 
-        Three complementary improvements over the plain neural+vibe blend:
+        Two validated improvements over the plain neural+vibe blend:
 
         * **quality_filter** (Approach 1): removes junk derivatives (slowed,
           karaoke, tribute, nightcore) from the candidate pool.
-        * **genre_rerank** (Approach 2): adds an artist-centroid genre-coherence
-          term so acoustically-similar but genre-incoherent artists (e.g. metal
-          bands near shoegaze seeds) are gently demoted.
-        * **related_boost** (Approach 3): adds a collaborative related-artist
-          prior (Deezer editorial + curated pairs) that directly boosts candidates
-          whose artist is editorially related to the seed artist.
+        * **genre_rerank** (Approach 2): guarded artist-centroid reordering of
+          positions 1–20 while positions 21–50 remain frozen.
 
-        All three flags default to True. Pass ``quality_filter=False`` etc. to
-        ablate individual contributions (useful for A/B evaluation).
+        The validated filter and guarded centroid flags default to True.
+        ``related_boost`` is retained only for API compatibility and defaults
+        to False because the manual graph was retired for leakage.
         """
         a = self.alpha if alpha is None else float(alpha)
         qn = self._neural[row]
@@ -306,17 +372,7 @@ class WebRecommender:
         seed_id = int(self.track_ids[row])
         seed_title = str(self.titles[row])
 
-        # ── Approach 2: artist-centroid genre coherence ──────────────────────
-        if genre_rerank and self._centroid_idx is not None:
-            blended = self._centroid_idx.blend_with_genre(
-                blended, seed_artist_raw, seed_neural_w=qn, gamma=genre_gamma)
-
-        # ── Approach 3: related-artist collaborative boost ───────────────────
-        if related_boost and self._related_graph is not None:
-            blended = self._related_graph.blend_with_related(
-                blended, self.artists, seed_artist_raw, gamma=related_gamma)
-
-        # Re-normalise to [0,1] so downstream comparisons stay meaningful
+        # Re-normalise to [0,1] so downstream comparisons stay meaningful.
         bl_min, bl_max = blended.min(), blended.max()
         blended = (blended - bl_min) / (bl_max - bl_min + 1e-9)
 
@@ -330,7 +386,10 @@ class WebRecommender:
         cand: List[int] = []
         seen: set = set()
         artist_count: Dict[str, int] = {}
-        pool_cap = max(n * 25, 500) if (diversity > 0 or max_per_artist) else n
+        guarded = genre_rerank and self._centroid_idx is not None
+        pool_cap = max(n * 25, 500) if (
+            diversity > 0 or max_per_artist or guarded
+        ) else n
         for idx in order:
             i = int(idx)
             if int(self.track_ids[i]) == seed_id:
@@ -341,6 +400,12 @@ class WebRecommender:
             title_i = str(self.titles[i])
             # Approach 1: skip junk tracks
             if qmask is not None and not qmask[i]:
+                continue
+            if (
+                qmask is not None
+                and self._qfilter is not None
+                and self._qfilter.seed_title_in_result(seed_title, title_i)
+            ):
                 continue
             key = f"{title_i.casefold()}::{akey}"
             if key in seen:
@@ -353,7 +418,25 @@ class WebRecommender:
             if len(cand) >= pool_cap:
                 break
 
-        chosen = self._mmr(cand, blended, n, diversity) if diversity > 0 else cand[:n]
+        select_n = max(n, 50) if (genre_rerank and self._centroid_idx is not None) else n
+        chosen = (
+            self._mmr(cand, blended, select_n, diversity)
+            if diversity > 0 else cand[:select_n]
+        )
+
+        # Guarded centroid rerank: only reorder the first 20 already-retrieved
+        # candidates.  Ranks 21–50 remain frozen, preventing held-out Recall@50
+        # regressions while correcting obvious scene errors in the visible top 5.
+        if genre_rerank and self._centroid_idx is not None and chosen:
+            centroid_score = self._centroid_idx.blend_with_genre(
+                blended, seed_artist_raw, seed_neural_w=qn, gamma=genre_gamma)
+            boundary = min(20, len(chosen))
+            chosen = sorted(
+                chosen[:boundary],
+                key=lambda i: float(centroid_score[i]),
+                reverse=True,
+            ) + chosen[boundary:]
+        chosen = chosen[:n]
         results = []
         from urllib.parse import quote
         for i in chosen:

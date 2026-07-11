@@ -68,32 +68,42 @@ class ArtistCentroidIndex:
         for i, a in enumerate(artists_cf):
             by_artist.setdefault(a, []).append(i)
 
-        # Build centroid per artist (unit norm)
-        self._centroids: Dict[str, np.ndarray] = {}
+        # Build one compact centroid matrix plus an int32 song→centroid map.
+        # The old implementation materialised a full (N,d) per-song centroid
+        # matrix, duplicating ~419 MB on the 272,853 × 384 production index.
+        centroid_names: List[str] = []
+        centroid_values: List[np.ndarray] = []
         for a, rows in by_artist.items():
             if len(rows) >= min_songs:
                 c = neural_w[rows].mean(axis=0)
                 norm = np.linalg.norm(c)
                 if norm > 1e-9:
                     c = c / norm
-                self._centroids[a] = c.astype(np.float32)
+                centroid_names.append(a)
+                centroid_values.append(c.astype(np.float32))
 
-        # Per-song centroid pointer: for each song, its artist's centroid (or
-        # the song's own embedding if artist has < min_songs tracks).
-        self._per_song = np.empty_like(neural_w)
-        for i in range(n):
-            a = artists_cf[i]
-            if a in self._centroids:
-                self._per_song[i] = self._centroids[a]
-            else:
-                self._per_song[i] = neural_w[i]  # fallback: song's own embedding
+        self._centroid_position = {
+            name: position for position, name in enumerate(centroid_names)
+        }
+        self._centroid_matrix = np.asarray(centroid_values, dtype=np.float32)
+        if not centroid_values:
+            self._centroid_matrix = np.empty(
+                (0, neural_w.shape[1]), dtype=np.float32
+            )
+        self._song_centroid = np.asarray(
+            [self._centroid_position.get(a, -1) for a in artists_cf],
+            dtype=np.int32,
+        )
+        # Reference, not a copy: singleton artists fall back to their own
+        # whitened embedding without another N×d allocation.
+        self._neural_w = neural_w
 
-        self._artists_cf = artists_cf
-        self.n_centroids = len(self._centroids)
+        self.n_centroids = len(self._centroid_matrix)
 
     def seed_artist_centroid(self, artist: str) -> Optional[np.ndarray]:
         """Return the centroid for ``artist`` (casefolded lookup)."""
-        return self._centroids.get(str(artist).casefold())
+        position = self._centroid_position.get(str(artist).casefold())
+        return None if position is None else self._centroid_matrix[position]
 
     def genre_similarity(
         self, seed_artist: str, seed_neural_w: Optional[np.ndarray] = None
@@ -114,14 +124,21 @@ class ArtistCentroidIndex:
         -------
         np.ndarray (N,)  values in [-1, 1]
         """
-        qc = self._centroids.get(str(seed_artist).casefold())
+        position = self._centroid_position.get(str(seed_artist).casefold())
+        qc = None if position is None else self._centroid_matrix[position]
         if qc is None:
             if seed_neural_w is not None:
                 qc = seed_neural_w.astype(np.float32)
             else:
                 # Unknown artist, no fallback → return zeros (neutral)
-                return np.zeros(len(self._per_song), dtype=np.float32)
-        return (self._per_song @ qc).astype(np.float32)
+                return np.zeros(len(self._song_centroid), dtype=np.float32)
+        centroid_scores = self._centroid_matrix @ qc
+        out = np.empty(len(self._song_centroid), dtype=np.float32)
+        mapped = self._song_centroid >= 0
+        out[mapped] = centroid_scores[self._song_centroid[mapped]]
+        if (~mapped).any():
+            out[~mapped] = self._neural_w[~mapped] @ qc
+        return out
 
     def blend_with_genre(
         self,

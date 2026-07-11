@@ -44,7 +44,7 @@ class TestArtistCentroidIndex:
         assert self.idx.n_centroids == 4
 
     def test_centroid_is_unit_norm(self):
-        for c in self.idx._centroids.values():
+        for c in self.idx._centroid_matrix:
             assert abs(np.linalg.norm(c) - 1.0) < 1e-5, "centroids must be unit-norm"
 
     def test_seed_artist_centroid_returned(self):

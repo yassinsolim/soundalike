@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from difflib import SequenceMatcher
 from typing import List, Optional, Sequence
 
 import numpy as np
@@ -47,8 +48,8 @@ _TITLE_JUNK_PATTERNS: List[str] = [
     r"\binstrumental\s+(?:version|mix|cover|track)\b",
     r"\ba\s+cappella\b",
     # Cover / tribute copies
-    r"\btribute\s+to\b",
-    r"\btribute\s+band\b",
+    r"^tribute\s+to\b",
+    r"\btribute\s+version\b",
     r"\bcover\s+version\b",
     r"\bpiano\s+version\b",
     r"\bstring\s+(?:quartet|version)\b",
@@ -155,10 +156,17 @@ class TitleQualityFilter:
 
         st = norm_t(seed_title)
         rt = norm_t(result_title)
-        if not st or not rt or st == rt:
+        if not st or not rt:
             return False
-        # seed title appears as a substring in result OR result title in seed
-        return st in rt
+        if st == rt:
+            return True
+        # Catch a title embedded in a mashup/cover label and one-character
+        # catalogue misspellings such as Ornithology/Orinthology.  The fuzzy
+        # check is limited to longer titles to avoid suppressing unrelated
+        # songs with generic one-word names.
+        if st in rt or rt in st:
+            return True
+        return min(len(st), len(rt)) >= 8 and SequenceMatcher(None, st, rt).ratio() >= 0.90
 
 
 # ---------------------------------------------------------------------------

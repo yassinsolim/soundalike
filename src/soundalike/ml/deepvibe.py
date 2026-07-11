@@ -108,14 +108,12 @@ class DeepVibeRecommender:
       TikTok edits, nightcore, karaoke, tribute, and seed-title mashups.  These
       should never appear in recommendations.
 
-    * **Approach 2 — artist-centroid genre reranker** (``genre_rerank=True``):
-      Adds a per-artist centroid term to the blend so acoustically-similar but
-      genre-incoherent candidates (e.g., metal near a shoegaze seed) are gently
-      demoted relative to candidates in the same scene.
+    * **Approach 2 — guarded artist-centroid reranker** (``genre_rerank=True``):
+      Reorders only the first 20 production candidates by artist-centroid
+      coherence.  Ranks 21–50 remain frozen, preventing a known-pair regression.
 
-    * **Approach 3 — related-artist collaborative graph** (``related_boost=True``):
-      Boosts candidates whose artist is editorially related to the seed artist
-      (Deezer + curated ``MANUAL_PAIRS``).  Orthogonal to the acoustic signal.
+    The old manual related-artist graph was retired because it directly leaked
+    benchmark artists into serving and evaluation.
 
     Pass ``enhance=False`` to get the original unmodified baseline for ablation.
     """
@@ -167,13 +165,13 @@ class DeepVibeRecommender:
         self._qfilter = None
         self._qmask: Optional[np.ndarray] = None
         self._centroid_idx = None
-        self._related_graph = None
+        self._related_graph = None  # retired; kept as a compatibility sentinel
 
         if enhance:
             self._load_enhancements(acc_cache_dir)
 
     def _load_enhancements(self, acc_cache_dir: Optional[Path]) -> None:
-        """Lazily build the three quality-improvement modules.
+        """Lazily build the two validated quality-improvement modules.
 
         Designed to degrade gracefully: each module is skipped silently if its
         import fails (e.g., running without the soundalike package installed as
@@ -192,13 +190,6 @@ class DeepVibeRecommender:
             from .genre_rerank import ArtistCentroidIndex
             self._centroid_idx = ArtistCentroidIndex(
                 self._neural, self.index.artists, min_songs=2)
-        except Exception:
-            pass
-
-        try:
-            from .related_artists_rerank import RelatedArtistGraph
-            self._related_graph = RelatedArtistGraph(
-                acc_cache_dir=acc_cache_dir, use_manual=True, boost=0.15)
         except Exception:
             pass
 
@@ -221,12 +212,13 @@ class DeepVibeRecommender:
         n: int = 15,
         exclude_ids: Optional[Set] = None,
         exclude_artist: Optional[str] = None,
+        seed_title: Optional[str] = None,
         diversity: float = 0.0,
         max_per_artist: int = 0,
         # Enhancement flags (all True = best validated method)
         quality_filter: bool = True,
         genre_rerank: bool = True,
-        related_boost: bool = True,
+        related_boost: bool = False,
         genre_gamma: float = 0.25,
         related_gamma: float = 0.20,
     ) -> List[DeepVibeRecommendation]:
@@ -239,8 +231,8 @@ class DeepVibeRecommender:
           before ranking (approach 1 — operates on library track titles/artists).
         * **genre_rerank**: adds artist-centroid coherence to the blend so the
           same scene as the seed is boosted (approach 2 — acoustic signal).
-        * **related_boost**: boosts candidates whose artist is editorially related
-          to the seed (approach 3 — collaborative/graph signal).
+        * **related_boost**: deprecated compatibility flag; the leaking manual
+          graph is not loaded by serving.
         """
         exclude_ids = exclude_ids or set()
         exclude_artist_key = (exclude_artist or "").casefold()
@@ -255,16 +247,6 @@ class DeepVibeRecommender:
         # Blend on comparable (z-scored) scales so alpha is meaningful.
         blended = self.alpha * self._zscore(neural_sim) + (1 - self.alpha) * self._zscore(vibe_sim)
 
-        # ── Approach 2: artist-centroid genre coherence ──────────────────────
-        if genre_rerank and self._centroid_idx is not None:
-            blended = self._centroid_idx.blend_with_genre(
-                blended, exclude_artist or "", seed_neural_w=qn, gamma=genre_gamma)
-
-        # ── Approach 3: related-artist collaborative boost ───────────────────
-        if related_boost and self._related_graph is not None and exclude_artist:
-            blended = self._related_graph.blend_with_related(
-                blended, self.index.artists, exclude_artist, gamma=related_gamma)
-
         order = np.argsort(blended)[::-1]
 
         # ── Approach 1: pre-filter junk from candidate pool ──────────────────
@@ -275,7 +257,10 @@ class DeepVibeRecommender:
         cand: List[int] = []
         seen: set = set()
         artist_count: Dict[str, int] = {}
-        pool_cap = max(n * 25, 500) if (diversity > 0 or max_per_artist) else n
+        guarded = genre_rerank and self._centroid_idx is not None
+        pool_cap = max(n * 25, 500) if (
+            diversity > 0 or max_per_artist or guarded
+        ) else n
         for idx in order:
             i = int(idx)
             tid = int(self.index.track_ids[i])
@@ -286,6 +271,13 @@ class DeepVibeRecommender:
             if exclude_artist_key and exclude_artist_key in akey:
                 continue
             if qmask is not None and not qmask[i]:
+                continue
+            if (
+                qmask is not None
+                and seed_title
+                and self._qfilter is not None
+                and self._qfilter.seed_title_in_result(seed_title, title)
+            ):
                 continue
             key = f"{title.casefold()}::{akey}"
             if key in seen:
@@ -298,7 +290,25 @@ class DeepVibeRecommender:
             if len(cand) >= pool_cap:
                 break
 
-        chosen = self._mmr(cand, blended, n, diversity) if diversity > 0 else cand[:n]
+        select_n = max(n, 50) if (genre_rerank and self._centroid_idx is not None) else n
+        chosen = (
+            self._mmr(cand, blended, select_n, diversity)
+            if diversity > 0 else cand[:select_n]
+        )
+
+        # Guarded centroid rerank: improve the visible top results while freezing
+        # the already-retrieved tail.  This preserved every baseline Recall@50
+        # hit in the sourced held-out benchmark.
+        if genre_rerank and self._centroid_idx is not None and chosen:
+            centroid_score = self._centroid_idx.blend_with_genre(
+                blended, exclude_artist or "", seed_neural_w=qn, gamma=genre_gamma)
+            boundary = min(20, len(chosen))
+            chosen = sorted(
+                chosen[:boundary],
+                key=lambda i: float(centroid_score[i]),
+                reverse=True,
+            ) + chosen[boundary:]
+        chosen = chosen[:n]
 
         results: List[DeepVibeRecommendation] = []
         for i in chosen:
@@ -468,4 +478,3 @@ def build_from_vibe_index(
     progress(f"Deep-vibe index size: {len(ids)} tracks")
     return DeepVibeIndex(ids, titles, artists, np.array(neural, np.float32),
                          np.array(vibe, np.float32))
-

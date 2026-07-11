@@ -1,9 +1,14 @@
 # Deploying soundalike as a hosted web app (Vercel)
 
 This directory is a **self-contained Vercel deployment**: a static frontend + two
-tiny Python serverless functions that recommend from the 87k-song library using
+tiny Python serverless functions that recommend from the 272,853-song library using
 **numpy only** (no PyTorch). You can host it on a subdomain like
 `soundalike.yassin.app` and let anyone try it in the browser.
+
+> **Release status (2026-07-11):** the guarded-centroid winner is implemented and
+> desktop/hosted parity-tested here, but the public project still serves the
+> frozen baseline. Deploy only from an authorized checkout; no successful
+> production deployment is claimed by the benchmark artifacts.
 
 ---
 
@@ -13,20 +18,20 @@ tiny Python serverless functions that recommend from the 87k-song library using
 which is ~12× over Vercel's 250 MB serverless limit. **But it doesn't need to.**
 
 Every song in the 87k library already has a precomputed embedding, and ranking is
-pure numpy (whiten → cosine → vibe-blend → MMR). So the hosted app recommends
-from the **library** with just numpy + the 71 MB index. A test
+pure numpy (whiten → cosine → vibe-blend → guarded centroid rerank). So the hosted
+app recommends from the **library** with just numpy + the 234 MB index. A test
 (`tests/test_webapp.py`) pins the numpy path to the desktop recommender so results
 are **byte-identical**.
 
 | | Hosted (Vercel) | Desktop (`soundalike serve`) |
 |---|---|---|
-| Recommend from a library song (87k) | ✅ instant, numpy | ✅ |
+| Recommend from a library song (272,853) | ✅ numpy | ✅ |
 | Recommend from *any* song (on-the-fly neural embedding) | ❌ needs torch | ✅ |
 | Save to Spotify playlist | ✅ (browser → Spotify) | ✅ |
 | Cost / maintenance | free, serverless | your machine |
 
 So: **host the library demo on Vercel; keep the desktop app for arbitrary songs.**
-87k songs is a huge catalog — most searches hit it.
+The release catalogue contains 272,853 songs; misses are reported honestly.
 
 ---
 
@@ -45,7 +50,7 @@ webapp/
 ```
 
 The index is **not** committed here — on first request the function downloads
-`deepvibe_index.npz` (71 MB) from the public GitHub Release into `/tmp` and caches
+`deepvibe_index.npz` (234 MB) from the public GitHub Release into `/tmp` and caches
 it for the life of the warm instance. Override with the `SOUNDALIKE_INDEX_URL` or
 `SOUNDALIKE_INDEX_PATH` env vars.
 

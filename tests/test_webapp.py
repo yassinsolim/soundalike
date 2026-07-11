@@ -84,6 +84,34 @@ def test_enhanced_recommender_differs_from_baseline(tmp_path):
         assert len(base_out["results"]) > 0 and len(enh_out["results"]) > 0
 
 
+def test_enhanced_web_recommender_matches_canonical(tmp_path):
+    """The shipped guarded winner must be identical on desktop and hosted paths."""
+    from _reco import WebRecommender
+    from soundalike.ml.deepvibe import DeepVibeIndex, DeepVibeRecommender
+    from soundalike.audio.vibe import VibeFeatures
+
+    path, idx = _synthetic_index(tmp_path, n_artists=60, per=5, dim=48, seed=9)
+    web = WebRecommender(str(path), enhance=True)
+    canon = DeepVibeRecommender(DeepVibeIndex.load(path), alpha=0.8, whiten=True,
+                                enhance=True)
+    for row in (0, 37, 111, 200):
+        hosted = web.recommend(row, n=15, alpha=0.8, diversity=0.15,
+                               max_per_artist=1)
+        desktop = canon.recommend(
+            np.asarray(idx.neural[row], np.float32),
+            VibeFeatures.from_vector(np.asarray(idx.vibe[row], np.float32)),
+            n=15,
+            exclude_ids={int(idx.track_ids[row])},
+            exclude_artist=str(idx.artists[row]),
+            seed_title=str(idx.titles[row]),
+            diversity=0.15,
+            max_per_artist=1,
+        )
+        assert [(item["title"], item["artist"]) for item in hosted["results"]] == [
+            (item.title, item.artist) for item in desktop
+        ], f"enhanced mismatch at row {row}"
+
+
 def test_web_recommender_search_and_findrow(tmp_path):
     from _reco import WebRecommender
 
@@ -148,3 +176,69 @@ def test_search_ranks_and_finds_titles_with_with(tmp_path):
     # a query that is an exact title ranks that title first.
     hits2 = rec.search("money machine", 3)
     assert hits2[0]["title"] == "Money Machine"
+
+
+def test_find_row_prefers_original_over_remix(tmp_path):
+    from _reco import WebRecommender
+    from soundalike.ml.deepvibe import DeepVibeIndex
+
+    titles = np.array(
+        ["Treasure (Sharam Club Remix)", "Treasure", "Other Song"], dtype=object
+    )
+    artists = np.array(["Bruno Mars", "Bruno Mars", "Other"], dtype=object)
+    rng = np.random.default_rng(20)
+    index = DeepVibeIndex(
+        np.array([1, 2, 3]), titles, artists,
+        rng.standard_normal((3, 16)).astype("float32"),
+        rng.standard_normal((3, 29)).astype("float32"),
+    )
+    path = tmp_path / "versions.npz"
+    index.save(path)
+    recommender = WebRecommender(str(path), enhance=False)
+    assert recommender.find_row("Treasure", "Bruno Mars") == 1
+
+
+def test_hosted_quality_rules_match_desktop_edge_cases():
+    from _reco import _TitleQualityFilter
+    from soundalike.ml.quality_filter import TitleQualityFilter
+
+    hosted = _TitleQualityFilter()
+    desktop = TitleQualityFilter()
+    cases = [
+        ("Sing Along Version", "Publisher"),
+        ("One x Two x Three", "Mashup Artist"),
+        ("Tribute Version", "Publisher"),
+        ("A Tribute To Someone", "Herbie Hancock"),
+    ]
+    hosted_mask = hosted.keep_mask(
+        [title for title, _ in cases], [artist for _, artist in cases]
+    )
+    desktop_mask = desktop.keep_mask(
+        [title for title, _ in cases], [artist for _, artist in cases]
+    )
+    assert hosted_mask.tolist() == desktop_mask.tolist() == [False, False, False, True]
+
+
+def test_guarded_reranker_can_promote_beyond_requested_n(tmp_path):
+    """n=5/diversity=0 must still collect the full guarded top-20 window."""
+    from _reco import WebRecommender
+
+    path, _ = _synthetic_index(tmp_path, n_artists=30, per=3, dim=24, seed=21)
+    recommender = WebRecommender(str(path), enhance=True)
+    baseline = recommender.recommend(
+        0, n=20, diversity=0, max_per_artist=0, genre_rerank=False
+    )
+    target_id = baseline["results"][10]["deezer_id"]
+    target_row = int(np.where(recommender.track_ids == target_id)[0][0])
+
+    class PromoteTarget:
+        def blend_with_genre(self, blended, *args, **kwargs):
+            scores = np.zeros_like(blended)
+            scores[target_row] = 1.0
+            return scores
+
+    recommender._centroid_idx = PromoteTarget()
+    guarded = recommender.recommend(
+        0, n=5, diversity=0, max_per_artist=0, genre_rerank=True
+    )
+    assert guarded["results"][0]["deezer_id"] == target_id

@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "measured_at": "2026-07-11",
+  "hardware": {
+    "local_cpu": "Intel Core i9-14900KF",
+    "local_gpu": "NVIDIA GeForce RTX 5080",
+    "local_ram_bytes": 51539607552
+  },
+  "index": {
+    "tracks": 272853,
+    "dimensions": 384,
+    "file_bytes": 233744489,
+    "sha256": "89bfde6f622619a704462291b17f82bcb6508880210932b0a1548a433e1b7085",
+    "cold_load_seconds": 3.7262373,
+    "neural_matrix_bytes": 419102208,
+    "vibe_matrix_bytes": 31650948,
+    "minimum_ranker_array_bytes": 450753156
+  },
+  "winner": {
+    "training_seconds": 0,
+    "training_note": "The selected method is an unsupervised inference-time reranker; no new encoder was trained.",
+    "centroid_count": 11968,
+    "quality_mask_bytes": 272853,
+    "centroid_song_map_bytes": 1091412,
+    "centroid_table_bytes": 18382848,
+    "retained_reranker_array_bytes": 19747113,
+    "measured_reranker_rss_delta_bytes": 45117440,
+    "full_process_rss_after_index_bytes": 1123799040,
+    "local_latency_ms": {
+      "mean": 118.236115,
+      "p50": 90.64975,
+      "p95": 195.231525,
+      "samples": 20
+    }
+  },
+  "hosted_live_baseline": {
+    "url": "https://soundalike.yassin.app",
+    "browser": "Chrome 150",
+    "cold_latency_ms": 13519.2,
+    "warm_latency_ms": {
+      "mean": 242.277778,
+      "p50": 236.5,
+      "p95": 280.66,
+      "samples": 9
+    },
+    "evidence": ".goals/human-quality-recommendations/artifacts/live-browser-10-seeds-v1.json",
+    "deployment_state": "The live browser results match the frozen baseline, not the guarded winner."
+  }
+}

@@ -244,22 +244,19 @@ class TestGenreReranker:
 
 
 # ---------------------------------------------------------------------------
-# Tests for related-artist graph (Approach 3)
+# Regression test for the retired leaking graph
 # ---------------------------------------------------------------------------
 
 class TestRelatedArtistBoost:
 
-    def test_related_graph_built_by_enhanced_recommender(self):
-        """enhance=True must build the RelatedArtistGraph."""
+    def test_related_graph_not_loaded_by_enhanced_recommender(self):
+        """Serving must not load the old benchmark-leaking graph."""
         torch = pytest.importorskip("torch")
         from soundalike.ml.deepvibe import DeepVibeIndex, DeepVibeRecommender
 
         idx, _, _ = _build_clustered_index()
         rec = DeepVibeRecommender(idx, alpha=0.8, enhance=True)
-        assert rec._related_graph is not None, \
-            "enhance=True must build RelatedArtistGraph"
-        # Manual pairs load even without acc_cache_dir
-        assert rec._related_graph.n_artists > 0
+        assert rec._related_graph is None
 
     def test_related_boost_does_not_crash_unknown_artist(self):
         """Passing an unknown seed artist must not raise or alter results."""
@@ -538,8 +535,8 @@ class TestDesktopHostedParity:
     """The canonical desktop path and hosted Vercel path must apply identical
     enhancements so recommendations are consistent across both surfaces."""
 
-    def test_enhanced_desktop_builds_all_three_modules(self):
-        """DeepVibeRecommender with enhance=True must load all 3 improvement modules."""
+    def test_enhanced_desktop_builds_validated_modules(self):
+        """Enhanced desktop loads only the two leakage-free winner modules."""
         torch = pytest.importorskip("torch")
         from soundalike.ml.deepvibe import DeepVibeRecommender
 
@@ -547,10 +544,10 @@ class TestDesktopHostedParity:
         rec = DeepVibeRecommender(idx, alpha=0.8, enhance=True)
         assert rec._qfilter is not None, "Approach 1: TitleQualityFilter not loaded"
         assert rec._centroid_idx is not None, "Approach 2: ArtistCentroidIndex not loaded"
-        assert rec._related_graph is not None, "Approach 3: RelatedArtistGraph not loaded"
+        assert rec._related_graph is None, "Leaking manual graph must remain retired"
 
     def test_enhance_false_loads_no_modules(self):
-        """enhance=False must leave all three modules as None."""
+        """enhance=False must leave all enhancement modules as None."""
         torch = pytest.importorskip("torch")
         from soundalike.ml.deepvibe import DeepVibeRecommender
 
@@ -728,4 +725,3 @@ class TestResourceMetrics:
         avg_ms = (time.perf_counter() - t0) * 1000 / 10
         assert avg_ms < 50.0, \
             f"Mean recommendation latency {avg_ms:.1f}ms exceeds 50ms on 500-song index"
-
