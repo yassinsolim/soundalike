@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Set
 
 import numpy as np
 
@@ -99,7 +99,26 @@ class DeepVibeIndex:
 
 
 class DeepVibeRecommender:
-    """Rank a DeepVibeIndex by a tunable blend of neural + vibe similarity."""
+    """Rank a DeepVibeIndex by a tunable blend of neural + vibe similarity.
+
+    Quality enhancements (all enabled by default, ``enhance=True``):
+
+    * **Approach 1 — quality filter** (``quality_filter=True`` in recommend):
+      Pre-filters the candidate pool to remove junk derivatives — slowed/reverb
+      TikTok edits, nightcore, karaoke, tribute, and seed-title mashups.  These
+      should never appear in recommendations.
+
+    * **Approach 2 — artist-centroid genre reranker** (``genre_rerank=True``):
+      Adds a per-artist centroid term to the blend so acoustically-similar but
+      genre-incoherent candidates (e.g., metal near a shoegaze seed) are gently
+      demoted relative to candidates in the same scene.
+
+    * **Approach 3 — related-artist collaborative graph** (``related_boost=True``):
+      Boosts candidates whose artist is editorially related to the seed artist
+      (Deezer + curated ``MANUAL_PAIRS``).  Orthogonal to the acoustic signal.
+
+    Pass ``enhance=False`` to get the original unmodified baseline for ablation.
+    """
 
     def __init__(
         self,
@@ -107,6 +126,8 @@ class DeepVibeRecommender:
         alpha: float = 0.8,
         vibe_weights: Optional[Dict[str, float]] = None,
         whiten: bool = True,
+        enhance: bool = True,
+        acc_cache_dir: Optional[Path] = None,
     ):
         if len(index) < 2:
             raise ValueError("Deep-vibe index is empty — build it first.")
@@ -142,6 +163,45 @@ class DeepVibeRecommender:
         self._vscaled = ((index.vibe - self._vmean) / self._vstd) * w
         self._w = w
 
+        # ── Enhancement modules ──────────────────────────────────────────────
+        self._qfilter = None
+        self._qmask: Optional[np.ndarray] = None
+        self._centroid_idx = None
+        self._related_graph = None
+
+        if enhance:
+            self._load_enhancements(acc_cache_dir)
+
+    def _load_enhancements(self, acc_cache_dir: Optional[Path]) -> None:
+        """Lazily build the three quality-improvement modules.
+
+        Designed to degrade gracefully: each module is skipped silently if its
+        import fails (e.g., running without the soundalike package installed as
+        an editable install, or with a stripped deployment).
+        """
+        try:
+            from .quality_filter import TitleQualityFilter
+            self._qfilter = TitleQualityFilter()
+            # Pre-compute mask once (fast; avoids per-call regex over 87k+ rows)
+            self._qmask = self._qfilter.keep_mask(
+                list(self.index.titles), list(self.index.artists))
+        except Exception:
+            pass
+
+        try:
+            from .genre_rerank import ArtistCentroidIndex
+            self._centroid_idx = ArtistCentroidIndex(
+                self._neural, self.index.artists, min_songs=2)
+        except Exception:
+            pass
+
+        try:
+            from .related_artists_rerank import RelatedArtistGraph
+            self._related_graph = RelatedArtistGraph(
+                acc_cache_dir=acc_cache_dir, use_manual=True, boost=0.15)
+        except Exception:
+            pass
+
     def _apply_whiten(self, vecs: np.ndarray) -> np.ndarray:
         """Center + ZCA-whiten + re-normalize (rows) of one or many embeddings."""
         x = (vecs - self._nmean) @ self._W
@@ -159,13 +219,31 @@ class DeepVibeRecommender:
         seed_neural: np.ndarray,
         seed_vibe: VibeFeatures,
         n: int = 15,
-        exclude_ids: Optional[set] = None,
+        exclude_ids: Optional[Set] = None,
         exclude_artist: Optional[str] = None,
         diversity: float = 0.0,
         max_per_artist: int = 0,
+        # Enhancement flags (all True = best validated method)
+        quality_filter: bool = True,
+        genre_rerank: bool = True,
+        related_boost: bool = True,
+        genre_gamma: float = 0.25,
+        related_gamma: float = 0.20,
     ) -> List[DeepVibeRecommendation]:
+        """Recommend songs similar to (seed_neural, seed_vibe).
+
+        Three complementary quality improvements are applied when the enhancement
+        modules are loaded (``enhance=True`` at construction):
+
+        * **quality_filter**: removes junk derivatives from the candidate pool
+          before ranking (approach 1 — operates on library track titles/artists).
+        * **genre_rerank**: adds artist-centroid coherence to the blend so the
+          same scene as the seed is boosted (approach 2 — acoustic signal).
+        * **related_boost**: boosts candidates whose artist is editorially related
+          to the seed (approach 3 — collaborative/graph signal).
+        """
         exclude_ids = exclude_ids or set()
-        exclude_artist = (exclude_artist or "").casefold()
+        exclude_artist_key = (exclude_artist or "").casefold()
 
         qn = seed_neural / (np.linalg.norm(seed_neural) + 1e-9)
         if self._whiten:
@@ -177,7 +255,20 @@ class DeepVibeRecommender:
         # Blend on comparable (z-scored) scales so alpha is meaningful.
         blended = self.alpha * self._zscore(neural_sim) + (1 - self.alpha) * self._zscore(vibe_sim)
 
+        # ── Approach 2: artist-centroid genre coherence ──────────────────────
+        if genre_rerank and self._centroid_idx is not None:
+            blended = self._centroid_idx.blend_with_genre(
+                blended, exclude_artist or "", seed_neural_w=qn, gamma=genre_gamma)
+
+        # ── Approach 3: related-artist collaborative boost ───────────────────
+        if related_boost and self._related_graph is not None and exclude_artist:
+            blended = self._related_graph.blend_with_related(
+                blended, self.index.artists, exclude_artist, gamma=related_gamma)
+
         order = np.argsort(blended)[::-1]
+
+        # ── Approach 1: pre-filter junk from candidate pool ──────────────────
+        qmask = self._qmask if (quality_filter and self._qmask is not None) else None
 
         # Build a filtered candidate pool (dedup by title/artist, honour excludes,
         # optionally cap songs per artist so one artist can't dominate).
@@ -192,7 +283,9 @@ class DeepVibeRecommender:
                 continue
             title, artist = str(self.index.titles[i]), str(self.index.artists[i])
             akey = artist.casefold()
-            if exclude_artist and exclude_artist in akey:
+            if exclude_artist_key and exclude_artist_key in akey:
+                continue
+            if qmask is not None and not qmask[i]:
                 continue
             key = f"{title.casefold()}::{akey}"
             if key in seen:

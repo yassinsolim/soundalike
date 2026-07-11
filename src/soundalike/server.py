@@ -89,7 +89,10 @@ class SoundalikeEngine:
 
         self.index = DeepVibeIndex.load(ipath)
         self.extractor = EncoderExtractor(model_dir or enc_default)
-        self.recommender = DeepVibeRecommender(self.index, alpha=alpha)
+        # enhance=True applies quality filter (Approach 1), artist-centroid genre
+        # reranker (Approach 2), and related-artist collaborative boost (Approach 3)
+        # — identical to the hosted Vercel path for canonical desktop/hosted parity.
+        self.recommender = DeepVibeRecommender(self.index, alpha=alpha, enhance=True)
         self.cfg = SpectrogramConfig()
         self._lock = threading.Lock()          # torch inference: serialize to be safe
         self._spotify_client = None

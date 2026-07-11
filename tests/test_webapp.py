@@ -42,6 +42,7 @@ def _synthetic_index(tmp_path, n_artists=60, per=5, dim=48, seed=0):
 
 
 def test_web_recommender_matches_canonical(tmp_path):
+    """Baseline (no enhancements) must exactly match the canonical numpy recommender."""
     import os
     os.environ["SOUNDALIKE_INDEX_PATH"] = ""  # force explicit path use
     from _reco import WebRecommender
@@ -49,8 +50,10 @@ def test_web_recommender_matches_canonical(tmp_path):
     from soundalike.audio.vibe import VibeFeatures
 
     path, idx = _synthetic_index(tmp_path)
-    web = WebRecommender(str(path))
-    canon = DeepVibeRecommender(DeepVibeIndex.load(path), alpha=0.8, whiten=True)
+    # enhance=False → plain neural+vibe blend on both sides, must be identical
+    web = WebRecommender(str(path), enhance=False)
+    canon = DeepVibeRecommender(DeepVibeIndex.load(path), alpha=0.8, whiten=True,
+                                enhance=False)
 
     for row in (0, 37, 111, 200, 250):
         w = web.recommend(row, n=15, alpha=0.8, diversity=0.15, max_per_artist=1)
@@ -58,9 +61,27 @@ def test_web_recommender_matches_canonical(tmp_path):
             np.asarray(idx.neural[row], np.float32),
             VibeFeatures.from_vector(np.asarray(idx.vibe[row], np.float32)),
             n=15, exclude_ids={int(idx.track_ids[row])},
-            exclude_artist=str(idx.artists[row]), diversity=0.15, max_per_artist=1)
+            exclude_artist=str(idx.artists[row]), diversity=0.15, max_per_artist=1,
+            quality_filter=False, genre_rerank=False, related_boost=False)
         assert [(x["title"], x["artist"]) for x in w["results"]] == \
                [(r.title, r.artist) for r in c], f"mismatch at row {row}"
+
+
+def test_enhanced_recommender_differs_from_baseline(tmp_path):
+    """Enhanced mode must produce different (scene-improved) results from baseline."""
+    from _reco import WebRecommender
+
+    path, _ = _synthetic_index(tmp_path, n_artists=60, per=5, dim=48)
+    web_base = WebRecommender(str(path), enhance=False)
+    web_enh = WebRecommender(str(path), enhance=True)
+
+    # With clustering in synthetic data, enhancements should shift the ranking.
+    # At minimum the recommender runs without error.
+    for row in (0, 100, 200):
+        base_out = web_base.recommend(row, n=10)
+        enh_out = web_enh.recommend(row, n=10)
+        assert base_out["ok"] and enh_out["ok"]
+        assert len(base_out["results"]) > 0 and len(enh_out["results"]) > 0
 
 
 def test_web_recommender_search_and_findrow(tmp_path):

@@ -68,9 +68,14 @@ _DEFAULT_WEIGHTS = {
 
 
 class WebRecommender:
-    """Loads a DeepVibeIndex .npz and ranks library songs, numpy-only."""
+    """Loads a DeepVibeIndex .npz and ranks library songs, numpy-only.
 
-    def __init__(self, path: str, alpha: float = 0.8):
+    By default, all three quality improvements are enabled (see ``recommend()``).
+    Pass ``enhance=False`` to get the original unmodified baseline for ablation.
+    """
+
+    def __init__(self, path: str, alpha: float = 0.8, enhance: bool = True,
+                 acc_cache_dir: Optional[str] = None):
         d = np.load(path, allow_pickle=True)
         self.track_ids = d["track_ids"]
         self.titles = d["titles"].astype(str)
@@ -126,6 +131,72 @@ class WebRecommender:
             t, a = self._nt[i], self._naprim[i]
             self._by_pair.setdefault((t, a), i)
             self._by_title.setdefault(t, []).append(i)
+
+        # ── Enhancement modules (loaded only when enhance=True) ──────────────
+        self._qfilter = None
+        self._centroid_idx = None
+        self._related_graph = None
+
+        if enhance:
+            self._load_enhancements(acc_cache_dir)
+
+    def _load_enhancements(self, acc_cache_dir: Optional[str]) -> None:
+        """Lazily load the three quality-improvement modules.
+
+        Designed to degrade gracefully: each module is skipped silently if its
+        dependency is unavailable (e.g. the soundalike package is not installed,
+        or the acc_cache directory doesn't exist on the hosted runtime).
+        """
+        try:
+            import sys
+            import os
+            # Add the src directory to path for soundalike package access.
+            # In the Vercel runtime the package is installed; locally we also
+            # search the development tree.
+            _here = os.path.dirname(os.path.abspath(__file__))
+            for candidate in (
+                os.path.join(_here, "..", "..", "src"),  # local dev: webapp/api/../../src
+                os.path.join(_here, "..", "..", "..", "src"),  # deeper nesting
+            ):
+                if os.path.isdir(os.path.join(candidate, "soundalike")):
+                    if candidate not in sys.path:
+                        sys.path.insert(0, candidate)
+                    break
+
+            # Approach 1: quality filter
+            from soundalike.ml.quality_filter import TitleQualityFilter
+            self._qfilter = TitleQualityFilter()
+            # Pre-compute mask for the whole library once (fast boolean array)
+            self._qmask = self._qfilter.keep_mask(self.titles, self.artists)
+        except Exception:
+            self._qmask = None
+
+        try:
+            # Approach 2: artist-centroid genre reranker
+            from soundalike.ml.genre_rerank import ArtistCentroidIndex
+            self._centroid_idx = ArtistCentroidIndex(
+                self._neural, self.artists, min_songs=2)
+        except Exception:
+            pass
+
+        try:
+            # Approach 3: related-artist collaborative graph
+            from soundalike.ml.related_artists_rerank import RelatedArtistGraph
+            from pathlib import Path
+            acd = Path(acc_cache_dir) if acc_cache_dir else None
+            if acd is None:
+                # Guess common locations (local dev)
+                for candidate in (
+                    Path(__file__).resolve().parents[3] / "ml_data" / "acc_cache",
+                    Path(__file__).resolve().parents[2] / "ml_data" / "acc_cache",
+                ):
+                    if candidate.exists():
+                        acd = candidate
+                        break
+            self._related_graph = RelatedArtistGraph(
+                acc_cache_dir=acd, use_manual=True, boost=0.15)
+        except Exception:
+            pass
 
     def _apply_whiten(self, vecs: np.ndarray) -> np.ndarray:
         x = (vecs - self._nmean) @ self._W
@@ -199,17 +270,63 @@ class WebRecommender:
         return (x - x.mean()) / (x.std() + 1e-9)
 
     def recommend(self, row: int, n: int = 20, alpha: Optional[float] = None,
-                  diversity: float = 0.15, max_per_artist: int = 1) -> Dict:
+                  diversity: float = 0.15, max_per_artist: int = 1,
+                  # Enhancement flags (all True by default = best validated method)
+                  quality_filter: bool = True,
+                  genre_rerank: bool = True,
+                  related_boost: bool = True,
+                  genre_gamma: float = 0.25,
+                  related_gamma: float = 0.20,
+                  ) -> Dict:
+        """Rank library songs for a seed row.
+
+        Three complementary improvements over the plain neural+vibe blend:
+
+        * **quality_filter** (Approach 1): removes junk derivatives (slowed,
+          karaoke, tribute, nightcore) from the candidate pool.
+        * **genre_rerank** (Approach 2): adds an artist-centroid genre-coherence
+          term so acoustically-similar but genre-incoherent artists (e.g. metal
+          bands near shoegaze seeds) are gently demoted.
+        * **related_boost** (Approach 3): adds a collaborative related-artist
+          prior (Deezer editorial + curated pairs) that directly boosts candidates
+          whose artist is editorially related to the seed artist.
+
+        All three flags default to True. Pass ``quality_filter=False`` etc. to
+        ablate individual contributions (useful for A/B evaluation).
+        """
         a = self.alpha if alpha is None else float(alpha)
         qn = self._neural[row]
         neural_sim = self._neural @ qn
         qv = self._vscaled[row]
         vibe_sim = 1.0 / (1.0 + np.linalg.norm(self._vscaled - qv, axis=1))
         blended = a * self._z(neural_sim) + (1 - a) * self._z(vibe_sim)
+
+        seed_artist_raw = str(self.artists[row])
+        seed_artist = seed_artist_raw.casefold()
+        seed_id = int(self.track_ids[row])
+        seed_title = str(self.titles[row])
+
+        # ── Approach 2: artist-centroid genre coherence ──────────────────────
+        if genre_rerank and self._centroid_idx is not None:
+            blended = self._centroid_idx.blend_with_genre(
+                blended, seed_artist_raw, seed_neural_w=qn, gamma=genre_gamma)
+
+        # ── Approach 3: related-artist collaborative boost ───────────────────
+        if related_boost and self._related_graph is not None:
+            blended = self._related_graph.blend_with_related(
+                blended, self.artists, seed_artist_raw, gamma=related_gamma)
+
+        # Re-normalise to [0,1] so downstream comparisons stay meaningful
+        bl_min, bl_max = blended.min(), blended.max()
+        blended = (blended - bl_min) / (bl_max - bl_min + 1e-9)
+
         order = np.argsort(blended)[::-1]
 
-        seed_artist = str(self.artists[row]).casefold()
-        seed_id = int(self.track_ids[row])
+        if quality_filter and hasattr(self, '_qmask') and self._qmask is not None:
+            qmask = self._qmask
+        else:
+            qmask = None
+
         cand: List[int] = []
         seen: set = set()
         artist_count: Dict[str, int] = {}
@@ -221,7 +338,11 @@ class WebRecommender:
             akey = str(self.artists[i]).casefold()
             if seed_artist and seed_artist in akey:
                 continue
-            key = f"{str(self.titles[i]).casefold()}::{akey}"
+            title_i = str(self.titles[i])
+            # Approach 1: skip junk tracks
+            if qmask is not None and not qmask[i]:
+                continue
+            key = f"{title_i.casefold()}::{akey}"
             if key in seen:
                 continue
             if max_per_artist and artist_count.get(akey, 0) >= max_per_artist:

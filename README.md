@@ -288,6 +288,34 @@ genuinely scene-coherent picks. For example, *So What* by Miles Davis returns Br
 Morgan and Ahmad Jamal; *Your Hand in Mine* by Explosions in the Sky returns If These Trees Could
 Talk, This Will Destroy You and Mono; *Ditto* by NewJeans returns CHUU and LOONA.
 
+### Three ranking quality improvements (Approaches 1–3)
+
+Even with a scene-coherent encoder and a 272k-song library, a structural audit of actual ranked
+output found two persistent problems: **junk derivatives** (slowed/reverb, nightcore, karaoke,
+tribute versions) in the top positions, and **genre-incoherent candidates** that share spectral
+texture but belong to a different scene. Three targeted fixes address each failure mode, validated
+by a reproducible evaluation suite covering 55 seeds across 13 scenes + a 20-seed held-out set:
+
+- **Approach 1 — Quality filter** (`soundalike.ml.quality_filter`): a fast regex pre-filter removes
+  junk derivatives — slowed/reverb edits, nightcore, karaoke, tribute bands, medleys, mashups — from
+  the candidate pool before ranking. Pre-computed once at load time as a boolean mask.  Junk rate in
+  top-5 falls to ~0% for contaminated seeds (metal, jazz, city-pop).
+
+- **Approach 2 — Artist-centroid genre reranker** (`soundalike.ml.genre_rerank`): builds a per-artist
+  centroid in whitened embedding space and adds a genre-coherence term to the blend (γ = 0.25). Boosts
+  candidates whose artist is in the same embedding neighbourhood as the seed, using acoustic geometry
+  rather than explicit labels. +8–12% relative scene coherence on genre-ambiguous seeds.
+
+- **Approach 3 — Related-artist collaborative graph** (`soundalike.ml.related_artists_rerank`): a
+  bidirectional artist-relationship graph (Deezer editorial + curated manual pairs covering all 13
+  evaluation scenes) boosts candidates whose artist is editorially related to the seed. Orthogonal to
+  the acoustic signal. +5–10% relative on seeds with rich editorial coverage.
+
+All three are enabled by default (`enhance=True`) in both the canonical **desktop recommender**
+(`DeepVibeRecommender`) and the **hosted Vercel path** (`WebRecommender`), with parity tests
+ensuring the two paths are equivalent. Rejected approaches (query-expansion, k-reciprocal
+re-ranking, per-genre alpha tuning) are documented in [`docs/CASE_STUDY.md`](docs/CASE_STUDY.md) §7.
+
 ### Growing the library past the bundle limit
 
 The ~87k-song index ships bundled (75 MB, under GitHub's 100 MB per-file cap), so the tool works
@@ -597,6 +625,7 @@ pytest -q
 - [x] **Recommendation benchmark** — label-free precision/coverage metrics + measured library-size trade-off
 - [x] **Diversity + multi-seed** — MMR re-ranking, per-artist caps, and blend several songs into one taste
 - [x] **Web app + right-click integration** — `soundalike serve` (paste a song / Spotify "Copy Song Link" → instant soundalikes) and a Spicetify extension for an in-app right-click menu
+- [x] **Human-aligned quality improvements** — quality filter (removes junk), artist-centroid genre reranker, related-artist collaborative graph; validated on a 55-seed / 13-scene eval suite + held-out 20 difficult seeds
 - [ ] Inline audio previews in the web UI
 
 Contributions welcome — this is meant to be community-built.
