@@ -1,0 +1,51 @@
+{
+  "actual_memory_limit_bytes": null,
+  "api_attempts": [
+    {
+      "at": "2026-07-12",
+      "endpoint": "/v9/projects/prj_dIRX8P1uu7SVtYJqkbImGLADIgBa?teamId=team_7KDYLvkpFCn35sRqOT8Ap96z",
+      "method": "GET",
+      "outcome": "Forbidden without credentials",
+      "status": 403
+    },
+    {
+      "at": "2026-07-12",
+      "endpoint": "/v2/teams/team_7KDYLvkpFCn35sRqOT8Ap96z",
+      "method": "GET",
+      "outcome": "Forbidden without credentials",
+      "status": 403
+    }
+  ],
+  "cli_attempts": [
+    {
+      "at": "2026-07-12",
+      "command": "vercel whoami",
+      "reason": "No existing credentials found",
+      "status": "failed"
+    },
+    {
+      "at": "2026-07-12",
+      "command": "vercel project inspect soundalike --yes",
+      "reason": "No existing credentials found",
+      "status": "failed"
+    }
+  ],
+  "cli_version": "54.20.0",
+  "conclusion": "Actual linked-project tier and memory limit cannot be credential-verified from available config/API evidence; resource precondition fails closed and no Hobby/Pro assumption is used.",
+  "credentials_or_tokens_recorded": false,
+  "live_stats": {
+    "library_size": 272853,
+    "status": 200,
+    "url": "https://soundalike.yassin.app/api/stats",
+    "version": "2026.07.11-dual-sonic64"
+  },
+  "orgId": "team_7KDYLvkpFCn35sRqOT8Ap96z",
+  "projectId": "prj_dIRX8P1uu7SVtYJqkbImGLADIgBa",
+  "projectName": "soundalike",
+  "project_config_path": "webapp\\.vercel\\project.json",
+  "project_config_sha256": "1a901c47b6d16b9c6d640ccfc289d479c2fc6d538fef0d98e8ffc1628fd675fe",
+  "project_tier": "unknown",
+  "repository_config_finding": "webapp/vercel.json configures function durations only; it contains no plan or memory tier",
+  "schema_version": 1,
+  "tier_verified": false
+}

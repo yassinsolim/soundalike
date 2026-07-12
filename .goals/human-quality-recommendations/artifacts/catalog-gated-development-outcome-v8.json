@@ -1,0 +1,642 @@
+{
+  "all_preconditions_passed": false,
+  "artifact_sha256": {
+    ".goals\\human-quality-recommendations\\artifacts\\..\\protocol-v8-gated-development-r2\\state.json": "e33e3e8f1aefdce8defdae889b964bf1621ff3348e75fd0625c21fc0d674d720",
+    ".goals\\human-quality-recommendations\\artifacts\\..\\protocol-v8-gated-development-r3\\state.json": "84769a217ae108289e39f1516058e3044cefb059058e10e35dd9008e9400b5fa",
+    ".goals\\human-quality-recommendations\\artifacts\\catalog-gated-direct-judgments-v8.json": "806575b3b20e0b63fe8e897382c5f7b122b5242c231dea0d60f42b0ffb64ff9b",
+    ".goals\\human-quality-recommendations\\artifacts\\catalog-gated-direct-lists-v8.json": "d7bb9830015135fa75353096f324475ee9fba52ed8ec0d70e1e9fd66a7b4822b",
+    ".goals\\human-quality-recommendations\\artifacts\\catalog-gated-direct-seeds-v8.json": "e5912a2591ba01b180ec795c5e86450b2a7d2c33eca9807953ca9a51f7fd5e3a",
+    ".goals\\human-quality-recommendations\\artifacts\\catalog-gated-direct-validation-v8.json": "67c980bdd58e23618d575c219403c8bd62cd159cbb4f1a1ac7fd49f6ae15d95b",
+    ".goals\\human-quality-recommendations\\artifacts\\catalog-gated-policy-v8.json": "6dca51bff4285cc80c153fb6fc2e3d074e166b2b7f0617c9f64193b9da5c928d",
+    ".goals\\human-quality-recommendations\\artifacts\\catalog-gated-resources-v8.json": "ef31fbf21bd2f41b181e3dd421e7ed9062b03e5e9f2f8896603429cf3f48c18c",
+    ".goals\\human-quality-recommendations\\artifacts\\catalog-gated-sonic-dev-cv-v8.json": "71c105b3aefa876c5f510b95024cb0150a1463ca2e25aa7ef057766c1e685ff9",
+    ".goals\\human-quality-recommendations\\artifacts\\catalog-vercel-tier-evidence-v8.json": "38c4d7291ad27d9aab86afb5f40acaaaaf833746d6d089e2606ee46cbc901656"
+  },
+  "decision": "DEV preconditions failed; FINAL and deployment prohibited",
+  "direct_summary": {
+    "challenger_passes": 16,
+    "gate_by_failure_class": {
+      "afrobeats": {
+        "abstained": 1,
+        "fired": 0
+      },
+      "art_pop": {
+        "abstained": 1,
+        "fired": 0
+      },
+      "city_pop": {
+        "abstained": 2,
+        "fired": 0
+      },
+      "daft_punk": {
+        "abstained": 1,
+        "fired": 0
+      },
+      "gorillaz": {
+        "abstained": 1,
+        "fired": 0
+      },
+      "hyperpop_digicore": {
+        "abstained": 3,
+        "fired": 0
+      },
+      "jazz": {
+        "abstained": 0,
+        "fired": 1
+      },
+      "k_pop": {
+        "abstained": 1,
+        "fired": 0
+      },
+      "latin": {
+        "abstained": 2,
+        "fired": 0
+      },
+      "metal": {
+        "abstained": 0,
+        "fired": 2
+      },
+      "pixies_to_trip_hop": {
+        "abstained": 2,
+        "fired": 0
+      },
+      "rap": {
+        "abstained": 0,
+        "fired": 1
+      },
+      "rnb": {
+        "abstained": 1,
+        "fired": 0
+      },
+      "shoegaze": {
+        "abstained": 0,
+        "fired": 1
+      }
+    },
+    "production_passes": 15
+  },
+  "exact_policy": {
+    "audio_weight": 0.05,
+    "sigma": 0.3,
+    "tau": 0.35
+  },
+  "final": {
+    "final_open_count": 0,
+    "fresh_final_created": false,
+    "fresh_final_metrics_present": false,
+    "fresh_final_opened": false,
+    "rankings_locked": false
+  },
+  "nested_summary": {
+    "absolute_gain": -0.0014674068376956334,
+    "baseline": {
+      "mrr_at_10": 0.004098360655737705,
+      "ndcg_at_10": 0.0070602714438261155,
+      "recall_at_10": 0.01639344262295082,
+      "sonic_primary": 0.009184024907504881
+    },
+    "candidate_recall_at_1000": [
+      0.2459016393442623,
+      0.2459016393442623
+    ],
+    "challenger": {
+      "mrr_at_10": 0.0018214936247723133,
+      "ndcg_at_10": 0.00493491796170461,
+      "recall_at_10": 0.01639344262295082,
+      "sonic_primary": 0.0077166180698092475
+    },
+    "ci95": {
+      "ci95_high": 0.0,
+      "ci95_low": -0.0044022205130868994,
+      "p_positive": 0.0
+    },
+    "firing": {
+      "abstained": 36,
+      "abstention_rate": 0.5901639344262295,
+      "fired": 25,
+      "firing_rate": 0.4098360655737705,
+      "per_scene": {
+        "asian-pop": {
+          "abstained": 2,
+          "fired": 2,
+          "firing_rate": 0.5,
+          "records": 4
+        },
+        "electronic": {
+          "abstained": 2,
+          "fired": 4,
+          "firing_rate": 0.6666666666666666,
+          "records": 6
+        },
+        "folk-country": {
+          "abstained": 2,
+          "fired": 0,
+          "firing_rate": 0.0,
+          "records": 2
+        },
+        "hip-hop": {
+          "abstained": 3,
+          "fired": 1,
+          "firing_rate": 0.25,
+          "records": 4
+        },
+        "indie-alternative": {
+          "abstained": 7,
+          "fired": 6,
+          "firing_rate": 0.46153846153846156,
+          "records": 13
+        },
+        "jazz": {
+          "abstained": 2,
+          "fired": 0,
+          "firing_rate": 0.0,
+          "records": 2
+        },
+        "metal": {
+          "abstained": 1,
+          "fired": 2,
+          "firing_rate": 0.6666666666666666,
+          "records": 3
+        },
+        "other": {
+          "abstained": 1,
+          "fired": 0,
+          "firing_rate": 0.0,
+          "records": 1
+        },
+        "pop": {
+          "abstained": 3,
+          "fired": 2,
+          "firing_rate": 0.4,
+          "records": 5
+        },
+        "r-and-b-soul": {
+          "abstained": 7,
+          "fired": 4,
+          "firing_rate": 0.36363636363636365,
+          "records": 11
+        },
+        "reggae-dub-ska": {
+          "abstained": 1,
+          "fired": 0,
+          "firing_rate": 0.0,
+          "records": 1
+        },
+        "rock": {
+          "abstained": 3,
+          "fired": 4,
+          "firing_rate": 0.5714285714285714,
+          "records": 7
+        },
+        "shoegaze-dream-pop": {
+          "abstained": 2,
+          "fired": 0,
+          "firing_rate": 0.0,
+          "records": 2
+        }
+      },
+      "reasons": {
+        "both_gates_passed": 25,
+        "consistency_below_sigma": 1,
+        "fewer_than_five_shared_neighbors": 4,
+        "missing_independent_source": 31
+      }
+    },
+    "improved": 0,
+    "relative_gain": -0.15977818575998387,
+    "unchanged": 60,
+    "worsened": 1
+  },
+  "numeric_parameter_count": 3,
+  "phase": "DEVELOPMENT_STOP",
+  "preconditions": {
+    "direct_20": {
+      "challenger_passes": 16,
+      "passed": true,
+      "production_passes": 15,
+      "required": 16
+    },
+    "nested_5fold": {
+      "gate_pass": false,
+      "passes": {
+        "absolute_delta_at_least_0_01": false,
+        "at_least_10_improved_records": false,
+        "bootstrap_ci95_low_above_zero": false,
+        "candidate_recall_at_1000_improves": false,
+        "mrr_at_10_non_regression": false,
+        "recall_at_10_non_regression": true,
+        "relative_gain_at_least_20_percent": false
+      }
+    },
+    "scene_held_out": {
+      "gate_pass": false,
+      "passes": {
+        "absolute_delta_at_least_0_01": false,
+        "at_least_10_improved_records": false,
+        "bootstrap_ci95_low_above_zero": false,
+        "candidate_recall_at_1000_improves": false,
+        "every_scene_above_minus_10_percent": false,
+        "mrr_at_10_non_regression": false,
+        "recall_at_10_non_regression": true,
+        "relative_gain_at_least_20_percent": false
+      }
+    },
+    "verified_hosted_tier_resource_gate": {
+      "headroom_bytes": null,
+      "passed": false,
+      "project_tier": "unknown",
+      "tier_verified": false,
+      "zero_fallbacks": true
+    }
+  },
+  "production": {
+    "canonical_path_modified": false,
+    "deployment_attempted": false,
+    "hosted_path_modified": false,
+    "live_library_size": 272853,
+    "live_version": "2026.07.11-dual-sonic64",
+    "manifest_modified": false,
+    "release_asset_uploaded": false,
+    "unchanged": true
+  },
+  "resources": {
+    "actual_project_headroom_bytes": null,
+    "deterministic": true,
+    "fallback_count": 0,
+    "graph_bytes": 12160029,
+    "load_seconds": 7.958867499997723,
+    "peak_rss_bytes": 1494294528,
+    "resident_rss_bytes": 1327017984,
+    "warm_latency": {
+      "count": 20,
+      "mean_ms": 200.62147499920684,
+      "p50_ms": 182.40165000315756,
+      "p95_ms": 265.4788949912472
+    }
+  },
+  "scene_summary": {
+    "aggregate": {
+      "absolute_gain": -0.0014674068376956334,
+      "baseline": {
+        "mrr_at_10": 0.004098360655737705,
+        "ndcg_at_10": 0.0070602714438261155,
+        "recall_at_10": 0.01639344262295082,
+        "sonic_primary": 0.009184024907504881
+      },
+      "baseline_candidate_recall_at_1000": 0.2459016393442623,
+      "candidate_recall_gain": 0.0,
+      "challenger": {
+        "mrr_at_10": 0.0018214936247723133,
+        "ndcg_at_10": 0.00493491796170461,
+        "recall_at_10": 0.01639344262295082,
+        "sonic_primary": 0.0077166180698092475
+      },
+      "challenger_candidate_recall_at_1000": 0.2459016393442623,
+      "firing": {
+        "abstained": 36,
+        "abstention_rate": 0.5901639344262295,
+        "fired": 25,
+        "firing_rate": 0.4098360655737705,
+        "per_scene": {
+          "asian-pop": {
+            "abstained": 2,
+            "fired": 2,
+            "firing_rate": 0.5,
+            "records": 4
+          },
+          "electronic": {
+            "abstained": 2,
+            "fired": 4,
+            "firing_rate": 0.6666666666666666,
+            "records": 6
+          },
+          "folk-country": {
+            "abstained": 2,
+            "fired": 0,
+            "firing_rate": 0.0,
+            "records": 2
+          },
+          "hip-hop": {
+            "abstained": 3,
+            "fired": 1,
+            "firing_rate": 0.25,
+            "records": 4
+          },
+          "indie-alternative": {
+            "abstained": 7,
+            "fired": 6,
+            "firing_rate": 0.46153846153846156,
+            "records": 13
+          },
+          "jazz": {
+            "abstained": 2,
+            "fired": 0,
+            "firing_rate": 0.0,
+            "records": 2
+          },
+          "metal": {
+            "abstained": 1,
+            "fired": 2,
+            "firing_rate": 0.6666666666666666,
+            "records": 3
+          },
+          "other": {
+            "abstained": 1,
+            "fired": 0,
+            "firing_rate": 0.0,
+            "records": 1
+          },
+          "pop": {
+            "abstained": 3,
+            "fired": 2,
+            "firing_rate": 0.4,
+            "records": 5
+          },
+          "r-and-b-soul": {
+            "abstained": 7,
+            "fired": 4,
+            "firing_rate": 0.36363636363636365,
+            "records": 11
+          },
+          "reggae-dub-ska": {
+            "abstained": 1,
+            "fired": 0,
+            "firing_rate": 0.0,
+            "records": 1
+          },
+          "rock": {
+            "abstained": 3,
+            "fired": 4,
+            "firing_rate": 0.5714285714285714,
+            "records": 7
+          },
+          "shoegaze-dream-pop": {
+            "abstained": 2,
+            "fired": 0,
+            "firing_rate": 0.0,
+            "records": 2
+          }
+        },
+        "reasons": {
+          "both_gates_passed": 25,
+          "consistency_below_sigma": 1,
+          "fewer_than_five_shared_neighbors": 4,
+          "missing_independent_source": 31
+        }
+      },
+      "improved": 0,
+      "paired_bootstrap_10000": {
+        "ci95_high": 0.0,
+        "ci95_low": -0.0044022205130868994,
+        "p_positive": 0.0
+      },
+      "records": 61,
+      "relative_gain": -0.15977818575998387,
+      "unchanged": 60,
+      "worsened": 1
+    },
+    "per_scene": {
+      "asian-pop": {
+        "abstained": 2,
+        "baseline": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "challenger": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "fired": 2,
+        "records": 4,
+        "relative_gain": 0.0
+      },
+      "electronic": {
+        "abstained": 2,
+        "baseline": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "challenger": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "fired": 4,
+        "records": 6,
+        "relative_gain": 0.0
+      },
+      "folk-country": {
+        "abstained": 2,
+        "baseline": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "challenger": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "fired": 0,
+        "records": 2,
+        "relative_gain": 0.0
+      },
+      "hip-hop": {
+        "abstained": 3,
+        "baseline": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "challenger": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "fired": 1,
+        "records": 4,
+        "relative_gain": 0.0
+      },
+      "indie-alternative": {
+        "abstained": 7,
+        "baseline": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "challenger": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "fired": 6,
+        "records": 13,
+        "relative_gain": 0.0
+      },
+      "jazz": {
+        "abstained": 2,
+        "baseline": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "challenger": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "fired": 0,
+        "records": 2,
+        "relative_gain": 0.0
+      },
+      "metal": {
+        "abstained": 1,
+        "baseline": {
+          "mrr_at_10": 0.08333333333333333,
+          "ndcg_at_10": 0.14355885269113103,
+          "recall_at_10": 0.3333333333333333,
+          "sonic_primary": 0.1867418397859326
+        },
+        "challenger": {
+          "mrr_at_10": 0.037037037037037035,
+          "ndcg_at_10": 0.10034333188799373,
+          "recall_at_10": 0.3333333333333333,
+          "sonic_primary": 0.15690456741945472
+        },
+        "fired": 2,
+        "records": 3,
+        "relative_gain": -0.15977818575998382
+      },
+      "other": {
+        "abstained": 1,
+        "baseline": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "challenger": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "fired": 0,
+        "records": 1,
+        "relative_gain": 0.0
+      },
+      "pop": {
+        "abstained": 3,
+        "baseline": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "challenger": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "fired": 2,
+        "records": 5,
+        "relative_gain": 0.0
+      },
+      "r-and-b-soul": {
+        "abstained": 7,
+        "baseline": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "challenger": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "fired": 4,
+        "records": 11,
+        "relative_gain": 0.0
+      },
+      "reggae-dub-ska": {
+        "abstained": 1,
+        "baseline": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "challenger": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "fired": 0,
+        "records": 1,
+        "relative_gain": 0.0
+      },
+      "rock": {
+        "abstained": 3,
+        "baseline": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "challenger": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "fired": 4,
+        "records": 7,
+        "relative_gain": 0.0
+      },
+      "shoegaze-dream-pop": {
+        "abstained": 2,
+        "baseline": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "challenger": {
+          "mrr_at_10": 0.0,
+          "ndcg_at_10": 0.0,
+          "recall_at_10": 0.0,
+          "sonic_primary": 0.0
+        },
+        "fired": 0,
+        "records": 2,
+        "relative_gain": 0.0
+      }
+    }
+  },
+  "schema_version": 8,
+  "source_hygiene": {
+    "deezer_used_for_selection": false,
+    "id_isolation_passed": true,
+    "lastfm_deezer_overlap": 0.36752136752136755,
+    "music4all_deezer_overlap": 0.8236994219653179
+  }
+}

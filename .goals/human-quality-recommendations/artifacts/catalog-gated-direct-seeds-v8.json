@@ -1,0 +1,168 @@
+{
+  "content_sha256": "fac028b662c887bc33fc6566ef1b83cde9e6e1b8b534969ff79a992d50449e3e",
+  "fresh_final_identities_included": false,
+  "inspection_rules": {
+    "automatic_seed_failure": [
+      "any junk result",
+      "any duplicate result",
+      "any seed-title variant"
+    ],
+    "coherent_results_required_per_list": 4,
+    "positions_1_to_3": "no unrelated result",
+    "positions_inspected_per_list": 5,
+    "required_seed_passes": 16,
+    "total_seeds": 20
+  },
+  "output_status": "fresh list outputs; not FINAL labels",
+  "policy_manifest_sha256": "6dca51bff4285cc80c153fb6fc2e3d074e166b2b7f0617c9f64193b9da5c928d",
+  "result_outputs_at_lock": "unreviewed",
+  "results_inspected": false,
+  "schema_version": 1,
+  "seed_count": 20,
+  "seeds": [
+    {
+      "artist": "Pixies",
+      "failure_class": "pixies_to_trip_hop",
+      "id": "direct-01",
+      "scene": "alternative_rock",
+      "title": "Where Is My Mind?"
+    },
+    {
+      "artist": "Anri",
+      "failure_class": "city_pop",
+      "id": "direct-02",
+      "scene": "city_pop",
+      "title": "Last Summer Whisper"
+    },
+    {
+      "artist": "Miki Matsubara",
+      "failure_class": "city_pop",
+      "id": "direct-03",
+      "scene": "city_pop",
+      "title": "Mayonaka no Door / Stay With Me"
+    },
+    {
+      "artist": "Kali Uchis",
+      "failure_class": "latin",
+      "id": "direct-04",
+      "scene": "latin_alt_pop",
+      "title": "telepatía"
+    },
+    {
+      "artist": "Bad Bunny",
+      "failure_class": "latin",
+      "id": "direct-05",
+      "scene": "latin_reggaeton",
+      "title": "Tití Me Preguntó"
+    },
+    {
+      "artist": "100 gecs",
+      "failure_class": "hyperpop_digicore",
+      "id": "direct-06",
+      "scene": "hyperpop",
+      "title": "money machine"
+    },
+    {
+      "artist": "brakence",
+      "failure_class": "hyperpop_digicore",
+      "id": "direct-07",
+      "scene": "digicore",
+      "title": "rosier/punk2"
+    },
+    {
+      "artist": "glaive",
+      "failure_class": "hyperpop_digicore",
+      "id": "direct-08",
+      "scene": "digicore",
+      "title": "astrid"
+    },
+    {
+      "artist": "Daft Punk",
+      "failure_class": "daft_punk",
+      "id": "direct-09",
+      "scene": "electronic",
+      "title": "Digital Love"
+    },
+    {
+      "artist": "Gorillaz",
+      "failure_class": "gorillaz",
+      "id": "direct-10",
+      "scene": "art_pop",
+      "title": "Clint Eastwood"
+    },
+    {
+      "artist": "Massive Attack",
+      "failure_class": "pixies_to_trip_hop",
+      "id": "direct-11",
+      "scene": "trip_hop",
+      "title": "Teardrop"
+    },
+    {
+      "artist": "my bloody valentine",
+      "failure_class": "shoegaze",
+      "id": "direct-12",
+      "scene": "shoegaze",
+      "title": "Sometimes"
+    },
+    {
+      "artist": "Deftones",
+      "failure_class": "metal",
+      "id": "direct-13",
+      "scene": "alternative_metal",
+      "title": "Be Quiet and Drive (Far Away)"
+    },
+    {
+      "artist": "A Tribe Called Quest",
+      "failure_class": "rap",
+      "id": "direct-14",
+      "scene": "jazz_rap",
+      "title": "Electric Relaxation"
+    },
+    {
+      "artist": "Frank Ocean",
+      "failure_class": "rnb",
+      "id": "direct-15",
+      "scene": "alternative_rnb",
+      "title": "Nights"
+    },
+    {
+      "artist": "Metallica",
+      "failure_class": "metal",
+      "id": "direct-16",
+      "scene": "thrash_metal",
+      "title": "Orion (Remastered)"
+    },
+    {
+      "artist": "Miles Davis",
+      "failure_class": "jazz",
+      "id": "direct-17",
+      "scene": "modal_jazz",
+      "title": "So What (Album Version)"
+    },
+    {
+      "artist": "Burna Boy",
+      "failure_class": "afrobeats",
+      "id": "direct-18",
+      "scene": "afrobeats",
+      "title": "Ye"
+    },
+    {
+      "artist": "NewJeans",
+      "failure_class": "k_pop",
+      "id": "direct-19",
+      "scene": "k_pop",
+      "title": "Super Shy"
+    },
+    {
+      "artist": "FKA twigs",
+      "failure_class": "art_pop",
+      "id": "direct-20",
+      "scene": "art_pop",
+      "title": "cellophane"
+    }
+  ],
+  "set_id": "catalog-v8-direct-dev-adjacent-difficult-20",
+  "set_status": "new locked DEV-adjacent difficult set",
+  "target_blind": true,
+  "target_labels_included": false
+}

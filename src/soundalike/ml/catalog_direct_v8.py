@@ -27,29 +27,29 @@ class DirectListError(ValueError):
 # preserved here; catalogue spellings are accepted only when PairResolver finds
 # the locked identity.
 LOCKED_SEEDS: Tuple[Mapping[str, str], ...] = (
-    {"artist": "Tyler The Creator", "title": "EARFQUAKE", "scene": "hip_hop"},
-    {"artist": "Kendrick Lamar", "title": "PRIDE.", "scene": "hip_hop"},
-    {"artist": "SZA", "title": "Good Days", "scene": "rnb_soul"},
-    {"artist": "my bloody valentine", "title": "Only Shallow", "scene": "shoegaze_dream_pop"},
-    {"artist": "Cocteau Twins", "title": "Heaven or Las Vegas", "scene": "shoegaze_dream_pop"},
-    {"artist": "Arctic Monkeys", "title": "Do I Wanna Know?", "scene": "rock"},
-    {"artist": "Charli xcx", "title": "Vroom Vroom", "scene": "hyperpop_digicore"},
-    {"artist": "SOPHIE", "title": "Immaterial", "scene": "hyperpop_digicore"},
-    {"artist": "underscores", "title": "Spoiled little brat", "scene": "hyperpop_digicore"},
-    {"artist": "Aphex Twin", "title": "Xtal", "scene": "electronic"},
-    {"artist": "Daft Punk", "title": "Something About Us", "scene": "electronic"},
-    {"artist": "Deftones", "title": "Change (In the House of Flies)", "scene": "metal"},
-    {"artist": "Black Sabbath", "title": "War Pigs", "scene": "metal"},
-    {"artist": "John Coltrane", "title": "Naima", "scene": "jazz"},
-    {"artist": "Herbie Hancock", "title": "Cantaloupe Island", "scene": "jazz"},
-    {"artist": "Mariya Takeuchi", "title": "Plastic Love", "scene": "city_pop"},
-    {"artist": "NewJeans", "title": "Ditto", "scene": "asian_pop"},
-    {"artist": "Bad Bunny", "title": "Ojitos Lindos", "scene": "latin"},
-    {"artist": "Burna Boy", "title": "Last Last", "scene": "african"},
-    {"artist": "Gorillaz", "title": "Feel Good Inc.", "scene": "art_rock"},
+    {"artist": "Pixies", "title": "Where Is My Mind?", "scene": "alternative_rock", "failure_class": "pixies_to_trip_hop"},
+    {"artist": "Anri", "title": "Last Summer Whisper", "scene": "city_pop", "failure_class": "city_pop"},
+    {"artist": "Miki Matsubara", "title": "Mayonaka no Door / Stay With Me", "scene": "city_pop", "failure_class": "city_pop"},
+    {"artist": "Kali Uchis", "title": "telepatía", "scene": "latin_alt_pop", "failure_class": "latin"},
+    {"artist": "Bad Bunny", "title": "Tití Me Preguntó", "scene": "latin_reggaeton", "failure_class": "latin"},
+    {"artist": "100 gecs", "title": "money machine", "scene": "hyperpop", "failure_class": "hyperpop_digicore"},
+    {"artist": "brakence", "title": "rosier/punk2", "scene": "digicore", "failure_class": "hyperpop_digicore"},
+    {"artist": "glaive", "title": "astrid", "scene": "digicore", "failure_class": "hyperpop_digicore"},
+    {"artist": "Daft Punk", "title": "Digital Love", "scene": "electronic", "failure_class": "daft_punk"},
+    {"artist": "Gorillaz", "title": "Clint Eastwood", "scene": "art_pop", "failure_class": "gorillaz"},
+    {"artist": "Massive Attack", "title": "Teardrop", "scene": "trip_hop", "failure_class": "pixies_to_trip_hop"},
+    {"artist": "my bloody valentine", "title": "Sometimes", "scene": "shoegaze", "failure_class": "shoegaze"},
+    {"artist": "Deftones", "title": "Be Quiet and Drive (Far Away)", "scene": "alternative_metal", "failure_class": "metal"},
+    {"artist": "A Tribe Called Quest", "title": "Electric Relaxation", "scene": "jazz_rap", "failure_class": "rap"},
+    {"artist": "Frank Ocean", "title": "Nights", "scene": "alternative_rnb", "failure_class": "rnb"},
+    {"artist": "Metallica", "title": "Orion (Remastered)", "scene": "thrash_metal", "failure_class": "metal"},
+    {"artist": "Miles Davis", "title": "So What (Album Version)", "scene": "modal_jazz", "failure_class": "jazz"},
+    {"artist": "Burna Boy", "title": "Ye", "scene": "afrobeats", "failure_class": "afrobeats"},
+    {"artist": "NewJeans", "title": "Super Shy", "scene": "k_pop", "failure_class": "k_pop"},
+    {"artist": "FKA twigs", "title": "cellophane", "scene": "art_pop", "failure_class": "art_pop"},
 )
 
-_POLICY_FIELDS = ("audio_weight", "style_weight", "style_guard_min")
+_POLICY_FIELDS = ("tau", "sigma", "audio_weight")
 
 
 def _canonical_bytes(value: Any) -> bytes:
@@ -96,7 +96,8 @@ def write_locked_seed_manifest(
     manifest: Dict[str, Any] = {
         "schema_version": 1,
         "set_id": "catalog-v8-direct-dev-adjacent-difficult-20",
-        "set_status": "new separate previously unreviewed",
+        "set_status": "new locked DEV-adjacent difficult set",
+        "output_status": "fresh list outputs; not FINAL labels",
         "seed_count": 20,
         "seeds": [dict(seed, id="direct-%02d" % (i + 1)) for i, seed in enumerate(LOCKED_SEEDS)],
         "policy_manifest_sha256": digest,
@@ -113,6 +114,9 @@ def write_locked_seed_manifest(
             ],
         },
         "results_inspected": False,
+        "result_outputs_at_lock": "unreviewed",
+        "target_labels_included": False,
+        "fresh_final_identities_included": False,
         "target_blind": True,
     }
     manifest["content_sha256"] = _content_hash(manifest)
@@ -253,6 +257,8 @@ def _serialize_candidate(
             "G": float(rationale["G"]),
             "A": float(rationale["A"]),
             "S": float(rationale["S"]),
+            "lastfm_G": float(rationale.get("lastfm_G", 0.0)),
+            "music4all_G": float(rationale.get("music4all_G", 0.0)),
             "A_definition": "audio-derived sonic/CLAP/vibe similarity",
             "source": str(rationale["source"]),
             "query_mode": str(rationale["query_mode"]),
@@ -333,11 +339,14 @@ def run_direct_lists(
             "catalogue_artist": str(rec.artists[query_row]),
             "resolver": "PairResolver",
         }
+        challenger_payload = ranker.recommend(query_row, n=5)
         challenger = [
             _serialize_candidate(item, styles, preview_lookup)
-            for item in ranker.recommend(query_row, n=5)["results"]
+            for item in challenger_payload["results"]
         ]
         production_rows = [int(row) for row in production.rank(query_row, "dual_sonic", n=5)]
+        if len(challenger) != 5 or len(production_rows) != 5:
+            raise DirectListError("%s requires two complete top-five lists" % seed["id"])
         audio = ranker.audio_scores(query_row)
         production_list: List[Dict[str, Any]] = []
         for position, row in enumerate(production_rows, start=1):
@@ -352,6 +361,8 @@ def run_direct_lists(
                     "G": 0.0,
                     "A": float(audio[row]),
                     "S": float(styles.style_overlap(str(rec.artists[query_row]), artist)),
+                    "lastfm_G": 0.0,
+                    "music4all_G": 0.0,
                     "A_definition": "audio-derived sonic/CLAP/vibe similarity",
                     "source": "current_production_dual_sonic",
                     "query_mode": str(getattr(rec, "last_retrieval_mode", "dual_sonic")),
@@ -362,6 +373,27 @@ def run_direct_lists(
             production_list.append(item)
         for values in (challenger, production_list):
             _flags(values, str(rec.titles[query_row]), str(rec.artists[query_row]), quality)
+        raw_gate = challenger_payload.get("gate")
+        if not isinstance(raw_gate, Mapping):
+            raise DirectListError("%s challenger omitted gate metadata" % seed["id"])
+        fired = bool(raw_gate.get("fired"))
+        record["gate"] = {
+            "fired": fired,
+            "abstained": not fired,
+            "reason": str(raw_gate.get("reason", "")),
+            "agreement": float(raw_gate.get("agreement", 0.0)),
+            "consistency": float(raw_gate.get("consistency", 0.0)),
+            "thresholds": {
+                "tau": float(raw_gate.get("thresholds", {}).get("tau", policy.tau)),
+                "sigma": float(raw_gate.get("thresholds", {}).get("sigma", policy.sigma)),
+            },
+            "shared_count": int(raw_gate.get("shared_count", 0)),
+            "source_coverage": dict(raw_gate.get("source_coverage", {})),
+        }
+        if not fired and [item["row"] for item in challenger] != production_rows:
+            raise DirectListError(
+                "%s abstention does not preserve exact production ordering" % seed["id"]
+            )
         record["lists"] = {
             "catalog_policy": challenger,
             "current_production_dual_sonic": production_list,
@@ -378,12 +410,13 @@ def run_direct_lists(
         "method": {
             "challenger": "CatalogPolicyRanker over CatalogArtistGraph and CatalogStyleIndex",
             "baseline": "current production WebRecommender dual_sonic",
-            "formula": "G + audio_weight*A + style_weight*S; style_guard_min protects positions 1-3 when enough candidates qualify",
+            "formula": "Production-default abstention; fire only when independent-source agreement >= tau and consistency >= sigma. G = 0.5*lastfm_G + 0.5*music4all_G is the frozen equal source-graph blend, with G + audio_weight*A as the single audio tie-break.",
             "parameters": list(_POLICY_FIELDS),
             "A": "audio-derived equal sonic, CLAP, and vibe similarity blend",
             "preview": "credential-free Deezer public API availability lookup; names are never replaced",
         },
         "provenance": {
+            "policy": "Production remains the default on abstention. Both the independent-source agreement threshold tau and consistency threshold sigma must pass; the source graph blend is frozen equal and audio_weight supplies the single audio tie-break.",
             "seed_manifest": str(manifest_file),
             "policy_manifest": str(policy_file) if policy_file else "inline canonical JSON",
             "assets": {
@@ -400,6 +433,13 @@ def run_direct_lists(
         },
         "records": records,
     }
+    by_failure_class: Dict[str, Dict[str, int]] = {}
+    for record in records:
+        name = record["seed"]["failure_class"]
+        counts = by_failure_class.setdefault(name, {"fired": 0, "abstained": 0})
+        if "gate" in record:
+            counts["fired" if record["gate"]["fired"] else "abstained"] += 1
+    report["gate_summary_by_failure_class"] = by_failure_class
     report["content_sha256"] = _content_hash(report)
     if output is not None:
         _write_json(Path(output), report)
@@ -437,29 +477,51 @@ def validate_judgments(lists: Any, judgments: Any) -> Dict[str, Any]:
     effective: List[Dict[str, Any]] = []
     for judgment in values:
         seed_id = judgment["id"]
-        if type(judgment.get("pass")) is not bool:
-            raise DirectListError("%s requires an explicit pass bool" % seed_id)
+        for field in ("challenger_pass", "production_pass"):
+            if type(judgment.get(field)) is not bool:
+                raise DirectListError("%s requires an explicit %s bool" % (seed_id, field))
+        generated_lists = records[seed_id].get("lists", {})
+        if set(generated_lists) != {
+            "catalog_policy", "current_production_dual_sonic"
+        } or any(len(rows) != 5 for rows in generated_lists.values()):
+            raise DirectListError("%s does not have two complete generated top fives" % seed_id)
         expected = []
-        for list_name, rows in records[seed_id].get("lists", {}).items():
+        for list_name, rows in generated_lists.items():
             for item in rows:
                 expected.append((list_name, int(item["position"]), item))
-        if len(expected) != 10:
-            raise DirectListError("%s does not have two complete generated top fives" % seed_id)
         positions = _judgment_positions(judgment)
         actual = {}
-        inspected_junk = False
+        inspected_junk = {
+            "catalog_policy": False,
+            "current_production_dual_sonic": False,
+        }
         for position in positions:
-            required = ("list", "position", "title", "artist", "rationale", "junk")
+            required = (
+                "list", "position", "title", "artist", "rationale", "junk",
+                "junk_evidence",
+            )
             if any(field not in position for field in required):
                 raise DirectListError("%s position judgment is incomplete" % seed_id)
-            if type(position["junk"]) is not bool or not str(position["rationale"]).strip():
-                raise DirectListError("%s needs junk bool and non-empty rationale" % seed_id)
+            if (
+                type(position["junk"]) is not bool
+                or not str(position["rationale"]).strip()
+                or not str(position["junk_evidence"]).strip()
+            ):
+                raise DirectListError(
+                    "%s needs junk bool, rationale, and junk evidence" % seed_id
+                )
             key = (str(position["list"]), int(position["position"]))
             if key in actual:
                 raise DirectListError("%s repeats an inspected position" % seed_id)
             actual[key] = position
-            inspected_junk = inspected_junk or bool(position["junk"])
-        automatic = False
+            if key[0] in inspected_junk:
+                inspected_junk[key[0]] = (
+                    inspected_junk[key[0]] or bool(position["junk"])
+                )
+        automatic = {
+            "catalog_policy": False,
+            "current_production_dual_sonic": False,
+        }
         for list_name, number, generated in expected:
             inspected = actual.get((list_name, number))
             if inspected is None:
@@ -470,27 +532,62 @@ def validate_judgments(lists: Any, judgments: Any) -> Dict[str, Any]:
             ):
                 raise DirectListError("%s inspected names do not match locked output" % seed_id)
             flags = generated["flags"]
-            automatic = automatic or any(
+            automatic[list_name] = automatic[list_name] or any(
                 bool(flags[name]) for name in ("junk", "duplicate", "seed_variant")
             )
-        effective_pass = bool(judgment["pass"]) and not automatic and not inspected_junk
+        challenger_automatic = (
+            automatic["catalog_policy"] or inspected_junk["catalog_policy"]
+        )
+        production_automatic = (
+            automatic["current_production_dual_sonic"]
+            or inspected_junk["current_production_dual_sonic"]
+        )
         effective.append(
             {
                 "id": seed_id,
-                "human_pass": judgment["pass"],
-                "automatic_failure": automatic or inspected_junk,
-                "effective_pass": effective_pass,
+                "failure_class": records[seed_id]["seed"]["failure_class"],
+                "gate": dict(records[seed_id]["gate"]),
+                "human_pass": {
+                    "challenger": judgment["challenger_pass"],
+                    "production": judgment["production_pass"],
+                },
+                "automatic_failure": {
+                    "challenger": challenger_automatic,
+                    "production": production_automatic,
+                },
+                "challenger_effective_pass": (
+                    judgment["challenger_pass"] and not challenger_automatic
+                ),
+                "production_effective_pass": (
+                    judgment["production_pass"] and not production_automatic
+                ),
             }
         )
-    passed = sum(item["effective_pass"] for item in effective)
+    challenger_passed = sum(item["challenger_effective_pass"] for item in effective)
+    production_passed = sum(item["production_effective_pass"] for item in effective)
+    gate_by_failure_class: Dict[str, Dict[str, int]] = {}
+    for item in effective:
+        counts = gate_by_failure_class.setdefault(
+            item["failure_class"], {"fired": 0, "abstained": 0}
+        )
+        counts["fired" if item["gate"]["fired"] else "abstained"] += 1
     return {
         "schema_version": 1,
         "lists_sha256": lists_doc["content_sha256"],
         "judgments": 20,
-        "effective_passes": passed,
+        "challenger_effective_passes": challenger_passed,
+        "production_effective_passes": production_passed,
         "required_passes": 16,
-        "gate_met": passed >= 16,
+        "gate_met": challenger_passed >= 16,
         "coherence_inferred": False,
+        "gate_summary_by_failure_class": gate_by_failure_class,
+        "review_evidence_disclosure": {
+            "explicit_method_pass_booleans": True,
+            "all_top5_positions_reviewed_for_both_methods": True,
+            "position_rationales_included": True,
+            "position_junk_evidence_included": True,
+            "coherence_inferred": False,
+        },
         "per_seed": effective,
     }
 

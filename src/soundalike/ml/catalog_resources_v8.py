@@ -111,17 +111,81 @@ def _graph_contract(graph: Any, details: Mapping[str, Any]) -> Dict[str, Any]:
                 aliases.append(name)
     metadata = graph.metadata if isinstance(graph.metadata, Mapping) else {}
     only_full = variants == ["full"]
+    full_aligned = False
+    if only_full:
+        import numpy as np
+
+        full_indices, full_weights = graph.variants["full"]
+        full_indices = np.asarray(full_indices)
+        full_weights = np.asarray(full_weights)
+        graph_artist_count = len(getattr(graph, "artist_names", ()))
+        full_aligned = bool(
+            full_indices.ndim == 2
+            and full_indices.size
+            and full_indices.shape == full_weights.shape
+            and len(full_indices) == graph_artist_count
+        )
+    dual_names = (
+        "music4all_query_artist_ids",
+        "music4all_indices",
+        "music4all_weights",
+    )
+    dual_present = [name in arrays for name in dual_names]
+    dual_complete = all(dual_present)
+    dual_aligned = False
+    dual_nonempty = False
+    if dual_complete:
+        import numpy as np
+
+        query_ids = np.asarray(
+            getattr(graph, "music4all_query_artist_ids", np.empty(0))
+        )
+        indices = np.asarray(getattr(graph, "music4all_indices", np.empty(0)))
+        weights = np.asarray(getattr(graph, "music4all_weights", np.empty(0)))
+        artist_count = len(getattr(graph, "artist_names", ()))
+        dual_nonempty = bool(query_ids.size and indices.size and weights.size)
+        dual_aligned = bool(
+            query_ids.ndim == 1
+            and indices.ndim == 2
+            and weights.ndim == 2
+            and len(query_ids) == len(indices)
+            and indices.shape == weights.shape
+            and len(set(map(int, query_ids))) == len(query_ids)
+            and (not query_ids.size or np.all((query_ids >= 0) & (query_ids < artist_count)))
+            and (not indices.size or np.all((indices >= -1) & (indices < artist_count)))
+            and metadata.get("music4all_aligned_artists") == len(query_ids)
+        )
+    metadata_valid = bool(
+        metadata.get("asset_type") == "catalog_artist_graph_dual_source_runtime"
+        and metadata.get("runtime_contains_raw_vectors") is False
+        and metadata.get("silent_fallback") is False
+    )
     return {
         "variants": variants,
         "only_full": only_full,
+        "full_arrays_aligned": full_aligned,
         "masked_variants_present": masked,
         "masked_variants_alias_full": aliases,
+        "music4all_dual_arrays_present": {
+            name: present for name, present in zip(dual_names, dual_present)
+        },
+        "music4all_dual_arrays_complete": dual_complete,
+        "music4all_dual_arrays_nonempty": dual_nonempty,
+        "music4all_dual_arrays_aligned": dual_aligned,
+        "asset_type": metadata.get("asset_type"),
+        "runtime_contains_raw_vectors": metadata.get(
+            "runtime_contains_raw_vectors"
+        ),
         "silent_fallback_declared": bool(metadata.get("silent_fallback", True)),
         "passed": (
             only_full
+            and full_aligned
             and not masked
             and not aliases
-            and metadata.get("silent_fallback") is False
+            and dual_complete
+            and dual_nonempty
+            and dual_aligned
+            and metadata_valid
         ),
     }
 
@@ -155,7 +219,7 @@ def _load_policy(path: Path) -> Tuple[Any, Dict[str, float]]:
     from .catalog_policy import CatalogPolicy
 
     value: Any = json.loads(path.read_text(encoding="utf-8"))
-    fields = ("audio_weight", "style_weight", "style_guard_min")
+    fields = ("tau", "sigma", "audio_weight")
     if isinstance(value, Mapping):
         for keys in (
             ("exact_policy",),
@@ -220,43 +284,273 @@ def poll_peak_rss(
     return peak, samples
 
 
-def platform_limit_provenance() -> Dict[str, Any]:
-    """Return conservative, credential-honest Vercel memory-limit provenance."""
-    return {
+def _linked_vercel_project() -> Optional[Dict[str, str]]:
+    path = Path(__file__).resolve().parents[3] / "webapp" / ".vercel" / "project.json"
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    keys = ("projectId", "orgId", "projectName")
+    if not isinstance(value, Mapping) or not all(
+        isinstance(value.get(key), str) and value[key] for key in keys
+    ):
+        return None
+    return {key: value[key] for key in keys}
+
+
+def _contains_secret(value: Any) -> bool:
+    forbidden = {
+        "token",
+        "access_token",
+        "refresh_token",
+        "api_key",
+        "apikey",
+        "authorization",
+        "password",
+        "secret",
+    }
+    if isinstance(value, Mapping):
+        return any(
+            str(key).casefold() in forbidden or _contains_secret(item)
+            for key, item in value.items()
+        )
+    if isinstance(value, list):
+        return any(_contains_secret(item) for item in value)
+    return False
+
+
+def _safe_attempts(value: Any) -> List[Any]:
+    if not isinstance(value, list):
+        return []
+    safe: List[Any] = []
+    allowed = {"method", "command", "endpoint", "status", "outcome", "reason", "at"}
+    for item in value:
+        if isinstance(item, Mapping):
+            safe.append(
+                {
+                    str(key): item[key]
+                    for key in item
+                    if str(key) in allowed
+                    and isinstance(item[key], (str, int, float, bool, type(None)))
+                }
+            )
+        elif isinstance(item, (str, int, float, bool)):
+            safe.append(item)
+    return safe
+
+
+def platform_limit_provenance(
+    evidence: Any = None,
+    default_project_tier_evidence_path: Any = None,
+    *,
+    default_evidence_path: Any = None,
+) -> Dict[str, Any]:
+    """Return fail-closed, linked-project Vercel tier provenance.
+
+    Evidence is supplied as a mapping or JSON path. No credentials are queried,
+    accepted, or retained by this measurement module.
+    """
+    documented = {
+        "Hobby": 2 * GIB,
+        "Pro": 4 * GIB,
+        "Enterprise": 4 * GIB,
+    }
+    base: Dict[str, Any] = {
         "provider": "Vercel Functions",
         "documentation_url": VERCEL_DOCUMENTATION_URL,
         "documentation_as_of": VERCEL_DOCUMENTATION_AS_OF,
-        "documented_maximums_bytes": {
-            "Hobby": 2 * GIB,
-            "Pro": 4 * GIB,
-            "Enterprise": 4 * GIB,
-        },
+        "documented_maximums_bytes": documented,
         "project_tier": "unknown",
+        "actual_memory_limit_bytes": None,
+        "linked_project": None,
+        "cli_attempts": [],
+        "api_attempts": [],
         "project_tier_credential_verification": {
             "available": False,
-            "reason": "Vercel CLI credentials unavailable",
+            "tier_verified": False,
+            "linked_project_matches": False,
+            "reason": "verified linked-project tier evidence was not provided",
         },
-        "limit_used_bytes": CONSERVATIVE_PLATFORM_LIMIT_BYTES,
-        "limit_basis": "conservative Hobby maximum; no project plan claimed",
+        "limit_used_bytes": None,
+        "limit_basis": "unverified project tier; no platform limit may be used",
     }
 
+    if (
+        default_project_tier_evidence_path is None
+        and default_evidence_path is not None
+    ):
+        default_project_tier_evidence_path = default_evidence_path
+    selected = evidence
+    if selected is None and default_project_tier_evidence_path is not None:
+        default_path = Path(default_project_tier_evidence_path)
+        if default_path.is_file():
+            selected = default_path
+    if selected is None:
+        return base
+    if isinstance(selected, (str, os.PathLike)):
+        try:
+            selected = json.loads(Path(selected).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            base["project_tier_credential_verification"]["reason"] = (
+                "platform evidence could not be loaded: %s" % type(error).__name__
+            )
+            return base
+    if not isinstance(selected, Mapping):
+        base["project_tier_credential_verification"]["reason"] = (
+            "platform evidence must be a mapping or JSON path"
+        )
+        return base
+    if _contains_secret(selected):
+        base["project_tier_credential_verification"]["reason"] = (
+            "platform evidence contains a forbidden credential field"
+        )
+        return base
 
-def apply_resource_gates(report: Dict[str, Any]) -> Dict[str, Any]:
+    project_value = selected.get("linked_project", selected.get("project", selected))
+    keys = ("projectId", "orgId", "projectName")
+    linked = (
+        {key: project_value.get(key) for key in keys}
+        if isinstance(project_value, Mapping)
+        else {}
+    )
+    linked_complete = all(
+        isinstance(linked.get(key), str) and linked[key] for key in keys
+    )
+    local = _linked_vercel_project()
+    project_matches = bool(
+        linked_complete and (local is None or all(linked[key] == local[key] for key in keys))
+    )
+    tier = selected.get("project_tier", "unknown")
+    actual = selected.get("actual_memory_limit_bytes")
+    actual_valid = (
+        not isinstance(actual, bool) and isinstance(actual, int) and actual > 0
+    )
+    tier_verified = selected.get("tier_verified") is True
+    verified = bool(
+        tier_verified
+        and tier in documented
+        and actual_valid
+        and project_matches
+    )
+    if not linked_complete:
+        reason = "platform evidence lacks linked projectId/orgId/projectName"
+    elif not project_matches:
+        reason = "platform evidence does not match webapp/.vercel/project.json"
+    elif not tier_verified:
+        reason = "project tier is unverified for the linked project"
+    elif tier not in documented:
+        reason = "verified project tier is not recognized"
+    elif not actual_valid:
+        reason = "verified evidence lacks a positive actual memory limit"
+    else:
+        reason = "verified for the linked Vercel project"
+
+    base.update(
+        {
+            "project_tier": str(tier),
+            "actual_memory_limit_bytes": int(actual) if actual_valid else None,
+            "linked_project": linked if linked_complete else None,
+            "cli_attempts": _safe_attempts(
+                selected.get("cli_attempts", selected.get("cliAttempts", []))
+            ),
+            "api_attempts": _safe_attempts(
+                selected.get("api_attempts", selected.get("apiAttempts", []))
+            ),
+            "project_tier_credential_verification": {
+                "available": verified,
+                "tier_verified": tier_verified,
+                "linked_project_matches": project_matches,
+                "reason": reason,
+            },
+            "limit_used_bytes": int(actual) if verified else None,
+            "limit_basis": (
+                "verified actual limit for the linked Vercel project"
+                if verified
+                else "unverified project tier; no platform limit may be used"
+            ),
+        }
+    )
+    return base
+
+
+def apply_resource_gates(
+    report: Dict[str, Any],
+    evidence: Any = None,
+    *,
+    provenance: Optional[Mapping[str, Any]] = None,
+    default_project_tier_evidence_path: Any = None,
+    default_evidence_path: Any = None,
+) -> Dict[str, Any]:
     """Add byte-exact resource and correctness gates to a worker report."""
     peak = int(report.get("peak_rss_bytes", 0))
     resident = int(report.get("post_gc_resident_rss_bytes", 0))
     core = int(report.get("core_index_post_gc_rss_bytes", 0))
-    provenance = platform_limit_provenance()
-    platform_limit = int(provenance["limit_used_bytes"])
+    if provenance is not None and provenance.get("provider") == "Vercel Functions":
+        platform_provenance = dict(provenance)
+    else:
+        platform_provenance = platform_limit_provenance(
+            provenance if provenance is not None else evidence,
+            default_project_tier_evidence_path=default_project_tier_evidence_path,
+            default_evidence_path=default_evidence_path,
+        )
+    verification = platform_provenance.get(
+        "project_tier_credential_verification", {}
+    )
+    local_project = _linked_vercel_project()
+    linked_project = platform_provenance.get("linked_project")
+    linked_matches = bool(
+        isinstance(linked_project, Mapping)
+        and local_project is not None
+        and all(
+            linked_project.get(key) == local_project.get(key)
+            for key in ("projectId", "orgId", "projectName")
+        )
+    )
+    platform_limit_value = platform_provenance.get("limit_used_bytes")
+    actual_limit_value = platform_provenance.get("actual_memory_limit_bytes")
+    platform_verified = bool(
+        isinstance(verification, Mapping)
+        and verification.get("available") is True
+        and verification.get("tier_verified") is True
+        and linked_matches
+        and not isinstance(platform_limit_value, bool)
+        and isinstance(platform_limit_value, int)
+        and platform_limit_value > 0
+        and not isinstance(actual_limit_value, bool)
+        and isinstance(actual_limit_value, int)
+        and actual_limit_value > 0
+        and platform_limit_value == actual_limit_value
+    )
+    platform_limit = int(platform_limit_value) if platform_verified else None
     resident_met = resident <= RESIDENT_TARGET_BYTES
     core_exceeds_target = core > RESIDENT_TARGET_BYTES
     graph_passed = bool(report.get("graph_contract", {}).get("passed", False))
+    no_silent_fallback = (
+        report.get("graph_contract", {}).get("silent_fallback_declared") is False
+    )
     style_present = bool(report.get("style", {}).get("present", False))
     zero_fallbacks = int(report.get("fallback_count", 0)) == 0
     zero_errors = not report.get("errors")
     deterministic = bool(report.get("determinism", {}).get("passed", False))
     peak_passed = 0 < peak <= PEAK_LIMIT_BYTES
-    headroom = platform_limit - peak
+    headroom = platform_limit - peak if platform_limit is not None else None
+    platform_passed = bool(
+        platform_verified and peak > 0 and headroom is not None and headroom >= 0
+    )
+    platform_reason = (
+        "verified actual linked-project limit has sufficient headroom"
+        if platform_passed
+        else (
+            "verified actual linked-project limit is below measured peak RSS"
+            if platform_verified
+            else str(
+                verification.get(
+                    "reason",
+                    "verified linked-project tier evidence is unavailable",
+                )
+            )
+        )
+    )
     gates = {
         "peak": {
             "limit_bytes": PEAK_LIMIT_BYTES,
@@ -278,9 +572,11 @@ def apply_resource_gates(report: Dict[str, Any]) -> Dict[str, Any]:
         "platform": {
             "limit_bytes": platform_limit,
             "headroom_bytes": headroom,
-            "passed": headroom > 0,
+            "passed": platform_passed,
+            "reason": platform_reason,
         },
         "compact_graph_only_full": graph_passed,
+        "no_silent_fallback": no_silent_fallback,
         "style_present": style_present,
         "zero_fallbacks": zero_fallbacks,
         "zero_errors": zero_errors,
@@ -288,15 +584,16 @@ def apply_resource_gates(report: Dict[str, Any]) -> Dict[str, Any]:
     }
     required = (
         peak_passed,
-        headroom > 0,
+        platform_passed,
         graph_passed,
+        no_silent_fallback,
         style_present,
         zero_fallbacks,
         zero_errors,
         deterministic,
         resident_met or core_exceeds_target,
     )
-    report["platform_limit"] = provenance
+    report["platform_limit"] = platform_provenance
     report["headroom_bytes"] = headroom
     report.setdefault(
         "units",
@@ -311,6 +608,99 @@ def _process_rss() -> int:
     import psutil
 
     return int(psutil.Process(os.getpid()).memory_info().rss)
+
+
+def _summarize_query_outputs(
+    outputs: Sequence[Mapping[str, Any]],
+    repeated: Mapping[str, Any],
+) -> Tuple[Dict[str, int], int, Dict[str, Any]]:
+    """Summarize gates without misclassifying intentional abstention."""
+    modes: Dict[str, int] = {}
+    fallback_count = 0
+    query_gates: List[Dict[str, Any]] = []
+    gate_reasons: Dict[str, int] = {}
+    for output in outputs:
+        mode = str(output.get("query_mode", "missing"))
+        modes[mode] = modes.get(mode, 0) + 1
+        gate = output.get("gate", {})
+        fired = bool(gate.get("fired", False)) if isinstance(gate, Mapping) else False
+        reason = (
+            str(gate.get("reason", "missing_gate"))
+            if isinstance(gate, Mapping)
+            else "missing_gate"
+        )
+        abstained = mode == "production_abstention"
+        gate_reasons[reason] = gate_reasons.get(reason, 0) + 1
+        query = output.get("query", {})
+        query_gates.append(
+            {
+                "query_row": int(
+                    query.get("row", -1) if isinstance(query, Mapping) else -1
+                ),
+                "query_mode": mode,
+                "gate_fired": fired,
+                "abstained_to_exact_production": abstained,
+                "reason": reason,
+            }
+        )
+        for result in output.get("results", []):
+            source = str(result.get("rationale", {}).get("source", ""))
+            lowered = source.casefold()
+            if "fallback" in lowered or "error" in lowered:
+                fallback_count += 1
+    # The repeated query is used only for determinism and is not another load
+    # sample. Its result sources still reveal a real fallback/error if one occurs.
+    for result in repeated.get("results", []):
+        source = str(result.get("rationale", {}).get("source", "")).casefold()
+        if "fallback" in source or "error" in source:
+            fallback_count += 1
+
+    query_count = len(query_gates)
+    fired_count = sum(int(value["gate_fired"]) for value in query_gates)
+    abstention_count = sum(
+        int(value["abstained_to_exact_production"]) for value in query_gates
+    )
+    per_row: Dict[int, Dict[str, Any]] = {}
+    for value in query_gates:
+        row = int(value["query_row"])
+        item = per_row.setdefault(
+            row,
+            {
+                "query_row": row,
+                "query_count": 0,
+                "gate_fired_count": 0,
+                "production_abstention_count": 0,
+                "reasons": {},
+            },
+        )
+        item["query_count"] += 1
+        item["gate_fired_count"] += int(value["gate_fired"])
+        item["production_abstention_count"] += int(
+            value["abstained_to_exact_production"]
+        )
+        reason = value["reason"]
+        item["reasons"][reason] = item["reasons"].get(reason, 0) + 1
+    rates_by_query = []
+    for row in sorted(per_row):
+        item = per_row[row]
+        count = item["query_count"]
+        item["gate_firing_rate"] = item["gate_fired_count"] / count
+        item["production_abstention_rate"] = (
+            item["production_abstention_count"] / count
+        )
+        rates_by_query.append(item)
+    return modes, fallback_count, {
+        "query_count": query_count,
+        "gate_fired_count": fired_count,
+        "gate_firing_rate": fired_count / query_count if query_count else 0.0,
+        "production_abstention_count": abstention_count,
+        "production_abstention_rate": (
+            abstention_count / query_count if query_count else 0.0
+        ),
+        "reasons": gate_reasons,
+        "by_query": query_gates,
+        "rates_by_query": rates_by_query,
+    }
 
 
 def _worker_measure(arguments: argparse.Namespace) -> Dict[str, Any]:
@@ -343,6 +733,10 @@ def _worker_measure(arguments: argparse.Namespace) -> Dict[str, Any]:
     policy, exact_policy = _load_policy(paths["policy"])
 
     recommender = WebRecommender(str(paths["index"]), enhance=False)
+    # The gate's abstention path must be byte-for-byte current production, whose
+    # guarded head requires the existing centroid enhancement. Load it before
+    # resident measurement rather than hiding a lazy-load allocation in query 1.
+    recommender._load_enhancements(None)
     gc.collect()
     core_rss = _process_rss()
     graph = CatalogArtistGraph(paths["graph"])
@@ -378,25 +772,24 @@ def _worker_measure(arguments: argparse.Namespace) -> Dict[str, Any]:
     repeated_bytes = json.dumps(
         repeated, sort_keys=True, separators=(",", ":")
     ).encode("utf-8")
-    modes: Dict[str, int] = {}
-    fallback_count = 0
-    for output in outputs + [repeated]:
-        mode = str(output.get("query_mode", "missing"))
-        modes[mode] = modes.get(mode, 0) + 1
-        for result in output.get("results", []):
-            source = str(result.get("rationale", {}).get("source", ""))
-            if "fallback" in source.casefold():
-                fallback_count += 1
+    modes, fallback_count, query_gates = _summarize_query_outputs(
+        outputs, repeated
+    )
 
     return {
         "schema_version": 1,
-        "candidate": "compact_graph_first",
+        "candidate": (
+            "confidence_gated_dual_source_graph_with_exact_production_abstention"
+        ),
+        "runtime_policy": (
+            "confidence-gated dual-source graph; exact production abstention"
+        ),
         "runtime_components": [
             "WebRecommender(enhance=False)",
-            "CatalogArtistGraph",
+            "CatalogArtistGraph(full-only dual-source)",
             "CatalogStyleIndex",
             "CatalogPolicy",
-            "CatalogPolicyRanker",
+            "CatalogPolicyRanker(confidence-gated; exact production abstention)",
         ],
         "assets": assets,
         "policy": exact_policy,
@@ -408,6 +801,7 @@ def _worker_measure(arguments: argparse.Namespace) -> Dict[str, Any]:
         "cold_recommendation_latency_ms": cold_seconds * 1000.0,
         "warm_latency": latency_statistics(warm_seconds),
         "query_modes": modes,
+        "query_gates": query_gates,
         "fallback_count": fallback_count,
         "errors": errors,
         "graph_contract": graph_contract,
@@ -436,6 +830,7 @@ def run_measurement(
     python_executable: Optional[str] = None,
     popen_factory: Any = subprocess.Popen,
     psutil_module: Any = None,
+    platform_evidence: Any = None,
 ) -> Dict[str, Any]:
     """Run the isolated worker, poll its process tree, and apply all gates."""
     if psutil_module is None:
@@ -501,7 +896,7 @@ def run_measurement(
     report["peak_rss_bytes"] = int(peak)
     report["peak_poll_samples"] = int(samples)
     report["peak_poll_interval_seconds"] = float(poll_interval_seconds)
-    return apply_resource_gates(report)
+    return apply_resource_gates(report, evidence=platform_evidence)
 
 
 measure_resources = run_measurement
@@ -521,6 +916,7 @@ def _parser() -> argparse.ArgumentParser:
         if command == "measure":
             child.add_argument("--output", required=True)
             child.add_argument("--poll-interval", type=float, default=0.01)
+            child.add_argument("--platform-evidence")
     return parser
 
 
@@ -548,6 +944,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         arguments.policy,
         warm_queries=arguments.warm_queries,
         poll_interval_seconds=arguments.poll_interval,
+        platform_evidence=arguments.platform_evidence,
     )
     output = Path(arguments.output)
     output.parent.mkdir(parents=True, exist_ok=True)

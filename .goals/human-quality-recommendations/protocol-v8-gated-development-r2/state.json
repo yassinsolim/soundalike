@@ -1,0 +1,28 @@
+{
+  "schema_version": 8,
+  "phase": "DEVELOPMENT_LOCKED",
+  "final_open_count": 0,
+  "fresh_final_blocked": true,
+  "deployment_blocked": true,
+  "all_preconditions_passed": false,
+  "protocol_path": ".goals\\human-quality-recommendations\\protocol-v8-gated-development-r2\\development-protocol.json",
+  "protocol_sha256": "51336fe4afb104a77994b351cfcdbf65e81fb6c1b9345f8efdf78c3f5b4ae557",
+  "development_input_sha256": {
+    "benchmarks\\soundalike_multipositive.v7.json": "b2fbf24962f0d1b73cdfee0e333b5ae9b3befdcb364a5f420dc465650b570324",
+    "benchmarks\\soundalike_pairs.v6.json": "ef6a86107554c3dd39fd68304c7cda635098dc992c3c1e891ec58be3e4953391",
+    "ml_data\\deepvibe_index_v5.npz": "f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9",
+    "ml_data\\iteration5\\collaborative\\item2vec-full.npz": "59a24b298e93773d59307b7c1dc24e4cbfffb6ae24122537fb51ae669e468ecd",
+    "ml_data\\iteration6\\catalog_graph\\catalog-artist-graph.npz": "10cc0e8490d834439a22e3c434bab5b8383ea49aa80536fa5bc516d3726861b5",
+    "ml_data\\iteration7\\catalog-artist-graph-full-v8.npz": "59a5047377251ba603c144ef83584225b4d40a71bd57c252d1f8832c101f10e0",
+    "ml_data\\iteration7\\musicbrainz-tag-cache.json": "aeb182d730a55b0a892ca23ddb4ff818f0616d764d9f48b68a638a396c6a4107",
+    "ml_data\\iteration8\\catalog-artist-graph-dual-v8.npz": "6a691f16f4b9d5ae015f5cb2959a4ba538af6fefe1446d89f72c64104ecf0f43",
+    "src\\soundalike\\ml\\catalog_cv.py": "80832490073b1b57356d6915f66527767fa13937e167ec5002bc309823e5697d",
+    "src\\soundalike\\ml\\catalog_direct_v8.py": "c6459628f8ef98eb7bba26aa53cb89b2d0b7855ab77c209b1967a5470e694666",
+    "src\\soundalike\\ml\\catalog_policy.py": "c374122d19601ab29b1863f9486171fd7f0494f3156caddb247fbade0c7fe71e",
+    "src\\soundalike\\ml\\catalog_v8.py": "35ab7836af09783c6a59bb20e817aa0ae89a2d3b704eb1c4a390eebbfb81965e"
+  },
+  "created_at": "2026-07-12T16:32:22.771420+00:00",
+  "detached_signature_required": true,
+  "integrity_signature": "4184dfc4184bd59a92af555f40c1abe84c4d3b7d456388d1ff0cfe63a419163d",
+  "signature_algorithm": "SHA-256 canonical JSON plus detached Ed25519"
+}

@@ -1,0 +1,34 @@
+{
+  "all_dev_cv_preconditions_passed": false,
+  "cv_report": ".goals\\human-quality-recommendations\\artifacts\\catalog-gated-sonic-dev-cv-v8.json",
+  "cv_sha256": "71c105b3aefa876c5f510b95024cb0150a1463ca2e25aa7ef057766c1e685ff9",
+  "development_protocol": ".goals\\human-quality-recommendations\\protocol-v8-gated-development-r2",
+  "development_protocol_state_sha256": "e33e3e8f1aefdce8defdae889b964bf1621ff3348e75fd0625c21fc0d674d720",
+  "final_open_count": 0,
+  "formula": {
+    "agreement_gate": "both sources covered, >=5 shared neighbors, fixed agreement >= tau",
+    "consistency_gate": "min(mean(A top5), mean(S top5), min(S top3)) >= sigma",
+    "graph_blend": "0.5*Last.fm_G + 0.5*Music4All_G (missing source component zero)",
+    "production_default": "exact current dual_sonic ordering on abstention",
+    "rank": "G + audio_weight*A",
+    "source_component": "0.7*normalized_positive_weight + 0.3/log2(rank+1)"
+  },
+  "fresh_final_allowed": false,
+  "method_id": "confidence-gated-dual-source-graph-v8-dev",
+  "nested_hard_gate_passed": false,
+  "numeric_parameter_count": 3,
+  "numeric_parameters": [
+    "tau",
+    "sigma",
+    "audio_weight"
+  ],
+  "policy": {
+    "audio_weight": 0.05,
+    "sigma": 0.3,
+    "tau": 0.35
+  },
+  "production_unchanged": true,
+  "scene_hard_gate_passed": false,
+  "schema_version": 8,
+  "selection_source": "nested 5-fold credible sonic DEV only; Deezer excluded"
+}

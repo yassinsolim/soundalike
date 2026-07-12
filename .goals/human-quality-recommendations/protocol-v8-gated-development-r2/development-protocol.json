@@ -1,0 +1,913 @@
+{
+  "schema_version": 8,
+  "kind": "development-protocol",
+  "phase": "DEVELOPMENT_LOCKED",
+  "corrected_provenance": {
+    "schema_version": 8,
+    "audit_kind": "record-level-source-independence",
+    "inputs": {
+      "v7_benchmark_path": "benchmarks\\soundalike_multipositive.v7.json",
+      "v7_benchmark_sha256": "b2fbf24962f0d1b73cdfee0e333b5ae9b3befdcb364a5f420dc465650b570324",
+      "catalog_graph_path": "ml_data\\iteration6\\catalog_graph\\catalog-artist-graph.npz",
+      "catalog_graph_sha256": "10cc0e8490d834439a22e3c434bab5b8383ea49aa80536fa5bc516d3726861b5",
+      "music4all_full_path": "ml_data\\iteration5\\collaborative\\item2vec-full.npz",
+      "music4all_full_sha256": "59a24b298e93773d59307b7c1dc24e4cbfffb6ae24122537fb51ae669e468ecd"
+    },
+    "signed_v7_erratum": {
+      "frozen_incorrect_declaration": "ListenBrainz session-based similar recordings",
+      "actual_primary_source": "Deezer related artists",
+      "records": 100,
+      "records_with_deezer_primary": 100,
+      "records_with_listenbrainz_secondary": 38,
+      "all_record_primary_sources_are_deezer": true
+    },
+    "deezer_directed_edges": {
+      "unique_query_positive_artist_edges": 1170,
+      "identity": "normalized artist names, directed query->positive"
+    },
+    "lastfm_360k_vs_deezer": {
+      "dataset": "Last.fm-360K user/artist play histories vs Deezer related artists",
+      "operator": "Last.fm dataset publisher vs Deezer service",
+      "api": "offline Last.fm-360K archive vs api.deezer.com related-artists API",
+      "id_namespace": "catalogue artist rows/names vs Deezer numeric artist/track IDs",
+      "same_dataset": false,
+      "same_operator": false,
+      "same_api": false,
+      "shared_numeric_id_namespace": false,
+      "resolved_deezer_edges": 1170,
+      "full_top_neighbor_edge_overlap": 430,
+      "overlap_fraction_of_resolved": 0.36752136752136755,
+      "overlap_examples": [
+        [
+          "99zed",
+          "baker ya maker"
+        ],
+        [
+          "99zed",
+          "mvko"
+        ],
+        [
+          "99zed",
+          "ytd"
+        ],
+        [
+          "a ha",
+          "culture club"
+        ],
+        [
+          "a ha",
+          "cyndi lauper"
+        ],
+        [
+          "a ha",
+          "duran duran"
+        ],
+        [
+          "a ha",
+          "erasure"
+        ],
+        [
+          "a ha",
+          "eurythmics"
+        ],
+        [
+          "a ha",
+          "inxs"
+        ],
+        [
+          "a ha",
+          "pet shop boys"
+        ],
+        [
+          "a ha",
+          "rick astley"
+        ],
+        [
+          "a ha",
+          "roxette"
+        ],
+        [
+          "a ha",
+          "simply red"
+        ],
+        [
+          "a ha",
+          "tina turner"
+        ],
+        [
+          "a tribe called quest",
+          "de la soul"
+        ],
+        [
+          "a tribe called quest",
+          "digable planets"
+        ],
+        [
+          "a tribe called quest",
+          "gang starr"
+        ],
+        [
+          "a tribe called quest",
+          "mos def"
+        ],
+        [
+          "a tribe called quest",
+          "pete rock"
+        ],
+        [
+          "a tribe called quest",
+          "q tip"
+        ]
+      ]
+    },
+    "music4all_onion_vs_deezer": {
+      "dataset": "Music4All-Onion listening histories vs Deezer related artists",
+      "operator": "Music4All-Onion researchers/Last.fm extraction vs Deezer service",
+      "api": "offline Music4All-Onion corpus vs api.deezer.com related-artists API",
+      "id_namespace": "Music4All track IDs/catalogue rows vs Deezer numeric IDs",
+      "same_dataset": false,
+      "same_operator": false,
+      "same_api": false,
+      "shared_numeric_id_namespace": false,
+      "overlap_kind": "learned top-96 artist-neighborhood overlap from L2-normalized Music4All artist vectors; not raw cooccurrence",
+      "raw_cooccurrence_available": false,
+      "resolved_deezer_edges": 346,
+      "learned_top96_artist_neighborhood_overlap": 285,
+      "overlap_fraction_of_resolved": 0.8236994219653179,
+      "overlap_examples": [
+        [
+          "a ha",
+          "culture club"
+        ],
+        [
+          "a ha",
+          "cyndi lauper"
+        ],
+        [
+          "a ha",
+          "duran duran"
+        ],
+        [
+          "a ha",
+          "erasure"
+        ],
+        [
+          "a ha",
+          "eurythmics"
+        ],
+        [
+          "a ha",
+          "genesis"
+        ],
+        [
+          "a ha",
+          "inxs"
+        ],
+        [
+          "a ha",
+          "roxette"
+        ],
+        [
+          "a ha",
+          "simply red"
+        ],
+        [
+          "a ha",
+          "tina turner"
+        ],
+        [
+          "a tribe called quest",
+          "gang starr"
+        ],
+        [
+          "a tribe called quest",
+          "mos def"
+        ],
+        [
+          "a tribe called quest",
+          "pete rock"
+        ],
+        [
+          "a tribe called quest",
+          "slick rick"
+        ],
+        [
+          "a tribe called quest",
+          "souls of mischief"
+        ],
+        [
+          "a tribe called quest",
+          "the roots"
+        ],
+        [
+          "alvvays",
+          "japanese breakfast"
+        ],
+        [
+          "armin van buuren",
+          "ummet ozcan"
+        ],
+        [
+          "art blakey",
+          "dizzy gillespie"
+        ],
+        [
+          "art blakey",
+          "joe henderson"
+        ]
+      ]
+    },
+    "id_isolation": {
+      "passed": true,
+      "catalog_graph_forbidden_id_fields": [],
+      "music4all_forbidden_id_fields": [],
+      "statement": "Deezer numeric artist and track IDs never enter either training asset. Normalized artist names are used only for this read-only overlap audit."
+    },
+    "decision": {
+      "unmasked_lastfm_full_direct_edges_allowed": true,
+      "rationale": "Unmasked full direct edges are intended legitimate query-conditioned collaborative signal because dataset, operator, API, and ID namespace are independent.",
+      "mask_policy": "Direct and two-hop masks are mechanism diagnostics only and never deciding constraints."
+    }
+  },
+  "style_metadata": {
+    "schema_version": 1,
+    "source": "MusicBrainz community tags with audio-nearest propagation",
+    "asset_sha256": "d8ef2158373f226194ffcc9c8d87d45f902be4c109be81f6f8a2fe2c0d959ccf",
+    "genre_blending_selection": "All opened v6 pairs whose source scene contains /, fusion, blend, hyperpop, digicore, or crunk; no artist-specific selection.",
+    "records": [
+      {
+        "query": "Nirvana",
+        "candidate": "Killing Joke",
+        "record_id": "DEV-OPENED-DEV-L002",
+        "scene": "grunge/post-punk"
+      },
+      {
+        "query": "The Beatles",
+        "candidate": "The Offspring",
+        "record_id": "DEV-OPENED-DEV-L003",
+        "scene": "pop/ska-punk"
+      },
+      {
+        "query": "Green Day",
+        "candidate": "The Kinks",
+        "record_id": "DEV-OPENED-DEV-L005",
+        "scene": "punk-rock/classic-rock"
+      },
+      {
+        "query": "The Killers",
+        "candidate": "David Bowie",
+        "record_id": "DEV-OPENED-DEV-L006",
+        "scene": "indie-rock/glam-rock"
+      },
+      {
+        "query": "One Direction",
+        "candidate": "The Who",
+        "record_id": "DEV-OPENED-DEV-L008",
+        "scene": "boy-band-pop/classic-rock"
+      },
+      {
+        "query": "The Strokes",
+        "candidate": "Tom Petty and the Heartbreakers",
+        "record_id": "DEV-OPENED-DEV-L009",
+        "scene": "indie/heartland-rock"
+      },
+      {
+        "query": "Mariya Takeuchi",
+        "candidate": "Yubin",
+        "record_id": "DEV-OPENED-DEV-L011",
+        "scene": "city-pop/k-pop"
+      },
+      {
+        "query": "Beyoncé",
+        "candidate": "Kelly Clarkson",
+        "record_id": "DEV-OPENED-DEV-L012",
+        "scene": "r&b/pop"
+      },
+      {
+        "query": "The Weeknd",
+        "candidate": "Rod Stewart",
+        "record_id": "DEV-OPENED-DEV-L013",
+        "scene": "synthwave/r&b-pop"
+      },
+      {
+        "query": "Arctic Monkeys",
+        "candidate": "Black Sabbath",
+        "record_id": "DEV-OPENED-DEV-L014",
+        "scene": "desert-rock/heavy-metal"
+      },
+      {
+        "query": "The Jam",
+        "candidate": "The Supremes",
+        "record_id": "DEV-OPENED-DEV-L015",
+        "scene": "mod-revival/motown"
+      },
+      {
+        "query": "Michael Jackson",
+        "candidate": "Daryl Hall & John Oates",
+        "record_id": "DEV-OPENED-DEV-L016",
+        "scene": "post-disco/synth-funk"
+      },
+      {
+        "query": "TWICE",
+        "candidate": "Dua Lipa",
+        "record_id": "DEV-OPENED-DEV-L017",
+        "scene": "k-pop/synthwave-pop"
+      },
+      {
+        "query": "Fontaines D.C.",
+        "candidate": "The La's",
+        "record_id": "DEV-OPENED-DEV-L019",
+        "scene": "jangle-pop/post-punk"
+      },
+      {
+        "query": "My Chemical Romance",
+        "candidate": "Slade",
+        "record_id": "DEV-OPENED-DEV-L020",
+        "scene": "emo/glam-rock"
+      },
+      {
+        "query": "M83",
+        "candidate": "The Smashing Pumpkins",
+        "record_id": "DEV-OPENED-DEV-L021",
+        "scene": "synth-pop/dream-pop"
+      },
+      {
+        "query": "HAIM",
+        "candidate": "Carly Rae Jepsen",
+        "record_id": "DEV-OPENED-DEV-L022",
+        "scene": "soft-rock/pop"
+      },
+      {
+        "query": "Muse",
+        "candidate": "Blondie",
+        "record_id": "DEV-OPENED-DEV-L023",
+        "scene": "alternative/glam-rock"
+      },
+      {
+        "query": "Elvis Costello and the Attractions",
+        "candidate": "Bob Dylan",
+        "record_id": "DEV-OPENED-DEV-L024",
+        "scene": "new-wave/folk-rock"
+      },
+      {
+        "query": "Britney Spears",
+        "candidate": "AC/DC",
+        "record_id": "DEV-OPENED-DEV-L025",
+        "scene": "dance-pop/hard-rock"
+      },
+      {
+        "query": "Chris Stapleton",
+        "candidate": "Willie Nelson",
+        "record_id": "DEV-OPENED-DEV-L026",
+        "scene": "country/folk"
+      },
+      {
+        "query": "John Mayer",
+        "candidate": "Toto",
+        "record_id": "DEV-OPENED-DEV-L028",
+        "scene": "soft-rock/synth-pop"
+      },
+      {
+        "query": "Maroon 5",
+        "candidate": "Stevie Wonder",
+        "record_id": "DEV-OPENED-DEV-L029",
+        "scene": "pop-rock/funk"
+      },
+      {
+        "query": "Rag'n'Bone Man",
+        "candidate": "Hozier",
+        "record_id": "DEV-OPENED-DEV-L030",
+        "scene": "soul/indie-rock"
+      },
+      {
+        "query": "Rihanna",
+        "candidate": "Etta James",
+        "record_id": "DEV-OPENED-DEV-L031",
+        "scene": "r&b/soul"
+      },
+      {
+        "query": "Taio Cruz",
+        "candidate": "Benny Benassi",
+        "record_id": "DEV-OPENED-DEV-L032",
+        "scene": "dance-pop/electro-house"
+      },
+      {
+        "query": "The Dandy Warhols",
+        "candidate": "The Rolling Stones",
+        "record_id": "DEV-OPENED-DEV-L033",
+        "scene": "garage-rock/classic-rock"
+      },
+      {
+        "query": "Red Velvet",
+        "candidate": "Jessie J feat. Ariana Grande & Nicki Minaj",
+        "record_id": "DEV-OPENED-DEV-L034",
+        "scene": "k-pop/brassy-pop"
+      },
+      {
+        "query": "Harry Styles",
+        "candidate": "James Bay",
+        "record_id": "DEV-OPENED-DEV-L035",
+        "scene": "synth-pop/indie-rock"
+      },
+      {
+        "query": "Fifth Harmony feat. Kid Ink",
+        "candidate": "Jason Derulo feat. 2 Chainz",
+        "record_id": "DEV-OPENED-DEV-L036",
+        "scene": "pop/horn-driven-r&b"
+      },
+      {
+        "query": "Vampire Weekend",
+        "candidate": "Grateful Dead",
+        "record_id": "DEV-OPENED-DEV-L037",
+        "scene": "indie-rock/jam-rock"
+      },
+      {
+        "query": "Ciara feat. Petey Pablo",
+        "candidate": "Usher feat. Lil Jon & Ludacris",
+        "record_id": "DEV-OPENED-DEV-L038",
+        "scene": "crunk-r&b"
+      },
+      {
+        "query": "The Smiths",
+        "candidate": "Bo Diddley",
+        "record_id": "DEV-OPENED-DEV-L039",
+        "scene": "post-punk/r&b-rhythm"
+      },
+      {
+        "query": "Little Mix",
+        "candidate": "Whitney Houston",
+        "record_id": "DEV-OPENED-DEV-L040",
+        "scene": "girl-group-pop/eighties-pop"
+      },
+      {
+        "query": "Rina Sawayama",
+        "candidate": "Justin Timberlake",
+        "record_id": "DEV-OPENED-DEV-L041",
+        "scene": "alternative-pop/r&b-rock"
+      },
+      {
+        "query": "Sky Ferreira",
+        "candidate": "Yes",
+        "record_id": "DEV-OPENED-DEV-L042",
+        "scene": "electropop/art-rock"
+      },
+      {
+        "query": "Brandi Carlile feat. Lucius",
+        "candidate": "Joni Mitchell",
+        "record_id": "DEV-OPENED-DEV-L043",
+        "scene": "acoustic-pop/folk"
+      },
+      {
+        "query": "Kanye West",
+        "candidate": "Marilyn Manson",
+        "record_id": "DEV-OPENED-DEV-L051",
+        "scene": "industrial-rap/rock"
+      },
+      {
+        "query": "Friendly Fires",
+        "candidate": "Depeche Mode",
+        "record_id": "DEV-OPENED-DEV-P021",
+        "scene": "dance-rock/new-wave"
+      },
+      {
+        "query": "Chicago Underground Quartet",
+        "candidate": "Dizzy Gillespie",
+        "record_id": "DEV-OPENED-DEV-P029",
+        "scene": "avant-jazz/bebop"
+      },
+      {
+        "query": "The World Is A Beautiful Place & I Am No Longer Afraid To Die",
+        "candidate": "American Football",
+        "record_id": "DEV-OPENED-DEV-P055",
+        "scene": "emo/post-rock"
+      },
+      {
+        "query": "Jhene Aiko",
+        "candidate": "The Brothers Johnson",
+        "record_id": "DEV-OPENED-DEV-P063",
+        "scene": "neo-soul/funk"
+      },
+      {
+        "query": "King Gizzard & The Lizard Wizard",
+        "candidate": "Deep Purple",
+        "record_id": "DEV-OPENED-DEV-P140",
+        "scene": "thrash/hard-rock"
+      },
+      {
+        "query": "Nothing",
+        "candidate": "Dinosaur Jr.",
+        "record_id": "DEV-OPENED-DEV-P160",
+        "scene": "shoegaze/alternative-rock"
+      },
+      {
+        "query": "Shygirl",
+        "candidate": "DMX",
+        "record_id": "DEV-OPENED-DEV-P165",
+        "scene": "club/hip-hop"
+      },
+      {
+        "query": "PinkPantheress",
+        "candidate": "Steve Lacy",
+        "record_id": "DEV-OPENED-FINAL-LB016",
+        "scene": "uk-garage/bedroom-pop"
+      },
+      {
+        "query": "Grimes",
+        "candidate": "Charli xcx",
+        "record_id": "DEV-OPENED-FINAL-LB031",
+        "scene": "electropop/hyperpop"
+      },
+      {
+        "query": "Joji",
+        "candidate": "Tyler, The Creator feat. Kali Uchis",
+        "record_id": "DEV-OPENED-FINAL-LB040",
+        "scene": "alternative-rnb/hip-hop"
+      },
+      {
+        "query": "100 gecs",
+        "candidate": "femtanyl",
+        "record_id": "FINAL-FRESH-046",
+        "scene": "hyperpop-digicore"
+      },
+      {
+        "query": "SOPHIE",
+        "candidate": "Caroline Polachek",
+        "record_id": "FINAL-FRESH-047",
+        "scene": "hyperpop-digicore"
+      },
+      {
+        "query": "A. G. Cook",
+        "candidate": "Danny L Harle",
+        "record_id": "FINAL-FRESH-048",
+        "scene": "hyperpop-digicore"
+      },
+      {
+        "query": "underscores",
+        "candidate": "Jane Remover",
+        "record_id": "FINAL-FRESH-049",
+        "scene": "hyperpop-digicore"
+      },
+      {
+        "query": "food house",
+        "candidate": "Gupi",
+        "record_id": "FINAL-FRESH-050",
+        "scene": "hyperpop-digicore"
+      },
+      {
+        "query": "Alice Longyu Gao",
+        "candidate": "Fraxiom",
+        "record_id": "FINAL-FRESH-051",
+        "scene": "hyperpop-digicore"
+      }
+    ],
+    "selected_policy_threshold": 0.0,
+    "selected_policy": {
+      "coverage": {
+        "catalogue_artists": 18258,
+        "direct_tag_artists": 208,
+        "direct_tag_fraction": 0.011392266403768211,
+        "propagated_artists": 18050,
+        "covered_artists": 18258,
+        "covered_fraction": 1.0
+      },
+      "false_exclusions": {
+        "threshold": 0.0,
+        "supplied_pairs": 54,
+        "evaluated_pairs": 47,
+        "unresolved_pairs": 7,
+        "count": 0,
+        "rate": 0.0,
+        "pairs": []
+      },
+      "source": {
+        "cache": "ml_data\\iteration7\\musicbrainz-tag-cache.json",
+        "graph_source_independent": true,
+        "provider": "MusicBrainz community artist tags",
+        "relationship": "independent scene/style metadata",
+        "used_by_catalog_graph": false,
+        "used_by_graph_or_benchmark": false,
+        "used_by_music4all": false,
+        "uses_lastfm": false,
+        "uses_music4all": false
+      }
+    },
+    "diagnostic_threshold_0_15": {
+      "coverage": {
+        "catalogue_artists": 18258,
+        "direct_tag_artists": 208,
+        "direct_tag_fraction": 0.011392266403768211,
+        "propagated_artists": 18050,
+        "covered_artists": 18258,
+        "covered_fraction": 1.0
+      },
+      "false_exclusions": {
+        "threshold": 0.15,
+        "supplied_pairs": 54,
+        "evaluated_pairs": 47,
+        "unresolved_pairs": 7,
+        "count": 3,
+        "rate": 0.06382978723404255,
+        "pairs": [
+          {
+            "query": "Kanye West",
+            "candidate": "Marilyn Manson",
+            "overlap": 0.12582600116729736
+          },
+          {
+            "query": "Shygirl",
+            "candidate": "DMX",
+            "overlap": 0.09347105026245117
+          },
+          {
+            "query": "100 gecs",
+            "candidate": "femtanyl",
+            "overlap": 0.0
+          }
+        ]
+      },
+      "source": {
+        "cache": "ml_data\\iteration7\\musicbrainz-tag-cache.json",
+        "graph_source_independent": true,
+        "provider": "MusicBrainz community artist tags",
+        "relationship": "independent scene/style metadata",
+        "used_by_catalog_graph": false,
+        "used_by_graph_or_benchmark": false,
+        "used_by_music4all": false,
+        "uses_lastfm": false,
+        "uses_music4all": false
+      }
+    },
+    "diagnostic_threshold_0_25": {
+      "coverage": {
+        "catalogue_artists": 18258,
+        "direct_tag_artists": 208,
+        "direct_tag_fraction": 0.011392266403768211,
+        "propagated_artists": 18050,
+        "covered_artists": 18258,
+        "covered_fraction": 1.0
+      },
+      "false_exclusions": {
+        "threshold": 0.25,
+        "supplied_pairs": 54,
+        "evaluated_pairs": 47,
+        "unresolved_pairs": 7,
+        "count": 4,
+        "rate": 0.0851063829787234,
+        "pairs": [
+          {
+            "query": "Arctic Monkeys",
+            "candidate": "Black Sabbath",
+            "overlap": 0.2236328125
+          },
+          {
+            "query": "Kanye West",
+            "candidate": "Marilyn Manson",
+            "overlap": 0.12582600116729736
+          },
+          {
+            "query": "Shygirl",
+            "candidate": "DMX",
+            "overlap": 0.09347105026245117
+          },
+          {
+            "query": "100 gecs",
+            "candidate": "femtanyl",
+            "overlap": 0.0
+          }
+        ]
+      },
+      "source": {
+        "cache": "ml_data\\iteration7\\musicbrainz-tag-cache.json",
+        "graph_source_independent": true,
+        "provider": "MusicBrainz community artist tags",
+        "relationship": "independent scene/style metadata",
+        "used_by_catalog_graph": false,
+        "used_by_graph_or_benchmark": false,
+        "used_by_music4all": false,
+        "uses_lastfm": false,
+        "uses_music4all": false
+      }
+    },
+    "iteration8_gate_inputs": {
+      "sonic_dev_benchmark_path": "benchmarks/soundalike_pairs.v6.json",
+      "production_index_path": "ml_data/deepvibe_index_v5.npz",
+      "dual_source_graph_path": "ml_data/iteration8/catalog-artist-graph-dual-v8.npz",
+      "lastfm_graph_source_path": "ml_data/iteration7/catalog-artist-graph-full-v8.npz",
+      "music4all_full_path": "ml_data/iteration5/collaborative/item2vec-full.npz",
+      "policy_source_path": "src/soundalike/ml/catalog_policy.py",
+      "cv_source_path": "src/soundalike/ml/catalog_cv.py",
+      "orchestrator_source_path": "src/soundalike/ml/catalog_v8.py",
+      "direct_protocol_source_path": "src/soundalike/ml/catalog_direct_v8.py",
+      "selection_axis": "credible Category-A sonic/editorial only",
+      "fresh_final_identity_data_present": false
+    }
+  },
+  "source_decision": {
+    "full_unmasked_lastfm_edges": "legitimate deciding collaborative signal",
+    "direct_and_twohop_masks": "mechanism diagnostics only; never constraints"
+  },
+  "scoring": {
+    "G": "0.7*normalized_graph_edge_weight + 0.3/log2(graph_edge_rank+1)",
+    "A": "mean(Sonic64 cosine mapped to [0,1], CLAP cosine mapped to [0,1], 1/(1+vibe_distance))",
+    "S": "MusicBrainz style-vector cosine overlap clipped to [0,1]",
+    "rank_score": "fixed dual-source graph blend G + audio_weight*A",
+    "style_gate": "MusicBrainz style is used only in the predeclared sigma consistency gate; it is never gold or primary"
+  },
+  "policy": {
+    "numeric_parameters": [
+      "tau",
+      "sigma",
+      "audio_weight"
+    ],
+    "numeric_parameter_count": 3,
+    "maximum_numeric_parameter_count": 3,
+    "fixed_grid": [
+      {
+        "tau": 0.35,
+        "sigma": 0.3,
+        "audio_weight": 0.05
+      },
+      {
+        "tau": 0.35,
+        "sigma": 0.3,
+        "audio_weight": 0.15
+      },
+      {
+        "tau": 0.35,
+        "sigma": 0.3,
+        "audio_weight": 0.3
+      },
+      {
+        "tau": 0.35,
+        "sigma": 0.45,
+        "audio_weight": 0.05
+      },
+      {
+        "tau": 0.35,
+        "sigma": 0.45,
+        "audio_weight": 0.15
+      },
+      {
+        "tau": 0.35,
+        "sigma": 0.45,
+        "audio_weight": 0.3
+      },
+      {
+        "tau": 0.35,
+        "sigma": 0.6,
+        "audio_weight": 0.05
+      },
+      {
+        "tau": 0.35,
+        "sigma": 0.6,
+        "audio_weight": 0.15
+      },
+      {
+        "tau": 0.35,
+        "sigma": 0.6,
+        "audio_weight": 0.3
+      },
+      {
+        "tau": 0.5,
+        "sigma": 0.3,
+        "audio_weight": 0.05
+      },
+      {
+        "tau": 0.5,
+        "sigma": 0.3,
+        "audio_weight": 0.15
+      },
+      {
+        "tau": 0.5,
+        "sigma": 0.3,
+        "audio_weight": 0.3
+      },
+      {
+        "tau": 0.5,
+        "sigma": 0.45,
+        "audio_weight": 0.05
+      },
+      {
+        "tau": 0.5,
+        "sigma": 0.45,
+        "audio_weight": 0.15
+      },
+      {
+        "tau": 0.5,
+        "sigma": 0.45,
+        "audio_weight": 0.3
+      },
+      {
+        "tau": 0.5,
+        "sigma": 0.6,
+        "audio_weight": 0.05
+      },
+      {
+        "tau": 0.5,
+        "sigma": 0.6,
+        "audio_weight": 0.15
+      },
+      {
+        "tau": 0.5,
+        "sigma": 0.6,
+        "audio_weight": 0.3
+      },
+      {
+        "tau": 0.65,
+        "sigma": 0.3,
+        "audio_weight": 0.05
+      },
+      {
+        "tau": 0.65,
+        "sigma": 0.3,
+        "audio_weight": 0.15
+      },
+      {
+        "tau": 0.65,
+        "sigma": 0.3,
+        "audio_weight": 0.3
+      },
+      {
+        "tau": 0.65,
+        "sigma": 0.45,
+        "audio_weight": 0.05
+      },
+      {
+        "tau": 0.65,
+        "sigma": 0.45,
+        "audio_weight": 0.15
+      },
+      {
+        "tau": 0.65,
+        "sigma": 0.45,
+        "audio_weight": 0.3
+      },
+      {
+        "tau": 0.65,
+        "sigma": 0.6,
+        "audio_weight": 0.05
+      },
+      {
+        "tau": 0.65,
+        "sigma": 0.6,
+        "audio_weight": 0.15
+      },
+      {
+        "tau": 0.65,
+        "sigma": 0.6,
+        "audio_weight": 0.3
+      }
+    ],
+    "selection": "nested five-fold CV over opened DEV only",
+    "production_default": "exact dual_sonic",
+    "gate": "fire only with both independent graph sources covered, at least five shared neighbors, source agreement >= tau, and top-five audio/style consistency >= sigma; otherwise return the exact production ranking"
+  },
+  "development_primary": {
+    "formula": "mean(nDCG@10, MRR@10, Recall@10)",
+    "gold_eligibility": "track-level category_a_sonic, deciding_primary, credible editorial/participant or named-critic audible comparisons only",
+    "metrics_reported_separately": [
+      "nDCG@10",
+      "MRR@10",
+      "Recall@10"
+    ],
+    "deezer_v7": "supporting taste-affinity only; never selection or deciding metrics; disclosed 82% overlap"
+  },
+  "gates": {
+    "nested_5fold_required": true,
+    "scene_held_out_required": true,
+    "minimum_relative_sonic_primary_gain": 0.2,
+    "maximum_per_scene_relative_regression": -0.1,
+    "minimum_absolute_sonic_primary_delta": 0.01,
+    "minimum_improved_records": 10,
+    "paired_bootstrap_samples": 10000,
+    "paired_bootstrap_fixed_seed": 20260712,
+    "paired_bootstrap_ci95_low_must_exceed": 0.0,
+    "candidate_recall_at_1000_must_improve": true,
+    "mrr_at_10_non_regression": true,
+    "recall_at_10_non_regression": true,
+    "direct_review_prerequisite": "at least 16/20"
+  },
+  "resources": {
+    "peak_limit_gb": 1.5,
+    "resident_target_gb": 1.1,
+    "final_requirement": "resource verification must pass on the verified catalogue tier"
+  },
+  "final_and_deployment": {
+    "fresh_final_creation_or_opening": "BLOCKED until every precondition passes",
+    "deployment": "BLOCKED until every precondition passes"
+  },
+  "development_input_sha256": {
+    "benchmarks\\soundalike_multipositive.v7.json": "b2fbf24962f0d1b73cdfee0e333b5ae9b3befdcb364a5f420dc465650b570324",
+    "benchmarks\\soundalike_pairs.v6.json": "ef6a86107554c3dd39fd68304c7cda635098dc992c3c1e891ec58be3e4953391",
+    "ml_data\\deepvibe_index_v5.npz": "f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9",
+    "ml_data\\iteration5\\collaborative\\item2vec-full.npz": "59a24b298e93773d59307b7c1dc24e4cbfffb6ae24122537fb51ae669e468ecd",
+    "ml_data\\iteration6\\catalog_graph\\catalog-artist-graph.npz": "10cc0e8490d834439a22e3c434bab5b8383ea49aa80536fa5bc516d3726861b5",
+    "ml_data\\iteration7\\catalog-artist-graph-full-v8.npz": "59a5047377251ba603c144ef83584225b4d40a71bd57c252d1f8832c101f10e0",
+    "ml_data\\iteration7\\musicbrainz-tag-cache.json": "aeb182d730a55b0a892ca23ddb4ff818f0616d764d9f48b68a638a396c6a4107",
+    "ml_data\\iteration8\\catalog-artist-graph-dual-v8.npz": "6a691f16f4b9d5ae015f5cb2959a4ba538af6fefe1446d89f72c64104ecf0f43",
+    "src\\soundalike\\ml\\catalog_cv.py": "80832490073b1b57356d6915f66527767fa13937e167ec5002bc309823e5697d",
+    "src\\soundalike\\ml\\catalog_direct_v8.py": "c6459628f8ef98eb7bba26aa53cb89b2d0b7855ab77c209b1967a5470e694666",
+    "src\\soundalike\\ml\\catalog_policy.py": "c374122d19601ab29b1863f9486171fd7f0494f3156caddb247fbade0c7fe71e",
+    "src\\soundalike\\ml\\catalog_v8.py": "35ab7836af09783c6a59bb20e817aa0ae89a2d3b704eb1c4a390eebbfb81965e"
+  }
+}

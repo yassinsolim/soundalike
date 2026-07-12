@@ -1,4 +1,6 @@
+import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -106,7 +108,16 @@ def test_development_lock_hashes_inputs_and_never_opens_final(tmp_path):
     assert state["fresh_final_blocked"] and state["deployment_blocked"]
     assert protocol["policy"]["numeric_parameter_count"] == 3
     assert protocol["development_input_sha256"][str(source)]
-    assert protocol["development_primary"]["formula"].startswith("0.80*nDCG")
+    assert protocol["development_primary"]["formula"] == (
+        "mean(nDCG@10, MRR@10, Recall@10)"
+    )
+    assert protocol["policy"]["numeric_parameters"] == [
+        "tau", "sigma", "audio_weight"
+    ]
+    assert protocol["gates"]["minimum_absolute_sonic_primary_delta"] == 0.01
+    assert protocol["gates"]["minimum_improved_records"] == 10
+    assert "82%" in protocol["development_primary"]["deezer_v7"]
+    assert "verified catalogue tier" in protocol["resources"]["final_requirement"]
     assert "16/20" in protocol["gates"]["direct_review_prerequisite"]
     assert (tmp_path / "protocol-v8" / "state.sig").is_file()
 
@@ -137,8 +148,18 @@ def test_dev_cv_precomputes_unique_query_and_reports_slices(tmp_path):
         "pairs": [
             {
                 "id": str(number),
-                "evidence_category": "category_a_human_songs_like",
-                "split": "final",
+                "evidence_category": "category_a_sonic",
+                "evidence_subtype": "named_critic_sonic",
+                "deciding_primary": True,
+                "claim_status": "reported",
+                "sources": [{
+                    "publisher": "Critic",
+                    "url": "https://example.test/sonic",
+                    "excerpt": "The critic compares the audible guitar tone.",
+                    "source_class": "named_critic_editorial",
+                    "accessed_at": "2026-07-12",
+                }],
+                "split": "development",
                 "scene": "rock" if number < 3 else "pop",
                 "query": query,
                 "target": {"title": "Target", "artist": "Beta"},
@@ -163,12 +184,8 @@ def test_dev_cv_precomputes_unique_query_and_reports_slices(tmp_path):
     v6_path, v7_path = tmp_path / "v6.json", tmp_path / "v7.json"
     v6_path.write_text(json.dumps(v6))
     v7_path.write_text(json.dumps(v7))
-    state = {
-        "final_open_count": 1,
-        "benchmark_sha256": __import__("hashlib").sha256(
-            v7_path.read_bytes()
-        ).hexdigest(),
-    }
+    # Supporting v7 state is intentionally irrelevant to deciding labels.
+    state = {"final_open_count": 0, "benchmark_sha256": "wrong"}
     for name in ("index.npz", "graph.npz", "style.npz"):
         (tmp_path / name).write_bytes(b"toy")
 
@@ -189,6 +206,11 @@ def test_dev_cv_precomputes_unique_query_and_reports_slices(tmp_path):
         return {
             "production_rows": [2, 1],
             "graph_union_rows": [1, 2],
+            "gate_components": {
+                "source_coverage": {"lastfm": True, "music4all": True},
+                "shared_count": 5,
+                "agreement": 1.0,
+            },
             "components": [
                 {"row": 1, "G": 1.0, "A": 1.0, "S": 1.0, "source": "graph"},
                 {"row": 2, "G": 0.0, "A": 0.0, "S": 0.0, "source": "audio_fallback"},
@@ -202,9 +224,9 @@ def test_dev_cv_precomputes_unique_query_and_reports_slices(tmp_path):
         policy = policies[0]
         return {
             "nested_5fold": {"final_policy": {
+                "tau": policy.tau,
+                "sigma": policy.sigma,
                 "audio_weight": policy.audio_weight,
-                "style_weight": policy.style_weight,
-                "style_guard_min": policy.style_guard_min,
             }},
             "probe": evaluator(policy, records, records),
         }
@@ -227,9 +249,71 @@ def test_dev_cv_precomputes_unique_query_and_reports_slices(tmp_path):
         report_builder=report_builder,
     )
     assert calls == [(0, 1000)]
-    assert set(report["probe"]["per_scene"]) == {"jazz", "pop", "rock"}
-    assert set(report["probe"]["per_axis"]) == {"taste_affinity"}
+    assert set(report["probe"]["per_scene"]) == {"pop", "rock"}
+    assert set(report["probe"]["per_axis"]) == {"sonic_editorial"}
     selected = report["selected_policy_evaluation"]["aggregate_and_slices"]
     assert {"baseline", "challenger", "improved", "worsened"} <= set(selected)
     assert report["execution"]["unique_queries"] == 1
+    assert not report["execution"]["deezer_used_for_selection"]
     assert json.loads((tmp_path / "report.json").read_text())["execution"]
+
+
+def test_real_gated_development_outcome_is_signed_and_fail_closed():
+    root = Path(".goals/human-quality-recommendations")
+    artifacts = root / "artifacts"
+    cv = json.loads(
+        (artifacts / "catalog-gated-sonic-dev-cv-v8.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert cv["benchmark_inventory"]["v6_included_credible_sonic_deciding"] == 65
+    assert cv["opened_evidence_resolution"]["evaluated_records"] == 61
+    assert cv["deezer_used_for_selection"] is False
+    assert cv["all_preconditions_passed"] is False
+    assert cv["nested_5fold"]["hard_gate"]["gate_pass"] is False
+    assert cv["scene_held_out"]["hard_gate"]["gate_pass"] is False
+
+    outcome = json.loads(
+        (artifacts / "catalog-gated-development-outcome-v8.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert outcome["all_preconditions_passed"] is False
+    assert outcome["final"] == {
+        "final_open_count": 0,
+        "fresh_final_created": False,
+        "fresh_final_metrics_present": False,
+        "fresh_final_opened": False,
+        "rankings_locked": False,
+    }
+    assert outcome["production"]["unchanged"] is True
+    assert outcome["production"]["deployment_attempted"] is False
+
+    for name in (
+        "protocol-v8-gated-development-r2",
+        "protocol-v8-gated-development-r3",
+    ):
+        protocol = root / name
+        state_path = protocol / "state.json"
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        assert state["final_open_count"] == 0
+        assert state["fresh_final_blocked"] is True
+        assert (
+            hashlib.sha256(
+                (protocol / "development-protocol.json").read_bytes()
+            ).hexdigest()
+            == state["protocol_sha256"]
+        )
+        verified = subprocess.run(
+            [
+                "ssh-keygen", "-Y", "verify",
+                "-f", str(protocol / "allowed_signers"),
+                "-I", "soundalike-protocol",
+                "-n", "soundalike-protocol",
+                "-s", str(protocol / "state.sig"),
+            ],
+            input=state_path.read_bytes(),
+            capture_output=True,
+            check=False,
+        )
+        assert verified.returncode == 0
