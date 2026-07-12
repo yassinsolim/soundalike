@@ -1,0 +1,236 @@
+{
+  "schema_version": 4,
+  "created_at": "2026-07-11",
+  "corpus": {
+    "rows": 272853,
+    "release_index_sha256": "f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9"
+  },
+  "selection_policy": {
+    "deciding_split": "benchmarks/soundalike_pairs.v4.json held_out pure_sonic",
+    "primary": "0.5 * Recall@50 + 0.5 * MRR",
+    "manual_judgments_blended": false,
+    "external_features_used": false,
+    "training_pairs": "v2/v3 development and validation only; F01-F20 excluded from all learned weights and priors",
+    "disclosure": "Sequential challenger comparison reused the held-out suite as requested; bootstrap uncertainty is descriptive, not a once-opened significance claim."
+  },
+  "representation_builds": {
+    "efficientnet_b0_pca64": {
+      "full_index_seconds": 75.5508544,
+      "dimension": 64
+    },
+    "laion_clap_calibrated_pca64": {
+      "full_index_seconds": 337.9769628,
+      "pca_seconds": 216.4053233,
+      "dimension": 64
+    },
+    "panns_cnn14_calibrated": {
+      "full_index_seconds": 112.9920821,
+      "dimension": 2048,
+      "decision": "rejected; no validation Recall@50 gain"
+    },
+    "efficientnet_multivector": {
+      "full_build_seconds": 435.9034786,
+      "vectors_per_track": 8,
+      "dimension": 64,
+      "decision": "rejected; late interaction did not improve validation Recall@50"
+    },
+    "chroma_fft_dsp": {
+      "full_index_seconds": 106.7506306,
+      "dimension": 384,
+      "decision": "rejected; no validation Recall@50 hit"
+    },
+    "clap_title_artist_text": {
+      "full_index_seconds": 167.894537,
+      "dimension": 512,
+      "decision": "rejected; text semantics did not retrieve exact sonic pairs"
+    }
+  },
+  "final_held_out_challengers": {
+    "production_baseline": {
+      "R@50": 0.05,
+      "MRR": 0.00625,
+      "primary": 0.028125
+    },
+    "dual_sonic_without_priors": {
+      "R@50": 0.0,
+      "MRR": 0.0,
+      "primary": 0.0,
+      "per_pair_ranks": {
+        "F01": 0,
+        "F02": 0,
+        "F03": 0,
+        "F04": 0,
+        "F05": 0,
+        "F06": 0,
+        "F07": 0,
+        "F08": 0,
+        "F09": 0,
+        "F10": 0,
+        "F11": 0,
+        "F12": 0,
+        "F13": 0,
+        "F14": 0,
+        "F15": 0,
+        "F16": 0,
+        "F17": 0,
+        "F18": 0,
+        "F19": 0,
+        "F20": 0
+      }
+    },
+    "pageview_heavy_learned_reranker": {
+      "R@50": 0.0,
+      "MRR": 0.0,
+      "primary": 0.0,
+      "per_pair_ranks": {
+        "F01": 0,
+        "F02": 0,
+        "F03": 0,
+        "F04": 0,
+        "F05": 0,
+        "F06": 0,
+        "F07": 0,
+        "F08": 0,
+        "F09": 0,
+        "F10": 0,
+        "F11": 0,
+        "F12": 0,
+        "F13": 0,
+        "F14": 0,
+        "F15": 0,
+        "F16": 0,
+        "F17": 0,
+        "F18": 0,
+        "F19": 0,
+        "F20": 0
+      }
+    },
+    "source_notability_continuous": {
+      "R@50": 0.05,
+      "MRR": 0.00913978494623656,
+      "primary": 0.02956989247311828,
+      "per_pair_ranks": {
+        "F01": 0,
+        "F02": 0,
+        "F03": 0,
+        "F04": 0,
+        "F05": 0,
+        "F06": 6,
+        "F07": 0,
+        "F08": 0,
+        "F09": 0,
+        "F10": 0,
+        "F11": 0,
+        "F12": 0,
+        "F13": 0,
+        "F14": 0,
+        "F15": 0,
+        "F16": 0,
+        "F17": 0,
+        "F18": 62,
+        "F19": 0,
+        "F20": 0
+      }
+    },
+    "specific_song_page_binary": {
+      "R@50": 0.05,
+      "MRR": 0.0025275275275275276,
+      "primary": 0.026263763763763767,
+      "per_pair_ranks": {
+        "F01": 0,
+        "F02": 0,
+        "F03": 0,
+        "F04": 0,
+        "F05": 0,
+        "F06": 74,
+        "F07": 0,
+        "F08": 0,
+        "F09": 0,
+        "F10": 0,
+        "F11": 0,
+        "F12": 0,
+        "F13": 0,
+        "F14": 0,
+        "F15": 0,
+        "F16": 0,
+        "F17": 0,
+        "F18": 27,
+        "F19": 0,
+        "F20": 0
+      }
+    },
+    "dual_sonic_guardrail": {
+      "R@50": 0.1,
+      "MRR": 0.005896805896805897,
+      "primary": 0.05294840294840295,
+      "per_pair_ranks": {
+        "F01": 0,
+        "F02": 0,
+        "F03": 0,
+        "F04": 0,
+        "F05": 0,
+        "F06": 11,
+        "F07": 0,
+        "F08": 0,
+        "F09": 0,
+        "F10": 0,
+        "F11": 0,
+        "F12": 0,
+        "F13": 0,
+        "F14": 0,
+        "F15": 0,
+        "F16": 0,
+        "F17": 0,
+        "F18": 37,
+        "F19": 0,
+        "F20": 0
+      }
+    }
+  },
+  "winner": {
+    "method": "dual_sonic_guardrail",
+    "comparison": {
+      "absolute_delta": 0.024823402948402944,
+      "relative_gain": 0.8826098825785008,
+      "ci95_low": -0.002556818181818188,
+      "ci95_high": 0.07702702702702702,
+      "probability_positive": 0.6393,
+      "bootstrap_iterations": 10000,
+      "per_scene_relative_delta": {
+        "acoustic-pop/folk": 0.0,
+        "alternative-pop": 1.0,
+        "alternative-pop/r&b-rock": 0.0,
+        "classic-rock": 0.0,
+        "crunk-r&b": -0.030303030303030373,
+        "electropop": 0.0,
+        "electropop/art-rock": 0.0,
+        "garage-rock/classic-rock": 0.0,
+        "girl-group-pop/eighties-pop": 0.0,
+        "indie-rock": 0.0,
+        "indie-rock/jam-rock": 0.0,
+        "industrial-rap/rock": 0.0,
+        "k-pop/brassy-pop": 0.0,
+        "pop-rap": 0.0,
+        "pop/horn-driven-r&b": 0.0,
+        "post-punk": 0.0,
+        "post-punk/r&b-rhythm": 0.0,
+        "soft-rock": 0.0,
+        "synth-pop": 0.0,
+        "synth-pop/indie-rock": 0.0
+      },
+      "passes_20pct_gain": true,
+      "passes_scene_guardrail": true
+    },
+    "direct_top5_passes": 17,
+    "direct_top5_total": 20
+  },
+  "negative_results": [
+    "VGGish mean and three-window max: zero pure-pair Recall@50.",
+    "PANNs Cnn14 calibrated log-mel: no new validation hit.",
+    "CLAP audio alone: validation improvement but final R@50 unchanged.",
+    "EfficientNet eight-vector late interaction: no additional validation hit.",
+    "Chroma-FFT DSP and CLAP title/artist text: no Recall@50 gain.",
+    "Dev-only hard-negative diagonal metric: overfit and did not generalize.",
+    "Pageview-heavy learned reranker: zero final held-out Recall@50."
+  ]
+}

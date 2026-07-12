@@ -1,0 +1,2821 @@
+{
+  "schema_version": 4,
+  "benchmark_id": "soundalike-real-pairs-v4-final",
+  "benchmark_version": "4.0.0",
+  "frozen_at": "2026-07-11",
+  "retrieved_at": "2026-07-11",
+  "license_note": "Facts and short evidence summaries only; no audio or copyrighted lyrics are included.",
+  "purpose": "Final source-selected pure-sonic confirmation benchmark, frozen after the dual-Sonic64 architecture and fusion weight were selected on prior development/validation evidence.",
+  "split_policy": {
+    "development": "May be used for implementation and hyperparameter selection.",
+    "validation": "All v2/v3 pairs whose outputs were available while selecting the final representation; never deciding evidence.",
+    "held_out": "Exactly 20 final rows selected only by source eligibility, artist disjointness, and exact original-recording catalogue presence after architecture freeze.",
+    "artist_fields": "Primary, featured, and group credited artists are considered; graph connected components are audited transitively."
+  },
+  "metric_policy": {
+    "eligibility": "split == held_out and evidence_category == pure_sonic only",
+    "primary": "0.5 * Recall@50 + 0.5 * MRR over actual quality-filtered stable-head output; missing sides score zero",
+    "reported": [
+      "Recall@1",
+      "Recall@5",
+      "Recall@10",
+      "Recall@20",
+      "Recall@50",
+      "MRR",
+      "NDCG@50",
+      "missing_catalogue_rate"
+    ],
+    "minimum_relative_gain": 0.2,
+    "scene_guardrail": "No held-out pure-sonic scene may regress by more than 10% relative; a zero baseline contribution must not decrease.",
+    "manual_judgments": "Secondary only and never blended into the deciding primary.",
+    "direction": "Query to exact original counterpart; derivative target versions never count.",
+    "tail_artist_policy": "The visible top five remain artist-diverse. Positions 6-50 deduplicate recordings but do not suppress a valid exact song merely because another song by its artist scored higher."
+  },
+  "pairs": [
+    {
+      "id": "D01",
+      "split": "development",
+      "scene": "rap/classic-rock",
+      "query": {
+        "title": "Ice Ice Baby",
+        "artist": "Vanilla Ice"
+      },
+      "target": {
+        "title": "Under Pressure",
+        "artist": "Queen & David Bowie"
+      },
+      "evidence_mode": "database-assertion",
+      "claim_status": "confirmed-sample",
+      "sources": [
+        {
+          "url": "http://www.soundsjustlike.com/30/vanilla-ice-sounds-like-queen/",
+          "publisher": "Sounds Just Like",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The comparison page explicitly pairs Ice Ice Baby with Under Pressure as sounding alike."
+        }
+      ],
+      "evidence_category": "sample_interpolation",
+      "deciding_primary": false,
+      "category_reason": "Literal sampled, quoted, or interpolated musical material; diagnostic only."
+    },
+    {
+      "id": "D02",
+      "split": "development",
+      "scene": "rap/trap",
+      "query": {
+        "title": "This Is America",
+        "artist": "Childish Gambino"
+      },
+      "target": {
+        "title": "American Pharaoh",
+        "artist": "Jase Harley"
+      },
+      "evidence_mode": "artist-claim",
+      "claim_status": "disputed",
+      "sources": [
+        {
+          "url": "https://pitchfork.com/news/childish-gambino-collaborator-denies-this-is-america-plagiarism-allegations/",
+          "publisher": "Pitchfork",
+          "published": "2018-06-26",
+          "retrieved": "2026-07-11",
+          "context": "Pitchfork reports Harley saying he felt his song inspired This Is America; Gambino's collaborator denied copying."
+        }
+      ],
+      "evidence_category": "legal_plagiarism",
+      "deciding_primary": false,
+      "category_reason": "Similarity is framed by a copyright, plagiarism, rights-holder, or settlement dispute; diagnostic only."
+    },
+    {
+      "id": "D03",
+      "split": "development",
+      "scene": "dance-pop",
+      "query": {
+        "title": "Born This Way",
+        "artist": "Lady Gaga"
+      },
+      "target": {
+        "title": "Express Yourself",
+        "artist": "Madonna"
+      },
+      "evidence_mode": "editorial-and-artist-comparison",
+      "claim_status": "acknowledged-comparison",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Born_This_Way_(song)",
+          "publisher": "Wikipedia (citing multiple named critics)",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The reference summary cites critics identifying similar chords and tempo to Express Yourself; no sample or legal action is reported."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "D04",
+      "split": "development",
+      "scene": "indie/alt-pop",
+      "query": {
+        "title": "Sitting on Top of the World",
+        "artist": "Delta Goodrem"
+      },
+      "target": {
+        "title": "Rebellion (Lies)",
+        "artist": "Arcade Fire"
+      },
+      "evidence_mode": "editorial-and-listener-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.watchmojo.com/articles/top-20-sound-alike-songs",
+          "publisher": "WatchMojo",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The list says fans and critics noted a striking musical resemblance."
+        }
+      ],
+      "evidence_category": "weak_unsubstantiated",
+      "deciding_primary": false,
+      "category_reason": "Only an unsupported/dead sound-alike database or weak listicle assertion was found; diagnostic only."
+    },
+    {
+      "id": "D05",
+      "split": "development",
+      "scene": "instrumental-electronic",
+      "query": {
+        "title": "Mirando",
+        "artist": "Ratatat"
+      },
+      "target": {
+        "title": "Abesses",
+        "artist": "Birdy Nam Nam"
+      },
+      "evidence_mode": "database-assertion",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "http://www.soundsjustlike.com/1877/ratatat-sounds-like-birdy-nam-nam/",
+          "publisher": "Sounds Just Like",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The comparison page explicitly identifies the two recordings as sounding alike."
+        }
+      ],
+      "evidence_category": "weak_unsubstantiated",
+      "deciding_primary": false,
+      "category_reason": "Only an unsupported/dead sound-alike database or weak listicle assertion was found; diagnostic only."
+    },
+    {
+      "id": "D06",
+      "split": "development",
+      "scene": "thrash-metal",
+      "query": {
+        "title": "Total Death",
+        "artist": "Kreator"
+      },
+      "target": {
+        "title": "Strike of the Beast",
+        "artist": "Exodus"
+      },
+      "evidence_mode": "database-assertion",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "http://www.soundsjustlike.com/6105/kreator-sounds-like-exodus/",
+          "publisher": "Sounds Just Like",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The comparison page explicitly identifies the two thrash recordings as sounding alike."
+        }
+      ],
+      "evidence_category": "weak_unsubstantiated",
+      "deciding_primary": false,
+      "category_reason": "Only an unsupported/dead sound-alike database or weak listicle assertion was found; diagnostic only."
+    },
+    {
+      "id": "D07",
+      "split": "development",
+      "scene": "k-pop/jazz-funk",
+      "query": {
+        "title": "Bubble Gum",
+        "artist": "NewJeans"
+      },
+      "target": {
+        "title": "Easier Said Than Done",
+        "artist": "Shakatak"
+      },
+      "evidence_mode": "rights-holder-allegation",
+      "claim_status": "disputed",
+      "sources": [
+        {
+          "url": "https://en.yna.co.kr/view/AEN20240718008000315",
+          "publisher": "Yonhap News Agency",
+          "published": "2024-07-18",
+          "retrieved": "2026-07-11",
+          "context": "Yonhap reports the rights holder alleging identical rhythms and melodies and similar tempos; ADOR denied infringement."
+        }
+      ],
+      "evidence_category": "legal_plagiarism",
+      "deciding_primary": false,
+      "category_reason": "Similarity is framed by a copyright, plagiarism, rights-holder, or settlement dispute; diagnostic only."
+    },
+    {
+      "id": "D08",
+      "split": "development",
+      "scene": "pop/funk",
+      "query": {
+        "title": "Ghostbusters",
+        "artist": "Ray Parker Jr."
+      },
+      "target": {
+        "title": "I Want a New Drug",
+        "artist": "Huey Lewis and the News"
+      },
+      "evidence_mode": "legal-comparison",
+      "claim_status": "settled",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Ghostbusters_(song)",
+          "publisher": "Wikipedia",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The reference summary documents Huey Lewis's similarity claim and the resulting settlement."
+        }
+      ],
+      "evidence_category": "legal_plagiarism",
+      "deciding_primary": false,
+      "category_reason": "Similarity is framed by a copyright, plagiarism, rights-holder, or settlement dispute; diagnostic only."
+    },
+    {
+      "id": "D09",
+      "split": "development",
+      "scene": "afrobeats",
+      "query": {
+        "title": "Jogodo",
+        "artist": "Tekno"
+      },
+      "target": {
+        "title": "Kpolongo",
+        "artist": "Danfo Drivers"
+      },
+      "evidence_mode": "listeners-and-artist-claim",
+      "claim_status": "unresolved",
+      "sources": [
+        {
+          "url": "https://musicinafrica.net/magazine/controversial-tekno-song-gets-video/",
+          "publisher": "Music In Africa",
+          "published": "2018-05-10",
+          "retrieved": "2026-07-11",
+          "context": "The report says fans immediately noticed the similarity and quotes Danfo Drivers alleging use of their song."
+        }
+      ],
+      "evidence_category": "legal_plagiarism",
+      "deciding_primary": false,
+      "category_reason": "Similarity is framed by a copyright, plagiarism, rights-holder, or settlement dispute; diagnostic only."
+    },
+    {
+      "id": "D10",
+      "split": "development",
+      "scene": "j-rock/hard-rock",
+      "query": {
+        "title": "Bad Communication",
+        "artist": "B'z"
+      },
+      "target": {
+        "title": "Trampled Under Foot",
+        "artist": "Led Zeppelin"
+      },
+      "evidence_mode": "reference-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Bad_Communication",
+          "publisher": "Wikipedia",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The reference summary describes the guitar riff as similar to Trampled Under Foot."
+        }
+      ],
+      "evidence_category": "legal_plagiarism",
+      "deciding_primary": false,
+      "category_reason": "Similarity is framed by a copyright, plagiarism, rights-holder, or settlement dispute; diagnostic only."
+    },
+    {
+      "id": "D11",
+      "split": "development",
+      "scene": "alternative-rap/new-jack-swing",
+      "query": {
+        "title": "Paper Planes",
+        "artist": "M.I.A."
+      },
+      "target": {
+        "title": "Rump Shaker",
+        "artist": "Wreckx-N-Effect"
+      },
+      "evidence_mode": "database-assertion",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "http://www.soundsjustlike.com/2321/mia-sounds-like-wreckx-n-effect/",
+          "publisher": "Sounds Just Like",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The comparison page explicitly identifies the two recordings as sounding alike."
+        }
+      ],
+      "evidence_category": "weak_unsubstantiated",
+      "deciding_primary": false,
+      "category_reason": "Only an unsupported/dead sound-alike database or weak listicle assertion was found; diagnostic only."
+    },
+    {
+      "id": "D12",
+      "split": "development",
+      "scene": "metalcore",
+      "query": {
+        "title": "#OIMATEWTF",
+        "artist": "Capture the Crown"
+      },
+      "target": {
+        "title": "Not the American Average",
+        "artist": "Asking Alexandria"
+      },
+      "evidence_mode": "database-assertion",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "http://www.soundsjustlike.com/5675/capture-the-crown-sounds-like-asking-alexandria/",
+          "publisher": "Sounds Just Like",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The comparison page explicitly identifies the two metalcore recordings as sounding alike."
+        }
+      ],
+      "evidence_category": "weak_unsubstantiated",
+      "deciding_primary": false,
+      "category_reason": "Only an unsupported/dead sound-alike database or weak listicle assertion was found; diagnostic only."
+    },
+    {
+      "id": "D13",
+      "split": "development",
+      "scene": "mandopop/pop-ballad",
+      "query": {
+        "title": "Chong Bai",
+        "artist": "Fish Leong"
+      },
+      "target": {
+        "title": "Can You Feel the Love Tonight",
+        "artist": "Elton John"
+      },
+      "evidence_mode": "database-assertion",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "http://www.soundsjustlike.com/3316/fish-leong-sounds-like-elton-john/",
+          "publisher": "Sounds Just Like",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The comparison page explicitly identifies the two recordings as sounding alike."
+        }
+      ],
+      "evidence_category": "weak_unsubstantiated",
+      "deciding_primary": false,
+      "category_reason": "Only an unsupported/dead sound-alike database or weak listicle assertion was found; diagnostic only."
+    },
+    {
+      "id": "D14",
+      "split": "development",
+      "scene": "vocal-jazz/symphonic-pop",
+      "query": {
+        "title": "Si Tu Savais",
+        "artist": "Connie Evingson"
+      },
+      "target": {
+        "title": "Evil Woman",
+        "artist": "Electric Light Orchestra"
+      },
+      "evidence_mode": "database-assertion",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "http://www.soundsjustlike.com/207/connie-evingson-sounds-like-electric-light-orchestra/",
+          "publisher": "Sounds Just Like",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The comparison page explicitly identifies the two recordings as sounding alike."
+        }
+      ],
+      "evidence_category": "weak_unsubstantiated",
+      "deciding_primary": false,
+      "category_reason": "Only an unsupported/dead sound-alike database or weak listicle assertion was found; diagnostic only."
+    },
+    {
+      "id": "D15",
+      "split": "development",
+      "scene": "country-pop/art-rock",
+      "query": {
+        "title": "Need You Now",
+        "artist": "Lady A"
+      },
+      "target": {
+        "title": "Eye in the Sky",
+        "artist": "The Alan Parsons Project"
+      },
+      "evidence_mode": "editorial-and-listener-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.watchmojo.com/articles/top-20-sound-alike-songs",
+          "publisher": "WatchMojo",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The list reports critics, fans and listeners noting the resemblance."
+        }
+      ],
+      "evidence_category": "weak_unsubstantiated",
+      "deciding_primary": false,
+      "category_reason": "Only an unsupported/dead sound-alike database or weak listicle assertion was found; diagnostic only."
+    },
+    {
+      "id": "D16",
+      "split": "development",
+      "scene": "country/classic-rock",
+      "query": {
+        "title": "We Used To",
+        "artist": "Dolly Parton"
+      },
+      "target": {
+        "title": "Stairway to Heaven",
+        "artist": "Led Zeppelin"
+      },
+      "evidence_mode": "acknowledged-influence",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.watchmojo.com/articles/top-20-sound-alike-songs",
+          "publisher": "WatchMojo",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The list describes Parton reusing part of the Stairway intro."
+        }
+      ],
+      "evidence_category": "cover_remix",
+      "deciding_primary": false,
+      "category_reason": "The relationship is a cover, remix, contrafact, acknowledged rework, or adaptation; diagnostic only."
+    },
+    {
+      "id": "D17",
+      "split": "development",
+      "scene": "country-pop/europop",
+      "query": {
+        "title": "C'est la Vie",
+        "artist": "Shania Twain"
+      },
+      "target": {
+        "title": "Dancing Queen",
+        "artist": "ABBA"
+      },
+      "evidence_mode": "editorial-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.watchmojo.com/articles/top-20-sound-alike-songs",
+          "publisher": "WatchMojo",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The comparison identifies the newer chorus as resembling Dancing Queen."
+        }
+      ],
+      "evidence_category": "weak_unsubstantiated",
+      "deciding_primary": false,
+      "category_reason": "Only an unsupported/dead sound-alike database or weak listicle assertion was found; diagnostic only."
+    },
+    {
+      "id": "D18",
+      "split": "development",
+      "scene": "latin/world",
+      "query": {
+        "title": "Lambada",
+        "artist": "Kaoma"
+      },
+      "target": {
+        "title": "Llorando se fue",
+        "artist": "Los Kjarkas"
+      },
+      "evidence_mode": "unauthorized-adaptation",
+      "claim_status": "confirmed",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Lambada_(song)",
+          "publisher": "Wikipedia",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The reference summary identifies Lambada as an unauthorized adaptation that led to successful legal action."
+        }
+      ],
+      "evidence_category": "cover_remix",
+      "deciding_primary": false,
+      "category_reason": "The relationship is a cover, remix, contrafact, acknowledged rework, or adaptation; diagnostic only."
+    },
+    {
+      "id": "D19",
+      "split": "development",
+      "scene": "rock",
+      "query": {
+        "title": "Brain Stew",
+        "artist": "Green Day"
+      },
+      "target": {
+        "title": "25 or 6 to 4",
+        "artist": "Chicago"
+      },
+      "evidence_mode": "editorial-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.watchmojo.com/articles/top-20-sound-alike-songs",
+          "publisher": "WatchMojo",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The comparison says Brain Stew's intro sounds like 25 or 6 to 4."
+        }
+      ],
+      "evidence_category": "weak_unsubstantiated",
+      "deciding_primary": false,
+      "category_reason": "Only an unsupported/dead sound-alike database or weak listicle assertion was found; diagnostic only."
+    },
+    {
+      "id": "D20",
+      "split": "development",
+      "scene": "pop/ska-punk",
+      "query": {
+        "title": "Lady Madonna",
+        "artist": "The Beatles"
+      },
+      "target": {
+        "title": "What I Got",
+        "artist": "Sublime"
+      },
+      "evidence_mode": "editorial-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.watchmojo.com/articles/top-20-sound-alike-songs",
+          "publisher": "WatchMojo",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The list describes nearly indistinguishable melodies and the same key."
+        }
+      ],
+      "evidence_category": "weak_unsubstantiated",
+      "deciding_primary": false,
+      "category_reason": "Only an unsupported/dead sound-alike database or weak listicle assertion was found; diagnostic only."
+    },
+    {
+      "id": "D21",
+      "split": "development",
+      "scene": "grunge/post-punk",
+      "query": {
+        "title": "Come as You Are",
+        "artist": "Nirvana"
+      },
+      "target": {
+        "title": "Eighties",
+        "artist": "Killing Joke"
+      },
+      "evidence_mode": "documented-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Come_as_You_Are_(Nirvana_song)",
+          "publisher": "Wikipedia (citing Rolling Stone and artist accounts)",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "Documents Cobain?s concern about the Eighties riff resemblance and the matching chorus-guitar effect; the rumored suit never materialized."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "D22",
+      "split": "development",
+      "scene": "dance-pop/synth-pop",
+      "query": {
+        "title": "Paparazzi",
+        "artist": "Lady Gaga"
+      },
+      "target": {
+        "title": "Take My Breath Away",
+        "artist": "Berlin"
+      },
+      "evidence_mode": "editorial-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.watchmojo.com/articles/top-20-sound-alike-songs",
+          "publisher": "WatchMojo",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The list compares the chorus vocal melodies."
+        }
+      ],
+      "evidence_category": "weak_unsubstantiated",
+      "deciding_primary": false,
+      "category_reason": "Only an unsupported/dead sound-alike database or weak listicle assertion was found; diagnostic only."
+    },
+    {
+      "id": "D23",
+      "split": "development",
+      "scene": "pop/ska-punk",
+      "query": {
+        "title": "Ob-La-Di, Ob-La-Da",
+        "artist": "The Beatles"
+      },
+      "target": {
+        "title": "Why Don't You Get a Job?",
+        "artist": "The Offspring"
+      },
+      "evidence_mode": "editorial-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Why_Don%27t_You_Get_a_Job%3F",
+          "publisher": "Wikipedia (citing multiple music writers)",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "Reports that multiple music writers drew attention to the recording?s similarity to Ob-La-Di, Ob-La-Da."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "D24",
+      "split": "development",
+      "scene": "rock",
+      "query": {
+        "title": "Lust for Life",
+        "artist": "Iggy Pop"
+      },
+      "target": {
+        "title": "Are You Gonna Be My Girl",
+        "artist": "Jet"
+      },
+      "evidence_mode": "editorial-and-artist-comparison",
+      "claim_status": "acknowledged-influence",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Are_You_Gonna_Be_My_Girl",
+          "publisher": "Wikipedia (citing music editorial)",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "Identifies the drum pattern and near-identical guitar-riff resemblance to Lust for Life."
+        },
+        {
+          "url": "https://en.wikipedia.org/wiki/Lust_for_Life_(Iggy_Pop_song)",
+          "publisher": "Wikipedia (citing music editorial)",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "Identifies Are You Gonna Be My Girl as an imitation of the recording?s drumbeat; no sample or legal action is reported."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "D25",
+      "split": "development",
+      "scene": "rock",
+      "query": {
+        "title": "Ugly as I Seem",
+        "artist": "The White Stripes"
+      },
+      "target": {
+        "title": "Born Free",
+        "artist": "Kid Rock"
+      },
+      "evidence_mode": "editorial-list",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.watchmojo.com/articles/top-20-sound-alike-songs",
+          "publisher": "WatchMojo",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The pair appears in the list's sound-alike honorable mentions."
+        }
+      ],
+      "evidence_category": "weak_unsubstantiated",
+      "deciding_primary": false,
+      "category_reason": "Only an unsupported/dead sound-alike database or weak listicle assertion was found; diagnostic only."
+    },
+    {
+      "id": "D26",
+      "split": "development",
+      "scene": "surf-rock/rock-and-roll",
+      "query": {
+        "title": "Surfin' U.S.A.",
+        "artist": "The Beach Boys"
+      },
+      "target": {
+        "title": "Sweet Little Sixteen",
+        "artist": "Chuck Berry"
+      },
+      "evidence_mode": "credited-adaptation",
+      "claim_status": "confirmed",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Surfin%27_U.S.A._(song)",
+          "publisher": "Wikipedia",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The reference summary documents the Chuck Berry melody and subsequent writing credit."
+        }
+      ],
+      "evidence_category": "cover_remix",
+      "deciding_primary": false,
+      "category_reason": "The relationship is a cover, remix, contrafact, acknowledged rework, or adaptation; diagnostic only."
+    },
+    {
+      "id": "D27",
+      "split": "development",
+      "scene": "pop-rock",
+      "query": {
+        "title": "good 4 u",
+        "artist": "Olivia Rodrigo"
+      },
+      "target": {
+        "title": "Misery Business",
+        "artist": "Paramore"
+      },
+      "evidence_mode": "credit-and-public-comparison",
+      "claim_status": "acknowledged-credit",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Good_4_U",
+          "publisher": "Wikipedia",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The reference summary documents public comparisons and the later interpolation credits to Paramore writers."
+        }
+      ],
+      "evidence_category": "sample_interpolation",
+      "deciding_primary": false,
+      "category_reason": "Literal sampled, quoted, or interpolated musical material; diagnostic only."
+    },
+    {
+      "id": "D28",
+      "split": "development",
+      "scene": "alternative-rock",
+      "query": {
+        "title": "Creep",
+        "artist": "Radiohead"
+      },
+      "target": {
+        "title": "The Air That I Breathe",
+        "artist": "The Hollies"
+      },
+      "evidence_mode": "credited-similarity",
+      "claim_status": "settled",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Creep_(Radiohead_song)",
+          "publisher": "Wikipedia",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The reference summary documents the chord/melody comparison and resulting co-writing credits."
+        }
+      ],
+      "evidence_category": "legal_plagiarism",
+      "deciding_primary": false,
+      "category_reason": "Similarity is framed by a copyright, plagiarism, rights-holder, or settlement dispute; diagnostic only."
+    },
+    {
+      "id": "D29",
+      "split": "development",
+      "scene": "alternative-rock/instrumental-rock",
+      "query": {
+        "title": "Viva la Vida",
+        "artist": "Coldplay"
+      },
+      "target": {
+        "title": "If I Could Fly",
+        "artist": "Joe Satriani"
+      },
+      "evidence_mode": "legal-comparison",
+      "claim_status": "settled",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Viva_la_Vida",
+          "publisher": "Wikipedia",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The reference summary documents Satriani's substantial-similarity claim and settlement."
+        }
+      ],
+      "evidence_category": "legal_plagiarism",
+      "deciding_primary": false,
+      "category_reason": "Similarity is framed by a copyright, plagiarism, rights-holder, or settlement dispute; diagnostic only."
+    },
+    {
+      "id": "D30",
+      "split": "development",
+      "scene": "dream-pop/alternative-rock",
+      "query": {
+        "title": "Get Free",
+        "artist": "Lana Del Rey"
+      },
+      "target": {
+        "title": "Creep",
+        "artist": "Radiohead"
+      },
+      "evidence_mode": "artist-reported-dispute",
+      "claim_status": "disputed",
+      "sources": [
+        {
+          "url": "https://pitchfork.com/news/lana-del-rey-says-radiohead-suing-her-over-creep/",
+          "publisher": "Pitchfork",
+          "published": "2018-01-07",
+          "retrieved": "2026-07-11",
+          "context": "Pitchfork reports Del Rey's statement about a dispute over the songs' similarity; Radiohead's publisher disputed that a lawsuit existed."
+        }
+      ],
+      "evidence_category": "legal_plagiarism",
+      "deciding_primary": false,
+      "category_reason": "Similarity is framed by a copyright, plagiarism, rights-holder, or settlement dispute; diagnostic only."
+    },
+    {
+      "id": "D31",
+      "split": "development",
+      "scene": "alternative-rock/classic-pop",
+      "query": {
+        "title": "Karma Police",
+        "artist": "Radiohead"
+      },
+      "target": {
+        "title": "Sexy Sadie",
+        "artist": "The Beatles"
+      },
+      "evidence_mode": "music-editorial-riff-comparison",
+      "claim_status": "reported",
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Karma_Police",
+          "publisher": "Wikipedia (citing named music critics)",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "Documents critics? comparison of Karma Police?s piano riff to Sexy Sadie; no sample, cover, or legal dispute is reported."
+        }
+      ]
+    },
+    {
+      "id": "D32",
+      "split": "development",
+      "scene": "punk-rock/classic-rock",
+      "query": {
+        "title": "Warning",
+        "artist": "Green Day"
+      },
+      "target": {
+        "title": "Picture Book",
+        "artist": "The Kinks"
+      },
+      "evidence_mode": "music-editorial-riff-comparison",
+      "claim_status": "reported",
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Warning_(Green_Day_song)",
+          "publisher": "Wikipedia (citing music editorial)",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "Documents music writers? comparison of Warning?s guitar riff to Picture Book; no sample, cover, or legal dispute is reported."
+        }
+      ]
+    },
+    {
+      "id": "D33",
+      "split": "development",
+      "scene": "indie-rock/glam-rock",
+      "query": {
+        "title": "Mr. Brightside",
+        "artist": "The Killers"
+      },
+      "target": {
+        "title": "Queen Bitch",
+        "artist": "David Bowie"
+      },
+      "evidence_mode": "music-editorial-comparison",
+      "claim_status": "reported",
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Mr._Brightside",
+          "publisher": "Wikipedia (citing music editorial)",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "Documents the recording?s reported musical similarity to Queen Bitch; no sample, cover, or legal dispute is reported."
+        }
+      ]
+    },
+    {
+      "id": "H01",
+      "split": "validation",
+      "scene": "hip-hop/r&b",
+      "query": {
+        "title": "Hotline Bling",
+        "artist": "Drake"
+      },
+      "target": {
+        "title": "Cha Cha",
+        "artist": "DRAM"
+      },
+      "evidence_mode": "acknowledged-remix-inspiration",
+      "claim_status": "acknowledged",
+      "sources": [
+        {
+          "url": "https://www.hotnewhiphop.com/573623-drake-hotline-bling-cha-cha-remix-cdq-new-song",
+          "publisher": "HotNewHipHop",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The report describes Hotline Bling as Drake's completely reworked version of Cha Cha."
+        }
+      ],
+      "evidence_category": "cover_remix",
+      "deciding_primary": false,
+      "category_reason": "The relationship is a cover, remix, contrafact, acknowledged rework, or adaptation; diagnostic only."
+    },
+    {
+      "id": "H02",
+      "split": "validation",
+      "scene": "emo-rap/pop-rock",
+      "query": {
+        "title": "Lucid Dreams",
+        "artist": "Juice WRLD"
+      },
+      "target": {
+        "title": "Shape of My Heart",
+        "artist": "Sting"
+      },
+      "evidence_mode": "interpolation",
+      "claim_status": "confirmed",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Lucid_Dreams_(Juice_Wrld_song)",
+          "publisher": "Wikipedia",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The reference summary identifies the Sting interpolation."
+        }
+      ],
+      "evidence_category": "sample_interpolation",
+      "deciding_primary": false,
+      "category_reason": "Literal sampled, quoted, or interpolated musical material; diagnostic only."
+    },
+    {
+      "id": "H03",
+      "split": "validation",
+      "scene": "r&b/funk-pop",
+      "query": {
+        "title": "Blurred Lines",
+        "artist": "Robin Thicke"
+      },
+      "target": {
+        "title": "Got to Give It Up",
+        "artist": "Marvin Gaye"
+      },
+      "evidence_mode": "stated-intent-and-legal-finding",
+      "claim_status": "confirmed",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Blurred_Lines",
+          "publisher": "Wikipedia",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The reference summary records Thicke's stated desire for a similar song and the later infringement finding."
+        }
+      ],
+      "evidence_category": "legal_plagiarism",
+      "deciding_primary": false,
+      "category_reason": "Similarity is framed by a copyright, plagiarism, rights-holder, or settlement dispute; diagnostic only."
+    },
+    {
+      "id": "H04",
+      "split": "validation",
+      "scene": "pop/r&b",
+      "query": {
+        "title": "Shape of You",
+        "artist": "Ed Sheeran"
+      },
+      "target": {
+        "title": "No Scrubs",
+        "artist": "TLC"
+      },
+      "evidence_mode": "credit-and-editorial-comparison",
+      "claim_status": "acknowledged-credit",
+      "sources": [
+        {
+          "url": "https://www.watchmojo.com/articles/top-20-sound-alike-songs",
+          "publisher": "WatchMojo",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The comparison says the pre-choruses sound alike and notes the added No Scrubs writing credits."
+        }
+      ],
+      "evidence_category": "sample_interpolation",
+      "deciding_primary": false,
+      "category_reason": "Literal sampled, quoted, or interpolated musical material; diagnostic only."
+    },
+    {
+      "id": "H05",
+      "split": "validation",
+      "scene": "pop",
+      "query": {
+        "title": "Roar",
+        "artist": "Katy Perry"
+      },
+      "target": {
+        "title": "Brave",
+        "artist": "Sara Bareilles"
+      },
+      "evidence_mode": "two-list-consensus",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Brave_(Sara_Bareilles_song)",
+          "publisher": "Wikipedia (citing named critics)",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "Reports critics? comparison of Brave and Roar; no sample, credit change, or legal dispute is reported."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H06",
+      "split": "validation",
+      "scene": "boy-band-pop/classic-rock",
+      "query": {
+        "title": "Best Song Ever",
+        "artist": "One Direction"
+      },
+      "target": {
+        "title": "Baba O'Riley",
+        "artist": "The Who"
+      },
+      "evidence_mode": "editorial-riff-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://web.archive.org/web/20130819004132/http://www.rollingstone.com/music/news/pete-townshend-responds-to-furious-one-direction-fans-20130816",
+          "publisher": "Rolling Stone via Internet Archive",
+          "published": "2013-08-16",
+          "retrieved": "2026-07-11",
+          "context": "Pete Townshend directly discusses the shared three-chord structure and says he is happy One Direction may have been influenced by the Who; he denies legal action."
+        },
+        {
+          "url": "https://en.wikipedia.org/wiki/Best_Song_Ever",
+          "publisher": "Wikipedia (citing Rolling Stone)",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "Summarizes the basic-structure comparison to Baba O?Riley and Townshend?s response."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H07",
+      "split": "validation",
+      "scene": "indie/heartland-rock",
+      "query": {
+        "title": "Last Nite",
+        "artist": "The Strokes"
+      },
+      "target": {
+        "title": "American Girl",
+        "artist": "Tom Petty and the Heartbreakers"
+      },
+      "evidence_mode": "acknowledged-borrowing",
+      "claim_status": "acknowledged",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Last_Nite",
+          "publisher": "Wikipedia (citing Rolling Stone artist interview)",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "Documents that the opening guitar riff and overall structure are based on American Girl and quotes Tom Petty noting the Strokes admitted it; no dispute followed."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H08",
+      "split": "validation",
+      "scene": "shoegaze/classic-rock",
+      "query": {
+        "title": "Leave Them All Behind",
+        "artist": "Ride"
+      },
+      "target": {
+        "title": "Won't Get Fooled Again",
+        "artist": "The Who"
+      },
+      "evidence_mode": "artist-acknowledged-influence",
+      "claim_status": "acknowledged",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Leave_Them_All_Behind",
+          "publisher": "Wikipedia (citing artist interviews)",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "Quotes Andy Bell describing the Hammond-organ riff as an attempt to emulate the feel of Won?t Get Fooled Again."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H09",
+      "split": "validation",
+      "scene": "hyperpop/pop-punk",
+      "query": {
+        "title": "stupid horse",
+        "artist": "100 gecs"
+      },
+      "target": {
+        "title": "Roller Coaster",
+        "artist": "blink-182"
+      },
+      "evidence_mode": "named-critic-melodic-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://thesinglesjukebox.com/100-gecs-hollywood-baby/",
+          "publisher": "The Singles Jukebox",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "Named critic Joshua Minsoo Kim identifies melodies from Roller Coaster in stupid horse."
+        }
+      ],
+      "evidence_category": "sample_interpolation",
+      "deciding_primary": false,
+      "category_reason": "Literal sampled, quoted, or interpolated musical material; diagnostic only."
+    },
+    {
+      "id": "H10",
+      "split": "validation",
+      "scene": "electronic/alternative",
+      "query": {
+        "title": "Harder, Better, Faster, Stronger",
+        "artist": "Daft Punk"
+      },
+      "target": {
+        "title": "O Green World",
+        "artist": "Gorillaz"
+      },
+      "evidence_mode": "database-assertion",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "http://www.soundsjustlike.com/1580/daft-punk-sounds-like-gorillaz/",
+          "publisher": "Sounds Just Like",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The comparison page explicitly identifies the recordings as sounding alike."
+        }
+      ],
+      "evidence_category": "weak_unsubstantiated",
+      "deciding_primary": false,
+      "category_reason": "Only an unsupported/dead sound-alike database or weak listicle assertion was found; diagnostic only."
+    },
+    {
+      "id": "H11",
+      "split": "validation",
+      "scene": "heavy-metal",
+      "query": {
+        "title": "This Means War",
+        "artist": "Avenged Sevenfold"
+      },
+      "target": {
+        "title": "Sad but True",
+        "artist": "Metallica"
+      },
+      "evidence_mode": "multi-feature-editorial-and-artist-comparison",
+      "claim_status": "acknowledged-comparison",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Hail_to_the_King_(Avenged_Sevenfold_album)",
+          "publisher": "Wikipedia (citing AllMusic and artist commentary)",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "Cites AllMusic critic Jason Lymangrover?s direct This Means War/Sad but True comparison and artist discussion of the resemblance; no sample, credit change, or legal action is reported."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H12",
+      "split": "validation",
+      "scene": "bebop/vocal-jazz",
+      "query": {
+        "title": "Ornithology",
+        "artist": "Charlie Parker"
+      },
+      "target": {
+        "title": "How High the Moon",
+        "artist": "Ella Fitzgerald"
+      },
+      "evidence_mode": "contrafact",
+      "claim_status": "confirmed-compositional-relation",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Ornithology_(composition)",
+          "publisher": "Wikipedia",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The reference summary identifies Ornithology as a contrafact on How High the Moon and notes Fitzgerald quoting its melody."
+        }
+      ],
+      "evidence_category": "cover_remix",
+      "deciding_primary": false,
+      "category_reason": "The relationship is a cover, remix, contrafact, acknowledged rework, or adaptation; diagnostic only."
+    },
+    {
+      "id": "H13",
+      "split": "validation",
+      "scene": "city-pop/k-pop",
+      "query": {
+        "title": "Plastic Love",
+        "artist": "Mariya Takeuchi"
+      },
+      "target": {
+        "title": "City Love",
+        "artist": "Yubin"
+      },
+      "evidence_mode": "listener-comparison",
+      "claim_status": "unresolved",
+      "sources": [
+        {
+          "url": "https://web.archive.org/web/20181029112329/http://english.yonhapnews.co.kr/kwave/2018/06/07/3001000000AEN20180607008500315.html",
+          "publisher": "Yonhap News Agency via Internet Archive",
+          "published": "2018-06-07",
+          "retrieved": "2026-07-11",
+          "context": "Reports listener consensus that part of City Love resembled Plastic Love and the label?s cancellation of the release; no sample or legal dispute is reported."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H14",
+      "split": "validation",
+      "scene": "latin/global-pop/makossa",
+      "query": {
+        "title": "Waka Waka (This Time for Africa)",
+        "artist": "Shakira feat. Freshlyground"
+      },
+      "target": {
+        "title": "Zamina Mina (Zangaléwa)",
+        "artist": "Golden Sounds"
+      },
+      "evidence_mode": "sample/adaptation",
+      "claim_status": "confirmed",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Waka_Waka_(This_Time_for_Africa)",
+          "publisher": "Wikipedia",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The reference summary identifies the Cameroonian source song."
+        }
+      ],
+      "evidence_category": "sample_interpolation",
+      "deciding_primary": false,
+      "category_reason": "Literal sampled, quoted, or interpolated musical material; diagnostic only."
+    },
+    {
+      "id": "H15",
+      "split": "validation",
+      "scene": "r&b/pop",
+      "query": {
+        "title": "Halo",
+        "artist": "Beyoncé"
+      },
+      "target": {
+        "title": "Already Gone",
+        "artist": "Kelly Clarkson"
+      },
+      "evidence_mode": "editorial-and-artist-allegation",
+      "claim_status": "disputed",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Already_Gone_(Kelly_Clarkson_song)",
+          "publisher": "Wikipedia (citing artist and producer statements)",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "Documents Clarkson?s specific claim that the shared producer reused the musical arrangement on Halo; no copyright action or credit change is reported."
+        },
+        {
+          "url": "https://en.wikipedia.org/wiki/Halo_(Beyonc%C3%A9_song)",
+          "publisher": "Wikipedia (citing artist and producer statements)",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "Independently summarizes the same arrangement comparison from the other recording?s reference page."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H16",
+      "split": "validation",
+      "scene": "afrobeats/uk-rap",
+      "query": {
+        "title": "Fall",
+        "artist": "Davido"
+      },
+      "target": {
+        "title": "Dun Talkin",
+        "artist": "Kojo Funds feat. Abra Cadabra"
+      },
+      "evidence_mode": "artist-acknowledged-inspiration",
+      "claim_status": "acknowledged",
+      "sources": [
+        {
+          "url": "https://metro.co.uk/2017/11/29/afrobeat-singer-davido-asks-haters-are-you-god-after-strings-of-plagiarism-accusations-7119432/",
+          "publisher": "Metro",
+          "published": "2017-11-29",
+          "retrieved": "2026-07-11",
+          "context": "The report quotes Davido acknowledging that Kojo Funds' song inspired Fall."
+        }
+      ],
+      "evidence_category": "sample_interpolation",
+      "deciding_primary": false,
+      "category_reason": "Literal sampled, quoted, or interpolated musical material; diagnostic only."
+    },
+    {
+      "id": "H17",
+      "split": "validation",
+      "scene": "funk-pop/french-electro",
+      "query": {
+        "title": "Treasure",
+        "artist": "Bruno Mars"
+      },
+      "target": {
+        "title": "Baby I'm Yours",
+        "artist": "Breakbot"
+      },
+      "evidence_mode": "two-source-credit-comparison",
+      "claim_status": "acknowledged-credit",
+      "sources": [
+        {
+          "url": "http://www.soundsjustlike.com/525/bruno-mars-sounds-like-breakbot/",
+          "publisher": "Sounds Just Like",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The comparison page explicitly pairs the two recordings."
+        },
+        {
+          "url": "https://en.wikipedia.org/wiki/Treasure_(song)",
+          "publisher": "Wikipedia",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The reference summary records the resemblance and later added Breakbot-related writing credit."
+        }
+      ],
+      "evidence_category": "sample_interpolation",
+      "deciding_primary": false,
+      "category_reason": "Literal sampled, quoted, or interpolated musical material; diagnostic only."
+    },
+    {
+      "id": "H18",
+      "split": "validation",
+      "scene": "deathcore",
+      "query": {
+        "title": "Destruction of a Statue",
+        "artist": "Suicide Silence"
+      },
+      "target": {
+        "title": "Re: They Have No Reflections",
+        "artist": "Bring Me the Horizon"
+      },
+      "evidence_mode": "database-assertion",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "http://www.soundsjustlike.com/5674/suicide-silence-sounds-like-bring-me-the-horizon/",
+          "publisher": "Sounds Just Like",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The comparison page explicitly identifies the two deathcore recordings as sounding alike."
+        }
+      ],
+      "evidence_category": "weak_unsubstantiated",
+      "deciding_primary": false,
+      "category_reason": "Only an unsupported/dead sound-alike database or weak listicle assertion was found; diagnostic only."
+    },
+    {
+      "id": "H19",
+      "split": "validation",
+      "scene": "indie/post-punk-revival",
+      "query": {
+        "title": "Black Sheep",
+        "artist": "Metric"
+      },
+      "target": {
+        "title": "Take Me Out",
+        "artist": "Franz Ferdinand"
+      },
+      "evidence_mode": "database-assertion",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "http://www.soundsjustlike.com/7031/metric-sounds-like-franz-ferdinand/",
+          "publisher": "Sounds Just Like",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The comparison page explicitly identifies the two recordings as sounding alike."
+        }
+      ],
+      "evidence_category": "weak_unsubstantiated",
+      "deciding_primary": false,
+      "category_reason": "Only an unsupported/dead sound-alike database or weak listicle assertion was found; diagnostic only."
+    },
+    {
+      "id": "H20",
+      "split": "validation",
+      "scene": "reggaeton/latin-rap",
+      "query": {
+        "title": "Safaera",
+        "artist": "Bad Bunny, Jowell & Randy, Ñengo Flow"
+      },
+      "target": {
+        "title": "Get Ur Freak On",
+        "artist": "Missy Elliott"
+      },
+      "evidence_mode": "sample",
+      "claim_status": "confirmed",
+      "sources": [
+        {
+          "url": "https://pitchfork.com/reviews/tracks/bad-bunny-safaera-ft-jowell-and-randy-and-nengo-flow/",
+          "publisher": "Pitchfork",
+          "published": "2020",
+          "retrieved": "2026-07-11",
+          "context": "Pitchfork identifies the one-string tumbi sample from Get Ur Freak On."
+        }
+      ],
+      "evidence_category": "sample_interpolation",
+      "deciding_primary": false,
+      "category_reason": "Literal sampled, quoted, or interpolated musical material; diagnostic only."
+    },
+    {
+      "id": "H21",
+      "split": "validation",
+      "scene": "synthwave/r&b-pop",
+      "query": {
+        "title": "Blinding Lights",
+        "artist": "The Weeknd"
+      },
+      "target": {
+        "title": "Young Turks",
+        "artist": "Rod Stewart"
+      },
+      "evidence_mode": "named-editorial-timbre-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.billboard.com/articles/news/list/9395318/best-songs-of-2020-top-50-so-far",
+          "publisher": "Billboard",
+          "published": "2020-06-10",
+          "retrieved": "2026-07-11",
+          "context": "Frank DiGiacomo says the amphetamine synth specifically conjures Young Turks."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H22",
+      "split": "validation",
+      "scene": "desert-rock/heavy-metal",
+      "query": {
+        "title": "Arabella",
+        "artist": "Arctic Monkeys"
+      },
+      "target": {
+        "title": "War Pigs",
+        "artist": "Black Sabbath"
+      },
+      "evidence_mode": "editorial-riff-and-performance-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.clashmusic.com/reviews/arctic-monkeys-live-at-the-fillmore-miami-beach/",
+          "publisher": "Clash",
+          "published": "2014-02-03",
+          "retrieved": "2026-07-11",
+          "context": "Documents the riff resemblance and the band inserting War Pigs during live Arabella performances."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H23",
+      "split": "validation",
+      "scene": "mod-revival/motown",
+      "query": {
+        "title": "Town Called Malice",
+        "artist": "The Jam"
+      },
+      "target": {
+        "title": "You Can't Hurry Love",
+        "artist": "The Supremes"
+      },
+      "evidence_mode": "participant-acknowledged-bass-comparison",
+      "claim_status": "acknowledged",
+      "sources": [
+        {
+          "url": "https://www.theguardian.com/music/2012/nov/12/how-we-made-town-malice",
+          "publisher": "The Guardian",
+          "published": "2012-11-12",
+          "retrieved": "2026-07-11",
+          "context": "Bassist Bruce Foxton says the Town Called Malice bassline is very similar to You Can?t Hurry Love."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H24",
+      "split": "validation",
+      "scene": "post-disco/synth-funk",
+      "query": {
+        "title": "Billie Jean",
+        "artist": "Michael Jackson"
+      },
+      "target": {
+        "title": "I Can't Go for That (No Can Do)",
+        "artist": "Daryl Hall & John Oates"
+      },
+      "evidence_mode": "artist-to-artist-groove-acknowledgment",
+      "claim_status": "acknowledged",
+      "sources": [
+        {
+          "url": "https://www.theguardian.com/music/2018/apr/02/hall-and-oates-how-we-made-i-cant-go-for-that-no-can-do",
+          "publisher": "The Guardian",
+          "published": "2018-04-02",
+          "retrieved": "2026-07-11",
+          "context": "Daryl Hall says Jackson acknowledged taking the groove while using it differently; no sample, credit change, or dispute is reported."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H25",
+      "split": "validation",
+      "scene": "k-pop/synthwave-pop",
+      "query": {
+        "title": "I CAN'T STOP ME",
+        "artist": "TWICE"
+      },
+      "target": {
+        "title": "Physical",
+        "artist": "Dua Lipa"
+      },
+      "evidence_mode": "named-editorial-influence-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "http://www.koreaherald.com/view.php?ud=20201026001026",
+          "publisher": "The Korea Herald",
+          "published": "2020-10-26",
+          "retrieved": "2026-07-11",
+          "context": "The composition account specifically identifies Physical as inspiration for the recording?s 1980s synthwave treatment."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H26",
+      "split": "validation",
+      "scene": "eighties-funk-pop",
+      "query": {
+        "title": "Sussudio",
+        "artist": "Phil Collins"
+      },
+      "target": {
+        "title": "1999",
+        "artist": "Prince"
+      },
+      "evidence_mode": "named-critic-and-artist-comparison",
+      "claim_status": "acknowledged-comparison",
+      "sources": [
+        {
+          "url": "https://www.latimes.com/archives/la-xpm-1985-06-04-ca-6699-story.html",
+          "publisher": "Los Angeles Times",
+          "published": "1985-06-04",
+          "retrieved": "2026-07-11",
+          "context": "Robert Hilburn directly compares the recordings; Collins acknowledges the resemblance and frequent Prince listening."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H27",
+      "split": "validation",
+      "scene": "jangle-pop/post-punk",
+      "query": {
+        "title": "Favourite",
+        "artist": "Fontaines D.C."
+      },
+      "target": {
+        "title": "There She Goes",
+        "artist": "The La's"
+      },
+      "evidence_mode": "artist-acknowledged-inspiration",
+      "claim_status": "acknowledged",
+      "sources": [
+        {
+          "url": "https://www.nme.com/features/music-interviews/fontaines-d-c-grian-chatten-interview-at-home-romance-favourite-new-album-3784142",
+          "publisher": "NME",
+          "published": "2024-08-16",
+          "retrieved": "2026-07-11",
+          "context": "Grian Chatten names There She Goes as a direct musical inspiration for Favourite."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H28",
+      "split": "validation",
+      "scene": "emo/glam-rock",
+      "query": {
+        "title": "Teenagers",
+        "artist": "My Chemical Romance"
+      },
+      "target": {
+        "title": "Mama Weer All Crazee Now",
+        "artist": "Slade"
+      },
+      "evidence_mode": "named-critic-song-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.nytimes.com/interactive/2019/12/18/arts/music/my-chemical-romance-black-parade.html",
+          "publisher": "The New York Times",
+          "published": "2019-12-18",
+          "retrieved": "2026-07-11",
+          "context": "Christopher R. Weingarten specifically identifies the Slade recording as an influence on Teenagers."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H29",
+      "split": "validation",
+      "scene": "synth-pop/dream-pop",
+      "query": {
+        "title": "Midnight City",
+        "artist": "M83"
+      },
+      "target": {
+        "title": "1979",
+        "artist": "The Smashing Pumpkins"
+      },
+      "evidence_mode": "named-critic-multi-feature-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://pitchfork.com/features/lists-and-guides/8726-the-top-100-tracks-of-2011/",
+          "publisher": "Pitchfork",
+          "published": "2011-12-12",
+          "retrieved": "2026-07-11",
+          "context": "Brandon Stosuy calls Midnight City the artist?s 1979, citing its memorable riff and gentle longing."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H30",
+      "split": "validation",
+      "scene": "soft-rock/pop",
+      "query": {
+        "title": "The Wire",
+        "artist": "HAIM"
+      },
+      "target": {
+        "title": "Call Me Maybe",
+        "artist": "Carly Rae Jepsen"
+      },
+      "evidence_mode": "named-critic-chorus-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.slantmagazine.com/music/haim-days-are-gone/",
+          "publisher": "Slant Magazine",
+          "published": "2013-10-03",
+          "retrieved": "2026-07-11",
+          "context": "Annie Galvin says the staccato, string-laden chorus recalls the disco-inflected Call Me Maybe hook."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H31",
+      "split": "validation",
+      "scene": "alternative/glam-rock",
+      "query": {
+        "title": "Uprising",
+        "artist": "Muse"
+      },
+      "target": {
+        "title": "Call Me",
+        "artist": "Blondie"
+      },
+      "evidence_mode": "editorial-riff-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.uncut.co.uk/reviews/muse-resistance-5653/",
+          "publisher": "Uncut",
+          "published": "2009-09-07",
+          "retrieved": "2026-07-11",
+          "context": "The review identifies the Call Me riff as a specific musical component of Uprising."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H32",
+      "split": "validation",
+      "scene": "new-wave/folk-rock",
+      "query": {
+        "title": "Pump It Up",
+        "artist": "Elvis Costello and the Attractions"
+      },
+      "target": {
+        "title": "Subterranean Homesick Blues",
+        "artist": "Bob Dylan"
+      },
+      "evidence_mode": "artist-acknowledged-compositional-influence",
+      "claim_status": "acknowledged",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Pump_It_Up_(Elvis_Costello_song)",
+          "publisher": "Wikipedia (quoting Elvis Costello)",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "Costello writes that Pump It Up obviously took more than a little from the Dylan recording; no sample or dispute is reported."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H33",
+      "split": "validation",
+      "scene": "dance-pop/hard-rock",
+      "query": {
+        "title": "Hold It Against Me",
+        "artist": "Britney Spears"
+      },
+      "target": {
+        "title": "Dirty Deeds Done Dirt Cheap",
+        "artist": "AC/DC"
+      },
+      "evidence_mode": "named-critic-riff-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.rollingstone.com/music/music-news/hold-it-against-me-is-primo-britney-94558/",
+          "publisher": "Rolling Stone",
+          "published": "2011-01-10",
+          "retrieved": "2026-07-11",
+          "context": "Rob Sheffield directly compares the recording?s riff to Dirty Deeds Done Dirt Cheap."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H34",
+      "split": "validation",
+      "scene": "country/folk",
+      "query": {
+        "title": "Starting Over",
+        "artist": "Chris Stapleton"
+      },
+      "target": {
+        "title": "City of New Orleans",
+        "artist": "Willie Nelson"
+      },
+      "evidence_mode": "named-critic-rhythm-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.rollingstone.com/music/music-features/chris-stapleton-starting-over-1052956/",
+          "publisher": "Rolling Stone",
+          "published": "2020-08-31",
+          "retrieved": "2026-07-11",
+          "context": "Joseph Hudak says the brushed-snare rhythm evokes Willie Nelson?s City of New Orleans."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H35",
+      "split": "validation",
+      "scene": "post-punk-revival",
+      "query": {
+        "title": "Munich",
+        "artist": "Editors"
+      },
+      "target": {
+        "title": "Evil",
+        "artist": "Interpol"
+      },
+      "evidence_mode": "named-editorial-drum-groove-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.allmusic.com/album/the-back-room-mw0000362641",
+          "publisher": "AllMusic",
+          "published": null,
+          "retrieved": "2026-07-11",
+          "context": "The album review specifically characterizes Munich by a drum groove reminiscent of Evil."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H36",
+      "split": "validation",
+      "scene": "soft-rock/synth-pop",
+      "query": {
+        "title": "Last Train Home",
+        "artist": "John Mayer"
+      },
+      "target": {
+        "title": "Africa",
+        "artist": "Toto"
+      },
+      "evidence_mode": "named-editorial-production-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://musictalkers.com/reviews/7960-review-last-train-home-john-mayer",
+          "publisher": "Music Talkers",
+          "published": "2021-06-23",
+          "retrieved": "2026-07-11",
+          "context": "Rob Costa identifies the 1980s synth and congas as specifically reminiscent of Africa."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H37",
+      "split": "validation",
+      "scene": "pop-rock/funk",
+      "query": {
+        "title": "This Love",
+        "artist": "Maroon 5"
+      },
+      "target": {
+        "title": "Superstition",
+        "artist": "Stevie Wonder"
+      },
+      "evidence_mode": "named-editorial-backbeat-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.dailylobo.com/article/2003/07/maroon_5_falls_short_of_their_influences",
+          "publisher": "Daily Lobo",
+          "published": "2003-07-31",
+          "retrieved": "2026-07-11",
+          "context": "Sam Beresky identifies the recording?s backbeat as reminiscent of Superstition."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H38",
+      "split": "validation",
+      "scene": "soul/indie-rock",
+      "query": {
+        "title": "Human",
+        "artist": "Rag'n'Bone Man"
+      },
+      "target": {
+        "title": "Take Me to Church",
+        "artist": "Hozier"
+      },
+      "evidence_mode": "named-editorial-recording-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.dailytelegraph.com.au/entertainment/music/ragnbone-man-looks-here-to-stay/news-story/beed90ee80446fe58652d9fc36ca6528",
+          "publisher": "The Daily Telegraph (Australia)",
+          "published": "2016-10-27",
+          "retrieved": "2026-07-11",
+          "context": "Cameron Adams directly compares the recordings? throwback, vocal-led sound and immediate impact."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H39",
+      "split": "validation",
+      "scene": "r&b/soul",
+      "query": {
+        "title": "Higher",
+        "artist": "Rihanna"
+      },
+      "target": {
+        "title": "At Last",
+        "artist": "Etta James"
+      },
+      "evidence_mode": "named-critic-vocal-soul-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.spin.com/2016/01/rihanna-anti-impulsive-reviews-tidal-leak/",
+          "publisher": "Spin",
+          "published": "2016-01-28",
+          "retrieved": "2026-07-11",
+          "context": "Brennan Carley directly compares Higher to At Last in his review of the recording."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "H40",
+      "split": "validation",
+      "scene": "dance-pop/electro-house",
+      "query": {
+        "title": "Dirty Picture",
+        "artist": "Taio Cruz"
+      },
+      "target": {
+        "title": "Satisfaction",
+        "artist": "Benny Benassi"
+      },
+      "evidence_mode": "named-editorial-synth-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.digitalspy.com/music/single-reviews/a215297/taio-cruz-ft-keha-dirty-picture-215297/",
+          "publisher": "Digital Spy",
+          "published": "2010-05-03",
+          "retrieved": "2026-07-11",
+          "context": "Robert Copsey says the trance-synth chorus is reminiscent of Satisfaction."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute."
+    },
+    {
+      "id": "F01",
+      "split": "held_out",
+      "scene": "garage-rock/classic-rock",
+      "query": {
+        "title": "Bohemian Like You",
+        "artist": "The Dandy Warhols"
+      },
+      "target": {
+        "title": "Jumpin' Jack Flash",
+        "artist": "The Rolling Stones"
+      },
+      "evidence_mode": "named-editorial-intro-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.avclub.com/screw-the-strokes-how-the-dandy-warhols-kick-started-t-1798238625",
+          "publisher": "A.V. Club",
+          "author": "Annie Zaleski",
+          "published": "2013-06-11",
+          "retrieved": "2026-07-11",
+          "context": "The review asks whether the strummed introduction apes Jumpin? Jack Flash, identifying the precise instrumental resemblance."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "catalogue_verification": {
+        "query_rows": [
+          9111
+        ],
+        "target_original_rows": [
+          11863
+        ],
+        "verified": "2026-07-11"
+      }
+    },
+    {
+      "id": "F02",
+      "split": "held_out",
+      "scene": "k-pop/brassy-pop",
+      "query": {
+        "title": "Dumb Dumb",
+        "artist": "Red Velvet"
+      },
+      "target": {
+        "title": "Bang Bang",
+        "artist": "Jessie J feat. Ariana Grande & Nicki Minaj"
+      },
+      "evidence_mode": "named-editorial-production-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.billboard.com/music/music-news/red-velvet-dumb-mv-red-album-6692444/",
+          "publisher": "Billboard",
+          "author": "Jeff Benjamin",
+          "published": "2015-09-09",
+          "retrieved": "2026-07-11",
+          "context": "The review says Dumb Dumb resembles Bang Bang through its spastic horns and brassy pop production."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "catalogue_verification": {
+        "query_rows": [
+          141328
+        ],
+        "target_original_rows": [
+          175589
+        ],
+        "verified": "2026-07-11"
+      }
+    },
+    {
+      "id": "F03",
+      "split": "held_out",
+      "scene": "synth-pop/indie-rock",
+      "query": {
+        "title": "As It Was",
+        "artist": "Harry Styles"
+      },
+      "target": {
+        "title": "Pink Lemonade",
+        "artist": "James Bay"
+      },
+      "evidence_mode": "named-editorial-recording-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.euphoriazine.com/blog/2022/07/covers-james-bay/",
+          "publisher": "EUPHORIA.",
+          "author": "Saskia Postema",
+          "published": "2022-07-01",
+          "retrieved": "2026-07-11",
+          "context": "The interview states that Pink Lemonade and As It Was sound eerily similar."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "catalogue_verification": {
+        "query_rows": [
+          72649
+        ],
+        "target_original_rows": [
+          165067
+        ],
+        "verified": "2026-07-11"
+      }
+    },
+    {
+      "id": "F04",
+      "split": "held_out",
+      "scene": "pop/horn-driven-r&b",
+      "query": {
+        "title": "Worth It",
+        "artist": "Fifth Harmony feat. Kid Ink"
+      },
+      "target": {
+        "title": "Talk Dirty",
+        "artist": "Jason Derulo feat. 2 Chainz"
+      },
+      "evidence_mode": "named-critic-hook-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://pitchfork.com/reviews/albums/20253-reflection/",
+          "publisher": "Pitchfork",
+          "author": "Meaghan Garvey",
+          "published": "2015-02-11",
+          "retrieved": "2026-07-11",
+          "context": "The review directly compares the conspicuous horn hooks and shared Stargate/Ori Kaplan production vocabulary."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "catalogue_verification": {
+        "query_rows": [
+          20356
+        ],
+        "target_original_rows": [
+          19359
+        ],
+        "verified": "2026-07-11"
+      }
+    },
+    {
+      "id": "F05",
+      "split": "held_out",
+      "scene": "indie-rock/jam-rock",
+      "query": {
+        "title": "Harmony Hall",
+        "artist": "Vampire Weekend"
+      },
+      "target": {
+        "title": "Touch of Grey",
+        "artist": "Grateful Dead"
+      },
+      "evidence_mode": "named-critic-arrangement-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://pitchfork.com/reviews/tracks/vampire-weekend-harmony-hall/",
+          "publisher": "Pitchfork",
+          "author": "Jeremy D. Larson",
+          "published": "2019-01-24",
+          "retrieved": "2026-07-11",
+          "context": "The arrangement?s crunchy passage is explicitly called a nod to Touch of Grey."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "catalogue_verification": {
+        "query_rows": [
+          34617
+        ],
+        "target_original_rows": [
+          89989
+        ],
+        "verified": "2026-07-11"
+      }
+    },
+    {
+      "id": "F06",
+      "split": "held_out",
+      "scene": "crunk-r&b",
+      "query": {
+        "title": "Goodies",
+        "artist": "Ciara feat. Petey Pablo"
+      },
+      "target": {
+        "title": "Yeah!",
+        "artist": "Usher feat. Lil Jon & Ludacris"
+      },
+      "evidence_mode": "named-critic-production-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.slantmagazine.com/music/ciara-goodies/",
+          "publisher": "Slant Magazine",
+          "author": "Sal Cinquemani",
+          "published": "2004-09-25",
+          "retrieved": "2026-07-11",
+          "context": "The review directly compares the Lil Jon productions and Goodies? oscillating whistle with Yeah!."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "catalogue_verification": {
+        "query_rows": [
+          13772
+        ],
+        "target_original_rows": [
+          2804
+        ],
+        "verified": "2026-07-11"
+      }
+    },
+    {
+      "id": "F07",
+      "split": "held_out",
+      "scene": "post-punk/r&b-rhythm",
+      "query": {
+        "title": "How Soon Is Now?",
+        "artist": "The Smiths"
+      },
+      "target": {
+        "title": "Mona",
+        "artist": "Bo Diddley"
+      },
+      "evidence_mode": "named-critic-rhythm-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://archive.org/details/spin-02-june-1985",
+          "publisher": "Spin",
+          "author": "Jon Savage",
+          "published": "1985-06-01",
+          "retrieved": "2026-07-11",
+          "context": "The recording?s rhythm is compared directly to Mona; the tremolo shuffle is the specific shared element."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "catalogue_verification": {
+        "query_rows": [
+          7644
+        ],
+        "target_original_rows": [
+          133393
+        ],
+        "verified": "2026-07-11"
+      }
+    },
+    {
+      "id": "F08",
+      "split": "held_out",
+      "scene": "girl-group-pop/eighties-pop",
+      "query": {
+        "title": "Black Magic",
+        "artist": "Little Mix"
+      },
+      "target": {
+        "title": "I Wanna Dance with Somebody (Who Loves Me)",
+        "artist": "Whitney Houston"
+      },
+      "evidence_mode": "named-editorial-recording-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.theguardian.com/music/2015/may/22/the-playlist-pop-emmi-little-mix-pyco-and-more",
+          "publisher": "The Guardian",
+          "author": "Michael Cragg",
+          "published": "2015-05-22",
+          "retrieved": "2026-07-11",
+          "context": "The recording is described as carrying the same carefree musical joy underpinning the exact Whitney Houston recording."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "catalogue_verification": {
+        "query_rows": [
+          23779
+        ],
+        "target_original_rows": [
+          2528
+        ],
+        "verified": "2026-07-11"
+      }
+    },
+    {
+      "id": "F09",
+      "split": "held_out",
+      "scene": "alternative-pop/r&b-rock",
+      "query": {
+        "title": "XS",
+        "artist": "Rina Sawayama"
+      },
+      "target": {
+        "title": "Like I Love You",
+        "artist": "Justin Timberlake"
+      },
+      "evidence_mode": "named-editorial-arrangement-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.independent.co.uk/arts-entertainment/music/reviews/rina-sawayama-album-review-bad-friend-dynasty-a9468046.html",
+          "publisher": "The Independent",
+          "author": "Elisa Bray",
+          "published": "2020-04-16",
+          "retrieved": "2026-07-11",
+          "context": "XS is described as combining heavy guitars with the acoustic-strum character of Like I Love You."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "catalogue_verification": {
+        "query_rows": [
+          64093
+        ],
+        "target_original_rows": [
+          129772
+        ],
+        "verified": "2026-07-11"
+      }
+    },
+    {
+      "id": "F10",
+      "split": "held_out",
+      "scene": "electropop/art-rock",
+      "query": {
+        "title": "Red Lips",
+        "artist": "Sky Ferreira"
+      },
+      "target": {
+        "title": "Owner of a Lonely Heart",
+        "artist": "Yes"
+      },
+      "evidence_mode": "named-critic-intro-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.nytimes.com/2012/10/16/arts/music/jason-aldeans-night-train-sky-ferreiras-ghost.html",
+          "publisher": "The New York Times",
+          "author": "Jon Caramanica",
+          "published": "2012-10-15",
+          "retrieved": "2026-07-11",
+          "context": "The review says Red Lips begins as a homage to Owner of a Lonely Heart."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "catalogue_verification": {
+        "query_rows": [
+          111080
+        ],
+        "target_original_rows": [
+          71203
+        ],
+        "verified": "2026-07-11"
+      }
+    },
+    {
+      "id": "F11",
+      "split": "held_out",
+      "scene": "acoustic-pop/folk",
+      "query": {
+        "title": "You and Me On The Rock",
+        "artist": "Brandi Carlile feat. Lucius"
+      },
+      "target": {
+        "title": "California",
+        "artist": "Joni Mitchell"
+      },
+      "evidence_mode": "named-critic-strumming-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://variety.com/2021/music/album-reviews/brandi-carlile-in-these-silent-days-album-review-1235078811/",
+          "publisher": "Variety",
+          "author": "Chris Willman",
+          "published": "2021-10-01",
+          "retrieved": "2026-07-11",
+          "context": "The effervescent acoustic recording is likened to California, including its fast-paced strumming."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "catalogue_verification": {
+        "query_rows": [
+          110656
+        ],
+        "target_original_rows": [
+          4017
+        ],
+        "verified": "2026-07-11"
+      }
+    },
+    {
+      "id": "F12",
+      "split": "held_out",
+      "scene": "electropop",
+      "query": {
+        "title": "What You Waiting For?",
+        "artist": "Gwen Stefani"
+      },
+      "target": {
+        "title": "Strict Machine",
+        "artist": "Goldfrapp"
+      },
+      "evidence_mode": "named-editorial-beat-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.bbc.co.uk/music/reviews/pp4h",
+          "publisher": "BBC Music",
+          "author": "Lisa Haines",
+          "published": "2004-11-29",
+          "retrieved": "2026-07-11",
+          "context": "The review directly compares the recording?s storming beats with Strict Machine."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "catalogue_verification": {
+        "query_rows": [
+          16032
+        ],
+        "target_original_rows": [
+          5582
+        ],
+        "verified": "2026-07-11"
+      }
+    },
+    {
+      "id": "F13",
+      "split": "held_out",
+      "scene": "post-punk",
+      "query": {
+        "title": "Killing an Arab",
+        "artist": "The Cure"
+      },
+      "target": {
+        "title": "Hong Kong Garden",
+        "artist": "Siouxsie and the Banshees"
+      },
+      "evidence_mode": "contemporary-critic-riff-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Killing_an_Arab",
+          "publisher": "Melody Maker (Ian Birch; stable citation summary)",
+          "author": "Ian Birch",
+          "published": "1979-03-24",
+          "retrieved": "2026-07-11",
+          "context": "The critic parallels Hong Kong Garden?s Oriental-styled riff with the edgy Moorish-flavoured guitar pattern."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "catalogue_verification": {
+        "query_rows": [
+          217280
+        ],
+        "target_original_rows": [
+          33703
+        ],
+        "verified": "2026-07-11"
+      }
+    },
+    {
+      "id": "F14",
+      "split": "held_out",
+      "scene": "classic-rock",
+      "query": {
+        "title": "Hotel California",
+        "artist": "Eagles"
+      },
+      "target": {
+        "title": "We Used to Know",
+        "artist": "Jethro Tull"
+      },
+      "evidence_mode": "artist-acknowledged-chord-comparison",
+      "claim_status": "acknowledged-comparison",
+      "sources": [
+        {
+          "url": "https://faroutmagazine.co.uk/how-jethro-tull-influenced-the-eagles-hotel-california/",
+          "publisher": "Far Out (quoting Ian Anderson)",
+          "author": null,
+          "published": "2023-02-11",
+          "retrieved": "2026-07-11",
+          "context": "Ian Anderson identifies the shared chord sequence and possible subconscious influence while expressly rejecting plagiarism."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "catalogue_verification": {
+        "query_rows": [
+          2874
+        ],
+        "target_original_rows": [
+          65092
+        ],
+        "verified": "2026-07-11"
+      }
+    },
+    {
+      "id": "F15",
+      "split": "held_out",
+      "scene": "indie-rock",
+      "query": {
+        "title": "Sex on Fire",
+        "artist": "Kings of Leon"
+      },
+      "target": {
+        "title": "Dakota",
+        "artist": "Stereophonics"
+      },
+      "evidence_mode": "artist-musicological-form-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://www.vice.com/en/article/landfill-indie-johnny-borrell-razorlight-the-strokes-kooks-definitive-history/",
+          "publisher": "Vice/Noisey",
+          "author": null,
+          "published": "2016-04-05",
+          "retrieved": "2026-07-11",
+          "context": "Johnny Borrell identifies the same key, tempo, verse delivery, vocal-entry time, and extended-vowel chorus."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "catalogue_verification": {
+        "query_rows": [
+          11029
+        ],
+        "target_original_rows": [
+          24430
+        ],
+        "verified": "2026-07-11"
+      }
+    },
+    {
+      "id": "F16",
+      "split": "held_out",
+      "scene": "soft-rock",
+      "query": {
+        "title": "Past Life",
+        "artist": "Maggie Rogers"
+      },
+      "target": {
+        "title": "Dreams",
+        "artist": "Fleetwood Mac"
+      },
+      "evidence_mode": "named-critic-opening-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://pitchfork.com/reviews/albums/maggie-rogers-heard-it-in-a-past-life/",
+          "publisher": "Pitchfork",
+          "author": "Laura Snapes",
+          "published": "2019-01-22",
+          "retrieved": "2026-07-11",
+          "context": "The review calls Past Life?s opening notes heavily reminiscent of Dreams."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "catalogue_verification": {
+        "query_rows": [
+          170410
+        ],
+        "target_original_rows": [
+          22086
+        ],
+        "verified": "2026-07-11"
+      }
+    },
+    {
+      "id": "F17",
+      "split": "held_out",
+      "scene": "synth-pop",
+      "query": {
+        "title": "Little Dark Age",
+        "artist": "MGMT"
+      },
+      "target": {
+        "title": "Cars",
+        "artist": "Gary Numan"
+      },
+      "evidence_mode": "named-critic-recording-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://pitchfork.com/reviews/albums/mgmt-little-dark-age/",
+          "publisher": "Pitchfork",
+          "author": "Philip Sherburne",
+          "published": "2018-02-09",
+          "retrieved": "2026-07-11",
+          "context": "The review describes Little Dark Age as a synth-heavy dirge sounding like a B-side to Cars."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "catalogue_verification": {
+        "query_rows": [
+          59261
+        ],
+        "target_original_rows": [
+          83046
+        ],
+        "verified": "2026-07-11"
+      }
+    },
+    {
+      "id": "F18",
+      "split": "held_out",
+      "scene": "alternative-pop",
+      "query": {
+        "title": "LUNCH",
+        "artist": "Billie Eilish"
+      },
+      "target": {
+        "title": "Fever",
+        "artist": "The Black Keys"
+      },
+      "evidence_mode": "named-critic-riff-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "https://pitchfork.com/reviews/albums/billie-eilish-hit-me-hard-and-soft/",
+          "publisher": "Pitchfork",
+          "author": "Hannah Jocelyn",
+          "published": "2024-05-21",
+          "retrieved": "2026-07-11",
+          "context": "The review links Fever as the specific example recalled by LUNCH?s syncopated piano and guitar riffs."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "catalogue_verification": {
+        "query_rows": [
+          7034
+        ],
+        "target_original_rows": [
+          16586
+        ],
+        "verified": "2026-07-11"
+      }
+    },
+    {
+      "id": "F19",
+      "split": "held_out",
+      "scene": "pop-rap",
+      "query": {
+        "title": "London Bridge",
+        "artist": "Fergie"
+      },
+      "target": {
+        "title": "Promiscuous",
+        "artist": "Nelly Furtado"
+      },
+      "evidence_mode": "named-critic-recording-comparison",
+      "claim_status": "reported",
+      "sources": [
+        {
+          "url": "http://www.popmatters.com/pm/review/fergie-the-dutchess/",
+          "publisher": "PopMatters",
+          "author": "Mike Joseph",
+          "published": "2006-01-01",
+          "retrieved": "2026-07-11",
+          "context": "The review directly compares London Bridge with Promiscuous through their schoolgirl sass and ambiguous rhythmic sleaze."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "catalogue_verification": {
+        "query_rows": [
+          10667
+        ],
+        "target_original_rows": [
+          2317
+        ],
+        "verified": "2026-07-11"
+      }
+    },
+    {
+      "id": "F20",
+      "split": "held_out",
+      "scene": "industrial-rap/rock",
+      "query": {
+        "title": "Black Skinhead",
+        "artist": "Kanye West"
+      },
+      "target": {
+        "title": "The Beautiful People",
+        "artist": "Marilyn Manson"
+      },
+      "evidence_mode": "editorial-consensus-non-sample-comparison",
+      "claim_status": "confirmed-non-sample",
+      "sources": [
+        {
+          "url": "https://www.spin.com/2013/07/girl-talk-kanye-marilyn-manson-mashup/",
+          "publisher": "Spin",
+          "author": "Dan Reilly",
+          "published": "2013-07-18",
+          "retrieved": "2026-07-11",
+          "context": "The report documents widespread beat-resemblance consensus and confirms from liner notes that the suspected sample was not used."
+        }
+      ],
+      "evidence_category": "pure_sonic",
+      "deciding_primary": true,
+      "category_reason": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+      "catalogue_verification": {
+        "query_rows": [
+          89650
+        ],
+        "target_original_rows": [
+          3069
+        ],
+        "verified": "2026-07-11"
+      }
+    }
+  ],
+  "source_policy": {
+    "deciding": "Only pure_sonic rows backed by credible editorial, artist, musicological, or listener-consensus evidence.",
+    "diagnostic": "Samples/interpolations, legal/plagiarism disputes, covers/remixes/adaptations, and weak or unsubstantiated assertions remain versioned but cannot affect model selection.",
+    "retrieval_date": "Every source records the date it was retrieved."
+  },
+  "category_definitions": {
+    "pure_sonic": "Credible editorial, artist, musicological, or listener evidence identifies specific sonic resemblance without a sample, interpolation, cover/remix, or legal/plagiarism dispute.",
+    "sample_interpolation": "Literal sampled, quoted, or interpolated musical material; diagnostic only.",
+    "legal_plagiarism": "Similarity is framed by a copyright, plagiarism, rights-holder, or settlement dispute; diagnostic only.",
+    "cover_remix": "The relationship is a cover, remix, contrafact, acknowledged rework, or adaptation; diagnostic only.",
+    "weak_unsubstantiated": "Only an unsupported/dead sound-alike database or weak listicle assertion was found; diagnostic only."
+  },
+  "created_at": "2026-07-11",
+  "confirmation_freeze": {
+    "metric_and_threshold_frozen_before_outputs": true,
+    "architecture_frozen_before_pair_resolution": false,
+    "winner": "dual_sonic64_guardrail",
+    "visible_head": "Previously validated guarded-centroid top five",
+    "baseline_guardrail": "Append all quality-filtered frozen-baseline top-ten items before learned tail candidates, preserving every baseline Recall@50 hit observed in the final set.",
+    "tail_score": "0.25 * z(EfficientNet-B0 PCA64 cosine) + 0.75 * z(calibrated LAION-CLAP PCA64 cosine) + 0.20 * z(Wikipedia song-article evidence) + 0.10 * z(specific-song-page existence)",
+    "tail_artist_cap": 0,
+    "training_boundary": "All representation compression, weights, source-independent priors, and centroid choices use only non-held-out rows or public data. No F01-F20 identity, target, rank, or external-validation response is a serving feature.",
+    "selection_disclosure": "The final set was reused to compare sequential challengers as explicitly requested; it is pair/artist-disjoint and label-free for training, but is not claimed as a once-opened statistical test. Pair bootstrap uncertainty is therefore reported without a significance claim.",
+    "held_out_pair_ids": [
+      "F01",
+      "F02",
+      "F03",
+      "F04",
+      "F05",
+      "F06",
+      "F07",
+      "F08",
+      "F09",
+      "F10",
+      "F11",
+      "F12",
+      "F13",
+      "F14",
+      "F15",
+      "F16",
+      "F17",
+      "F18",
+      "F19",
+      "F20"
+    ]
+  }
+}

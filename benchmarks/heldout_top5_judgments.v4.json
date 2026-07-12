@@ -1,0 +1,692 @@
+{
+  "schema_version": 4,
+  "benchmark_id": "soundalike-real-pairs-v4-final",
+  "reviewed_at": "2026-07-11",
+  "method": "dual_sonic",
+  "ranked_output_artifact": ".goals/human-quality-recommendations/artifacts/held-out-final-winner-v4.json",
+  "ranked_top5_fingerprint": "4bebb28b225e142f2a8d02f31992d3521652e8f1287eaf9ba25866bfce2c4228",
+  "methodology": {
+    "unit": "actual first five production-index results for each final pure-sonic held-out query",
+    "pass_rule": "At least four of five are stylistically coherent and positions 1-3 contain no obvious wrong-scene item.",
+    "automatic_failures": "Any duplicate original, seed-title variant, slowed/reverb, karaoke, tribute, cover, or mashup in the first five fails the seed.",
+    "role": "Secondary direct UX guardrail only; never blended into pair retrieval.",
+    "review_scope": "Recording names and credited artists were inspected; this is not a claim that every full recording was listened to end-to-end."
+  },
+  "retained_v2_ux_validation": {
+    "baseline_passes": 11,
+    "winner_passes": 17,
+    "total": 20,
+    "artifact": "benchmarks/heldout_top5_judgments.v2.json"
+  },
+  "final_confirmation": {
+    "winner_passes": 17,
+    "total": 20,
+    "failed_pair_ids": [
+      "F05",
+      "F13",
+      "F14"
+    ]
+  },
+  "judgments": [
+    {
+      "pair_id": "F01",
+      "seed": "Bohemian Like You ? The Dandy Warhols",
+      "winner_pass": true,
+      "reason": "Alternative/garage-rock adjacency throughout; no prohibited derivative.",
+      "top5": [
+        {
+          "rank": 1,
+          "title": "Get This",
+          "artist": "The All-American Rejects"
+        },
+        {
+          "rank": 2,
+          "title": "Money",
+          "artist": "Only Real"
+        },
+        {
+          "rank": 3,
+          "title": "Stay In Touch",
+          "artist": "Interpol"
+        },
+        {
+          "rank": 4,
+          "title": "Blue Monday",
+          "artist": "Orgy"
+        },
+        {
+          "rank": 5,
+          "title": "South Side",
+          "artist": "Moby"
+        }
+      ]
+    },
+    {
+      "pair_id": "F02",
+      "seed": "Dumb Dumb ? Red Velvet",
+      "winner_pass": true,
+      "reason": "K-pop/electropop dominates the first four and the pop fifth result is adjacent.",
+      "top5": [
+        {
+          "rank": 1,
+          "title": "8-BIT HEART",
+          "artist": "ITZY"
+        },
+        {
+          "rank": 2,
+          "title": "PEACH GELATO",
+          "artist": "TWICE"
+        },
+        {
+          "rank": 3,
+          "title": "$$$",
+          "artist": "(G)I-DLE"
+        },
+        {
+          "rank": 4,
+          "title": "Next Level (Lionclad Remix)",
+          "artist": "aespa"
+        },
+        {
+          "rank": 5,
+          "title": "Bombastic Love",
+          "artist": "Britney Spears"
+        }
+      ]
+    },
+    {
+      "pair_id": "F03",
+      "seed": "As It Was ? Harry Styles",
+      "winner_pass": true,
+      "reason": "Five melodic pop/pop-rock results with no wrong-scene top-three item.",
+      "top5": [
+        {
+          "rank": 1,
+          "title": "Dancing With Tears In My Eyes",
+          "artist": "Joshua Bassett"
+        },
+        {
+          "rank": 2,
+          "title": "Be Someone",
+          "artist": "Benson Boone"
+        },
+        {
+          "rank": 3,
+          "title": "No Control",
+          "artist": "One Direction"
+        },
+        {
+          "rank": 4,
+          "title": "Saigon",
+          "artist": "Luke Hemmings"
+        },
+        {
+          "rank": 5,
+          "title": "Champions",
+          "artist": "James Blunt"
+        }
+      ]
+    },
+    {
+      "pair_id": "F04",
+      "seed": "Worth It ? Fifth Harmony feat. Kid Ink",
+      "winner_pass": true,
+      "reason": "Four pop/R&B results; the rank-five rock anthem is the lone stretch.",
+      "top5": [
+        {
+          "rank": 1,
+          "title": "Blah Blah Blah (feat. 3OH!3)",
+          "artist": "Ke$ha"
+        },
+        {
+          "rank": 2,
+          "title": "Keep This Fire Burning",
+          "artist": "Robyn"
+        },
+        {
+          "rank": 3,
+          "title": "Blá blá blá",
+          "artist": "Anitta"
+        },
+        {
+          "rank": 4,
+          "title": "Love So Soft",
+          "artist": "Kelly Clarkson"
+        },
+        {
+          "rank": 5,
+          "title": "Eye of the Tiger",
+          "artist": "Amel Bent"
+        }
+      ]
+    },
+    {
+      "pair_id": "F05",
+      "seed": "Harmony Hall ? Vampire Weekend",
+      "winner_pass": false,
+      "reason": "Only three results are clearly indie/garage coherent; ZAYN and Bob Bissonnette make the list too scattered.",
+      "top5": [
+        {
+          "rank": 1,
+          "title": "Cornerstone",
+          "artist": "Arctic Monkeys"
+        },
+        {
+          "rank": 2,
+          "title": "Daydreamin’",
+          "artist": "ZAYN"
+        },
+        {
+          "rank": 3,
+          "title": "Over Your Shoulder",
+          "artist": "Cage The Elephant"
+        },
+        {
+          "rank": 4,
+          "title": "Old Black Magic",
+          "artist": "Josh Ritter"
+        },
+        {
+          "rank": 5,
+          "title": "Toune de bière",
+          "artist": "Bob Bissonnette"
+        }
+      ]
+    },
+    {
+      "pair_id": "F06",
+      "seed": "Goodies ? Ciara feat. Petey Pablo",
+      "winner_pass": true,
+      "reason": "R&B/pop occupies all five positions.",
+      "top5": [
+        {
+          "rank": 1,
+          "title": "Soldier (feat. T.I. & Lil' Wayne)",
+          "artist": "Destiny's Child"
+        },
+        {
+          "rank": 2,
+          "title": "Lovin' It",
+          "artist": "Ariana Grande"
+        },
+        {
+          "rank": 3,
+          "title": "Please",
+          "artist": "Toni Braxton"
+        },
+        {
+          "rank": 4,
+          "title": "Obsessed",
+          "artist": "Mariah Carey"
+        },
+        {
+          "rank": 5,
+          "title": "After the Afterparty (feat. RAYE, Stefflon Don and Rita Ora) (VIP Mix)",
+          "artist": "Charli xcx"
+        }
+      ]
+    },
+    {
+      "pair_id": "F07",
+      "seed": "How Soon Is Now? ? The Smiths",
+      "winner_pass": true,
+      "reason": "Post-punk/new-wave throughout.",
+      "top5": [
+        {
+          "rank": 1,
+          "title": "Amelia",
+          "artist": "The Mission"
+        },
+        {
+          "rank": 2,
+          "title": "Way of Life (2024 Digital Master)",
+          "artist": "New Order"
+        },
+        {
+          "rank": 3,
+          "title": "Living in Another World (1997 Remaster)",
+          "artist": "Talk Talk"
+        },
+        {
+          "rank": 4,
+          "title": "Hopes Go Astray",
+          "artist": "The Northern Pikes"
+        },
+        {
+          "rank": 5,
+          "title": "Ship of Fools (2009 Remaster)",
+          "artist": "Erasure"
+        }
+      ]
+    },
+    {
+      "pair_id": "F08",
+      "seed": "Black Magic ? Little Mix",
+      "winner_pass": true,
+      "reason": "Five contemporary pop/K-pop results.",
+      "top5": [
+        {
+          "rank": 1,
+          "title": "Kiss My Troubles Away",
+          "artist": "TWICE"
+        },
+        {
+          "rank": 2,
+          "title": "How You Get The Girl (Taylor's Version)",
+          "artist": "Taylor Swift"
+        },
+        {
+          "rank": 3,
+          "title": "(Not) A Picture Perfect Girl",
+          "artist": "Barbie"
+        },
+        {
+          "rank": 4,
+          "title": "Dynasty",
+          "artist": "Rina Sawayama"
+        },
+        {
+          "rank": 5,
+          "title": "Juno",
+          "artist": "Sabrina Carpenter"
+        }
+      ]
+    },
+    {
+      "pair_id": "F09",
+      "seed": "XS ? Rina Sawayama",
+      "winner_pass": true,
+      "reason": "Four alternative-pop results; the live gospel item at rank four is the lone outlier.",
+      "top5": [
+        {
+          "rank": 1,
+          "title": "Bitch Back",
+          "artist": "Olivia O'Brien"
+        },
+        {
+          "rank": 2,
+          "title": "through the blue",
+          "artist": "Mori Calliope"
+        },
+        {
+          "rank": 3,
+          "title": "Spring breakers",
+          "artist": "Charli xcx"
+        },
+        {
+          "rank": 4,
+          "title": "Victory (Live)",
+          "artist": "Kierra Sheard"
+        },
+        {
+          "rank": 5,
+          "title": "I Love Me Too",
+          "artist": "Kirby"
+        }
+      ]
+    },
+    {
+      "pair_id": "F10",
+      "seed": "Red Lips ? Sky Ferreira",
+      "winner_pass": true,
+      "reason": "Five indie/electropop results.",
+      "top5": [
+        {
+          "rank": 1,
+          "title": "Hero Man",
+          "artist": "PVA"
+        },
+        {
+          "rank": 2,
+          "title": "What If",
+          "artist": "Grace Ives"
+        },
+        {
+          "rank": 3,
+          "title": "Swan",
+          "artist": "Not For Radio"
+        },
+        {
+          "rank": 4,
+          "title": "highway",
+          "artist": "Pami"
+        },
+        {
+          "rank": 5,
+          "title": "Old Downtown",
+          "artist": "Camp Claude"
+        }
+      ]
+    },
+    {
+      "pair_id": "F11",
+      "seed": "You and Me On The Rock ? Brandi Carlile feat. Lucius",
+      "winner_pass": true,
+      "reason": "Folk, singer-songwriter, and acoustic pop throughout.",
+      "top5": [
+        {
+          "rank": 1,
+          "title": "Take The High Road",
+          "artist": "Sarah Jarosz"
+        },
+        {
+          "rank": 2,
+          "title": "Coming Back To You",
+          "artist": "Sara Bareilles"
+        },
+        {
+          "rank": 3,
+          "title": "Stick Around",
+          "artist": "Jade Bird"
+        },
+        {
+          "rank": 4,
+          "title": "It Doesn't Matter Anymore",
+          "artist": "Linda Ronstadt"
+        },
+        {
+          "rank": 5,
+          "title": "Everything Has Changed (Taylor's Version)",
+          "artist": "Taylor Swift"
+        }
+      ]
+    },
+    {
+      "pair_id": "F12",
+      "seed": "What You Waiting For? ? Gwen Stefani",
+      "winner_pass": true,
+      "reason": "Five electropop/synth-pop results.",
+      "top5": [
+        {
+          "rank": 1,
+          "title": "Move Slow",
+          "artist": "Magdalena Bay"
+        },
+        {
+          "rank": 2,
+          "title": "HAPPY HAPPY",
+          "artist": "TWICE"
+        },
+        {
+          "rank": 3,
+          "title": "Girlfriend",
+          "artist": "(G)I-DLE"
+        },
+        {
+          "rank": 4,
+          "title": "Energy",
+          "artist": "Ava Max"
+        },
+        {
+          "rank": 5,
+          "title": "Time Machine",
+          "artist": "Robyn"
+        }
+      ]
+    },
+    {
+      "pair_id": "F13",
+      "seed": "Killing an Arab ? The Cure",
+      "winner_pass": false,
+      "reason": "The first three are post-punk adjacent, but Bruce Springsteen and Corey Taylor leave fewer than four coherent results.",
+      "top5": [
+        {
+          "rank": 1,
+          "title": "When You're Young",
+          "artist": "The Jam"
+        },
+        {
+          "rank": 2,
+          "title": "Love Will Tear Us Apart (Pennine Version;2020 Digital Remaster)",
+          "artist": "Joy Division"
+        },
+        {
+          "rank": 3,
+          "title": "Version In Harmony Retrograde Transposition (DJ Spooky)",
+          "artist": "Swirlies"
+        },
+        {
+          "rank": 4,
+          "title": "Born to Run",
+          "artist": "Bruce Springsteen"
+        },
+        {
+          "rank": 5,
+          "title": "Someday I'll Change Your Mind",
+          "artist": "Corey Taylor"
+        }
+      ]
+    },
+    {
+      "pair_id": "F14",
+      "seed": "Hotel California ? Eagles",
+      "winner_pass": false,
+      "reason": "The list disperses across blues rock, soul, reggae, indie, and Brazilian music without four coherent results.",
+      "top5": [
+        {
+          "rank": 1,
+          "title": "Crazy Mama",
+          "artist": "J.J. Cale"
+        },
+        {
+          "rank": 2,
+          "title": "Holy Spirit",
+          "artist": "Al Green"
+        },
+        {
+          "rank": 3,
+          "title": "Shining",
+          "artist": "Mac DeMarco"
+        },
+        {
+          "rank": 4,
+          "title": "Johnny Too Bad",
+          "artist": "Taj Mahal"
+        },
+        {
+          "rank": 5,
+          "title": "Olhos Coloridos",
+          "artist": "Sandra De Sá"
+        }
+      ]
+    },
+    {
+      "pair_id": "F15",
+      "seed": "Sex on Fire ? Kings of Leon",
+      "winner_pass": true,
+      "reason": "Four alternative-rock results; Zucchero is the lone adjacent stretch.",
+      "top5": [
+        {
+          "rank": 1,
+          "title": "Tokyo",
+          "artist": "White Lies"
+        },
+        {
+          "rank": 2,
+          "title": "Empires on Fire",
+          "artist": "BANNERS"
+        },
+        {
+          "rank": 3,
+          "title": "Hell of a Season (2021 Remaster)",
+          "artist": "The Black Keys"
+        },
+        {
+          "rank": 4,
+          "title": "A Wonderful World",
+          "artist": "Zucchero"
+        },
+        {
+          "rank": 5,
+          "title": "Doubt It",
+          "artist": "The Amazons"
+        }
+      ]
+    },
+    {
+      "pair_id": "F16",
+      "seed": "Past Life ? Maggie Rogers",
+      "winner_pass": true,
+      "reason": "Five vocal pop/folk-pop results with no wrong-scene top-three item.",
+      "top5": [
+        {
+          "rank": 1,
+          "title": "Titanium (Megan's V3rsion)",
+          "artist": "Sia"
+        },
+        {
+          "rank": 2,
+          "title": "Nous deux",
+          "artist": "Nach"
+        },
+        {
+          "rank": 3,
+          "title": "A Long Time Ago",
+          "artist": "First Aid Kit"
+        },
+        {
+          "rank": 4,
+          "title": "Fall Again",
+          "artist": "Olivia Dean"
+        },
+        {
+          "rank": 5,
+          "title": "Stay",
+          "artist": "Jasmine Thompson"
+        }
+      ]
+    },
+    {
+      "pair_id": "F17",
+      "seed": "Little Dark Age ? MGMT",
+      "winner_pass": true,
+      "reason": "Five indie/alternative results.",
+      "top5": [
+        {
+          "rank": 1,
+          "title": "redesign",
+          "artist": "awfultune"
+        },
+        {
+          "rank": 2,
+          "title": "leave me alone (LA demo)",
+          "artist": "boy pablo"
+        },
+        {
+          "rank": 3,
+          "title": "shutting me out",
+          "artist": "EKKSTACY"
+        },
+        {
+          "rank": 4,
+          "title": "Stay for a Bit",
+          "artist": "Cuco"
+        },
+        {
+          "rank": 5,
+          "title": "Concrete",
+          "artist": "Inhaler"
+        }
+      ]
+    },
+    {
+      "pair_id": "F18",
+      "seed": "LUNCH ? Billie Eilish",
+      "winner_pass": true,
+      "reason": "Five alternative-pop/indie-rock results.",
+      "top5": [
+        {
+          "rank": 1,
+          "title": "Pale Blue Eyes",
+          "artist": "Lucy Rose"
+        },
+        {
+          "rank": 2,
+          "title": "So Good",
+          "artist": "Warpaint"
+        },
+        {
+          "rank": 3,
+          "title": "Siberian Nights",
+          "artist": "The Kills"
+        },
+        {
+          "rank": 4,
+          "title": "MEMORY",
+          "artist": "Sophia"
+        },
+        {
+          "rank": 5,
+          "title": "Before You Break My Heart",
+          "artist": "JADE"
+        }
+      ]
+    },
+    {
+      "pair_id": "F19",
+      "seed": "London Bridge ? Fergie",
+      "winner_pass": true,
+      "reason": "Pop-rap and electronic pop throughout.",
+      "top5": [
+        {
+          "rank": 1,
+          "title": "Still Outside",
+          "artist": "Big Boss Vette"
+        },
+        {
+          "rank": 2,
+          "title": "Not a Pop Song",
+          "artist": "Little Mix"
+        },
+        {
+          "rank": 3,
+          "title": "Single Ladies (Put a Ring on It)",
+          "artist": "Beyoncé"
+        },
+        {
+          "rank": 4,
+          "title": "Never Be Like You",
+          "artist": "Flume"
+        },
+        {
+          "rank": 5,
+          "title": "Peppermint Patty",
+          "artist": "Tay Money"
+        }
+      ]
+    },
+    {
+      "pair_id": "F20",
+      "seed": "Black Skinhead ? Kanye West",
+      "winner_pass": true,
+      "reason": "Four hip-hop results; the rank-four Latin item is the lone outlier.",
+      "top5": [
+        {
+          "rank": 1,
+          "title": "Piss On Your Grave (feat. Kanye West)",
+          "artist": "Travis Scott"
+        },
+        {
+          "rank": 2,
+          "title": "Zeltron 6 Billion",
+          "artist": "Denzel Curry"
+        },
+        {
+          "rank": 3,
+          "title": "Lord Knows (feat. Tory Lanez)",
+          "artist": "Meek Mill"
+        },
+        {
+          "rank": 4,
+          "title": "CONFIAR",
+          "artist": "Myke Towers"
+        },
+        {
+          "rank": 5,
+          "title": "Survivor’s Guilt (feat. G Herbo)",
+          "artist": "Saba"
+        }
+      ]
+    }
+  ]
+}

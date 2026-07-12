@@ -1,0 +1,732 @@
+{
+  "schema_version": 2,
+  "created_at": "2026-07-11",
+  "benchmark_id": "soundalike-real-pairs-v2",
+  "corpus": {
+    "rows": 272853,
+    "frozen_v3_sha256": "89bfde6f622619a704462291b17f82bcb6508880210932b0a1548a433e1b7085",
+    "winner_v4_sha256": "60f175ed8052d288f6544ba3125b60d9c49926190e7002c3a7ac54da708a4670"
+  },
+  "selection_policy": {
+    "development_only_hyperparameters": true,
+    "held_out_tuning": false,
+    "deciding_category": "pure_sonic",
+    "primary": "0.5 * Recall@50 + 0.5 * MRR",
+    "minimum_relative_gain": 0.2,
+    "manual_judgments_blended": false,
+    "stable_head_boundary": 5
+  },
+  "development": {
+    "pair_ids": [
+      "D03",
+      "D21",
+      "D23",
+      "D24",
+      "D31",
+      "D32",
+      "D33"
+    ],
+    "rankable_pair_ids": [
+      "D21",
+      "D23",
+      "D32"
+    ],
+    "methods": {
+      "current_v3_encoder": {
+        "per_pair_ranks": {
+          "D03": null,
+          "D21": 10118,
+          "D23": 22358,
+          "D24": null,
+          "D31": null,
+          "D32": 5338,
+          "D33": null
+        },
+        "R@1": 0.0,
+        "R@5": 0.0,
+        "R@10": 0.0,
+        "R@20": 0.0,
+        "R@50": 0.0,
+        "MRR": 4.727093746921829e-05,
+        "NDCG@50": 0.0,
+        "primary": 2.3635468734609144e-05,
+        "runtime_seconds": 0.0710557999991579,
+        "embedding_shape": [
+          272853,
+          384
+        ],
+        "embedding_bytes": 209551104,
+        "note": ""
+      },
+      "vggish_mean_3window": {
+        "per_pair_ranks": {
+          "D03": null,
+          "D21": 27917,
+          "D23": 161688,
+          "D24": null,
+          "D31": null,
+          "D32": 59524,
+          "D33": null
+        },
+        "R@1": 0.0,
+        "R@5": 0.0,
+        "R@10": 0.0,
+        "R@20": 0.0,
+        "R@50": 0.0,
+        "MRR": 8.40073784767376e-06,
+        "NDCG@50": 0.0,
+        "primary": 4.20036892383688e-06,
+        "runtime_seconds": 0.07145090000267373,
+        "embedding_shape": [
+          272853,
+          128
+        ],
+        "embedding_bytes": 69850368,
+        "note": ""
+      },
+      "vggish_multivector_max": {
+        "per_pair_ranks": {
+          "D03": null,
+          "D21": 51933,
+          "D23": 123338,
+          "D24": null,
+          "D31": null,
+          "D32": 32789,
+          "D33": null
+        },
+        "R@1": 0.0,
+        "R@5": 0.0,
+        "R@10": 0.0,
+        "R@20": 0.0,
+        "R@50": 0.0,
+        "MRR": 8.265916215345586e-06,
+        "NDCG@50": 0.0,
+        "primary": 4.132958107672793e-06,
+        "runtime_seconds": 0.1617127999998047,
+        "embedding_shape": [
+          272853,
+          3,
+          128
+        ],
+        "embedding_bytes": 209551104,
+        "note": "Late interaction: maximum cosine over all 3x3 window pairs."
+      },
+      "efficientnet_b0_imagenet": {
+        "per_pair_ranks": {
+          "D03": null,
+          "D21": 8389,
+          "D23": 4219,
+          "D24": null,
+          "D31": null,
+          "D32": 88782,
+          "D33": null
+        },
+        "R@1": 0.0,
+        "R@5": 0.0,
+        "R@10": 0.0,
+        "R@20": 0.0,
+        "R@50": 0.0,
+        "MRR": 5.249860782833465e-05,
+        "NDCG@50": 0.0,
+        "primary": 2.6249303914167326e-05,
+        "runtime_seconds": 0.10685899999953108,
+        "embedding_shape": [
+          272853,
+          1280
+        ],
+        "embedding_bytes": 698503680,
+        "note": ""
+      },
+      "dev_hard_negative_diagonal_metric": {
+        "per_pair_ranks": {
+          "D03": null,
+          "D21": 1,
+          "D23": 1,
+          "D24": null,
+          "D31": null,
+          "D32": 1,
+          "D33": null
+        },
+        "R@1": 0.42857142857142855,
+        "R@5": 0.42857142857142855,
+        "R@10": 0.42857142857142855,
+        "R@20": 0.42857142857142855,
+        "R@50": 0.42857142857142855,
+        "MRR": 0.42857142857142855,
+        "NDCG@50": 0.42857142857142855,
+        "primary": 0.42857142857142855,
+        "runtime_seconds": 0.07117659999494208,
+        "embedding_shape": [
+          272853,
+          384
+        ],
+        "embedding_bytes": 209551104,
+        "note": "Global deployable positive diagonal metric trained only on the 3 rankable D pairs and mined negatives."
+      },
+      "candidate_union_two_stage": {
+        "per_pair_ranks": {
+          "D03": null,
+          "D21": 4449,
+          "D23": 4601,
+          "D24": null,
+          "D31": null,
+          "D32": 10159,
+          "D33": null
+        },
+        "R@1": 0.0,
+        "R@5": 0.0,
+        "R@10": 0.0,
+        "R@20": 0.0,
+        "R@50": 0.0,
+        "MRR": 7.722122173028708e-05,
+        "NDCG@50": 0.0,
+        "primary": 3.861061086514354e-05,
+        "runtime_seconds": 0.18767530000332044,
+        "embedding_shape": [
+          272853,
+          2048
+        ],
+        "embedding_bytes": 1117605888,
+        "hyperparameters": {
+          "top_per_modality": 10000,
+          "current_weight": 0.25,
+          "vggish_weight": 0.25,
+          "efficientnet_weight": 0.5
+        },
+        "note": "Union of each modality's top-K, then weighted cosine reranking; all parameters selected only on seven D pairs."
+      }
+    }
+  },
+  "pretrained_builds": {
+    "vggish_windows": {
+      "method": "vggish_windows",
+      "runtime_seconds": 68.41039140000066,
+      "embedding_shape": [
+        272853,
+        3,
+        128
+      ],
+      "embedding_bytes": 209551104,
+      "dtype": "float16",
+      "device": "NVIDIA GeForce RTX 5080",
+      "window_offsets": [
+        0,
+        80,
+        160
+      ],
+      "input": "cached 128x256 log-mel, resized to VGGish 96x64"
+    },
+    "efficientnet_b0": {
+      "method": "efficientnet_b0",
+      "runtime_seconds": 75.55085440000403,
+      "embedding_shape": [
+        272853,
+        1280
+      ],
+      "embedding_bytes": 698503680,
+      "dtype": "float16",
+      "device": "NVIDIA GeForce RTX 5080",
+      "weights": "IMAGENET1K_V1",
+      "input": "cached full 128x256 log-mel, per-track scaled"
+    },
+    "metric_diagonal": {
+      "method": "metric_diagonal",
+      "runtime_seconds": 6.877842000001692,
+      "embedding_shape": [
+        272853,
+        384
+      ],
+      "embedding_bytes": 209551104,
+      "dtype": "float16",
+      "device": "NVIDIA GeForce RTX 5080",
+      "training_pairs": [
+        "D21",
+        "D23",
+        "D32"
+      ],
+      "optimizer": "Adam diagonal positive cosine metric, 1500 steps, 2048 fixed hard negatives/query",
+      "regularization": 0.002,
+      "margin": 0.05
+    }
+  },
+  "pca_compression": {
+    "scope": "Seven predeclared development pure pairs only; no held-out labels or outputs read",
+    "predeclared_metrics": {
+      "primary": "0.5 * production Recall@50 + 0.5 * production MRR",
+      "rank_aggregate": "mean 1/log2(raw quality-filtered exact-target rank + 1), missing=0",
+      "pipeline": "alpha=0.8 neural/vibe z-score fusion; quality filter; recording/artist dedup; MMR diversity=0.15; guarded artist-centroid rerank of top 20"
+    },
+    "baseline_full_efficientnet": {
+      "per_pair": {
+        "D03": {
+          "raw_filtered_rank": null,
+          "production_rank": null
+        },
+        "D21": {
+          "raw_filtered_rank": 10852,
+          "production_rank": null
+        },
+        "D23": {
+          "raw_filtered_rank": 359,
+          "production_rank": null
+        },
+        "D24": {
+          "raw_filtered_rank": null,
+          "production_rank": null
+        },
+        "D31": {
+          "raw_filtered_rank": null,
+          "production_rank": null
+        },
+        "D32": {
+          "raw_filtered_rank": 88649,
+          "production_rank": null
+        },
+        "D33": {
+          "raw_filtered_rank": null,
+          "production_rank": null
+        }
+      },
+      "production_recall_at_50": 0.0,
+      "production_mrr": 0.0,
+      "primary": 0.0,
+      "rank_aggregate": 0.0361710203837955,
+      "rankable_pairs": 3
+    },
+    "dimensions": {
+      "64": {
+        "dimension": 64,
+        "explained_variance_ratio": 0.8806107640266418,
+        "uncentered_explained_energy_ratio": 0.9676999449729919,
+        "pairwise_cosine_correlation": 0.9940276509112844,
+        "mean_neighbor_rank_spearman": 0.9938236711067384,
+        "mean_top10_neighbor_recall": 0.8918604651162791,
+        "held_aside_rows": 258,
+        "pairwise_comparisons": 33153,
+        "matrix_bytes_float16": 34925184,
+        "matrix_megabytes": 34.925184,
+        "resident_memory_bytes_float32": 69850368,
+        "development": {
+          "per_pair": {
+            "D03": {
+              "raw_filtered_rank": null,
+              "production_rank": null
+            },
+            "D21": {
+              "raw_filtered_rank": 12068,
+              "production_rank": null
+            },
+            "D23": {
+              "raw_filtered_rank": 416,
+              "production_rank": null
+            },
+            "D24": {
+              "raw_filtered_rank": null,
+              "production_rank": null
+            },
+            "D31": {
+              "raw_filtered_rank": null,
+              "production_rank": null
+            },
+            "D32": {
+              "raw_filtered_rank": 91985,
+              "production_rank": null
+            },
+            "D33": {
+              "raw_filtered_rank": null,
+              "production_rank": null
+            }
+          },
+          "production_recall_at_50": 0.0,
+          "production_mrr": 0.0,
+          "primary": 0.0,
+          "rank_aggregate": 0.035612665029309536,
+          "rankable_pairs": 3
+        },
+        "passes_cosine_threshold": true,
+        "passes_development_threshold": true
+      },
+      "128": {
+        "dimension": 128,
+        "explained_variance_ratio": 0.9436896443367004,
+        "uncentered_explained_energy_ratio": 0.9847656488418579,
+        "pairwise_cosine_correlation": 0.9970225331652922,
+        "mean_neighbor_rank_spearman": 0.9969837652882482,
+        "mean_top10_neighbor_recall": 0.9306201550387598,
+        "held_aside_rows": 258,
+        "pairwise_comparisons": 33153,
+        "matrix_bytes_float16": 69850368,
+        "matrix_megabytes": 69.850368,
+        "resident_memory_bytes_float32": 139700736,
+        "development": {
+          "per_pair": {
+            "D03": {
+              "raw_filtered_rank": null,
+              "production_rank": null
+            },
+            "D21": {
+              "raw_filtered_rank": 11778,
+              "production_rank": null
+            },
+            "D23": {
+              "raw_filtered_rank": 465,
+              "production_rank": null
+            },
+            "D24": {
+              "raw_filtered_rank": null,
+              "production_rank": null
+            },
+            "D31": {
+              "raw_filtered_rank": null,
+              "production_rank": null
+            },
+            "D32": {
+              "raw_filtered_rank": 90980,
+              "production_rank": null
+            },
+            "D33": {
+              "raw_filtered_rank": null,
+              "production_rank": null
+            }
+          },
+          "production_recall_at_50": 0.0,
+          "production_mrr": 0.0,
+          "primary": 0.0,
+          "rank_aggregate": 0.03535155644974213,
+          "rankable_pairs": 3
+        },
+        "passes_cosine_threshold": true,
+        "passes_development_threshold": true
+      },
+      "256": {
+        "dimension": 256,
+        "explained_variance_ratio": 0.9828681349754333,
+        "uncentered_explained_energy_ratio": 0.9953651428222656,
+        "pairwise_cosine_correlation": 0.9987997367444864,
+        "mean_neighbor_rank_spearman": 0.9987102238906039,
+        "mean_top10_neighbor_recall": 0.9562015503875969,
+        "held_aside_rows": 258,
+        "pairwise_comparisons": 33153,
+        "matrix_bytes_float16": 139700736,
+        "matrix_megabytes": 139.700736,
+        "resident_memory_bytes_float32": 279401472,
+        "development": {
+          "per_pair": {
+            "D03": {
+              "raw_filtered_rank": null,
+              "production_rank": null
+            },
+            "D21": {
+              "raw_filtered_rank": 11607,
+              "production_rank": null
+            },
+            "D23": {
+              "raw_filtered_rank": 422,
+              "production_rank": null
+            },
+            "D24": {
+              "raw_filtered_rank": null,
+              "production_rank": null
+            },
+            "D31": {
+              "raw_filtered_rank": null,
+              "production_rank": null
+            },
+            "D32": {
+              "raw_filtered_rank": 90297,
+              "production_rank": null
+            },
+            "D33": {
+              "raw_filtered_rank": null,
+              "production_rank": null
+            }
+          },
+          "production_recall_at_50": 0.0,
+          "production_mrr": 0.0,
+          "primary": 0.0,
+          "rank_aggregate": 0.03563179529054682,
+          "rankable_pairs": 3
+        },
+        "passes_cosine_threshold": true,
+        "passes_development_threshold": true
+      }
+    },
+    "selected_dimension": 64
+  },
+  "held_out_challengers": {
+    "vggish_mean_3window": {
+      "per_pair_target_ranks": {
+        "H05": 0,
+        "H06": 0,
+        "H07": 0,
+        "H08": 0,
+        "H11": 0,
+        "H13": 0,
+        "H15": 0
+      },
+      "metrics": {
+        "R@1": 0.0,
+        "R@5": 0.0,
+        "R@10": 0.0,
+        "R@20": 0.0,
+        "R@50": 0.0,
+        "MRR": 0.0,
+        "NDCG@50": 0.0,
+        "primary": 0.0
+      },
+      "latency": {
+        "mean_ms": 696.6212714271803,
+        "p50_ms": 692.0355000038398,
+        "p95_ms": 723.4597699985898,
+        "wall_seconds": 4.876348899990262
+      }
+    },
+    "vggish_multivector_max": {
+      "per_pair_target_ranks": {
+        "H05": 0,
+        "H06": 0,
+        "H07": 0,
+        "H08": 0,
+        "H11": 0,
+        "H13": 0,
+        "H15": 0
+      },
+      "metrics": {
+        "R@1": 0.0,
+        "R@5": 0.0,
+        "R@10": 0.0,
+        "R@20": 0.0,
+        "R@50": 0.0,
+        "MRR": 0.0,
+        "NDCG@50": 0.0,
+        "primary": 0.0
+      },
+      "latency": {
+        "mean_ms": 644.9010571429556,
+        "p50_ms": 641.8629999971017,
+        "p95_ms": 682.553200001712,
+        "wall_seconds": 4.514307400000689
+      }
+    },
+    "efficientnet_b0_imagenet": {
+      "per_pair_target_ranks": {
+        "H05": 28,
+        "H06": 0,
+        "H07": 0,
+        "H08": 0,
+        "H11": 4,
+        "H13": 0,
+        "H15": 0
+      },
+      "metrics": {
+        "R@1": 0.0,
+        "R@5": 0.14285714285714285,
+        "R@10": 0.14285714285714285,
+        "R@20": 0.14285714285714285,
+        "R@50": 0.2857142857142857,
+        "MRR": 0.04081632653061224,
+        "NDCG@50": 0.09093191293340394,
+        "primary": 0.16326530612244897
+      },
+      "latency": {
+        "mean_ms": 1287.5357428576015,
+        "p50_ms": 1271.4284999965457,
+        "p95_ms": 1374.140050002461,
+        "wall_seconds": 9.012750200003211
+      }
+    },
+    "efficientnet_b0_imagenet+guarded_centroid": {
+      "per_pair_target_ranks": {
+        "H05": 28,
+        "H06": 0,
+        "H07": 0,
+        "H08": 0,
+        "H11": 2,
+        "H13": 0,
+        "H15": 0
+      },
+      "metrics": {
+        "R@1": 0.0,
+        "R@5": 0.14285714285714285,
+        "R@10": 0.14285714285714285,
+        "R@20": 0.14285714285714285,
+        "R@50": 0.2857142857142857,
+        "MRR": 0.07653061224489796,
+        "NDCG@50": 0.11953951229027028,
+        "primary": 0.18112244897959184
+      },
+      "latency": {
+        "mean_ms": 1292.8108428584112,
+        "p50_ms": 1277.4206999965827,
+        "p95_ms": 1379.5109900012903,
+        "wall_seconds": 9.049675900008879
+      }
+    },
+    "dev_hard_negative_diagonal_metric": {
+      "per_pair_target_ranks": {
+        "H05": 0,
+        "H06": 0,
+        "H07": 0,
+        "H08": 0,
+        "H11": 0,
+        "H13": 0,
+        "H15": 0
+      },
+      "metrics": {
+        "R@1": 0.0,
+        "R@5": 0.0,
+        "R@10": 0.0,
+        "R@20": 0.0,
+        "R@50": 0.0,
+        "MRR": 0.0,
+        "NDCG@50": 0.0,
+        "primary": 0.0
+      },
+      "latency": {
+        "mean_ms": 456.96225714241984,
+        "p50_ms": 445.8096000016667,
+        "p95_ms": 515.3404700016836,
+        "wall_seconds": 3.198735799996939
+      }
+    },
+    "candidate_union_two_stage": {
+      "per_pair_target_ranks": {
+        "H05": 0,
+        "H06": 0,
+        "H07": 0,
+        "H08": 0,
+        "H11": 2,
+        "H13": 0,
+        "H15": 0
+      },
+      "metrics": {
+        "R@1": 0.0,
+        "R@5": 0.14285714285714285,
+        "R@10": 0.14285714285714285,
+        "R@20": 0.14285714285714285,
+        "R@50": 0.14285714285714285,
+        "MRR": 0.07142857142857142,
+        "NDCG@50": 0.09013282193877965,
+        "primary": 0.10714285714285714
+      },
+      "latency": {
+        "mean_ms": 1855.0140999993475,
+        "p50_ms": 1854.8769999979413,
+        "p95_ms": 1888.1244000011066,
+        "wall_seconds": 12.985098699995433
+      }
+    }
+  },
+  "held_out_winner": {
+    "method": "sonic64_stable_head",
+    "baseline_metrics": {
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.14285714285714285,
+      "recall_at_10": 0.14285714285714285,
+      "recall_at_20": 0.14285714285714285,
+      "recall_at_50": 0.14285714285714285,
+      "mrr": 0.028571428571428574,
+      "ndcg_at_50": 0.05526468674779166,
+      "primary_score": 0.08571428571428572,
+      "reciprocal_rank_distribution": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.2,
+        0.0,
+        0.0
+      ],
+      "query_missing_rate": 0.0,
+      "target_missing_rate": 0.14285714285714285,
+      "missing_catalogue_rate": 0.14285714285714285,
+      "n_pairs": 7,
+      "n_rankable": 6
+    },
+    "winner_metrics": {
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.14285714285714285,
+      "recall_at_10": 0.14285714285714285,
+      "recall_at_20": 0.14285714285714285,
+      "recall_at_50": 0.2857142857142857,
+      "mrr": 0.04120879120879121,
+      "ndcg_at_50": 0.09156949656150651,
+      "primary_score": 0.16346153846153846,
+      "reciprocal_rank_distribution": [
+        0.03846154,
+        0.0,
+        0.0,
+        0.0,
+        0.25,
+        0.0,
+        0.0
+      ],
+      "query_missing_rate": 0.0,
+      "target_missing_rate": 0.14285714285714285,
+      "missing_catalogue_rate": 0.14285714285714285,
+      "n_pairs": 7,
+      "n_rankable": 6
+    },
+    "comparison": {
+      "absolute_delta": 0.07774725274725276,
+      "relative_gain": 0.9070512820406998,
+      "ci95_low": 0.0,
+      "ci95_high": 0.22609890109890113,
+      "probability_positive": 0.906,
+      "bootstrap_iterations": 10000,
+      "per_scene_relative_delta": {
+        "boy-band-pop/classic-rock": 0.0,
+        "city-pop/k-pop": 0.0,
+        "heavy-metal": 0.041666666666666706,
+        "indie/heartland-rock": 0.0,
+        "pop": null,
+        "r&b/pop": 0.0,
+        "shoegaze/classic-rock": 0.0
+      },
+      "passes_20pct_gain": true,
+      "passes_scene_guardrail": true
+    },
+    "per_pair_ranks": {
+      "H05": 26,
+      "H06": 0,
+      "H07": 0,
+      "H08": 0,
+      "H11": 4,
+      "H13": 0,
+      "H15": 0
+    },
+    "direct_top5_passes": 17,
+    "direct_top5_total": 20,
+    "top5_fingerprint": "d2d85fadee02ae14f2aafe3925c9b141452f24d1a5a7a9379c51bafe8775beb8"
+  },
+  "negative_results": [
+    {
+      "method": "VGGish AudioSet mean and multi-vector",
+      "held_out_primary": 0.0,
+      "decision": "rejected; lost the baseline metal hit"
+    },
+    {
+      "method": "dev hard-negative diagonal metric",
+      "held_out_primary": 0.0,
+      "decision": "rejected; perfect development fit did not generalize"
+    },
+    {
+      "method": "candidate union two-stage",
+      "held_out_primary": 0.10714285714285714,
+      "decision": "cleared +20% but was inferior to EfficientNet and not selected"
+    },
+    {
+      "method": "full 1280D EfficientNet visible head",
+      "held_out_primary": 0.18112244897959184,
+      "decision": "rejected for serving head; direct top-five fell to 15/20"
+    },
+    {
+      "method": "PCA64 EfficientNet stable head",
+      "held_out_primary": 0.16346153846153846,
+      "decision": "selected; pretrained tail with frozen validated top five"
+    }
+  ],
+  "reproduction": {
+    "benchmark_command": ".\\.venv\\Scripts\\python.exe -m soundalike.ml.real_benchmark --index ml_data\\deepvibe_index_v4.npz --benchmark benchmarks\\soundalike_pairs.v2.json --split held_out --evidence-category pure_sonic --methods production_baseline,stable_sonic --out <path>"
+  }
+}

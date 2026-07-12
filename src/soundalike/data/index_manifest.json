@@ -1,7 +1,7 @@
 {
-  "version": "2026.07.04-272k-384d",
+  "version": "2026.07.11-dual-sonic64",
   "repo": "yassinsolim/soundalike",
-  "release_tag": "index-2026.07.04-272k",
+  "release_tag": "index-2026.07.11-dual-sonic64",
   "encoder": {
     "asset": "vibe_encoder.pt",
     "sha256": "7b8a175d3b3a9fffcc10a6f4f6170ab76916af7c72cee784d6239303e5904662",
@@ -11,8 +11,11 @@
   },
   "index": {
     "asset": "deepvibe_index.npz",
-    "sha256": "89bfde6f622619a704462291b17f82bcb6508880210932b0a1548a433e1b7085",
+    "sha256": "f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9",
     "n_tracks": 272853,
-    "bytes": 233744489
+    "bytes": 299288526,
+    "sonic_dim": 64,
+    "clap_dim": 64,
+    "source_prior_columns": 2
   }
 }

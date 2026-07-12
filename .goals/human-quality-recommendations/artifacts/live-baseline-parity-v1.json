@@ -1,0 +1,11 @@
+{
+  "verified_at": "2026-07-11",
+  "live_artifact": ".goals/human-quality-recommendations/artifacts/live-browser-10-seeds-v1.json",
+  "local_artifact": ".goals/human-quality-recommendations/artifacts/held-out-winner-v1.json",
+  "method": "production_baseline",
+  "comparison": "exact ordered top-five title equality",
+  "matched": 10,
+  "total": 10,
+  "pair_ids": ["H01", "H03", "H04", "H08", "H09", "H10", "H11", "H12", "H13", "H20"],
+  "result": "The frozen local baseline is the exact live baseline. The guarded winner is not yet deployed."
+}

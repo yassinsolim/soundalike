@@ -1,9 +1,15 @@
 # Deploying soundalike as a hosted web app (Vercel)
 
 This directory is a **self-contained Vercel deployment**: a static frontend + two
-tiny Python serverless functions that recommend from the 87k-song library using
+tiny Python serverless functions that recommend from the 272,853-song library using
 **numpy only** (no PyTorch). You can host it on a subdomain like
 `soundalike.yassin.app` and let anyone try it in the browser.
+
+> **Release status (2026-07-11):** Dual-Sonic64 uses the versioned
+> `index-2026.07.11-dual-sonic64` release asset. Desktop and hosted paths checksum the
+> same 272,853-row index and expose `dual_sonic64_guardrail` plus the active index
+> version in recommendation responses. Production was live-verified on 12 diverse
+> seeds with search and fresh preview lookups passing.
 
 ---
 
@@ -12,21 +18,21 @@ tiny Python serverless functions that recommend from the 87k-song library using
 **The full model can't** — embedding an *arbitrary* song needs PyTorch (~2.9 GB),
 which is ~12× over Vercel's 250 MB serverless limit. **But it doesn't need to.**
 
-Every song in the 87k library already has a precomputed embedding, and ranking is
-pure numpy (whiten → cosine → vibe-blend → MMR). So the hosted app recommends
-from the **library** with just numpy + the 71 MB index. A test
-(`tests/test_webapp.py`) pins the numpy path to the desktop recommender so results
-are **byte-identical**.
+Every song in the 272,853-row release already has precomputed neural, vibe,
+EfficientNet PCA64, and CLAP PCA64 embeddings. Ranking is pure numpy (whiten →
+cosine → guarded candidate union). The hosted app therefore needs only
+numpy plus the 299 MB release index. `tests/test_webapp.py` pins the numpy path to
+the desktop recommender so results are **byte-identical**.
 
 | | Hosted (Vercel) | Desktop (`soundalike serve`) |
 |---|---|---|
-| Recommend from a library song (87k) | ✅ instant, numpy | ✅ |
+| Recommend from a library song (272,853) | ✅ numpy | ✅ |
 | Recommend from *any* song (on-the-fly neural embedding) | ❌ needs torch | ✅ |
 | Save to Spotify playlist | ✅ (browser → Spotify) | ✅ |
 | Cost / maintenance | free, serverless | your machine |
 
 So: **host the library demo on Vercel; keep the desktop app for arbitrary songs.**
-87k songs is a huge catalog — most searches hit it.
+The release catalogue contains 272,853 songs; misses are reported honestly.
 
 ---
 
@@ -44,10 +50,12 @@ webapp/
   dev_server.py       # local-only: mimics Vercel routing for testing
 ```
 
-The index is **not** committed here — on first request the function downloads
-`deepvibe_index.npz` (71 MB) from the public GitHub Release into `/tmp` and caches
-it for the life of the warm instance. Override with the `SOUNDALIKE_INDEX_URL` or
-`SOUNDALIKE_INDEX_PATH` env vars.
+The index is **not** committed here. On first request the function downloads
+`deepvibe_index.npz` (299,288,526 bytes) from the pinned public GitHub Release into
+`/tmp`, verifies SHA-256 `f3ed57af…526fb9`, and atomically caches it for the warm
+instance. A mismatch fails closed before numpy loads the file. Custom deployments
+may override `SOUNDALIKE_INDEX_URL`, `SOUNDALIKE_INDEX_SHA256`, or
+`SOUNDALIKE_INDEX_PATH`.
 
 ---
 
@@ -132,18 +140,22 @@ default.
 
 ---
 
-## What I need from you to finish the public deployment
+## Release and verification procedure
 
-1. **Connect the repo to Vercel** and set Root Directory = `webapp` (or give me
-   access and I'll prepare the project config).
-2. **DNS:** add the CNAME Vercel gives you for `soundalike.yassin.app`.
-3. **Spotify Dashboard:** add the redirect URI above, add your account under User
-   Management, and paste the Client ID into `index.html` (or tell me to).
-4. *(Optional)* Enable the owner-account model above for public one-click saving
-   (Extended Quota is org-only, so this is the realistic path).
+The GitHub repository is already connected to the production Vercel project with
+`webapp` as its root. For an index-backed ranking release:
 
-Run it locally first to see it work end-to-end:
+1. Build the index and verify its row order, SHA-256, dimensions, and local parity.
+2. Upload it as `deepvibe_index.npz` under the release tag named in
+   `src/soundalike/data/index_manifest.json`.
+3. Update `_INDEX_URL`, `_INDEX_VERSION`, and `_INDEX_SHA256` together.
+4. Merge the verified code to `main`; the Git integration triggers production.
+5. Cold-load `/api/stats`, then verify search, recommendations, and previews for at
+   least ten diverse seeds. Confirm each response reports the expected retrieval
+   mode and index version.
+
+Run the same hosted code locally first:
 
 ```bash
-python webapp/dev_server.py      # → http://127.0.0.1:8788
+python webapp/dev_server.py      # → http://127.0.0.1:8788/
 ```
