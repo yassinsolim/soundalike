@@ -1,8 +1,8 @@
 """Protocol-v8 source audit and opened-data-only catalogue development.
 
 This module deliberately has no operation that creates, opens, scores, or deploys
-a FINAL.  Its only benchmark operation is cross-validation over previously opened
-v6/v7 material.
+a FINAL.  Its deciding benchmark operation is sonic-only cross-validation over
+previously opened v6 material; v7 is hashed supporting provenance only.
 """
 from __future__ import annotations
 
@@ -26,6 +26,7 @@ import numpy as np
 
 from .catalog_cv import (
     DEFAULT_POLICY_GRID,
+    apply_cached_policy,
     build_catalog_cv_report,
     candidate_recall,
     evaluate_seed,
@@ -33,7 +34,6 @@ from .catalog_cv import (
     policy_key,
     precompute_query_components,
     resolve_relevance,
-    rescore_components,
 )
 from .catalog_graph import CatalogArtistGraph
 from .catalog_policy import CatalogPolicy, CatalogPolicyRanker
@@ -433,29 +433,50 @@ def write_signed_development_protocol(
                     "to [0,1], 1/(1+vibe_distance))"
                 ),
                 "S": "MusicBrainz style-vector cosine overlap clipped to [0,1]",
-                "rank_score": "G + audio_weight*A + style_weight*S",
-                "top3_guard": (
-                    "prefer S >= style_guard_min when at least three candidates "
-                    "qualify"
+                "rank_score": "fixed dual-source graph blend G + audio_weight*A",
+                "style_gate": (
+                    "MusicBrainz style is used only in the predeclared sigma "
+                    "consistency gate; it is never gold or primary"
                 ),
             },
             "policy": {
-                "numeric_parameters": [
-                    "audio_weight", "style_weight", "style_guard_min"
-                ],
+                "numeric_parameters": ["tau", "sigma", "audio_weight"],
                 "numeric_parameter_count": 3,
+                "maximum_numeric_parameter_count": 3,
                 "fixed_grid": [asdict(policy) for policy in policies],
                 "selection": "nested five-fold CV over opened DEV only",
+                "production_default": "exact dual_sonic",
+                "gate": (
+                    "fire only with both independent graph sources covered, at "
+                    "least five shared neighbors, source agreement >= tau, and "
+                    "top-five audio/style consistency >= sigma; otherwise return "
+                    "the exact production ranking"
+                ),
             },
             "development_primary": {
-                "formula": "0.80*nDCG@10 + 0.20*MusicBrainz style@3",
-                "axis_metrics_reported_separately": True,
+                "formula": "mean(nDCG@10, MRR@10, Recall@10)",
+                "gold_eligibility": (
+                    "track-level category_a_sonic, deciding_primary, credible "
+                    "editorial/participant or named-critic audible comparisons only"
+                ),
+                "metrics_reported_separately": [
+                    "nDCG@10", "MRR@10", "Recall@10"
+                ],
+                "deezer_v7": (
+                    "supporting taste-affinity only; never selection or deciding "
+                    "metrics; disclosed 82% overlap"
+                ),
             },
             "gates": {
                 "nested_5fold_required": True,
                 "scene_held_out_required": True,
-                "minimum_relative_composite_gain": 0.20,
+                "minimum_relative_sonic_primary_gain": 0.20,
                 "maximum_per_scene_relative_regression": -0.10,
+                "minimum_absolute_sonic_primary_delta": 0.01,
+                "minimum_improved_records": 10,
+                "paired_bootstrap_samples": 10000,
+                "paired_bootstrap_fixed_seed": 20260712,
+                "paired_bootstrap_ci95_low_must_exceed": 0.0,
                 "candidate_recall_at_1000_must_improve": True,
                 "mrr_at_10_non_regression": True,
                 "recall_at_10_non_regression": True,
@@ -464,6 +485,9 @@ def write_signed_development_protocol(
             "resources": {
                 "peak_limit_gb": 1.5,
                 "resident_target_gb": 1.1,
+                "final_requirement": (
+                    "resource verification must pass on the verified catalogue tier"
+                ),
             },
             "final_and_deployment": {
                 "fresh_final_creation_or_opening": (
@@ -532,7 +556,7 @@ def _validate_opened_v7(path: Path, state_value: Any) -> Mapping[str, Any]:
 def _average_metrics(rows: Sequence[Mapping[str, float]]) -> Dict[str, float]:
     keys = (
         "ndcg_at_10", "mrr_at_10", "recall_at_10",
-        "style_coherence_at_3", "composite_primary",
+        "sonic_primary",
     )
     return {
         key: float(mean(float(row.get(key, 0.0)) for row in rows)) if rows else 0.0
@@ -567,7 +591,9 @@ def run_development_cv(
     """Execute cached real DEV CV using production ``dual_sonic`` as baseline."""
     started = time.perf_counter()
     v6_path, v7_path = Path(v6_benchmark_path), Path(v7_benchmark_path)
-    v7 = _validate_opened_v7(v7_path, v7_state_path)
+    # v7 is opened supporting provenance only.  Its labels and state can never
+    # decide policy selection or any metric.
+    v7 = _load_json(v7_path) if v7_path.is_file() else {}
     v6 = _load_json(v6_path)
     normalized = normalize_opened_benchmarks(v6, v7)
     all_records = normalized["records"]
@@ -622,9 +648,6 @@ def run_development_cv(
         baseline_recall = candidate_recall(
             cached["production_rows"], relevance, 1000
         )
-        union_recall = candidate_recall(
-            cached["graph_union_rows"], relevance, 1000
-        )
         record_data[str(record["id"])] = {
             "record": record,
             "query_artist": str(query.get("artist", "")),
@@ -632,7 +655,6 @@ def run_development_cv(
             "relevance": relevance,
             "baseline": baseline_metrics,
             "baseline_recall": baseline_recall,
-            "union_recall": union_recall,
         }
     precompute_seconds = time.perf_counter() - precompute_started
     if len(records) < 5:
@@ -640,14 +662,25 @@ def run_development_cv(
             "nested five-fold CV requires at least five resolvable records"
         )
 
-    policy_record_cache: Dict[Tuple[Tuple[float, float, float], str], Dict[str, float]] = {}
+    policy_record_cache: Dict[
+        Tuple[Tuple[float, float, float], str], Dict[str, Any]
+    ] = {}
 
     def policy_metrics(policy: CatalogPolicy, record_id: str) -> Dict[str, float]:
         key = (policy_key(policy), record_id)
         if key not in policy_record_cache:
             data = record_data[record_id]
-            ranking = rescore_components(data["query"]["components"], policy, 10)
-            policy_record_cache[key] = evaluate_seed(ranking, data["relevance"])
+            applied = apply_cached_policy(data["query"], policy, 10)
+            ranking = [{"row": row} for row in applied["ranking_rows"]]
+            metrics = evaluate_seed(ranking, data["relevance"])
+            metrics.update({
+                "candidate_recall_at_1000": candidate_recall(
+                    applied["candidate_rows"], data["relevance"], 1000
+                ),
+                "gate_fired": bool(applied["fired"]),
+                "gate_reason": str(applied["reason"]),
+            })
+            policy_record_cache[key] = metrics
         return policy_record_cache[key]
 
     def evaluator(
@@ -675,17 +708,29 @@ def run_development_cv(
             }
 
         improved = sum(
-            challenger_rows[i]["composite_primary"]
-            > baseline_rows[i]["composite_primary"]
+            challenger_rows[i]["sonic_primary"] > baseline_rows[i]["sonic_primary"]
             for i in range(len(ids))
         )
         worsened = sum(
-            challenger_rows[i]["composite_primary"]
-            < baseline_rows[i]["composite_primary"]
+            challenger_rows[i]["sonic_primary"] < baseline_rows[i]["sonic_primary"]
             for i in range(len(ids))
         )
         baseline_recall = float(mean(record_data[x]["baseline_recall"] for x in ids))
-        union_recall = float(mean(record_data[x]["union_recall"] for x in ids))
+        challenger_recall = float(mean(
+            policy_metrics(policy, x)["candidate_recall_at_1000"] for x in ids
+        ))
+        per_record = [{
+            "id": value,
+            "scene": str(record_data[value]["record"].get("scene", "unknown")),
+            "baseline": record_data[value]["baseline"],
+            "challenger": policy_metrics(policy, value),
+            "baseline_candidate_recall_at_1000": record_data[value]["baseline_recall"],
+            "challenger_candidate_recall_at_1000": policy_metrics(
+                policy, value
+            )["candidate_recall_at_1000"],
+            "gate_fired": policy_metrics(policy, value)["gate_fired"],
+            "gate_reason": policy_metrics(policy, value)["gate_reason"],
+        } for value in ids]
         return {
             "baseline": baseline,
             "challenger": challenger,
@@ -695,7 +740,8 @@ def run_development_cv(
             "worsened": int(worsened),
             "unchanged": len(ids) - int(improved) - int(worsened),
             "baseline_candidate_recall_at_1000": baseline_recall,
-            "challenger_candidate_recall_at_1000": union_recall,
+            "challenger_candidate_recall_at_1000": challenger_recall,
+            "per_record": per_record,
         }
 
     cv_started = time.perf_counter()
@@ -705,30 +751,29 @@ def run_development_cv(
         for record in records
         if int(record["source_version"]) == 6
     ]
-    filtered_v7 = dict(v7)
-    filtered_v7["records"] = [
-        record["source_record"]
-        for record in records
-        if int(record["source_version"]) == 7
-    ]
     report = report_builder(
-        filtered_v6, filtered_v7, evaluator, policies=policies
+        filtered_v6, v7, evaluator, policies=policies
     )
+    # CV operates on catalogue-resolvable records, but the report must retain
+    # the complete opened-evidence inventory rather than hiding resolution
+    # exclusions behind the filtered execution document.
+    report["benchmark_inventory"] = normalized["benchmark_inventory"]
     report["opened_evidence_resolution"] = {
         "considered_records": len(all_records),
         "evaluated_records": len(records),
         "unresolved_queries": unresolved_queries,
         "unresolved_relevance": unresolved_relevance,
-        "all_opened_records_considered": True,
+        "all_eligible_sonic_records_considered": True,
+        "v7_labels_considered": False,
         "exclusion_rule": "only catalogue-unresolvable query or positive labels",
     }
     cv_seconds = time.perf_counter() - cv_started
     selected_value = report.get("nested_5fold", {}).get("final_policy")
     if isinstance(selected_value, Mapping):
         selected = CatalogPolicy(
+            float(selected_value["tau"]),
+            float(selected_value["sigma"]),
             float(selected_value["audio_weight"]),
-            float(selected_value["style_weight"]),
-            float(selected_value["style_guard_min"]),
         )
         report["selected_policy_evaluation"] = {
             "exact_policy": asdict(selected),
@@ -739,17 +784,22 @@ def run_development_cv(
         state_hashes["inline_v7_opened_state"] = hashlib.sha256(
             _canonical_bytes(v7_state_path)
         ).hexdigest()
-    else:
+    elif v7_state_path is not None and Path(v7_state_path).is_file():
         state_hashes[str(Path(v7_state_path))] = _sha256(Path(v7_state_path))
     report["execution"] = {
         "phase": "DEVELOPMENT_LOCKED",
         "production_baseline": "dual_sonic",
-        "v7_already_opened": True,
+        "v7_supporting_provenance_hashed": v7_path.is_file(),
+        "deezer_used_for_selection": False,
+        "no_unopened_final_labels_compared": True,
         "fresh_final_inputs_accepted": False,
         "unique_queries": len(query_cache),
         "records": len(records),
         "policy_record_cache_entries": len(policy_record_cache),
-        "candidate_components": "complete full graph plus fixed 1000-audio pool",
+        "candidate_components": (
+            "complete independent Last.fm/Music4All graph union plus exact "
+            "production dual_sonic pool"
+        ),
         "relevance_computed_separately_per_record": True,
         "timing_seconds": {
             "precompute": precompute_seconds,
@@ -758,7 +808,7 @@ def run_development_cv(
         },
         "input_sha256": {
             str(v6_path): _sha256(v6_path),
-            str(v7_path): _sha256(v7_path),
+            **({str(v7_path): _sha256(v7_path)} if v7_path.is_file() else {}),
             str(Path(index_path)): _sha256(Path(index_path)),
             str(Path(catalog_graph_path)): _sha256(Path(catalog_graph_path)),
             str(Path(style_index_path)): _sha256(Path(style_index_path)),

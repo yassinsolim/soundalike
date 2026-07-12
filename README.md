@@ -550,11 +550,77 @@ The serving candidate now stores only the full graph (`int16` neighbors / `float
 the graph 23.2→11.4 MB (50.8%). An isolated process measured 5.91 s load, **1.493 GB peak RSS**,
 1.219 GB resident (the core index alone was 1.191 GB, so the 1.1 GB resident target is not feasible
 without reformatting it), 110 ms first recommendation, and 113 ms warm mean / 133 ms p95, with zero
-fallbacks. The conservative documented Vercel Hobby limit is 2 GB, leaving 655 MB peak headroom.
+fallbacks. The earlier 655 MB headroom figure was only a conservative **Hobby-tier assumption**;
+iteration 8 below checks the linked project and refuses to treat that estimate as verified capacity.
 
 Because cross-validation and direct review both failed, the protocol remained
 `DEVELOPMENT_LOCKED` with `final_open_count=0`: **no fresh FINAL was built or opened, no release
 asset was uploaded, and production remains unchanged.**
+
+### Confidence-gated production fallback (iteration 8)
+
+The global graph policy hurt sparse scenes, so iteration 8 implemented the smaller policy suggested
+by that failure. Current production is now the explicit development challenger’s default:
+
+`fire graph head iff agreement(Music4All, Last.fm) >= tau and consistency(A, S) >= sigma`
+
+When either check fails, the challenger returns the **exact production ordering**. `G` is a frozen
+equal blend of the two sources’ fixed `0.7·weight + 0.3/log2(rank+1)` components; graph mode ranks
+with `G + audio_weight·A`. Thus the only numeric tunables are `tau`, `sigma`, and
+`audio_weight`. There are no scene branches, manual/artist boosts, Wikipedia scores, or popularity
+features in the graph head.
+
+Selection used only 65 already-opened, source-audited Category-A sonic/editorial pairs from v6.
+Four catalogue-unresolvable labels left 61 scored records. The 40 ListenBrainz-only sonic records,
+88 human-songs-like records, and all 100 Deezer multi-positive records were excluded from deciding
+selection. Deezer remains supporting evidence only: Music4All↔Deezer learned-neighborhood overlap is
+82.4%, Last.fm↔Deezer overlap is 36.8%, and the ID-isolation audit still passes.
+
+| Nested sonic DEV | nDCG@10 | MRR@10 | Recall@10 | Primary |
+|---|---:|---:|---:|---:|
+| Exact production | **0.007060** | **0.004098** | 0.016393 | **0.009184** |
+| Gated challenger | 0.004935 | 0.001821 | 0.016393 | 0.007717 |
+
+Primary is `mean(nDCG@10, MRR@10, Recall@10)`. Outer-fold primary results were
+`0→0`, `0→0`, `0→0`, `0.046685→0.039226`, and `0→0`; aggregate change was
+**-15.98%** (absolute -0.001467, paired 10,000-bootstrap CI
+**[-0.004402, 0]**), with 0 improved / 1 worsened / 60 unchanged. Candidate Recall@1000 stayed
+0.245902→0.245902. The gate fired 25/61 (41.0%) and abstained 36/61; reasons were 31 missing-source,
+4 insufficient-agreement-neighborhood, 1 consistency rejection, and 25 passes. Scene-held-out CV
+matched the aggregate and failed the floor only in metal (-15.98%); all other scene deltas were zero.
+
+A separately locked difficult review compared both methods on the same fresh 20 seeds, including
+two city-pop, two Latin, three hyperpop/digicore, Daft Punk, Gorillaz, and the Pixies→trip-hop
+failure. All 200 positions include preview status, audio/style values, tags, and junk evidence.
+The challenger reached **16/20** versus production **15/20**; its gate fired 5/20 and fixed the
+my-bloody-valentine list, but brakence, Gorillaz, Frank Ocean, and FKA twigs still failed.
+
+The dual-source runtime graph is 12,160,029 bytes and stores no raw Music4All vectors. Isolated
+measurement found 7.96 s load, 1,494,294,528-byte peak RSS, 1,327,017,984-byte resident RSS,
+200.6 ms warm mean / 265.5 ms p95, deterministic output, and zero silent fallbacks. The linked
+Vercel project config was found, but CLI authentication was unavailable and both project/team API
+probes returned 403. Therefore the **actual tier and headroom remain unverified**; the resource gate
+fails closed instead of assuming Hobby or Pro.
+
+The nested, scene, and verified-tier preconditions failed. Consequently
+`final_open_count=0`: **no fresh FINAL identity was created or opened, no canonical/hosted code or
+manifest changed, and nothing was deployed.** Production and live stats remain
+`2026.07.11-dual-sonic64` / 272,853 songs.
+
+Reproduce the non-FINAL development run:
+
+```powershell
+.\.venv\Scripts\python.exe -c "from soundalike.ml.catalog_graph import compact_dual_source_graph; compact_dual_source_graph('ml_data/iteration7/catalog-artist-graph-full-v8.npz','ml_data/iteration5/collaborative/item2vec-full.npz','ml_data/iteration8/catalog-artist-graph-dual-v8.npz')"
+
+.\.venv\Scripts\python.exe -m soundalike.ml.catalog_v8 dev-cv `
+  benchmarks\soundalike_pairs.v6.json benchmarks\soundalike_multipositive.v7.json `
+  .goals\human-quality-recommendations\protocol-v7\state.json `
+  ml_data\deepvibe_index_v5.npz ml_data\iteration8\catalog-artist-graph-dual-v8.npz `
+  ml_data\iteration7\catalog-style-v8.npz `
+  .goals\human-quality-recommendations\artifacts\catalog-gated-sonic-dev-cv-v8.json
+
+.\.venv\Scripts\python.exe -m pytest tests\ -q
+```
 
 ### Growing the library past the bundle limit
 

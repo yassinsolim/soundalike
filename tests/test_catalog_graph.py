@@ -7,6 +7,7 @@ import pytest
 
 from soundalike.ml.catalog_graph import (
     CatalogArtistGraph,
+    compact_dual_source_graph,
     compact_full_graph,
     mask_final_topology,
 )
@@ -135,6 +136,61 @@ def test_compact_graph_rejects_absent_mask_without_fallback(tmp_path):
         graph.artist_neighbors(
             "a", np.asarray([1.0, 0.0]), variant="twohop"
         )
+
+
+def _music4all_asset(path: Path) -> Path:
+    np.savez_compressed(
+        path,
+        artist_names=np.asarray(["d", "b", "a", "c"]),
+        artist_vectors=np.asarray(
+            [[0.7, 0.3], [0.9, 0.1], [1.0, 0.0], [0.0, 1.0]],
+            dtype=np.float16,
+        ),
+        metadata=np.asarray(json.dumps({"method": "item2vec-full"})),
+    )
+    return path
+
+
+def test_compact_dual_source_asset_is_deterministic_and_vector_free(tmp_path):
+    source = _graph_asset(tmp_path / "source.npz")
+    music = _music4all_asset(tmp_path / "item2vec-full.npz")
+    first = compact_dual_source_graph(source, music, tmp_path / "first.npz")
+    second = compact_dual_source_graph(source, music, tmp_path / "second.npz")
+
+    assert first.read_bytes() == second.read_bytes()
+    with np.load(first, allow_pickle=False) as asset:
+        assert asset["music4all_query_artist_ids"].tolist() == [0, 1, 2, 3]
+        assert asset["music4all_indices"].shape == (4, 3)
+        assert "artist_vectors" not in asset.files
+        assert "vectors" not in asset.files
+        metadata = json.loads(str(asset["metadata"].item()))
+        assert metadata["runtime_contains_raw_vectors"] is False
+        assert metadata["music4all_signal"] == "item2vec-full-exact-cosine-top96"
+
+
+def test_dual_source_runtime_rejects_audio_projected_lastfm_evidence(tmp_path):
+    dual = compact_dual_source_graph(
+        _graph_asset(tmp_path / "source.npz"),
+        _music4all_asset(tmp_path / "item2vec-full.npz"),
+        tmp_path / "dual.npz",
+    )
+    graph = CatalogArtistGraph(dual)
+
+    projected = graph.dual_source_neighbors("d")
+    assert projected["source_coverage"] == {
+        "lastfm": False,
+        "music4all": True,
+    }
+    assert projected["lastfm"]["artist_ids"].size == 0
+    assert projected["mode"] == "dual_source_unavailable"
+
+    mapped = graph.dual_source_neighbors("a")
+    assert mapped["mode"] == "dual_source_union"
+    assert all(graph.source_mapped[row] for row in mapped["lastfm"]["artist_ids"])
+    assert set(mapped["union_artist_ids"]) == (
+        set(mapped["lastfm"]["artist_ids"])
+        | set(mapped["music4all"]["artist_ids"])
+    )
 
 
 def test_catalog_graph_requires_full_but_keeps_legacy_variants(tmp_path):

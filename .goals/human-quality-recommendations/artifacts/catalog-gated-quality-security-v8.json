@@ -1,0 +1,63 @@
+{
+  "artifact_sha256": {
+    ".goals\\human-quality-recommendations\\artifacts\\catalog-gated-development-outcome-v8.json": "76bf1d6f7d7a3e4f681be7c039d34fa43d2302c6f402fd2b0a7d4d5a49560989",
+    ".goals\\human-quality-recommendations\\artifacts\\catalog-gated-direct-validation-v8.json": "67c980bdd58e23618d575c219403c8bd62cd159cbb4f1a1ac7fd49f6ae15d95b",
+    ".goals\\human-quality-recommendations\\artifacts\\catalog-gated-resources-v8.json": "ef31fbf21bd2f41b181e3dd421e7ed9062b03e5e9f2f8896603429cf3f48c18c",
+    ".goals\\human-quality-recommendations\\artifacts\\catalog-gated-sonic-dev-cv-v8.json": "71c105b3aefa876c5f510b95024cb0150a1463ca2e25aa7ef057766c1e685ff9",
+    ".goals\\human-quality-recommendations\\protocol-v8-gated-development-r3\\state.json": "84769a217ae108289e39f1516058e3044cefb059058e10e35dd9008e9400b5fa"
+  },
+  "build": {
+    "command": ".\\.venv\\Scripts\\python.exe -m build",
+    "note": "setuptools license-table deprecation warning only",
+    "passed": true,
+    "sdist_and_wheel": true
+  },
+  "created_at": "2026-07-12",
+  "dependency_audit": {
+    "command": ".\\.venv\\Scripts\\python.exe -m pip_audit",
+    "dependency_manifests_changed": false,
+    "known_vulnerabilities": 0,
+    "passed": true,
+    "skipped_non_pypi": [
+      "soundalike 0.1.0",
+      "torch 2.13.0+cu130",
+      "torchaudio 2.11.0+cu130",
+      "torchvision 0.28.0+cu130"
+    ]
+  },
+  "independent_reviews": {
+    "code_review": "no significant issues",
+    "security_review": "no security vulnerabilities"
+  },
+  "integrity": {
+    "dependency_manifests_modified": false,
+    "final_open_count": 0,
+    "fresh_final_created": false,
+    "immutable_goal_modified": false,
+    "production_serving_paths_modified": false,
+    "protocol_r2_signature_verified": true,
+    "protocol_r3_current_source_hashes_match": true,
+    "protocol_r3_signature_verified": true
+  },
+  "passed": true,
+  "quality_gate": {
+    "command": ".\\.venv\\Scripts\\python.exe -m pytest tests\\ -q",
+    "passed": true,
+    "seconds": 18.81,
+    "tests_passed": 479
+  },
+  "schema_version": 8,
+  "secret_scan": {
+    "entropy_findings": 110,
+    "entropy_findings_classification": "102 hex hashes/checksums/signatures and 8 public Vercel project/org IDs or Ed25519 public-key material; 0 unclassified",
+    "github_secret_scanning": {
+      "available": false,
+      "reason": "repository does not have GitHub Advanced Security enabled"
+    },
+    "known_pattern_findings": 0,
+    "local_scanner": "detect-secrets 1.5.0 over every staged ACM file",
+    "passed": true,
+    "private_key_or_token_pattern_matches": 0,
+    "private_signing_keys_persisted": false
+  }
+}

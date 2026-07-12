@@ -972,7 +972,121 @@ There is deliberately no FINAL command in `soundalike.ml.catalog_v8`.
 
 ---
 
-## 11. Security & correctness
+## 11. Confidence-gated graph fallback: direct quality passed, CV did not
+
+Iteration 7 showed why one global graph ranking cannot protect heterogeneous scenes. Iteration 8
+therefore made deployed production the default and allowed a graph head only when two independent
+confidence checks pass:
+
+```text
+Last.fm component = 0.7 * normalized_weight + 0.3 / log2(rank + 1)
+Music4All component = 0.7 * normalized_weight + 0.3 / log2(rank + 1)
+G = 0.5 * Last.fm component + 0.5 * Music4All component
+A = mean(Sonic64 cosine01, CLAP cosine01, 1 / (1 + vibe_distance))
+score = G + audio_weight * A
+
+fire iff source_agreement >= tau
+        and min(mean(A@5), mean(style@5), min(style@3)) >= sigma
+otherwise return exact production
+```
+
+The graph candidate set is the union of exact top-96 Music4All artist-vector neighbors and
+Last.fm-360K neighbors for directly mapped queries/candidates. Audio-projected Last.fm artists do
+not count as independent evidence. At least five neighbor artists must occur in both sources before
+`tau` can pass. The fixed grid has only `tau`, `sigma`, and the one audio tie-break weight; there is
+no per-scene lookup, style ranking weight, manual artist boost, Wikipedia feature, or popularity
+feature.
+
+### Sonic-only development protocol
+
+The pre-registration is detached-Ed25519-signed. Selection considered all 65 eligible v6 records:
+51 editorial/participant comparisons and 16 named-critic comparisons, minus one unresolved and one
+disputed claim. Four otherwise eligible records were catalogue-unresolvable, leaving 61 scored.
+The following were explicitly excluded from the deciding axis:
+
+- 40 ListenBrainz session/co-listening-only pairs;
+- 88 `category_a_human_songs_like` pairs;
+- 100 Deezer related-artist multi-positive records.
+
+No eligible opened multi-positive **sonic/editorial** source existed; relabelling Deezer affinity as
+sonic gold would have been the same axis error that invalidated earlier experiments. The Deezer set
+therefore remains supporting-only. Music4All↔Deezer top-neighborhood overlap is disclosed as 82.37%
+(285/346), Last.fm↔Deezer as 36.75% (430/1,170), while numeric-ID isolation passes.
+
+Nested five-fold selection chose `(tau=0.35, sigma=0.30, audio_weight=0.05)` in every outer fold:
+
+| Outer fold | Records | Production primary | Gated primary | Relative | Fired |
+|---:|---:|---:|---:|---:|---:|
+| 0 | 13 | 0 | 0 | 0% | 3 |
+| 1 | 12 | 0 | 0 | 0% | 8 |
+| 2 | 12 | 0 | 0 | 0% | 4 |
+| 3 | 12 | 0.046685 | 0.039226 | -15.98% | 4 |
+| 4 | 12 | 0 | 0 | 0% | 6 |
+| **Aggregate** | **61** | **0.009184** | **0.007717** | **-15.98%** | **25** |
+
+The aggregate absolute delta is -0.001467; the paired 10,000-bootstrap CI is
+[-0.004402, 0], with probability-positive 0.0 and 0 improved / 1 worsened / 60 unchanged.
+nDCG@10 changed 0.007060→0.004935, MRR@10 0.004098→0.001821, Recall@10 stayed
+0.016393, and candidate Recall@1000 stayed 0.245902. Thus every positive-evidence gate except
+Recall non-regression failed.
+
+Scene-held-out selection produced the same aggregate. Exact scene outcomes:
+
+| Held scene | N | Relative primary | Fired / abstained |
+|---|---:|---:|---:|
+| Asian pop | 4 | 0% | 2 / 2 |
+| Electronic | 6 | 0% | 4 / 2 |
+| Folk/country | 2 | 0% | 0 / 2 |
+| Hip-hop | 4 | 0% | 1 / 3 |
+| Indie/alternative | 13 | 0% | 6 / 7 |
+| Jazz | 2 | 0% | 0 / 2 |
+| Metal | 3 | **-15.98%** | 2 / 1 |
+| Other | 1 | 0% | 0 / 1 |
+| Pop | 5 | 0% | 2 / 3 |
+| R&B/soul | 11 | 0% | 4 / 7 |
+| Reggae/dub/ska | 1 | 0% | 0 / 1 |
+| Rock | 7 | 0% | 4 / 3 |
+| Shoegaze/dream-pop | 2 | 0% | 0 / 2 |
+
+Across outer predictions, the gate fired 25/61 (40.98%) and abstained 36/61. Abstention reasons
+were missing one independent source (31), fewer than five shared neighbors (4), and failed
+audio/style consistency (1). This is the intended safety mechanism, but it did not create a sonic
+retrieval gain.
+
+### Direct lists and resource stop
+
+A fresh target-blind 20-seed manifest was hash-locked to the selected policy before list generation.
+It covers city-pop ×2, Latin ×2, hyperpop/digicore ×3, Daft Punk, Gorillaz, Pixies, trip-hop,
+shoegaze, metal, jazz, rap, R&B, Afrobeats, K-pop, and art-pop. Both methods’ 200 positions record
+title/artist, preview availability, A/S values, style tags, and junk evidence. The challenger passed
+**16/20**, production 15/20. Graph mode fired 5/20 (shoegaze, two metal, rap, jazz) and corrected the
+my-bloody-valentine head; it abstained on all city-pop, Latin, hyperpop/digicore, Daft Punk,
+Gorillaz, and Pixies cases. Challenger failures remained brakence, Gorillaz, Frank Ocean, and FKA
+twigs. No duplicate, karaoke, slowed, seed-title variant, or other generated junk flag appeared.
+
+The compact dual-source NPZ is 12,160,029 bytes: 18,258 Last.fm graph artists × 96 plus a sparse
+2,640-query Music4All top-96 block. It contains no user histories or raw Music4All vectors.
+Subprocess measurement over the direct seeds found:
+
+- load 7.959 s; first recommendation 180.0 ms;
+- warm mean 200.6 ms, p50 182.4 ms, p95 265.5 ms;
+- peak RSS 1,494,294,528 bytes; resident 1,327,017,984 bytes;
+- deterministic repeated output, zero errors, zero silent fallbacks.
+
+The linked `soundalike` project ID/org ID were verified from `.vercel/project.json`, but the Vercel
+CLI had no credentials and both exact project/team API calls returned 403. `vercel.json` declares
+durations, not the plan. Therefore the actual memory tier and headroom are **unknown**. Unlike
+iteration 7’s conservative estimate, this gate does not assume Hobby: platform headroom is null and
+the resource precondition fails.
+
+**Stop decision:** nested CV, scene-held-out CV, candidate-recall, confidence, improved-count, and
+verified-tier requirements failed. Direct review alone cannot authorize a FINAL. No fresh FINAL was
+created or opened (`final_open_count=0`), no rankings entered `RANKINGS_LOCKED`, and no desktop,
+hosted, release, manifest, or live-production path changed.
+
+---
+
+## 12. Security & correctness
 
 - **No passwords, ever.** Live Spotify access uses OAuth 2.0 **Authorization Code + PKCE** with a
   local loopback callback, CSRF `state` validation, and cached auto-refreshing tokens.
@@ -997,7 +1111,7 @@ There is deliberately no FINAL command in `soundalike.ml.catalog_v8`.
 
 ---
 
-## 12. What I'd build next
+## 13. What I'd build next
 
 - **Persist a personal acoustic-feature store** so the engines cover a user's entire Spotify
   library, not just what's in a preview catalog.
@@ -1019,7 +1133,7 @@ There is deliberately no FINAL command in `soundalike.ml.catalog_v8`.
 
 ---
 
-## 13. Skills demonstrated
+## 14. Skills demonstrated
 
 For anyone evaluating this as a portfolio piece, the work spans:
 
@@ -1033,7 +1147,7 @@ For anyone evaluating this as a portfolio piece, the work spans:
   CUDA memory-layout and precision tuning, reading cuDNN kernel selection.
 - **API integration & security:** OAuth 2.0 PKCE, token lifecycle management, rate-limit handling,
   secret hygiene.
-- **Software engineering:** clean package design, a 419-test suite, packaging, a documented CLI,
+- **Software engineering:** clean package design, a 479-test suite, packaging, a documented CLI,
   decoupling I/O from compute (the harvest-once spec cache), and reviewed, merged pull requests.
   Includes a reproducible human-aligned evaluation suite, three ranking improvements (quality
   filter, genre reranker, collaborative graph), and desktop/hosted parity tests.

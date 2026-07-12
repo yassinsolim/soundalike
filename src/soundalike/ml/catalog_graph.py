@@ -126,6 +126,124 @@ def compact_full_graph(source: str | Path, output: str | Path) -> Path:
     return output_path
 
 
+def compact_dual_source_graph(
+    source: str | Path,
+    music4all_full: str | Path,
+    output: str | Path,
+) -> Path:
+    """Add exact Music4All item2vec artist neighborhoods to a graph asset.
+
+    Only catalogue-aligned artist ids and their deterministic top-96 cosine
+    neighborhoods are written.  The item2vec vectors are build-time inputs and
+    are deliberately absent from the runtime asset.
+    """
+    source_path = Path(source)
+    music_path = Path(music4all_full)
+    output_path = Path(output)
+    required = (
+        "artist_names",
+        "track_artist_ids",
+        "track_rows",
+        "track_indptr",
+        "source_mapped",
+        "artist_audio",
+        "full_indices",
+        "full_weights",
+    )
+    with np.load(source_path, allow_pickle=False) as asset:
+        missing = [name for name in required if name not in asset.files]
+        if missing:
+            raise ValueError(
+                "Cannot build dual-source graph; missing graph arrays: "
+                + ", ".join(missing)
+            )
+        arrays = {name: np.asarray(asset[name]) for name in required}
+
+    with np.load(music_path, allow_pickle=False) as asset:
+        if "artist_names" not in asset.files:
+            raise ValueError("Music4All item2vec-full asset lacks artist_names")
+        vector_key = (
+            "artist_vectors" if "artist_vectors" in asset.files else "vectors"
+        )
+        if vector_key not in asset.files:
+            raise ValueError("Music4All item2vec-full asset lacks artist vectors")
+        music_names = np.asarray(asset["artist_names"])
+        music_vectors = np.asarray(asset[vector_key], dtype=np.float32)
+    if music_vectors.ndim != 2 or len(music_names) != len(music_vectors):
+        raise ValueError("Music4All artist names and vectors are misaligned")
+
+    graph_lookup = {
+        normalize_text(str(name)): artist_id
+        for artist_id, name in enumerate(arrays["artist_names"])
+    }
+    # Sorting by catalogue id makes both rows and tie-breaking independent of
+    # the source file's incidental row order.
+    aligned: Dict[int, np.ndarray] = {}
+    for name, vector in zip(music_names, music_vectors):
+        artist_id = graph_lookup.get(normalize_text(str(name)))
+        if artist_id is not None and artist_id not in aligned:
+            aligned[artist_id] = vector
+    query_ids = np.asarray(sorted(aligned), dtype=np.int32)
+    vectors = (
+        _normalise_rows(np.asarray([aligned[int(key)] for key in query_ids]))
+        if len(query_ids)
+        else np.empty((0, music_vectors.shape[1]), dtype=np.float32)
+    )
+    width = min(96, max(len(query_ids) - 1, 0))
+    indices = np.full((len(query_ids), width), -1, dtype=np.int32)
+    weights = np.zeros((len(query_ids), width), dtype=np.float32)
+    for start in range(0, len(query_ids), 256):
+        stop = min(start + 256, len(query_ids))
+        score = vectors[start:stop] @ vectors.T
+        score[np.arange(stop - start), np.arange(start, stop)] = -np.inf
+        for offset, values in enumerate(score):
+            # lexsort uses catalogue id as the deterministic tie-break.
+            order = np.lexsort((query_ids, -values))[:width]
+            positive = values[order] > 0.0
+            count = int(positive.sum())
+            if count:
+                indices[start + offset, :count] = query_ids[order[positive]]
+                weights[start + offset, :count] = values[order[positive]]
+
+    artist_count = len(arrays["artist_names"])
+    index_dtype = (
+        np.int16
+        if artist_count <= np.iinfo(np.int16).max + 1
+        else np.int32
+    )
+    metadata = {
+        "schema_version": 3,
+        "asset_type": "catalog_artist_graph_dual_source_runtime",
+        "available_variants": ["full"],
+        "lastfm_candidate_policy": "source_mapped_only",
+        "music4all_signal": "item2vec-full-exact-cosine-top96",
+        "music4all_aligned_artists": int(len(query_ids)),
+        "source_sha256": _digest(source_path),
+        "music4all_full_sha256": _digest(music_path),
+        "runtime_contains_raw_vectors": False,
+        "silent_fallback": False,
+    }
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(
+        output_path,
+        artist_names=arrays["artist_names"],
+        track_artist_ids=arrays["track_artist_ids"],
+        track_rows=arrays["track_rows"],
+        track_indptr=arrays["track_indptr"],
+        source_mapped=np.asarray(arrays["source_mapped"], dtype=np.uint8),
+        artist_audio=np.asarray(
+            _normalise_rows(arrays["artist_audio"]), dtype=np.float16
+        ),
+        full_indices=np.asarray(arrays["full_indices"], dtype=index_dtype),
+        full_weights=np.asarray(arrays["full_weights"], dtype=np.float16),
+        music4all_query_artist_ids=query_ids,
+        music4all_indices=np.asarray(indices, dtype=index_dtype),
+        music4all_weights=np.asarray(weights, dtype=np.float16),
+        metadata=np.asarray(json.dumps(metadata, sort_keys=True)),
+    )
+    return output_path
+
+
 def _normalise_rows(values: np.ndarray) -> np.ndarray:
     values = np.asarray(values, dtype=np.float32)
     return values / np.linalg.norm(values, axis=1, keepdims=True).clip(min=1e-8)
@@ -706,11 +824,109 @@ class CatalogArtistGraph:
                         ),
                     )
             self.metadata = json.loads(str(asset["metadata"].item()))
+            dual_keys = (
+                "music4all_query_artist_ids",
+                "music4all_indices",
+                "music4all_weights",
+            )
+            present = [name in asset.files for name in dual_keys]
+            if any(present) and not all(present):
+                raise ValueError("Music4All dual-source graph arrays are incomplete")
+            self.music4all_query_artist_ids = (
+                np.asarray(asset[dual_keys[0]], dtype=np.int32)
+                if all(present)
+                else np.empty(0, dtype=np.int32)
+            )
+            self.music4all_indices = (
+                np.asarray(asset[dual_keys[1]], dtype=np.int32)
+                if all(present)
+                else np.empty((0, 0), dtype=np.int32)
+            )
+            self.music4all_weights = (
+                np.asarray(asset[dual_keys[2]], dtype=np.float32)
+                if all(present)
+                else np.empty((0, 0), dtype=np.float32)
+            )
+            if all(present) and (
+                len(self.music4all_query_artist_ids)
+                != len(self.music4all_indices)
+                or self.music4all_indices.shape != self.music4all_weights.shape
+            ):
+                raise ValueError("Music4All dual-source graph arrays are misaligned")
         self.artist_lookup = {
             str(name): position
             for position, name in enumerate(self.artist_names)
         }
+        self._music4all_rows = {
+            int(artist_id): row
+            for row, artist_id in enumerate(self.music4all_query_artist_ids)
+        }
+        self.has_dual_source = bool(len(self.music4all_query_artist_ids))
         self.load_seconds = time.perf_counter() - started
+
+    def dual_source_neighbors(self, query_artist: str) -> Dict[str, Any]:
+        """Expose the independent Last.fm/Music4All top-96 union.
+
+        Last.fm evidence is accepted only when both query and candidate were
+        directly mapped in Last.fm.  Audio-projected rows never count as an
+        independent source and no source is substituted when either is absent.
+        """
+        artist_id = self.artist_lookup.get(normalize_text(query_artist))
+        coverage = {"lastfm": False, "music4all": False}
+        empty = {
+            "artist_ids": np.empty(0, dtype=np.int32),
+            "weights": np.empty(0, dtype=np.float32),
+        }
+        lastfm = dict(empty)
+        music4all = dict(empty)
+        if artist_id is not None and bool(self.source_mapped[artist_id]):
+            raw_indices, raw_weights = self._variant("full")
+            valid = (
+                (raw_indices[artist_id] >= 0)
+                & self.source_mapped[
+                    np.maximum(raw_indices[artist_id].astype(np.int64), 0)
+                ]
+            )
+            lastfm = {
+                "artist_ids": np.asarray(
+                    raw_indices[artist_id, valid][:96], dtype=np.int32
+                ),
+                "weights": np.asarray(
+                    raw_weights[artist_id, valid][:96], dtype=np.float32
+                ),
+            }
+            coverage["lastfm"] = True
+        music_row = self._music4all_rows.get(int(artist_id)) if artist_id is not None else None
+        if music_row is not None:
+            valid = self.music4all_indices[music_row] >= 0
+            music4all = {
+                "artist_ids": np.asarray(
+                    self.music4all_indices[music_row, valid][:96], dtype=np.int32
+                ),
+                "weights": np.asarray(
+                    self.music4all_weights[music_row, valid][:96], dtype=np.float32
+                ),
+            }
+            coverage["music4all"] = True
+        union = np.asarray(
+            sorted(
+                set(map(int, lastfm["artist_ids"]))
+                | set(map(int, music4all["artist_ids"]))
+            ),
+            dtype=np.int32,
+        )
+        return {
+            "artist_id": artist_id,
+            "lastfm": lastfm,
+            "music4all": music4all,
+            "union_artist_ids": union,
+            "source_coverage": coverage,
+            "mode": (
+                "dual_source_union"
+                if all(coverage.values())
+                else "dual_source_unavailable"
+            ),
+        }
 
     def _variant(self, variant: str) -> Tuple[np.ndarray, np.ndarray]:
         try:

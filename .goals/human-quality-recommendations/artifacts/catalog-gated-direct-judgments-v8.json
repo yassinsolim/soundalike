@@ -1,0 +1,4149 @@
+{
+  "created_at": "2026-07-12",
+  "judgments": [
+    {
+      "challenger_pass": true,
+      "id": "direct-01",
+      "positions": [
+        {
+          "artist": "Soundgarden",
+          "audio_similarity": 0.6692421436309814,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.669; S=0.750; styles=['rock', 'metal', 'shoegaze_dream_pop', 'pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Alternative/grunge/space-rock peers; Pixies-to-trip-hop drift is absent.",
+          "style_labels": [
+            "rock",
+            "metal",
+            "shoegaze_dream_pop",
+            "pop"
+          ],
+          "style_overlap": 0.7497923374176025,
+          "title": "Limo Wreck (Rehearsal Version)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Built To Spill",
+          "audio_similarity": 0.6114552617073059,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.611; S=0.658; styles=['rock', 'pop', 'punk', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Alternative/grunge/space-rock peers; Pixies-to-trip-hop drift is absent.",
+          "style_labels": [
+            "rock",
+            "pop",
+            "punk",
+            "electronic"
+          ],
+          "style_overlap": 0.6583409309387207,
+          "title": "Kicked It in the Sun",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Hum",
+          "audio_similarity": 0.6652244925498962,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.665; S=0.739; styles=['rock', 'metal', 'pop', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Alternative/grunge/space-rock peers; Pixies-to-trip-hop drift is absent.",
+          "style_labels": [
+            "rock",
+            "metal",
+            "pop",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.7391457557678223,
+          "title": "Afternoon With The Axolotls",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Box Car Racer",
+          "audio_similarity": 0.6004252433776855,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.600; S=0.821; styles=['rock', 'pop', 'punk', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Alternative/grunge/space-rock peers; Pixies-to-trip-hop drift is absent.",
+          "style_labels": [
+            "rock",
+            "pop",
+            "punk",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.8214520215988159,
+          "title": "Elevator",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Chevelle",
+          "audio_similarity": 0.6190110445022583,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.619; S=0.739; styles=['rock', 'metal', 'punk', 'pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Alternative/grunge/space-rock peers; Pixies-to-trip-hop drift is absent.",
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "pop"
+          ],
+          "style_overlap": 0.738872766494751,
+          "title": "The Red",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Soundgarden",
+          "audio_similarity": 0.6692421436309814,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.669; S=0.750; styles=['rock', 'metal', 'shoegaze_dream_pop', 'pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Alternative/grunge/space-rock peers; Pixies-to-trip-hop drift is absent.",
+          "style_labels": [
+            "rock",
+            "metal",
+            "shoegaze_dream_pop",
+            "pop"
+          ],
+          "style_overlap": 0.7497923374176025,
+          "title": "Limo Wreck (Rehearsal Version)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Built To Spill",
+          "audio_similarity": 0.6114552617073059,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.611; S=0.658; styles=['rock', 'pop', 'punk', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Alternative/grunge/space-rock peers; Pixies-to-trip-hop drift is absent.",
+          "style_labels": [
+            "rock",
+            "pop",
+            "punk",
+            "electronic"
+          ],
+          "style_overlap": 0.6583409309387207,
+          "title": "Kicked It in the Sun",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Hum",
+          "audio_similarity": 0.6652244925498962,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.665; S=0.739; styles=['rock', 'metal', 'pop', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Alternative/grunge/space-rock peers; Pixies-to-trip-hop drift is absent.",
+          "style_labels": [
+            "rock",
+            "metal",
+            "pop",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.7391457557678223,
+          "title": "Afternoon With The Axolotls",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Box Car Racer",
+          "audio_similarity": 0.6004252433776855,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.600; S=0.821; styles=['rock', 'pop', 'punk', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Alternative/grunge/space-rock peers; Pixies-to-trip-hop drift is absent.",
+          "style_labels": [
+            "rock",
+            "pop",
+            "punk",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.8214520215988159,
+          "title": "Elevator",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Chevelle",
+          "audio_similarity": 0.6190110445022583,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.619; S=0.739; styles=['rock', 'metal', 'punk', 'pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Alternative/grunge/space-rock peers; Pixies-to-trip-hop drift is absent.",
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "pop"
+          ],
+          "style_overlap": 0.738872766494751,
+          "title": "The Red",
+          "wrong_scene": false
+        }
+      ],
+      "production_pass": true,
+      "summary": "Alternative/grunge/space-rock peers; Pixies-to-trip-hop drift is absent."
+    },
+    {
+      "challenger_pass": true,
+      "id": "direct-02",
+      "positions": [
+        {
+          "artist": "Fujimal Yoshino",
+          "audio_similarity": 0.7070519328117371,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.707; S=0.960; styles=['jazz', 'electronic', 'pop', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four city-pop, jazz-funk, or adjacent fusion recordings; the Brazilian-pop fifth is loose.",
+          "style_labels": [
+            "jazz",
+            "electronic",
+            "pop",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.9598537683486938,
+          "title": "August (2022 Remaster)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Minako Yoshida",
+          "audio_similarity": 0.6267433762550354,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.627; S=0.713; styles=['pop', 'rnb_soul', 'rock', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four city-pop, jazz-funk, or adjacent fusion recordings; the Brazilian-pop fifth is loose.",
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "rock",
+            "electronic"
+          ],
+          "style_overlap": 0.7128106951713562,
+          "title": "Tornado",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Roy Ayers",
+          "audio_similarity": 0.5941794514656067,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.594; S=0.747; styles=['rnb_soul', 'jazz', 'rock', 'pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four city-pop, jazz-funk, or adjacent fusion recordings; the Brazilian-pop fifth is loose.",
+          "style_labels": [
+            "rnb_soul",
+            "jazz",
+            "rock",
+            "pop"
+          ],
+          "style_overlap": 0.746650755405426,
+          "title": "Don't Stop The Feeling",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Himiko Kikuchi",
+          "audio_similarity": 0.6118170619010925,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.612; S=0.687; styles=['jazz', 'electronic', 'rock', 'hip_hop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four city-pop, jazz-funk, or adjacent fusion recordings; the Brazilian-pop fifth is loose.",
+          "style_labels": [
+            "jazz",
+            "electronic",
+            "rock",
+            "hip_hop"
+          ],
+          "style_overlap": 0.6870690584182739,
+          "title": "The Second Summer",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Cazuza",
+          "audio_similarity": 0.5640965700149536,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.564; S=0.700; styles=['pop', 'rock', 'rnb_soul', 'electronic']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Four city-pop, jazz-funk, or adjacent fusion recordings; the Brazilian-pop fifth is loose.",
+          "style_labels": [
+            "pop",
+            "rock",
+            "rnb_soul",
+            "electronic"
+          ],
+          "style_overlap": 0.699661135673523,
+          "title": "Cúmplice",
+          "wrong_scene": true
+        },
+        {
+          "artist": "Fujimal Yoshino",
+          "audio_similarity": 0.7070519328117371,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.707; S=0.960; styles=['jazz', 'electronic', 'pop', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four city-pop, jazz-funk, or adjacent fusion recordings; the Brazilian-pop fifth is loose.",
+          "style_labels": [
+            "jazz",
+            "electronic",
+            "pop",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.9598537683486938,
+          "title": "August (2022 Remaster)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Minako Yoshida",
+          "audio_similarity": 0.6267433762550354,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.627; S=0.713; styles=['pop', 'rnb_soul', 'rock', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four city-pop, jazz-funk, or adjacent fusion recordings; the Brazilian-pop fifth is loose.",
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "rock",
+            "electronic"
+          ],
+          "style_overlap": 0.7128106951713562,
+          "title": "Tornado",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Roy Ayers",
+          "audio_similarity": 0.5941794514656067,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.594; S=0.747; styles=['rnb_soul', 'jazz', 'rock', 'pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four city-pop, jazz-funk, or adjacent fusion recordings; the Brazilian-pop fifth is loose.",
+          "style_labels": [
+            "rnb_soul",
+            "jazz",
+            "rock",
+            "pop"
+          ],
+          "style_overlap": 0.746650755405426,
+          "title": "Don't Stop The Feeling",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Himiko Kikuchi",
+          "audio_similarity": 0.6118170619010925,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.612; S=0.687; styles=['jazz', 'electronic', 'rock', 'hip_hop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four city-pop, jazz-funk, or adjacent fusion recordings; the Brazilian-pop fifth is loose.",
+          "style_labels": [
+            "jazz",
+            "electronic",
+            "rock",
+            "hip_hop"
+          ],
+          "style_overlap": 0.6870690584182739,
+          "title": "The Second Summer",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Cazuza",
+          "audio_similarity": 0.5640965700149536,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.564; S=0.700; styles=['pop', 'rock', 'rnb_soul', 'electronic']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Four city-pop, jazz-funk, or adjacent fusion recordings; the Brazilian-pop fifth is loose.",
+          "style_labels": [
+            "pop",
+            "rock",
+            "rnb_soul",
+            "electronic"
+          ],
+          "style_overlap": 0.699661135673523,
+          "title": "Cúmplice",
+          "wrong_scene": true
+        }
+      ],
+      "production_pass": true,
+      "summary": "Four city-pop, jazz-funk, or adjacent fusion recordings; the Brazilian-pop fifth is loose."
+    },
+    {
+      "challenger_pass": true,
+      "id": "direct-03",
+      "positions": [
+        {
+          "artist": "Junko Ohashi",
+          "audio_similarity": 0.6803925037384033,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.680; S=0.895; styles=['pop', 'rock', 'rnb_soul', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. All five are Japanese city-pop or close period pop/funk peers.",
+          "style_labels": [
+            "pop",
+            "rock",
+            "rnb_soul",
+            "electronic"
+          ],
+          "style_overlap": 0.8950101137161255,
+          "title": "Tasogare My Love",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Meiko Nakahara",
+          "audio_similarity": 0.6746914386749268,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.675; S=0.955; styles=['pop', 'rock', 'rnb_soul', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. All five are Japanese city-pop or close period pop/funk peers.",
+          "style_labels": [
+            "pop",
+            "rock",
+            "rnb_soul",
+            "electronic"
+          ],
+          "style_overlap": 0.9552464485168457,
+          "title": "Go Away",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Hiromi Iwasaki",
+          "audio_similarity": 0.7061271071434021,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.706; S=0.944; styles=['pop', 'rnb_soul', 'rock', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. All five are Japanese city-pop or close period pop/funk peers.",
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "rock",
+            "electronic"
+          ],
+          "style_overlap": 0.9443036913871765,
+          "title": "Etranger",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Yurie Kokubu",
+          "audio_similarity": 0.6957073211669922,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.696; S=0.939; styles=['pop', 'rock', 'rnb_soul', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. All five are Japanese city-pop or close period pop/funk peers.",
+          "style_labels": [
+            "pop",
+            "rock",
+            "rnb_soul",
+            "electronic"
+          ],
+          "style_overlap": 0.9392196536064148,
+          "title": "Easy Love",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Epo",
+          "audio_similarity": 0.6373242735862732,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.637; S=0.974; styles=['pop', 'rnb_soul', 'electronic', 'rock']; preview=available; artist/title and flags inspected. Position is scene/style coherent. All five are Japanese city-pop or close period pop/funk peers.",
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "electronic",
+            "rock"
+          ],
+          "style_overlap": 0.973807156085968,
+          "title": "Do You No Yoru Ha Paradise",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Junko Ohashi",
+          "audio_similarity": 0.6803925037384033,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.680; S=0.895; styles=['pop', 'rock', 'rnb_soul', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. All five are Japanese city-pop or close period pop/funk peers.",
+          "style_labels": [
+            "pop",
+            "rock",
+            "rnb_soul",
+            "electronic"
+          ],
+          "style_overlap": 0.8950101137161255,
+          "title": "Tasogare My Love",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Meiko Nakahara",
+          "audio_similarity": 0.6746914386749268,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.675; S=0.955; styles=['pop', 'rock', 'rnb_soul', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. All five are Japanese city-pop or close period pop/funk peers.",
+          "style_labels": [
+            "pop",
+            "rock",
+            "rnb_soul",
+            "electronic"
+          ],
+          "style_overlap": 0.9552464485168457,
+          "title": "Go Away",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Hiromi Iwasaki",
+          "audio_similarity": 0.7061271071434021,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.706; S=0.944; styles=['pop', 'rnb_soul', 'rock', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. All five are Japanese city-pop or close period pop/funk peers.",
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "rock",
+            "electronic"
+          ],
+          "style_overlap": 0.9443036913871765,
+          "title": "Etranger",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Yurie Kokubu",
+          "audio_similarity": 0.6957073211669922,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.696; S=0.939; styles=['pop', 'rock', 'rnb_soul', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. All five are Japanese city-pop or close period pop/funk peers.",
+          "style_labels": [
+            "pop",
+            "rock",
+            "rnb_soul",
+            "electronic"
+          ],
+          "style_overlap": 0.9392196536064148,
+          "title": "Easy Love",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Epo",
+          "audio_similarity": 0.6373242735862732,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.637; S=0.974; styles=['pop', 'rnb_soul', 'electronic', 'rock']; preview=available; artist/title and flags inspected. Position is scene/style coherent. All five are Japanese city-pop or close period pop/funk peers.",
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "electronic",
+            "rock"
+          ],
+          "style_overlap": 0.973807156085968,
+          "title": "Do You No Yoru Ha Paradise",
+          "wrong_scene": false
+        }
+      ],
+      "production_pass": true,
+      "summary": "All five are Japanese city-pop or close period pop/funk peers."
+    },
+    {
+      "challenger_pass": true,
+      "id": "direct-04",
+      "positions": [
+        {
+          "artist": "India Shawn",
+          "audio_similarity": 0.5998416543006897,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.600; S=0.964; styles=['rnb_soul', 'pop', 'hip_hop', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four dreamy alternative-R&B/pop peers fit the recording; the fourth is looser mainstream alt-pop.",
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "hip_hop",
+            "electronic"
+          ],
+          "style_overlap": 0.9638694524765015,
+          "title": "Rain On Me",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Kirby",
+          "audio_similarity": 0.5383742451667786,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.538; S=0.943; styles=['rnb_soul', 'pop', 'electronic', 'rock']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four dreamy alternative-R&B/pop peers fit the recording; the fourth is looser mainstream alt-pop.",
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "electronic",
+            "rock"
+          ],
+          "style_overlap": 0.9433013796806335,
+          "title": "Eve Gene",
+          "wrong_scene": false
+        },
+        {
+          "artist": "KwN",
+          "audio_similarity": 0.5806578993797302,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.581; S=0.900; styles=['rnb_soul', 'pop', 'electronic', 'hip_hop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four dreamy alternative-R&B/pop peers fit the recording; the fourth is looser mainstream alt-pop.",
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "electronic",
+            "hip_hop"
+          ],
+          "style_overlap": 0.9004915952682495,
+          "title": "hopeless romantic",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Melanie Martinez",
+          "audio_similarity": 0.5938523411750793,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.594; S=0.888; styles=['pop', 'rock', 'electronic', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Four dreamy alternative-R&B/pop peers fit the recording; the fourth is looser mainstream alt-pop.",
+          "style_labels": [
+            "pop",
+            "rock",
+            "electronic",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.887941837310791,
+          "title": "POSSESSION",
+          "wrong_scene": true
+        },
+        {
+          "artist": "Alicia Keys",
+          "audio_similarity": 0.5419488549232483,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.542; S=0.911; styles=['rnb_soul', 'pop', 'electronic', 'folk_country']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four dreamy alternative-R&B/pop peers fit the recording; the fourth is looser mainstream alt-pop.",
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "electronic",
+            "folk_country"
+          ],
+          "style_overlap": 0.9106029868125916,
+          "title": "If I Ain't Got You",
+          "wrong_scene": false
+        },
+        {
+          "artist": "India Shawn",
+          "audio_similarity": 0.5998416543006897,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.600; S=0.964; styles=['rnb_soul', 'pop', 'hip_hop', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four dreamy alternative-R&B/pop peers fit the recording; the fourth is looser mainstream alt-pop.",
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "hip_hop",
+            "electronic"
+          ],
+          "style_overlap": 0.9638694524765015,
+          "title": "Rain On Me",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Kirby",
+          "audio_similarity": 0.5383742451667786,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.538; S=0.943; styles=['rnb_soul', 'pop', 'electronic', 'rock']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four dreamy alternative-R&B/pop peers fit the recording; the fourth is looser mainstream alt-pop.",
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "electronic",
+            "rock"
+          ],
+          "style_overlap": 0.9433013796806335,
+          "title": "Eve Gene",
+          "wrong_scene": false
+        },
+        {
+          "artist": "KwN",
+          "audio_similarity": 0.5806578993797302,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.581; S=0.900; styles=['rnb_soul', 'pop', 'electronic', 'hip_hop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four dreamy alternative-R&B/pop peers fit the recording; the fourth is looser mainstream alt-pop.",
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "electronic",
+            "hip_hop"
+          ],
+          "style_overlap": 0.9004915952682495,
+          "title": "hopeless romantic",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Melanie Martinez",
+          "audio_similarity": 0.5938523411750793,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.594; S=0.888; styles=['pop', 'rock', 'electronic', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Four dreamy alternative-R&B/pop peers fit the recording; the fourth is looser mainstream alt-pop.",
+          "style_labels": [
+            "pop",
+            "rock",
+            "electronic",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.887941837310791,
+          "title": "POSSESSION",
+          "wrong_scene": true
+        },
+        {
+          "artist": "Alicia Keys",
+          "audio_similarity": 0.5419488549232483,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.542; S=0.911; styles=['rnb_soul', 'pop', 'electronic', 'folk_country']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four dreamy alternative-R&B/pop peers fit the recording; the fourth is looser mainstream alt-pop.",
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "electronic",
+            "folk_country"
+          ],
+          "style_overlap": 0.9106029868125916,
+          "title": "If I Ain't Got You",
+          "wrong_scene": false
+        }
+      ],
+      "production_pass": true,
+      "summary": "Four dreamy alternative-R&B/pop peers fit the recording; the fourth is looser mainstream alt-pop."
+    },
+    {
+      "challenger_pass": true,
+      "id": "direct-05",
+      "positions": [
+        {
+          "artist": "Dei V",
+          "audio_similarity": 0.6354064345359802,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.635; S=0.556; styles=['hip_hop', 'pop', 'rnb_soul', 'folk_country']; preview=available; artist/title and flags inspected. Position is scene/style coherent. First four are reggaeton, Latin urban, or dancehall-adjacent; the French-R&B fifth is drift.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "rnb_soul",
+            "folk_country"
+          ],
+          "style_overlap": 0.5560793876647949,
+          "title": "Narcotics",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Chronic Law",
+          "audio_similarity": 0.6435339450836182,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.644; S=0.558; styles=['hip_hop', 'pop', 'punk', 'jazz']; preview=available; artist/title and flags inspected. Position is scene/style coherent. First four are reggaeton, Latin urban, or dancehall-adjacent; the French-R&B fifth is drift.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "jazz"
+          ],
+          "style_overlap": 0.5582370758056641,
+          "title": "Plastic Smile",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Ñengo Flow",
+          "audio_similarity": 0.6399461627006531,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.640; S=0.634; styles=['hip_hop', 'pop', 'punk', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. First four are reggaeton, Latin urban, or dancehall-adjacent; the French-R&B fifth is drift.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.6338856220245361,
+          "title": "Gato de Noche",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Lyanno",
+          "audio_similarity": 0.6634959578514099,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.663; S=0.376; styles=['pop', 'rnb_soul', 'hip_hop', 'latin']; preview=available; artist/title and flags inspected. Position is scene/style coherent. First four are reggaeton, Latin urban, or dancehall-adjacent; the French-R&B fifth is drift.",
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "hip_hop",
+            "latin"
+          ],
+          "style_overlap": 0.37647342681884766,
+          "title": "MARTINI",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Genezio",
+          "audio_similarity": 0.5922682881355286,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.592; S=0.172; styles=['rnb_soul', 'pop', 'hip_hop', 'electronic']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. First four are reggaeton, Latin urban, or dancehall-adjacent; the French-R&B fifth is drift.",
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "hip_hop",
+            "electronic"
+          ],
+          "style_overlap": 0.17209720611572266,
+          "title": "LA MELO EST DANS LA BOUNCE",
+          "wrong_scene": true
+        },
+        {
+          "artist": "Dei V",
+          "audio_similarity": 0.6354064345359802,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.635; S=0.556; styles=['hip_hop', 'pop', 'rnb_soul', 'folk_country']; preview=available; artist/title and flags inspected. Position is scene/style coherent. First four are reggaeton, Latin urban, or dancehall-adjacent; the French-R&B fifth is drift.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "rnb_soul",
+            "folk_country"
+          ],
+          "style_overlap": 0.5560793876647949,
+          "title": "Narcotics",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Chronic Law",
+          "audio_similarity": 0.6435339450836182,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.644; S=0.558; styles=['hip_hop', 'pop', 'punk', 'jazz']; preview=available; artist/title and flags inspected. Position is scene/style coherent. First four are reggaeton, Latin urban, or dancehall-adjacent; the French-R&B fifth is drift.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "jazz"
+          ],
+          "style_overlap": 0.5582370758056641,
+          "title": "Plastic Smile",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Ñengo Flow",
+          "audio_similarity": 0.6399461627006531,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.640; S=0.634; styles=['hip_hop', 'pop', 'punk', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. First four are reggaeton, Latin urban, or dancehall-adjacent; the French-R&B fifth is drift.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.6338856220245361,
+          "title": "Gato de Noche",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Lyanno",
+          "audio_similarity": 0.6634959578514099,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.663; S=0.376; styles=['pop', 'rnb_soul', 'hip_hop', 'latin']; preview=available; artist/title and flags inspected. Position is scene/style coherent. First four are reggaeton, Latin urban, or dancehall-adjacent; the French-R&B fifth is drift.",
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "hip_hop",
+            "latin"
+          ],
+          "style_overlap": 0.37647342681884766,
+          "title": "MARTINI",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Genezio",
+          "audio_similarity": 0.5922682881355286,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.592; S=0.172; styles=['rnb_soul', 'pop', 'hip_hop', 'electronic']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. First four are reggaeton, Latin urban, or dancehall-adjacent; the French-R&B fifth is drift.",
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "hip_hop",
+            "electronic"
+          ],
+          "style_overlap": 0.17209720611572266,
+          "title": "LA MELO EST DANS LA BOUNCE",
+          "wrong_scene": true
+        }
+      ],
+      "production_pass": true,
+      "summary": "First four are reggaeton, Latin urban, or dancehall-adjacent; the French-R&B fifth is drift."
+    },
+    {
+      "challenger_pass": true,
+      "id": "direct-06",
+      "positions": [
+        {
+          "artist": "CMTEN",
+          "audio_similarity": 0.6195375323295593,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.620; S=0.763; styles=['pop', 'electronic', 'hyperpop_digicore', 'rock']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Hyperpop/glitch-pop/electronic peers throughout; no unrelated top-three scene.",
+          "style_labels": [
+            "pop",
+            "electronic",
+            "hyperpop_digicore",
+            "rock"
+          ],
+          "style_overlap": 0.7629585266113281,
+          "title": "NEVER MET! (feat. Glitch Gum)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "underscores",
+          "audio_similarity": 0.6158690452575684,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.616; S=0.707; styles=['pop', 'rock', 'hyperpop_digicore', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Hyperpop/glitch-pop/electronic peers throughout; no unrelated top-three scene.",
+          "style_labels": [
+            "pop",
+            "rock",
+            "hyperpop_digicore",
+            "electronic"
+          ],
+          "style_overlap": 0.70703125,
+          "title": "Do It (Yves Remix)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Alice Longyu Gao",
+          "audio_similarity": 0.6628658771514893,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.663; S=0.620; styles=['pop', 'electronic', 'rock', 'hyperpop_digicore']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Hyperpop/glitch-pop/electronic peers throughout; no unrelated top-three scene.",
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "hyperpop_digicore"
+          ],
+          "style_overlap": 0.6195154190063477,
+          "title": "Dumb Bitch Juice",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Skrillex",
+          "audio_similarity": 0.6051029562950134,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.605; S=0.560; styles=['electronic', 'pop', 'hyperpop_digicore', 'rock']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Hyperpop/glitch-pop/electronic peers throughout; no unrelated top-three scene.",
+          "style_labels": [
+            "electronic",
+            "pop",
+            "hyperpop_digicore",
+            "rock"
+          ],
+          "style_overlap": 0.5596179962158203,
+          "title": "DRUIDS",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Ashnikko",
+          "audio_similarity": 0.6123579740524292,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.612; S=0.536; styles=['pop', 'rnb_soul', 'electronic', 'hip_hop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Hyperpop/glitch-pop/electronic peers throughout; no unrelated top-three scene.",
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "electronic",
+            "hip_hop"
+          ],
+          "style_overlap": 0.5360128879547119,
+          "title": "Skin Cleared",
+          "wrong_scene": false
+        },
+        {
+          "artist": "CMTEN",
+          "audio_similarity": 0.6195375323295593,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.620; S=0.763; styles=['pop', 'electronic', 'hyperpop_digicore', 'rock']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Hyperpop/glitch-pop/electronic peers throughout; no unrelated top-three scene.",
+          "style_labels": [
+            "pop",
+            "electronic",
+            "hyperpop_digicore",
+            "rock"
+          ],
+          "style_overlap": 0.7629585266113281,
+          "title": "NEVER MET! (feat. Glitch Gum)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "underscores",
+          "audio_similarity": 0.6158690452575684,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.616; S=0.707; styles=['pop', 'rock', 'hyperpop_digicore', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Hyperpop/glitch-pop/electronic peers throughout; no unrelated top-three scene.",
+          "style_labels": [
+            "pop",
+            "rock",
+            "hyperpop_digicore",
+            "electronic"
+          ],
+          "style_overlap": 0.70703125,
+          "title": "Do It (Yves Remix)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Alice Longyu Gao",
+          "audio_similarity": 0.6628658771514893,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.663; S=0.620; styles=['pop', 'electronic', 'rock', 'hyperpop_digicore']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Hyperpop/glitch-pop/electronic peers throughout; no unrelated top-three scene.",
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "hyperpop_digicore"
+          ],
+          "style_overlap": 0.6195154190063477,
+          "title": "Dumb Bitch Juice",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Skrillex",
+          "audio_similarity": 0.6051029562950134,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.605; S=0.560; styles=['electronic', 'pop', 'hyperpop_digicore', 'rock']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Hyperpop/glitch-pop/electronic peers throughout; no unrelated top-three scene.",
+          "style_labels": [
+            "electronic",
+            "pop",
+            "hyperpop_digicore",
+            "rock"
+          ],
+          "style_overlap": 0.5596179962158203,
+          "title": "DRUIDS",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Ashnikko",
+          "audio_similarity": 0.6123579740524292,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.612; S=0.536; styles=['pop', 'rnb_soul', 'electronic', 'hip_hop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Hyperpop/glitch-pop/electronic peers throughout; no unrelated top-three scene.",
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "electronic",
+            "hip_hop"
+          ],
+          "style_overlap": 0.5360128879547119,
+          "title": "Skin Cleared",
+          "wrong_scene": false
+        }
+      ],
+      "production_pass": true,
+      "summary": "Hyperpop/glitch-pop/electronic peers throughout; no unrelated top-three scene."
+    },
+    {
+      "challenger_pass": false,
+      "id": "direct-07",
+      "positions": [
+        {
+          "artist": "Sekou",
+          "audio_similarity": 0.6169607043266296,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.617; S=0.431; styles=['pop', 'rnb_soul', 'folk_country', 'rock']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Generic R&B, French pop, lo-fi, and folk replace the seed?s digicore/hyperpop scene.",
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "folk_country",
+            "rock"
+          ],
+          "style_overlap": 0.430908203125,
+          "title": "Too Young",
+          "wrong_scene": true
+        },
+        {
+          "artist": "Joe Hertz",
+          "audio_similarity": 0.6047217845916748,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.605; S=0.446; styles=['rnb_soul', 'pop', 'hip_hop', 'electronic']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Generic R&B, French pop, lo-fi, and folk replace the seed?s digicore/hyperpop scene.",
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "hip_hop",
+            "electronic"
+          ],
+          "style_overlap": 0.445892333984375,
+          "title": "One Sided",
+          "wrong_scene": true
+        },
+        {
+          "artist": "SenSey'",
+          "audio_similarity": 0.614610493183136,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.615; S=0.722; styles=['pop', 'hip_hop', 'rnb_soul', 'electronic']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Generic R&B, French pop, lo-fi, and folk replace the seed?s digicore/hyperpop scene.",
+          "style_labels": [
+            "pop",
+            "hip_hop",
+            "rnb_soul",
+            "electronic"
+          ],
+          "style_overlap": 0.72210693359375,
+          "title": "Parcours",
+          "wrong_scene": true
+        },
+        {
+          "artist": "J'san",
+          "audio_similarity": 0.6096238493919373,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.610; S=0.056; styles=['jazz', 'rock', 'electronic', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Generic R&B, French pop, lo-fi, and folk replace the seed?s digicore/hyperpop scene.",
+          "style_labels": [
+            "jazz",
+            "rock",
+            "electronic",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.055694580078125,
+          "title": "ephemeral",
+          "wrong_scene": true
+        },
+        {
+          "artist": "Bon Iver",
+          "audio_similarity": 0.6071885228157043,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.607; S=0.262; styles=['rock', 'pop', 'folk_country', 'jazz']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Generic R&B, French pop, lo-fi, and folk replace the seed?s digicore/hyperpop scene.",
+          "style_labels": [
+            "rock",
+            "pop",
+            "folk_country",
+            "jazz"
+          ],
+          "style_overlap": 0.262451171875,
+          "title": "Woods",
+          "wrong_scene": true
+        },
+        {
+          "artist": "Sekou",
+          "audio_similarity": 0.6169607043266296,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.617; S=0.431; styles=['pop', 'rnb_soul', 'folk_country', 'rock']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Generic R&B, French pop, lo-fi, and folk replace the seed?s digicore/hyperpop scene.",
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "folk_country",
+            "rock"
+          ],
+          "style_overlap": 0.430908203125,
+          "title": "Too Young",
+          "wrong_scene": true
+        },
+        {
+          "artist": "Joe Hertz",
+          "audio_similarity": 0.6047217845916748,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.605; S=0.446; styles=['rnb_soul', 'pop', 'hip_hop', 'electronic']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Generic R&B, French pop, lo-fi, and folk replace the seed?s digicore/hyperpop scene.",
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "hip_hop",
+            "electronic"
+          ],
+          "style_overlap": 0.445892333984375,
+          "title": "One Sided",
+          "wrong_scene": true
+        },
+        {
+          "artist": "SenSey'",
+          "audio_similarity": 0.614610493183136,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.615; S=0.722; styles=['pop', 'hip_hop', 'rnb_soul', 'electronic']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Generic R&B, French pop, lo-fi, and folk replace the seed?s digicore/hyperpop scene.",
+          "style_labels": [
+            "pop",
+            "hip_hop",
+            "rnb_soul",
+            "electronic"
+          ],
+          "style_overlap": 0.72210693359375,
+          "title": "Parcours",
+          "wrong_scene": true
+        },
+        {
+          "artist": "J'san",
+          "audio_similarity": 0.6096238493919373,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.610; S=0.056; styles=['jazz', 'rock', 'electronic', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Generic R&B, French pop, lo-fi, and folk replace the seed?s digicore/hyperpop scene.",
+          "style_labels": [
+            "jazz",
+            "rock",
+            "electronic",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.055694580078125,
+          "title": "ephemeral",
+          "wrong_scene": true
+        },
+        {
+          "artist": "Bon Iver",
+          "audio_similarity": 0.6071885228157043,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.607; S=0.262; styles=['rock', 'pop', 'folk_country', 'jazz']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Generic R&B, French pop, lo-fi, and folk replace the seed?s digicore/hyperpop scene.",
+          "style_labels": [
+            "rock",
+            "pop",
+            "folk_country",
+            "jazz"
+          ],
+          "style_overlap": 0.262451171875,
+          "title": "Woods",
+          "wrong_scene": true
+        }
+      ],
+      "production_pass": false,
+      "summary": "Generic R&B, French pop, lo-fi, and folk replace the seed?s digicore/hyperpop scene."
+    },
+    {
+      "challenger_pass": true,
+      "id": "direct-08",
+      "positions": [
+        {
+          "artist": "twikipedia",
+          "audio_similarity": 0.6271936893463135,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.627; S=0.913; styles=['pop', 'electronic', 'hip_hop', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. First four are digicore/hyperpop peers; the fifth is a loose pop result.",
+          "style_labels": [
+            "pop",
+            "electronic",
+            "hip_hop",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.9126158356666565,
+          "title": "desprazer",
+          "wrong_scene": false
+        },
+        {
+          "artist": "5v",
+          "audio_similarity": 0.6224467158317566,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.622; S=0.913; styles=['rnb_soul', 'pop', 'electronic', 'hip_hop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. First four are digicore/hyperpop peers; the fifth is a loose pop result.",
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "electronic",
+            "hip_hop"
+          ],
+          "style_overlap": 0.91334468126297,
+          "title": "weitergehen",
+          "wrong_scene": false
+        },
+        {
+          "artist": "midwxst",
+          "audio_similarity": 0.577262818813324,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.577; S=0.802; styles=['hip_hop', 'pop', 'rnb_soul', 'punk']; preview=available; artist/title and flags inspected. Position is scene/style coherent. First four are digicore/hyperpop peers; the fifth is a loose pop result.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "rnb_soul",
+            "punk"
+          ],
+          "style_overlap": 0.802308201789856,
+          "title": "Tic Tac Toe",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Syko",
+          "audio_similarity": 0.5904920101165771,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.590; S=0.708; styles=['electronic', 'pop', 'rock', 'experimental']; preview=available; artist/title and flags inspected. Position is scene/style coherent. First four are digicore/hyperpop peers; the fifth is a loose pop result.",
+          "style_labels": [
+            "electronic",
+            "pop",
+            "rock",
+            "experimental"
+          ],
+          "style_overlap": 0.7076624631881714,
+          "title": "111 Seconds in Heaven",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Adanna Duru",
+          "audio_similarity": 0.6214167475700378,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.621; S=0.841; styles=['pop', 'asian_pop', 'rnb_soul', 'electronic']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. First four are digicore/hyperpop peers; the fifth is a loose pop result.",
+          "style_labels": [
+            "pop",
+            "asian_pop",
+            "rnb_soul",
+            "electronic"
+          ],
+          "style_overlap": 0.841042160987854,
+          "title": "toes in the grass",
+          "wrong_scene": true
+        },
+        {
+          "artist": "twikipedia",
+          "audio_similarity": 0.6271936893463135,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.627; S=0.913; styles=['pop', 'electronic', 'hip_hop', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. First four are digicore/hyperpop peers; the fifth is a loose pop result.",
+          "style_labels": [
+            "pop",
+            "electronic",
+            "hip_hop",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.9126158356666565,
+          "title": "desprazer",
+          "wrong_scene": false
+        },
+        {
+          "artist": "5v",
+          "audio_similarity": 0.6224467158317566,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.622; S=0.913; styles=['rnb_soul', 'pop', 'electronic', 'hip_hop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. First four are digicore/hyperpop peers; the fifth is a loose pop result.",
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "electronic",
+            "hip_hop"
+          ],
+          "style_overlap": 0.91334468126297,
+          "title": "weitergehen",
+          "wrong_scene": false
+        },
+        {
+          "artist": "midwxst",
+          "audio_similarity": 0.577262818813324,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.577; S=0.802; styles=['hip_hop', 'pop', 'rnb_soul', 'punk']; preview=available; artist/title and flags inspected. Position is scene/style coherent. First four are digicore/hyperpop peers; the fifth is a loose pop result.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "rnb_soul",
+            "punk"
+          ],
+          "style_overlap": 0.802308201789856,
+          "title": "Tic Tac Toe",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Syko",
+          "audio_similarity": 0.5904920101165771,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.590; S=0.708; styles=['electronic', 'pop', 'rock', 'experimental']; preview=available; artist/title and flags inspected. Position is scene/style coherent. First four are digicore/hyperpop peers; the fifth is a loose pop result.",
+          "style_labels": [
+            "electronic",
+            "pop",
+            "rock",
+            "experimental"
+          ],
+          "style_overlap": 0.7076624631881714,
+          "title": "111 Seconds in Heaven",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Adanna Duru",
+          "audio_similarity": 0.6214167475700378,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.621; S=0.841; styles=['pop', 'asian_pop', 'rnb_soul', 'electronic']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. First four are digicore/hyperpop peers; the fifth is a loose pop result.",
+          "style_labels": [
+            "pop",
+            "asian_pop",
+            "rnb_soul",
+            "electronic"
+          ],
+          "style_overlap": 0.841042160987854,
+          "title": "toes in the grass",
+          "wrong_scene": true
+        }
+      ],
+      "production_pass": true,
+      "summary": "First four are digicore/hyperpop peers; the fifth is a loose pop result."
+    },
+    {
+      "challenger_pass": true,
+      "id": "direct-09",
+      "positions": [
+        {
+          "artist": "Godford",
+          "audio_similarity": 0.6052284836769104,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.605; S=0.530; styles=['electronic', 'jazz', 'hip_hop', 'rock']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four electronic, synth-pop, or synthwave-adjacent recordings; the fifth is looser new wave.",
+          "style_labels": [
+            "electronic",
+            "jazz",
+            "hip_hop",
+            "rock"
+          ],
+          "style_overlap": 0.5302973985671997,
+          "title": "Padma",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Visage",
+          "audio_similarity": 0.5515528321266174,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.552; S=0.716; styles=['pop', 'electronic', 'rock', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four electronic, synth-pop, or synthwave-adjacent recordings; the fifth is looser new wave.",
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.7163629531860352,
+          "title": "The Damned Don't Cry",
+          "wrong_scene": false
+        },
+        {
+          "artist": "FM Attack",
+          "audio_similarity": 0.5089326500892639,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.509; S=0.749; styles=['electronic', 'pop', 'experimental', 'soundtrack']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four electronic, synth-pop, or synthwave-adjacent recordings; the fifth is looser new wave.",
+          "style_labels": [
+            "electronic",
+            "pop",
+            "experimental",
+            "soundtrack"
+          ],
+          "style_overlap": 0.7491586804389954,
+          "title": "With You Tonight",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Getdown Services",
+          "audio_similarity": 0.6468441486358643,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.647; S=0.700; styles=['electronic', 'pop', 'rock', 'experimental']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four electronic, synth-pop, or synthwave-adjacent recordings; the fifth is looser new wave.",
+          "style_labels": [
+            "electronic",
+            "pop",
+            "rock",
+            "experimental"
+          ],
+          "style_overlap": 0.7001236081123352,
+          "title": "I Can't Die Like That",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Tears For Fears",
+          "audio_similarity": 0.5695041418075562,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.570; S=0.423; styles=['rock', 'pop', 'punk', 'electronic']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Four electronic, synth-pop, or synthwave-adjacent recordings; the fifth is looser new wave.",
+          "style_labels": [
+            "rock",
+            "pop",
+            "punk",
+            "electronic"
+          ],
+          "style_overlap": 0.42292749881744385,
+          "title": "The Hurting",
+          "wrong_scene": true
+        },
+        {
+          "artist": "Godford",
+          "audio_similarity": 0.6052284836769104,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.605; S=0.530; styles=['electronic', 'jazz', 'hip_hop', 'rock']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four electronic, synth-pop, or synthwave-adjacent recordings; the fifth is looser new wave.",
+          "style_labels": [
+            "electronic",
+            "jazz",
+            "hip_hop",
+            "rock"
+          ],
+          "style_overlap": 0.5302973985671997,
+          "title": "Padma",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Visage",
+          "audio_similarity": 0.5515528321266174,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.552; S=0.716; styles=['pop', 'electronic', 'rock', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four electronic, synth-pop, or synthwave-adjacent recordings; the fifth is looser new wave.",
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.7163629531860352,
+          "title": "The Damned Don't Cry",
+          "wrong_scene": false
+        },
+        {
+          "artist": "FM Attack",
+          "audio_similarity": 0.5089326500892639,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.509; S=0.749; styles=['electronic', 'pop', 'experimental', 'soundtrack']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four electronic, synth-pop, or synthwave-adjacent recordings; the fifth is looser new wave.",
+          "style_labels": [
+            "electronic",
+            "pop",
+            "experimental",
+            "soundtrack"
+          ],
+          "style_overlap": 0.7491586804389954,
+          "title": "With You Tonight",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Getdown Services",
+          "audio_similarity": 0.6468441486358643,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.647; S=0.700; styles=['electronic', 'pop', 'rock', 'experimental']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Four electronic, synth-pop, or synthwave-adjacent recordings; the fifth is looser new wave.",
+          "style_labels": [
+            "electronic",
+            "pop",
+            "rock",
+            "experimental"
+          ],
+          "style_overlap": 0.7001236081123352,
+          "title": "I Can't Die Like That",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Tears For Fears",
+          "audio_similarity": 0.5695041418075562,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.570; S=0.423; styles=['rock', 'pop', 'punk', 'electronic']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Four electronic, synth-pop, or synthwave-adjacent recordings; the fifth is looser new wave.",
+          "style_labels": [
+            "rock",
+            "pop",
+            "punk",
+            "electronic"
+          ],
+          "style_overlap": 0.42292749881744385,
+          "title": "The Hurting",
+          "wrong_scene": true
+        }
+      ],
+      "production_pass": true,
+      "summary": "Four electronic, synth-pop, or synthwave-adjacent recordings; the fifth is looser new wave."
+    },
+    {
+      "challenger_pass": false,
+      "id": "direct-10",
+      "positions": [
+        {
+          "artist": "The Beatnuts",
+          "audio_similarity": 0.6946608424186707,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.695; S=0.623; styles=['hip_hop', 'pop', 'punk', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. The list over-indexes generic rap and misses the seed?s dub/art-rock blend after two plausible peers.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.6226806640625,
+          "title": "Hit Me With That",
+          "wrong_scene": false
+        },
+        {
+          "artist": "The Herbaliser",
+          "audio_similarity": 0.6862757205963135,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.686; S=0.848; styles=['pop', 'electronic', 'rock', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. The list over-indexes generic rap and misses the seed?s dub/art-rock blend after two plausible peers.",
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.8482666015625,
+          "title": "Distinguished Jamaican English",
+          "wrong_scene": false
+        },
+        {
+          "artist": "50 Cent",
+          "audio_similarity": 0.6907851696014404,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.691; S=0.577; styles=['pop', 'punk', 'hip_hop']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. The list over-indexes generic rap and misses the seed?s dub/art-rock blend after two plausible peers.",
+          "style_labels": [
+            "pop",
+            "punk",
+            "hip_hop"
+          ],
+          "style_overlap": 0.5771484375,
+          "title": "Get Up",
+          "wrong_scene": true
+        },
+        {
+          "artist": "DMX",
+          "audio_similarity": 0.6256712675094604,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.626; S=0.354; styles=['punk', 'hip_hop']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. The list over-indexes generic rap and misses the seed?s dub/art-rock blend after two plausible peers.",
+          "style_labels": [
+            "punk",
+            "hip_hop"
+          ],
+          "style_overlap": 0.353515625,
+          "title": "The Rain",
+          "wrong_scene": true
+        },
+        {
+          "artist": "The Godfathers",
+          "audio_similarity": 0.6801642775535583,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.680; S=0.564; styles=['hip_hop', 'punk', 'pop', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. The list over-indexes generic rap and misses the seed?s dub/art-rock blend after two plausible peers.",
+          "style_labels": [
+            "hip_hop",
+            "punk",
+            "pop",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.56365966796875,
+          "title": "Teflon Dons",
+          "wrong_scene": true
+        },
+        {
+          "artist": "The Beatnuts",
+          "audio_similarity": 0.6946608424186707,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.695; S=0.623; styles=['hip_hop', 'pop', 'punk', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. The list over-indexes generic rap and misses the seed?s dub/art-rock blend after two plausible peers.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.6226806640625,
+          "title": "Hit Me With That",
+          "wrong_scene": false
+        },
+        {
+          "artist": "The Herbaliser",
+          "audio_similarity": 0.6862757205963135,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.686; S=0.848; styles=['pop', 'electronic', 'rock', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. The list over-indexes generic rap and misses the seed?s dub/art-rock blend after two plausible peers.",
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.8482666015625,
+          "title": "Distinguished Jamaican English",
+          "wrong_scene": false
+        },
+        {
+          "artist": "50 Cent",
+          "audio_similarity": 0.6907851696014404,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.691; S=0.577; styles=['pop', 'punk', 'hip_hop']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. The list over-indexes generic rap and misses the seed?s dub/art-rock blend after two plausible peers.",
+          "style_labels": [
+            "pop",
+            "punk",
+            "hip_hop"
+          ],
+          "style_overlap": 0.5771484375,
+          "title": "Get Up",
+          "wrong_scene": true
+        },
+        {
+          "artist": "DMX",
+          "audio_similarity": 0.6256712675094604,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.626; S=0.354; styles=['punk', 'hip_hop']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. The list over-indexes generic rap and misses the seed?s dub/art-rock blend after two plausible peers.",
+          "style_labels": [
+            "punk",
+            "hip_hop"
+          ],
+          "style_overlap": 0.353515625,
+          "title": "The Rain",
+          "wrong_scene": true
+        },
+        {
+          "artist": "The Godfathers",
+          "audio_similarity": 0.6801642775535583,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.680; S=0.564; styles=['hip_hop', 'punk', 'pop', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. The list over-indexes generic rap and misses the seed?s dub/art-rock blend after two plausible peers.",
+          "style_labels": [
+            "hip_hop",
+            "punk",
+            "pop",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.56365966796875,
+          "title": "Teflon Dons",
+          "wrong_scene": true
+        }
+      ],
+      "production_pass": false,
+      "summary": "The list over-indexes generic rap and misses the seed?s dub/art-rock blend after two plausible peers."
+    },
+    {
+      "challenger_pass": true,
+      "id": "direct-11",
+      "positions": [
+        {
+          "artist": "The Internet",
+          "audio_similarity": 0.6155182123184204,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.616; S=0.132; styles=['jazz', 'pop', 'rock', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Downtempo alternative R&B/electronic/art-pop and Morcheeba remain coherent with atmospheric trip-hop.",
+          "style_labels": [
+            "jazz",
+            "pop",
+            "rock",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.13187789916992188,
+          "title": "Sunset (feat. Yuna Zarai)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Bastien D",
+          "audio_similarity": 0.5875236392021179,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.588; S=0.578; styles=['electronic', 'pop', 'metal', 'rock']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Downtempo alternative R&B/electronic/art-pop and Morcheeba remain coherent with atmospheric trip-hop.",
+          "style_labels": [
+            "electronic",
+            "pop",
+            "metal",
+            "rock"
+          ],
+          "style_overlap": 0.5781741142272949,
+          "title": "Hit Dat",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Blood Orange",
+          "audio_similarity": 0.6635602712631226,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.664; S=0.438; styles=['pop', 'electronic', 'rock', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Downtempo alternative R&B/electronic/art-pop and Morcheeba remain coherent with atmospheric trip-hop.",
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.4383559226989746,
+          "title": "Thank You",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Amaria",
+          "audio_similarity": 0.651250422000885,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.651; S=0.272; styles=['rnb_soul', 'pop', 'rock', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Downtempo alternative R&B/electronic/art-pop and Morcheeba remain coherent with atmospheric trip-hop.",
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "rock",
+            "electronic"
+          ],
+          "style_overlap": 0.2724728584289551,
+          "title": "Got Me Like",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Morcheeba",
+          "audio_similarity": 0.6464124917984009,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.646; S=0.399; styles=['pop', 'rnb_soul', 'electronic', 'rock']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Downtempo alternative R&B/electronic/art-pop and Morcheeba remain coherent with atmospheric trip-hop.",
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "electronic",
+            "rock"
+          ],
+          "style_overlap": 0.3987407684326172,
+          "title": "Part of the Process",
+          "wrong_scene": false
+        },
+        {
+          "artist": "The Internet",
+          "audio_similarity": 0.6155182123184204,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.616; S=0.132; styles=['jazz', 'pop', 'rock', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Downtempo alternative R&B/electronic/art-pop and Morcheeba remain coherent with atmospheric trip-hop.",
+          "style_labels": [
+            "jazz",
+            "pop",
+            "rock",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.13187789916992188,
+          "title": "Sunset (feat. Yuna Zarai)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Bastien D",
+          "audio_similarity": 0.5875236392021179,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.588; S=0.578; styles=['electronic', 'pop', 'metal', 'rock']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Downtempo alternative R&B/electronic/art-pop and Morcheeba remain coherent with atmospheric trip-hop.",
+          "style_labels": [
+            "electronic",
+            "pop",
+            "metal",
+            "rock"
+          ],
+          "style_overlap": 0.5781741142272949,
+          "title": "Hit Dat",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Blood Orange",
+          "audio_similarity": 0.6635602712631226,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.664; S=0.438; styles=['pop', 'electronic', 'rock', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Downtempo alternative R&B/electronic/art-pop and Morcheeba remain coherent with atmospheric trip-hop.",
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.4383559226989746,
+          "title": "Thank You",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Amaria",
+          "audio_similarity": 0.651250422000885,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.651; S=0.272; styles=['rnb_soul', 'pop', 'rock', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Downtempo alternative R&B/electronic/art-pop and Morcheeba remain coherent with atmospheric trip-hop.",
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "rock",
+            "electronic"
+          ],
+          "style_overlap": 0.2724728584289551,
+          "title": "Got Me Like",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Morcheeba",
+          "audio_similarity": 0.6464124917984009,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.646; S=0.399; styles=['pop', 'rnb_soul', 'electronic', 'rock']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Downtempo alternative R&B/electronic/art-pop and Morcheeba remain coherent with atmospheric trip-hop.",
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "electronic",
+            "rock"
+          ],
+          "style_overlap": 0.3987407684326172,
+          "title": "Part of the Process",
+          "wrong_scene": false
+        }
+      ],
+      "production_pass": true,
+      "summary": "Downtempo alternative R&B/electronic/art-pop and Morcheeba remain coherent with atmospheric trip-hop."
+    },
+    {
+      "challenger_pass": true,
+      "id": "direct-12",
+      "positions": [
+        {
+          "artist": "Slowdive",
+          "audio_similarity": 0.6739103198051453,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.674; S=0.730; styles=['pop', 'rock', 'art_rock', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. The fired graph head is a coherent shoegaze/noise-rock set; production opens with unrelated black metal and has punk drift.",
+          "style_labels": [
+            "pop",
+            "rock",
+            "art_rock",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.7303009033203125,
+          "title": "Catch The Breeze (Peel Session)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Galaxie 500",
+          "audio_similarity": 0.5661348700523376,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.566; S=0.754; styles=['rock', 'pop', 'folk_country', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. The fired graph head is a coherent shoegaze/noise-rock set; production opens with unrelated black metal and has punk drift.",
+          "style_labels": [
+            "rock",
+            "pop",
+            "folk_country",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.7544331550598145,
+          "title": "Leave the Planet",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Swirlies",
+          "audio_similarity": 0.641470730304718,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.641; S=0.825; styles=['rock', 'pop', 'shoegaze_dream_pop', 'metal']; preview=available; artist/title and flags inspected. Position is scene/style coherent. The fired graph head is a coherent shoegaze/noise-rock set; production opens with unrelated black metal and has punk drift.",
+          "style_labels": [
+            "rock",
+            "pop",
+            "shoegaze_dream_pop",
+            "metal"
+          ],
+          "style_overlap": 0.82464599609375,
+          "title": "San Cristobal De Las Casas",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Sonic Youth",
+          "audio_similarity": 0.655206561088562,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.655; S=0.818; styles=['rock', 'punk', 'pop', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. The fired graph head is a coherent shoegaze/noise-rock set; production opens with unrelated black metal and has punk drift.",
+          "style_labels": [
+            "rock",
+            "punk",
+            "pop",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.8183126449584961,
+          "title": "'Cross the Breeze (Album Version)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "The Jesus And Mary Chain",
+          "audio_similarity": 0.663561999797821,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.664; S=0.785; styles=['rock', 'metal', 'punk', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. The fired graph head is a coherent shoegaze/noise-rock set; production opens with unrelated black metal and has punk drift.",
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.7848987579345703,
+          "title": "The Living End",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Darkthrone",
+          "audio_similarity": 0.6758666634559631,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.676; S=0.725; styles=['rock', 'metal', 'punk', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. The fired graph head is a coherent shoegaze/noise-rock set; production opens with unrelated black metal and has punk drift.",
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.7249503135681152,
+          "title": "The Beast",
+          "wrong_scene": true
+        },
+        {
+          "artist": "Chapterhouse",
+          "audio_similarity": 0.6642669439315796,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.664; S=0.802; styles=['rock', 'metal', 'punk', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. The fired graph head is a coherent shoegaze/noise-rock set; production opens with unrelated black metal and has punk drift.",
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.801551103591919,
+          "title": "Guilt",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Xmal Deutschland",
+          "audio_similarity": 0.619018018245697,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.619; S=0.864; styles=['rock', 'shoegaze_dream_pop', 'pop', 'punk']; preview=available; artist/title and flags inspected. Position is scene/style coherent. The fired graph head is a coherent shoegaze/noise-rock set; production opens with unrelated black metal and has punk drift.",
+          "style_labels": [
+            "rock",
+            "shoegaze_dream_pop",
+            "pop",
+            "punk"
+          ],
+          "style_overlap": 0.8637926578521729,
+          "title": "Danthem",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Stiff Little Fingers",
+          "audio_similarity": 0.6501834988594055,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.650; S=0.748; styles=['rock', 'pop', 'punk', 'metal']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. The fired graph head is a coherent shoegaze/noise-rock set; production opens with unrelated black metal and has punk drift.",
+          "style_labels": [
+            "rock",
+            "pop",
+            "punk",
+            "metal"
+          ],
+          "style_overlap": 0.747772216796875,
+          "title": "White Noise",
+          "wrong_scene": true
+        },
+        {
+          "artist": "METZ",
+          "audio_similarity": 0.6599005460739136,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.660; S=0.560; styles=['rock', 'metal', 'punk', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. The fired graph head is a coherent shoegaze/noise-rock set; production opens with unrelated black metal and has punk drift.",
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.5601739883422852,
+          "title": "Wet Blanket (BBC Maida Vale Session)",
+          "wrong_scene": false
+        }
+      ],
+      "production_pass": false,
+      "summary": "The fired graph head is a coherent shoegaze/noise-rock set; production opens with unrelated black metal and has punk drift."
+    },
+    {
+      "challenger_pass": true,
+      "id": "direct-13",
+      "positions": [
+        {
+          "artist": "Team Sleep",
+          "audio_similarity": 0.6812836527824402,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.681; S=0.395; styles=['electronic', 'pop', 'rock', 'jazz']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Alternative-metal and adjacent heavy-rock peers throughout both lists.",
+          "style_labels": [
+            "electronic",
+            "pop",
+            "rock",
+            "jazz"
+          ],
+          "style_overlap": 0.39523959159851074,
+          "title": "Your Skull Is Red",
+          "wrong_scene": false
+        },
+        {
+          "artist": "A Perfect Circle",
+          "audio_similarity": 0.6986293196678162,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.699; S=0.539; styles=['rock', 'pop', 'punk', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Alternative-metal and adjacent heavy-rock peers throughout both lists.",
+          "style_labels": [
+            "rock",
+            "pop",
+            "punk",
+            "electronic"
+          ],
+          "style_overlap": 0.5389278531074524,
+          "title": "Judith",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Chevelle",
+          "audio_similarity": 0.696532666683197,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.697; S=0.783; styles=['rock', 'metal', 'punk', 'pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Alternative-metal and adjacent heavy-rock peers throughout both lists.",
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "pop"
+          ],
+          "style_overlap": 0.7825884819030762,
+          "title": "So Long, Mother Earth",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Incubus",
+          "audio_similarity": 0.6860087513923645,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.686; S=0.292; styles=['pop', 'rock', 'punk', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Alternative-metal and adjacent heavy-rock peers throughout both lists.",
+          "style_labels": [
+            "pop",
+            "rock",
+            "punk",
+            "electronic"
+          ],
+          "style_overlap": 0.29181504249572754,
+          "title": "A Certain Shade of Green",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Mudvayne",
+          "audio_similarity": 0.693684995174408,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.694; S=0.800; styles=['rock', 'metal', 'punk', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Alternative-metal and adjacent heavy-rock peers throughout both lists.",
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.799638032913208,
+          "title": "Have It Your Way",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Balance and Composure",
+          "audio_similarity": 0.7056611180305481,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.706; S=0.682; styles=['rock', 'punk', 'pop', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Alternative-metal and adjacent heavy-rock peers throughout both lists.",
+          "style_labels": [
+            "rock",
+            "punk",
+            "pop",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.682475209236145,
+          "title": "Enemy",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Alice In Chains",
+          "audio_similarity": 0.7117591500282288,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.712; S=0.816; styles=['rock', 'metal']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Alternative-metal and adjacent heavy-rock peers throughout both lists.",
+          "style_labels": [
+            "rock",
+            "metal"
+          ],
+          "style_overlap": 0.8161239624023438,
+          "title": "Pretty Done",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Chimaira",
+          "audio_similarity": 0.7105675339698792,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.711; S=0.853; styles=['rock', 'metal', 'punk', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Alternative-metal and adjacent heavy-rock peers throughout both lists.",
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.8528298139572144,
+          "title": "Sp Lit",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Helmet",
+          "audio_similarity": 0.6456648707389832,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.646; S=0.585; styles=['rock', 'punk', 'pop', 'experimental']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Alternative-metal and adjacent heavy-rock peers throughout both lists.",
+          "style_labels": [
+            "rock",
+            "punk",
+            "pop",
+            "experimental"
+          ],
+          "style_overlap": 0.584722101688385,
+          "title": "Like I Care (Album Version)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Mastodon",
+          "audio_similarity": 0.6973333358764648,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.697; S=0.836; styles=['rock', 'metal', 'punk', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Alternative-metal and adjacent heavy-rock peers throughout both lists.",
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.835709810256958,
+          "title": "March of the Fire Ants",
+          "wrong_scene": false
+        }
+      ],
+      "production_pass": true,
+      "summary": "Alternative-metal and adjacent heavy-rock peers throughout both lists."
+    },
+    {
+      "challenger_pass": true,
+      "id": "direct-14",
+      "positions": [
+        {
+          "artist": "Mos Def",
+          "audio_similarity": 0.6699265837669373,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.670; S=0.965; styles=['hip_hop', 'pop', 'punk', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Boom-bap and alternative-hip-hop peers throughout both lists.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.9650846123695374,
+          "title": "Love",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Gang Starr",
+          "audio_similarity": 0.6795745491981506,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.680; S=0.980; styles=['hip_hop', 'punk', 'pop', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Boom-bap and alternative-hip-hop peers throughout both lists.",
+          "style_labels": [
+            "hip_hop",
+            "punk",
+            "pop",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.9797190427780151,
+          "title": "Lights Out",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Madlib",
+          "audio_similarity": 0.6460089087486267,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.646; S=0.503; styles=['pop', 'electronic', 'rock', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Boom-bap and alternative-hip-hop peers throughout both lists.",
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.5028245449066162,
+          "title": "African Pompano",
+          "wrong_scene": false
+        },
+        {
+          "artist": "J Dilla",
+          "audio_similarity": 0.6778466105461121,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.678; S=0.267; styles=['electronic', 'jazz', 'rock', 'reggae_caribbean']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Boom-bap and alternative-hip-hop peers throughout both lists.",
+          "style_labels": [
+            "electronic",
+            "jazz",
+            "rock",
+            "reggae_caribbean"
+          ],
+          "style_overlap": 0.2672652006149292,
+          "title": "Track Feat. Phat Kat",
+          "wrong_scene": false
+        },
+        {
+          "artist": "The Roots",
+          "audio_similarity": 0.6802725195884705,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.680; S=1.000; styles=['hip_hop', 'pop', 'punk', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Boom-bap and alternative-hip-hop peers throughout both lists.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ],
+          "style_overlap": 1.0,
+          "title": "Right On",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Black Moon",
+          "audio_similarity": 0.594464898109436,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.594; S=0.991; styles=['hip_hop', 'pop', 'punk', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Boom-bap and alternative-hip-hop peers throughout both lists.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.9913179874420166,
+          "title": "Make Munne",
+          "wrong_scene": false
+        },
+        {
+          "artist": "The Pharcyde",
+          "audio_similarity": 0.5838930010795593,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.584; S=0.996; styles=['hip_hop', 'punk', 'pop', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Boom-bap and alternative-hip-hop peers throughout both lists.",
+          "style_labels": [
+            "hip_hop",
+            "punk",
+            "pop",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.9960306286811829,
+          "title": "4 Better Or 4 Worse",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Quasimoto",
+          "audio_similarity": 0.655470073223114,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.655; S=0.993; styles=['hip_hop', 'pop', 'punk', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Boom-bap and alternative-hip-hop peers throughout both lists.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.9932482242584229,
+          "title": "The Unseen",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Wu-Tang Clan",
+          "audio_similarity": 0.5151532292366028,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.515; S=0.963; styles=['hip_hop', 'pop', 'punk', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Boom-bap and alternative-hip-hop peers throughout both lists.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.9632198214530945,
+          "title": "After the Laughter Comes Tears (Tearz Instrumental)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "The Beatnuts",
+          "audio_similarity": 0.6122214198112488,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.612; S=1.000; styles=['hip_hop', 'pop', 'punk', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Boom-bap and alternative-hip-hop peers throughout both lists.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ],
+          "style_overlap": 1.0,
+          "title": "We Got the Funk",
+          "wrong_scene": false
+        }
+      ],
+      "production_pass": true,
+      "summary": "Boom-bap and alternative-hip-hop peers throughout both lists."
+    },
+    {
+      "challenger_pass": false,
+      "id": "direct-15",
+      "positions": [
+        {
+          "artist": "Kanye West",
+          "audio_similarity": 0.6645670533180237,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.665; S=0.554; styles=['hip_hop', 'pop', 'punk', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Generic rap and country-pop dominate; only one R&B result is a close fit.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.5540943145751953,
+          "title": "Barry Bonds",
+          "wrong_scene": true
+        },
+        {
+          "artist": "Jacquees",
+          "audio_similarity": 0.6828539967536926,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.683; S=0.786; styles=['rnb_soul', 'pop', 'hip_hop', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Generic rap and country-pop dominate; only one R&B result is a close fit.",
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "hip_hop",
+            "electronic"
+          ],
+          "style_overlap": 0.7860889434814453,
+          "title": "Beauty Doesn’t Cry",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Chance The Rapper",
+          "audio_similarity": 0.6569868326187134,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.657; S=0.464; styles=['hip_hop', 'pop', 'punk', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Generic rap and country-pop dominate; only one R&B result is a close fit.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.46390295028686523,
+          "title": "Smoke Again",
+          "wrong_scene": true
+        },
+        {
+          "artist": "YoungBoy Never Broke Again",
+          "audio_similarity": 0.6900425553321838,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.690; S=0.464; styles=['hip_hop', 'pop', 'punk', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Generic rap and country-pop dominate; only one R&B result is a close fit.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.4639892578125,
+          "title": "Sedated",
+          "wrong_scene": true
+        },
+        {
+          "artist": "Russell Dickerson",
+          "audio_similarity": 0.64802485704422,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.648; S=0.929; styles=['pop', 'rnb_soul', 'electronic', 'folk_country']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Generic rap and country-pop dominate; only one R&B result is a close fit.",
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "electronic",
+            "folk_country"
+          ],
+          "style_overlap": 0.9293594360351562,
+          "title": "Every Little Thing (Stripped)",
+          "wrong_scene": true
+        },
+        {
+          "artist": "Kanye West",
+          "audio_similarity": 0.6645670533180237,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.665; S=0.554; styles=['hip_hop', 'pop', 'punk', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Generic rap and country-pop dominate; only one R&B result is a close fit.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.5540943145751953,
+          "title": "Barry Bonds",
+          "wrong_scene": true
+        },
+        {
+          "artist": "Jacquees",
+          "audio_similarity": 0.6828539967536926,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.683; S=0.786; styles=['rnb_soul', 'pop', 'hip_hop', 'electronic']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Generic rap and country-pop dominate; only one R&B result is a close fit.",
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "hip_hop",
+            "electronic"
+          ],
+          "style_overlap": 0.7860889434814453,
+          "title": "Beauty Doesn’t Cry",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Chance The Rapper",
+          "audio_similarity": 0.6569868326187134,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.657; S=0.464; styles=['hip_hop', 'pop', 'punk', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Generic rap and country-pop dominate; only one R&B result is a close fit.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.46390295028686523,
+          "title": "Smoke Again",
+          "wrong_scene": true
+        },
+        {
+          "artist": "YoungBoy Never Broke Again",
+          "audio_similarity": 0.6900425553321838,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.690; S=0.464; styles=['hip_hop', 'pop', 'punk', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Generic rap and country-pop dominate; only one R&B result is a close fit.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.4639892578125,
+          "title": "Sedated",
+          "wrong_scene": true
+        },
+        {
+          "artist": "Russell Dickerson",
+          "audio_similarity": 0.64802485704422,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.648; S=0.929; styles=['pop', 'rnb_soul', 'electronic', 'folk_country']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Generic rap and country-pop dominate; only one R&B result is a close fit.",
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "electronic",
+            "folk_country"
+          ],
+          "style_overlap": 0.9293594360351562,
+          "title": "Every Little Thing (Stripped)",
+          "wrong_scene": true
+        }
+      ],
+      "production_pass": false,
+      "summary": "Generic rap and country-pop dominate; only one R&B result is a close fit."
+    },
+    {
+      "challenger_pass": true,
+      "id": "direct-16",
+      "positions": [
+        {
+          "artist": "Megadeth",
+          "audio_similarity": 0.700981080532074,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.701; S=0.913; styles=['rock', 'metal', 'punk', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Thrash, classic heavy metal, and close aggressive-rock peers throughout.",
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.9127883911132812,
+          "title": "Evil That's Within (Remastered 2004 / Remixed)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Iron Maiden",
+          "audio_similarity": 0.6589570641517639,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.659; S=0.630; styles=['rock', 'punk', 'pop', 'metal']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Thrash, classic heavy metal, and close aggressive-rock peers throughout.",
+          "style_labels": [
+            "rock",
+            "punk",
+            "pop",
+            "metal"
+          ],
+          "style_overlap": 0.6295270919799805,
+          "title": "The Book of Souls",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Judas Priest",
+          "audio_similarity": 0.6722363829612732,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.672; S=0.598; styles=['rock', 'punk', 'pop', 'metal']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Thrash, classic heavy metal, and close aggressive-rock peers throughout.",
+          "style_labels": [
+            "rock",
+            "punk",
+            "pop",
+            "metal"
+          ],
+          "style_overlap": 0.5975933074951172,
+          "title": "The Hellion / Electric Eye",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Pantera",
+          "audio_similarity": 0.6749815940856934,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.675; S=0.939; styles=['rock', 'metal', 'punk', 'experimental']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Thrash, classic heavy metal, and close aggressive-rock peers throughout.",
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "experimental"
+          ],
+          "style_overlap": 0.9393711090087891,
+          "title": "25 Years",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Slayer",
+          "audio_similarity": 0.6757773756980896,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.676; S=0.861; styles=['rock', 'metal', 'punk', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Thrash, classic heavy metal, and close aggressive-rock peers throughout.",
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.8610038757324219,
+          "title": "Cult (Album Version)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Megadeth",
+          "audio_similarity": 0.700981080532074,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.701; S=0.913; styles=['rock', 'metal', 'punk', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Thrash, classic heavy metal, and close aggressive-rock peers throughout.",
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.9127883911132812,
+          "title": "Evil That's Within (Remastered 2004 / Remixed)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Dio",
+          "audio_similarity": 0.6386193633079529,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.639; S=0.654; styles=['rock', 'punk', 'pop', 'metal']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Thrash, classic heavy metal, and close aggressive-rock peers throughout.",
+          "style_labels": [
+            "rock",
+            "punk",
+            "pop",
+            "metal"
+          ],
+          "style_overlap": 0.6535205841064453,
+          "title": "Jesus, Mary & the Holy Ghost",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Ministry",
+          "audio_similarity": 0.6665366291999817,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.667; S=0.558; styles=['electronic', 'rock', 'metal', 'experimental']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Thrash, classic heavy metal, and close aggressive-rock peers throughout.",
+          "style_labels": [
+            "electronic",
+            "rock",
+            "metal",
+            "experimental"
+          ],
+          "style_overlap": 0.5575466156005859,
+          "title": "Crumbs",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Cro-mags",
+          "audio_similarity": 0.6343786716461182,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.634; S=0.912; styles=['rock', 'metal', 'punk', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Thrash, classic heavy metal, and close aggressive-rock peers throughout.",
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.9124431610107422,
+          "title": "The Only One",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Anthrax",
+          "audio_similarity": 0.6683780550956726,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.668; S=0.898; styles=['rock', 'metal', 'punk', 'experimental']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Thrash, classic heavy metal, and close aggressive-rock peers throughout.",
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "experimental"
+          ],
+          "style_overlap": 0.8975982666015625,
+          "title": "Keep It In The Family",
+          "wrong_scene": false
+        }
+      ],
+      "production_pass": true,
+      "summary": "Thrash, classic heavy metal, and close aggressive-rock peers throughout."
+    },
+    {
+      "challenger_pass": true,
+      "id": "direct-17",
+      "positions": [
+        {
+          "artist": "John Coltrane",
+          "audio_similarity": 0.674628496170044,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.675; S=0.333; styles=['experimental', 'jazz', 'gospel']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Canonical modal, bebop, and post-bop jazz peers throughout.",
+          "style_labels": [
+            "experimental",
+            "jazz",
+            "gospel"
+          ],
+          "style_overlap": 0.3331003189086914,
+          "title": "Sun Star (Alternate Take Version)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Thelonious Monk",
+          "audio_similarity": 0.6309316158294678,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.631; S=0.577; styles=['jazz']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Canonical modal, bebop, and post-bop jazz peers throughout.",
+          "style_labels": [
+            "jazz"
+          ],
+          "style_overlap": 0.5771484375,
+          "title": "Rhythm A Ning (Album Version)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Herbie Hancock",
+          "audio_similarity": 0.6453046202659607,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.645; S=0.816; styles=['jazz', 'classical']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Canonical modal, bebop, and post-bop jazz peers throughout.",
+          "style_labels": [
+            "jazz",
+            "classical"
+          ],
+          "style_overlap": 0.8161239624023438,
+          "title": "Bo Ba Be Da",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Charlie Parker",
+          "audio_similarity": 0.581188440322876,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.581; S=0.656; styles=['jazz', 'experimental', 'rnb_soul', 'gospel']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Canonical modal, bebop, and post-bop jazz peers throughout.",
+          "style_labels": [
+            "jazz",
+            "experimental",
+            "rnb_soul",
+            "gospel"
+          ],
+          "style_overlap": 0.6558440923690796,
+          "title": "All The Things You Are / 52nd Street Theme",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Charles Mingus",
+          "audio_similarity": 0.6517768502235413,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.652; S=0.717; styles=['jazz', 'classical', 'rnb_soul', 'rock']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Canonical modal, bebop, and post-bop jazz peers throughout.",
+          "style_labels": [
+            "jazz",
+            "classical",
+            "rnb_soul",
+            "rock"
+          ],
+          "style_overlap": 0.7166447639465332,
+          "title": "Song With Orange (Alternate)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "John Coltrane",
+          "audio_similarity": 0.674628496170044,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.675; S=0.333; styles=['experimental', 'jazz', 'gospel']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Canonical modal, bebop, and post-bop jazz peers throughout.",
+          "style_labels": [
+            "experimental",
+            "jazz",
+            "gospel"
+          ],
+          "style_overlap": 0.3331003189086914,
+          "title": "Sun Star (Alternate Take Version)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Paul Chambers",
+          "audio_similarity": 0.5993501543998718,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.599; S=0.562; styles=['jazz', 'experimental', 'rnb_soul', 'latin']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Canonical modal, bebop, and post-bop jazz peers throughout.",
+          "style_labels": [
+            "jazz",
+            "experimental",
+            "rnb_soul",
+            "latin"
+          ],
+          "style_overlap": 0.5619306564331055,
+          "title": "Dexterity",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Paul Chamber",
+          "audio_similarity": 0.6127191185951233,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.613; S=0.655; styles=['jazz', 'experimental', 'rnb_soul', 'latin']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Canonical modal, bebop, and post-bop jazz peers throughout.",
+          "style_labels": [
+            "jazz",
+            "experimental",
+            "rnb_soul",
+            "latin"
+          ],
+          "style_overlap": 0.6547873020172119,
+          "title": "Visitation",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Pharoah Sanders",
+          "audio_similarity": 0.6777563095092773,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.678; S=0.717; styles=['jazz', 'classical', 'rnb_soul', 'rock']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Canonical modal, bebop, and post-bop jazz peers throughout.",
+          "style_labels": [
+            "jazz",
+            "classical",
+            "rnb_soul",
+            "rock"
+          ],
+          "style_overlap": 0.7174197435379028,
+          "title": "Duo",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Ahmad Jamal",
+          "audio_similarity": 0.6478464007377625,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.648; S=0.604; styles=['jazz', 'rnb_soul', 'blues', 'classical']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Canonical modal, bebop, and post-bop jazz peers throughout.",
+          "style_labels": [
+            "jazz",
+            "rnb_soul",
+            "blues",
+            "classical"
+          ],
+          "style_overlap": 0.6041670441627502,
+          "title": "But Not For Me",
+          "wrong_scene": false
+        }
+      ],
+      "production_pass": true,
+      "summary": "Canonical modal, bebop, and post-bop jazz peers throughout."
+    },
+    {
+      "challenger_pass": true,
+      "id": "direct-18",
+      "positions": [
+        {
+          "artist": "Show Dem Camp",
+          "audio_similarity": 0.6693194508552551,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.669; S=0.263; styles=['hip_hop', 'pop', 'rnb_soul', 'jazz']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Nigerian Afrobeats, Afropop, and adjacent artists throughout.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "rnb_soul",
+            "jazz"
+          ],
+          "style_overlap": 0.2632817029953003,
+          "title": "No Love In Lagos",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Sarz",
+          "audio_similarity": 0.629694402217865,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.630; S=0.417; styles=['rnb_soul', 'jazz', 'hip_hop', 'pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Nigerian Afrobeats, Afropop, and adjacent artists throughout.",
+          "style_labels": [
+            "rnb_soul",
+            "jazz",
+            "hip_hop",
+            "pop"
+          ],
+          "style_overlap": 0.4171503782272339,
+          "title": "Mademoiselle (feat. ODUMODUBLVCK, Shallipopi, Theodora, Zeina)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Ajebutter22",
+          "audio_similarity": 0.6226316094398499,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.623; S=0.231; styles=['hip_hop', 'pop', 'jazz', 'punk']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Nigerian Afrobeats, Afropop, and adjacent artists throughout.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "jazz",
+            "punk"
+          ],
+          "style_overlap": 0.23094391822814941,
+          "title": "Rock Your Body",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Naira Marley",
+          "audio_similarity": 0.5505030751228333,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.551; S=0.330; styles=['hip_hop', 'pop', 'rnb_soul', 'punk']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Nigerian Afrobeats, Afropop, and adjacent artists throughout.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "rnb_soul",
+            "punk"
+          ],
+          "style_overlap": 0.3296129107475281,
+          "title": "JAPA",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Timaya",
+          "audio_similarity": 0.5923265814781189,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.592; S=0.180; styles=['hip_hop', 'pop', 'electronic', 'jazz']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Nigerian Afrobeats, Afropop, and adjacent artists throughout.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "electronic",
+            "jazz"
+          ],
+          "style_overlap": 0.18007707595825195,
+          "title": "Gra Gra",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Show Dem Camp",
+          "audio_similarity": 0.6693194508552551,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.669; S=0.263; styles=['hip_hop', 'pop', 'rnb_soul', 'jazz']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Nigerian Afrobeats, Afropop, and adjacent artists throughout.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "rnb_soul",
+            "jazz"
+          ],
+          "style_overlap": 0.2632817029953003,
+          "title": "No Love In Lagos",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Sarz",
+          "audio_similarity": 0.629694402217865,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.630; S=0.417; styles=['rnb_soul', 'jazz', 'hip_hop', 'pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Nigerian Afrobeats, Afropop, and adjacent artists throughout.",
+          "style_labels": [
+            "rnb_soul",
+            "jazz",
+            "hip_hop",
+            "pop"
+          ],
+          "style_overlap": 0.4171503782272339,
+          "title": "Mademoiselle (feat. ODUMODUBLVCK, Shallipopi, Theodora, Zeina)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Ajebutter22",
+          "audio_similarity": 0.6226316094398499,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.623; S=0.231; styles=['hip_hop', 'pop', 'jazz', 'punk']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Nigerian Afrobeats, Afropop, and adjacent artists throughout.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "jazz",
+            "punk"
+          ],
+          "style_overlap": 0.23094391822814941,
+          "title": "Rock Your Body",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Naira Marley",
+          "audio_similarity": 0.5505030751228333,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.551; S=0.330; styles=['hip_hop', 'pop', 'rnb_soul', 'punk']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Nigerian Afrobeats, Afropop, and adjacent artists throughout.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "rnb_soul",
+            "punk"
+          ],
+          "style_overlap": 0.3296129107475281,
+          "title": "JAPA",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Timaya",
+          "audio_similarity": 0.5923265814781189,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.592; S=0.180; styles=['hip_hop', 'pop', 'electronic', 'jazz']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Nigerian Afrobeats, Afropop, and adjacent artists throughout.",
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "electronic",
+            "jazz"
+          ],
+          "style_overlap": 0.18007707595825195,
+          "title": "Gra Gra",
+          "wrong_scene": false
+        }
+      ],
+      "production_pass": true,
+      "summary": "Nigerian Afrobeats, Afropop, and adjacent artists throughout."
+    },
+    {
+      "challenger_pass": true,
+      "id": "direct-19",
+      "positions": [
+        {
+          "artist": "CHUU",
+          "audio_similarity": 0.6034958958625793,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.603; S=1.000; styles=['pop', 'asian_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. K-pop girl-group peers throughout with no unrelated top-three result.",
+          "style_labels": [
+            "pop",
+            "asian_pop"
+          ],
+          "style_overlap": 0.999786376953125,
+          "title": "Girl's Talk (이브, 츄)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "TWICE",
+          "audio_similarity": 0.5795137286186218,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.580; S=0.707; styles=['pop', 'rnb_soul', 'electronic', 'asian_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. K-pop girl-group peers throughout with no unrelated top-three result.",
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "electronic",
+            "asian_pop"
+          ],
+          "style_overlap": 0.70703125,
+          "title": "REWIND",
+          "wrong_scene": false
+        },
+        {
+          "artist": "RESCENE",
+          "audio_similarity": 0.61573326587677,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.616; S=0.674; styles=['pop', 'electronic', 'rock', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. K-pop girl-group peers throughout with no unrelated top-three result.",
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.6743206977844238,
+          "title": "Pinball",
+          "wrong_scene": false
+        },
+        {
+          "artist": "LE SSERAFIM",
+          "audio_similarity": 0.6096654534339905,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.610; S=0.536; styles=['pop', 'electronic', 'rnb_soul', 'rock']; preview=available; artist/title and flags inspected. Position is scene/style coherent. K-pop girl-group peers throughout with no unrelated top-three result.",
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rnb_soul",
+            "rock"
+          ],
+          "style_overlap": 0.5362718105316162,
+          "title": "iffy iffy",
+          "wrong_scene": false
+        },
+        {
+          "artist": "ITZY",
+          "audio_similarity": 0.6028772592544556,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.603; S=0.662; styles=['pop', 'electronic', 'rock', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. K-pop girl-group peers throughout with no unrelated top-three result.",
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.661719799041748,
+          "title": "No Biggie",
+          "wrong_scene": false
+        },
+        {
+          "artist": "CHUU",
+          "audio_similarity": 0.6034958958625793,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.603; S=1.000; styles=['pop', 'asian_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. K-pop girl-group peers throughout with no unrelated top-three result.",
+          "style_labels": [
+            "pop",
+            "asian_pop"
+          ],
+          "style_overlap": 0.999786376953125,
+          "title": "Girl's Talk (이브, 츄)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "TWICE",
+          "audio_similarity": 0.5795137286186218,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.580; S=0.707; styles=['pop', 'rnb_soul', 'electronic', 'asian_pop']; preview=available; artist/title and flags inspected. Position is scene/style coherent. K-pop girl-group peers throughout with no unrelated top-three result.",
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "electronic",
+            "asian_pop"
+          ],
+          "style_overlap": 0.70703125,
+          "title": "REWIND",
+          "wrong_scene": false
+        },
+        {
+          "artist": "RESCENE",
+          "audio_similarity": 0.61573326587677,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.616; S=0.674; styles=['pop', 'electronic', 'rock', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. K-pop girl-group peers throughout with no unrelated top-three result.",
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.6743206977844238,
+          "title": "Pinball",
+          "wrong_scene": false
+        },
+        {
+          "artist": "LE SSERAFIM",
+          "audio_similarity": 0.6096654534339905,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.610; S=0.536; styles=['pop', 'electronic', 'rnb_soul', 'rock']; preview=available; artist/title and flags inspected. Position is scene/style coherent. K-pop girl-group peers throughout with no unrelated top-three result.",
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rnb_soul",
+            "rock"
+          ],
+          "style_overlap": 0.5362718105316162,
+          "title": "iffy iffy",
+          "wrong_scene": false
+        },
+        {
+          "artist": "ITZY",
+          "audio_similarity": 0.6028772592544556,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.603; S=0.662; styles=['pop', 'electronic', 'rock', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. K-pop girl-group peers throughout with no unrelated top-three result.",
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.661719799041748,
+          "title": "No Biggie",
+          "wrong_scene": false
+        }
+      ],
+      "production_pass": true,
+      "summary": "K-pop girl-group peers throughout with no unrelated top-three result."
+    },
+    {
+      "challenger_pass": false,
+      "id": "direct-20",
+      "positions": [
+        {
+          "artist": "Holly Macve",
+          "audio_similarity": 0.6036925911903381,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.604; S=0.564; styles=['rock', 'folk_country', 'pop', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Folk, conventional soul-rock, a cover, and vintage pop miss the seed?s experimental art-pop sound.",
+          "style_labels": [
+            "rock",
+            "folk_country",
+            "pop",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.5643707513809204,
+          "title": "Suburban House",
+          "wrong_scene": true
+        },
+        {
+          "artist": "Natanya",
+          "audio_similarity": 0.6059721112251282,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.606; S=0.842; styles=['pop', 'electronic', 'asian_pop', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Folk, conventional soul-rock, a cover, and vintage pop miss the seed?s experimental art-pop sound.",
+          "style_labels": [
+            "pop",
+            "electronic",
+            "asian_pop",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.8421468734741211,
+          "title": "Ur Fool (feat. Unflirt)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Rachel Chinouriri",
+          "audio_similarity": 0.6295137405395508,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.630; S=0.816; styles=['rnb_soul', 'pop', 'rock', 'folk_country']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Folk, conventional soul-rock, a cover, and vintage pop miss the seed?s experimental art-pop sound.",
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "rock",
+            "folk_country"
+          ],
+          "style_overlap": 0.8159947991371155,
+          "title": "Fix You (Recorded at Artistic Palace Studios, Paris)",
+          "wrong_scene": true
+        },
+        {
+          "artist": "St. Paul & The Broken Bones",
+          "audio_similarity": 0.666743814945221,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.667; S=0.839; styles=['pop', 'rock', 'electronic', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Folk, conventional soul-rock, a cover, and vintage pop miss the seed?s experimental art-pop sound.",
+          "style_labels": [
+            "pop",
+            "rock",
+            "electronic",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.8388537764549255,
+          "title": "Hurricanes",
+          "wrong_scene": true
+        },
+        {
+          "artist": "Ornella Vanoni",
+          "audio_similarity": 0.6389837861061096,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "catalog_policy",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.639; S=0.626; styles=['rock', 'pop', 'jazz', 'folk_country']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Folk, conventional soul-rock, a cover, and vintage pop miss the seed?s experimental art-pop sound.",
+          "style_labels": [
+            "rock",
+            "pop",
+            "jazz",
+            "folk_country"
+          ],
+          "style_overlap": 0.6258746385574341,
+          "title": "Semaforo rosso",
+          "wrong_scene": true
+        },
+        {
+          "artist": "Holly Macve",
+          "audio_similarity": 0.6036925911903381,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "preview_status": "available",
+          "rationale": "A=0.604; S=0.564; styles=['rock', 'folk_country', 'pop', 'shoegaze_dream_pop']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Folk, conventional soul-rock, a cover, and vintage pop miss the seed?s experimental art-pop sound.",
+          "style_labels": [
+            "rock",
+            "folk_country",
+            "pop",
+            "shoegaze_dream_pop"
+          ],
+          "style_overlap": 0.5643707513809204,
+          "title": "Suburban House",
+          "wrong_scene": true
+        },
+        {
+          "artist": "Natanya",
+          "audio_similarity": 0.6059721112251282,
+          "coherent": true,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "preview_status": "available",
+          "rationale": "A=0.606; S=0.842; styles=['pop', 'electronic', 'asian_pop', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is scene/style coherent. Folk, conventional soul-rock, a cover, and vintage pop miss the seed?s experimental art-pop sound.",
+          "style_labels": [
+            "pop",
+            "electronic",
+            "asian_pop",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.8421468734741211,
+          "title": "Ur Fool (feat. Unflirt)",
+          "wrong_scene": false
+        },
+        {
+          "artist": "Rachel Chinouriri",
+          "audio_similarity": 0.6295137405395508,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "preview_status": "available",
+          "rationale": "A=0.630; S=0.816; styles=['rnb_soul', 'pop', 'rock', 'folk_country']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Folk, conventional soul-rock, a cover, and vintage pop miss the seed?s experimental art-pop sound.",
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "rock",
+            "folk_country"
+          ],
+          "style_overlap": 0.8159947991371155,
+          "title": "Fix You (Recorded at Artistic Palace Studios, Paris)",
+          "wrong_scene": true
+        },
+        {
+          "artist": "St. Paul & The Broken Bones",
+          "audio_similarity": 0.666743814945221,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "preview_status": "available",
+          "rationale": "A=0.667; S=0.839; styles=['pop', 'rock', 'electronic', 'rnb_soul']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Folk, conventional soul-rock, a cover, and vintage pop miss the seed?s experimental art-pop sound.",
+          "style_labels": [
+            "pop",
+            "rock",
+            "electronic",
+            "rnb_soul"
+          ],
+          "style_overlap": 0.8388537764549255,
+          "title": "Hurricanes",
+          "wrong_scene": true
+        },
+        {
+          "artist": "Ornella Vanoni",
+          "audio_similarity": 0.6389837861061096,
+          "coherent": false,
+          "junk": false,
+          "junk_evidence": "Generated junk/duplicate/seed-variant flags are all false; title and artist were inspected.",
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "preview_status": "available",
+          "rationale": "A=0.639; S=0.626; styles=['rock', 'pop', 'jazz', 'folk_country']; preview=available; artist/title and flags inspected. Position is audibly/scene-wise loose or unrelated. Folk, conventional soul-rock, a cover, and vintage pop miss the seed?s experimental art-pop sound.",
+          "style_labels": [
+            "rock",
+            "pop",
+            "jazz",
+            "folk_country"
+          ],
+          "style_overlap": 0.6258746385574341,
+          "title": "Semaforo rosso",
+          "wrong_scene": true
+        }
+      ],
+      "production_pass": false,
+      "summary": "Folk, conventional soul-rock, a cover, and vintage pop miss the seed?s experimental art-pop sound."
+    }
+  ],
+  "lists_sha256": "bc6cd10fde027711fcff421cf77c486eea2d1cbad3761c466a4bed8603db848d",
+  "review_policy": "Locked names/artists, all 200 top-five positions, preview availability, audio A, MusicBrainz style S/tags, and junk flags inspected. No claim of audible preview playback. Pass requires >=4 coherent and no unrelated positions 1-3.",
+  "schema_version": 1
+}

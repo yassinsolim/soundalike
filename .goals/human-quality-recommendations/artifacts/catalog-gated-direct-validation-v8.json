@@ -1,0 +1,717 @@
+{
+  "challenger_effective_passes": 16,
+  "coherence_inferred": false,
+  "gate_met": true,
+  "gate_summary_by_failure_class": {
+    "afrobeats": {
+      "abstained": 1,
+      "fired": 0
+    },
+    "art_pop": {
+      "abstained": 1,
+      "fired": 0
+    },
+    "city_pop": {
+      "abstained": 2,
+      "fired": 0
+    },
+    "daft_punk": {
+      "abstained": 1,
+      "fired": 0
+    },
+    "gorillaz": {
+      "abstained": 1,
+      "fired": 0
+    },
+    "hyperpop_digicore": {
+      "abstained": 3,
+      "fired": 0
+    },
+    "jazz": {
+      "abstained": 0,
+      "fired": 1
+    },
+    "k_pop": {
+      "abstained": 1,
+      "fired": 0
+    },
+    "latin": {
+      "abstained": 2,
+      "fired": 0
+    },
+    "metal": {
+      "abstained": 0,
+      "fired": 2
+    },
+    "pixies_to_trip_hop": {
+      "abstained": 2,
+      "fired": 0
+    },
+    "rap": {
+      "abstained": 0,
+      "fired": 1
+    },
+    "rnb": {
+      "abstained": 1,
+      "fired": 0
+    },
+    "shoegaze": {
+      "abstained": 0,
+      "fired": 1
+    }
+  },
+  "judgments": 20,
+  "lists_sha256": "bc6cd10fde027711fcff421cf77c486eea2d1cbad3761c466a4bed8603db848d",
+  "per_seed": [
+    {
+      "automatic_failure": {
+        "challenger": false,
+        "production": false
+      },
+      "challenger_effective_pass": true,
+      "failure_class": "pixies_to_trip_hop",
+      "gate": {
+        "abstained": true,
+        "agreement": 0.0,
+        "consistency": 0.0,
+        "fired": false,
+        "reason": "missing_independent_source",
+        "shared_count": 0,
+        "source_coverage": {
+          "lastfm": true,
+          "lastfm_candidates": 21,
+          "music4all": false,
+          "music4all_candidates": 0
+        },
+        "thresholds": {
+          "sigma": 0.3,
+          "tau": 0.35
+        }
+      },
+      "human_pass": {
+        "challenger": true,
+        "production": true
+      },
+      "id": "direct-01",
+      "production_effective_pass": true
+    },
+    {
+      "automatic_failure": {
+        "challenger": false,
+        "production": false
+      },
+      "challenger_effective_pass": true,
+      "failure_class": "city_pop",
+      "gate": {
+        "abstained": true,
+        "agreement": 0.0,
+        "consistency": 0.0,
+        "fired": false,
+        "reason": "missing_independent_source",
+        "shared_count": 0,
+        "source_coverage": {
+          "lastfm": false,
+          "lastfm_candidates": 0,
+          "music4all": false,
+          "music4all_candidates": 0
+        },
+        "thresholds": {
+          "sigma": 0.3,
+          "tau": 0.35
+        }
+      },
+      "human_pass": {
+        "challenger": true,
+        "production": true
+      },
+      "id": "direct-02",
+      "production_effective_pass": true
+    },
+    {
+      "automatic_failure": {
+        "challenger": false,
+        "production": false
+      },
+      "challenger_effective_pass": true,
+      "failure_class": "city_pop",
+      "gate": {
+        "abstained": true,
+        "agreement": 0.0,
+        "consistency": 0.0,
+        "fired": false,
+        "reason": "missing_independent_source",
+        "shared_count": 0,
+        "source_coverage": {
+          "lastfm": false,
+          "lastfm_candidates": 0,
+          "music4all": false,
+          "music4all_candidates": 0
+        },
+        "thresholds": {
+          "sigma": 0.3,
+          "tau": 0.35
+        }
+      },
+      "human_pass": {
+        "challenger": true,
+        "production": true
+      },
+      "id": "direct-03",
+      "production_effective_pass": true
+    },
+    {
+      "automatic_failure": {
+        "challenger": false,
+        "production": false
+      },
+      "challenger_effective_pass": true,
+      "failure_class": "latin",
+      "gate": {
+        "abstained": true,
+        "agreement": 0.0,
+        "consistency": 0.0,
+        "fired": false,
+        "reason": "missing_independent_source",
+        "shared_count": 0,
+        "source_coverage": {
+          "lastfm": false,
+          "lastfm_candidates": 0,
+          "music4all": false,
+          "music4all_candidates": 0
+        },
+        "thresholds": {
+          "sigma": 0.3,
+          "tau": 0.35
+        }
+      },
+      "human_pass": {
+        "challenger": true,
+        "production": true
+      },
+      "id": "direct-04",
+      "production_effective_pass": true
+    },
+    {
+      "automatic_failure": {
+        "challenger": false,
+        "production": false
+      },
+      "challenger_effective_pass": true,
+      "failure_class": "latin",
+      "gate": {
+        "abstained": true,
+        "agreement": 0.0,
+        "consistency": 0.0,
+        "fired": false,
+        "reason": "missing_independent_source",
+        "shared_count": 0,
+        "source_coverage": {
+          "lastfm": false,
+          "lastfm_candidates": 0,
+          "music4all": true,
+          "music4all_candidates": 96
+        },
+        "thresholds": {
+          "sigma": 0.3,
+          "tau": 0.35
+        }
+      },
+      "human_pass": {
+        "challenger": true,
+        "production": true
+      },
+      "id": "direct-05",
+      "production_effective_pass": true
+    },
+    {
+      "automatic_failure": {
+        "challenger": false,
+        "production": false
+      },
+      "challenger_effective_pass": true,
+      "failure_class": "hyperpop_digicore",
+      "gate": {
+        "abstained": true,
+        "agreement": 0.0,
+        "consistency": 0.0,
+        "fired": false,
+        "reason": "missing_independent_source",
+        "shared_count": 0,
+        "source_coverage": {
+          "lastfm": false,
+          "lastfm_candidates": 0,
+          "music4all": false,
+          "music4all_candidates": 0
+        },
+        "thresholds": {
+          "sigma": 0.3,
+          "tau": 0.35
+        }
+      },
+      "human_pass": {
+        "challenger": true,
+        "production": true
+      },
+      "id": "direct-06",
+      "production_effective_pass": true
+    },
+    {
+      "automatic_failure": {
+        "challenger": false,
+        "production": false
+      },
+      "challenger_effective_pass": false,
+      "failure_class": "hyperpop_digicore",
+      "gate": {
+        "abstained": true,
+        "agreement": 0.0,
+        "consistency": 0.0,
+        "fired": false,
+        "reason": "missing_independent_source",
+        "shared_count": 0,
+        "source_coverage": {
+          "lastfm": false,
+          "lastfm_candidates": 0,
+          "music4all": false,
+          "music4all_candidates": 0
+        },
+        "thresholds": {
+          "sigma": 0.3,
+          "tau": 0.35
+        }
+      },
+      "human_pass": {
+        "challenger": false,
+        "production": false
+      },
+      "id": "direct-07",
+      "production_effective_pass": false
+    },
+    {
+      "automatic_failure": {
+        "challenger": false,
+        "production": false
+      },
+      "challenger_effective_pass": true,
+      "failure_class": "hyperpop_digicore",
+      "gate": {
+        "abstained": true,
+        "agreement": 0.0,
+        "consistency": 0.0,
+        "fired": false,
+        "reason": "missing_independent_source",
+        "shared_count": 0,
+        "source_coverage": {
+          "lastfm": false,
+          "lastfm_candidates": 0,
+          "music4all": false,
+          "music4all_candidates": 0
+        },
+        "thresholds": {
+          "sigma": 0.3,
+          "tau": 0.35
+        }
+      },
+      "human_pass": {
+        "challenger": true,
+        "production": true
+      },
+      "id": "direct-08",
+      "production_effective_pass": true
+    },
+    {
+      "automatic_failure": {
+        "challenger": false,
+        "production": false
+      },
+      "challenger_effective_pass": true,
+      "failure_class": "daft_punk",
+      "gate": {
+        "abstained": true,
+        "agreement": 0.0,
+        "consistency": 0.5724247097969055,
+        "fired": false,
+        "reason": "fewer_than_five_shared_neighbors",
+        "shared_count": 0,
+        "source_coverage": {
+          "lastfm": true,
+          "lastfm_candidates": 1,
+          "music4all": true,
+          "music4all_candidates": 96
+        },
+        "thresholds": {
+          "sigma": 0.3,
+          "tau": 0.35
+        }
+      },
+      "human_pass": {
+        "challenger": true,
+        "production": true
+      },
+      "id": "direct-09",
+      "production_effective_pass": true
+    },
+    {
+      "automatic_failure": {
+        "challenger": false,
+        "production": false
+      },
+      "challenger_effective_pass": false,
+      "failure_class": "gorillaz",
+      "gate": {
+        "abstained": true,
+        "agreement": 0.0,
+        "consistency": 0.5771484375,
+        "fired": false,
+        "reason": "fewer_than_five_shared_neighbors",
+        "shared_count": 1,
+        "source_coverage": {
+          "lastfm": true,
+          "lastfm_candidates": 5,
+          "music4all": true,
+          "music4all_candidates": 96
+        },
+        "thresholds": {
+          "sigma": 0.3,
+          "tau": 0.35
+        }
+      },
+      "human_pass": {
+        "challenger": false,
+        "production": false
+      },
+      "id": "direct-10",
+      "production_effective_pass": false
+    },
+    {
+      "automatic_failure": {
+        "challenger": false,
+        "production": false
+      },
+      "challenger_effective_pass": true,
+      "failure_class": "pixies_to_trip_hop",
+      "gate": {
+        "abstained": true,
+        "agreement": 0.8476124432770725,
+        "consistency": 0.1955728530883789,
+        "fired": false,
+        "reason": "consistency_below_sigma",
+        "shared_count": 10,
+        "source_coverage": {
+          "lastfm": true,
+          "lastfm_candidates": 13,
+          "music4all": true,
+          "music4all_candidates": 96
+        },
+        "thresholds": {
+          "sigma": 0.3,
+          "tau": 0.35
+        }
+      },
+      "human_pass": {
+        "challenger": true,
+        "production": true
+      },
+      "id": "direct-11",
+      "production_effective_pass": true
+    },
+    {
+      "automatic_failure": {
+        "challenger": false,
+        "production": false
+      },
+      "challenger_effective_pass": true,
+      "failure_class": "shoegaze",
+      "gate": {
+        "abstained": false,
+        "agreement": 0.7763495318411613,
+        "consistency": 0.6400568962097168,
+        "fired": true,
+        "reason": "both_gates_passed",
+        "shared_count": 15,
+        "source_coverage": {
+          "lastfm": true,
+          "lastfm_candidates": 24,
+          "music4all": true,
+          "music4all_candidates": 96
+        },
+        "thresholds": {
+          "sigma": 0.3,
+          "tau": 0.35
+        }
+      },
+      "human_pass": {
+        "challenger": true,
+        "production": false
+      },
+      "id": "direct-12",
+      "production_effective_pass": false
+    },
+    {
+      "automatic_failure": {
+        "challenger": false,
+        "production": false
+      },
+      "challenger_effective_pass": true,
+      "failure_class": "metal",
+      "gate": {
+        "abstained": false,
+        "agreement": 0.8689126697045237,
+        "consistency": 0.39523959159851074,
+        "fired": true,
+        "reason": "both_gates_passed",
+        "shared_count": 15,
+        "source_coverage": {
+          "lastfm": true,
+          "lastfm_candidates": 17,
+          "music4all": true,
+          "music4all_candidates": 96
+        },
+        "thresholds": {
+          "sigma": 0.3,
+          "tau": 0.35
+        }
+      },
+      "human_pass": {
+        "challenger": true,
+        "production": true
+      },
+      "id": "direct-13",
+      "production_effective_pass": true
+    },
+    {
+      "automatic_failure": {
+        "challenger": false,
+        "production": false
+      },
+      "challenger_effective_pass": true,
+      "failure_class": "rap",
+      "gate": {
+        "abstained": false,
+        "agreement": 0.6116200884442511,
+        "consistency": 0.5028245449066162,
+        "fired": true,
+        "reason": "both_gates_passed",
+        "shared_count": 11,
+        "source_coverage": {
+          "lastfm": true,
+          "lastfm_candidates": 36,
+          "music4all": true,
+          "music4all_candidates": 96
+        },
+        "thresholds": {
+          "sigma": 0.3,
+          "tau": 0.35
+        }
+      },
+      "human_pass": {
+        "challenger": true,
+        "production": true
+      },
+      "id": "direct-14",
+      "production_effective_pass": true
+    },
+    {
+      "automatic_failure": {
+        "challenger": false,
+        "production": false
+      },
+      "challenger_effective_pass": false,
+      "failure_class": "rnb",
+      "gate": {
+        "abstained": true,
+        "agreement": 0.0,
+        "consistency": 0.0,
+        "fired": false,
+        "reason": "missing_independent_source",
+        "shared_count": 0,
+        "source_coverage": {
+          "lastfm": false,
+          "lastfm_candidates": 0,
+          "music4all": true,
+          "music4all_candidates": 96
+        },
+        "thresholds": {
+          "sigma": 0.3,
+          "tau": 0.35
+        }
+      },
+      "human_pass": {
+        "challenger": false,
+        "production": false
+      },
+      "id": "direct-15",
+      "production_effective_pass": false
+    },
+    {
+      "automatic_failure": {
+        "challenger": false,
+        "production": false
+      },
+      "challenger_effective_pass": true,
+      "failure_class": "metal",
+      "gate": {
+        "abstained": false,
+        "agreement": 0.7513267954811748,
+        "consistency": 0.5975933074951172,
+        "fired": true,
+        "reason": "both_gates_passed",
+        "shared_count": 36,
+        "source_coverage": {
+          "lastfm": true,
+          "lastfm_candidates": 60,
+          "music4all": true,
+          "music4all_candidates": 96
+        },
+        "thresholds": {
+          "sigma": 0.3,
+          "tau": 0.35
+        }
+      },
+      "human_pass": {
+        "challenger": true,
+        "production": true
+      },
+      "id": "direct-16",
+      "production_effective_pass": true
+    },
+    {
+      "automatic_failure": {
+        "challenger": false,
+        "production": false
+      },
+      "challenger_effective_pass": true,
+      "failure_class": "jazz",
+      "gate": {
+        "abstained": false,
+        "agreement": 0.7344724192637025,
+        "consistency": 0.3331003189086914,
+        "fired": true,
+        "reason": "both_gates_passed",
+        "shared_count": 10,
+        "source_coverage": {
+          "lastfm": true,
+          "lastfm_candidates": 19,
+          "music4all": true,
+          "music4all_candidates": 96
+        },
+        "thresholds": {
+          "sigma": 0.3,
+          "tau": 0.35
+        }
+      },
+      "human_pass": {
+        "challenger": true,
+        "production": true
+      },
+      "id": "direct-17",
+      "production_effective_pass": true
+    },
+    {
+      "automatic_failure": {
+        "challenger": false,
+        "production": false
+      },
+      "challenger_effective_pass": true,
+      "failure_class": "afrobeats",
+      "gate": {
+        "abstained": true,
+        "agreement": 0.0,
+        "consistency": 0.0,
+        "fired": false,
+        "reason": "missing_independent_source",
+        "shared_count": 0,
+        "source_coverage": {
+          "lastfm": false,
+          "lastfm_candidates": 0,
+          "music4all": true,
+          "music4all_candidates": 96
+        },
+        "thresholds": {
+          "sigma": 0.3,
+          "tau": 0.35
+        }
+      },
+      "human_pass": {
+        "challenger": true,
+        "production": true
+      },
+      "id": "direct-18",
+      "production_effective_pass": true
+    },
+    {
+      "automatic_failure": {
+        "challenger": false,
+        "production": false
+      },
+      "challenger_effective_pass": true,
+      "failure_class": "k_pop",
+      "gate": {
+        "abstained": true,
+        "agreement": 0.0,
+        "consistency": 0.0,
+        "fired": false,
+        "reason": "missing_independent_source",
+        "shared_count": 0,
+        "source_coverage": {
+          "lastfm": false,
+          "lastfm_candidates": 0,
+          "music4all": false,
+          "music4all_candidates": 0
+        },
+        "thresholds": {
+          "sigma": 0.3,
+          "tau": 0.35
+        }
+      },
+      "human_pass": {
+        "challenger": true,
+        "production": true
+      },
+      "id": "direct-19",
+      "production_effective_pass": true
+    },
+    {
+      "automatic_failure": {
+        "challenger": false,
+        "production": false
+      },
+      "challenger_effective_pass": false,
+      "failure_class": "art_pop",
+      "gate": {
+        "abstained": true,
+        "agreement": 0.0,
+        "consistency": 0.0,
+        "fired": false,
+        "reason": "missing_independent_source",
+        "shared_count": 0,
+        "source_coverage": {
+          "lastfm": false,
+          "lastfm_candidates": 0,
+          "music4all": false,
+          "music4all_candidates": 0
+        },
+        "thresholds": {
+          "sigma": 0.3,
+          "tau": 0.35
+        }
+      },
+      "human_pass": {
+        "challenger": false,
+        "production": false
+      },
+      "id": "direct-20",
+      "production_effective_pass": false
+    }
+  ],
+  "production_effective_passes": 15,
+  "required_passes": 16,
+  "review_evidence_disclosure": {
+    "all_top5_positions_reviewed_for_both_methods": true,
+    "coherence_inferred": false,
+    "explicit_method_pass_booleans": true,
+    "position_junk_evidence_included": true,
+    "position_rationales_included": true
+  },
+  "schema_version": 1
+}

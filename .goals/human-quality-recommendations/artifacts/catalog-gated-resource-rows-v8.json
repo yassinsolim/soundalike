@@ -1,0 +1,104 @@
+{
+  "query_rows": [
+    {
+      "id": "direct-01",
+      "row": 26205,
+      "scene": "alternative_rock"
+    },
+    {
+      "id": "direct-02",
+      "row": 80407,
+      "scene": "city_pop"
+    },
+    {
+      "id": "direct-03",
+      "row": 36113,
+      "scene": "city_pop"
+    },
+    {
+      "id": "direct-04",
+      "row": 4525,
+      "scene": "latin_alt_pop"
+    },
+    {
+      "id": "direct-05",
+      "row": 7496,
+      "scene": "latin_reggaeton"
+    },
+    {
+      "id": "direct-06",
+      "row": 1304,
+      "scene": "hyperpop"
+    },
+    {
+      "id": "direct-07",
+      "row": 183307,
+      "scene": "digicore"
+    },
+    {
+      "id": "direct-08",
+      "row": 1297,
+      "scene": "digicore"
+    },
+    {
+      "id": "direct-09",
+      "row": 2855,
+      "scene": "electronic"
+    },
+    {
+      "id": "direct-10",
+      "row": 66725,
+      "scene": "art_pop"
+    },
+    {
+      "id": "direct-11",
+      "row": 14105,
+      "scene": "trip_hop"
+    },
+    {
+      "id": "direct-12",
+      "row": 7372,
+      "scene": "shoegaze"
+    },
+    {
+      "id": "direct-13",
+      "row": 4262,
+      "scene": "alternative_metal"
+    },
+    {
+      "id": "direct-14",
+      "row": 53039,
+      "scene": "jazz_rap"
+    },
+    {
+      "id": "direct-15",
+      "row": 18361,
+      "scene": "alternative_rnb"
+    },
+    {
+      "id": "direct-16",
+      "row": 158746,
+      "scene": "thrash_metal"
+    },
+    {
+      "id": "direct-17",
+      "row": 221630,
+      "scene": "modal_jazz"
+    },
+    {
+      "id": "direct-18",
+      "row": 13282,
+      "scene": "afrobeats"
+    },
+    {
+      "id": "direct-19",
+      "row": 80787,
+      "scene": "k_pop"
+    },
+    {
+      "id": "direct-20",
+      "row": 6837,
+      "scene": "art_pop"
+    }
+  ]
+}
