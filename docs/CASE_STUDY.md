@@ -51,6 +51,10 @@ run it" lives in the [README](../README.md); this is the "how it was built and w
   encoder at 16/29 (55.2%) and a DEV-selected, FMA-regularized 32-D projection at 19/29 (65.5%).
   The +10.3-point paired CI still spans zero, so the catalog was not re-embedded. A signed,
   60-seed blinded-list evaluator is ready, but no real listener exports existed in this run.
+- **All-triad cross-validation result:** a leakage-purged nested cross-fit uses all 307 accepted
+  MagnaTagATune triads. The inner-selected learned model reaches 186/307 versus 176/307 for the
+  production encoder, but +3.26 points with CI crossing zero fails the release gate. No catalog,
+  commercial evaluator, FINAL, or deployment changed.
 - **Built and validated on:** an NVIDIA RTX 5080, the full automated suite, and a clean packaged
   wheel.
 
@@ -1364,6 +1368,81 @@ The study instructions now require at least three independent raters, ideally fi
 HMACs, collector signatures, reloadable localStorage autosave, and the existing private role key
 remain compatible through verified erratum binding. No human ratings were created here, no FINAL was opened, no recommendation order
 or deployed model changed, and AC#3 remains intentionally unclaimed pending actual raters.
+
+### All-triad nested cross-validation (iteration 12)
+
+No human commercial-list exports were available after iteration 11. The only honest route was to
+extract more evidence from the existing public human-audio judgments without pretending that MTAT
+answers the commercial ranked-list question.
+
+The 307 accepted rows involve 611 clips and 193 artists. Their raw artist co-occurrence graph has
+one connected component, which makes a conventional whole-component k-fold split impossible:
+either all rows occupy one fold or crossing rows are discarded. V12 therefore uses a
+**multi-membership purged grouped cross-fit**. Weighted Louvain communities of the shared-artist/
+shared-clip triad graph are packed into five test folds while balancing row count, vote-confidence
+mass, and fixed confidence strata (`<0.25`, `0.25–0.50`, `>=0.50`). For each outer fold, every
+non-test row sharing any artist or clip with test is purged. Three inner folds repeat exactly the
+same isolation. Every accepted source row is test exactly once; no test artist or clip occurs in
+its eligible training rows.
+
+| fold | OOF test | eligible train | purged | artist-SupCon | inner-selected learned | delta |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0 | 75 | 87 | 145 | 46/75 | 50/75 | +5.33 pt |
+| 1 | 66 | 96 | 145 | 33/66 | 41/66 | +12.12 pt |
+| 2 | 55 | 105 | 147 | 34/55 | 30/55 | -7.27 pt |
+| 3 | 69 | 77 | 161 | 44/69 | 39/69 | -7.25 pt |
+| 4 | 42 | 155 | 110 | 19/42 | 26/42 | +16.67 pt |
+
+Five deliberately small families were tried: linear symmetric triplet hinge, row-orthogonality
+regularized linear triplet, a 32/64-D two-layer MLP with 0.4 dropout and strong weight decay,
+smooth pairwise ranking, and linear triplet plus independent FMA geometry distillation. Fixed
+grids contain only 32/64-D models, fixed 140/160-epoch budgets, two margins or temperatures, and
+deterministic seeds. Training rows are weighted by vote confidence. Each family and then the
+promotion candidate are selected from inner OOF confidence-weighted accuracy, unweighted
+accuracy, parameter count, and fixed config ID—in that order. Outer labels never select a family,
+configuration, or epoch.
+
+| all 307 OOF triads | correct | accuracy | confidence-weighted |
+|---|---:|---:|---:|
+| artist-SupCon production audio | 176 | 57.3% | 62.8% |
+| FMA cross-artist SupCon | 185 | 60.3% | 66.1% |
+| vibe/DSP | 180 | 58.6% | 64.8% |
+| LAION-CLAP | 204 | 66.4% | 74.3% |
+| linear triplet | 187 | 60.9% | 69.4% |
+| orthogonal linear triplet | 190 | 61.9% | 69.5% |
+| small MLP triplet | 199 | 64.8% | 70.8% |
+| smooth linear ranking | 176 | 57.3% | 64.0% |
+| FMA-distilled linear triplet | 197 | 64.2% | 70.7% |
+| **predeclared inner-selected learned** | **186** | **60.6%** | **67.5%** |
+
+The promotion comparison is paired by source row against production audio. Its `+3.26`-point
+delta has triad-bootstrap CI `[-1.30,+7.82]` and multi-membership artist-cluster CI
+`[0.00,+6.62]` (50,000 draws each). A 100,000-draw paired sign-flip test gives `p=0.213`;
+exact McNemar gives `p=0.212` from 31 challenger-only and 21 baseline-only correct rows.
+Accuracy deltas by predeclared vote strength are +1.09 low, +3.31 medium, and +5.32 high points.
+Three of five folds improve, but the overall delta is below five points and neither CI lower
+bound is above zero. The gate therefore fails.
+
+CLAP, the MLP family, and FMA-distilled family are useful hypotheses, not post-hoc winners.
+Selecting one because its outer score looks strongest would reuse the outer folds; CLAP also
+cannot be applied to the existing catalog embedding/spec cache without 272,853 source audio
+files. No outer result was reused to choose a final model.
+
+Feature preparation took 34.67 s; artist-SupCon, FMA-SupCon, CLAP, and the 512-item FMA cache took
+0.23 s, 0.08 s, 16.31 s, and 0.31 s on the RTX 5080. Nested training took 136.63 s, peaked at
+71.3 MB allocated / 92.3 MB reserved GPU memory, and preserved 25 selected fold checkpoints
+(1.86 MB total). The fixed and FMA caches are 2.39 MB and 0.73 MB. The complete 307-row OOF
+report, fold/inner manifests, configurations, seeds, losses, prediction vectors, tests, and
+checkpoint hashes are in `magnatagatune-human-nested-cv-v12.json`; compact checkpoints are under
+`benchmarks/evidence/v12/mtat-fold-checkpoints/`.
+
+**Release decision:** negative. No final all-data projection was trained; all 272,853 catalog
+rows, query transform, three-parameter Last.fm gate, v10/v11 signed protocols, ranked lists,
+evaluator, commercial FINAL state, and production deployment remain unchanged.
+The unchanged v11 IDs were re-audited fresh: previews resolved for 480/480 unique results,
+59/60 seeds, and 600/600 ranked positions with zero errors. The one unavailable seed remains
+visible through the evaluator fallback. This new access snapshot is
+`human-eval-preview-reaudit-v12.json`; it is not a new pack or a human rating.
 
 ---
 
