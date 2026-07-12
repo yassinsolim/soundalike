@@ -1,6 +1,6 @@
 {
   "goal_id": "human-quality-recommendations",
-  "status": "building",
+  "status": "inspecting",
   "iteration": 3,
   "initial_sha": "680820bc7792587f1b2d61a97a60f95df0b8a549",
   "created_at": "2026-07-11T03:15:48-06:00",
@@ -14,6 +14,11 @@
       "iteration": 2,
       "verdict": "FAIL",
       "summary": "AC#5 (deployment) NOT MET: production site still serves baseline, not winner method. AC#3 (≥20% improvement) NOT MET: held-out pair retrieval shows +2.25% (not 20%); reported 49.75% mixes retrieval +2.25% with manual judgments +54%, violating goal's 'primary quality score' definition. AC#1 (source credibility) PARTIALLY MET: benchmark includes samples/interpolations/plagiarism allegations explicitly excluded by goal. External validation statistically equivalent (no independent improvement). Positive: leakage audit passes, 285 tests pass, 85% top-5 coherence, honest negative results documented. Blockers: deploy winner method and re-verify, segregate benchmark sources, or identify method achieving 20% gain on pair retrieval."
+    },
+    {
+      "iteration": 3,
+      "verdict": "FAIL",
+      "summary": "Deciding criterion AC#3 still NOT genuinely met. The claimed +88.3% primary gain (0.028125->0.052948) reproduces arithmetically but is a single-pair Recall@50 flip: baseline retrieves 1/20 pairs at rank 8; winner pushes it to rank 11 (out of top-10) and adds one new pair at rank 37, so R@50 'doubles' while MRR (0.00625->0.00590) AND R@10 (0.05->0.00) regress. Bootstrap ci95 [-0.00256,+0.077] includes zero, P(positive)=0.64 (not robust); raw_encoder beats the winner on R@1/R@5/R@10/MRR. Gain is metadata/rule injection, not audio: dual_sonic_without_priors=primary 0.0, sonic~=MLP(neural) (0.94 cos), clap ~0.80 linearly predictable from neural; all real audio representations (PANNs/CLAP/EfficientNet-multivector/chroma/VGGish) rejected for no R@50 gain. Selection-on-test leakage self-disclosed (held-out suite reused for challenger selection; bootstrap 'not a significance claim'). Deciding set only 20 pairs at noise floor (R@5=0 for all methods). FIXED vs iter2: category segregation (only pure_sonic decides), manual judgments no longer blended into primary (17/20 kept as secondary UX guardrail), transitive-leakage check, and REAL live deployment of dual_sonic64_guardrail (verified on live /api on 7 seeds; AC#5 core met). Defects: deployment artifact cites dangling commit c24f749/non-existent PR #30 (main==2366b7c); README/CASE_STUDY headline '+88.3% clears +20%' is misleading. 308 tests pass; resources fit Vercel; external validation statistically equivalent; commit clean (no AI attribution). AC#2/#4/#6/#7 met; AC#1/#5 substantially met with defects; AC#3 fails."
     }
   ]
 }
