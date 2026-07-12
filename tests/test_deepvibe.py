@@ -7,7 +7,7 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
-from soundalike.audio.vibe import vibe_from_signal
+from soundalike.audio.vibe import VibeFeatures, vibe_from_signal
 from soundalike.ml.deepvibe import DeepVibeIndex, DeepVibeRecommender
 
 
@@ -40,6 +40,110 @@ def test_index_save_load_roundtrip(tmp_path):
     assert len(loaded) == 4
     assert np.allclose(loaded.neural, idx.neural)
     assert np.allclose(loaded.vibe, idx.vibe)
+    assert loaded.sonic is None
+
+
+def test_index_sonic_roundtrip(tmp_path):
+    idx = _toy_index()
+    idx.sonic = np.arange(4 * 64, dtype=np.float16).reshape(4, 64)
+    path = tmp_path / "sonic.npz"
+    idx.save(path, half=True)
+    loaded = DeepVibeIndex.load(path)
+    assert loaded.sonic.dtype == np.float16
+    assert np.array_equal(loaded.sonic, idx.sonic)
+
+
+def test_index_dual_sonic_roundtrip(tmp_path):
+    idx = _toy_index()
+    idx.sonic = np.arange(4 * 64, dtype=np.float16).reshape(4, 64)
+    idx.clap = np.flip(idx.sonic, axis=1).copy()
+    idx.wiki = np.arange(4, dtype=np.float16)
+    idx.wiki_specific = np.array([0, 1, 0, 1], dtype=np.uint8)
+    path = tmp_path / "dual.npz"
+    idx.save(path, half=True)
+    loaded = DeepVibeIndex.load(path)
+    assert np.array_equal(loaded.clap, idx.clap)
+    assert np.array_equal(loaded.wiki, idx.wiki)
+    assert np.array_equal(loaded.wiki_specific, idx.wiki_specific)
+
+
+def test_dual_sonic_preserves_guarded_head_and_baseline_top_ten():
+    rng = np.random.default_rng(32)
+    count = 40
+    idx = DeepVibeIndex(
+        np.arange(count),
+        [f"title {i}" for i in range(count)],
+        [f"artist {i}" for i in range(count)],
+        rng.normal(size=(count, 24)).astype(np.float32),
+        rng.normal(size=(count, 29)).astype(np.float32),
+        rng.normal(size=(count, 64)).astype(np.float16),
+        rng.normal(size=(count, 64)).astype(np.float16),
+        rng.integers(0, 6, count).astype(np.float16),
+        rng.integers(0, 2, count).astype(np.uint8),
+    )
+    rec = DeepVibeRecommender(idx, enhance=True)
+    vibe = VibeFeatures.from_vector(idx.vibe[0])
+    guarded = rec.recommend(
+        idx.neural[0], vibe, n=5, exclude_ids={0}, diversity=.15,
+        max_per_artist=1,
+    )
+    baseline = rec.recommend(
+        idx.neural[0], vibe, n=10, exclude_ids={0}, diversity=.15,
+        max_per_artist=1, genre_rerank=False,
+    )
+    dual = rec.recommend(
+        idx.neural[0], vibe, n=25, exclude_ids={0},
+        exclude_artist="artist 0", seed_title="title 0", diversity=.15,
+        max_per_artist=1, seed_row=0,
+    )
+    ids = [item.track_id for item in dual]
+    assert ids[:5] == [item.track_id for item in guarded]
+    assert {item.track_id for item in baseline} <= set(ids[:15])
+    assert rec.last_retrieval_mode == "dual_sonic64_guardrail"
+
+
+def test_stable_sonic_preserves_head_and_changes_tail():
+    rng = np.random.default_rng(31)
+    count = 30
+    idx = DeepVibeIndex(
+        np.arange(count),
+        [f"title {i}" for i in range(count)],
+        [f"artist {i}" for i in range(count)],
+        rng.normal(size=(count, 24)).astype(np.float32),
+        rng.normal(size=(count, 29)).astype(np.float32),
+        rng.normal(size=(count, 64)).astype(np.float16),
+    )
+    rec = DeepVibeRecommender(idx, enhance=True)
+    vibe = VibeFeatures.from_vector(idx.vibe[0])
+    legacy = rec.recommend(
+        idx.neural[0], vibe, n=15, exclude_ids={0}, diversity=.15,
+        max_per_artist=1,
+    )
+    sonic = rec.recommend(
+        idx.neural[0], vibe, n=15, exclude_ids={0}, diversity=.15,
+        max_per_artist=1, seed_row=0,
+    )
+    assert len(sonic) == 15
+    assert [item.track_id for item in sonic[:5]] == [
+        item.track_id for item in legacy[:5]
+    ]
+    assert [item.track_id for item in sonic[5:]] != [
+        item.track_id for item in legacy[5:]
+    ]
+    short = rec.recommend(
+        idx.neural[0], vibe, n=3, exclude_ids={0}, diversity=.15,
+        max_per_artist=1, seed_row=0,
+    )
+    assert len(short) == 3
+    assert rec.last_retrieval_mode == "sonic64_stable_head"
+
+
+def test_sonic_index_without_query_reports_explicit_fallback():
+    idx = _toy_index()
+    idx.sonic = np.eye(4, 64, dtype=np.float16)
+    rec = DeepVibeRecommender(idx)
+    rec.recommend(idx.neural[0], VibeFeatures.from_vector(idx.vibe[0]), n=3)
+    assert rec.last_retrieval_mode == "legacy_no_sonic_seed"
 
 
 def test_fusion_matches_both_signals():

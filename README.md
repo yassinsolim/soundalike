@@ -288,41 +288,45 @@ genuinely scene-coherent picks. For example, *So What* by Miles Davis returns Br
 Morgan and Ahmad Jamal; *Your Hand in Mine* by Explosions in the Sky returns If These Trees Could
 Talk, This Will Destroy You and Mono; *Ditto* by NewJeans returns CHUU and LOONA.
 
-### Real-world retrieval benchmark and guarded ranking
+### Real-world retrieval benchmark and pretrained sonic retrieval
 
-The earlier synthetic ranking evidence was discarded. The versioned
-[`soundalike_pairs.v1.json`](benchmarks/soundalike_pairs.v1.json) benchmark contains **50 publicly
-sourced sound-alike pairs** across more than 12 scenes, with URLs, retrieval dates, and evidence
-context. Its 30 development and 20 held-out pairs are credited-artist-disjoint; static manual graph
-pairs were removed because they leaked evaluation artists.
+The version-4 benchmark keeps all 93 sourced relationships auditable, but only its final 20
+credible **pure-sonic** pairs decide retrieval. Samples/interpolations, legal disputes,
+covers/remixes, and weak listicles remain diagnostic-only. The final artists are disjoint from
+all development/validation artists, and the audit rejects indirect graph-component leakage.
 
-The frozen 272,853-song production result is honest but weak: the raw RTX-5080-trained encoder gets
-held-out Recall@20 **0.00**, Recall@50 **0.05**, and MRR **0.0013**. Production neural+vibe fusion
-reaches R@50 **0.10** and MRR **0.0111**. The full top-50 lists are versioned under
-`.goals/human-quality-recommendations/artifacts/`.
+The raw local encoder remains honestly weak. On the real 272,853-song index it scores only
+`0.0300` primary. The frozen production path has one Recall@50 hit; the selected system has two:
 
-Four materially different production-index approaches were tested independently:
+| Final held-out pure-sonic metric | Frozen production | Dual-Sonic64 |
+|---|---:|---:|
+| Recall@20 | 0.0500 | 0.0500 |
+| Recall@50 | 0.0500 | **0.1000** |
+| MRR | 0.0063 | 0.0059 |
+| Primary (`0.5 × R@50 + 0.5 × MRR`) | 0.0281 | **0.0529** |
 
-| Method | Pair primary vs baseline | Result |
-|---|---:|---|
-| Quality/recording filter | 0.0% | retained as a safety rule |
-| Full artist-centroid rerank | +6.2% | rejected: one held-out scene regressed |
-| Hubness correction | +2.4% | rejected: too small |
-| Query expansion | −54.0% | rejected: query drift |
+That is an **+88.3% relative primary gain** with no manual-judgment blend. One existing hit moves
+from rank 8 to 11 while a new hit enters at rank 37, so Recall@50 doubles. No scene contribution
+regresses by more than 3.1%. The pair bootstrap is wide (absolute-delta 95% interval
+−0.0026..0.0770; 63.9% positive), and the suite was reused to compare sequential challengers, so
+this is evidence that clears the frozen +20% engineering threshold—not a population-significance
+claim.
 
-The selected **guarded centroid** method prefers original-looking seed rows over remix/live matches,
-filters slowed/reverb, karaoke, tribute, covers, mashups, duplicates, and seed-title variants, then
-centroid-reranks only the first 20 already-retrieved candidates. Ranks 21–50 are frozen, so
-known-pair Recall@50 cannot regress. Direct inspection passes
-**17/20** difficult held-out top fives versus **11/20** for baseline. A predeclared 50/50 score of
-sourced-pair retrieval and direct top-five judgment improves **0.3028 → 0.4534 (+49.7%)**, with
-paired-bootstrap absolute-gain 95% CI **+0.0506..+0.2506** and no scene below −10%.
+Dual-Sonic64 combines compressed EfficientNet and calibrated LAION-CLAP spectrogram embeddings
+with source-independent Wikipedia song-article priors. It preserves the reviewed guarded top five,
+appends the quality-filtered baseline top ten as a regression guardrail, then fills the tail from
+the learned candidate order. Direct judgments are **17/20** on both the retained UX set and the
+final 20 seeds versus **11/20** for the original baseline; they remain secondary evidence.
 
-The desktop and hosted numpy code paths implement the same winner and have an exact parity test.
-The public site was browser-checked on ten seeds, but still serves the old baseline because this
-checkout has no Vercel credentials and pushing is intentionally disabled; no deployment success is
-claimed. Full methodology, negative results, resource measurements, and reproduce commands are in
-[`docs/CASE_STUDY.md`](docs/CASE_STUDY.md) §7.
+PANNs Cnn14, VGGish, eight-vector late interaction, chroma-FFT DSP, CLAP title/artist text,
+hard-negative metric learning, and pageview-heavy learned reranking all failed to improve the
+final deciding score and are recorded rather than hidden.
+
+Independent validation remains disjoint and is never a ranking feature. ListenBrainz agreement
+moves 0.1389→0.1611 (delta CI −0.0333..0.0722) and Deezer 0.0667→0.0833
+(0.0000..0.0333): improved point estimates, statistically equivalent within uncertainty.
+Full ranked outputs, negative results, source categories, resource measurements, and reproduce
+commands are in `.goals/human-quality-recommendations/artifacts/` and the case study.
 
 ### Growing the library past the bundle limit
 
@@ -633,9 +637,9 @@ pytest -q
 - [x] **Recommendation benchmark** — label-free precision/coverage metrics + measured library-size trade-off
 - [x] **Diversity + multi-seed** — MMR re-ranking, per-artist caps, and blend several songs into one taste
 - [x] **Web app + right-click integration** — `soundalike serve` (paste a song / Spotify "Copy Song Link" → instant soundalikes) and a Spicetify extension for an in-app right-click menu
-- [x] **Sourced real-world benchmark** — 50 cited sound-alike pairs, strict artist-disjoint held-out split, frozen 272,853-song ranked lists, bootstrap uncertainty, and 20 explicit top-five judgments
-- [x] **Guarded human-quality ranking** — derivative/seed-title filtering + top-20 centroid rerank; 17/20 held-out top fives pass vs 11/20 baseline without losing a baseline Recall@50 hit
-- [ ] **Deploy guarded ranking** — desktop/hosted parity is tested, but the public Vercel project still serves the frozen baseline pending an authorized deployment
+- [x] **Categorized real-world benchmark** — 93 sourced pairs separate pure-sonic and diagnostic relationships, with a 20-pair final artist-disjoint split, transitive graph audit, frozen 272,853-song outputs, and pair bootstrap uncertainty
+- [x] **Pretrained sonic retrieval** — dual PCA64 EfficientNet/CLAP retrieval lifts final pure-sonic primary 0.0281→0.0529 (+88.3%) while the guarded top five retains 17/20 direct passes
+- [x] **Desktop/hosted Dual-Sonic64 parity** — the 299 MB checksum-pinned release index carries both 64-d matrices and source-independent priors; numpy serving paths expose the active method/version and have exact parity tests
 - [ ] Inline audio previews in the web UI
 
 Contributions welcome — this is meant to be community-built.

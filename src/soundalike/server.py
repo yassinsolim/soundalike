@@ -207,6 +207,10 @@ class SoundalikeEngine:
                 seed_artist = str(self.index.artists[row])
                 exclude_ids = {int(self.index.track_ids[row])}
                 matched = "library"
+                seed_sonic = (
+                    None if self.index.sonic is None
+                    else np.asarray(self.index.sonic[row], dtype=np.float32)
+                )
             else:
                 dz = self._deezer()
                 if seed["deezer_id"] is not None:
@@ -229,11 +233,12 @@ class SoundalikeEngine:
                 seed_title, seed_artist = track.title, track.artist
                 exclude_ids = {int(track.id)}
                 matched = "preview"
+                seed_sonic = None
 
             results = self.recommender.recommend(
                 seed_neural, seed_vibe, n=n, exclude_ids=exclude_ids,
                 exclude_artist=seed_artist, seed_title=seed_title, diversity=diversity,
-                max_per_artist=max_per_artist)
+                max_per_artist=max_per_artist, seed_sonic=seed_sonic, seed_row=row)
 
         vibe = seed_vibe.describe()
         out = []
@@ -254,6 +259,7 @@ class SoundalikeEngine:
                      "low_end": vibe["low_end"], "tone": vibe["tone"]},
             "results": out,
             "library_size": len(self.index),
+            "retrieval_mode": self.recommender.last_retrieval_mode,
         }
 
 # ============================================================ HTTP server layer

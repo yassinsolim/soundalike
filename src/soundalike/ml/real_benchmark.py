@@ -2,8 +2,11 @@
 
 This module intentionally does not use the old scene-label score.  Its relevance
 labels are recording pairs asserted by public editorial, artist, listener, or
-reference sources in ``benchmarks/soundalike_pairs.v1.json``.  Unknown artists do
-not receive the benefit of the doubt.
+reference sources.  Version 2 separates pure sonic comparisons from samples,
+legal disputes, covers/remixes, and weak assertions.  Version 3 adds a
+source-selected confirmation split that was frozen after the architecture.
+Only the predeclared ``pure_sonic`` category can decide model selection.
+Unknown artists do not receive the benefit of the doubt.
 
 The production baseline is the July 4, 2026 272,853-row ranking path with all
 iteration-1 enhancements disabled.  Every report stores the actual top 50 so a
@@ -30,7 +33,12 @@ from .quality_filter import TitleQualityFilter
 
 RECALL_CUTOFFS = (1, 5, 10, 20, 50)
 PRIMARY_CUTOFF = 50
-BENCHMARK_VERSION = "soundalike-real-pairs-v1"
+BENCHMARK_IDS = {
+    "soundalike-real-pairs-v1",
+    "soundalike-real-pairs-v2",
+    "soundalike-real-pairs-v3-confirmation",
+    "soundalike-real-pairs-v4-final",
+}
 
 
 def normalize_text(value: str) -> str:
@@ -67,10 +75,22 @@ def credited_artists(value: str) -> Set[str]:
 
 def load_benchmark(path: Path) -> Dict[str, Any]:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
-    if data.get("benchmark_id") != BENCHMARK_VERSION:
+    if data.get("benchmark_id") not in BENCHMARK_IDS:
         raise ValueError(f"Unexpected benchmark id: {data.get('benchmark_id')!r}")
     if len(data.get("pairs", [])) < 50:
         raise ValueError("The real-world benchmark must contain at least 50 pairs")
+    if data.get("schema_version", 1) >= 2:
+        allowed = set(data.get("category_definitions", {}))
+        for pair in data["pairs"]:
+            category = pair.get("evidence_category")
+            if category not in allowed:
+                raise ValueError(
+                    f"Pair {pair.get('id')} has invalid evidence category {category!r}"
+                )
+            if bool(pair.get("deciding_primary")) != (category == "pure_sonic"):
+                raise ValueError(
+                    f"Pair {pair.get('id')} has an inconsistent deciding_primary flag"
+                )
     return data
 
 
@@ -88,9 +108,11 @@ def audit_leakage(
     benchmark: Mapping[str, Any],
     manual_pairs: Sequence[Tuple[str, str]] = (),
     graph_artists: Iterable[str] = (),
+    graph_edges: Sequence[Tuple[str, str]] = (),
 ) -> Dict[str, Any]:
-    """Fail closed when any held-out artist reaches development or graph data."""
+    """Fail closed on direct or transitive pre-held-out graph leakage."""
     dev: Set[str] = set()
+    validation: Set[str] = set()
     test = held_out_artists(benchmark)
     pair_ids: Set[str] = set()
     duplicate_ids: List[str] = []
@@ -98,11 +120,17 @@ def audit_leakage(
         if pair["id"] in pair_ids:
             duplicate_ids.append(pair["id"])
         pair_ids.add(pair["id"])
+        pair_artists = (
+            credited_artists(pair["query"]["artist"])
+            | credited_artists(pair["target"]["artist"])
+        )
         if pair["split"] == "development":
-            dev.update(credited_artists(pair["query"]["artist"]))
-            dev.update(credited_artists(pair["target"]["artist"]))
+            dev.update(pair_artists)
+        elif pair["split"] == "validation":
+            validation.update(pair_artists)
 
-    dev_overlap = sorted(dev & test)
+    pre_held_out = dev | validation
+    dev_overlap = sorted(pre_held_out & test)
     manual_artists = {
         artist
         for edge in manual_pairs
@@ -116,15 +144,62 @@ def audit_leakage(
         for artist in credited_artists(raw)
     }
     graph_overlap = sorted(graph_keys & test)
+    adjacency: Dict[str, Set[str]] = {}
+
+    def add_edge(left: str, right: str) -> None:
+        left_artists = credited_artists(left)
+        right_artists = credited_artists(right)
+        for left_artist in left_artists:
+            adjacency.setdefault(left_artist, set()).update(right_artists)
+        for right_artist in right_artists:
+            adjacency.setdefault(right_artist, set()).update(left_artists)
+
+    for pair in benchmark["pairs"]:
+        add_edge(pair["query"]["artist"], pair["target"]["artist"])
+    for left, right in [*manual_pairs, *graph_edges]:
+        add_edge(left, right)
+    for artist in graph_keys:
+        adjacency.setdefault(artist, set())
+
+    transitive_components: List[Dict[str, List[str]]] = []
+    visited: Set[str] = set()
+    for start in sorted(adjacency):
+        if start in visited:
+            continue
+        stack = [start]
+        component: Set[str] = set()
+        while stack:
+            current = stack.pop()
+            if current in component:
+                continue
+            component.add(current)
+            stack.extend(adjacency.get(current, set()) - component)
+        visited.update(component)
+        development_members = sorted(component & pre_held_out)
+        held_out_members = sorted(component & test)
+        if development_members and held_out_members:
+            transitive_components.append({
+                "development_artists": development_members,
+                "held_out_artists": held_out_members,
+            })
     held_pairs = [p for p in benchmark["pairs"] if p["split"] == "held_out"]
     audit = {
-        "passed": not (dev_overlap or manual_overlap or graph_overlap or duplicate_ids),
+        "passed": not (
+            dev_overlap
+            or manual_overlap
+            or graph_overlap
+            or transitive_components
+            or duplicate_ids
+        ),
         "development_artist_count": len(dev),
+        "validation_artist_count": len(validation),
+        "pre_held_out_artist_count": len(pre_held_out),
         "held_out_artist_count": len(test),
         "held_out_pair_count": len(held_pairs),
         "development_held_out_overlap": dev_overlap,
         "manual_pair_held_out_overlap": manual_overlap,
         "graph_held_out_overlap": graph_overlap,
+        "transitive_graph_overlap": transitive_components,
         "duplicate_pair_ids": duplicate_ids,
     }
     if len(held_pairs) != 20:
@@ -183,15 +258,23 @@ class PairResolver:
         if not rows:
             return None
 
-        def version_penalty(row: int) -> Tuple[int, int]:
-            title = self.titles[row].casefold()
-            derivative = int(bool(re.search(
-                r"\b(?:karaoke|tribute|slowed|reverb|nightcore|instrumental|"
-                r"remix|cover|live|acoustic)\b", title
-            )))
-            return derivative, len(title)
+        return min(rows, key=self._version_penalty)
 
-        return min(rows, key=version_penalty)
+    def target_rows(self, song: Mapping[str, str]) -> List[int]:
+        """Resolve only the requested recording, never a derivative substitute."""
+        return [
+            row for row in self.rows(song)
+            if self._version_penalty(row)[0] == 0
+        ]
+
+    def _version_penalty(self, row: int) -> Tuple[int, int]:
+        title = self.titles[row].casefold()
+        derivative = int(bool(re.search(
+            r"\b(?:karaoke|tribute|slowed|reverb|nightcore|instrumental|"
+            r"remix|cover|live|acoustic|sped[- ]up|speed[- ]up|mashup)\b",
+            title,
+        )))
+        return derivative, len(title)
 
     def resolve(self, pairs: Sequence[Mapping[str, Any]]) -> List[ResolvedPair]:
         resolved = []
@@ -201,7 +284,7 @@ class PairResolver:
                 pair=pair,
                 query_row=self.query_row(pair["query"]),
                 baseline_query_row=query_rows[0] if query_rows else None,
-                target_rows=set(self.rows(pair["target"])),
+                target_rows=set(self.target_rows(pair["target"])),
             ))
         return resolved
 
@@ -223,6 +306,22 @@ class ProductionRanker:
         self._centroids: Optional[ArtistCentroidIndex] = None
         self._hubness: Optional[np.ndarray] = None
         self._seed = seed
+        self._rows_by_track_id: Dict[int, List[int]] = {}
+        for row, track_id in enumerate(recommender.track_ids):
+            self._rows_by_track_id.setdefault(int(track_id), []).append(row)
+
+    def _row_for_output(self, item: Mapping[str, Any]) -> int:
+        """Resolve a served result back to its exact immutable index row."""
+        candidates = self._rows_by_track_id.get(int(item["deezer_id"]), [])
+        for row in candidates:
+            if (
+                str(self.titles[row]) == str(item["title"])
+                and str(self.artists[row]) == str(item["artist"])
+            ):
+                return row
+        if candidates:
+            return candidates[0]
+        raise ValueError(f"Served track id {item['deezer_id']} is absent from the index")
 
     def _base_parts(self, row: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         neural = self.rec._neural @ self.rec._neural[row]
@@ -271,7 +370,7 @@ class ProductionRanker:
         neural, _, blend = self._base_parts(row)
         if method in {
             "raw_encoder", "production_baseline", "quality_filter",
-            "guarded_centroid",
+            "guarded_centroid", "stable_sonic", "dual_sonic",
         }:
             return neural if method == "raw_encoder" else blend
         if method == "artist_centroid":
@@ -284,6 +383,8 @@ class ProductionRanker:
             )
         if method in {"hubness", "quality_hubness"}:
             self.fit_hubness()
+            if self._hubness is None:
+                raise RuntimeError("Hubness fitting did not produce a density vector")
             corrected = neural - float(hub_beta) * self._hubness
             return (
                 self.rec.alpha * _zscore(corrected)
@@ -314,6 +415,34 @@ class ProductionRanker:
         n: int = 50,
         hub_beta: float = 0.5,
     ) -> List[int]:
+        if method == "dual_sonic":
+            if getattr(self.rec, "_clap", None) is None:
+                raise ValueError("dual_sonic requires the dual-Sonic64 release index")
+            if getattr(self.rec, "_centroid_idx", None) is None:
+                self.rec._load_enhancements(None)
+            output = self.rec.recommend(
+                row, n=n, alpha=self.rec.alpha, diversity=0.15,
+                max_per_artist=1, quality_filter=True, genre_rerank=True,
+            )
+            return [
+                self._row_for_output(item)
+                for item in output["results"]
+            ]
+
+        if method == "stable_sonic":
+            if getattr(self.rec, "_sonic", None) is None:
+                raise ValueError("stable_sonic requires an index with sonic embeddings")
+            if getattr(self.rec, "_centroid_idx", None) is None:
+                self.rec._load_enhancements(None)
+            output = self.rec.recommend(
+                row, n=n, alpha=self.rec.alpha, diversity=0.15,
+                max_per_artist=1, quality_filter=True, genre_rerank=True,
+            )
+            return [
+                self._row_for_output(item)
+                for item in output["results"]
+            ]
+
         if method == "guarded_centroid":
             # Re-rank only the first 20 already-retrieved production candidates.
             # The tail is frozen, so a known counterpart at rank 21-50 cannot be
@@ -437,7 +566,7 @@ def evaluate_method(
         pair = item.pair
         query_row = (
             item.query_row
-            if method == "guarded_centroid"
+            if method in {"guarded_centroid", "stable_sonic"}
             else item.baseline_query_row
         )
         ranked: List[int] = []
@@ -480,7 +609,18 @@ def evaluate_method(
     metrics = _method_metrics(records)
     return {
         "method": method,
-        "parameters": {"hub_beta": hub_beta} if "hubness" in method else {},
+        "parameters": (
+            {
+                "head_positions": 5,
+                "alpha": 0.8,
+                "max_per_artist": 1,
+                "diversity_mmr": 0.15,
+                "quality_filter": True,
+                "guarded_centroid": True,
+            }
+            if method == "stable_sonic"
+            else ({"hub_beta": hub_beta} if "hubness" in method else {})
+        ),
         "metrics": metrics,
         "per_scene": _per_scene(records),
         "latency": {
@@ -540,7 +680,7 @@ def bootstrap_delta(
     challenger: Mapping[str, Any],
     iterations: int = 10_000,
     seed: int = 20260711,
-) -> Dict[str, float]:
+) -> Dict[str, Any]:
     base_map = contribution_by_pair(baseline)
     test_map = contribution_by_pair(challenger)
     if set(base_map) != set(test_map):
@@ -577,7 +717,11 @@ def compare_to_baseline(
             continue
         base = float(base_metrics["primary_score"])
         current = float(challenger_metrics["primary_score"])
-        scene_regressions[scene] = (current - base) / (base + 1e-12)
+        scene_regressions[scene] = (
+            (current - base) / base
+            if base > 0
+            else (0.0 if current == 0 else 1.0)
+        )
     delta["per_scene_relative_delta"] = scene_regressions
     delta["passes_20pct_gain"] = bool(delta["relative_gain"] >= 0.20)
     delta["passes_scene_guardrail"] = all(
@@ -694,6 +838,7 @@ def run_benchmark(
     methods: Sequence[str],
     split: str = "held_out",
     hub_beta: float = 0.5,
+    evidence_category: Optional[str] = None,
 ) -> Dict[str, Any]:
     # Importing here keeps unit tests independent of the hosted module.
     from webapp.api._reco import WebRecommender
@@ -709,7 +854,17 @@ def run_benchmark(
     load_seconds = time.perf_counter() - load_started
     rss_after_index = _rss_bytes()
     resolver = PairResolver(recommender.titles, recommender.artists)
-    selected = [pair for pair in benchmark["pairs"] if pair["split"] == split]
+    split_pairs = [pair for pair in benchmark["pairs"] if pair["split"] == split]
+    selected = [
+        pair
+        for pair in split_pairs
+        if evidence_category is None
+        or pair.get("evidence_category") == evidence_category
+    ]
+    if not selected:
+        raise ValueError(
+            f"No {split} pairs matched evidence category {evidence_category!r}"
+        )
     resolved = resolver.resolve(selected)
     # Seed exactly the row selected by the deployed query resolver.  Several
     # catalogue titles have multiple remaster/version rows; choosing a cleaner
@@ -737,13 +892,28 @@ def run_benchmark(
         }
     neural_bytes = int(recommender._neural.nbytes)
     vibe_bytes = int(recommender._vscaled.nbytes)
+    sonic = getattr(recommender, "_sonic", None)
+    sonic_bytes = int(sonic.nbytes) if sonic is not None else 0
+    centroid_index: Any = (
+        ranker._centroids or getattr(recommender, "_centroid_idx", None)
+    )
+    centroid_song_map = (
+        getattr(centroid_index, "_song_centroid", None)
+        if centroid_index is not None else None
+    )
+    if centroid_index is not None and centroid_song_map is None:
+        centroid_song_map = centroid_index.song_centroid
+    centroid_table = (
+        getattr(centroid_index, "_centroid_matrix", None)
+        if centroid_index is not None else None
+    )
+    if centroid_index is not None and centroid_table is None:
+        centroid_table = centroid_index.matrix
     centroid_song_map_bytes = (
-        int(ranker._centroids._song_centroid.nbytes)
-        if ranker._centroids is not None else 0
+        int(centroid_song_map.nbytes) if centroid_song_map is not None else 0
     )
     centroid_table_bytes = (
-        int(ranker._centroids._centroid_matrix.nbytes)
-        if ranker._centroids is not None else 0
+        int(centroid_table.nbytes) if centroid_table is not None else 0
     )
     return {
         "schema_version": 1,
@@ -751,11 +921,18 @@ def run_benchmark(
         "benchmark_id": benchmark["benchmark_id"],
         "benchmark_version": benchmark["benchmark_version"],
         "split": split,
+        "evidence_category": evidence_category,
+        "selection": {
+            "selected_pairs": len(selected),
+            "split_pairs": len(split_pairs),
+            "diagnostic_pairs_excluded": len(split_pairs) - len(selected),
+        },
         "index": {
             "path": str(index_path),
             "sha256": sha256_file(index_path),
             "tracks": len(recommender),
             "neural_dimension": int(recommender._neural.shape[1]),
+            "sonic_dimension": int(sonic.shape[1]) if sonic is not None else 0,
             "file_bytes": int(Path(index_path).stat().st_size),
         },
         "leakage_audit": leakage,
@@ -763,16 +940,18 @@ def run_benchmark(
             "cold_load_seconds": load_seconds,
             "neural_matrix_bytes": neural_bytes,
             "vibe_matrix_bytes": vibe_bytes,
-            "minimum_ranker_array_bytes": neural_bytes + vibe_bytes,
+            "sonic_matrix_bytes": sonic_bytes,
+            "minimum_ranker_array_bytes": neural_bytes + vibe_bytes + sonic_bytes,
             "quality_mask_bytes": int(ranker._quality_mask.nbytes),
             "centroid_count": (
-                int(ranker._centroids.n_centroids)
-                if ranker._centroids is not None else 0
+                int(centroid_index.n_centroids)
+                if centroid_index is not None else 0
             ),
             "centroid_song_map_bytes": centroid_song_map_bytes,
             "centroid_table_bytes": centroid_table_bytes,
             "reranker_bytes": (
                 int(ranker._quality_mask.nbytes)
+                + sonic_bytes
                 + centroid_song_map_bytes
                 + centroid_table_bytes
             ),
@@ -798,7 +977,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument(
         "--benchmark",
         type=Path,
-        default=Path("benchmarks/soundalike_pairs.v1.json"),
+        default=Path("benchmarks/soundalike_pairs.v2.json"),
     )
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--split", choices=("development", "held_out"), default="held_out")
@@ -810,6 +989,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         ),
     )
     parser.add_argument("--hub-beta", type=float, default=0.5)
+    parser.add_argument(
+        "--evidence-category",
+        default="pure_sonic",
+        help="Only evaluate this predeclared evidence category; use 'all' for diagnostics.",
+    )
     parser.add_argument("--judgments", type=Path, default=None)
     args = parser.parse_args(argv)
     report = run_benchmark(
@@ -818,6 +1002,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         [part.strip() for part in args.methods.split(",") if part.strip()],
         split=args.split,
         hub_beta=args.hub_beta,
+        evidence_category=(
+            None if args.evidence_category == "all" else args.evidence_category
+        ),
     )
     if args.judgments:
         report["human_aligned_primary"] = combine_ranked_list_judgments(

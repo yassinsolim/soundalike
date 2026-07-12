@@ -28,6 +28,20 @@ def test_manifest_loads_and_describes():
     assert "tracks" in text
 
 
+def test_dual_sonic64_manifest_shape():
+    manifest = index_store.load_manifest()
+    assert manifest["release_tag"] == "index-2026.07.11-dual-sonic64"
+    assert manifest["index"] == {
+        "asset": "deepvibe_index.npz",
+        "sha256": "f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9",
+        "n_tracks": 272853,
+        "bytes": 299288526,
+        "sonic_dim": 64,
+        "clap_dim": 64,
+        "source_prior_columns": 2,
+    }
+
+
 def test_resolve_prefers_matching_cache(tmp_path, monkeypatch):
     # A cached file whose sha matches the manifest spec is used without download.
     asset = tmp_path / "thing.bin"

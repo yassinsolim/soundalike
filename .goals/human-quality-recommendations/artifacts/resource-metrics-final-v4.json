@@ -1,0 +1,39 @@
+{
+  "schema_version": 4,
+  "measured_at": "2026-07-11",
+  "hardware": {
+    "cpu": "Intel Core i9-14900KF",
+    "gpu": "NVIDIA GeForce RTX 5080",
+    "ram_bytes": 51539607552
+  },
+  "release_index": {
+    "tracks": 272853,
+    "file_bytes": 299288526,
+    "sha256": "f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9",
+    "efficientnet_dim": 64,
+    "clap_dim": 64,
+    "prior_columns": 2,
+    "cold_load_seconds": 5.8936566000047605,
+    "rss_before_bytes": 159424512,
+    "rss_after_bytes": 1258311680,
+    "rss_delta_bytes": 1098887168
+  },
+  "selected_build": {
+    "clap_full_index_seconds": 337.9769628047943,
+    "clap_pca_fit_and_transform_seconds": 216.40532326698303,
+    "efficientnet_build_seconds": 75.55085440000403,
+    "served_model_bytes": 0,
+    "note": "GPU checkpoints are research/build dependencies only; hosted inference serves precomputed numpy arrays."
+  },
+  "local_recommendation_ms": {
+    "samples": 20,
+    "mean": 133.00075000079232,
+    "p50": 133.46490000549238,
+    "p95": 146.39050499754376,
+    "max": 157.28519999538548
+  },
+  "hosted": {
+    "status": "pending production merge",
+    "memory_limit_bytes": 3221225472
+  }
+}

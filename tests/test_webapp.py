@@ -17,7 +17,10 @@ _API = Path(__file__).resolve().parents[1] / "webapp" / "api"
 sys.path.insert(0, str(_API))
 
 
-def _synthetic_index(tmp_path, n_artists=60, per=5, dim=48, seed=0):
+def _synthetic_index(
+    tmp_path, n_artists=60, per=5, dim=48, seed=0,
+    sonic=False, dual=False,
+):
     """Build + save a small DeepVibeIndex so both recommenders read the same data."""
     from soundalike.ml.deepvibe import DeepVibeIndex
 
@@ -33,12 +36,46 @@ def _synthetic_index(tmp_path, n_artists=60, per=5, dim=48, seed=0):
             artists.append(f"artist {a}")
             tids.append(1000 + k)
             k += 1
-    idx = DeepVibeIndex(np.array(tids), np.array(titles, object),
-                        np.array(artists, object),
-                        np.asarray(neural, np.float32), np.asarray(vibe, np.float32))
+    sonic_matrix = (
+        rng.standard_normal((len(tids), 64)).astype(np.float16)
+        if sonic or dual else None
+    )
+    clap_matrix = (
+        rng.standard_normal((len(tids), 64)).astype(np.float16) if dual else None
+    )
+    wiki = rng.integers(0, 6, len(tids)).astype(np.float16) if dual else None
+    wiki_specific = rng.integers(0, 2, len(tids)).astype(np.uint8) if dual else None
+    idx = DeepVibeIndex(
+        np.array(tids), np.array(titles, object), np.array(artists, object),
+        np.asarray(neural, np.float32), np.asarray(vibe, np.float32),
+        sonic_matrix, clap_matrix, wiki, wiki_specific,
+    )
     p = tmp_path / "idx.npz"
     idx.save(p)
     return p, idx
+
+
+def test_index_checksum_helper(tmp_path):
+    from _reco import _sha256
+
+    path = tmp_path / "index.npz"
+    path.write_bytes(b"soundalike")
+    assert _sha256(str(path)) == (
+        "8ef7e84df18a9be28b16191183e83db57606492021a2f2faf4604a1670475d90"
+    )
+
+
+def test_old_and_sonic_index_roundtrip_compatibility(tmp_path):
+    from soundalike.ml.deepvibe import DeepVibeIndex
+
+    old_path, old = _synthetic_index(tmp_path, seed=3)
+    assert DeepVibeIndex.load(old_path).sonic is None
+    old.sonic = np.arange(len(old) * 64, dtype=np.float16).reshape(len(old), 64)
+    new_path = tmp_path / "new.npz"
+    old.save(new_path, half=True)
+    loaded = DeepVibeIndex.load(new_path)
+    assert loaded.sonic.dtype == np.float16
+    assert np.array_equal(loaded.sonic, old.sonic)
 
 
 def test_web_recommender_matches_canonical(tmp_path):
@@ -82,6 +119,7 @@ def test_enhanced_recommender_differs_from_baseline(tmp_path):
         enh_out = web_enh.recommend(row, n=10)
         assert base_out["ok"] and enh_out["ok"]
         assert len(base_out["results"]) > 0 and len(enh_out["results"]) > 0
+        assert base_out["retrieval_mode"] == "legacy_no_sonic_seed"
 
 
 def test_enhanced_web_recommender_matches_canonical(tmp_path):
@@ -110,6 +148,91 @@ def test_enhanced_web_recommender_matches_canonical(tmp_path):
         assert [(item["title"], item["artist"]) for item in hosted["results"]] == [
             (item.title, item.artist) for item in desktop
         ], f"enhanced mismatch at row {row}"
+
+
+def test_sonic_hosted_matches_canonical_and_reports_diagnostics(tmp_path):
+    from _reco import WebRecommender
+    from soundalike.ml.deepvibe import DeepVibeIndex, DeepVibeRecommender
+    from soundalike.audio.vibe import VibeFeatures
+
+    path, idx = _synthetic_index(
+        tmp_path, n_artists=60, per=5, dim=48, seed=41, sonic=True
+    )
+    hosted = WebRecommender(str(path), enhance=True)
+    desktop = DeepVibeRecommender(DeepVibeIndex.load(path), enhance=True)
+    for row in (0, 111):
+        web_result = hosted.recommend(row, n=20)
+        canonical = desktop.recommend(
+            idx.neural[row], VibeFeatures.from_vector(idx.vibe[row]), n=20,
+            exclude_ids={int(idx.track_ids[row])},
+            exclude_artist=str(idx.artists[row]), seed_title=str(idx.titles[row]),
+            diversity=.15, max_per_artist=1, seed_row=row,
+        )
+        assert [(item["title"], item["artist"]) for item in web_result["results"]] == [
+            (item.title, item.artist) for item in canonical
+        ]
+        assert web_result["retrieval_mode"] == "sonic64_stable_head"
+        assert web_result["method"] == "sonic64_stable_head"
+        assert web_result["index_version"] == "2026.07.11-dual-sonic64"
+
+
+def test_dual_sonic_hosted_matches_canonical_and_preserves_guardrails(tmp_path):
+    from _reco import WebRecommender
+    from soundalike.ml.deepvibe import DeepVibeIndex, DeepVibeRecommender
+    from soundalike.audio.vibe import VibeFeatures
+
+    path, idx = _synthetic_index(
+        tmp_path, n_artists=60, per=5, dim=48, seed=44, dual=True
+    )
+    hosted = WebRecommender(str(path), enhance=True)
+    desktop = DeepVibeRecommender(DeepVibeIndex.load(path), enhance=True)
+    legacy = _synthetic_index(
+        tmp_path, n_artists=60, per=5, dim=48, seed=44
+    )[0]
+    legacy_head = WebRecommender(str(legacy), enhance=True).recommend(
+        0, n=5
+    )["results"]
+    web_result = hosted.recommend(0, n=20)
+    canonical = desktop.recommend(
+        idx.neural[0], VibeFeatures.from_vector(idx.vibe[0]), n=20,
+        exclude_ids={int(idx.track_ids[0])},
+        exclude_artist=str(idx.artists[0]), seed_title=str(idx.titles[0]),
+        diversity=.15, max_per_artist=1, seed_row=0,
+    )
+    assert [(item["title"], item["artist"]) for item in web_result["results"]] == [
+        (item.title, item.artist) for item in canonical
+    ]
+    assert web_result["results"][:5] == legacy_head
+    assert web_result["method"] == "dual_sonic64_guardrail"
+    assert web_result["index_version"] == "2026.07.11-dual-sonic64"
+
+
+def test_sonic_stable_head_is_exact_and_tail_changes(tmp_path):
+    from _reco import WebRecommender
+
+    old_path, _ = _synthetic_index(tmp_path, seed=42)
+    legacy = WebRecommender(str(old_path), enhance=True).recommend(0, n=20)
+    sonic_path, _ = _synthetic_index(tmp_path, seed=42, sonic=True)
+    sonic = WebRecommender(str(sonic_path), enhance=True).recommend(0, n=20)
+    legacy_ids = [item["deezer_id"] for item in legacy["results"]]
+    sonic_ids = [item["deezer_id"] for item in sonic["results"]]
+    assert sonic_ids[:5] == legacy_ids[:5]
+    assert sonic_ids[5:] != legacy_ids[5:]
+
+
+def test_stable_sonic_benchmark_method_uses_serving_ranker(tmp_path):
+    from _reco import WebRecommender
+    from soundalike.ml.real_benchmark import ProductionRanker
+
+    path, _ = _synthetic_index(tmp_path, seed=43, sonic=True)
+    recommender = WebRecommender(str(path), enhance=True)
+    expected = recommender.recommend(0, n=20)["results"]
+    ranked = ProductionRanker(recommender, heldout=set()).rank(
+        0, "stable_sonic", n=20
+    )
+    assert [int(recommender.track_ids[row]) for row in ranked] == [
+        item["deezer_id"] for item in expected
+    ]
 
 
 def test_web_recommender_search_and_findrow(tmp_path):
@@ -209,6 +332,16 @@ def test_hosted_quality_rules_match_desktop_edge_cases():
         ("One x Two x Three", "Mashup Artist"),
         ("Tribute Version", "Publisher"),
         ("A Tribute To Someone", "Herbie Hancock"),
+        ("Cover Me", "Bruce Springsteen"),
+        ("Mashup", "A Legitimate Artist"),
+        ("Originally", "The Performers"),
+        ("A x B", "Mathematics"),
+        ("Song (Cover of Hit)", "Cover Publisher"),
+        ("Song", "In the Style of Adele"),
+        ("Song - Originally Performed by Adele", "Publisher"),
+        ("First Song x Second Song", "DJ"),
+        ("Love X Love", "George Benson"),
+        ("Pola (The Geek x VRV Remix)", "Jabberwocky"),
     ]
     hosted_mask = hosted.keep_mask(
         [title for title, _ in cases], [artist for _, artist in cases]
@@ -216,7 +349,10 @@ def test_hosted_quality_rules_match_desktop_edge_cases():
     desktop_mask = desktop.keep_mask(
         [title for title, _ in cases], [artist for _, artist in cases]
     )
-    assert hosted_mask.tolist() == desktop_mask.tolist() == [False, False, False, True]
+    assert hosted_mask.tolist() == desktop_mask.tolist() == [
+        False, False, False, True, True, False, True, True,
+        False, False, False, False, True, True,
+    ]
 
 
 def test_guarded_reranker_can_promote_beyond_requested_n(tmp_path):

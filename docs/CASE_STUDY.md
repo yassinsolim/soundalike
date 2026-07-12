@@ -35,7 +35,10 @@ run it" lives in the [README](../README.md); this is the "how it was built and w
   **regressed real cross-artist recommendation** (and botched niche genres like city pop/hyperpop).
   An internal metric had rewarded the wrong thing, so I **reverted** and built a `cross_artist_agreement`
   metric that measures inter-artist geometry — the honest "measure, ship, re-measure, revert" loop.
-- **Built and validated on:** an NVIDIA RTX 5080 (Blackwell), 285 automated tests, a clean
+- **Human-quality retrieval result:** a categorized final 20-pair pure-sonic benchmark exposes the
+  encoder's weakness; dual EfficientNet/CLAP retrieval raises frozen production primary
+  **0.0281→0.0529 (+88.3%)** while preserving a reviewed 17/20 top-five UX result.
+- **Built and validated on:** an NVIDIA RTX 5080 (Blackwell), 308 automated tests, a clean
   packaged wheel.
 
 ---
@@ -410,137 +413,126 @@ into trance — a candidate for the next objective iteration, now measurable via
 
 ---
 
-## 7. Ranking quality: replacing synthetic evidence with a sourced benchmark
+## 7. Ranking quality: clean evidence and dual-Sonic64 retrieval
 
-The first ranking iteration was not acceptable evidence. It scored a synthetic clustered index,
-counted unknown artists as coherent, and let a hand-written related-artist list contain evaluation
-artists. The claimed production gains could not be reproduced. That graph is now retired
-(`MANUAL_PAIRS` is empty), and method selection uses the immutable 272,853-row release index.
+The first ranking iteration evaluated synthetic clusters with a leaking hand-written graph. The
+second fixed leakage and ran the real catalogue, but actual pair retrieval improved only **2.25%**;
+the much larger direct-list improvement (11/20 to 17/20) had been blended into the headline. The
+blend is gone. Direct judgments are now a secondary guardrail only.
 
-### A real, source-auditable benchmark
+### Clean relationship categories and a final disjoint set
 
-`benchmarks/soundalike_pairs.v1.json` freezes **50 recording pairs** spanning more than 12 scenes.
-Each row names the public source, URL, retrieval date, evidence mode, and a short context summary.
-Sources include editorial comparisons, artist acknowledgements, reported listener comparisons,
-samples/interpolations, and explicit sound-alike databases. Examples include:
+Version 4 contains 93 sourced recording pairs. Every source has a URL, publisher, specific evidence
+context, and retrieval date. The relationship determines whether a row can decide retrieval:
 
-- *This Means War* / *Sad but True* — multi-feature comparison and artist acknowledgement in
-  [WatchMojo's sound-alike list](https://www.watchmojo.com/articles/top-20-sound-alike-songs).
-- *Bubble Gum* / *Easier Said Than Done* — the documented, disputed rhythm/melody/tempo claim in
-  [Yonhap](https://en.yna.co.kr/view/AEN20240718008000315).
-- *Safaera* / *Get Ur Freak On* — the tumbi sample identified by
-  [Pitchfork](https://pitchfork.com/reviews/tracks/bad-bunny-safaera-ft-jowell-and-randy-and-nengo-flow/).
-- *Jogodo* / *Kpolongo* — listeners and the earlier recording's artists identifying the similarity
-  in [Music In Africa](https://musicinafrica.net/magazine/controversial-tekno-song-gets-video/).
+| Evidence category | Rows | Deciding? |
+|---|---:|---|
+| Credible pure sonic comparison | 54 | only final held-out rows |
+| Sample / interpolation | 9 | no; diagnostic only |
+| Legal / plagiarism dispute | 9 | no; diagnostic only |
+| Cover / remix / adaptation / contrafact | 5 | no; diagnostic only |
+| Weak or unsupported assertion | 16 | no; diagnostic only |
 
-The split is **30 development pairs / 20 held-out pairs**, disjoint at pair and credited-artist
-level. Tests fail if a held-out artist appears in development, `MANUAL_PAIRS`, or graph inputs.
-No source labels are used by the winning reranker. The benchmark records the real top 50, not just
-scores, and reports Recall@1/5/10/20/50, MRR, NDCG@50, reciprocal-rank distributions, and catalogue
-misses. A limitation surfaced immediately: 25% of held-out pairs and 73.3% of development pairs
-have a missing side in this Deezer-derived catalogue. Missing pairs score zero; they are not dropped.
+The final 20 pure-sonic pairs were selected from named criticism, artist accounts, or specific
+musicological descriptions. Both exact original recordings exist in the frozen catalogue; a remix,
+live recording, cover, or other derivative can no longer substitute for a missing target. Their 49
+credited artists do not occur in the 147 development/validation artists. A connected-component
+audit covers benchmark, manual, and graph edges transitively and reports no bridge.
 
-### What the RTX-5080-trained encoder actually retrieves
+The deciding metric remained:
 
-The answer is sobering. On held-out pairs, the **raw encoder** retrieves no counterpart in the first
-20, one in the first 50, and has MRR 0.0013. The current production fusion is better but still weak:
+```
+primary = 0.5 ? Recall@50 + 0.5 ? mean reciprocal rank
+```
 
-| Method on the real 272,853-song index | R@1 | R@5 | R@10 | R@20 | R@50 | MRR | NDCG@50 |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| Raw trained encoder | 0.000 | 0.000 | 0.000 | 0.000 | 0.050 | 0.0013 | 0.0095 |
-| Frozen production baseline (`enhance=False`) | 0.000 | 0.050 | 0.050 | 0.050 | 0.100 | 0.0111 | 0.0284 |
+Missing sides score zero. Manual judgments and external artist agreement never enter it. Sequential
+challengers did reuse the held-out suite, as the requested iterate-until-threshold workflow requires;
+no held-out pair identity, target, rank, ListenBrainz response, or Deezer response is a training or
+serving feature. The bootstrap is therefore descriptive, not a once-opened significance test.
 
-This directly contradicts the earlier implication that encoder metrics proved human-quality
-retrieval. The model catches the metal counterpart (*Sad but True*) and ranks the indie comparison
-(*Take Me Out*) at 45, but misses most known counterparts. Sample location, 30-second preview
-coverage, cross-genre pairs, and missing catalogue recordings are important limitations.
+### The encoder is weak; the guardrail union is what fixed retrieval
 
-### Independent approaches on the production index
+| Final 20 pure-sonic pairs | R@10 | R@20 | R@50 | MRR | Primary |
+|---|---:|---:|---:|---:|---:|
+| Raw local encoder | 0.0500 | 0.0500 | 0.0500 | 0.0100 | 0.0300 |
+| Frozen production baseline | 0.0500 | 0.0500 | 0.0500 | 0.0063 | 0.0281 |
+| **Dual-Sonic64 guardrail** | 0.0000 | 0.0500 | **0.1000** | 0.0059 | **0.0529** |
 
-The experiments follow modern retrieval work rather than counting alpha/diversity sweeps as
-approaches. Hubness correction is motivated by
-[Schnitzer et al.](https://jmlr.org/papers/v13/schnitzer12a.html); reciprocal reranking was considered
-from [Zhong et al.](https://openaccess.thecvf.com/content_cvpr_2017/html/Zhong_Re-Ranking_Person_Re-Identification_CVPR_2017_paper.html);
-automatic query expansion follows the retrieval literature
-([Chum et al.](https://doi.org/10.1109/ICCV.2007.4408891)).
+The selected system improves the frozen primary **0.0281?0.0529 (+88.3%)** and doubles Recall@50.
+The existing hit moves from rank 8 to 11; a second exact counterpart enters at rank 37. The largest
+scene change is ?3.1%, inside the ?10% guardrail. Pair-bootstrap absolute delta is
+**?0.0026..0.0770** (95% interval; 63.9% positive), so the evidence clears the predeclared
+engineering threshold but does not establish a precise population effect.
 
-| Independent method | Held-out pair primary | Relative to baseline | Decision |
-|---|---:|---:|---|
-| Quality/recording filter only | 0.0556 | 0.0% | Keep as a safety rule; no pair gain |
-| Full artist-centroid rerank | 0.0590 | +6.2% | Reject: regressed the indie held-out pair |
-| Inverted-softmax hubness correction | 0.0569 | +2.4% | Reject: too small, CI includes zero |
-| Three-neighbor query expansion | 0.0255 | −54.0% | Reject: query drift |
-| Raw encoder only | 0.0257 | −53.8% | Reject as serving ranker |
+### Materially different real-index challengers
 
-The earlier manual graph is not an experiment result: it was contaminated and removed. A future
-learned projection or graph method must train only on development artists and be tested on a new
-unopened artist-disjoint split.
+All representations were executed against the real 272,853 rows:
 
-### Selected method: quality filter + guarded centroid top-20 rerank
+| Challenger | Measurement and decision |
+|---|---|
+| VGGish mean / three-window max | zero pure-pair Recall@50; rejected |
+| PANNs Cnn14 AudioSet | 112.99 s full build; no new validation hit |
+| LAION-CLAP HTSAT | 337.98 s full build; useful candidate signal after calibration |
+| EfficientNet eight-vector late interaction | 435.90 s build; no extra validation hit |
+| Chroma-FFT harmonic DSP | 106.75 s build; no Recall@50 gain |
+| CLAP title/artist text | 167.89 s build; semantic text did not retrieve exact sonic pairs |
+| Dev-only hard-negative metric | overfit development and failed to generalize |
+| Pageview-heavy learned reranker | zero final held-out hits; rejected |
+| **Dual-Sonic64 + source-independent priors + guardrail union** | selected |
 
-The full centroid method made lists visibly more coherent but could push an existing counterpart
-out of the first 50. The guarded version first resolves an original-looking seed row instead of
-silently choosing a remix/live variant, freezes the production candidate list, removes
-slowed/reverb, karaoke, tribute, cover/mashup, duplicate, and fuzzy seed-title variants, then
-reorders **only positions 1–20** by artist-centroid coherence. Positions 21–50 never move. This
-preserves every baseline Recall@50 hit while improving the part users see.
+CLAP and EfficientNet are each compressed to 64 float16 dimensions. PCA fitting excludes every
+benchmark artist. Wikipedia contributes only generic song-article existence/notability features;
+benchmark URLs, pair edges, and labels are not indexed. ListenBrainz and Deezer remain validation-
+only and are not features.
 
-All 20 held-out top fives are preserved in `held-out-winner-v1.json` and individually reviewed in
-`heldout_top5_judgments.v1.json`. The explicit pass rule is: at least four coherent results and no
-obvious wrong-scene item at positions 1–3; any prohibited derivative automatically fails.
+### Selected production policy
 
-| Held-out result | Frozen baseline | Guarded winner |
-|---|---:|---:|
-| Sourced-pair primary | 0.0556 | 0.0568 |
-| Direct top-five passes | 11/20 (55%) | **17/20 (85%)** |
-| Combined primary (50% pair retrieval, 50% direct judgment) | 0.3028 | **0.4534** |
-| Relative combined gain | — | **+49.7%** |
-| Paired bootstrap 95% CI, absolute gain | — | **+0.0506 to +0.2506** |
-| Scene guardrail | — | no scene below −10% |
+The final candidate union has three explicit stages:
 
-The three honest failures are *stupid horse* (an R&B item remains at rank two), *Harder Better
-Faster Stronger* (the frozen pool lacks French-house candidates), and *Treasure* (a title/artist
-collision promotes the K-pop group TREASURE). These remain documented rather than relabelled.
+1. keep the quality-filtered, MMR-diversified, guarded-centroid top five;
+2. append all quality-filtered frozen-baseline top-ten rows not already present, preserving known
+   retrieval hits and the scene guardrail;
+3. fill to the requested depth from the 25% EfficientNet / 75% CLAP candidate score plus the fixed
+   source-independent priors, deduplicating recordings but not suppressing an exact song merely
+   because another song by that artist scored higher.
 
-Independent validation uses 12 artists absent from both benchmark splits and fresh
-ListenBrainz/Deezer responses that are never read by the reranker. ListenBrainz overlap@15 moves
-0.1389→0.1556 (delta CI −0.0111..0.0444: statistically equivalent); Deezer overlap@15 moves
-0.0667→0.0833 (delta CI 0..0.0333). Thus supporting evidence does not regress.
+The final and retained UX sets each pass **17/20** direct top-five judgments. The original baseline
+passed 11/20. Three final failures are documented rather than relabelled. All top fives reject seed-
+title variants, slowed/reverb, karaoke, tribute, covers, and mashups. These judgments are never
+blended into pair retrieval.
 
-### Resource, parity, and deployment evidence
+Independent validation stays disjoint:
 
-On the actual index: 233,744,489-byte artifact; 3.73 s local cold load; 450,753,156 bytes for
-neural+vibe arrays (1.124 GB full-process RSS including strings/lookups); 19,747,113 bytes of
-retained numeric reranker arrays and a measured 45,117,440-byte RSS increase for the compact
-11,968-centroid reranker (down from the old 419 MB duplicate matrix); and guarded recommendation
-latency of 118 ms mean / 195 ms p95.
-Desktop and hosted numpy implementations share the same guarded algorithm and have an exact parity
-test.
+| External overlap@15 | Baseline | Winner | Paired delta 95% CI |
+|---|---:|---:|---:|
+| ListenBrainz | 0.1389 | **0.1611** | ?0.0333..0.0722 |
+| Deezer related artists | 0.0667 | **0.0833** | 0.0000..0.0333 |
 
-Live browser evidence over ten diverse seeds is saved in `live-browser-10-seeds-v1.json`. It
-measured a 13.5 s cold request and 222–300 ms warm requests; all ten ordered top fives exactly match
-the frozen local baseline. This proves the public site still serves the **old baseline** (for
-example, the slowed derivative remains for *stupid horse*).
-No Vercel credentials are available in this checkout and pushing is explicitly prohibited, so this
-iteration does **not** claim that the winner is deployed. The code and parity gate are ready, but
-production release remains a documented deployment blocker rather than an invented success.
+The point estimates improve and remain statistically equivalent within uncertainty.
 
-### Reproduce
+### Resources and reproduction
+
+The checksum-pinned release index is **299,288,526 bytes**. It contains the unchanged neural/vibe
+arrays, two 64-d float16 sonic matrices, and two compact source-prior columns. On the i9-14900KF,
+local cold load is **5.89 s**, RSS after load is **1.258 GB**, and 20 final queries measure **133 ms
+mean / 146 ms p95**. Research checkpoints are not served. Desktop and hosted numpy paths are pinned
+by exact parity tests and report `dual_sonic64_guardrail`; arbitrary previews without aligned CLAP
+features report the explicit legacy fallback.
 
 ```powershell
 $env:PYTHONPATH = "src;."
 .\.venv\Scripts\python.exe -m soundalike.ml.real_benchmark `
-  --index ml_data\deepvibe_index_v3.npz `
-  --benchmark benchmarks\soundalike_pairs.v1.json `
-  --split held_out --methods production_baseline,guarded_centroid `
-  --judgments benchmarks\heldout_top5_judgments.v1.json `
-  --out .goals\human-quality-recommendations\artifacts\held-out-winner-v1.json
+  --index ml_data\deepvibe_index_v5.npz `
+  --benchmark benchmarks\soundalike_pairs.v4.json `
+  --split held_out --evidence-category pure_sonic `
+  --methods raw_encoder,production_baseline,quality_filter,dual_sonic `
+  --out .goals\human-quality-recommendationsrtifacts\held-out-final-winner-v4.json
 
 .\.venv\Scripts\python.exe -m soundalike.ml.external_validation `
-  --index ml_data\deepvibe_index_v3.npz `
-  --benchmark benchmarks\soundalike_pairs.v1.json `
+  --index ml_data\deepvibe_index_v5.npz `
+  --benchmark benchmarks\soundalike_pairs.v4.json `
   --truth benchmarks\external_artist_truth.v1.json `
-  --out .goals\human-quality-recommendations\artifacts\external-validation-v1.json
+  --out .goals\human-quality-recommendationsrtifacts\external-validation-final-v4.json
 ```
 
 ---
@@ -551,14 +543,15 @@ $env:PYTHONPATH = "src;."
   local loopback callback, CSRF `state` validation, and cached auto-refreshing tokens.
 - **No secrets in git.** Credentials live only in a git-ignored `.env`; the repo ships a
   `.env.example` template.
-- **No data leakage in evaluation.** The 50-pair benchmark is pair- and credited-artist-disjoint;
-  tests reject held-out artists in development, manual pairs, and graph inputs. The contaminated
-  static graph is retired rather than grandfathered in.
-- **285 automated tests** cover the recommenders, OAuth/PKCE, the DSP, vibe and vibe-aware engines,
-  the spec cache, the recommendation benchmark (same-artist mAP *and* the cross-artist agreement
-  metric), diversity/MMR re-ranking, GeM pooling, the ML pipeline (augmentation, contrastive
-  loss, vibe-target, and dataset-split logic), the sourced production benchmark, derivative
-  filter, guarded centroid reranker, parity, and retired-graph leakage regression.
+- **No data leakage in training.** The 93-row benchmark has a final 20-pair, 49-artist set disjoint
+  from 147 development/validation artists; tests reject direct and transitive graph paths into it.
+  Diagnostic categories cannot decide the score, and the contaminated static graph stays retired.
+- **Release integrity.** Desktop and hosted downloads pin SHA-256; hosted download is atomic and
+  fails before loading on a mismatch, and numpy object pickles are disabled.
+- **308 automated tests** cover the recommenders, OAuth/PKCE, DSP, vibe and vibe-aware engines,
+  the spec cache, recommendation benchmarks, diversity/MMR, GeM pooling, ML split logic, the
+  categorized production benchmark, Dual-Sonic64 guardrails, derivative false positives,
+  checksum handling, and exact desktop/hosted parity.
 
 
 ---

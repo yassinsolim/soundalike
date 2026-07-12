@@ -118,6 +118,28 @@ class TestTitleQualityFilter:
     def test_legitimate_tribute_title_is_not_globally_suppressed(self):
         assert not self.f.is_junk("A Tribute To Someone", "Herbie Hancock")
 
+    def test_legitimate_x_title_is_not_mistaken_for_mashup(self):
+        assert not self.f.is_junk("Love X Love", "George Benson")
+
+    @pytest.mark.parametrize("title,artist", [
+        ("Cover Me", "Bruce Springsteen"),
+        ("Originally", "The Performers"),
+        ("A x B", "Mathematics"),
+        ("Tribute", "Tenacious D"),
+        ("Pola (The Geek x VRV Remix)", "Jabberwocky"),
+    ])
+    def test_context_words_do_not_cause_harmful_false_positives(self, title, artist):
+        assert not self.f.is_junk(title, artist)
+
+    @pytest.mark.parametrize("title,artist", [
+        ("Song (Cover of Hit)", "Cover Publisher"),
+        ("Song - Originally Performed by Adele", "Publisher"),
+        ("First Song x Second Song", "DJ"),
+        ("Song", "In the Style of Adele"),
+    ])
+    def test_contextual_derivative_metadata_is_filtered(self, title, artist):
+        assert self.f.is_junk(title, artist)
+
     def test_seed_title_not_in_unrelated_result(self):
         assert not self.f.seed_title_in_result("Money Trees", "Alright")
 

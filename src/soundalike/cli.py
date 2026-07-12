@@ -487,13 +487,25 @@ def cmd_deep_vibe_similar(args: argparse.Namespace) -> int:
 
     extractor = EncoderExtractor(args.model_dir or enc_default)
     cfg = SpectrogramConfig()
-    neural_list, vibe_list, seed_ids, seed_labels = [], [], set(), []
+    neural_list, vibe_list, sonic_list, seed_ids, seed_labels = [], [], [], set(), []
+    rows_by_id = {
+        int(track_id): row for row, track_id in enumerate(index.track_ids)
+    }
+    all_library_rows = index.sonic is not None
     with TemporaryDirectory() as tmp:
         for title, artist in seed_specs:
             track = client.search_track(title, artist)
             if track is None or not track.has_preview:
                 print(f"No previewable track found for '{title}'"
                       + (f" by {artist}" if artist else "") + ".")
+                continue
+            row = rows_by_id.get(int(track.id))
+            if row is not None and index.sonic is not None:
+                neural_list.append(np.asarray(index.neural[row], dtype=np.float32))
+                vibe_list.append(np.asarray(index.vibe[row], dtype=np.float32))
+                sonic_list.append(np.asarray(index.sonic[row], dtype=np.float32))
+                seed_ids.add(track.id)
+                seed_labels.append(f"{track.title} — {track.artist}")
                 continue
             dest = Path(tmp) / f"{track.id}.mp3"
             client.download_preview(track, dest)
@@ -502,6 +514,7 @@ def cmd_deep_vibe_similar(args: argparse.Namespace) -> int:
             vibe_list.append(vibe_from_file(str(dest)).vector())
             seed_ids.add(track.id)
             seed_labels.append(f"{track.title} — {track.artist}")
+            all_library_rows = False
 
     if not neural_list:
         print("No usable seeds found.")
@@ -509,6 +522,9 @@ def cmd_deep_vibe_similar(args: argparse.Namespace) -> int:
 
     seed_neural = np.mean(neural_list, axis=0)
     seed_vibe = VibeFeatures.from_vector(np.mean(vibe_list, axis=0))
+    seed_sonic = np.mean(sonic_list, axis=0) if (
+        all_library_rows and len(sonic_list) == len(neural_list)
+    ) else None
 
     weights = dict(DEFAULT_WEIGHTS)
     for pair in args.weight or []:
@@ -522,6 +538,7 @@ def cmd_deep_vibe_similar(args: argparse.Namespace) -> int:
         seed_neural, seed_vibe, n=args.num, exclude_ids=seed_ids,
         exclude_artist=(seed_labels[0].split(" — ")[-1] if args.exclude_artist and len(seed_labels) == 1 else None),
         diversity=args.diversity, max_per_artist=args.max_per_artist,
+        seed_sonic=seed_sonic,
     )
     if len(seed_labels) == 1:
         v = seed_vibe.describe()
@@ -535,6 +552,7 @@ def cmd_deep_vibe_similar(args: argparse.Namespace) -> int:
     if args.diversity > 0:
         blend_note += f"  |  diversity {args.diversity:.0%}"
     print(blend_note)
+    print(f"  retrieval: {rec.last_retrieval_mode}")
     print(f"\nDeep-vibe matches (from a {len(index)}-track library):")
     for i, r in enumerate(results, 1):
         print(f"  {i:>2}. {r.title} — {r.artist}   "

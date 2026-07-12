@@ -1,8 +1,8 @@
 """Independent artist-similarity validation for the guarded reranker.
 
-ListenBrainz and Deezer data collected here is validation-only.  The winner is
-an unsupervised centroid reranker and never reads these responses.  All seed
-artists are disjoint from both splits of the sourced-pair benchmark.
+ListenBrainz and Deezer data collected here is validation-only.  The winner
+never reads these responses or uses either service as a ranking feature.  All
+seed artists are disjoint from the sourced-pair benchmark.
 """
 
 from __future__ import annotations
@@ -164,10 +164,19 @@ def run(
     recommender = WebRecommender(str(index_path), enhance=False)
     resolver = PairResolver(recommender.titles, recommender.artists)
     ranker = ProductionRanker(recommender, held_out_artists(benchmark))
+    winner_method = (
+        "dual_sonic"
+        if getattr(recommender, "_clap", None) is not None
+        else (
+            "stable_sonic"
+            if getattr(recommender, "_sonic", None) is not None
+            else "guarded_centroid"
+        )
+    )
     records = []
     aggregates = {
-        "listenbrainz": {"production_baseline": [], "guarded_centroid": []},
-        "deezer": {"production_baseline": [], "guarded_centroid": []},
+        "listenbrainz": {"production_baseline": [], winner_method: []},
+        "deezer": {"production_baseline": [], winner_method: []},
     }
     for row in truth["rows"]:
         query = {"title": row["title"], "artist": row["artist"]}
@@ -176,7 +185,7 @@ def run(
         if query_row is None:
             records.append(record)
             continue
-        for method in ("production_baseline", "guarded_centroid"):
+        for method in ("production_baseline", winner_method):
             ranked = ranker.rank(query_row, method, n=15)
             artists = [primary_artist(str(recommender.artists[i])) for i in ranked]
             record["methods"][method] = {
@@ -193,7 +202,7 @@ def run(
 
     comparisons = {
         source: _bootstrap_delta(
-            values["production_baseline"], values["guarded_centroid"]
+            values["production_baseline"], values[winner_method]
         )
         for source, values in aggregates.items()
         if values["production_baseline"]
@@ -203,6 +212,7 @@ def run(
         "created_at": "2026-07-11",
         "index_tracks": len(recommender),
         "benchmark_artist_overlap": overlap,
+        "winner_method": winner_method,
         "truth_sources": truth["sources"],
         "comparisons": comparisons,
         "records": records,

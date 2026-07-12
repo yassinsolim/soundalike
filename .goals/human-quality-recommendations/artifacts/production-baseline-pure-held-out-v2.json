@@ -1,0 +1,2855 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-11",
+  "benchmark_id": "soundalike-real-pairs-v2",
+  "benchmark_version": "2.0.0",
+  "split": "held_out",
+  "evidence_category": "pure_sonic",
+  "selection": {
+    "selected_pairs": 7,
+    "split_pairs": 20,
+    "diagnostic_pairs_excluded": 13
+  },
+  "index": {
+    "path": "ml_data\\deepvibe_index_v3.npz",
+    "sha256": "89bfde6f622619a704462291b17f82bcb6508880210932b0a1548a433e1b7085",
+    "tracks": 272853,
+    "neural_dimension": 384,
+    "file_bytes": 233744489
+  },
+  "leakage_audit": {
+    "passed": true,
+    "development_artist_count": 60,
+    "held_out_artist_count": 45,
+    "held_out_pair_count": 20,
+    "development_held_out_overlap": [],
+    "manual_pair_held_out_overlap": [],
+    "graph_held_out_overlap": [],
+    "transitive_graph_overlap": [],
+    "duplicate_pair_ids": []
+  },
+  "resources": {
+    "cold_load_seconds": 3.7121100000003935,
+    "neural_matrix_bytes": 419102208,
+    "vibe_matrix_bytes": 31650948,
+    "minimum_ranker_array_bytes": 450753156,
+    "quality_mask_bytes": 272853,
+    "centroid_count": 0,
+    "centroid_song_map_bytes": 0,
+    "centroid_table_bytes": 0,
+    "reranker_bytes": 272853,
+    "rss_after_index_bytes": 1126432768,
+    "rss_before_reranker_bytes": 1886920704,
+    "rss_after_quality_filter_bytes": 1881931776,
+    "rss_after_methods_bytes": 1888833536,
+    "measured_reranker_rss_delta_bytes": 1912832,
+    "hubness_bytes": 0
+  },
+  "methods": {
+    "production_baseline": {
+      "method": "production_baseline",
+      "parameters": {},
+      "metrics": {
+        "recall_at_1": 0.0,
+        "recall_at_5": 0.14285714285714285,
+        "recall_at_10": 0.14285714285714285,
+        "recall_at_20": 0.14285714285714285,
+        "recall_at_50": 0.14285714285714285,
+        "mrr": 0.028571428571428574,
+        "ndcg_at_50": 0.05526468674779166,
+        "primary_score": 0.08571428571428572,
+        "reciprocal_rank_distribution": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.2,
+          0.0,
+          0.0
+        ],
+        "query_missing_rate": 0.0,
+        "target_missing_rate": 0.14285714285714285,
+        "missing_catalogue_rate": 0.14285714285714285,
+        "n_pairs": 7,
+        "n_rankable": 6
+      },
+      "per_scene": {
+        "boy-band-pop/classic-rock": {
+          "recall_at_1": 0.0,
+          "recall_at_5": 0.0,
+          "recall_at_10": 0.0,
+          "recall_at_20": 0.0,
+          "recall_at_50": 0.0,
+          "mrr": 0.0,
+          "ndcg_at_50": 0.0,
+          "primary_score": 0.0,
+          "reciprocal_rank_distribution": [
+            0.0
+          ],
+          "query_missing_rate": 0.0,
+          "target_missing_rate": 0.0,
+          "missing_catalogue_rate": 0.0,
+          "n_pairs": 1,
+          "n_rankable": 1
+        },
+        "city-pop/k-pop": {
+          "recall_at_1": 0.0,
+          "recall_at_5": 0.0,
+          "recall_at_10": 0.0,
+          "recall_at_20": 0.0,
+          "recall_at_50": 0.0,
+          "mrr": 0.0,
+          "ndcg_at_50": 0.0,
+          "primary_score": 0.0,
+          "reciprocal_rank_distribution": [
+            0.0
+          ],
+          "query_missing_rate": 0.0,
+          "target_missing_rate": 1.0,
+          "missing_catalogue_rate": 1.0,
+          "n_pairs": 1,
+          "n_rankable": 0
+        },
+        "heavy-metal": {
+          "recall_at_1": 0.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "recall_at_20": 1.0,
+          "recall_at_50": 1.0,
+          "mrr": 0.2,
+          "ndcg_at_50": 0.38685280723454163,
+          "primary_score": 0.6,
+          "reciprocal_rank_distribution": [
+            0.2
+          ],
+          "query_missing_rate": 0.0,
+          "target_missing_rate": 0.0,
+          "missing_catalogue_rate": 0.0,
+          "n_pairs": 1,
+          "n_rankable": 1
+        },
+        "indie/heartland-rock": {
+          "recall_at_1": 0.0,
+          "recall_at_5": 0.0,
+          "recall_at_10": 0.0,
+          "recall_at_20": 0.0,
+          "recall_at_50": 0.0,
+          "mrr": 0.0,
+          "ndcg_at_50": 0.0,
+          "primary_score": 0.0,
+          "reciprocal_rank_distribution": [
+            0.0
+          ],
+          "query_missing_rate": 0.0,
+          "target_missing_rate": 0.0,
+          "missing_catalogue_rate": 0.0,
+          "n_pairs": 1,
+          "n_rankable": 1
+        },
+        "pop": {
+          "recall_at_1": 0.0,
+          "recall_at_5": 0.0,
+          "recall_at_10": 0.0,
+          "recall_at_20": 0.0,
+          "recall_at_50": 0.0,
+          "mrr": 0.0,
+          "ndcg_at_50": 0.0,
+          "primary_score": 0.0,
+          "reciprocal_rank_distribution": [
+            0.0
+          ],
+          "query_missing_rate": 0.0,
+          "target_missing_rate": 0.0,
+          "missing_catalogue_rate": 0.0,
+          "n_pairs": 1,
+          "n_rankable": 1
+        },
+        "r&b/pop": {
+          "recall_at_1": 0.0,
+          "recall_at_5": 0.0,
+          "recall_at_10": 0.0,
+          "recall_at_20": 0.0,
+          "recall_at_50": 0.0,
+          "mrr": 0.0,
+          "ndcg_at_50": 0.0,
+          "primary_score": 0.0,
+          "reciprocal_rank_distribution": [
+            0.0
+          ],
+          "query_missing_rate": 0.0,
+          "target_missing_rate": 0.0,
+          "missing_catalogue_rate": 0.0,
+          "n_pairs": 1,
+          "n_rankable": 1
+        },
+        "shoegaze/classic-rock": {
+          "recall_at_1": 0.0,
+          "recall_at_5": 0.0,
+          "recall_at_10": 0.0,
+          "recall_at_20": 0.0,
+          "recall_at_50": 0.0,
+          "mrr": 0.0,
+          "ndcg_at_50": 0.0,
+          "primary_score": 0.0,
+          "reciprocal_rank_distribution": [
+            0.0
+          ],
+          "query_missing_rate": 0.0,
+          "target_missing_rate": 0.0,
+          "missing_catalogue_rate": 0.0,
+          "n_pairs": 1,
+          "n_rankable": 1
+        }
+      },
+      "latency": {
+        "mean_ms": 39.076385711918455,
+        "p50_ms": 37.239400000544265,
+        "p95_ms": 46.63561999550438,
+        "wall_seconds": 0.27607829999760725
+      },
+      "pairs": [
+        {
+          "pair_id": "H05",
+          "scene": "pop",
+          "query": {
+            "title": "Roar",
+            "artist": "Katy Perry"
+          },
+          "target": {
+            "title": "Brave",
+            "artist": "Sara Bareilles"
+          },
+          "query_found": true,
+          "query_catalogue": {
+            "row": 2873,
+            "title": "Roar",
+            "artist": "Katy Perry"
+          },
+          "target_found": true,
+          "target_catalogue_rows": [
+            82560
+          ],
+          "target_rank": 0,
+          "reciprocal_rank": 0.0,
+          "latency_ms": 49.853,
+          "ranked_outputs": [
+            {
+              "rank": 1,
+              "row": 136958,
+              "title": "Más Buena",
+              "artist": "Gloria Trevi",
+              "is_target": false
+            },
+            {
+              "rank": 2,
+              "row": 115292,
+              "title": "Dancing In The Street",
+              "artist": "Royal Philharmonic Orchestra",
+              "is_target": false
+            },
+            {
+              "rank": 3,
+              "row": 145369,
+              "title": "Everest",
+              "artist": "Halestorm",
+              "is_target": false
+            },
+            {
+              "rank": 4,
+              "row": 95896,
+              "title": "BLOW",
+              "artist": "BETWEEN FRIENDS",
+              "is_target": false
+            },
+            {
+              "rank": 5,
+              "row": 22306,
+              "title": "Demons",
+              "artist": "Chris Daughtry",
+              "is_target": false
+            },
+            {
+              "rank": 6,
+              "row": 13020,
+              "title": "Sweatpants",
+              "artist": "Paloma Faith",
+              "is_target": false
+            },
+            {
+              "rank": 7,
+              "row": 44179,
+              "title": "Heaven",
+              "artist": "TAEMIN",
+              "is_target": false
+            },
+            {
+              "rank": 8,
+              "row": 166337,
+              "title": "Enough",
+              "artist": "ATEEZ",
+              "is_target": false
+            },
+            {
+              "rank": 9,
+              "row": 101275,
+              "title": "Fall In Line (feat. Demi Lovato)",
+              "artist": "Christina Aguilera",
+              "is_target": false
+            },
+            {
+              "rank": 10,
+              "row": 60450,
+              "title": "Tide",
+              "artist": "Mori Calliope",
+              "is_target": false
+            },
+            {
+              "rank": 11,
+              "row": 127827,
+              "title": "I Love You Bitch",
+              "artist": "Lizzo",
+              "is_target": false
+            },
+            {
+              "rank": 12,
+              "row": 163131,
+              "title": "Hold My Hand",
+              "artist": "Lady Gaga",
+              "is_target": false
+            },
+            {
+              "rank": 13,
+              "row": 118259,
+              "title": "Sending Up A Praise",
+              "artist": "Housefires",
+              "is_target": false
+            },
+            {
+              "rank": 14,
+              "row": 74818,
+              "title": "Hayloft II",
+              "artist": "Mother Mother",
+              "is_target": false
+            },
+            {
+              "rank": 15,
+              "row": 17552,
+              "title": "Never Been In Love",
+              "artist": "Elliphant",
+              "is_target": false
+            },
+            {
+              "rank": 16,
+              "row": 150153,
+              "title": "Hard To Tell",
+              "artist": "Briston Maroney",
+              "is_target": false
+            },
+            {
+              "rank": 17,
+              "row": 136715,
+              "title": "Honey Cruller",
+              "artist": "Qualité Motel",
+              "is_target": false
+            },
+            {
+              "rank": 18,
+              "row": 140125,
+              "title": "Birthday",
+              "artist": "JP Cooper",
+              "is_target": false
+            },
+            {
+              "rank": 19,
+              "row": 75464,
+              "title": "Comeback",
+              "artist": "Ella Eyre",
+              "is_target": false
+            },
+            {
+              "rank": 20,
+              "row": 146082,
+              "title": "Tonight",
+              "artist": "Peter McPoland",
+              "is_target": false
+            },
+            {
+              "rank": 21,
+              "row": 175797,
+              "title": "Doing It (feat. Rita Ora)",
+              "artist": "Charli xcx",
+              "is_target": false
+            },
+            {
+              "rank": 22,
+              "row": 166436,
+              "title": "Ready to Fight",
+              "artist": "WOODZ",
+              "is_target": false
+            },
+            {
+              "rank": 23,
+              "row": 112252,
+              "title": "here, alone, again",
+              "artist": "Olivia O'Brien",
+              "is_target": false
+            },
+            {
+              "rank": 24,
+              "row": 17647,
+              "title": "Head Above Water",
+              "artist": "Avril Lavigne",
+              "is_target": false
+            },
+            {
+              "rank": 25,
+              "row": 43179,
+              "title": "sunday morning",
+              "artist": "Henry Moodie",
+              "is_target": false
+            },
+            {
+              "rank": 26,
+              "row": 53378,
+              "title": "Living My Best Life",
+              "artist": "Jessie J",
+              "is_target": false
+            },
+            {
+              "rank": 27,
+              "row": 133498,
+              "title": "Sad Generation",
+              "artist": "Palaye Royale",
+              "is_target": false
+            },
+            {
+              "rank": 28,
+              "row": 10919,
+              "title": "The Time Of My Life",
+              "artist": "Benson Boone",
+              "is_target": false
+            },
+            {
+              "rank": 29,
+              "row": 270864,
+              "title": "Teenage Symphony",
+              "artist": "Michael Jackson",
+              "is_target": false
+            },
+            {
+              "rank": 30,
+              "row": 90523,
+              "title": "Street Fight",
+              "artist": "Smallpools",
+              "is_target": false
+            },
+            {
+              "rank": 31,
+              "row": 100201,
+              "title": "Dancing In The Street",
+              "artist": "Martha Reeves & The Vandellas",
+              "is_target": false
+            },
+            {
+              "rank": 32,
+              "row": 89512,
+              "title": "Heartbeat Away",
+              "artist": "Sheryl Crow",
+              "is_target": false
+            },
+            {
+              "rank": 33,
+              "row": 74763,
+              "title": "Hits Like This",
+              "artist": "Issac Frank",
+              "is_target": false
+            },
+            {
+              "rank": 34,
+              "row": 29008,
+              "title": "Want You Back",
+              "artist": "HAIM",
+              "is_target": false
+            },
+            {
+              "rank": 35,
+              "row": 168895,
+              "title": "Evil",
+              "artist": "Daughtry",
+              "is_target": false
+            },
+            {
+              "rank": 36,
+              "row": 19781,
+              "title": "Hear My Howl",
+              "artist": "Monster High",
+              "is_target": false
+            },
+            {
+              "rank": 37,
+              "row": 150038,
+              "title": "Jungle Youth",
+              "artist": "Young The Giant",
+              "is_target": false
+            },
+            {
+              "rank": 38,
+              "row": 63045,
+              "title": "Christmas Time",
+              "artist": "James Fortune",
+              "is_target": false
+            },
+            {
+              "rank": 39,
+              "row": 140812,
+              "title": "Happy (Live/Remastered)",
+              "artist": "Tasha Cobbs Leonard",
+              "is_target": false
+            },
+            {
+              "rank": 40,
+              "row": 185948,
+              "title": "Fearless",
+              "artist": "SEVENTEEN",
+              "is_target": false
+            },
+            {
+              "rank": 41,
+              "row": 107899,
+              "title": "Zero Eclipse",
+              "artist": "Hiroyuki Sawano",
+              "is_target": false
+            },
+            {
+              "rank": 42,
+              "row": 36986,
+              "title": "TRIGGER",
+              "artist": "THE BOYZ",
+              "is_target": false
+            },
+            {
+              "rank": 43,
+              "row": 86652,
+              "title": "Don't Break the Heart",
+              "artist": "Tom Grennan",
+              "is_target": false
+            },
+            {
+              "rank": 44,
+              "row": 88091,
+              "title": "All Night Long",
+              "artist": "Demi Lovato",
+              "is_target": false
+            },
+            {
+              "rank": 45,
+              "row": 96522,
+              "title": "Art of Love (feat. Jordin Sparks)",
+              "artist": "Guy Sebastian",
+              "is_target": false
+            },
+            {
+              "rank": 46,
+              "row": 11159,
+              "title": "The Phoenix",
+              "artist": "Fall Out Boy",
+              "is_target": false
+            },
+            {
+              "rank": 47,
+              "row": 152152,
+              "title": "Buttons (Showmusik TikTok Remix)",
+              "artist": "The Pussycat Dolls",
+              "is_target": false
+            },
+            {
+              "rank": 48,
+              "row": 131728,
+              "title": "Sugar on the Bone",
+              "artist": "Rival Sons",
+              "is_target": false
+            },
+            {
+              "rank": 49,
+              "row": 156540,
+              "title": "On My Youth 遗憾效应",
+              "artist": "WayV",
+              "is_target": false
+            },
+            {
+              "rank": 50,
+              "row": 5445,
+              "title": "Chemistry",
+              "artist": "Gigi Perez",
+              "is_target": false
+            }
+          ]
+        },
+        {
+          "pair_id": "H06",
+          "scene": "boy-band-pop/classic-rock",
+          "query": {
+            "title": "Best Song Ever",
+            "artist": "One Direction"
+          },
+          "target": {
+            "title": "Baba O'Riley",
+            "artist": "The Who"
+          },
+          "query_found": true,
+          "query_catalogue": {
+            "row": 61794,
+            "title": "Best Song Ever",
+            "artist": "One Direction"
+          },
+          "target_found": true,
+          "target_catalogue_rows": [
+            11299
+          ],
+          "target_rank": 0,
+          "reciprocal_rank": 0.0,
+          "latency_ms": 37.239,
+          "ranked_outputs": [
+            {
+              "rank": 1,
+              "row": 31807,
+              "title": "Hey Look Ma, I Made It",
+              "artist": "Panic! At The Disco",
+              "is_target": false
+            },
+            {
+              "rank": 2,
+              "row": 132608,
+              "title": "Feel Something, Great.",
+              "artist": "Palaye Royale",
+              "is_target": false
+            },
+            {
+              "rank": 3,
+              "row": 16979,
+              "title": "Back Again",
+              "artist": "You Me At Six",
+              "is_target": false
+            },
+            {
+              "rank": 4,
+              "row": 63888,
+              "title": "Middle Of The Night",
+              "artist": "The Vamps",
+              "is_target": false
+            },
+            {
+              "rank": 5,
+              "row": 112504,
+              "title": "Below The Belt",
+              "artist": "Point North",
+              "is_target": false
+            },
+            {
+              "rank": 6,
+              "row": 132379,
+              "title": "Cry",
+              "artist": "Sigma",
+              "is_target": false
+            },
+            {
+              "rank": 7,
+              "row": 132052,
+              "title": "Word Up!",
+              "artist": "Little Mix",
+              "is_target": false
+            },
+            {
+              "rank": 8,
+              "row": 23285,
+              "title": "Wish You The Best",
+              "artist": "Rain City Drive",
+              "is_target": false
+            },
+            {
+              "rank": 9,
+              "row": 76781,
+              "title": "Singles You Up",
+              "artist": "Jordan Davis",
+              "is_target": false
+            },
+            {
+              "rank": 10,
+              "row": 79003,
+              "title": "Black Suit",
+              "artist": "SUPER JUNIOR",
+              "is_target": false
+            },
+            {
+              "rank": 11,
+              "row": 60801,
+              "title": "OBLIVION",
+              "artist": "Halo Boy",
+              "is_target": false
+            },
+            {
+              "rank": 12,
+              "row": 167235,
+              "title": "ROT",
+              "artist": "WesGhost",
+              "is_target": false
+            },
+            {
+              "rank": 13,
+              "row": 140568,
+              "title": "Before The World Ends",
+              "artist": "Anarbor",
+              "is_target": false
+            },
+            {
+              "rank": 14,
+              "row": 34434,
+              "title": "NANANA",
+              "artist": "Got7",
+              "is_target": false
+            },
+            {
+              "rank": 15,
+              "row": 262206,
+              "title": "If You Want It (feat. Scar) (From SUPERFLY - Original Soundtrack)",
+              "artist": "Sleepy Brown",
+              "is_target": false
+            },
+            {
+              "rank": 16,
+              "row": 122745,
+              "title": "Chula",
+              "artist": "Therapie TAXI",
+              "is_target": false
+            },
+            {
+              "rank": 17,
+              "row": 13433,
+              "title": "Cut To The Feeling",
+              "artist": "Carly Rae Jepsen",
+              "is_target": false
+            },
+            {
+              "rank": 18,
+              "row": 167507,
+              "title": "We Didn’t Start The Fire",
+              "artist": "Fall Out Boy",
+              "is_target": false
+            },
+            {
+              "rank": 19,
+              "row": 133779,
+              "title": "CHAOS",
+              "artist": "$atori Zoom",
+              "is_target": false
+            },
+            {
+              "rank": 20,
+              "row": 40238,
+              "title": "Without You",
+              "artist": "John Newman",
+              "is_target": false
+            },
+            {
+              "rank": 21,
+              "row": 46516,
+              "title": "Like a Bomb",
+              "artist": "RIIZE",
+              "is_target": false
+            },
+            {
+              "rank": 22,
+              "row": 103762,
+              "title": "Iconic",
+              "artist": "Simple Plan",
+              "is_target": false
+            },
+            {
+              "rank": 23,
+              "row": 29750,
+              "title": "DJ Got Us Fallin' In Love (feat. Pitbull)",
+              "artist": "USHER",
+              "is_target": false
+            },
+            {
+              "rank": 24,
+              "row": 110448,
+              "title": "Paranoid (Crash & Burn) (Zardonic Remix)",
+              "artist": "Pop Evil",
+              "is_target": false
+            },
+            {
+              "rank": 25,
+              "row": 59334,
+              "title": "Want to Want Me",
+              "artist": "Jason Derülo",
+              "is_target": false
+            },
+            {
+              "rank": 26,
+              "row": 40154,
+              "title": "Our Own Way",
+              "artist": "BARELY ALIVE",
+              "is_target": false
+            },
+            {
+              "rank": 27,
+              "row": 42825,
+              "title": "Red",
+              "artist": "Alaska Thunderfuck",
+              "is_target": false
+            },
+            {
+              "rank": 28,
+              "row": 12829,
+              "title": "Roll Up My Love",
+              "artist": "Tommy Newport",
+              "is_target": false
+            },
+            {
+              "rank": 29,
+              "row": 527,
+              "title": "purity (isthiscontamination)",
+              "artist": "sodistilled",
+              "is_target": false
+            },
+            {
+              "rank": 30,
+              "row": 51612,
+              "title": "Winning",
+              "artist": "Pastor Mike Jr.",
+              "is_target": false
+            },
+            {
+              "rank": 31,
+              "row": 153041,
+              "title": "PULSE",
+              "artist": "PhaseOne",
+              "is_target": false
+            },
+            {
+              "rank": 32,
+              "row": 184946,
+              "title": "Catastrophize",
+              "artist": "Noah Kahan",
+              "is_target": false
+            },
+            {
+              "rank": 33,
+              "row": 37494,
+              "title": "NonStop",
+              "artist": "NCT 127",
+              "is_target": false
+            },
+            {
+              "rank": 34,
+              "row": 60202,
+              "title": "Lift Me Up (Original Mix)",
+              "artist": "Rusko",
+              "is_target": false
+            },
+            {
+              "rank": 35,
+              "row": 15786,
+              "title": "That's My Girl",
+              "artist": "Fifth Harmony",
+              "is_target": false
+            },
+            {
+              "rank": 36,
+              "row": 73633,
+              "title": "Revolver",
+              "artist": "Thornhill",
+              "is_target": false
+            },
+            {
+              "rank": 37,
+              "row": 22685,
+              "title": "ALL I SAW WAS YOU",
+              "artist": "Johnny Huynh",
+              "is_target": false
+            },
+            {
+              "rank": 38,
+              "row": 151706,
+              "title": "Lucifer",
+              "artist": "Trickle",
+              "is_target": false
+            },
+            {
+              "rank": 39,
+              "row": 260191,
+              "title": "Pin",
+              "artist": "Grimes",
+              "is_target": false
+            },
+            {
+              "rank": 40,
+              "row": 140799,
+              "title": "Don't Hold Your Breath",
+              "artist": "Nicole Scherzinger",
+              "is_target": false
+            },
+            {
+              "rank": 41,
+              "row": 186207,
+              "title": "School Life",
+              "artist": "Stray Kids",
+              "is_target": false
+            },
+            {
+              "rank": 42,
+              "row": 71653,
+              "title": "Horizon",
+              "artist": "Temples",
+              "is_target": false
+            },
+            {
+              "rank": 43,
+              "row": 60588,
+              "title": "Ego",
+              "artist": "Bigbang",
+              "is_target": false
+            },
+            {
+              "rank": 44,
+              "row": 131700,
+              "title": "Animals",
+              "artist": "Call Me Karizma",
+              "is_target": false
+            },
+            {
+              "rank": 45,
+              "row": 60937,
+              "title": "Who Will Pray?",
+              "artist": "We Came As Romans",
+              "is_target": false
+            },
+            {
+              "rank": 46,
+              "row": 103982,
+              "title": "Come Back 噩梦",
+              "artist": "WayV",
+              "is_target": false
+            },
+            {
+              "rank": 47,
+              "row": 79783,
+              "title": "Keep on Moving",
+              "artist": "NEXZ",
+              "is_target": false
+            },
+            {
+              "rank": 48,
+              "row": 151646,
+              "title": "RISE",
+              "artist": "League Of Legends",
+              "is_target": false
+            },
+            {
+              "rank": 49,
+              "row": 23078,
+              "title": "Cheetah Tongue",
+              "artist": "The Wombats",
+              "is_target": false
+            },
+            {
+              "rank": 50,
+              "row": 23398,
+              "title": "Endless Summer",
+              "artist": "Absofacto",
+              "is_target": false
+            }
+          ]
+        },
+        {
+          "pair_id": "H07",
+          "scene": "indie/heartland-rock",
+          "query": {
+            "title": "Last Nite",
+            "artist": "The Strokes"
+          },
+          "target": {
+            "title": "American Girl",
+            "artist": "Tom Petty and the Heartbreakers"
+          },
+          "query_found": true,
+          "query_catalogue": {
+            "row": 431,
+            "title": "Last Nite",
+            "artist": "The Strokes"
+          },
+          "target_found": true,
+          "target_catalogue_rows": [
+            80793,
+            167725
+          ],
+          "target_rank": 0,
+          "reciprocal_rank": 0.0,
+          "latency_ms": 37.392,
+          "ranked_outputs": [
+            {
+              "rank": 1,
+              "row": 213376,
+              "title": "R.A.M.O.N.E.S. (Live)",
+              "artist": "Ramones",
+              "is_target": false
+            },
+            {
+              "rank": 2,
+              "row": 65452,
+              "title": "Firefly",
+              "artist": "Saves The Day",
+              "is_target": false
+            },
+            {
+              "rank": 3,
+              "row": 216969,
+              "title": "alt.end",
+              "artist": "The Cure",
+              "is_target": false
+            },
+            {
+              "rank": 4,
+              "row": 113806,
+              "title": "Nothing But A Good Time",
+              "artist": "Reel Big Fish",
+              "is_target": false
+            },
+            {
+              "rank": 5,
+              "row": 87943,
+              "title": "Bakunin",
+              "artist": "Against All Authority",
+              "is_target": false
+            },
+            {
+              "rank": 6,
+              "row": 171391,
+              "title": "Burnout",
+              "artist": "Green Day",
+              "is_target": false
+            },
+            {
+              "rank": 7,
+              "row": 41346,
+              "title": "She Dominates",
+              "artist": "Blitzkid",
+              "is_target": false
+            },
+            {
+              "rank": 8,
+              "row": 179613,
+              "title": "Sappy (2013 Mix)",
+              "artist": "Nirvana",
+              "is_target": false
+            },
+            {
+              "rank": 9,
+              "row": 156911,
+              "title": "The Enemy",
+              "artist": "Dirty Pretty Things",
+              "is_target": false
+            },
+            {
+              "rank": 10,
+              "row": 135613,
+              "title": "Flash of the Blade (2015 Remaster)",
+              "artist": "Iron Maiden",
+              "is_target": false
+            },
+            {
+              "rank": 11,
+              "row": 179435,
+              "title": "Little Miss Lover (2006 Remaster)",
+              "artist": "Red Hot Chili Peppers",
+              "is_target": false
+            },
+            {
+              "rank": 12,
+              "row": 53838,
+              "title": "Go!!!",
+              "artist": "Flow",
+              "is_target": false
+            },
+            {
+              "rank": 13,
+              "row": 214624,
+              "title": "Tack",
+              "artist": "Descendents",
+              "is_target": false
+            },
+            {
+              "rank": 14,
+              "row": 71955,
+              "title": "The Last Song",
+              "artist": "The All-American Rejects",
+              "is_target": false
+            },
+            {
+              "rank": 15,
+              "row": 140410,
+              "title": "She Ain't Your Baby",
+              "artist": "Screeching Weasel",
+              "is_target": false
+            },
+            {
+              "rank": 16,
+              "row": 159159,
+              "title": "At The Edge",
+              "artist": "Stiff Little Fingers",
+              "is_target": false
+            },
+            {
+              "rank": 17,
+              "row": 31041,
+              "title": "N.I.B.",
+              "artist": "Black Sabbath",
+              "is_target": false
+            },
+            {
+              "rank": 18,
+              "row": 147695,
+              "title": "Leave Mine To Me",
+              "artist": "Bad Religion",
+              "is_target": false
+            },
+            {
+              "rank": 19,
+              "row": 35961,
+              "title": "Stranglehold",
+              "artist": "UK Subs",
+              "is_target": false
+            },
+            {
+              "rank": 20,
+              "row": 70099,
+              "title": "A New Kind of Army",
+              "artist": "Anti-Flag",
+              "is_target": false
+            },
+            {
+              "rank": 21,
+              "row": 86633,
+              "title": "Rock House",
+              "artist": "Circle Jerks",
+              "is_target": false
+            },
+            {
+              "rank": 22,
+              "row": 26922,
+              "title": "No",
+              "artist": "Subhumans",
+              "is_target": false
+            },
+            {
+              "rank": 23,
+              "row": 88607,
+              "title": "My Love Is Shared",
+              "artist": "Death From Above 1979",
+              "is_target": false
+            },
+            {
+              "rank": 24,
+              "row": 164959,
+              "title": "This Is a Call",
+              "artist": "Foo Fighters",
+              "is_target": false
+            },
+            {
+              "rank": 25,
+              "row": 106030,
+              "title": "It's So Easy",
+              "artist": "Guns N' Roses",
+              "is_target": false
+            },
+            {
+              "rank": 26,
+              "row": 94992,
+              "title": "I Can't Stand It",
+              "artist": "Lou Reed",
+              "is_target": false
+            },
+            {
+              "rank": 27,
+              "row": 73241,
+              "title": "Shrinking",
+              "artist": "Youth Brigade",
+              "is_target": false
+            },
+            {
+              "rank": 28,
+              "row": 80008,
+              "title": "Money City Maniacs",
+              "artist": "Sloan",
+              "is_target": false
+            },
+            {
+              "rank": 29,
+              "row": 166743,
+              "title": "For Ivadell",
+              "artist": "Mineral",
+              "is_target": false
+            },
+            {
+              "rank": 30,
+              "row": 45805,
+              "title": "Dear Ol' Dad",
+              "artist": "Blind Melon",
+              "is_target": false
+            },
+            {
+              "rank": 31,
+              "row": 44322,
+              "title": "Uzu To Uzu (Album Mix)",
+              "artist": "NICO Touches the Walls",
+              "is_target": false
+            },
+            {
+              "rank": 32,
+              "row": 110852,
+              "title": "Automatic",
+              "artist": "Less Than Jake",
+              "is_target": false
+            },
+            {
+              "rank": 33,
+              "row": 104389,
+              "title": "Behind Closed Doors",
+              "artist": "Rise Against",
+              "is_target": false
+            },
+            {
+              "rank": 34,
+              "row": 99027,
+              "title": "Cool To Hate",
+              "artist": "The Offspring",
+              "is_target": false
+            },
+            {
+              "rank": 35,
+              "row": 60036,
+              "title": "(Long Live) Tony Perkis!",
+              "artist": "The Flat Stanleys",
+              "is_target": false
+            },
+            {
+              "rank": 36,
+              "row": 137758,
+              "title": "you can't eat cats kevin",
+              "artist": "Mom Jeans.",
+              "is_target": false
+            },
+            {
+              "rank": 37,
+              "row": 79077,
+              "title": "Riot",
+              "artist": "The Casualties",
+              "is_target": false
+            },
+            {
+              "rank": 38,
+              "row": 217925,
+              "title": "Paper",
+              "artist": "Talking Heads",
+              "is_target": false
+            },
+            {
+              "rank": 39,
+              "row": 7443,
+              "title": "Inaction",
+              "artist": "We Are Scientists",
+              "is_target": false
+            },
+            {
+              "rank": 40,
+              "row": 81282,
+              "title": "You'll Be Okay",
+              "artist": "Adjust the Sails",
+              "is_target": false
+            },
+            {
+              "rank": 41,
+              "row": 129848,
+              "title": "Leather Jacket",
+              "artist": "Joyce Manor",
+              "is_target": false
+            },
+            {
+              "rank": 42,
+              "row": 116936,
+              "title": "La télé me regarde",
+              "artist": "Vulgaires Machins",
+              "is_target": false
+            },
+            {
+              "rank": 43,
+              "row": 17478,
+              "title": "The Story Of My Life",
+              "artist": "Millencolin",
+              "is_target": false
+            },
+            {
+              "rank": 44,
+              "row": 62033,
+              "title": "Go'n Breakdown",
+              "artist": "Suicidal Tendencies",
+              "is_target": false
+            },
+            {
+              "rank": 45,
+              "row": 249297,
+              "title": "Walkin' Thru the Park",
+              "artist": "Muddy Waters",
+              "is_target": false
+            },
+            {
+              "rank": 46,
+              "row": 145630,
+              "title": "Jinx Removing (Alt)",
+              "artist": "Jawbreaker",
+              "is_target": false
+            },
+            {
+              "rank": 47,
+              "row": 167597,
+              "title": "St. Mary",
+              "artist": "Rancid",
+              "is_target": false
+            },
+            {
+              "rank": 48,
+              "row": 37171,
+              "title": "One Year Later",
+              "artist": "The Get Up Kids",
+              "is_target": false
+            },
+            {
+              "rank": 49,
+              "row": 76844,
+              "title": "Winnebago Warrior",
+              "artist": "Dead Kennedys",
+              "is_target": false
+            },
+            {
+              "rank": 50,
+              "row": 90354,
+              "title": "Happy Birthday To Me",
+              "artist": "The Vandals",
+              "is_target": false
+            }
+          ]
+        },
+        {
+          "pair_id": "H08",
+          "scene": "shoegaze/classic-rock",
+          "query": {
+            "title": "Leave Them All Behind",
+            "artist": "Ride"
+          },
+          "target": {
+            "title": "Won't Get Fooled Again",
+            "artist": "The Who"
+          },
+          "query_found": true,
+          "query_catalogue": {
+            "row": 15844,
+            "title": "Leave Them All Behind (2001 Remaster)",
+            "artist": "Ride"
+          },
+          "target_found": true,
+          "target_catalogue_rows": [
+            6383,
+            111765
+          ],
+          "target_rank": 0,
+          "reciprocal_rank": 0.0,
+          "latency_ms": 39.129,
+          "ranked_outputs": [
+            {
+              "rank": 1,
+              "row": 63540,
+              "title": "UTAKATA",
+              "artist": "Takeharu Ishimoto",
+              "is_target": false
+            },
+            {
+              "rank": 2,
+              "row": 1492,
+              "title": "San Cristobal De Las Casas",
+              "artist": "Swirlies",
+              "is_target": false
+            },
+            {
+              "rank": 3,
+              "row": 59243,
+              "title": "Isoders Dronning",
+              "artist": "Enslaved",
+              "is_target": false
+            },
+            {
+              "rank": 4,
+              "row": 44957,
+              "title": "Age of Excuse V",
+              "artist": "Mgła",
+              "is_target": false
+            },
+            {
+              "rank": 5,
+              "row": 152496,
+              "title": "Funeral of Existence",
+              "artist": "Mayhem",
+              "is_target": false
+            },
+            {
+              "rank": 6,
+              "row": 17721,
+              "title": "Come in Alone",
+              "artist": "my bloody valentine",
+              "is_target": false
+            },
+            {
+              "rank": 7,
+              "row": 149207,
+              "title": "Reconquest",
+              "artist": "Shadow of Intent",
+              "is_target": false
+            },
+            {
+              "rank": 8,
+              "row": 113672,
+              "title": "Sidewalk",
+              "artist": "Built To Spill",
+              "is_target": false
+            },
+            {
+              "rank": 9,
+              "row": 140842,
+              "title": "Wrecking Crew",
+              "artist": "Adolescents",
+              "is_target": false
+            },
+            {
+              "rank": 10,
+              "row": 216222,
+              "title": "The Itchy Glowbo Blow",
+              "artist": "Cocteau Twins",
+              "is_target": false
+            },
+            {
+              "rank": 11,
+              "row": 75339,
+              "title": "Sungrave",
+              "artist": "Glare",
+              "is_target": false
+            },
+            {
+              "rank": 12,
+              "row": 156548,
+              "title": "Everything Must Go (2016 Remastered Version)",
+              "artist": "Manic Street Preachers",
+              "is_target": false
+            },
+            {
+              "rank": 13,
+              "row": 213929,
+              "title": "Faith Alone",
+              "artist": "Bad Religion",
+              "is_target": false
+            },
+            {
+              "rank": 14,
+              "row": 105458,
+              "title": "Tantrum",
+              "artist": "Ned's Atomic Dustbin",
+              "is_target": false
+            },
+            {
+              "rank": 15,
+              "row": 19459,
+              "title": "Wicked Garden",
+              "artist": "Stone Temple Pilots",
+              "is_target": false
+            },
+            {
+              "rank": 16,
+              "row": 132342,
+              "title": "Far Removed",
+              "artist": "Narrow Head",
+              "is_target": false
+            },
+            {
+              "rank": 17,
+              "row": 98849,
+              "title": "The End Of Everything",
+              "artist": "The Charlatans",
+              "is_target": false
+            },
+            {
+              "rank": 18,
+              "row": 143492,
+              "title": "Faceless ones",
+              "artist": "Gorguts",
+              "is_target": false
+            },
+            {
+              "rank": 19,
+              "row": 160406,
+              "title": "The World Burns",
+              "artist": "The Haunted",
+              "is_target": false
+            },
+            {
+              "rank": 20,
+              "row": 158517,
+              "title": "Malice Through the Looking Glass",
+              "artist": "Cradle Of Filth",
+              "is_target": false
+            },
+            {
+              "rank": 21,
+              "row": 132055,
+              "title": "Mighty Ravendark",
+              "artist": "IMMORTAL",
+              "is_target": false
+            },
+            {
+              "rank": 22,
+              "row": 41212,
+              "title": "Five, Eight And Ten",
+              "artist": "Mineral",
+              "is_target": false
+            },
+            {
+              "rank": 23,
+              "row": 68170,
+              "title": "The Brimstone Gate",
+              "artist": "Naglfar",
+              "is_target": false
+            },
+            {
+              "rank": 24,
+              "row": 30320,
+              "title": "Parachutes",
+              "artist": "Balance and Composure",
+              "is_target": false
+            },
+            {
+              "rank": 25,
+              "row": 183417,
+              "title": "Prunesnail",
+              "artist": "quannnic",
+              "is_target": false
+            },
+            {
+              "rank": 26,
+              "row": 179083,
+              "title": "Prove Yourself (Drill Version)",
+              "artist": "Radiohead",
+              "is_target": false
+            },
+            {
+              "rank": 27,
+              "row": 120528,
+              "title": "Blackout",
+              "artist": "Lush",
+              "is_target": false
+            },
+            {
+              "rank": 28,
+              "row": 155238,
+              "title": "Broderskapets Ring",
+              "artist": "Dimmu Borgir",
+              "is_target": false
+            },
+            {
+              "rank": 29,
+              "row": 24387,
+              "title": "Lovely Crawl",
+              "artist": "Fleeting Joys",
+              "is_target": false
+            },
+            {
+              "rank": 30,
+              "row": 216955,
+              "title": "The Only One (Album Version)",
+              "artist": "The Cure",
+              "is_target": false
+            },
+            {
+              "rank": 31,
+              "row": 78305,
+              "title": "Power and Sacrifice",
+              "artist": "Swans",
+              "is_target": false
+            },
+            {
+              "rank": 32,
+              "row": 73354,
+              "title": "Shadows of Moonlit Nights",
+              "artist": "Autumn's Grey Solace",
+              "is_target": false
+            },
+            {
+              "rank": 33,
+              "row": 61534,
+              "title": "Atrum Regina",
+              "artist": "Dark Funeral",
+              "is_target": false
+            },
+            {
+              "rank": 34,
+              "row": 66828,
+              "title": "The Wanderer",
+              "artist": "Emperor",
+              "is_target": false
+            },
+            {
+              "rank": 35,
+              "row": 113246,
+              "title": "Round (Remastered)",
+              "artist": "Sunny Day Real Estate",
+              "is_target": false
+            },
+            {
+              "rank": 36,
+              "row": 108301,
+              "title": "Almost Gold",
+              "artist": "The Jesus And Mary Chain",
+              "is_target": false
+            },
+            {
+              "rank": 37,
+              "row": 57248,
+              "title": "Scenic",
+              "artist": "Ozean",
+              "is_target": false
+            },
+            {
+              "rank": 38,
+              "row": 151948,
+              "title": "Undone",
+              "artist": "Rowland S. Howard",
+              "is_target": false
+            },
+            {
+              "rank": 39,
+              "row": 115290,
+              "title": "Heaven Sent",
+              "artist": "INXS",
+              "is_target": false
+            },
+            {
+              "rank": 40,
+              "row": 50713,
+              "title": "Mildred Pierce",
+              "artist": "Sonic Youth",
+              "is_target": false
+            },
+            {
+              "rank": 41,
+              "row": 57150,
+              "title": "Million",
+              "artist": "Jawbreaker",
+              "is_target": false
+            },
+            {
+              "rank": 42,
+              "row": 33734,
+              "title": "Nexion 218",
+              "artist": "Dissection",
+              "is_target": false
+            },
+            {
+              "rank": 43,
+              "row": 24580,
+              "title": "Show Me Mary",
+              "artist": "Catherine Wheel",
+              "is_target": false
+            },
+            {
+              "rank": 44,
+              "row": 69593,
+              "title": "Yekteniya IV: Milost'",
+              "artist": "PATRIARKH",
+              "is_target": false
+            },
+            {
+              "rank": 45,
+              "row": 54621,
+              "title": "Breather",
+              "artist": "Chapterhouse",
+              "is_target": false
+            },
+            {
+              "rank": 46,
+              "row": 119668,
+              "title": "Baptise in Fire and Ice",
+              "artist": "Bathory",
+              "is_target": false
+            },
+            {
+              "rank": 47,
+              "row": 57855,
+              "title": "Silver",
+              "artist": "Bleed",
+              "is_target": false
+            },
+            {
+              "rank": 48,
+              "row": 70747,
+              "title": "Wave of Babies",
+              "artist": "Animals As Leaders",
+              "is_target": false
+            },
+            {
+              "rank": 49,
+              "row": 57699,
+              "title": "Tombes Oubliées",
+              "artist": "The Brian Jonestown Massacre",
+              "is_target": false
+            },
+            {
+              "rank": 50,
+              "row": 156509,
+              "title": "In Chamber",
+              "artist": "Worst Party Ever",
+              "is_target": false
+            }
+          ]
+        },
+        {
+          "pair_id": "H11",
+          "scene": "heavy-metal",
+          "query": {
+            "title": "This Means War",
+            "artist": "Avenged Sevenfold"
+          },
+          "target": {
+            "title": "Sad but True",
+            "artist": "Metallica"
+          },
+          "query_found": true,
+          "query_catalogue": {
+            "row": 36311,
+            "title": "This Means War",
+            "artist": "Avenged Sevenfold"
+          },
+          "target_found": true,
+          "target_catalogue_rows": [
+            23969,
+            180904
+          ],
+          "target_rank": 5,
+          "reciprocal_rank": 0.2,
+          "latency_ms": 36.739,
+          "ranked_outputs": [
+            {
+              "rank": 1,
+              "row": 165738,
+              "title": "Headtrip",
+              "artist": "Sevendust",
+              "is_target": false
+            },
+            {
+              "rank": 2,
+              "row": 45492,
+              "title": "Domination",
+              "artist": "Pantera",
+              "is_target": false
+            },
+            {
+              "rank": 3,
+              "row": 220495,
+              "title": "Vendetta",
+              "artist": "Slipknot",
+              "is_target": false
+            },
+            {
+              "rank": 4,
+              "row": 144104,
+              "title": "Become Divine",
+              "artist": "Orthodox",
+              "is_target": false
+            },
+            {
+              "rank": 5,
+              "row": 23969,
+              "title": "Sad But True",
+              "artist": "Metallica",
+              "is_target": true
+            },
+            {
+              "rank": 6,
+              "row": 53498,
+              "title": "Nothing Left To Lose",
+              "artist": "American Hi-Fi",
+              "is_target": false
+            },
+            {
+              "rank": 7,
+              "row": 125954,
+              "title": "Diamond Eyes",
+              "artist": "Deftones",
+              "is_target": false
+            },
+            {
+              "rank": 8,
+              "row": 69954,
+              "title": "Love-Hate-Sex-Pain",
+              "artist": "Godsmack",
+              "is_target": false
+            },
+            {
+              "rank": 9,
+              "row": 39932,
+              "title": "Man in the Box",
+              "artist": "Alice In Chains",
+              "is_target": false
+            },
+            {
+              "rank": 10,
+              "row": 136087,
+              "title": "Idle Flow",
+              "artist": "Peter Murphy",
+              "is_target": false
+            },
+            {
+              "rank": 11,
+              "row": 111479,
+              "title": "Illusion",
+              "artist": "Creed",
+              "is_target": false
+            },
+            {
+              "rank": 12,
+              "row": 87625,
+              "title": "Shout 2000",
+              "artist": "Disturbed",
+              "is_target": false
+            },
+            {
+              "rank": 13,
+              "row": 271084,
+              "title": "Come Back",
+              "artist": "USHER",
+              "is_target": false
+            },
+            {
+              "rank": 14,
+              "row": 80951,
+              "title": "Captain Goat",
+              "artist": "Avatar",
+              "is_target": false
+            },
+            {
+              "rank": 15,
+              "row": 45911,
+              "title": "Les Boys",
+              "artist": "Eric Lapointe",
+              "is_target": false
+            },
+            {
+              "rank": 16,
+              "row": 156519,
+              "title": "Your Power",
+              "artist": "Downset",
+              "is_target": false
+            },
+            {
+              "rank": 17,
+              "row": 149044,
+              "title": "Crazy",
+              "artist": "Mushroomhead",
+              "is_target": false
+            },
+            {
+              "rank": 18,
+              "row": 56541,
+              "title": "Pure Sincerity",
+              "artist": "DevilDriver",
+              "is_target": false
+            },
+            {
+              "rank": 19,
+              "row": 179450,
+              "title": "Funky Crime",
+              "artist": "Red Hot Chili Peppers",
+              "is_target": false
+            },
+            {
+              "rank": 20,
+              "row": 147813,
+              "title": "Stop The World (Album)",
+              "artist": "Extreme",
+              "is_target": false
+            },
+            {
+              "rank": 21,
+              "row": 116604,
+              "title": "Which Way To Free? (Album Version)",
+              "artist": "Suicidal Tendencies",
+              "is_target": false
+            },
+            {
+              "rank": 22,
+              "row": 87658,
+              "title": "Clean",
+              "artist": "Watcha",
+              "is_target": false
+            },
+            {
+              "rank": 23,
+              "row": 220757,
+              "title": "Gears of War (Remastered 2019)",
+              "artist": "Megadeth",
+              "is_target": false
+            },
+            {
+              "rank": 24,
+              "row": 112784,
+              "title": "Still Rise",
+              "artist": "Strife",
+              "is_target": false
+            },
+            {
+              "rank": 25,
+              "row": 65990,
+              "title": "Primal",
+              "artist": "Soen",
+              "is_target": false
+            },
+            {
+              "rank": 26,
+              "row": 153096,
+              "title": "Inside",
+              "artist": "Soil",
+              "is_target": false
+            },
+            {
+              "rank": 27,
+              "row": 180797,
+              "title": "Iced Honey",
+              "artist": "Lou Reed",
+              "is_target": false
+            },
+            {
+              "rank": 28,
+              "row": 59990,
+              "title": "Dead & Bloated (2017 Remaster)",
+              "artist": "Stone Temple Pilots",
+              "is_target": false
+            },
+            {
+              "rank": 29,
+              "row": 18975,
+              "title": "Blame It on the Boom Boom",
+              "artist": "Black Stone Cherry",
+              "is_target": false
+            },
+            {
+              "rank": 30,
+              "row": 214305,
+              "title": "X-Kid",
+              "artist": "Green Day",
+              "is_target": false
+            },
+            {
+              "rank": 31,
+              "row": 2306,
+              "title": "Take Me To Hell",
+              "artist": "Bodysnatcher",
+              "is_target": false
+            },
+            {
+              "rank": 32,
+              "row": 7177,
+              "title": "Last Resort",
+              "artist": "Papa Roach",
+              "is_target": false
+            },
+            {
+              "rank": 33,
+              "row": 180929,
+              "title": "Ego Brain",
+              "artist": "System of A Down",
+              "is_target": false
+            },
+            {
+              "rank": 34,
+              "row": 117137,
+              "title": "Bloody Sunday",
+              "artist": "Saving Abel",
+              "is_target": false
+            },
+            {
+              "rank": 35,
+              "row": 55740,
+              "title": "You Got Me Fucked Up",
+              "artist": "Deez Nuts",
+              "is_target": false
+            },
+            {
+              "rank": 36,
+              "row": 38130,
+              "title": "Family System",
+              "artist": "Chevelle",
+              "is_target": false
+            },
+            {
+              "rank": 37,
+              "row": 136420,
+              "title": "Sham Pain",
+              "artist": "Five Finger Death Punch",
+              "is_target": false
+            },
+            {
+              "rank": 38,
+              "row": 162763,
+              "title": "I'd Rather Not Say",
+              "artist": "Boundaries",
+              "is_target": false
+            },
+            {
+              "rank": 39,
+              "row": 153788,
+              "title": "FREEZE MY MIND",
+              "artist": "Emigrate",
+              "is_target": false
+            },
+            {
+              "rank": 40,
+              "row": 120190,
+              "title": "Cut to Fit",
+              "artist": "Demon Hunter",
+              "is_target": false
+            },
+            {
+              "rank": 41,
+              "row": 121663,
+              "title": "Bury Me",
+              "artist": "Lionheart",
+              "is_target": false
+            },
+            {
+              "rank": 42,
+              "row": 56812,
+              "title": "Desperate People (2023 Remaster)",
+              "artist": "Living Colour",
+              "is_target": false
+            },
+            {
+              "rank": 43,
+              "row": 152754,
+              "title": "Rock or Bust",
+              "artist": "AC/DC",
+              "is_target": false
+            },
+            {
+              "rank": 44,
+              "row": 50500,
+              "title": "Trenches",
+              "artist": "Pop Evil",
+              "is_target": false
+            },
+            {
+              "rank": 45,
+              "row": 110348,
+              "title": "Nicky Barnes AKA It's Alright (feat. Jungle Brown)",
+              "artist": "Camp Lo",
+              "is_target": false
+            },
+            {
+              "rank": 46,
+              "row": 148630,
+              "title": "King of a Stellar War",
+              "artist": "Rotting Christ",
+              "is_target": false
+            },
+            {
+              "rank": 47,
+              "row": 169569,
+              "title": "...and Then She Bled",
+              "artist": "Suicide Silence",
+              "is_target": false
+            },
+            {
+              "rank": 48,
+              "row": 22422,
+              "title": "Sucker Train Blues",
+              "artist": "Velvet Revolver",
+              "is_target": false
+            },
+            {
+              "rank": 49,
+              "row": 78840,
+              "title": "What Will Become",
+              "artist": "Fear Factory",
+              "is_target": false
+            },
+            {
+              "rank": 50,
+              "row": 149923,
+              "title": "The Nameless Elite",
+              "artist": "Asphyx",
+              "is_target": false
+            }
+          ]
+        },
+        {
+          "pair_id": "H13",
+          "scene": "city-pop/k-pop",
+          "query": {
+            "title": "Plastic Love",
+            "artist": "Mariya Takeuchi"
+          },
+          "target": {
+            "title": "City Love",
+            "artist": "Yubin"
+          },
+          "query_found": true,
+          "query_catalogue": {
+            "row": 62065,
+            "title": "Plastic Love",
+            "artist": "Mariya Takeuchi"
+          },
+          "target_found": false,
+          "target_catalogue_rows": [],
+          "target_rank": 0,
+          "reciprocal_rank": 0.0,
+          "latency_ms": 36.199,
+          "ranked_outputs": [
+            {
+              "rank": 1,
+              "row": 81505,
+              "title": "Girls And Boys",
+              "artist": "Marcus Miller",
+              "is_target": false
+            },
+            {
+              "rank": 2,
+              "row": 95442,
+              "title": "Stuttgart Aria I",
+              "artist": "Biréli Lagrène and Jaco Pastorius",
+              "is_target": false
+            },
+            {
+              "rank": 3,
+              "row": 55582,
+              "title": "Watching You (Single Version; 2006 Remaster)",
+              "artist": "Slave",
+              "is_target": false
+            },
+            {
+              "rank": 4,
+              "row": 76726,
+              "title": "Bread Sandwiches",
+              "artist": "Bernard Wright",
+              "is_target": false
+            },
+            {
+              "rank": 5,
+              "row": 102553,
+              "title": "Manatsu no Sequence",
+              "artist": "Momoko Kikuchi",
+              "is_target": false
+            },
+            {
+              "rank": 6,
+              "row": 182369,
+              "title": "GLBTM (Studio Outtakes)",
+              "artist": "Daft Punk",
+              "is_target": false
+            },
+            {
+              "rank": 7,
+              "row": 121958,
+              "title": "HE'S MY MUSIC",
+              "artist": "Anri",
+              "is_target": false
+            },
+            {
+              "rank": 8,
+              "row": 133614,
+              "title": "Chills",
+              "artist": "Ladyhawke",
+              "is_target": false
+            },
+            {
+              "rank": 9,
+              "row": 191051,
+              "title": "Pode, Waldir?",
+              "artist": "Gilberto Gil",
+              "is_target": false
+            },
+            {
+              "rank": 10,
+              "row": 96616,
+              "title": "Get Hot!",
+              "artist": "Himiko Kikuchi",
+              "is_target": false
+            },
+            {
+              "rank": 11,
+              "row": 152967,
+              "title": "The Last Emo Boy on Earth",
+              "artist": "Chinese Football",
+              "is_target": false
+            },
+            {
+              "rank": 12,
+              "row": 17334,
+              "title": "T-Jam",
+              "artist": "George Duke",
+              "is_target": false
+            },
+            {
+              "rank": 13,
+              "row": 115010,
+              "title": "Foreign Language (Rocco Raimundo Re-Interpretation)",
+              "artist": "Flight Facilities",
+              "is_target": false
+            },
+            {
+              "rank": 14,
+              "row": 221263,
+              "title": "Splatch (2002 Remaster)",
+              "artist": "Miles Davis",
+              "is_target": false
+            },
+            {
+              "rank": 15,
+              "row": 89761,
+              "title": "One Man Entourage",
+              "artist": "The Bamboos",
+              "is_target": false
+            },
+            {
+              "rank": 16,
+              "row": 66083,
+              "title": "A Place In Your World",
+              "artist": "Flying Colors",
+              "is_target": false
+            },
+            {
+              "rank": 17,
+              "row": 223932,
+              "title": "Junku",
+              "artist": "Herbie Hancock",
+              "is_target": false
+            },
+            {
+              "rank": 18,
+              "row": 53551,
+              "title": "Transfusion",
+              "artist": "Hiroshi Sato",
+              "is_target": false
+            },
+            {
+              "rank": 19,
+              "row": 139215,
+              "title": "Burnin' Up",
+              "artist": "Imagination",
+              "is_target": false
+            },
+            {
+              "rank": 20,
+              "row": 158763,
+              "title": "Naa Er Druene Paa Sitt Beste",
+              "artist": "Lindstrøm",
+              "is_target": false
+            },
+            {
+              "rank": 21,
+              "row": 171702,
+              "title": "Boa Vida",
+              "artist": "Cazuza",
+              "is_target": false
+            },
+            {
+              "rank": 22,
+              "row": 171245,
+              "title": "Get It Together",
+              "artist": "Lettuce",
+              "is_target": false
+            },
+            {
+              "rank": 23,
+              "row": 135652,
+              "title": "Fabulous People",
+              "artist": "Joe Jackson",
+              "is_target": false
+            },
+            {
+              "rank": 24,
+              "row": 184124,
+              "title": "1 for 1, DiMaggio",
+              "artist": "Vulfpeck",
+              "is_target": false
+            },
+            {
+              "rank": 25,
+              "row": 138045,
+              "title": "Picture On My Wall (Live)",
+              "artist": "Orgone",
+              "is_target": false
+            },
+            {
+              "rank": 26,
+              "row": 92625,
+              "title": "Milk Tooth",
+              "artist": "RJD2",
+              "is_target": false
+            },
+            {
+              "rank": 27,
+              "row": 28385,
+              "title": "Travelers",
+              "artist": "The Square / T-Square",
+              "is_target": false
+            },
+            {
+              "rank": 28,
+              "row": 139985,
+              "title": "The Best Film He Ever Made",
+              "artist": "Sad Lovers & Giants",
+              "is_target": false
+            },
+            {
+              "rank": 29,
+              "row": 169781,
+              "title": "The Traveller, Pt. 2",
+              "artist": "The Haggis Horns",
+              "is_target": false
+            },
+            {
+              "rank": 30,
+              "row": 90395,
+              "title": "You And I (Extended M+M Mix)",
+              "artist": "Rick James",
+              "is_target": false
+            },
+            {
+              "rank": 31,
+              "row": 95181,
+              "title": "Glow",
+              "artist": "Manu Katché",
+              "is_target": false
+            },
+            {
+              "rank": 32,
+              "row": 163505,
+              "title": "Shock Me",
+              "artist": "Kiss",
+              "is_target": false
+            },
+            {
+              "rank": 33,
+              "row": 18824,
+              "title": "Life Goes On",
+              "artist": "Hiromi",
+              "is_target": false
+            },
+            {
+              "rank": 34,
+              "row": 224227,
+              "title": "What About Me? (2024 Remixed + Remastered)",
+              "artist": "Snarky Puppy",
+              "is_target": false
+            },
+            {
+              "rank": 35,
+              "row": 58908,
+              "title": "CLOSE YOUR EYES",
+              "artist": "Sadistics",
+              "is_target": false
+            },
+            {
+              "rank": 36,
+              "row": 78142,
+              "title": "Shaku Na Yesterday (2022 Restored Version)",
+              "artist": "Tomoko Aran",
+              "is_target": false
+            },
+            {
+              "rank": 37,
+              "row": 132483,
+              "title": "Coastal Postal",
+              "artist": "The Fearless Flyers",
+              "is_target": false
+            },
+            {
+              "rank": 38,
+              "row": 59645,
+              "title": "On Sundays",
+              "artist": "Epo",
+              "is_target": false
+            },
+            {
+              "rank": 39,
+              "row": 72504,
+              "title": "Jasmin",
+              "artist": "Naniwa Express",
+              "is_target": false
+            },
+            {
+              "rank": 40,
+              "row": 25072,
+              "title": "Tropical Fish (2020 Remastered)",
+              "artist": "Kingo Hamada",
+              "is_target": false
+            },
+            {
+              "rank": 41,
+              "row": 183823,
+              "title": "Disco Dancer",
+              "artist": "Kiki Gyan",
+              "is_target": false
+            },
+            {
+              "rank": 42,
+              "row": 80457,
+              "title": "Kiska",
+              "artist": "Tatsuro Yamashita",
+              "is_target": false
+            },
+            {
+              "rank": 43,
+              "row": 139330,
+              "title": "Pia Dance",
+              "artist": "Yin Yin",
+              "is_target": false
+            },
+            {
+              "rank": 44,
+              "row": 215880,
+              "title": "Pitch Dark",
+              "artist": "Chon",
+              "is_target": false
+            },
+            {
+              "rank": 45,
+              "row": 119108,
+              "title": "Uman (Mixed)",
+              "artist": "Kokoroko",
+              "is_target": false
+            },
+            {
+              "rank": 46,
+              "row": 98439,
+              "title": "Stay Close",
+              "artist": "Yukihiro Takahashi",
+              "is_target": false
+            },
+            {
+              "rank": 47,
+              "row": 184161,
+              "title": "South of the River",
+              "artist": "Tom Misch",
+              "is_target": false
+            },
+            {
+              "rank": 48,
+              "row": 155306,
+              "title": "Last Chance",
+              "artist": "The Brooks",
+              "is_target": false
+            },
+            {
+              "rank": 49,
+              "row": 49301,
+              "title": "Boa Vista (Ao Vivo)",
+              "artist": "Joyce Alane",
+              "is_target": false
+            },
+            {
+              "rank": 50,
+              "row": 53960,
+              "title": "Riding With the King",
+              "artist": "Eric Clapton",
+              "is_target": false
+            }
+          ]
+        },
+        {
+          "pair_id": "H15",
+          "scene": "r&b/pop",
+          "query": {
+            "title": "Halo",
+            "artist": "Beyoncé"
+          },
+          "target": {
+            "title": "Already Gone",
+            "artist": "Kelly Clarkson"
+          },
+          "query_found": true,
+          "query_catalogue": {
+            "row": 16193,
+            "title": "Halo",
+            "artist": "Beyoncé"
+          },
+          "target_found": true,
+          "target_catalogue_rows": [
+            24145
+          ],
+          "target_rank": 0,
+          "reciprocal_rank": 0.0,
+          "latency_ms": 36.983,
+          "ranked_outputs": [
+            {
+              "rank": 1,
+              "row": 270538,
+              "title": "Sledgehammer (From The Motion Picture \"Star Trek Beyond\")",
+              "artist": "Rihanna",
+              "is_target": false
+            },
+            {
+              "rank": 2,
+              "row": 11091,
+              "title": "maman",
+              "artist": "Louane",
+              "is_target": false
+            },
+            {
+              "rank": 3,
+              "row": 158094,
+              "title": "Rest On Us (Live)",
+              "artist": "UPPERROOM",
+              "is_target": false
+            },
+            {
+              "rank": 4,
+              "row": 84186,
+              "title": "Happy",
+              "artist": "Leona Lewis",
+              "is_target": false
+            },
+            {
+              "rank": 5,
+              "row": 135543,
+              "title": "19th Hour",
+              "artist": "Griff",
+              "is_target": false
+            },
+            {
+              "rank": 6,
+              "row": 123136,
+              "title": "For Your Glory (Live)",
+              "artist": "Tasha Cobbs Leonard",
+              "is_target": false
+            },
+            {
+              "rank": 7,
+              "row": 82707,
+              "title": "Feet Don't Fail Me Now",
+              "artist": "Foxes",
+              "is_target": false
+            },
+            {
+              "rank": 8,
+              "row": 20531,
+              "title": "Never Let Me Go",
+              "artist": "Florence + The Machine",
+              "is_target": false
+            },
+            {
+              "rank": 9,
+              "row": 74118,
+              "title": "Ecos De Amor",
+              "artist": "Jesse & Joy",
+              "is_target": false
+            },
+            {
+              "rank": 10,
+              "row": 152747,
+              "title": "Reaper",
+              "artist": "Sia",
+              "is_target": false
+            },
+            {
+              "rank": 11,
+              "row": 21419,
+              "title": "Stars",
+              "artist": "Myla",
+              "is_target": false
+            },
+            {
+              "rank": 12,
+              "row": 25007,
+              "title": "Canary",
+              "artist": "CHUU",
+              "is_target": false
+            },
+            {
+              "rank": 13,
+              "row": 137242,
+              "title": "Malgré tout",
+              "artist": "Chimène Badi",
+              "is_target": false
+            },
+            {
+              "rank": 14,
+              "row": 102187,
+              "title": "traitor",
+              "artist": "Olivia Rodrigo",
+              "is_target": false
+            },
+            {
+              "rank": 15,
+              "row": 96522,
+              "title": "Art of Love (feat. Jordin Sparks)",
+              "artist": "Guy Sebastian",
+              "is_target": false
+            },
+            {
+              "rank": 16,
+              "row": 102658,
+              "title": "Jerome",
+              "artist": "Zella Day",
+              "is_target": false
+            },
+            {
+              "rank": 17,
+              "row": 131623,
+              "title": "I Know I Know I Know (Beyond)",
+              "artist": "Whee In",
+              "is_target": false
+            },
+            {
+              "rank": 18,
+              "row": 260416,
+              "title": "Forgiveness",
+              "artist": "Rina Sawayama",
+              "is_target": false
+            },
+            {
+              "rank": 19,
+              "row": 44759,
+              "title": "I Blame Myself",
+              "artist": "Sky Ferreira",
+              "is_target": false
+            },
+            {
+              "rank": 20,
+              "row": 10314,
+              "title": "A fleur de toi",
+              "artist": "Vitaa",
+              "is_target": false
+            },
+            {
+              "rank": 21,
+              "row": 165566,
+              "title": "I Just Don't Know You Yet (feat. Flames Collective) (Choral Version)",
+              "artist": "Absolutely",
+              "is_target": false
+            },
+            {
+              "rank": 22,
+              "row": 14306,
+              "title": "Brown Eyes",
+              "artist": "Destiny's Child",
+              "is_target": false
+            },
+            {
+              "rank": 23,
+              "row": 119286,
+              "title": "FOMO",
+              "artist": "HWASA",
+              "is_target": false
+            },
+            {
+              "rank": 24,
+              "row": 101311,
+              "title": "Elle voulait jouer cabaret",
+              "artist": "Patricia Kaas",
+              "is_target": false
+            },
+            {
+              "rank": 25,
+              "row": 9240,
+              "title": "T'es pas là",
+              "artist": "Valentina",
+              "is_target": false
+            },
+            {
+              "rank": 26,
+              "row": 57498,
+              "title": "Believer",
+              "artist": "Lea Michele",
+              "is_target": false
+            },
+            {
+              "rank": 27,
+              "row": 177350,
+              "title": "I Come Apart (feat. Florence Welch)",
+              "artist": "A$AP Rocky",
+              "is_target": false
+            },
+            {
+              "rank": 28,
+              "row": 178414,
+              "title": "Ghost in the Machine (feat. Phoebe Bridgers)",
+              "artist": "SZA",
+              "is_target": false
+            },
+            {
+              "rank": 29,
+              "row": 161031,
+              "title": "Aftermath",
+              "artist": "Lauren Spencer Smith",
+              "is_target": false
+            },
+            {
+              "rank": 30,
+              "row": 137721,
+              "title": "You're No Good",
+              "artist": "Major Lazer",
+              "is_target": false
+            },
+            {
+              "rank": 31,
+              "row": 186658,
+              "title": "DDU-DU DDU-DU (Japan Version / BLACKPINK 2019-2020 WORLD TOUR IN YOUR AREA -TOKYO DOME-)",
+              "artist": "BLACKPINK",
+              "is_target": false
+            },
+            {
+              "rank": 32,
+              "row": 47103,
+              "title": "The Fall Song",
+              "artist": "Bridgit Mendler",
+              "is_target": false
+            },
+            {
+              "rank": 33,
+              "row": 108484,
+              "title": "Better Than This",
+              "artist": "Paloma Faith",
+              "is_target": false
+            },
+            {
+              "rank": 34,
+              "row": 48711,
+              "title": "Starry Night",
+              "artist": "MAMAMOO",
+              "is_target": false
+            },
+            {
+              "rank": 35,
+              "row": 55381,
+              "title": "The Story of Us",
+              "artist": "milet",
+              "is_target": false
+            },
+            {
+              "rank": 36,
+              "row": 182812,
+              "title": "Say It (Illenium Remix)",
+              "artist": "Flume",
+              "is_target": false
+            },
+            {
+              "rank": 37,
+              "row": 3452,
+              "title": "Maybe You’re The Problem",
+              "artist": "Ava Max",
+              "is_target": false
+            },
+            {
+              "rank": 38,
+              "row": 117089,
+              "title": "Mighty To Save",
+              "artist": "Hillsong Chapel",
+              "is_target": false
+            },
+            {
+              "rank": 39,
+              "row": 54358,
+              "title": "235 (2:35 I Want You)",
+              "artist": "Ashanti",
+              "is_target": false
+            },
+            {
+              "rank": 40,
+              "row": 175753,
+              "title": "Cross You Out (Live)",
+              "artist": "Charli xcx",
+              "is_target": false
+            },
+            {
+              "rank": 41,
+              "row": 7911,
+              "title": "Pretty, Pink and Soft",
+              "artist": "The Army, The Navy",
+              "is_target": false
+            },
+            {
+              "rank": 42,
+              "row": 161105,
+              "title": "Summertime",
+              "artist": "Fantasia",
+              "is_target": false
+            },
+            {
+              "rank": 43,
+              "row": 73395,
+              "title": "Because of You",
+              "artist": "Kelly Clarkson",
+              "is_target": false
+            },
+            {
+              "rank": 44,
+              "row": 174867,
+              "title": "Foolish One (Taylor’s Version) (From The Vault)",
+              "artist": "Taylor Swift",
+              "is_target": false
+            },
+            {
+              "rank": 45,
+              "row": 10765,
+              "title": "Something Better",
+              "artist": "Sofia Camara",
+              "is_target": false
+            },
+            {
+              "rank": 46,
+              "row": 146421,
+              "title": "Wild",
+              "artist": "Erin Kinsey",
+              "is_target": false
+            },
+            {
+              "rank": 47,
+              "row": 134711,
+              "title": "Grateful",
+              "artist": "Rita Ora",
+              "is_target": false
+            },
+            {
+              "rank": 48,
+              "row": 205608,
+              "title": "Love Me More",
+              "artist": "Chase & Status",
+              "is_target": false
+            },
+            {
+              "rank": 49,
+              "row": 49681,
+              "title": "Whistle Down The Wind",
+              "artist": "Tina Arena",
+              "is_target": false
+            },
+            {
+              "rank": 50,
+              "row": 17532,
+              "title": "Total Eclipse Of The Heart (Re-Recorded)",
+              "artist": "Bonnie Tyler",
+              "is_target": false
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "comparisons_to_production_baseline": {}
+}

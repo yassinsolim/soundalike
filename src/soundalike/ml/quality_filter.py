@@ -49,8 +49,13 @@ _TITLE_JUNK_PATTERNS: List[str] = [
     r"\ba\s+cappella\b",
     # Cover / tribute copies
     r"^tribute\s+to\b",
-    r"\btribute\s+version\b",
-    r"\bcover\s+version\b",
+    r"\btribute\s+(?:version|recording)\b",
+    r"\bcover\s+(?:version|record)\b",
+    r"\(\s*cover(?:\s+of\b[^)]*)?\s*\)",
+    r"\s+-\s+cover(?:\s+of\b.*)?$",
+    r"\boriginally\s+performed\s+by\b",
+    r"\bin\s+the\s+style\s+of\b",
+    r"\bas\s+made\s+famous\s+by\b",
     r"\bpiano\s+version\b",
     r"\bstring\s+(?:quartet|version)\b",
     r"\borchestral\s+version\b",
@@ -59,8 +64,10 @@ _TITLE_JUNK_PATTERNS: List[str] = [
     r"\bmarimba\s+remix\b",
     r"\bringtone\b",
     r"\b8\s*bit\s+(?:version|cover)\b",
-    # Multi-song mashups with explicit "x" separator (not bands with "x" in name)
-    r"\bx\s+\w.*\bx\s+\w",   # "Song A x Song B x Song C" style
+    # Require at least two words on each side; this catches explicit song-title
+    # mashups without suppressing legitimate titles such as "Love X Love".
+    r"\b\w[\w']*\s+\w[\w' -]*\s+x\s+(?![^()]*\bremix\b)\w[\w']*\s+\w[\w' -]*\b",
+    r"\bx\s+\w.*\bx\s+\w",
     # Medleys
     r"\bmedley\b",
     r"\bmashup\b",
@@ -77,8 +84,10 @@ _TITLE_JUNK_PATTERNS: List[str] = [
 _ARTIST_JUNK_PATTERNS: List[str] = [
     r"\bkaraoke\b",
     r"\bkaraōke\b",
-    r"\btribute\b",
+    r"\btribute\s+(?:to|band|artists?)\b",
     r"\bcovers?\s+band\b",
+    r"\boriginally\s+performed\s+by\b",
+    r"\bin\s+the\s+style\s+of\b",
     r"\bsound-?alike\b",
     r"\binstrumental\s+all\s+stars?\b",
     r"\bmarimba\s+remix\b",

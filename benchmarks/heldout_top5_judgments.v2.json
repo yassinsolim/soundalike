@@ -1,0 +1,182 @@
+{
+  "schema_version": 2,
+  "benchmark_id": "soundalike-real-pairs-v2",
+  "ranked_output_artifact": ".goals/human-quality-recommendations/artifacts/held-out-all-winner-v2.json",
+  "ranked_top5_fingerprint": "d2d85fadee02ae14f2aafe3925c9b141452f24d1a5a7a9379c51bafe8775beb8",
+  "reviewed_at": "2026-07-11",
+  "methodology": {
+    "unit": "the actual first five production-index results",
+    "pass_rule": "At least four of five are stylistically coherent and positions 1-3 contain no obvious wrong-scene item.",
+    "automatic_failures": "Any duplicate original, seed-title variant, slowed/reverb, karaoke, tribute, cover, or mashup in the first five fails the seed.",
+    "scope": "Recording names and artists were inspected. This is a transparent ranked-list judgment, not a claim that every full recording was listened to end-to-end.",
+    "blindness": "The pair target rank and method-level aggregate score were not used to assign coherence.",
+    "role": "Secondary direct UX guardrail only; these judgments are never blended into the pure-sonic pair-retrieval primary.",
+    "winner_top5_provenance": "The stable sonic policy preserves the previously judged guarded top five exactly, so no labels were changed or reinterpreted."
+  },
+  "judgments": [
+    {
+      "pair_id": "H01",
+      "seed": "Hotline Bling — Drake",
+      "baseline_pass": true,
+      "winner_pass": true,
+      "baseline_reason": "Five hip-hop/trap artists; no wrong-scene top-three item.",
+      "winner_reason": "Five hip-hop/trap artists; no prohibited derivative."
+    },
+    {
+      "pair_id": "H02",
+      "seed": "Lucid Dreams — Juice WRLD",
+      "baseline_pass": true,
+      "winner_pass": true,
+      "baseline_reason": "Rap and emo-rap neighbors throughout the list.",
+      "winner_reason": "Rap and emo-rap neighbors throughout the list."
+    },
+    {
+      "pair_id": "H03",
+      "seed": "Blurred Lines — Robin Thicke",
+      "baseline_pass": false,
+      "winner_pass": true,
+      "baseline_reason": "The first two results are hip-hop/drill rather than funk-pop/R&B and the list is scattered.",
+      "winner_reason": "Jordan Rakei, Gabriel Jacoby, Thundercat and Amp Fiddler form a coherent funk/R&B list; DJ Quik is the one adjacent outlier."
+    },
+    {
+      "pair_id": "H04",
+      "seed": "Shape of You — Ed Sheeran",
+      "baseline_pass": false,
+      "winner_pass": true,
+      "baseline_reason": "French rap is first and the top three drift through rap and Afrobeats rather than melodic pop.",
+      "winner_reason": "The first four are melodic pop/R&B artists; the fifth is the only stylistic stretch."
+    },
+    {
+      "pair_id": "H05",
+      "seed": "Roar — Katy Perry",
+      "baseline_pass": false,
+      "winner_pass": true,
+      "baseline_reason": "Orchestral and hard-rock items occupy positions two and three.",
+      "winner_reason": "The top three are mainstream pop; the two rock/electropop items remain adjacent rather than scene-breaking."
+    },
+    {
+      "pair_id": "H06",
+      "seed": "Best Song Ever — One Direction",
+      "baseline_pass": true,
+      "winner_pass": true,
+      "baseline_reason": "Pop-rock/pop-punk list with no prohibited derivative.",
+      "winner_reason": "Pop-rock dominates positions one through three and the remaining pop items are compatible."
+    },
+    {
+      "pair_id": "H07",
+      "seed": "Last Nite — The Strokes",
+      "baseline_pass": true,
+      "winner_pass": true,
+      "baseline_reason": "Garage, punk and alternative-rock neighbors throughout.",
+      "winner_reason": "Garage, punk and alternative-rock neighbors throughout; the live Ramones item is not the seed recording."
+    },
+    {
+      "pair_id": "H08",
+      "seed": "Leave Them All Behind — Ride",
+      "baseline_pass": false,
+      "winner_pass": true,
+      "baseline_reason": "A game soundtrack and hardcore punk occupy positions one and two before the first shoegaze result.",
+      "winner_reason": "Swirlies, My Bloody Valentine and Cocteau Twins lead a shoegaze/dream-pop list; the two remaining artists are adjacent alternative rock."
+    },
+    {
+      "pair_id": "H09",
+      "seed": "stupid horse — 100 gecs",
+      "baseline_pass": false,
+      "winner_pass": false,
+      "baseline_reason": "Ashanti is first, the list crosses unrelated pop/math-rock scenes, and a sped-up derivative appears fifth.",
+      "winner_reason": "The sped-up derivative is gone, but Ashanti remains at position two and fewer than four items are clearly hyperpop-adjacent."
+    },
+    {
+      "pair_id": "H10",
+      "seed": "Harder, Better, Faster, Stronger — Daft Punk",
+      "baseline_pass": false,
+      "winner_pass": false,
+      "baseline_reason": "Blues, reggae and rap occupy the first four positions.",
+      "winner_reason": "The top five still cross reggae, indie rock and blues; the guarded pool lacks enough French-house candidates."
+    },
+    {
+      "pair_id": "H11",
+      "seed": "This Means War — Avenged Sevenfold",
+      "baseline_pass": true,
+      "winner_pass": true,
+      "baseline_reason": "Five heavy/alternative-metal results including the sourced counterpart.",
+      "winner_reason": "Five heavy/alternative-metal results; the counterpart improves from rank five to four."
+    },
+    {
+      "pair_id": "H12",
+      "seed": "Ornithology — Charlie Parker",
+      "baseline_pass": false,
+      "winner_pass": true,
+      "baseline_reason": "Although the scene is jazz, position one is the same composition under the one-character misspelling Orinthology, which is a prohibited seed-title variant.",
+      "winner_reason": "The seed-title variant is removed and all five remaining results are jazz."
+    },
+    {
+      "pair_id": "H13",
+      "seed": "Plastic Love — Mariya Takeuchi",
+      "baseline_pass": false,
+      "winner_pass": true,
+      "baseline_reason": "Four jazz/funk players precede the only clear city-pop artist at rank five.",
+      "winner_reason": "Momoko Kikuchi and Anri lead; the remaining jazz-funk artists reflect city-pop's production vocabulary without a wrong-scene top-three result."
+    },
+    {
+      "pair_id": "H14",
+      "seed": "Waka Waka (This Time for Africa) — Shakira",
+      "baseline_pass": true,
+      "winner_pass": true,
+      "baseline_reason": "Latin, Afro-house and Afrobeats dominate the top three.",
+      "winner_reason": "Latin, Brazilian funk and Afro-house dominate the top three; no prohibited derivative."
+    },
+    {
+      "pair_id": "H15",
+      "seed": "Halo — Beyoncé",
+      "baseline_pass": true,
+      "winner_pass": true,
+      "baseline_reason": "Pop/R&B ballads and vocal pop are coherent for the seed.",
+      "winner_reason": "Pop/R&B vocalists occupy the top three; gospel at four is adjacent to the ballad/gospel character."
+    },
+    {
+      "pair_id": "H16",
+      "seed": "Fall — Davido",
+      "baseline_pass": true,
+      "winner_pass": true,
+      "baseline_reason": "Afrobeats/dancehall artists occupy positions one through three.",
+      "winner_reason": "Afrobeats/dancehall artists occupy all five positions."
+    },
+    {
+      "pair_id": "H17",
+      "seed": "Treasure — Bruno Mars",
+      "baseline_pass": false,
+      "winner_pass": false,
+      "baseline_reason": "The deployed resolver selects Treasure (Sharam Club Remix), not the requested original recording, so this automatically fails despite a coherent house list.",
+      "winner_reason": "A title/artist collision promotes the K-pop group TREASURE to position one and the list remains mixed."
+    },
+    {
+      "pair_id": "H18",
+      "seed": "Destruction of a Statue — Suicide Silence",
+      "baseline_pass": true,
+      "winner_pass": true,
+      "baseline_reason": "Deathcore/extreme-metal throughout.",
+      "winner_reason": "Deathcore/extreme-metal throughout."
+    },
+    {
+      "pair_id": "H19",
+      "seed": "Black Sheep — Metric",
+      "baseline_pass": true,
+      "winner_pass": true,
+      "baseline_reason": "Alternative/indie-rock list; no wrong-scene top-three item.",
+      "winner_reason": "Alternative/indie-rock list led by Paramore; the sourced counterpart remains frozen at rank 45."
+    },
+    {
+      "pair_id": "H20",
+      "seed": "Safaera — Bad Bunny",
+      "baseline_pass": true,
+      "winner_pass": true,
+      "baseline_reason": "Reggaetón/Latin-rap throughout.",
+      "winner_reason": "Reggaetón/Latin-rap throughout."
+    }
+  ],
+  "ranked_methods": [
+    "production_baseline",
+    "stable_sonic"
+  ]
+}
