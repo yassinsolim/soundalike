@@ -728,6 +728,54 @@ negative: **the 272,853-song catalog was not re-embedded and production did not 
 The full once-opened report is
 `.goals/human-quality-recommendations/artifacts/magnatagatune-human-calibration-v10.json`.
 
+### All-triad nested human-audio cross-validation (iteration 12)
+
+Because no commercial-list listener ratings were returned, iteration 12 does not invent any.
+Instead it reuses **all 307** reconciled MagnaTagATune triads in a deterministic five-fold
+multi-membership cross-fit. The raw 193-artist graph is one connected component, so ordinary
+component GroupKFold cannot both retain every row and isolate artists. The v12 protocol clusters
+the triad overlap graph, assigns every row to one outer test fold, and purges from that fold's
+training set every row sharing any artist or clip with test. The same isolation is repeated in
+three inner folds; vote confidence weights training and defines fixed low/medium/high strata.
+
+| outer fold | test | eligible train | purged | incumbent | nested learned |
+|---:|---:|---:|---:|---:|---:|
+| 0 | 75 | 87 | 145 | 61.3% | 66.7% |
+| 1 | 66 | 96 | 145 | 50.0% | 62.1% |
+| 2 | 55 | 105 | 147 | 61.8% | 54.5% |
+| 3 | 69 | 77 | 161 | 63.8% | 56.5% |
+| 4 | 42 | 155 | 110 | 45.2% | 61.9% |
+
+The predeclared promotion-eligible model selects both family and hyperparameters **only on inner
+OOF predictions**. It scores **186/307 (60.6%)** versus artist-SupCon's **176/307 (57.3%)**:
+`+3.26` points, triad-bootstrap CI `[-1.30,+7.82]`, multi-membership artist-bootstrap CI
+`[0.00,+6.62]`, sign-flip `p=0.213`, exact McNemar `p=0.212`, and positive deltas in 3/5 folds.
+The vote-strength deltas are +1.09 low, +3.31 medium, and +5.32 high points. It fails the
+predeclared +5-point and positive-lower-CI conditions.
+
+Fixed CLAP and some individual learned families have stronger *exploratory* outer scores, but
+choosing one after seeing those outer folds would reuse the test folds and p-hack the result.
+CLAP also cannot be derived mathematically from the existing 272,853 artist-SupCon catalog
+embeddings. They therefore remain comparators, not a post-hoc winner. No final all-data
+projection, catalog transform, ranking/list/evaluator change, commercial FINAL, or deployment
+occurred. Exact OOF vectors, fold manifests, configurations, seeds, statistical tests, losses,
+and checkpoint hashes are in
+`.goals/human-quality-recommendations/artifacts/magnatagatune-human-nested-cv-v12.json`;
+the 25 compact selected fold checkpoints are preserved under
+`benchmarks/evidence/v12/mtat-fold-checkpoints/`.
+
+The unchanged signed v11 pack was re-audited after the experiment: stable IDs remain 480/480
+results and 60/60 seeds, while fresh previews resolved for **480/480 results, 59/60 seeds, and
+600/600 ranked positions (100%)**, with zero endpoint errors. This is audio-access evidence only;
+it creates no ratings and does not supersede the signed v10/v11 order.
+
+```powershell
+.\.venv\Scripts\python.exe -m soundalike.ml.magnatagatune_v12 benchmark-all
+.\.venv\Scripts\python.exe -m soundalike.ml.magnatagatune_v12 features-all
+.\.venv\Scripts\python.exe -m soundalike.ml.magnatagatune_v12 extract-fixed
+.\.venv\Scripts\python.exe -m soundalike.ml.magnatagatune_v12 run-nested
+```
+
 Version handling is now generic and query-aware: explicit remixes/mixes, edits, instrumentals,
 covers, karaoke/tribute recordings, slowed/reverb/nightcore/sped-up versions, medleys/mashups, and
 seed-title variants are excluded for a canonical query; a derivative query may admit only the same
