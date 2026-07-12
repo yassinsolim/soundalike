@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-12",
+  "source_report": ".goals\\human-quality-recommendations\\artifacts\\collaborative-final-once-v6.json",
+  "post_open_diagnostic_only": true,
+  "used_for_tuning_or_selection": false,
+  "winner_changed_after_open": false,
+  "baseline_primary": 0.008071703612013098,
+  "current_production": {
+    "method": "iteration3_deployed / dual_sonic64_guardrail",
+    "primary": 0.011563129650687254,
+    "winner_absolute_delta": -0.011330723168280772,
+    "winner_relative_gain": -0.9799010744126121,
+    "winner_ci95": [-0.034315466919153555, 0.00036768786768786763],
+    "improved_pairs": 2,
+    "worsened_pairs": 3,
+    "unchanged_pairs": 83,
+    "unmasked_ablation": {
+      "absolute_delta": 0.002360911867652617,
+      "relative_gain": 0.20417585368095362,
+      "ci95": [-0.02859687255742862, 0.030089242344948815],
+      "improved_pairs": 5,
+      "worsened_pairs": 3,
+      "mrr_regressed": true,
+      "valid_deciding_method": false
+    }
+  },
+  "comparisons": {
+    "audio_only": {
+      "primary": 0.0,
+      "absolute_delta": -0.008071703612013098,
+      "relative_gain": -1.0,
+      "ci95": [-0.02421511083603929, 0.0],
+      "improved_pairs": 0,
+      "worsened_pairs": 1
+    },
+    "collaborative_only_edge_masked": {
+      "primary": 0.00022000306091215182,
+      "absolute_delta": -0.007851700551100946,
+      "relative_gain": -0.9727439123774662,
+      "ci95": [-0.02421511083603929, 0.00044957147229874504],
+      "improved_pairs": 2,
+      "worsened_pairs": 1
+    },
+    "hybrid_edge_masked_locked_winner": {
+      "primary": 0.00023240648240648238,
+      "absolute_delta": -0.007839297129606616,
+      "relative_gain": -0.97120725765245,
+      "ci95": [-0.02421511083603929, 0.0005029692529692529],
+      "improved_pairs": 2,
+      "worsened_pairs": 1
+    },
+    "hybrid_unmasked_ablation": {
+      "primary": 0.013924041518339874,
+      "absolute_delta": 0.005852337906326774,
+      "relative_gain": 0.7250437067110286,
+      "ci95": [-0.018268075960015548, 0.030660544882337],
+      "improved_pairs": 5,
+      "worsened_pairs": 1
+    }
+  },
+  "candidate_recall": {
+    "audio_only": {"recall_at_100": 0.0, "recall_at_500": 0.011363636363636364, "recall_at_1000": 0.011363636363636364},
+    "collaborative_edge_masked": {"recall_at_100": 0.03409090909090909, "recall_at_500": 0.045454545454545456, "recall_at_1000": 0.045454545454545456},
+    "hybrid_union_edge_masked": {"recall_at_100": 0.022727272727272728, "recall_at_500": 0.06818181818181818, "recall_at_1000": 0.09090909090909091},
+    "collaborative_unmasked": {"recall_at_100": 0.045454545454545456, "recall_at_500": 0.056818181818181816, "recall_at_1000": 0.07954545454545454},
+    "hybrid_union_unmasked": {"recall_at_100": 0.06818181818181818, "recall_at_500": 0.09090909090909091, "recall_at_1000": 0.10227272727272728}
+  },
+  "interpretation": "The edge-masked graph generalizes enough to add two top-50 hits, but loses the baseline top-five hit and fails every gate. The unmasked model is better but still has a CI containing zero and only five improved pairs; its gap over the masked model is evidence that direct co-listening edges, not topology alone, drive much of the apparent lift."
+}

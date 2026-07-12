@@ -35,10 +35,14 @@ run it" lives in the [README](../README.md); this is the "how it was built and w
   **regressed real cross-artist recommendation** (and botched niche genres like city pop/hyperpop).
   An internal metric had rewarded the wrong thing, so I **reverted** and built a `cross_artist_agreement`
   metric that measures inter-artist geometry — the honest "measure, ship, re-measure, revert" loop.
-- **Human-quality retrieval result:** a 107-pair, component-disjoint protocol exposed another
+- **Human-quality audio retrieval result:** a 107-pair, component-disjoint protocol exposed another
   failed generalization. The locked audio-only method improved DEV primary 0.01506→0.02558, but
   the once-opened 40-pair FINAL test moved one counterpart to rank 14, with primary 0→0.000595
   and a paired 95% interval touching zero. It was rejected and not deployed.
+- **Collaborative candidate result:** Music4All-Onion item2vec over 115,468 mapped users raised DEV
+  hybrid candidate R@1000 from 0.0686 audio-only to 0.2353. On a fresh, once-opened 88-pair FINAL,
+  however, the exact-edge-masked hybrid regressed current-production primary 0.01156→0.00023 and
+  direct inspection passed only 13/20 difficult seeds. It was rejected and not deployed.
 - **Built and validated on:** an NVIDIA RTX 5080, the full automated suite, and a clean packaged
   wheel.
 
@@ -82,7 +86,8 @@ A deliberate design principle runs through the acoustic engines: **ranking is do
 the sound.** A music catalog (Deezer) is used *only* to enumerate candidate songs and fetch their
 audio — never to decide what's "similar." That keeps the recommendations grounded in acoustics
 rather than "people who listened to X also listened to Y," which is what every existing tool
-already does.
+already does. Iteration 5 deliberately tested a collaborative counter-hypothesis as a research
+candidate generator; its fresh FINAL failed, so this production design was not changed.
 
 ---
 
@@ -545,25 +550,172 @@ Exact records are in `artifacts/audio-dev-results-v5.json`, `artifacts/final-onc
 
 ---
 
-## 8. Security & correctness
+## 8. Collaborative candidates: independent data, fresh FINAL, failed result
+
+The iteration-4 failure was diagnostic, not just disappointing. Every FINAL query and target was
+present in the 272,853-row catalogue, but audio candidate recall was too low for any reranker to
+help. Iteration 5 therefore changed candidate generation rather than training another audio encoder.
+
+### Independent collaborative source and compact model
+
+The training source is [Music4All-Onion](https://doi.org/10.5281/zenodo.6609677), published under
+CC-BY-4.0 by Moscati et al. (CIKM 2022). Its public count subset contains 50,016,042 user-track
+interactions from 119,140 Last.fm users over 56,512 tracks; the full dataset provenance records
+252,984,396 timestamped listens. The downloaded 550,649,499-byte count archive matched published
+MD5 `314b51196a9c8f333c7fefc0711760a1`.
+
+Exact normalized title/artist matching mapped 28,538 source IDs to 27,367 catalogue rows. Streaming
+the archive produced 22,854,372 mapped tokens from 115,468 users with at least two mapped tracks.
+A 64-dimensional skip-gram item2vec model used window 30, 15 negative samples, eight epochs, and 24
+CPU workers. After the frequency floor, the compact index covers 13,680 catalogue rows and 2,640
+artists. An unmapped seed uses a mapped artist centroid when available, otherwise an audio-neighbour
+bridge; this preserves query-conditioned retrieval without a global popularity fallback.
+
+The runtime asset is float16 and only 1,978,816 bytes. User histories, raw counts, and the 389 MB
+training corpora are research inputs and do not ship.
+
+### Fresh protocol before training
+
+Version 6 was frozen before item2vec training. The 107 opened v5 pairs became DEV diagnostics only.
+FINAL contains 88 fresh, in-catalog, cross-artist human “songs-like” pairs from the independently
+operated ListenBrainz session-similarity service across 18 scenes and popular/deep-cut/niche tiers.
+DEV and FINAL are artist-disjoint; the complete 195-pair benchmark has 414 unique credited artists.
+Source URLs, algorithm, score, excerpts, and access dates are stored for every FINAL pair.
+
+`protocol-v6` froze the benchmark, 88-pair manifest, release index, and target-agnostic rankings for
+pre-goal/current-production/audio controls. A detached Ed25519 signature seals the pre-training
+frozen snapshot. After DEV selection, the method manifest and three assets were hash-bound. The
+winner and all controls were generated without target comparisons, then the state entered
+`RANKINGS_LOCKED` at `2026-07-12T11:58:58Z`. FINAL opened once at `11:59:29Z`; the finalized state
+is separately Ed25519-signed. Both private keys were destroyed.
+
+Training and benchmark source families are distinct, but both describe aggregate listening
+behavior, so source identity alone is not treated as proof. The stronger test was exact edge masking:
+39/88 FINAL pairs had both items mapped into Music4All, representing 74 internal item edges and
+2,236 shared-user co-occurrences. Before deciding-model training, one endpoint was deterministically
+removed from every such user context. The masked corpus audit is exactly 2,236→0. A full, unmasked
+model was locked only as an anti-memorization ablation; it was never eligible to replace the winner.
+
+### Candidate union and DEV selection
+
+Three genuinely different generators were compared: audio-only, item2vec collaborative-only, and a
+round-robin union of both plus current-production candidates. The union keeps at most three tracks
+per artist before ranking. The final list applies the existing real-index derivative filter, seed-
+title rejection, exact recording deduplication, and one-result-per-artist cap. A compact linear
+reranker uses collaborative cosine, collaborative reciprocal rank, and a small audio-vibe score.
+The global Wikipedia/notability feature and weight are both exactly zero.
+
+| Opened DEV (102 resolved pairs) | Audio only | Collaborative masked | Hybrid union masked |
+|---|---:|---:|---:|
+| Candidate Recall@100 | 0.0196 | 0.0784 | **0.1078** |
+| Candidate Recall@500 | 0.0490 | 0.1275 | **0.2059** |
+| Candidate Recall@1000 | 0.0686 | 0.1275 | **0.2353** |
+
+| DEV ranked-list metric | Current candidate control | Collaborative only | Locked hybrid |
+|---|---:|---:|---:|
+| Recall@10 | 0.00980 | **0.02941** | **0.02941** |
+| Recall@50 | 0.05882 | 0.06863 | **0.07843** |
+| MRR | 0.00491 | 0.01222 | **0.01237** |
+| Primary | 0.00631 | 0.01898 | **0.01903** |
+
+The hybrid's all-DEV relative gain was +201.4%, but the paired delta interval
+**[-0.00991, 0.03751] crossed zero**. The 24-pair internal selection subset had no top-10 hit for
+any tested linear blend; its tie-break chose the smallest predeclared positive audio weight (0.01),
+not a convincing learned separation. This weakness was disclosed before FINAL and no FINAL metric
+was used to change it.
+
+### FINAL opened once — candidate generation still failed
+
+| Once-opened FINAL (88 pairs) | R@10 | R@50 | MRR | NDCG@10 | Primary |
+|---|---:|---:|---:|---:|---:|
+| Current deployed `dual_sonic64_guardrail` | 0.01136 | 0.03409 | **0.01196** | **0.01136** | **0.01156** |
+| Audio only | 0 | 0 | 0 | 0 | 0 |
+| Collaborative only, edge-masked | 0 | 0.02273 | 0.00066 | 0 | 0.00022 |
+| **Locked hybrid, edge-masked** | 0 | 0.02273 | 0.00070 | 0 | 0.00023 |
+| Unmasked diagnostic, not eligible | **0.02273** | **0.05682** | 0.00859 | 0.01045 | 0.01392 |
+
+Against current production, the locked winner's absolute primary delta was **-0.01133**
+(-97.99%), CI **[-0.03432, 0.00037]**. It improved two pairs, worsened three, lost the existing
+punk/hardcore top-five hit, regressed Recall@10 and MRR, and failed every predeclared gate. Its
+candidate recall was only 0.0227/0.0682/0.0909 at @100/@500/@1000.
+
+The unmasked diagnostic nominally reached +20.4% primary against current production, but its CI
+**[-0.02860, 0.03009]** included zero, it improved 5/88 rather than the required 10, and MRR
+regressed. More importantly, the lift largely disappeared after the required direct edges were
+removed. That is evidence of edge memorization, not graph-topology generalization, so it cannot be
+selected after the fact.
+
+Direct inspection independently failed: **13/20** difficult seeds passed the locked top-five rule
+(required 16), with four missing queries and three incoherent resolved lists. All 80 resolved result
+rows exposed a Deezer preview URL; availability was checked, but no audible-playback claim is made.
+On 11 benchmark-disjoint seeds, Deezer related-artist overlap improved 0.158→0.267 with paired delta
+CI [0.0364, 0.1879]. This is encouraging *artist-level taste affinity*, not sonic similarity, and
+cannot override a failed deciding FINAL or direct test. Neither Last.fm nor ListenBrainz is claimed
+as an external validation source for this Last.fm-derived training run.
+
+### Resource and product decision
+
+The masked index plus scorer adds 2,026,706 bytes. It loaded in 0.0124 s and added 48.4 MB process
+RSS. With the 299,288,526-byte production index, measured RSS was 1.253 GB; first ranking took
+1.98 s and 16 warm rankings averaged 0.252 s (p95 0.288 s). The method fits the hosted resource
+budget, so resource pressure is not the reason for rejection.
+
+**Verdict: FINAL failed.** No iteration-5 code or asset was wired into production, no release or
+manifest was changed, and no post-FINAL retuning occurred. The live site still reports
+`2026.07.11-dual-sonic64` and 272,853 tracks. Historical iteration-3/4 artifacts remain unchanged;
+the v6 state, reports, direct judgments, source audit, resource measurements, and negative ablations
+are retained under `.goals/human-quality-recommendations/`.
+
+Reproduction (the finalized state correctly rejects a second open):
+
+```powershell
+New-Item -ItemType Directory -Force ml_data\iteration5\raw | Out-Null
+curl.exe -L -o ml_data\iteration5\raw\music4all-id-information.csv `
+  https://huggingface.co/datasets/Leon299/music4all/raw/main/id_information.csv
+curl.exe -L -o ml_data\iteration5\raw\userid_trackid_count.tsv.bz2 `
+  https://zenodo.org/api/records/6609677/files/userid_trackid_count.tsv.bz2/content
+
+.\.venv\Scripts\python.exe -m soundalike.ml.collaborative `
+  --metadata ml_data\iteration5\raw\music4all-id-information.csv `
+  --counts ml_data\iteration5\raw\userid_trackid_count.tsv.bz2 `
+  --index ml_data\deepvibe_index_v5.npz `
+  --benchmark benchmarks\soundalike_pairs.v6.json `
+  --output-dir ml_data\iteration5\collaborative
+
+.\.venv\Scripts\python.exe -m soundalike.ml.collaborative_rerank dev `
+  --index ml_data\deepvibe_index_v5.npz `
+  --benchmark benchmarks\soundalike_pairs.v6.json `
+  --masked-asset ml_data\iteration5\collaborative\item2vec-final-edges-masked.npz `
+  --full-asset ml_data\iteration5\collaborative\item2vec-full.npz `
+  --scorer ml_data\iteration5\collaborative\hybrid-scorer.json `
+  --report .goals\human-quality-recommendations\artifacts\collaborative-dev-v6.json
+
+.\.venv\Scripts\python.exe -m pytest tests\ -q
+```
+
+---
+
+## 9. Security & correctness
 
 - **No passwords, ever.** Live Spotify access uses OAuth 2.0 **Authorization Code + PKCE** with a
   local loopback callback, CSRF `state` validation, and cached auto-refreshing tokens.
 - **No secrets in git.** Credentials live only in a git-ignored `.env`; the repo ships a
   `.env.example` template.
-- **No data leakage in training.** The 107-row Category-A benchmark has a 40-pair FINAL set
-  separated from development by connected artist components. The distillation and independent-pair
-  trainers exclude every benchmark artist; tests reject artist/track duplicates and split overlap.
-  FINAL was opened once after checkpoint/configuration hashes were locked.
+- **No data leakage in training.** The v5 audio benchmark remains component-disjoint. The v6
+  collaborative protocol makes every opened v5 pair DEV-only and freezes 88 fresh, artist-disjoint
+  FINAL pairs before training. Exact deciding item edges were removed from every Music4All user
+  context (2,236 co-occurrences to zero), target-agnostic rankings entered `RANKINGS_LOCKED`, and
+  FINAL opened once. Tests reject artist/track duplicates, split overlap, and protocol tampering.
 - **Real-index derivative audit.** On 272,853 rows the filter removes 1,361 candidates. An
   independent pattern set found 348 obvious slowed/reverb/nightcore/karaoke/cover/mashup variants
   with zero false negatives; six curated legitimate risky titles had zero false positives.
 - **Release integrity.** Desktop and hosted downloads pin SHA-256; hosted download is atomic and
   fails before loading on a mismatch, and numpy object pickles are disabled.
-- **399 automated tests** cover the recommenders, OAuth/PKCE, DSP, vibe and vibe-aware engines,
+- **408 automated tests** cover the recommenders, OAuth/PKCE, DSP, vibe and vibe-aware engines,
   the spec cache, recommendation benchmarks, diversity/MMR, GeM pooling, ML split logic, the
-  categorized production benchmark, one-open protocol, audio experiments, real-index derivative
-  false-positive/negative checks, checksum handling, and exact desktop/hosted parity.
+  categorized production benchmarks, one-open protocol, audio and collaborative experiments,
+  graph-edge masking, candidate unions, no-notability ablation, real-index derivative checks,
+  checksum handling, detached protocol signatures, and exact desktop/hosted parity.
 
 
 ---
@@ -604,7 +756,7 @@ For anyone evaluating this as a portfolio piece, the work spans:
   CUDA memory-layout and precision tuning, reading cuDNN kernel selection.
 - **API integration & security:** OAuth 2.0 PKCE, token lifecycle management, rate-limit handling,
   secret hygiene.
-- **Software engineering:** clean package design, a 285-test suite, packaging, a documented CLI,
+- **Software engineering:** clean package design, a 408-test suite, packaging, a documented CLI,
   decoupling I/O from compute (the harvest-once spec cache), and reviewed, merged pull requests.
   Includes a reproducible human-aligned evaluation suite, three ranking improvements (quality
   filter, genre reranker, collaborative graph), and desktop/hosted parity tests.

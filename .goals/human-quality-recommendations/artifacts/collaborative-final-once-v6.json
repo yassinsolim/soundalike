@@ -1,0 +1,5271 @@
+{
+  "schema_version": 1,
+  "opened_at": "2026-07-12T11:59:29.288109+00:00",
+  "open_number": 1,
+  "method_id": "music4all-edge-masked-hybrid-v1",
+  "metrics": {
+    "production_baseline": {
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.011363636363636364,
+      "recall_at_10": 0.011363636363636364,
+      "recall_at_20": 0.011363636363636364,
+      "recall_at_50": 0.011363636363636364,
+      "mrr": 0.005681818181818182,
+      "ndcg_at_10": 0.007169656290584745,
+      "ndcg_at_50": 0.007169656290584745,
+      "primary": 0.008071703612013098
+    },
+    "iteration3_deployed": {
+      "recall_at_1": 0.011363636363636364,
+      "recall_at_5": 0.011363636363636364,
+      "recall_at_10": 0.011363636363636364,
+      "recall_at_20": 0.011363636363636364,
+      "recall_at_50": 0.03409090909090909,
+      "mrr": 0.011962116224789036,
+      "ndcg_at_10": 0.011363636363636364,
+      "ndcg_at_50": 0.015649816137904067,
+      "primary": 0.011563129650687254
+    },
+    "raw_encoder": {
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.011363636363636364,
+      "recall_at_10": 0.011363636363636364,
+      "recall_at_20": 0.011363636363636364,
+      "recall_at_50": 0.011363636363636364,
+      "mrr": 0.005681818181818182,
+      "ndcg_at_10": 0.007169656290584745,
+      "ndcg_at_50": 0.007169656290584745,
+      "primary": 0.008071703612013098
+    },
+    "audio_priors_zero": {
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.0,
+      "recall_at_10": 0.0,
+      "recall_at_20": 0.0,
+      "recall_at_50": 0.0,
+      "mrr": 0.0,
+      "ndcg_at_10": 0.0,
+      "ndcg_at_50": 0.0,
+      "primary": 0.0
+    },
+    "winner": {
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.0,
+      "recall_at_10": 0.0,
+      "recall_at_20": 0.0,
+      "recall_at_50": 0.022727272727272728,
+      "mrr": 0.0006972194472194471,
+      "ndcg_at_10": 0.0,
+      "ndcg_at_50": 0.004474416558744796,
+      "primary": 0.00023240648240648238
+    },
+    "audio_only": {
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.0,
+      "recall_at_10": 0.0,
+      "recall_at_20": 0.0,
+      "recall_at_50": 0.0,
+      "mrr": 0.0,
+      "ndcg_at_10": 0.0,
+      "ndcg_at_50": 0.0,
+      "primary": 0.0
+    },
+    "collaborative_only": {
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.0,
+      "recall_at_10": 0.0,
+      "recall_at_20": 0.0,
+      "recall_at_50": 0.022727272727272728,
+      "mrr": 0.0006600091827364554,
+      "ndcg_at_10": 0.0,
+      "ndcg_at_50": 0.004415004002720258,
+      "primary": 0.00022000306091215182
+    },
+    "hybrid_edge_masked": {
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.0,
+      "recall_at_10": 0.0,
+      "recall_at_20": 0.0,
+      "recall_at_50": 0.022727272727272728,
+      "mrr": 0.0006972194472194471,
+      "ndcg_at_10": 0.0,
+      "ndcg_at_50": 0.004474416558744796,
+      "primary": 0.00023240648240648238
+    },
+    "hybrid_unmasked_ablation": {
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.011363636363636364,
+      "recall_at_10": 0.022727272727272728,
+      "recall_at_20": 0.03409090909090909,
+      "recall_at_50": 0.056818181818181816,
+      "mrr": 0.008590367965367966,
+      "ndcg_at_10": 0.010454483862378926,
+      "ndcg_at_50": 0.01819464738378618,
+      "primary": 0.013924041518339874
+    }
+  },
+  "candidate_recall": {
+    "audio_only": {
+      "recall_at_100": 0.0,
+      "recall_at_500": 0.011363636363636364,
+      "recall_at_1000": 0.011363636363636364
+    },
+    "collaborative_edge_masked": {
+      "recall_at_100": 0.03409090909090909,
+      "recall_at_500": 0.045454545454545456,
+      "recall_at_1000": 0.045454545454545456
+    },
+    "collaborative_unmasked": {
+      "recall_at_100": 0.045454545454545456,
+      "recall_at_500": 0.056818181818181816,
+      "recall_at_1000": 0.07954545454545454
+    },
+    "hybrid_union_edge_masked": {
+      "recall_at_100": 0.022727272727272728,
+      "recall_at_500": 0.06818181818181818,
+      "recall_at_1000": 0.09090909090909091
+    },
+    "hybrid_union_unmasked": {
+      "recall_at_100": 0.06818181818181818,
+      "recall_at_500": 0.09090909090909091,
+      "recall_at_1000": 0.10227272727272728
+    },
+    "production": {
+      "recall_at_100": 0.045454545454545456,
+      "recall_at_500": 0.045454545454545456,
+      "recall_at_1000": 0.045454545454545456
+    }
+  },
+  "comparison_to_production_baseline": {
+    "absolute_delta": -0.007839297129606616,
+    "baseline_primary": 0.008071703612013098,
+    "relative_gain": -0.97120725765245,
+    "ci95_low": -0.02421511083603929,
+    "ci95_high": 0.0005029692529692529,
+    "probability_positive": 0.31415,
+    "improved_pairs": 2,
+    "worsened_pairs": 1,
+    "unchanged_pairs": 85,
+    "per_scene": {
+      "afrobeats": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "ambient-experimental": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "classic-psych-rock": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "electronic": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0010683760683760683,
+        "relative_delta": 0.0
+      },
+      "emo-pop-punk": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "folk-country": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.002976190476190476,
+        "relative_delta": 0.0
+      },
+      "hip-hop": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "hyperpop-digicore": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "indie-rock": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "jazz": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "k-pop": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "latin-reggaeton": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "metal": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "pop": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "punk-hardcore": {
+        "baseline_primary": 0.11838498630952543,
+        "winner_primary": 0.0,
+        "relative_delta": -1.0
+      },
+      "r&b-soul": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "reggae-dub-ska": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "shoegaze-dream-pop": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      }
+    },
+    "passes": {
+      "relative_gain": false,
+      "positive_absolute": false,
+      "minimum_absolute_gain": false,
+      "recall_at_10_non_regression": false,
+      "mrr_non_regression": false,
+      "ci_excludes_zero": false,
+      "meaningful_count": false,
+      "scene_no_regression": false
+    },
+    "final_pass": false
+  },
+  "pairs": [
+    {
+      "pair_id": "FINAL-FRESH-001",
+      "scene": "hip-hop",
+      "query": {
+        "title": "N.Y. State of Mind",
+        "artist": "Nas",
+        "recording_mbid": "ee9eaab7-99e5-4ffe-8876-5b6882ef3d23"
+      },
+      "target": {
+        "title": "Doomsday",
+        "artist": "MF Doom",
+        "recording_mbid": "2356e949-f493-4911-afb1-de0d470b51dc"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 49,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "production": {
+          "recall_at_100": true,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-002",
+      "scene": "hip-hop",
+      "query": {
+        "title": "Electric Relaxation",
+        "artist": "A Tribe Called Quest",
+        "recording_mbid": "b569357e-7aa3-46ff-9318-cbc4a3a0b691"
+      },
+      "target": {
+        "title": "Mass Appeal",
+        "artist": "Gang Starr",
+        "recording_mbid": "ed834163-401b-4960-897f-0c1dc699dbe8"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-003",
+      "scene": "hip-hop",
+      "query": {
+        "title": "Accordion",
+        "artist": "Madvillain",
+        "recording_mbid": "9ef2742a-4210-43d8-8879-7b1b99ba3536"
+      },
+      "target": {
+        "title": "Space Hos",
+        "artist": "DangerDoom",
+        "recording_mbid": "efbf8c22-601f-430d-98f0-dd877b2bb6a9"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-004",
+      "scene": "hip-hop",
+      "query": {
+        "title": "1539 N. Calvert",
+        "artist": "JPEGMAFIA",
+        "recording_mbid": "7ad5d330-e085-4a73-9ee2-30dd112d6c06"
+      },
+      "target": {
+        "title": "Hunger",
+        "artist": "Mike",
+        "recording_mbid": "4321e4f7-72c3-42b2-8a0e-ae364cd27ef4"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-005",
+      "scene": "hip-hop",
+      "query": {
+        "title": "No Role Modelz",
+        "artist": "J. Cole",
+        "recording_mbid": "f47d2a02-51cd-409c-9d57-759fc45000d1"
+      },
+      "target": {
+        "title": "tv off",
+        "artist": "Kendrick Lamar",
+        "recording_mbid": "639da52f-d42c-431f-9a4c-6cc4f589754d"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-006",
+      "scene": "r&b-soul",
+      "query": {
+        "title": "Adorn",
+        "artist": "Miguel",
+        "recording_mbid": "d6bcc45c-2567-4abb-91bc-2ff39a98bbf9"
+      },
+      "target": {
+        "title": "Snooze",
+        "artist": "SZA",
+        "recording_mbid": "6cf2ac53-82d4-4c6d-94ca-083cfd23db6d"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-007",
+      "scene": "r&b-soul",
+      "query": {
+        "title": "Exchange",
+        "artist": "Bryson Tiller",
+        "recording_mbid": "df22e60b-2a3d-4b51-b210-c4fed4f6a1df"
+      },
+      "target": {
+        "title": "Thinkin Bout You",
+        "artist": "Frank Ocean",
+        "recording_mbid": "3f23dd2a-a70a-4d6e-a5b1-ae3f22589dd7"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-008",
+      "scene": "r&b-soul",
+      "query": {
+        "title": "Best Part (feat. H.E.R.)",
+        "artist": "Daniel Caesar",
+        "recording_mbid": "6a70e938-1fb1-4b2c-9fc7-5e92e62aab7e"
+      },
+      "target": {
+        "title": "double take",
+        "artist": "Dhruv",
+        "recording_mbid": "92ab9875-510e-4ac7-8b8b-8f53e522a0f2"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-009",
+      "scene": "indie-rock",
+      "query": {
+        "title": "Banquet",
+        "artist": "Bloc Party",
+        "recording_mbid": "1001f481-e93e-4107-b640-cf289a122335"
+      },
+      "target": {
+        "title": "Seven Nation Army",
+        "artist": "The White Stripes",
+        "recording_mbid": "24cc8311-98fd-423a-bed1-97728f5eabc5"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-010",
+      "scene": "indie-rock",
+      "query": {
+        "title": "New Slang",
+        "artist": "The Shins",
+        "recording_mbid": "d836830d-fb62-41b1-bc2a-fc899d1c99cc"
+      },
+      "target": {
+        "title": "1901",
+        "artist": "Phoenix",
+        "recording_mbid": "8e20739e-0dcc-45b7-ad13-6b5548f0523a"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-011",
+      "scene": "shoegaze-dream-pop",
+      "query": {
+        "title": "Heaven or Las Vegas",
+        "artist": "Cocteau Twins",
+        "recording_mbid": "e1c1ba62-8df8-46cd-8610-3f3e7a897e79"
+      },
+      "target": {
+        "title": "House Of Cards",
+        "artist": "Radiohead",
+        "recording_mbid": "29a9d792-151b-4dd4-99ae-25bc853d8895"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-012",
+      "scene": "shoegaze-dream-pop",
+      "query": {
+        "title": "For Love",
+        "artist": "Lush",
+        "recording_mbid": "2b2d2898-1dc7-4ef6-9737-65e4d13a4e0d"
+      },
+      "target": {
+        "title": "Kinky Love",
+        "artist": "Pale Saints",
+        "recording_mbid": "b718bc0d-bc10-4f58-9cc7-e6b3f1f7deee"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-013",
+      "scene": "shoegaze-dream-pop",
+      "query": {
+        "title": "Leave",
+        "artist": "Whirr",
+        "recording_mbid": "04561dc3-419c-4103-9f2c-1989af9458f8"
+      },
+      "target": {
+        "title": "Your face",
+        "artist": "Wisp",
+        "recording_mbid": "272ac01c-6523-4945-9258-c50800bd3a89"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-014",
+      "scene": "shoegaze-dream-pop",
+      "query": {
+        "title": "Archie, Marry Me",
+        "artist": "Alvvays",
+        "recording_mbid": "b15f5111-05e5-416d-b249-e88a472946d5"
+      },
+      "target": {
+        "title": "Falling Apart",
+        "artist": "Slow Pulp",
+        "recording_mbid": "d2453693-40ce-49be-8bcb-5d40d4b67f08"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-015",
+      "scene": "electronic",
+      "query": {
+        "title": "Archangel",
+        "artist": "Burial",
+        "recording_mbid": "e66b1022-d2d4-4d92-8916-72970de6426e"
+      },
+      "target": {
+        "title": "Apricots",
+        "artist": "Bicep",
+        "recording_mbid": "55ae2a14-acdc-4a9d-9888-1cf548964d17"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-016",
+      "scene": "electronic",
+      "query": {
+        "title": "Two Thousand and Seventeen",
+        "artist": "Four Tet",
+        "recording_mbid": "59feedf2-8212-4352-80c9-820b00bd36ce"
+      },
+      "target": {
+        "title": "Alone in Kyoto",
+        "artist": "Air",
+        "recording_mbid": "f900f8e2-7d49-4cca-a9a9-ee67dda88e6e"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-017",
+      "scene": "electronic",
+      "query": {
+        "title": "D.A.N.C.E. (WWW)",
+        "artist": "Justice",
+        "recording_mbid": "d18a1284-d6a1-42d9-b0c1-b247e9f27b80"
+      },
+      "target": {
+        "title": "Nightcall",
+        "artist": "Kavinsky",
+        "recording_mbid": "3a2f5805-565f-433f-a92d-d1ac7aee6575"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-018",
+      "scene": "electronic",
+      "query": {
+        "title": "All My Friends",
+        "artist": "LCD Soundsystem",
+        "recording_mbid": "722b0851-8793-4df7-9aff-835cd3770a8c"
+      },
+      "target": {
+        "title": "The Rat",
+        "artist": "The Walkmen",
+        "recording_mbid": "73b4af05-80ff-439d-bfa4-91255d3c681a"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 39,
+        "audio_only": 0,
+        "collaborative_only": 33,
+        "hybrid_edge_masked": 39,
+        "hybrid_unmasked_ablation": 10
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": true,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": true,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": true,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-019",
+      "scene": "electronic",
+      "query": {
+        "title": "Teardrop",
+        "artist": "Massive Attack",
+        "recording_mbid": "f3bba4cd-8018-468b-902e-bc8f029593e5"
+      },
+      "target": {
+        "title": "Roads",
+        "artist": "Portishead",
+        "recording_mbid": "8a49dba0-253a-4535-b87f-78bb035336ce"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-020",
+      "scene": "metal",
+      "query": {
+        "title": "Holy Wars...The Punishment Due",
+        "artist": "Megadeth",
+        "recording_mbid": "c756a4e6-8994-479d-b89f-44153f9d9a86"
+      },
+      "target": {
+        "title": "South Of Heaven",
+        "artist": "Slayer",
+        "recording_mbid": "5659354b-92af-4078-8287-c9ab59501994"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-021",
+      "scene": "metal",
+      "query": {
+        "title": "Painkiller",
+        "artist": "Judas Priest",
+        "recording_mbid": "2467c6e5-247d-47a3-a3cc-c8286bfd2230"
+      },
+      "target": {
+        "title": "The Trooper (1998 Remaster)",
+        "artist": "Iron Maiden",
+        "recording_mbid": "8f13d546-0cc6-4d8b-8d3a-27805f3ca264"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-022",
+      "scene": "metal",
+      "query": {
+        "title": "Walk",
+        "artist": "Pantera",
+        "recording_mbid": "e4b29daf-3483-4158-8d08-14b299e2b2b6"
+      },
+      "target": {
+        "title": "Chop Suey!",
+        "artist": "System of A Down",
+        "recording_mbid": "46c7368a-013a-47b6-97cc-e55e7ab25213"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-023",
+      "scene": "metal",
+      "query": {
+        "title": "Change (In the House of Flies)",
+        "artist": "Deftones",
+        "recording_mbid": "af7f2f8b-68ce-47fd-a088-ed3a29edd96f"
+      },
+      "target": {
+        "title": "One Step Closer",
+        "artist": "Linkin Park",
+        "recording_mbid": "c6111171-bb92-4401-9053-f165863547f2"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-024",
+      "scene": "metal",
+      "query": {
+        "title": "Stranded",
+        "artist": "Gojira",
+        "recording_mbid": "bda5e235-d138-47d4-9921-e75ab4ef5e0e"
+      },
+      "target": {
+        "title": "Blood and Thunder",
+        "artist": "Mastodon",
+        "recording_mbid": "5fe2946e-ab9e-4271-bf80-e745fb08ccc3"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-025",
+      "scene": "jazz",
+      "query": {
+        "title": "Goodbye Pork Pie Hat",
+        "artist": "Charles Mingus",
+        "recording_mbid": "cb044761-a5cf-4113-a86d-93109e4a6471"
+      },
+      "target": {
+        "title": "Blue in Green (feat. John Coltrane & Bill Evans)",
+        "artist": "Miles Davis",
+        "recording_mbid": "67a9794c-153a-4a24-82ec-9eace7e208f2"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-026",
+      "scene": "jazz",
+      "query": {
+        "title": "Moanin' (Alternate Take)",
+        "artist": "Art Blakey",
+        "recording_mbid": "059485fb-177b-45c7-8423-20fd1f9c2639"
+      },
+      "target": {
+        "title": "Take Five",
+        "artist": "Dave Brubeck",
+        "recording_mbid": "69db5ee7-2114-4dda-981d-d2aa8cba6f1f"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-027",
+      "scene": "k-pop",
+      "query": {
+        "title": "WANNABE",
+        "artist": "ITZY",
+        "recording_mbid": "3d0a4ca4-130f-49dd-a2d0-4b7fbc849dce"
+      },
+      "target": {
+        "title": "LOVE DIVE",
+        "artist": "IVE",
+        "recording_mbid": "25db131d-4437-4d07-a289-77d1223703e7"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-028",
+      "scene": "latin-reggaeton",
+      "query": {
+        "title": "TQG",
+        "artist": "KAROL G",
+        "recording_mbid": "31586003-9935-439d-bbe9-41029504a60b"
+      },
+      "target": {
+        "title": "Me Porto Bonito",
+        "artist": "Bad Bunny",
+        "recording_mbid": "aaab6788-00a8-4f91-9bd2-dfb77cefc3c2"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-029",
+      "scene": "latin-reggaeton",
+      "query": {
+        "title": "Todo De Ti",
+        "artist": "Rauw Alejandro",
+        "recording_mbid": "2928b0e8-1116-4593-a214-5838d574fb08"
+      },
+      "target": {
+        "title": "La Bachata",
+        "artist": "Manuel Turizo",
+        "recording_mbid": "1c698f74-2500-422d-8e98-5ecc3c34c238"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-030",
+      "scene": "latin-reggaeton",
+      "query": {
+        "title": "DESPECHÁ",
+        "artist": "ROSALÍA",
+        "recording_mbid": "e853141a-5724-44f8-8a51-0d6a8db16ca6"
+      },
+      "target": {
+        "title": "LUNA",
+        "artist": "Feid",
+        "recording_mbid": "ebe65cf8-fa27-4d6b-954b-b344f15152a5"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-031",
+      "scene": "afrobeats",
+      "query": {
+        "title": "Calm Down",
+        "artist": "Rema",
+        "recording_mbid": "e7d4a352-cf63-4c6d-8721-409ca57db03d"
+      },
+      "target": {
+        "title": "Water",
+        "artist": "Tyla",
+        "recording_mbid": "df1fd341-2119-441e-a863-7d21eaa3ab94"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 31,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": true,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": true,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "production": {
+          "recall_at_100": true,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-032",
+      "scene": "afrobeats",
+      "query": {
+        "title": "soso",
+        "artist": "Omah Lay",
+        "recording_mbid": "2b6175e3-5c83-4850-ac7c-f1ec4e4d87d9"
+      },
+      "target": {
+        "title": "Rush",
+        "artist": "Ayra Starr",
+        "recording_mbid": "62865a1e-b54b-4725-83fa-888528220c79"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-033",
+      "scene": "punk-hardcore",
+      "query": {
+        "title": "Blitzkrieg Bop (1999 Remaster)",
+        "artist": "Ramones",
+        "recording_mbid": "59b14ce2-7b0a-4924-9e23-7418f2fad01c"
+      },
+      "target": {
+        "title": "London Calling (Remastered)",
+        "artist": "The Clash",
+        "recording_mbid": "8f7f788e-131e-406e-8276-84a0a9f04fa0"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-034",
+      "scene": "punk-hardcore",
+      "query": {
+        "title": "Banned in D.C.",
+        "artist": "Bad Brains",
+        "recording_mbid": "555dfb63-76fc-44ae-bad0-f783db8d7c99"
+      },
+      "target": {
+        "title": "Bloodstains",
+        "artist": "Agent Orange",
+        "recording_mbid": "cbca2b27-9388-4c2c-816b-37ffabc4f874"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-035",
+      "scene": "punk-hardcore",
+      "query": {
+        "title": "Rise Above",
+        "artist": "Black Flag",
+        "recording_mbid": "aff08032-4540-45c4-b047-1d7c4d8edeaf"
+      },
+      "target": {
+        "title": "Last Caress",
+        "artist": "Misfits",
+        "recording_mbid": "bd113090-816d-4267-aa3c-4041496ab582"
+      },
+      "ranks": {
+        "production_baseline": 2,
+        "iteration3_deployed": 1,
+        "raw_encoder": 2,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": true,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": true,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "production": {
+          "recall_at_100": true,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-036",
+      "scene": "punk-hardcore",
+      "query": {
+        "title": "Suburban Home",
+        "artist": "Descendents",
+        "recording_mbid": "b77083e3-06ea-4c33-b37a-d85f217cbe82"
+      },
+      "target": {
+        "title": "Filler",
+        "artist": "Minor Threat",
+        "recording_mbid": "61800ff1-2aa1-4b7a-b43c-72f0986a26e3"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-037",
+      "scene": "folk-country",
+      "query": {
+        "title": "Pink Moon",
+        "artist": "Nick Drake",
+        "recording_mbid": "d840d505-c0e0-44fe-9c03-3a272cfff88e"
+      },
+      "target": {
+        "title": "Waltz #2 (XO)",
+        "artist": "Elliott Smith",
+        "recording_mbid": "e9af3911-dd05-4f3b-983e-268dc8b7bcb3"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-038",
+      "scene": "folk-country",
+      "query": {
+        "title": "Chicago",
+        "artist": "Sufjan Stevens",
+        "recording_mbid": "5efb8ca9-6f8a-4140-9713-13398178cb4d"
+      },
+      "target": {
+        "title": "Wake Up",
+        "artist": "Arcade Fire",
+        "recording_mbid": "a1a4b6c4-d1c5-4a26-b155-75052d407c83"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 28,
+        "audio_only": 0,
+        "collaborative_only": 36,
+        "hybrid_edge_masked": 28,
+        "hybrid_unmasked_ablation": 40
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": true,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "production": {
+          "recall_at_100": true,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-039",
+      "scene": "folk-country",
+      "query": {
+        "title": "For Emma",
+        "artist": "Bon Iver",
+        "recording_mbid": "9292cc80-2875-4efa-b7f8-ec2e25525d15"
+      },
+      "target": {
+        "title": "Big Black Car",
+        "artist": "Gregory Alan Isakov",
+        "recording_mbid": "a2b84be0-4ad9-4e41-89aa-0c81c8a488ac"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-040",
+      "scene": "folk-country",
+      "query": {
+        "title": "Feathered Indians",
+        "artist": "Tyler Childers",
+        "recording_mbid": "229b7c41-388f-4762-b81f-60657f0a4c71"
+      },
+      "target": {
+        "title": "Sleeping on the Blacktop",
+        "artist": "Colter Wall",
+        "recording_mbid": "87d36f49-1283-4e81-81c0-c2287c16e423"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-041",
+      "scene": "classic-psych-rock",
+      "query": {
+        "title": "All Along the Watchtower",
+        "artist": "Jimi Hendrix",
+        "recording_mbid": "989013d7-af14-4c78-925a-bd8679f31397"
+      },
+      "target": {
+        "title": "La Grange (2019 Remaster)",
+        "artist": "ZZ Top",
+        "recording_mbid": "a64fbce7-81aa-4f20-a51c-835136f8816d"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-042",
+      "scene": "emo-pop-punk",
+      "query": {
+        "title": "King For A Day",
+        "artist": "Pierce The Veil",
+        "recording_mbid": "d57df77c-ae38-4315-912a-c060fa409801"
+      },
+      "target": {
+        "title": "Misery Business",
+        "artist": "Paramore",
+        "recording_mbid": "26bc1124-b228-401e-8f38-5cea1625d8c2"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-043",
+      "scene": "emo-pop-punk",
+      "query": {
+        "title": "The Anthem",
+        "artist": "Good Charlotte",
+        "recording_mbid": "3bceacbc-1a22-47a4-90fd-703d227f3523"
+      },
+      "target": {
+        "title": "In Too Deep",
+        "artist": "Sum 41",
+        "recording_mbid": "1a987223-78db-4a67-87a3-0cb9eb3c3c10"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-044",
+      "scene": "reggae-dub-ska",
+      "query": {
+        "title": "Three Little Birds",
+        "artist": "Bob Marley & The Wailers",
+        "recording_mbid": "33b9b9fd-15a1-4e1f-a10a-3d15df5e58f0"
+      },
+      "target": {
+        "title": "September",
+        "artist": "Earth, Wind & Fire",
+        "recording_mbid": "661d35c3-6ade-4367-af96-6c2898149906"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-045",
+      "scene": "ambient-experimental",
+      "query": {
+        "title": "cellophane",
+        "artist": "FKA twigs",
+        "recording_mbid": "54a6b1c1-04a3-4725-aa52-224040ce2c31"
+      },
+      "target": {
+        "title": "Good Luck, Babe!",
+        "artist": "Chappell Roan",
+        "recording_mbid": "7194cfbb-36e7-48a1-b7aa-8dce21a0785a"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-046",
+      "scene": "hyperpop-digicore",
+      "query": {
+        "title": "money machine",
+        "artist": "100 gecs",
+        "recording_mbid": "5e67eb83-e42e-4095-b908-20600d239252"
+      },
+      "target": {
+        "title": "GIRL HELL 1999",
+        "artist": "femtanyl",
+        "recording_mbid": "38c9d6c4-11ba-45dd-9ca6-6b9f756478e4"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-047",
+      "scene": "hyperpop-digicore",
+      "query": {
+        "title": "Immaterial",
+        "artist": "SOPHIE",
+        "recording_mbid": "d39fe3eb-59d7-407e-8bf7-c74c689d4784"
+      },
+      "target": {
+        "title": "Bunny Is A Rider",
+        "artist": "Caroline Polachek",
+        "recording_mbid": "7bbbc4f7-6f61-4996-bd4b-3e64501a9f43"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-048",
+      "scene": "hyperpop-digicore",
+      "query": {
+        "title": "Beautiful",
+        "artist": "A. G. Cook",
+        "recording_mbid": "92a95626-85c3-4405-b40d-ea7f6cfaf7ee"
+      },
+      "target": {
+        "title": "In My Dreams",
+        "artist": "Danny L Harle",
+        "recording_mbid": "2330cae4-a119-434d-987e-7164c4b916d3"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-049",
+      "scene": "hyperpop-digicore",
+      "query": {
+        "title": "Spoiled little brat",
+        "artist": "underscores",
+        "recording_mbid": "0e4e7b4e-536a-4059-a464-fd6681b19a73"
+      },
+      "target": {
+        "title": "your clothes",
+        "artist": "Jane Remover",
+        "recording_mbid": "985cce78-e8e5-4bc0-8284-88ed287e2def"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-050",
+      "scene": "hyperpop-digicore",
+      "query": {
+        "title": "Thos Moser",
+        "artist": "food house",
+        "recording_mbid": "c416b359-20a0-4143-8ed3-eb6fc03816d9"
+      },
+      "target": {
+        "title": "False Awakening",
+        "artist": "Gupi",
+        "recording_mbid": "e14edddb-11b9-48e5-8005-bf6cb3dac04e"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-051",
+      "scene": "hyperpop-digicore",
+      "query": {
+        "title": "Rich Bitch Juice",
+        "artist": "Alice Longyu Gao",
+        "recording_mbid": "8a331282-4f00-4d4b-8fb3-383558abe8d7"
+      },
+      "target": {
+        "title": "scawy monstews and nice spwites :3",
+        "artist": "Fraxiom",
+        "recording_mbid": "a9dac07c-4167-4868-92b3-c9081b5df329"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-052",
+      "scene": "pop",
+      "query": {
+        "title": "24K Magic",
+        "artist": "Bruno Mars",
+        "recording_mbid": "716f0fa1-c526-4995-a8ad-ff57c44bf9b1"
+      },
+      "target": {
+        "title": "Espresso",
+        "artist": "Sabrina Carpenter",
+        "recording_mbid": "d3efc8d3-90e7-4696-8eda-2cab5ebc050d"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-053",
+      "scene": "pop",
+      "query": {
+        "title": "Flowers",
+        "artist": "Miley Cyrus",
+        "recording_mbid": "4ddebe69-6db5-4338-97d3-299cfdc72fb2"
+      },
+      "target": {
+        "title": "greedy",
+        "artist": "Tate McRae",
+        "recording_mbid": "882c925d-125e-415c-b236-c78f1b1db436"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-054",
+      "scene": "pop",
+      "query": {
+        "title": "Cool for the Summer",
+        "artist": "Demi Lovato",
+        "recording_mbid": "a98c6c17-5415-40f5-b9bc-ee537c2460ff"
+      },
+      "target": {
+        "title": "Habits (Stay High)",
+        "artist": "Tove Lo",
+        "recording_mbid": "1d8b14d9-0398-4128-a1b9-9dfc79ac24d8"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-055",
+      "scene": "r&b-soul",
+      "query": {
+        "title": "Girls Need Love",
+        "artist": "Summer Walker",
+        "recording_mbid": "73887c16-40b3-467b-85e9-ce6ac5da2e28"
+      },
+      "target": {
+        "title": "Under The Influence",
+        "artist": "Chris Brown",
+        "recording_mbid": "e86392c3-7f16-4b57-8e37-628d7e14756f"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-056",
+      "scene": "indie-rock",
+      "query": {
+        "title": "Bloodbuzz Ohio",
+        "artist": "The National",
+        "recording_mbid": "6a17a1a8-a70e-4cd7-93c6-d9a54820c354"
+      },
+      "target": {
+        "title": "The High Road",
+        "artist": "Broken Bells",
+        "recording_mbid": "bd1599ab-10e4-4e40-9329-33d939af70fb"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": true
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": true
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-057",
+      "scene": "indie-rock",
+      "query": {
+        "title": "Cut Your Hair",
+        "artist": "Pavement",
+        "recording_mbid": "5a6d98a8-fe47-4fca-b041-d163faf482e8"
+      },
+      "target": {
+        "title": "Teen Age Riot (Album Version)",
+        "artist": "Sonic Youth",
+        "recording_mbid": "2109e376-132b-40ad-b993-2bb6812e19d4"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-058",
+      "scene": "indie-rock",
+      "query": {
+        "title": "Intro",
+        "artist": "The xx",
+        "recording_mbid": "773a1557-a974-4f1e-978e-c240be4c3cb8"
+      },
+      "target": {
+        "title": "Burning",
+        "artist": "The Whitest Boy Alive",
+        "recording_mbid": "eae536b0-3967-40c0-9c5a-487b17612301"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-059",
+      "scene": "k-pop",
+      "query": {
+        "title": "HIP",
+        "artist": "MAMAMOO",
+        "recording_mbid": "9260859a-4f25-4535-a521-42e2afe395e9"
+      },
+      "target": {
+        "title": "ABCD",
+        "artist": "NAYEON",
+        "recording_mbid": "d84fcd8d-c7a0-4345-a6cf-713d63475b19"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-060",
+      "scene": "k-pop",
+      "query": {
+        "title": "Scream",
+        "artist": "Dreamcatcher",
+        "recording_mbid": "ca1d0752-d68e-444a-9bd2-c98ca8d587cf"
+      },
+      "target": {
+        "title": "RUN2U",
+        "artist": "STAYC",
+        "recording_mbid": "6c14d35d-76b7-4da6-adda-cbea3572d138"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-061",
+      "scene": "metal",
+      "query": {
+        "title": "Redneck",
+        "artist": "Lamb Of God",
+        "recording_mbid": "65e9508c-b95b-4545-b669-9ec37434f3c9"
+      },
+      "target": {
+        "title": "Psychosocial",
+        "artist": "Slipknot",
+        "recording_mbid": "99eafe91-a43c-4adc-b3ea-8b6f8e0e4966"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-062",
+      "scene": "metal",
+      "query": {
+        "title": "My Curse",
+        "artist": "Killswitch Engage",
+        "recording_mbid": "79ec57c9-ac82-4554-b779-87b09ecff5b1"
+      },
+      "target": {
+        "title": "Two Weeks",
+        "artist": "All That Remains",
+        "recording_mbid": "6c101501-4730-452a-a48c-7e707cc8d449"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-063",
+      "scene": "metal",
+      "query": {
+        "title": "Doomsday",
+        "artist": "Architects",
+        "recording_mbid": "cbc7cbfd-09f1-4ce9-979e-d26b850d570f"
+      },
+      "target": {
+        "title": "Circle With Me",
+        "artist": "Spiritbox",
+        "recording_mbid": "5d74244a-d193-44e6-a78c-28446abf2904"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-064",
+      "scene": "latin-reggaeton",
+      "query": {
+        "title": "Hawái",
+        "artist": "Maluma",
+        "recording_mbid": "8b4f7e85-af3d-402b-aa7b-eb1f5460bab6"
+      },
+      "target": {
+        "title": "LALA",
+        "artist": "Myke Towers",
+        "recording_mbid": "2f9fd931-1114-494e-a609-c034198e151e"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-065",
+      "scene": "punk-hardcore",
+      "query": {
+        "title": "Sound System (2007 Remaster)",
+        "artist": "Operation Ivy",
+        "recording_mbid": "bb47be80-68c1-4b11-852b-bdec5cc510e0"
+      },
+      "target": {
+        "title": "All My Best Friends Are Metalheads",
+        "artist": "Less Than Jake",
+        "recording_mbid": "64636beb-5ff8-4229-bb5d-2beab5402df2"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-066",
+      "scene": "punk-hardcore",
+      "query": {
+        "title": "Time Bomb",
+        "artist": "Rancid",
+        "recording_mbid": "c6c6872b-8ad4-43c5-907e-76e865d2068a"
+      },
+      "target": {
+        "title": "American Jesus",
+        "artist": "Bad Religion",
+        "recording_mbid": "453de38c-6d0d-4bb8-93ff-88d78774352a"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-067",
+      "scene": "emo-pop-punk",
+      "query": {
+        "title": "The Taste of Ink",
+        "artist": "The Used",
+        "recording_mbid": "fad5ecfc-7473-4195-bb04-1bb8013d44df"
+      },
+      "target": {
+        "title": "First Date",
+        "artist": "blink-182",
+        "recording_mbid": "99bfd38c-6f6d-49a5-8b97-f42b8d5edf89"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-068",
+      "scene": "emo-pop-punk",
+      "query": {
+        "title": "Hands Down",
+        "artist": "Dashboard Confessional",
+        "recording_mbid": "aa4ea1d2-88ba-4666-9193-a596df81f898"
+      },
+      "target": {
+        "title": "Swing, Swing",
+        "artist": "The All-American Rejects",
+        "recording_mbid": "9462792b-094c-4aa5-a5dc-5588536d51a0"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-069",
+      "scene": "emo-pop-punk",
+      "query": {
+        "title": "Seven Years",
+        "artist": "Saosin",
+        "recording_mbid": "ad4004d7-514c-4854-b565-70f955337ec7"
+      },
+      "target": {
+        "title": "Writing On The Walls",
+        "artist": "Underoath",
+        "recording_mbid": "938415db-f1cb-4c7e-af1f-1e9b4c7d74ab"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 2
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": true,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": true,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-070",
+      "scene": "pop",
+      "query": {
+        "title": "Rush (Extended)",
+        "artist": "Troye Sivan",
+        "recording_mbid": "db8f56ef-8d49-43fc-8594-72b6683b909a"
+      },
+      "target": {
+        "title": "i like the way you kiss me",
+        "artist": "Artemas",
+        "recording_mbid": "63935ae3-fa46-4663-b83e-2a502318e691"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-071",
+      "scene": "pop",
+      "query": {
+        "title": "Lights",
+        "artist": "Ellie Goulding",
+        "recording_mbid": "e8b32cd0-f354-4956-8ffe-2f9675ba18a2"
+      },
+      "target": {
+        "title": "Runaway (U & I)",
+        "artist": "Galantis",
+        "recording_mbid": "a7267512-1a91-45f7-8d8d-f56310cab13b"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-072",
+      "scene": "hip-hop",
+      "query": {
+        "title": "A Milli (Album Version Explicit)",
+        "artist": "Lil Wayne",
+        "recording_mbid": "0fbf43cf-1482-4177-b44e-7442390930a4"
+      },
+      "target": {
+        "title": "Hypnotize (2007 Remaster)",
+        "artist": "The Notorious B.I.G.",
+        "recording_mbid": "739c17dd-c97b-49d0-81cc-08d83a2b3f30"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-073",
+      "scene": "hip-hop",
+      "query": {
+        "title": "Day 'N' Nite",
+        "artist": "Kid Cudi",
+        "recording_mbid": "447912ed-f8c8-400a-b688-9cec4911bd85"
+      },
+      "target": {
+        "title": "Mask Off",
+        "artist": "Future",
+        "recording_mbid": "09a613f7-5f9d-414a-9c4a-5c318dfe6b9a"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-074",
+      "scene": "hip-hop",
+      "query": {
+        "title": "Collard Greens",
+        "artist": "ScHoolboy Q",
+        "recording_mbid": "34e3c370-be27-492e-b8f1-c8cfb4cce23b"
+      },
+      "target": {
+        "title": "Praise The Lord (Da Shine) (feat. Skepta)",
+        "artist": "A$AP Rocky",
+        "recording_mbid": "78ee7ba2-400d-4a17-a4bf-142c44a30fb4"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-075",
+      "scene": "r&b-soul",
+      "query": {
+        "title": "Family Affair",
+        "artist": "Mary J. Blige",
+        "recording_mbid": "c0d6b00e-45f2-438b-b54e-a067ff55c65e"
+      },
+      "target": {
+        "title": "In Da Club",
+        "artist": "50 Cent",
+        "recording_mbid": "87877ebd-874b-4dd2-83c6-4c1360ba26a0"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-076",
+      "scene": "indie-rock",
+      "query": {
+        "title": "My Number",
+        "artist": "Foals",
+        "recording_mbid": "5dc0acc5-283c-4b2a-9d3b-38b71d02dc6b"
+      },
+      "target": {
+        "title": "Golden Skans",
+        "artist": "Klaxons",
+        "recording_mbid": "91c08f17-2b48-4f03-9f61-390a184a28b7"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-077",
+      "scene": "indie-rock",
+      "query": {
+        "title": "Gooey",
+        "artist": "Glass Animals",
+        "recording_mbid": "52032938-7ee1-4375-9a6b-c349f0a6c1af"
+      },
+      "target": {
+        "title": "Drop The Game",
+        "artist": "Flume",
+        "recording_mbid": "b8708fcc-b3c1-4914-9789-d7f979363491"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-078",
+      "scene": "indie-rock",
+      "query": {
+        "title": "Feel It Still",
+        "artist": "Portugal. The Man",
+        "recording_mbid": "6728f2b7-dec1-4098-8c91-362db1d0ff31"
+      },
+      "target": {
+        "title": "Whatever It Takes",
+        "artist": "Imagine Dragons",
+        "recording_mbid": "ba172571-a0c9-4e75-855a-e4365ca33833"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-079",
+      "scene": "indie-rock",
+      "query": {
+        "title": "Young Folks",
+        "artist": "Peter Bjorn And John",
+        "recording_mbid": "e30269b3-eb85-4881-a0fc-ef18be37e89b"
+      },
+      "target": {
+        "title": "Tongue Tied",
+        "artist": "Grouplove",
+        "recording_mbid": "00814269-b88d-4999-980c-31f735cc0e82"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-080",
+      "scene": "indie-rock",
+      "query": {
+        "title": "Naive",
+        "artist": "The Kooks",
+        "recording_mbid": "32c2aff2-2eef-4578-a7f3-a48f94658c94"
+      },
+      "target": {
+        "title": "Alright",
+        "artist": "Supergrass",
+        "recording_mbid": "a531ff88-1c3c-44d2-8ba8-c649e5efe612"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": true
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-081",
+      "scene": "electronic",
+      "query": {
+        "title": "A Moment Apart",
+        "artist": "Odesza",
+        "recording_mbid": "73dddcb6-74d8-448b-a426-7383a5ea0025"
+      },
+      "target": {
+        "title": "Inner Light",
+        "artist": "Elderbrook",
+        "recording_mbid": "a9715cbd-7696-44b7-80d4-d01a55ed4594"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-082",
+      "scene": "electronic",
+      "query": {
+        "title": "All My Friends",
+        "artist": "Madeon",
+        "recording_mbid": "0b4e13f5-8011-429b-ae12-19dde78abd9c"
+      },
+      "target": {
+        "title": "Something Comforting",
+        "artist": "Porter Robinson",
+        "recording_mbid": "007cefd7-58f5-434a-b772-6e8365f37cd7"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-083",
+      "scene": "electronic",
+      "query": {
+        "title": "Clarity",
+        "artist": "Zedd",
+        "recording_mbid": "28242b51-5e46-499f-b9e3-887812722466"
+      },
+      "target": {
+        "title": "Summer",
+        "artist": "Calvin Harris",
+        "recording_mbid": "9f192d15-def7-4446-a7cd-19446ca752f0"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 21
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": true,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": true,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": true,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-084",
+      "scene": "metal",
+      "query": {
+        "title": "Freak On a Leash",
+        "artist": "Korn",
+        "recording_mbid": "5addac83-e296-4548-bf4d-7b03a8a079bc"
+      },
+      "target": {
+        "title": "Break Stuff",
+        "artist": "Limp Bizkit",
+        "recording_mbid": "c8e00a85-9f7e-4779-a451-7b6890c5f0b9"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 12
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": true,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": true,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-085",
+      "scene": "metal",
+      "query": {
+        "title": "Can You Feel My Heart",
+        "artist": "Bring Me The Horizon",
+        "recording_mbid": "863dd3b3-c525-427c-a0fb-faa75b1dde37"
+      },
+      "target": {
+        "title": "Bring Me To Life",
+        "artist": "Evanescence",
+        "recording_mbid": "c24eb26a-04d6-4f09-9449-9bc334f78ede"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-088",
+      "scene": "pop",
+      "query": {
+        "title": "Genie In a Bottle",
+        "artist": "Christina Aguilera",
+        "recording_mbid": "fbe9ad8c-3a31-4b5a-9710-228b8c77907b"
+      },
+      "target": {
+        "title": "I Want It That Way",
+        "artist": "Backstreet Boys",
+        "recording_mbid": "87dfa566-21c3-45ed-bc42-1d345b8563fa"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-089",
+      "scene": "pop",
+      "query": {
+        "title": "Chandelier",
+        "artist": "Sia",
+        "recording_mbid": "d54ad2cf-cc5b-4c8d-881d-f4685e12553c"
+      },
+      "target": {
+        "title": "Complicated",
+        "artist": "Avril Lavigne",
+        "recording_mbid": "ef82bf7c-dd8b-4bac-85a8-2211376dc3b4"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    },
+    {
+      "pair_id": "FINAL-FRESH-090",
+      "scene": "pop",
+      "query": {
+        "title": "Without Me",
+        "artist": "Halsey",
+        "recording_mbid": "01552e9a-11b0-4b5d-bcd5-cd15850ebd29"
+      },
+      "target": {
+        "title": "Dancing With A Stranger",
+        "artist": "Sam Smith",
+        "recording_mbid": "aa243e48-c9f6-4753-8b42-b2342bb8988b"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0,
+        "audio_only": 0,
+        "collaborative_only": 0,
+        "hybrid_edge_masked": 0,
+        "hybrid_unmasked_ablation": 0
+      },
+      "candidate_hits": {
+        "audio_only": {
+          "recall_at_100": false,
+          "recall_at_500": true,
+          "recall_at_1000": true
+        },
+        "collaborative_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "collaborative_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        },
+        "hybrid_union_edge_masked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": true
+        },
+        "hybrid_union_unmasked": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": true
+        },
+        "production": {
+          "recall_at_100": false,
+          "recall_at_500": false,
+          "recall_at_1000": false
+        }
+      }
+    }
+  ]
+}

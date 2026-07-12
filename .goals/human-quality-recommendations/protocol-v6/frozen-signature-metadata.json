@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "signed_at": "2026-07-12",
+  "signed_file": "frozen-state.json",
+  "signed_file_sha256": "89c99ef9c4a4124d7076e1b43b23c63b257bac2db4424326c4b3641dd06cb243",
+  "algorithm": "ssh-ed25519",
+  "namespace": "soundalike-protocol",
+  "signer_fingerprint": "SHA256:swR7LWOnpSxTTqgXUhwWrDaiyCppQnqGH8LljVTkDqA",
+  "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF6AubIGzMUMRXrPQfMM9r3sQ6AO2RuHWSN7cwPbTE6X soundalike-protocol-v6-frozen",
+  "private_key_retained": false,
+  "verification_command": "ssh-keygen -Y verify -f frozen-allowed-signers -I soundalike-protocol -n soundalike-protocol -s frozen-state.sig < frozen-state.json"
+}

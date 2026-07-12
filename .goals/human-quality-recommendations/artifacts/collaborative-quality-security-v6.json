@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-07-12",
+  "quality_gate": {
+    "command": ".\\.venv\\Scripts\\python.exe -m pytest tests\\ -q",
+    "result": "408 passed",
+    "seconds": 18.62
+  },
+  "build": {
+    "command": ".\\.venv\\Scripts\\python.exe -m build",
+    "result": "pass",
+    "wheel": {"path": "dist\\soundalike-0.1.0-py3-none-any.whl", "bytes": 87628169},
+    "sdist": {"path": "dist\\soundalike-0.1.0.tar.gz", "bytes": 87682503}
+  },
+  "dependency_audit": {
+    "command": ".\\.venv\\Scripts\\python.exe -m pip_audit",
+    "result": "no known vulnerabilities",
+    "setuptools_version": "83.0.0",
+    "remediation": "Raised the build-system floor to setuptools>=78.1.1 after the first audit found PYSEC-2025-49 in local setuptools 78.1.0.",
+    "not_auditable_on_pypi": ["soundalike", "torch+cu130", "torchaudio+cu130", "torchvision+cu130"]
+  },
+  "secret_checks": {
+    "github_secret_scanning": "unavailable: repository does not have GitHub Advanced Security enabled",
+    "fallback_changed_file_pattern_scan": "pass: no private-key, API-key, token, password, bearer, or client-secret pattern",
+    "committed_ssh_material": "public keys and detached signatures only; both private keys destroyed"
+  },
+  "security_review": {
+    "result": "no high-confidence vulnerabilities",
+    "npz_pickle_loading": false,
+    "torch_weights_only_where_applicable": true,
+    "shell_interpolation_in_protocol_verifier": false
+  },
+  "integrity": {
+    "git_diff_check": "pass",
+    "all_json_parse": "pass",
+    "final_ed25519_verify": "pass",
+    "rankings_lock_preceded_final_open": true,
+    "final_open_count": 1
+  }
+}

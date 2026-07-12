@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-12",
+  "training_source": {
+    "name": "Music4All-Onion",
+    "doi": "https://doi.org/10.5281/zenodo.6609677",
+    "publisher": "Johannes Kepler University Linz / Zenodo",
+    "license": "CC-BY-4.0",
+    "provenance": "252,984,396 listening records for 119,140 users extracted from Last.fm; the published count subset contains 50,016,042 user-track interactions over 56,512 tracks.",
+    "counts_url": "https://zenodo.org/api/records/6609677/files/userid_trackid_count.tsv.bz2/content",
+    "counts_bytes": 550649499,
+    "counts_md5": "314b51196a9c8f333c7fefc0711760a1",
+    "counts_sha256": "90cbc25042b8cc8ea18d96393ece46791206b96476a72545d8f33423568b4e64",
+    "metadata_url": "https://huggingface.co/datasets/Leon299/music4all/raw/main/id_information.csv",
+    "metadata_bytes": 7000455,
+    "metadata_sha256": "11b7638e54c6f1bbb69746a087dcc62622cc9f04a7d3de13e98ffd073685be59",
+    "citation": "Moscati et al., Music4All-Onion, CIKM 2022, DOI 10.1145/3511808.3557656"
+  },
+  "deciding_benchmark_source": {
+    "name": "ListenBrainz Labs similar-recordings",
+    "provider": "MetaBrainz Foundation",
+    "algorithm": "session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+    "fresh_pairs": 88,
+    "scenes": 18,
+    "source_urls": 88,
+    "get_responses_used_during_freeze": 88,
+    "target_present_in_response": 88,
+    "accessed_at": "2026-07-12",
+    "same_dataset_or_api_as_training": false,
+    "caveat": "Both sources aggregate human listening behavior, but they are separately operated datasets/APIs. No user identifiers were joined and no ListenBrainz data entered training."
+  },
+  "exact_pair_edge_overlap": {
+    "final_pairs": 88,
+    "pairs_with_both_items_mapped_to_music4all": 39,
+    "internal_item_edges": 74,
+    "music4all_user_cooccurrences_before_mask": 2236,
+    "music4all_user_cooccurrences_after_mask": 0,
+    "mask_applied_before_item2vec_training": true
+  },
+  "external_validation": {
+    "source": "Deezer related-artists API",
+    "same_dataset_or_api_as_training": false,
+    "lastfm_or_listenbrainz_claimed_as_external_validation": false,
+    "direct_human_list_inspection_is_second_validation_axis": true
+  },
+  "leakage_controls": {
+    "fresh_final_artists_used_for_manual_boosts": false,
+    "fresh_final_targets_used_for_model_selection": false,
+    "final_open_count": 1,
+    "rankings_locked_before_open": true
+  }
+}

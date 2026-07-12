@@ -38,6 +38,16 @@ BASELINE_METHODS = (
     "audio_priors_zero",
 )
 RECALL_CUTOFFS = (1, 5, 10, 20, 50)
+CATEGORY_A_EVIDENCE = {
+    "category_a_sonic",
+    "category_a_human_songs_like",
+}
+
+
+def _is_category_a(pair: Mapping[str, Any]) -> bool:
+    return bool(pair.get("deciding_primary")) and pair.get(
+        "evidence_category"
+    ) in CATEGORY_A_EVIDENCE
 
 
 class ProtocolError(RuntimeError):
@@ -168,16 +178,17 @@ def _pair_artists(pair: Mapping[str, Any]) -> Set[str]:
 def validate_benchmark(benchmark: Mapping[str, Any]) -> Dict[str, Any]:
     """Validate scale, provenance, deduplication, and component isolation."""
     pairs = [
-        pair for pair in benchmark.get("pairs", [])
-        if pair.get("deciding_primary")
-        and pair.get("evidence_category") == "category_a_sonic"
+        pair for pair in benchmark.get("pairs", []) if _is_category_a(pair)
     ]
     development = [pair for pair in pairs if pair.get("split") == "development"]
     final = [pair for pair in pairs if pair.get("split") == "final"]
     if len(pairs) < 100:
         raise ProtocolError("Category-A benchmark must contain at least 100 pairs")
-    if len(final) < 30:
-        raise ProtocolError("FINAL must contain at least 30 deciding pairs")
+    minimum_final = 80 if int(benchmark.get("schema_version", 0)) >= 6 else 30
+    if len(final) < minimum_final:
+        raise ProtocolError(
+            f"FINAL must contain at least {minimum_final} deciding pairs"
+        )
 
     tracks: Set[Tuple[str, str]] = set()
     artists: Set[str] = set()
@@ -300,9 +311,7 @@ def freeze_protocol(
     audit = validate_benchmark(benchmark)
     final_pairs = [
         pair for pair in benchmark["pairs"]
-        if pair.get("split") == "final"
-        and pair.get("deciding_primary")
-        and pair.get("evidence_category") == "category_a_sonic"
+        if pair.get("split") == "final" and _is_category_a(pair)
     ]
     manifest = {
         "schema_version": 1,
@@ -504,9 +513,11 @@ def _bootstrap(
         sample = rng.integers(0, len(base), len(base))
         deltas[iteration] = np.mean(test[sample] - base[sample])
     absolute = float(np.mean(test - base))
+    baseline_mean = float(np.mean(base))
     return {
         "absolute_delta": absolute,
-        "relative_gain": absolute / (float(np.mean(base)) + 1e-12),
+        "baseline_primary": baseline_mean,
+        "relative_gain": absolute / baseline_mean if baseline_mean > 0 else None,
         "ci95_low": float(np.percentile(deltas, 2.5)),
         "ci95_high": float(np.percentile(deltas, 97.5)),
         "probability_positive": float(np.mean(deltas > 0)),
@@ -563,8 +574,30 @@ def open_final_once(
     index_path = Path(state["index_path"])
     with np.load(index_path, allow_pickle=False) as index:
         resolver = PairResolver(index["titles"], index["artists"])
+        diagnostic_methods = sorted({
+            method
+            for record in winner_doc["records"]
+            for method in record.get("diagnostic_rankings", {})
+        })
+        reserved_methods = set(BASELINE_METHODS) | {"winner"}
+        collisions = reserved_methods & set(diagnostic_methods)
+        if collisions:
+            raise ProtocolError(
+                "Diagnostic method names collide with reserved keys: "
+                f"{sorted(collisions)}"
+            )
+        candidate_methods = sorted({
+            method
+            for record in winner_doc["records"]
+            for method in record.get("candidate_sets", {})
+        })
         ranks: Dict[str, List[int]] = {
-            method: [] for method in (*BASELINE_METHODS, "winner")
+            method: []
+            for method in (*BASELINE_METHODS, "winner", *diagnostic_methods)
+        }
+        candidate_hits = {
+            method: {cutoff: [] for cutoff in (100, 500, 1000)}
+            for method in candidate_methods
         }
         rows = []
         for pair_id in pair_by_id:
@@ -575,19 +608,46 @@ def open_final_once(
                 method: _rank_for_rows(record["rankings"][method], targets)
                 for method in BASELINE_METHODS
             }
+            winner_record = winner_by_id[pair_id]
             pair_ranks["winner"] = _rank_for_rows(
-                winner_by_id[pair_id]["ranking"], targets
+                winner_record["ranking"], targets
             )
+            for method in diagnostic_methods:
+                pair_ranks[method] = _rank_for_rows(
+                    winner_record.get("diagnostic_rankings", {}).get(method, []),
+                    targets,
+                )
             for method, rank in pair_ranks.items():
                 ranks[method].append(rank)
+            pair_candidate_hits = {}
+            for method in candidate_methods:
+                candidate_rows = [
+                    int(value)
+                    for value in winner_record.get("candidate_sets", {}).get(
+                        method, []
+                    )
+                ]
+                pair_candidate_hits[method] = {}
+                for cutoff in (100, 500, 1000):
+                    hit = bool(set(candidate_rows[:cutoff]) & targets)
+                    candidate_hits[method][cutoff].append(hit)
+                    pair_candidate_hits[method][f"recall_at_{cutoff}"] = hit
             rows.append({
                 "pair_id": pair_id,
                 "scene": pair["scene"],
                 "query": pair["query"],
                 "target": pair["target"],
                 "ranks": pair_ranks,
+                "candidate_hits": pair_candidate_hits,
             })
     metrics = {method: _metrics(values) for method, values in ranks.items()}
+    candidate_recall = {
+        method: {
+            f"recall_at_{cutoff}": float(np.mean(values)) if values else 0.0
+            for cutoff, values in cutoffs.items()
+        }
+        for method, cutoffs in candidate_hits.items()
+    }
     comparison = _bootstrap(ranks["production_baseline"], ranks["winner"])
     base_contrib = np.asarray([
         _contribution(rank) for rank in ranks["production_baseline"]
@@ -626,9 +686,12 @@ def open_final_once(
         encoding="utf-8"
     ))["metric_policy"]["success"]
     comparison["passes"] = {
-        "relative_gain": comparison["relative_gain"]
+        "relative_gain": comparison["relative_gain"] is not None
+        and comparison["relative_gain"]
         >= policy["minimum_relative_primary_gain"],
         "positive_absolute": comparison["absolute_delta"] > 0,
+        "minimum_absolute_gain": comparison["absolute_delta"]
+        >= policy.get("minimum_absolute_primary_gain", 0.0),
         "recall_at_10_non_regression": metrics["winner"]["recall_at_10"]
         >= metrics["production_baseline"]["recall_at_10"],
         "mrr_non_regression": metrics["winner"]["mrr"]
@@ -650,6 +713,7 @@ def open_final_once(
         "open_number": 1,
         "method_id": state["method_id"],
         "metrics": metrics,
+        "candidate_recall": candidate_recall,
         "comparison_to_production_baseline": comparison,
         "pairs": rows,
     }
