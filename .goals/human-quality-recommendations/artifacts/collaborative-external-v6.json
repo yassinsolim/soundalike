@@ -1,0 +1,838 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-12T12:01:31.310679+00:00",
+  "source_independence": {
+    "collaborative_training": "Music4All-Onion / Last.fm extraction",
+    "validation_source": "Deezer related artists",
+    "same_dataset_or_api": false,
+    "listenbrainz_or_lastfm_claimed_as_external": false
+  },
+  "metric_scope": "artist-level taste affinity, not sonic similarity",
+  "benchmark_artist_overlap": [],
+  "resolved_seeds": 11,
+  "comparison": {
+    "baseline_mean": 0.15757575757575756,
+    "winner_mean": 0.26666666666666666,
+    "absolute_delta": 0.10909090909090911,
+    "ci95_low": 0.03636363636363637,
+    "ci95_high": 0.1878787878787879
+  },
+  "baseline_mean": 0.15757575757575756,
+  "hybrid_mean": 0.26666666666666666,
+  "records": [
+    {
+      "query": {
+        "title": "Lose Yourself",
+        "artist": "Eminem",
+        "scene": "hip-hop"
+      },
+      "source": {
+        "provider": "Deezer",
+        "endpoint": "https://api.deezer.com/artist/{id}/related",
+        "relationship": "artist-level taste affinity"
+      },
+      "truth_artists": [
+        "D12",
+        "50 Cent",
+        "Bad Meets Evil",
+        "Dr. Dre",
+        "Obie Trice",
+        "Snoop Dogg",
+        "The Game",
+        "2Pac",
+        "JAY Z",
+        "Nas",
+        "Fat Joe",
+        "Tech N9ne",
+        "DMX",
+        "Lloyd Banks",
+        "Ice Cube",
+        "The Notorious B.I.G.",
+        "G-Unit",
+        "Xzibit",
+        "Lil Wayne",
+        "Stat Quo"
+      ],
+      "current_production": {
+        "artists": [
+          "jay z",
+          "jadakiss",
+          "tony yayo",
+          "dilated peoples",
+          "sonnyjim",
+          "nas",
+          "soprano",
+          "awon",
+          "50 cent",
+          "masta ace",
+          "shaggy",
+          "don toliver",
+          "lupe fiasco",
+          "clipse",
+          "the notorious b i g"
+        ],
+        "overlap_at_15": 0.26666666666666666
+      },
+      "locked_hybrid": {
+        "artists": [
+          "d12",
+          "bad meets evil",
+          "50 cent",
+          "2pac",
+          "dmx",
+          "tech n9ne",
+          "hollywood undead",
+          "t i",
+          "ice cube",
+          "method man",
+          "westside connection",
+          "ludacris",
+          "linkin park",
+          "kanye west",
+          "nelly"
+        ],
+        "overlap_at_15": 0.4666666666666667
+      }
+    },
+    {
+      "query": {
+        "title": "The Light",
+        "artist": "Common",
+        "scene": "hip-hop"
+      },
+      "source": {
+        "provider": "Deezer",
+        "endpoint": "https://api.deezer.com/artist/{id}/related",
+        "relationship": "artist-level taste affinity"
+      },
+      "truth_artists": [
+        "The Roots",
+        "A Tribe Called Quest",
+        "Talib Kweli",
+        "Mos Def",
+        "Nas",
+        "Pete Rock",
+        "Slum Village",
+        "Little Brother",
+        "De La Soul",
+        "The Pharcyde",
+        "Q-Tip",
+        "Outkast",
+        "Ghostface Killah",
+        "Slick Rick",
+        "Hi-Tek",
+        "Redman",
+        "Gang Starr",
+        "Masta Ace",
+        "Reflection Eternal",
+        "The Notorious B.I.G."
+      ],
+      "current_production": {
+        "artists": [
+          "mos def",
+          "mf doom",
+          "the beatnuts",
+          "de la soul",
+          "brother ali",
+          "jurassic 5",
+          "bas",
+          "a tribe called quest",
+          "snoop dogg",
+          "q tip",
+          "kanye west",
+          "stevie wonder",
+          "teyana taylor",
+          "the pharcyde",
+          "ja rule"
+        ],
+        "overlap_at_15": 0.3333333333333333
+      },
+      "locked_hybrid": {
+        "artists": [
+          "outkast",
+          "method man",
+          "nas",
+          "westside connection",
+          "dmx",
+          "eminem",
+          "2pac",
+          "gang starr",
+          "rakim",
+          "busta rhymes",
+          "kanye west",
+          "50 cent",
+          "ol dirty bastard",
+          "dilated peoples",
+          "ice cube"
+        ],
+        "overlap_at_15": 0.2
+      }
+    },
+    {
+      "query": {
+        "title": "Ascension (Don't Ever Wonder) (Cut)",
+        "artist": "Maxwell",
+        "scene": "r&b"
+      },
+      "source": {
+        "provider": "Deezer",
+        "endpoint": "https://api.deezer.com/artist/{id}/related",
+        "relationship": "artist-level taste affinity"
+      },
+      "truth_artists": [
+        "Angie Stone",
+        "Ledisi",
+        "Anthony Hamilton",
+        "Eric Benét",
+        "Leela James",
+        "India.Arie",
+        "D'Angelo",
+        "Musiq Soulchild",
+        "Chico DeBarge",
+        "Vivian Green",
+        "Raheem Devaughn",
+        "Rahsaan Patterson",
+        "Kem",
+        "Lalah Hathaway",
+        "Glenn Lewis",
+        "Brian McKnight",
+        "Chrisette Michele",
+        "Tweet",
+        "Floetry",
+        "Kenny Lattimore"
+      ],
+      "current_production": {
+        "artists": [
+          "mac ayres",
+          "dwele",
+          "gary clark jr",
+          "usher",
+          "new kids on the block",
+          "phoenix",
+          "rae khalil",
+          "alfa rococo",
+          "death in vegas",
+          "avicii",
+          "tomoko aran",
+          "brandy",
+          "walk the moon",
+          "chris brown",
+          "jung kook"
+        ],
+        "overlap_at_15": 0.0
+      },
+      "locked_hybrid": {
+        "artists": [
+          "jill scott",
+          "raphael saadiq",
+          "robin thicke",
+          "anita baker",
+          "amel larrieux",
+          "ledisi",
+          "bilal",
+          "erykah badu",
+          "toni braxton",
+          "faith evans",
+          "brandy",
+          "marsha ambrosius",
+          "goapele",
+          "mary j blige",
+          "floetry"
+        ],
+        "overlap_at_15": 0.13333333333333333
+      }
+    },
+    {
+      "query": {
+        "title": "Eple",
+        "artist": "Röyksopp",
+        "scene": "electronic"
+      },
+      "source": {
+        "provider": "Deezer",
+        "endpoint": "https://api.deezer.com/artist/{id}/related",
+        "relationship": "artist-level taste affinity"
+      },
+      "truth_artists": [
+        "Agoria",
+        "Moderat",
+        "Apparat",
+        "Rone",
+        "Trentemøller",
+        "Weval",
+        "Superpoze",
+        "Four Tet",
+        "Bonobo",
+        "Scratch Massive",
+        "Caribou",
+        "Tycho",
+        "Matthew Dear",
+        "Modeselektor",
+        "Etienne de Crécy",
+        "Vitalic",
+        "George Fitzgerald",
+        "GusGus",
+        "French 79",
+        "Thylacine"
+      ],
+      "current_production": {
+        "artists": [
+          "sayem",
+          "tor",
+          "lipphead",
+          "good knight productions",
+          "underworld",
+          "fitz",
+          "new order",
+          "herbie hancock",
+          "rjd2",
+          "the who",
+          "seal",
+          "chaka khan",
+          "orchestral manoeuvres in the dark",
+          "grimes",
+          "billy joel"
+        ],
+        "overlap_at_15": 0.0
+      },
+      "locked_hybrid": {
+        "artists": [
+          "nero",
+          "daft punk",
+          "disturbed",
+          "lamb",
+          "kavinsky",
+          "fritz kalkbrenner",
+          "moderat",
+          "oliver koletzki",
+          "sam paganini",
+          "gareth emery",
+          "rone",
+          "crystal castles",
+          "coldplay",
+          "justice",
+          "knife party"
+        ],
+        "overlap_at_15": 0.13333333333333333
+      }
+    },
+    {
+      "query": {
+        "title": "Lateralus",
+        "artist": "TOOL",
+        "scene": "metal"
+      },
+      "source": {
+        "provider": "Deezer",
+        "endpoint": "https://api.deezer.com/artist/{id}/related",
+        "relationship": "artist-level taste affinity"
+      },
+      "truth_artists": [
+        "Helmet",
+        "Primus",
+        "Marilyn Manson",
+        "Mastodon",
+        "White Zombie",
+        "A Perfect Circle",
+        "Alice in Chains",
+        "Puscifer",
+        "Ministry",
+        "KoЯn",
+        "Rage Against the Machine",
+        "Clawfinger",
+        "Crowbar",
+        "Dream Widow",
+        "Opeth",
+        "Filter",
+        "Godsmack",
+        "Body Count",
+        "Karnivool",
+        "Sepultura"
+      ],
+      "current_production": {
+        "artists": [
+          "and so i watch you from afar",
+          "explosions in the sky",
+          "1000mods",
+          "la dispute",
+          "mineral",
+          "dm dokuro",
+          "tropical fuck storm",
+          "merchant ships",
+          "hans zimmer",
+          "gavin greenaway",
+          "fiddlehead",
+          "weedeater",
+          "jesper kyd",
+          "richy mitch the coal miners",
+          "nirvana"
+        ],
+        "overlap_at_15": 0.0
+      },
+      "locked_hybrid": {
+        "artists": [
+          "opeth",
+          "massive attack",
+          "katatonia",
+          "meshuggah",
+          "neurosis",
+          "portishead",
+          "nick drake",
+          "queens of the stone age",
+          "tim buckley",
+          "pink floyd",
+          "kyuss",
+          "gojira",
+          "lamb of god",
+          "long distance calling",
+          "pantera"
+        ],
+        "overlap_at_15": 0.06666666666666667
+      }
+    },
+    {
+      "query": {
+        "title": "Crystal Mountain",
+        "artist": "Death",
+        "scene": "metal"
+      },
+      "source": {
+        "provider": "Deezer",
+        "endpoint": "https://api.deezer.com/artist/{id}/related",
+        "relationship": "artist-level taste affinity"
+      },
+      "truth_artists": [
+        "Obituary",
+        "Cannibal Corpse",
+        "Slayer",
+        "Kreator",
+        "Krisiun",
+        "Entombed",
+        "Carcass",
+        "Sepultura",
+        "Morbid Angel",
+        "Napalm Death",
+        "Sodom",
+        "Exodus",
+        "Possessed",
+        "Sarcofago",
+        "Brujería",
+        "Testament",
+        "Bolt Thrower",
+        "Six Feet Under",
+        "Nile",
+        "Deicide"
+      ],
+      "current_production": {
+        "artists": [
+          "atheist",
+          "cannibal corpse",
+          "pestilence",
+          "obituary",
+          "exodus",
+          "bad religion",
+          "revocation",
+          "metallica",
+          "morbid angel",
+          "kreator",
+          "annihilator",
+          "alter bridge",
+          "collective soul",
+          "soundgarden",
+          "three days grace"
+        ],
+        "overlap_at_15": 0.3333333333333333
+      },
+      "locked_hybrid": {
+        "artists": [
+          "nile",
+          "necrophagist",
+          "kreator",
+          "at the gates",
+          "morbid angel",
+          "dissection",
+          "cannibal corpse",
+          "suffocation",
+          "sepultura",
+          "annihilator",
+          "emperor",
+          "bloodbath",
+          "slayer",
+          "entombed",
+          "cryptopsy"
+        ],
+        "overlap_at_15": 0.4666666666666667
+      }
+    },
+    {
+      "query": {
+        "title": "Take Five",
+        "artist": "Dave Brubeck",
+        "scene": "jazz"
+      },
+      "source": {
+        "provider": "Deezer",
+        "endpoint": "https://api.deezer.com/artist/{id}/related",
+        "relationship": "artist-level taste affinity"
+      },
+      "truth_artists": [
+        "Duke Ellington",
+        "Chet Baker",
+        "Bill Evans",
+        "Miles Davis",
+        "Oscar Peterson",
+        "Thelonious Monk",
+        "Wes Montgomery",
+        "Sonny Rollins",
+        "Dave Brubeck",
+        "Charlie Parker",
+        "Dizzy Gillespie",
+        "John Coltrane",
+        "Art Blakey",
+        "Gerry Mulligan",
+        "Keith Jarrett",
+        "Wynton Marsalis",
+        "Paul Desmond",
+        "Charles Mingus",
+        "Horace Silver",
+        "Kenny Burrell"
+      ],
+      "current_production": {
+        "artists": [
+          "bill evans",
+          "wes montgomery",
+          "kenny burrell",
+          "stan getz",
+          "miles davis",
+          "ben webster",
+          "paul desmond",
+          "john coltrane",
+          "art blakey",
+          "thelonious monk",
+          "nine inch nails",
+          "van halen",
+          "willie nelson",
+          "muddy waters",
+          "otis redding"
+        ],
+        "overlap_at_15": 0.5333333333333333
+      },
+      "locked_hybrid": {
+        "artists": [
+          "miles davis",
+          "john coltrane",
+          "herbie hancock",
+          "kenny burrell",
+          "charles mingus",
+          "horace silver",
+          "charlie parker",
+          "thelonious monk quintet",
+          "dizzy gillespie",
+          "thelonious monk",
+          "bill evans",
+          "django reinhardt",
+          "art blakey",
+          "miles davis herbie hancock",
+          "ahmad jamal"
+        ],
+        "overlap_at_15": 0.6666666666666666
+      }
+    },
+    {
+      "query": {
+        "title": "Essence (feat. Tems)",
+        "artist": "Wizkid",
+        "scene": "afrobeats"
+      },
+      "source": {
+        "provider": "Deezer",
+        "endpoint": "https://api.deezer.com/artist/{id}/related",
+        "relationship": "artist-level taste affinity"
+      },
+      "truth_artists": [
+        "Burna Boy",
+        "Mr Eazi",
+        "DaVido",
+        "Tiwa Savage",
+        "Adekunle Gold",
+        "Olamide",
+        "Rema",
+        "Fireboy Dml",
+        "Timaya",
+        "Reekado Banks",
+        "Joeboy",
+        "Maleek Berry",
+        "CKay",
+        "Sarz",
+        "Mayorkun",
+        "Omah lay",
+        "Simi",
+        "DJ Neptune",
+        "Spinall",
+        "Wande Coal"
+      ],
+      "current_production": {
+        "artists": [
+          "skales",
+          "king promise",
+          "omah lay",
+          "zinoleesky",
+          "khaid",
+          "tems",
+          "ta ku",
+          "rvssian",
+          "j balvin",
+          "king perryy",
+          "justin bieber",
+          "usher",
+          "taylor swift",
+          "ed sheeran",
+          "erykah badu"
+        ],
+        "overlap_at_15": 0.06666666666666667
+      },
+      "locked_hybrid": {
+        "artists": [
+          "mr eazi",
+          "omarion",
+          "brent faiyaz",
+          "maleek berry",
+          "lil baby",
+          "lucky daye",
+          "bryson tiller",
+          "burna boy",
+          "afro b",
+          "ella mai",
+          "damian marley",
+          "youngboy never broke again",
+          "chris brown",
+          "dababy",
+          "protoje"
+        ],
+        "overlap_at_15": 0.2
+      }
+    },
+    {
+      "query": {
+        "title": "Kyoto",
+        "artist": "Phoebe Bridgers",
+        "scene": "folk-rock"
+      },
+      "source": {
+        "provider": "Deezer",
+        "endpoint": "https://api.deezer.com/artist/{id}/related",
+        "relationship": "artist-level taste affinity"
+      },
+      "truth_artists": [
+        "Boygenius",
+        "Lucy Dacus",
+        "Searows",
+        "Lizzy McAlpine",
+        "Julien Baker",
+        "Ethel Cain",
+        "Maya Hawke",
+        "Lorde",
+        "Gigi Perez",
+        "Sarah Kinsley",
+        "Sydney Rose",
+        "Hozier",
+        "Leith Ross",
+        "Abby Powledge",
+        "Samia",
+        "Wasia Project",
+        "The Japanese House",
+        "Billie Marten",
+        "Katie Gregson-MacLeod",
+        "girl in red"
+      ],
+      "current_production": {
+        "artists": [
+          "whisper",
+          "frances forever",
+          "babygirl",
+          "imogen heap",
+          "spill tab",
+          "julie",
+          "summer salt",
+          "richard seguin",
+          "paris paloma",
+          "weyes blood",
+          "miles kane",
+          "imase",
+          "night tapes",
+          "day wave",
+          "john lennon"
+        ],
+        "overlap_at_15": 0.0
+      },
+      "locked_hybrid": {
+        "artists": [
+          "tame impala",
+          "temples",
+          "death",
+          "queens of the stone age",
+          "elder",
+          "katatonia",
+          "grizzly bear",
+          "broken social scene",
+          "arcade fire",
+          "russian circles",
+          "sepultura",
+          "meshuggah",
+          "real estate",
+          "opeth",
+          "paradise lost"
+        ],
+        "overlap_at_15": 0.0
+      }
+    },
+    {
+      "query": {
+        "title": "Freeee (Ghost Town Pt. 2)",
+        "artist": "KIDS SEE GHOSTS",
+        "scene": "hip-hop"
+      },
+      "source": {
+        "provider": "Deezer",
+        "endpoint": "https://api.deezer.com/artist/{id}/related",
+        "relationship": "artist-level taste affinity"
+      },
+      "truth_artists": [
+        "Kanye West",
+        "Pusha T",
+        "Kendrick Lamar",
+        "A$AP Rocky",
+        "Tyler, The Creator",
+        "Schoolboy Q",
+        "Denzel Curry",
+        "Killer Mike",
+        "Cordae",
+        "Kid Cudi",
+        "¥$",
+        "Chance the Rapper",
+        "Jack Harlow",
+        "J. Cole",
+        "King Combs",
+        "JID",
+        "Joey Bada$$",
+        "Consequence",
+        "Clipse",
+        "BROCKHAMPTON"
+      ],
+      "current_production": {
+        "artists": [
+          "x ambassadors",
+          "joji",
+          "travis scott",
+          "",
+          "danny brown",
+          "deftones",
+          "zaho de sagazan",
+          "little dragon",
+          "",
+          "the black keys",
+          "jay z",
+          "korn",
+          "rammstein",
+          "walk the moon",
+          "rihanna"
+        ],
+        "overlap_at_15": 0.13333333333333333
+      },
+      "locked_hybrid": {
+        "artists": [
+          "pusha t",
+          "kanye west",
+          "tyler the creator",
+          "mac miller",
+          "brockhampton",
+          "earl sweatshirt",
+          "nas",
+          "frank ocean",
+          "jpegmafia",
+          "jid",
+          "a ap rocky",
+          "j cole",
+          "denzel curry",
+          "big k r i t",
+          "danny brown"
+        ],
+        "overlap_at_15": 0.5333333333333333
+      }
+    },
+    {
+      "query": {
+        "title": "Them Changes",
+        "artist": "Thundercat",
+        "scene": "funk"
+      },
+      "source": {
+        "provider": "Deezer",
+        "endpoint": "https://api.deezer.com/artist/{id}/related",
+        "relationship": "artist-level taste affinity"
+      },
+      "truth_artists": [
+        "Duckwrth",
+        "Blood Orange",
+        "Anderson .Paak",
+        "SAMPHA",
+        "Little Simz",
+        "Terrace Martin",
+        "Lexa Gates",
+        "Samm Henshaw",
+        "Rejjie Snow",
+        "BLK ODYSSY",
+        "Tom Misch",
+        "Flying Lotus",
+        "Samara Cyn",
+        "Steve Lacy",
+        "Jordan Ward",
+        "Free Nationals",
+        "Wesley Joseph",
+        "Ravyn Lenae",
+        "LAVA LA RUE",
+        "Bakar"
+      ],
+      "current_production": {
+        "artists": [
+          "leon thomas",
+          "black party",
+          "snoh aalegra",
+          "toro y moi",
+          "free nationals",
+          "limp bizkit",
+          "vanessa da mata",
+          "shintaro sakamoto",
+          "chris brown",
+          "hieroglyphics",
+          "naughty by nature",
+          "michael jackson",
+          "olly murs",
+          "alice cooper",
+          "santana"
+        ],
+        "overlap_at_15": 0.06666666666666667
+      },
+      "locked_hybrid": {
+        "artists": [
+          "hiatus kaiyote",
+          "badbadnotgood",
+          "mount kimbie",
+          "the internet",
+          "flying lotus",
+          "real estate",
+          "grizzly bear",
+          "four tet",
+          "oneohtrix point never",
+          "madlib",
+          "tyler the creator",
+          "floating points",
+          "james ingram",
+          "bibio",
+          "danny brown"
+        ],
+        "overlap_at_15": 0.06666666666666667
+      }
+    }
+  ]
+}

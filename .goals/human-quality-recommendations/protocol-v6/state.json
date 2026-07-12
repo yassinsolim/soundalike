@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "status": "FINALIZED",
+  "created_at": "2026-07-12T11:26:58.278787+00:00",
+  "benchmark_path": "benchmarks\\soundalike_pairs.v6.json",
+  "benchmark_sha256": "ef6a86107554c3dd39fd68304c7cda635098dc992c3c1e891ec58be3e4953391",
+  "index_path": "ml_data\\deepvibe_index_v5.npz",
+  "index_sha256": "f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9",
+  "manifest_path": ".goals\\human-quality-recommendations\\protocol-v6\\final-test-manifest.json",
+  "manifest_sha256": "484416ddb7c7b698984505d3391a0d9b17c9e9214147c743fd0c0f876ad4b984",
+  "baseline_path": ".goals\\human-quality-recommendations\\protocol-v6\\frozen-baseline-rankings.json",
+  "baseline_sha256": "a9db950b8112757fca57142d0a4dbbf747b19dff5fcc698c17f8b8551249033b",
+  "final_open_count": 1,
+  "audit": {
+    "category_a_pairs": 195,
+    "development_pairs": 107,
+    "final_pairs": 88,
+    "scenes": 100,
+    "artists": 414,
+    "artist_overlap": []
+  },
+  "locked_at": "2026-07-12T11:57:27.089182+00:00",
+  "method_id": "music4all-edge-masked-hybrid-v1",
+  "method_manifest_path": ".goals\\human-quality-recommendations\\artifacts\\collaborative-method-v6.json",
+  "method_manifest_sha256": "a792089e3918fbe58212c96510a93e70774627967abb87660fdb0493eb823b82",
+  "dev_report_path": ".goals\\human-quality-recommendations\\artifacts\\collaborative-dev-v6.json",
+  "dev_report_sha256": "3d37bb433d62cb598a8ebf618e446526e97724ff19edfb51455673d1b9675ab9",
+  "asset_hashes": {
+    "ml_data\\iteration5\\collaborative\\item2vec-final-edges-masked.npz": "29d165496cf44f961e011eceddde4dbf18aeecfaecd91b2ea2ac2bf54ca8a861",
+    "ml_data\\iteration5\\collaborative\\item2vec-full.npz": "59a24b298e93773d59307b7c1dc24e4cbfffb6ae24122537fb51ae669e468ecd",
+    "ml_data\\iteration5\\collaborative\\hybrid-scorer.json": "9e65d610345f80bf71dff0c31a07a76c73f7fdabd6bfc2da4ab6a9525e4ff8fc"
+  },
+  "winner_rankings_path": ".goals\\human-quality-recommendations\\protocol-v6\\winner-rankings.json",
+  "winner_rankings_sha256": "a0bc3dba977d4dcedb4c0b91647b8712a584f58928a3351cf4a7e98456e47d53",
+  "winner_rankings_content_sha256": "4fafd55e71e66c810b767c306aa9c6cf04e64f9de69caa1ea068caac3d72c7c0",
+  "rankings_locked_at": "2026-07-12T11:58:58.899370+00:00",
+  "final_opened_at": "2026-07-12T11:59:29.288109+00:00",
+  "final_report_path": ".goals\\human-quality-recommendations\\artifacts\\collaborative-final-once-v6.json",
+  "final_report_sha256": "5e2c0017c5f6d17c782ea29d4a51f98e93f8cf6c34f3dc4988cb3659d2788048",
+  "final_pass": false,
+  "integrity_signature": "6f767187004d60954414ac26a2424342042a0353d48017f53f27bef2a005b4b0",
+  "signature_algorithm": "SHA-256 canonical JSON"
+}

@@ -346,6 +346,95 @@ The live site still reports `2026.07.11-dual-sonic64`; previews and search were 
 The frozen protocol, exact DEV/FINAL reports, source records, negative findings, and hashes are in
 `.goals/human-quality-recommendations/` and the case study.
 
+### Query-conditioned collaborative candidate test (iteration 5)
+
+Iteration 5 tested the next evidence-driven hypothesis: audio reranking cannot recover a target that
+never enters its candidate pool, so add a real **people-who-like-this-also-like-that** generator. The
+training source was the CC-BY-4.0 [Music4All-Onion](https://doi.org/10.5281/zenodo.6609677)
+user-track count set: 50,016,042 interactions from 119,140 users. Exact title/artist matching mapped
+28,538 source tracks to 27,367 catalogue rows. A 64-dimensional skip-gram item2vec model trained for
+eight epochs over 22.85 million mapped listening tokens from 115,468 users; the distilled runtime
+index contains 13,680 catalogue rows and 2,640 artist centroids.
+
+Before that training, a new v6 protocol froze 107 already-opened v5 pairs as DEV diagnostics and
+**88 fresh FINAL pairs** from the independently operated ListenBrainz similar-recordings service.
+The fresh set spans 18 scenes and popular/deep-cut/niche tiers. Its manifest, production rankings,
+and unopened state were hashed and Ed25519-signed. The exact method and target-agnostic rankings
+then passed the explicit `FROZEN → METHOD_LOCKED → RANKINGS_LOCKED → FINALIZED` transition; FINAL
+was opened once.
+
+The source audit found 39/88 FINAL pairs whose two recordings mapped into Music4All. Those pairs
+represented 74 source item edges and 2,236 shared-user co-occurrences. The deciding item2vec corpus
+removed every one before training (2,236→0). An unmasked model was locked only as an anti-
+memorization diagnostic. No benchmark artist boost, Wikipedia/notability score, or global popularity
+feature is present; the notability feature and weight are identically zero.
+
+Candidate generation genuinely changed on opened DEV:
+
+| DEV candidate recall | @100 | @500 | @1000 |
+|---|---:|---:|---:|
+| Audio only | 0.0196 | 0.0490 | 0.0686 |
+| Collaborative, FINAL edges masked | 0.0784 | 0.1275 | 0.1275 |
+| Hybrid union + current production | **0.1078** | **0.2059** | **0.2353** |
+
+A DEV-selected linear reranker used collaborative cosine/rank, a small audio-vibe weight, the real-
+index quality filter, and artist caps. DEV primary rose 0.00631→0.01903 (+201%), with R@10
+0.0098→0.0294 and MRR 0.00491→0.01237, but its paired interval
+**[-0.00991, 0.03751] included zero**. That uncertainty was retained rather than hidden.
+
+The once-opened fresh FINAL then **failed decisively**:
+
+| FINAL (88 fresh pairs) | R@10 | R@50 | MRR | Primary |
+|---|---:|---:|---:|---:|
+| Current deployed method | 0.01136 | **0.03409** | **0.01196** | **0.01156** |
+| Audio-only control | 0 | 0 | 0 | 0 |
+| Collaborative-only, edge-masked | 0 | 0.02273 | 0.00066 | 0.00022 |
+| Locked hybrid, edge-masked | 0 | 0.02273 | 0.00070 | 0.00023 |
+| Unmasked diagnostic (not eligible) | **0.02273** | **0.05682** | 0.00859 | 0.01392 |
+
+The locked winner regressed 97.99% against current production, improved only 2/88 pairs, worsened 3,
+and had paired delta CI **[-0.03432, 0.00037]**. Candidate recall for the masked hybrid union was
+only 0.0227/0.0682/0.0909 at @100/@500/@1000. The unmasked diagnostic nominally gained 20.4%, but
+its CI **[-0.02860, 0.03009]** included zero, it improved only five pairs, MRR regressed, and its
+advantage disappeared when exact deciding edges were removed. Graph topology alone did not
+generalize.
+
+Direct inspection also failed the separate UX gate: **13/20** difficult seeds passed (required
+16), including four missing catalogue queries. Deezer related-artist overlap on 11 independent seeds
+improved 0.158→0.267 with delta CI [0.0364, 0.1879], but that is an artist-level *taste-affinity*
+metric, not evidence of sonic similarity and cannot override FINAL. Every resolved direct top-five
+had a Deezer preview URL; availability was checked, not claimed as audible playback.
+
+The compact runtime addition is only 2,026,706 bytes. It loaded in 0.012 s, added 48.4 MB RSS, and
+ranked warm queries in 0.252 s mean / 0.288 s p95. It fits serverless constraints, but quality—not
+resources—blocked release. **Nothing from iteration 5 was deployed or retuned after FINAL.** The live
+site intentionally remains `2026.07.11-dual-sonic64` on 272,853 tracks.
+
+Rebuild the research assets (the finalized protocol will correctly reject a second FINAL open):
+
+```powershell
+New-Item -ItemType Directory -Force ml_data\iteration5\raw | Out-Null
+curl.exe -L -o ml_data\iteration5\raw\music4all-id-information.csv `
+  https://huggingface.co/datasets/Leon299/music4all/raw/main/id_information.csv
+curl.exe -L -o ml_data\iteration5\raw\userid_trackid_count.tsv.bz2 `
+  https://zenodo.org/api/records/6609677/files/userid_trackid_count.tsv.bz2/content
+
+.\.venv\Scripts\python.exe -m soundalike.ml.collaborative `
+  --metadata ml_data\iteration5\raw\music4all-id-information.csv `
+  --counts ml_data\iteration5\raw\userid_trackid_count.tsv.bz2 `
+  --index ml_data\deepvibe_index_v5.npz `
+  --benchmark benchmarks\soundalike_pairs.v6.json `
+  --output-dir ml_data\iteration5\collaborative
+
+.\.venv\Scripts\python.exe -m soundalike.ml.collaborative_rerank dev `
+  --index ml_data\deepvibe_index_v5.npz `
+  --benchmark benchmarks\soundalike_pairs.v6.json `
+  --masked-asset ml_data\iteration5\collaborative\item2vec-final-edges-masked.npz `
+  --full-asset ml_data\iteration5\collaborative\item2vec-full.npz `
+  --scorer ml_data\iteration5\collaborative\hybrid-scorer.json `
+  --report .goals\human-quality-recommendations\artifacts\collaborative-dev-v6.json
+```
+
 ### Growing the library past the bundle limit
 
 The ~87k-song index ships bundled (75 MB, under GitHub's 100 MB per-file cap), so the tool works
@@ -657,7 +746,9 @@ pytest -q
 - [x] **Web app + right-click integration** — `soundalike serve` (paste a song / Spotify "Copy Song Link" → instant soundalikes) and a Spicetify extension for an in-app right-click menu
 - [x] **Once-opened retrieval protocol** — 107 Category-A pairs, 85 scenes, a 40-pair artist-component-disjoint FINAL split, frozen baseline rankings, SHA-256 state, and a machine-enforced single opening
 - [x] **Substantial audio experiments** — FMA SupCon, FMA BYOL, audio-teacher distillation, independent-pair metric learning, and multi-window late interaction all indexed and tested on 272,853 songs; negative results are retained
-- [x] **Honest final rejection** — DEV improved, but FINAL moved one pair with a confidence interval touching zero; no iteration-4 method was shipped
+- [x] **Honest audio-final rejection** — iteration-4 DEV improved, but FINAL moved one pair with a confidence interval touching zero; no iteration-4 method was shipped
+- [x] **Collaborative candidate experiment** — Music4All-Onion item2vec over 115,468 mapped users, audio/collaborative/production candidate union, learned DEV reranker, exact-edge-masked topology ablation, and an 88-pair fresh once-opened FINAL
+- [x] **Honest collaborative-final rejection** — candidate recall improved on DEV but collapsed on fresh FINAL; the locked method regressed current production, direct judgment passed 13/20, and no iteration-5 asset was deployed
 - [x] **Desktop/hosted Dual-Sonic64 parity** — retained as the prior manual-UX behavior, not described as a statistically established retrieval improvement
 - [ ] Inline audio previews in the web UI
 

@@ -1,5 +1,13 @@
 # Detached protocol signatures cover exact bytes; never rewrite line endings.
-.goals/human-quality-recommendations/protocol-v5/state.json -text
-.goals/human-quality-recommendations/protocol-v5/state.sig -text
-.goals/human-quality-recommendations/protocol-v5/allowed_signers -text
-.goals/human-quality-recommendations/protocol-v5/signer.pub -text
+.goals/human-quality-recommendations/protocol-v5/state.json binary
+.goals/human-quality-recommendations/protocol-v5/state.sig binary
+.goals/human-quality-recommendations/protocol-v5/allowed_signers binary
+.goals/human-quality-recommendations/protocol-v5/signer.pub binary
+.goals/human-quality-recommendations/protocol-v6/state.json binary
+.goals/human-quality-recommendations/protocol-v6/state.sig binary
+.goals/human-quality-recommendations/protocol-v6/allowed_signers binary
+.goals/human-quality-recommendations/protocol-v6/signer.pub binary
+.goals/human-quality-recommendations/protocol-v6/frozen-state.json binary
+.goals/human-quality-recommendations/protocol-v6/frozen-state.sig binary
+.goals/human-quality-recommendations/protocol-v6/frozen-allowed-signers binary
+.goals/human-quality-recommendations/protocol-v6/frozen-signer.pub binary

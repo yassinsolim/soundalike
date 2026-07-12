@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-07-12",
+  "target": "https://soundalike.yassin.app",
+  "iteration5_deployed": false,
+  "deployment_attempted": false,
+  "reason": "The once-opened FINAL and direct difficult-seed gates failed. The predeclared policy prohibits deployment or FINAL-driven retuning.",
+  "research_method": "music4all-edge-masked-hybrid-v1",
+  "research_final_pass": false,
+  "production_unchanged": true,
+  "live_stats": {
+    "ok": true,
+    "library_size": 272853,
+    "version": "2026.07.11-dual-sonic64"
+  },
+  "retained_method": "dual_sonic64_guardrail",
+  "latest_ten_seed_live_evidence": ".goals\\human-quality-recommendations\\artifacts\\live-retained-production-v5.json",
+  "release_assets_uploaded": false,
+  "manifest_updated": false,
+  "repository_pushed": false
+}

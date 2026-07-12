@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "status": "FROZEN",
+  "created_at": "2026-07-12T11:26:58.278787+00:00",
+  "benchmark_path": "benchmarks\\soundalike_pairs.v6.json",
+  "benchmark_sha256": "ef6a86107554c3dd39fd68304c7cda635098dc992c3c1e891ec58be3e4953391",
+  "index_path": "ml_data\\deepvibe_index_v5.npz",
+  "index_sha256": "f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9",
+  "manifest_path": ".goals\\human-quality-recommendations\\protocol-v6\\final-test-manifest.json",
+  "manifest_sha256": "484416ddb7c7b698984505d3391a0d9b17c9e9214147c743fd0c0f876ad4b984",
+  "baseline_path": ".goals\\human-quality-recommendations\\protocol-v6\\frozen-baseline-rankings.json",
+  "baseline_sha256": "a9db950b8112757fca57142d0a4dbbf747b19dff5fcc698c17f8b8551249033b",
+  "final_open_count": 0,
+  "audit": {
+    "category_a_pairs": 195,
+    "development_pairs": 107,
+    "final_pairs": 88,
+    "scenes": 100,
+    "artists": 414,
+    "artist_overlap": []
+  },
+  "integrity_signature": "88f8ec9080203a22330a8c5a6f987a73d31725f387a159931d8d50bb201a7af4",
+  "signature_algorithm": "SHA-256 canonical JSON"
+}

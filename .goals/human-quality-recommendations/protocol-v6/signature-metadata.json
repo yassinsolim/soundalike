@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "signed_at": "2026-07-12",
+  "signed_file": "state.json",
+  "signed_file_sha256": "3614abbc3259d3f33e2aafa3dfe1f6b3aae9ce02d66eaf5abb044650298bf162",
+  "algorithm": "ssh-ed25519",
+  "namespace": "soundalike-protocol",
+  "signer_fingerprint": "SHA256:YN9/h/8UwOVrRH5PDTtfJHg5Q7wzZd+BJhytgO14wvw",
+  "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAKWwFmjixOhuK37GMcca5qH4kEcIJzFp4W/vS0yBZuG soundalike-protocol-v6-final",
+  "private_key_retained": false,
+  "verification_command": "ssh-keygen -Y verify -f allowed_signers -I soundalike-protocol -n soundalike-protocol -s state.sig < state.json"
+}

@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "method_id": "music4all-edge-masked-hybrid-v1",
+  "description": "Query-conditioned item2vec candidates unioned with audio and production candidates, then ranked by a DEV-selected linear audio/collaborative scorer.",
+  "configuration": {
+    "collaborative_training": {
+      "source": "Music4All-Onion",
+      "doi": "https://doi.org/10.5281/zenodo.6609677",
+      "license": "CC-BY-4.0",
+      "users": 119140,
+      "source_interactions": 50016042,
+      "mapped_user_tokens": 22849039,
+      "item2vec": {
+        "architecture": "skip-gram with negative sampling",
+        "dimensions": 64,
+        "window": 30,
+        "negative_samples": 15,
+        "epochs": 8,
+        "workers": 24
+      },
+      "mapped_catalogue_rows": 13680,
+      "mapped_artists": 2640
+    },
+    "candidate_union": {
+      "audio_candidates": 1000,
+      "collaborative_candidates": 1000,
+      "production_candidates": 250,
+      "union_candidates": 1500,
+      "candidate_artist_cap": 3,
+      "ranked_artist_cap": 1,
+      "quality_filter": true,
+      "unmapped_query_fallback": "artist centroid, then audio-neighbour bridge"
+    },
+    "reranker": {
+      "type": "DEV-listwise-selected linear scorer",
+      "audio_blend_weight": 0.01,
+      "collaborative_cosine_weight": 0.5,
+      "collaborative_reciprocal_rank_weight": 0.5,
+      "global_wikipedia_notability_weight": 0.0,
+      "global_notability_ablation": "identically zero"
+    },
+    "final_edge_mask": {
+      "fresh_final_pairs": 88,
+      "pairs_mapped_to_training_items": 39,
+      "internal_item_edges": 74,
+      "user_pair_cooccurrences_before_mask": 2236,
+      "user_pair_cooccurrences_after_mask": 0
+    },
+    "source_independence": {
+      "training": "Music4All-Onion Last.fm extraction",
+      "deciding_final": "ListenBrainz session-similarity API",
+      "same_dataset_or_api": false,
+      "final_pair_edges_removed_before_training": true,
+      "benchmark_labels_or_artists_used_for_boosts": false
+    }
+  },
+  "assets": [
+    {
+      "role": "deciding edge-masked collaborative index",
+      "path": "ml_data\\iteration5\\collaborative\\item2vec-final-edges-masked.npz",
+      "bytes": 1978816,
+      "sha256": "29d165496cf44f961e011eceddde4dbf18aeecfaecd91b2ea2ac2bf54ca8a861"
+    },
+    {
+      "role": "unmasked diagnostic ablation index",
+      "path": "ml_data\\iteration5\\collaborative\\item2vec-full.npz",
+      "bytes": 1976419,
+      "sha256": "59a24b298e93773d59307b7c1dc24e4cbfffb6ae24122537fb51ae669e468ecd"
+    },
+    {
+      "role": "DEV-selected linear reranker",
+      "path": "ml_data\\iteration5\\collaborative\\hybrid-scorer.json",
+      "bytes": 47890,
+      "sha256": "9e65d610345f80bf71dff0c31a07a76c73f7fdabd6bfc2da4ab6a9525e4ff8fc"
+    }
+  ],
+  "dev_evidence": {
+    "path": ".goals\\human-quality-recommendations\\artifacts\\collaborative-dev-v6.json",
+    "sha256": "3d37bb433d62cb598a8ebf618e446526e97724ff19edfb51455673d1b9675ab9",
+    "final_labels_compared": false,
+    "hybrid_primary": 0.0190298617515371,
+    "production_primary": 0.006313149490916926,
+    "relative_gain": 2.0143214221232055,
+    "ci95": [
+      -0.009905135423869492,
+      0.03750537345557635
+    ],
+    "candidate_recall_at_1000": {
+      "audio_only": 0.06862745098039216,
+      "collaborative_edge_masked": 0.12745098039215685,
+      "hybrid_union_edge_masked": 0.23529411764705882
+    }
+  }
+}

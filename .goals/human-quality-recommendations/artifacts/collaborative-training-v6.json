@@ -1,0 +1,258 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-12T11:47:58.951144+00:00",
+  "source": {
+    "name": "Music4All-Onion",
+    "doi": "https://doi.org/10.5281/zenodo.6609677",
+    "license": "CC-BY-4.0",
+    "provenance": "252,984,396 Last.fm listening records from 119,140 users; the count subset has 50,016,042 user-track interactions.",
+    "counts_url": "https://zenodo.org/api/records/6609677/files/userid_trackid_count.tsv.bz2/content",
+    "counts_md5": "314b51196a9c8f333c7fefc0711760a1",
+    "metadata_url": "https://huggingface.co/datasets/Leon299/music4all/raw/main/id_information.csv"
+  },
+  "configuration": {
+    "vector_size": 64,
+    "window": 30,
+    "negative": 15,
+    "epochs": 8,
+    "min_count": 2,
+    "max_tracks_per_user": 160,
+    "workers": 24,
+    "seed": 20260712
+  },
+  "mapping": {
+    "metadata_rows": 109269,
+    "mapped_music4all_tracks": 28538,
+    "unique_catalogue_rows": 27367,
+    "duplicate_catalogue_mappings": 1171,
+    "mapping_rate": 0.26117197009215787
+  },
+  "edge_mask_audit": {
+    "final_pairs": 88,
+    "final_pairs_mapped_to_training_items": 39,
+    "internal_edges_masked": 74,
+    "mapped_pairs": [
+      {
+        "pair_id": "FINAL-FRESH-002",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-009",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-010",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-011",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-017",
+        "internal_edge_count": 4
+      },
+      {
+        "pair_id": "FINAL-FRESH-018",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-019",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-021",
+        "internal_edge_count": 2
+      },
+      {
+        "pair_id": "FINAL-FRESH-022",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-024",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-025",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-026",
+        "internal_edge_count": 4
+      },
+      {
+        "pair_id": "FINAL-FRESH-033",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-035",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-038",
+        "internal_edge_count": 4
+      },
+      {
+        "pair_id": "FINAL-FRESH-041",
+        "internal_edge_count": 4
+      },
+      {
+        "pair_id": "FINAL-FRESH-042",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-043",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-044",
+        "internal_edge_count": 2
+      },
+      {
+        "pair_id": "FINAL-FRESH-054",
+        "internal_edge_count": 8
+      },
+      {
+        "pair_id": "FINAL-FRESH-056",
+        "internal_edge_count": 2
+      },
+      {
+        "pair_id": "FINAL-FRESH-057",
+        "internal_edge_count": 3
+      },
+      {
+        "pair_id": "FINAL-FRESH-058",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-061",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-062",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-065",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-068",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-069",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-071",
+        "internal_edge_count": 6
+      },
+      {
+        "pair_id": "FINAL-FRESH-073",
+        "internal_edge_count": 4
+      },
+      {
+        "pair_id": "FINAL-FRESH-075",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-076",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-077",
+        "internal_edge_count": 2
+      },
+      {
+        "pair_id": "FINAL-FRESH-079",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-083",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-084",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-085",
+        "internal_edge_count": 2
+      },
+      {
+        "pair_id": "FINAL-FRESH-088",
+        "internal_edge_count": 1
+      },
+      {
+        "pair_id": "FINAL-FRESH-089",
+        "internal_edge_count": 2
+      }
+    ]
+  },
+  "corpus": {
+    "users_total": 119140,
+    "users_with_two_mapped_tracks": 115468,
+    "full_corpus_tokens": 22854372,
+    "masked_corpus_tokens": 22849039,
+    "final_pair_user_overlaps_before_mask": 2236,
+    "final_pair_user_overlaps_after_mask": 0,
+    "max_tracks_per_user": 160
+  },
+  "models": {
+    "full": {
+      "schema_version": 1,
+      "method": "music4all-onion-skipgram-item2vec",
+      "created_at": "2026-07-12T11:42:10.055176+00:00",
+      "edge_masked": false,
+      "catalogue_size": 272853,
+      "mapped_catalogue_rows": 13680,
+      "mapped_artists": 2640,
+      "configuration": {
+        "vector_size": 64,
+        "window": 30,
+        "negative": 15,
+        "epochs": 8,
+        "min_count": 2,
+        "max_tracks_per_user": 160,
+        "workers": 24,
+        "seed": 20260712
+      },
+      "training_seconds": 349.3801053999923,
+      "corpus_path": "ml_data\\iteration5\\collaborative\\users-full.txt",
+      "corpus_sha256": "4f44034e76915242ccd420a774d55dc98b1c24f9b6fe6ed98c4a4e7852761045",
+      "source_doi": "https://doi.org/10.5281/zenodo.6609677",
+      "source_license": "CC-BY-4.0",
+      "asset_path": "ml_data\\iteration5\\collaborative\\item2vec-full.npz",
+      "asset_bytes": 1976419,
+      "asset_sha256": "59a24b298e93773d59307b7c1dc24e4cbfffb6ae24122537fb51ae669e468ecd"
+    },
+    "edge_masked": {
+      "schema_version": 1,
+      "method": "music4all-onion-skipgram-item2vec",
+      "created_at": "2026-07-12T11:47:58.679403+00:00",
+      "edge_masked": true,
+      "catalogue_size": 272853,
+      "mapped_catalogue_rows": 13680,
+      "mapped_artists": 2640,
+      "configuration": {
+        "vector_size": 64,
+        "window": 30,
+        "negative": 15,
+        "epochs": 8,
+        "min_count": 2,
+        "max_tracks_per_user": 160,
+        "workers": 24,
+        "seed": 20260712
+      },
+      "training_seconds": 348.35302260000026,
+      "corpus_path": "ml_data\\iteration5\\collaborative\\users-final-edges-masked.txt",
+      "corpus_sha256": "718eb22b8d92b5f41aa14a38f43709f48bb4a4acdeedb485d5b7271e93af82b0",
+      "source_doi": "https://doi.org/10.5281/zenodo.6609677",
+      "source_license": "CC-BY-4.0",
+      "asset_path": "ml_data\\iteration5\\collaborative\\item2vec-final-edges-masked.npz",
+      "asset_bytes": 1978816,
+      "asset_sha256": "29d165496cf44f961e011eceddde4dbf18aeecfaecd91b2ea2ac2bf54ca8a861"
+    }
+  }
+}

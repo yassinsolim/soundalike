@@ -1,0 +1,2471 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-12T11:56:18.326669+00:00",
+  "split": "development-only",
+  "final_labels_compared": false,
+  "benchmark_sha256": "ef6a86107554c3dd39fd68304c7cda635098dc992c3c1e891ec58be3e4953391",
+  "index_sha256": "f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9",
+  "pairs": {
+    "resolved": 102,
+    "fit": 78,
+    "selection": 24
+  },
+  "fit": {
+    "training_pairs": 78,
+    "objective": "selection ranked-list primary"
+  },
+  "candidate_recall": {
+    "audio_only": {
+      "recall_at_100": 0.0196078431372549,
+      "recall_at_500": 0.049019607843137254,
+      "recall_at_1000": 0.06862745098039216
+    },
+    "collaborative_edge_masked": {
+      "recall_at_100": 0.0784313725490196,
+      "recall_at_500": 0.12745098039215685,
+      "recall_at_1000": 0.12745098039215685
+    },
+    "hybrid_union_edge_masked": {
+      "recall_at_100": 0.10784313725490197,
+      "recall_at_500": 0.20588235294117646,
+      "recall_at_1000": 0.23529411764705882
+    },
+    "collaborative_unmasked": {
+      "recall_at_100": 0.058823529411764705,
+      "recall_at_500": 0.12745098039215685,
+      "recall_at_1000": 0.16666666666666666
+    },
+    "hybrid_union_unmasked": {
+      "recall_at_100": 0.09803921568627451,
+      "recall_at_500": 0.21568627450980393,
+      "recall_at_1000": 0.24509803921568626
+    }
+  },
+  "edge_masked": {
+    "metrics": {
+      "production": {
+        "recall_at_1": 0.0,
+        "recall_at_5": 0.00980392156862745,
+        "recall_at_10": 0.00980392156862745,
+        "recall_at_20": 0.029411764705882353,
+        "recall_at_50": 0.058823529411764705,
+        "mrr": 0.004913207707325354,
+        "ndcg_at_10": 0.004222319196797972,
+        "ndcg_at_50": 0.015220042864059808,
+        "primary": 0.006313149490916926
+      },
+      "audio_only": {
+        "recall_at_1": 0.0,
+        "recall_at_5": 0.0,
+        "recall_at_10": 0.00980392156862745,
+        "recall_at_20": 0.00980392156862745,
+        "recall_at_50": 0.0196078431372549,
+        "mrr": 0.0015225787284610815,
+        "ndcg_at_10": 0.0030927929096640073,
+        "ndcg_at_50": 0.005019867735475994,
+        "primary": 0.004806431068917513
+      },
+      "collaborative_only": {
+        "recall_at_1": 0.0,
+        "recall_at_5": 0.029411764705882353,
+        "recall_at_10": 0.029411764705882353,
+        "recall_at_20": 0.0392156862745098,
+        "recall_at_50": 0.06862745098039216,
+        "mrr": 0.01222047193319423,
+        "ndcg_at_10": 0.015309865800439712,
+        "ndcg_at_50": 0.023605872666887726,
+        "primary": 0.0189807008131721
+      },
+      "hybrid": {
+        "recall_at_1": 0.0,
+        "recall_at_5": 0.029411764705882353,
+        "recall_at_10": 0.029411764705882353,
+        "recall_at_20": 0.0392156862745098,
+        "recall_at_50": 0.0784313725490196,
+        "mrr": 0.012367954748289233,
+        "ndcg_at_10": 0.015309865800439712,
+        "ndcg_at_50": 0.025302200809217513,
+        "primary": 0.0190298617515371
+      }
+    },
+    "comparisons": {
+      "audio_only": {
+        "absolute_delta": -0.001506718421999412,
+        "baseline_primary": 0.006313149490916927,
+        "relative_gain": -0.23866351084624404,
+        "ci95_low": -0.017268755195439852,
+        "ci95_high": 0.01310340321439196,
+        "probability_positive": 0.34435
+      },
+      "collaborative_only": {
+        "absolute_delta": 0.012667551322255173,
+        "baseline_primary": 0.006313149490916927,
+        "relative_gain": 2.0065343519079772,
+        "ci95_low": -0.009965659038168977,
+        "ci95_high": 0.03749340172871829,
+        "probability_positive": 0.8655
+      },
+      "hybrid": {
+        "absolute_delta": 0.012716712260620175,
+        "baseline_primary": 0.006313149490916927,
+        "relative_gain": 2.0143214221232055,
+        "ci95_low": -0.009905135423869492,
+        "ci95_high": 0.03750537345557635,
+        "probability_positive": 0.8696
+      }
+    },
+    "pairs": [
+      {
+        "pair_id": "DEV-OPENED-DEV-L002",
+        "scene": "grunge/post-punk",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L003",
+        "scene": "pop/ska-punk",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L005",
+        "scene": "punk-rock/classic-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L007",
+        "scene": "pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 25,
+          "audio_only": 0,
+          "collaborative_only": 43,
+          "hybrid": 34
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L008",
+        "scene": "boy-band-pop/classic-rock",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L009",
+        "scene": "indie/heartland-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L010",
+        "scene": "heavy-metal",
+        "query_mode": "track",
+        "ranks": {
+          "production": 4,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L012",
+        "scene": "r&b/pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 15,
+          "audio_only": 33,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L013",
+        "scene": "synthwave/r&b-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L014",
+        "scene": "desert-rock/heavy-metal",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L015",
+        "scene": "mod-revival/motown",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L016",
+        "scene": "post-disco/synth-funk",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L018",
+        "scene": "eighties-funk-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L019",
+        "scene": "jangle-pop/post-punk",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L020",
+        "scene": "emo/glam-rock",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L021",
+        "scene": "synth-pop/dream-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L022",
+        "scene": "soft-rock/pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L023",
+        "scene": "alternative/glam-rock",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 45
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L024",
+        "scene": "new-wave/folk-rock",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L025",
+        "scene": "dance-pop/hard-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L026",
+        "scene": "country/folk",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L027",
+        "scene": "post-punk-revival",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L028",
+        "scene": "soft-rock/synth-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L029",
+        "scene": "pop-rock/funk",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L030",
+        "scene": "soul/indie-rock",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 22,
+          "hybrid": 27
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L031",
+        "scene": "r&b/soul",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L032",
+        "scene": "dance-pop/electro-house",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L033",
+        "scene": "garage-rock/classic-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L034",
+        "scene": "k-pop/brassy-pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L035",
+        "scene": "synth-pop/indie-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L036",
+        "scene": "pop/horn-driven-r&b",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L037",
+        "scene": "indie-rock/jam-rock",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L038",
+        "scene": "crunk-r&b",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 11,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L039",
+        "scene": "post-punk/r&b-rhythm",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L040",
+        "scene": "girl-group-pop/eighties-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L041",
+        "scene": "alternative-pop/r&b-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L042",
+        "scene": "electropop/art-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L043",
+        "scene": "acoustic-pop/folk",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L044",
+        "scene": "electropop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L045",
+        "scene": "post-punk",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L046",
+        "scene": "indie-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 15,
+          "hybrid": 16
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L047",
+        "scene": "soft-rock",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L048",
+        "scene": "synth-pop",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L049",
+        "scene": "alternative-pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 35,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L050",
+        "scene": "pop-rap",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L051",
+        "scene": "industrial-rap/rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P021",
+        "scene": "dance-rock/new-wave",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P029",
+        "scene": "avant-jazz/bebop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P053",
+        "scene": "alternative-rnb",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P055",
+        "scene": "emo/post-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 3,
+          "hybrid": 3
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P058",
+        "scene": "heartland-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P063",
+        "scene": "neo-soul/funk",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P124",
+        "scene": "retro-soul",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P130",
+        "scene": "pop-rap",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 40,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P132",
+        "scene": "indie-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P140",
+        "scene": "thrash/hard-rock",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P143",
+        "scene": "britpop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P160",
+        "scene": "shoegaze/alternative-rock",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P165",
+        "scene": "club/hip-hop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P166",
+        "scene": "pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P175",
+        "scene": "synth-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P180",
+        "scene": "jazz-funk",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB001",
+        "scene": "k-pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB002",
+        "scene": "folk-pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB003",
+        "scene": "new-wave",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB004",
+        "scene": "indie-dance",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 4,
+          "hybrid": 4
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB005",
+        "scene": "indie-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB006",
+        "scene": "piano-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB007",
+        "scene": "psychedelic-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB008",
+        "scene": "dream-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB009",
+        "scene": "k-pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB010",
+        "scene": "psychedelic-pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB011",
+        "scene": "dream-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB012",
+        "scene": "alternative-rock",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB013",
+        "scene": "bedroom-pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB014",
+        "scene": "dream-pop",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB015",
+        "scene": "indie-folk",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB016",
+        "scene": "uk-garage/bedroom-pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB017",
+        "scene": "dream-pop",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB018",
+        "scene": "shoegaze",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 2,
+          "hybrid": 2
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB019",
+        "scene": "indie-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB020",
+        "scene": "alternative-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB021",
+        "scene": "dream-pop",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB022",
+        "scene": "synth-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB023",
+        "scene": "bedroom-pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB024",
+        "scene": "surf-rock",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB025",
+        "scene": "grunge",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 36,
+          "hybrid": 37
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB026",
+        "scene": "post-punk",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB027",
+        "scene": "classic-rock",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB028",
+        "scene": "ambient-idm",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB029",
+        "scene": "pop-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB030",
+        "scene": "indie-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 8,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB031",
+        "scene": "electropop/hyperpop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB032",
+        "scene": "indie-folk",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB033",
+        "scene": "indie-rock",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB034",
+        "scene": "darkwave",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB035",
+        "scene": "indie-pop",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB036",
+        "scene": "indie-folk",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB037",
+        "scene": "indie-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB038",
+        "scene": "pop-ballad",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB039",
+        "scene": "alternative-pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB040",
+        "scene": "alternative-rnb/hip-hop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      }
+    ]
+  },
+  "unmasked_ablation": {
+    "metrics": {
+      "production": {
+        "recall_at_1": 0.0,
+        "recall_at_5": 0.00980392156862745,
+        "recall_at_10": 0.00980392156862745,
+        "recall_at_20": 0.029411764705882353,
+        "recall_at_50": 0.058823529411764705,
+        "mrr": 0.004913207707325354,
+        "ndcg_at_10": 0.004222319196797972,
+        "ndcg_at_50": 0.015220042864059808,
+        "primary": 0.006313149490916926
+      },
+      "audio_only": {
+        "recall_at_1": 0.0,
+        "recall_at_5": 0.0,
+        "recall_at_10": 0.00980392156862745,
+        "recall_at_20": 0.00980392156862745,
+        "recall_at_50": 0.0196078431372549,
+        "mrr": 0.0015225787284610815,
+        "ndcg_at_10": 0.0030927929096640073,
+        "ndcg_at_50": 0.005019867735475994,
+        "primary": 0.004806431068917513
+      },
+      "collaborative_only": {
+        "recall_at_1": 0.00980392156862745,
+        "recall_at_5": 0.029411764705882353,
+        "recall_at_10": 0.029411764705882353,
+        "recall_at_20": 0.0392156862745098,
+        "recall_at_50": 0.049019607843137254,
+        "mrr": 0.017785930439829206,
+        "ndcg_at_10": 0.01978218196868627,
+        "ndcg_at_50": 0.024312693699713357,
+        "primary": 0.022326625704799274
+      },
+      "hybrid": {
+        "recall_at_1": 0.00980392156862745,
+        "recall_at_5": 0.0196078431372549,
+        "recall_at_10": 0.029411764705882353,
+        "recall_at_20": 0.0392156862745098,
+        "recall_at_50": 0.049019607843137254,
+        "mrr": 0.017494929006085194,
+        "ndcg_at_10": 0.019481734712543917,
+        "ndcg_at_50": 0.024129119041150053,
+        "primary": 0.022129476141503818
+      }
+    },
+    "comparisons": {
+      "audio_only": {
+        "absolute_delta": -0.001506718421999412,
+        "baseline_primary": 0.006313149490916927,
+        "relative_gain": -0.23866351084624404,
+        "ci95_low": -0.017268755195439852,
+        "ci95_high": 0.01310340321439196,
+        "probability_positive": 0.34435
+      },
+      "collaborative_only": {
+        "absolute_delta": 0.01601347621388235,
+        "baseline_primary": 0.006313149490916927,
+        "relative_gain": 2.5365273287004872,
+        "ci95_low": -0.008329035138671411,
+        "ci95_high": 0.04575764854451184,
+        "probability_positive": 0.8725
+      },
+      "hybrid": {
+        "absolute_delta": 0.0158163266505869,
+        "baseline_primary": 0.006313149490916927,
+        "relative_gain": 2.5052989277923348,
+        "ci95_low": -0.008341539897567508,
+        "ci95_high": 0.04546854856738523,
+        "probability_positive": 0.87075
+      }
+    },
+    "pairs": [
+      {
+        "pair_id": "DEV-OPENED-DEV-L002",
+        "scene": "grunge/post-punk",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L003",
+        "scene": "pop/ska-punk",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L005",
+        "scene": "punk-rock/classic-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L007",
+        "scene": "pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 25,
+          "audio_only": 0,
+          "collaborative_only": 43,
+          "hybrid": 29
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L008",
+        "scene": "boy-band-pop/classic-rock",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L009",
+        "scene": "indie/heartland-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L010",
+        "scene": "heavy-metal",
+        "query_mode": "track",
+        "ranks": {
+          "production": 4,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L012",
+        "scene": "r&b/pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 15,
+          "audio_only": 33,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L013",
+        "scene": "synthwave/r&b-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L014",
+        "scene": "desert-rock/heavy-metal",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L015",
+        "scene": "mod-revival/motown",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L016",
+        "scene": "post-disco/synth-funk",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L018",
+        "scene": "eighties-funk-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L019",
+        "scene": "jangle-pop/post-punk",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L020",
+        "scene": "emo/glam-rock",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L021",
+        "scene": "synth-pop/dream-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L022",
+        "scene": "soft-rock/pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L023",
+        "scene": "alternative/glam-rock",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L024",
+        "scene": "new-wave/folk-rock",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L025",
+        "scene": "dance-pop/hard-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L026",
+        "scene": "country/folk",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L027",
+        "scene": "post-punk-revival",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L028",
+        "scene": "soft-rock/synth-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L029",
+        "scene": "pop-rock/funk",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L030",
+        "scene": "soul/indie-rock",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L031",
+        "scene": "r&b/soul",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L032",
+        "scene": "dance-pop/electro-house",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L033",
+        "scene": "garage-rock/classic-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L034",
+        "scene": "k-pop/brassy-pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L035",
+        "scene": "synth-pop/indie-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L036",
+        "scene": "pop/horn-driven-r&b",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L037",
+        "scene": "indie-rock/jam-rock",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L038",
+        "scene": "crunk-r&b",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 11,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L039",
+        "scene": "post-punk/r&b-rhythm",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L040",
+        "scene": "girl-group-pop/eighties-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L041",
+        "scene": "alternative-pop/r&b-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L042",
+        "scene": "electropop/art-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L043",
+        "scene": "acoustic-pop/folk",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L044",
+        "scene": "electropop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L045",
+        "scene": "post-punk",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L046",
+        "scene": "indie-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 11,
+          "hybrid": 12
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L047",
+        "scene": "soft-rock",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L048",
+        "scene": "synth-pop",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L049",
+        "scene": "alternative-pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 35,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L050",
+        "scene": "pop-rap",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-L051",
+        "scene": "industrial-rap/rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P021",
+        "scene": "dance-rock/new-wave",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P029",
+        "scene": "avant-jazz/bebop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P053",
+        "scene": "alternative-rnb",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P055",
+        "scene": "emo/post-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 5,
+          "hybrid": 6
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P058",
+        "scene": "heartland-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P063",
+        "scene": "neo-soul/funk",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P124",
+        "scene": "retro-soul",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P130",
+        "scene": "pop-rap",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 40,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P132",
+        "scene": "indie-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P140",
+        "scene": "thrash/hard-rock",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P143",
+        "scene": "britpop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P160",
+        "scene": "shoegaze/alternative-rock",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P165",
+        "scene": "club/hip-hop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P166",
+        "scene": "pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P175",
+        "scene": "synth-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-DEV-P180",
+        "scene": "jazz-funk",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB001",
+        "scene": "k-pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB002",
+        "scene": "folk-pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB003",
+        "scene": "new-wave",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB004",
+        "scene": "indie-dance",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 1,
+          "hybrid": 1
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB005",
+        "scene": "indie-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB006",
+        "scene": "piano-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB007",
+        "scene": "psychedelic-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB008",
+        "scene": "dream-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB009",
+        "scene": "k-pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB010",
+        "scene": "psychedelic-pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB011",
+        "scene": "dream-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB012",
+        "scene": "alternative-rock",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB013",
+        "scene": "bedroom-pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB014",
+        "scene": "dream-pop",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB015",
+        "scene": "indie-folk",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB016",
+        "scene": "uk-garage/bedroom-pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB017",
+        "scene": "dream-pop",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB018",
+        "scene": "shoegaze",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 2,
+          "hybrid": 2
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB019",
+        "scene": "indie-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB020",
+        "scene": "alternative-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB021",
+        "scene": "dream-pop",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB022",
+        "scene": "synth-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB023",
+        "scene": "bedroom-pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB024",
+        "scene": "surf-rock",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB025",
+        "scene": "grunge",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB026",
+        "scene": "post-punk",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB027",
+        "scene": "classic-rock",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB028",
+        "scene": "ambient-idm",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB029",
+        "scene": "pop-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB030",
+        "scene": "indie-pop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 8,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB031",
+        "scene": "electropop/hyperpop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB032",
+        "scene": "indie-folk",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB033",
+        "scene": "indie-rock",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB034",
+        "scene": "darkwave",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB035",
+        "scene": "indie-pop",
+        "query_mode": "track",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB036",
+        "scene": "indie-folk",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB037",
+        "scene": "indie-rock",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB038",
+        "scene": "pop-ballad",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB039",
+        "scene": "alternative-pop",
+        "query_mode": "audio_bridge",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      },
+      {
+        "pair_id": "DEV-OPENED-FINAL-LB040",
+        "scene": "alternative-rnb/hip-hop",
+        "query_mode": "artist",
+        "ranks": {
+          "production": 0,
+          "audio_only": 0,
+          "collaborative_only": 0,
+          "hybrid": 0
+        }
+      }
+    ]
+  },
+  "selected_scorer": {
+    "feature_names": [
+      "audio_blend",
+      "efficientnet_cosine",
+      "clap_cosine",
+      "collaborative_cosine",
+      "production_reciprocal_rank",
+      "audio_reciprocal_rank",
+      "collaborative_reciprocal_rank",
+      "production_audio_blend",
+      "audio_x_collaborative",
+      "global_notability_zero"
+    ],
+    "coefficients": [
+      0.009999999776482582,
+      0.0,
+      0.0,
+      0.5,
+      0.0,
+      0.0,
+      0.5,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "intercept": 0.0,
+    "c": 0.0,
+    "global_notability_weight": 0.0
+  },
+  "wall_seconds": 76.67313029999787,
+  "content_sha256": "cafe6b4b54f6c7f43ecc69d57a4814ec7196ff2e44655d38696a5ab582aa8374"
+}

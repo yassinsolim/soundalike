@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=78.1.1", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -38,6 +38,8 @@ ml = [
     "umap-learn>=0.5",
     "matplotlib>=3.6",
     "requests>=2.28",
+    "gensim>=4.3,<5",
+    "psutil>=5.9",
 ]
 # Everything, for development.
 dev = [
@@ -46,6 +48,7 @@ dev = [
     "python-dotenv>=1.0",
     "librosa>=0.10",
     "soundfile>=0.12",
+    "psutil>=5.9",
     "pytest>=7.0",
 ]
 
