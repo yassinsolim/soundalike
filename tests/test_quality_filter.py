@@ -6,6 +6,7 @@ identified and that real tracks are never suppressed.
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -129,7 +130,6 @@ class TestTitleQualityFilter:
         ("Originally", "The Performers"),
         ("A x B", "Mathematics"),
         ("Tribute", "Tenacious D"),
-        ("Pola (The Geek x VRV Remix)", "Jabberwocky"),
     ])
     def test_context_words_do_not_cause_harmful_false_positives(self, title, artist):
         assert not self.f.is_junk(title, artist)
@@ -142,6 +142,40 @@ class TestTitleQualityFilter:
     ])
     def test_contextual_derivative_metadata_is_filtered(self, title, artist):
         assert self.f.is_junk(title, artist)
+
+    @pytest.mark.parametrize("title", [
+        "Because of You (Thunderpuss Club Mix)",
+        "Track (Lionclad Remix)",
+        "Song - Chopnotslop Remix",
+        "Anthem (Dirtyphonics Remix)",
+        "Single - Offer Nissim Remix",
+        "Tune (Phunked Up Mix)",
+        "Pola (The Geek x VRV Remix)",
+        "Cut (Yves Remix)",
+    ])
+    def test_iteration_nine_missed_mix_variants_are_filtered(self, title):
+        assert self.f.is_junk(title, "Artist")
+
+    def test_query_version_exception_is_generic_and_class_matched(self):
+        assert not self.f.is_eligible_for_query(
+            "Original Song", "Artist", "Other Song (Club Mix)", "Peer"
+        )
+        assert self.f.is_eligible_for_query(
+            "Original Song (Radio Mix)", "Artist", "Other Song (Club Mix)", "Peer"
+        )
+        assert not self.f.is_eligible_for_query(
+            "Original Song (Radio Mix)", "Artist", "Two Songs Mashup", "Peer"
+        )
+
+    def test_canonical_title_and_original_preference(self):
+        values = [
+            {"title": "Song (Yves Remix)", "artist": "Artist", "score": 0.9},
+            {"title": "Song", "artist": "Artist", "score": 0.8},
+            {"title": "Different Song", "artist": "Artist", "score": 0.7},
+        ]
+        kept = self.f.prefer_canonical(values)
+        assert [item["title"] for item in kept] == ["Song", "Different Song"]
+        assert self.f.canonical_title("Song (Yves Remix)") == "song"
 
     def test_seed_title_not_in_unrelated_result(self):
         assert not self.f.seed_title_in_result("Money Trees", "Alright")
@@ -257,3 +291,20 @@ def test_real_index_legitimate_titles_have_no_false_positives():
     assert int(selected.sum()) >= 3, "Curated real-index originals are missing"
     kept = TitleQualityFilter().keep_mask(titles, artists)
     assert kept[selected].all()
+
+
+def test_v10_real_index_audit_records_fp_fn_samples_and_no_deployment():
+    report = json.loads(Path(
+        ".goals/human-quality-recommendations/artifacts/"
+        "catalog-version-quality-audit-v10.json"
+    ).read_text(encoding="utf-8"))
+    assert report["catalog_rows"] == 272853
+    assert report["explicit_derivative_false_negatives"] == 0
+    assert report["explicit_derivative_false_negative_samples"] == []
+    assert report["curated_legitimate_controls_present"] == 6
+    assert report["curated_legitimate_false_positives"] == 0
+    assert report["curated_legitimate_false_positive_samples"] == []
+    assert len(report["filtered_samples"]) >= 20
+    assert report["canonical_original_preference_groups"] >= 4000
+    assert report["artist_specific_rules"] is False
+    assert report["production_deployed"] is False

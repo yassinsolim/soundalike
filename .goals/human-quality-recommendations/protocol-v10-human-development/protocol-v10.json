@@ -1,0 +1,19 @@
+{
+  "schema_version": 10,
+  "protocol_kind": "blinded_served_list_human_listener",
+  "rankings_state": "RANKINGS_LOCKED",
+  "ratings_count_at_freeze": 0,
+  "served_lists_sha256": "458abcb809378dbc16506c9d0055477bc26d74585416b38f53863b07341c9815",
+  "private_key_sha256": "470c1a774409cff420886053d5bbdc0fba71c793db3fca8a9bc1d6c11caabe55",
+  "seed_count": 60,
+  "scene_count": 13,
+  "results_per_method": 5,
+  "assignment": "per-session randomized seed, list, and display order",
+  "duplicate_accounting": "a shared track is rated once per seed and the same human grade is credited to each method position containing it",
+  "estimated_workload": "60 seeds x up to 9-10 unique results; about 90-150 minutes for a complete rater, with partial export/resume supported",
+  "human_evidence_gate": "Each browser export must also have a detached Ed25519 approval from the local study collector before aggregation.",
+  "collector_public_key_sha256": "a493effcb022422786b90574b888f911fad49dde74d4646c23a21a2cf77fd185",
+  "collector_allowed_signers_sha256": "62510f8c1aaad6661df2eab2a7f8bcb631f5e2dcb09c694bdf0c1d14eb3e7052",
+  "integrity_notice": "Exports use a local per-session HMAC key carried in the export. This detects accidental changes; it proves integrity, not identity or authenticity.",
+  "content_sha256": "2ce53bbf601618a8541d881a124e4cb961f5813707e8aa1d30c1495b952ec06a"
+}

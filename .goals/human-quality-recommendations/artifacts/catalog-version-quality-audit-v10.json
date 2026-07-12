@@ -1,0 +1,513 @@
+{
+  "artist_specific_rules": false,
+  "canonical_original_preference_groups": 4353,
+  "canonical_original_preference_samples": [
+    {
+      "artist": "flume",
+      "available_versions": 4,
+      "canonical_title": "never be like you",
+      "preferred_title": "Never Be Like You",
+      "preferred_track_id": 2471458441,
+      "rejected_derivative_titles": [
+        "Never Be Like You (Wave Racer Remix)",
+        "Never Be Like You (Martin Solveig Remix)",
+        "Never Be Like You (Teengirl Fantasy Remix)"
+      ]
+    },
+    {
+      "artist": "flume",
+      "available_versions": 5,
+      "canonical_title": "the difference",
+      "preferred_title": "The Difference",
+      "preferred_track_id": 2347316605,
+      "rejected_derivative_titles": [
+        "The Difference (Jon Hopkins Remix)",
+        "The Difference (Willaris. K Remix)",
+        "The Difference (Picard Brothers Remix)",
+        "The Difference (High Contrast Remix)"
+      ]
+    },
+    {
+      "artist": "flume",
+      "available_versions": 2,
+      "canonical_title": "say it feat tove lo",
+      "preferred_title": "Say It (feat. Tove Lo)",
+      "preferred_track_id": 3875883991,
+      "rejected_derivative_titles": [
+        "Say It (feat. Tove Lo) (Clean Bandit Remix)"
+      ]
+    },
+    {
+      "artist": "lorde",
+      "available_versions": 2,
+      "canonical_title": "tennis court",
+      "preferred_title": "Tennis Court",
+      "preferred_track_id": 70403435,
+      "rejected_derivative_titles": [
+        "Tennis Court (Flume Remix)"
+      ]
+    },
+    {
+      "artist": "flume",
+      "available_versions": 2,
+      "canonical_title": "say nothing",
+      "preferred_title": "Say Nothing",
+      "preferred_track_id": 2640749462,
+      "rejected_derivative_titles": [
+        "Say Nothing (Tchami Remix)"
+      ]
+    },
+    {
+      "artist": "a. g. cook",
+      "available_versions": 2,
+      "canonical_title": "beautiful",
+      "preferred_title": "Beautiful",
+      "preferred_track_id": 1184296752,
+      "rejected_derivative_titles": [
+        "Beautiful (2023 Edit)"
+      ]
+    },
+    {
+      "artist": "lady gaga",
+      "available_versions": 2,
+      "canonical_title": "911",
+      "preferred_title": "911",
+      "preferred_track_id": 973317102,
+      "rejected_derivative_titles": [
+        "911 (Charli XCX & A. G. Cook Remix)"
+      ]
+    },
+    {
+      "artist": "ninajirachi",
+      "available_versions": 2,
+      "canonical_title": "it s you",
+      "preferred_title": "It's You",
+      "preferred_track_id": 3444573091,
+      "rejected_derivative_titles": [
+        "It's You (underscores' \"It’s U\" Remix)"
+      ]
+    },
+    {
+      "artist": "daîne",
+      "available_versions": 2,
+      "canonical_title": "pqc",
+      "preferred_title": "PQC",
+      "preferred_track_id": 4025085971,
+      "rejected_derivative_titles": [
+        "PQC (Bassvictim Edit)"
+      ]
+    },
+    {
+      "artist": "porter robinson",
+      "available_versions": 3,
+      "canonical_title": "get your wish",
+      "preferred_title": "Get Your Wish",
+      "preferred_track_id": 3484515871,
+      "rejected_derivative_titles": [
+        "Get Your Wish (Anamanaguchi Remix)",
+        "Get Your Wish (DJ NOT PORTER ROBINSON Remix)"
+      ]
+    },
+    {
+      "artist": "porter robinson",
+      "available_versions": 2,
+      "canonical_title": "goodbye to a world",
+      "preferred_title": "Goodbye To A World",
+      "preferred_track_id": 81836840,
+      "rejected_derivative_titles": [
+        "Goodbye To A World (Chrome Sparks Remix)"
+      ]
+    },
+    {
+      "artist": "porter robinson",
+      "available_versions": 2,
+      "canonical_title": "sad machine",
+      "preferred_title": "Sad Machine",
+      "preferred_track_id": 81836820,
+      "rejected_derivative_titles": [
+        "Sad Machine (Deon Custom Remix)"
+      ]
+    },
+    {
+      "artist": "porter robinson",
+      "available_versions": 2,
+      "canonical_title": "years of war",
+      "preferred_title": "Years Of War",
+      "preferred_track_id": 81836822,
+      "rejected_derivative_titles": [
+        "Years Of War (Rob Mayth Remix)"
+      ]
+    },
+    {
+      "artist": "gfoty",
+      "available_versions": 2,
+      "canonical_title": "tongue",
+      "preferred_title": "Tongue",
+      "preferred_track_id": 1213625592,
+      "rejected_derivative_titles": [
+        "Tongue (Lil Data Remix)"
+      ]
+    },
+    {
+      "artist": "gfoty",
+      "available_versions": 2,
+      "canonical_title": "grwm eww",
+      "preferred_title": "GRWM (eww)",
+      "preferred_track_id": 3165490241,
+      "rejected_derivative_titles": [
+        "GRWM (eww) (izid99 Remix)"
+      ]
+    },
+    {
+      "artist": "gfoty",
+      "available_versions": 2,
+      "canonical_title": "don t wanna let s do it",
+      "preferred_title": "Don't Wanna / Let's Do It",
+      "preferred_track_id": 1184296822,
+      "rejected_derivative_titles": [
+        "Don't Wanna / Let's Do It (Bucks Mix)"
+      ]
+    },
+    {
+      "artist": "zedd",
+      "available_versions": 2,
+      "canonical_title": "beautiful now",
+      "preferred_title": "Beautiful Now",
+      "preferred_track_id": 99554798,
+      "rejected_derivative_titles": [
+        "Beautiful Now (Dirty South Remix)"
+      ]
+    },
+    {
+      "artist": "john summit",
+      "available_versions": 6,
+      "canonical_title": "where you are",
+      "preferred_title": "Where You Are",
+      "preferred_track_id": 2164533907,
+      "rejected_derivative_titles": [
+        "Where You Are (Zedd Remix)",
+        "Where You Are (GRiZ Remix)",
+        "Where You Are (Millero Remix)",
+        "Where You Are (Gorgon City Remix)"
+      ]
+    },
+    {
+      "artist": "oklou",
+      "available_versions": 3,
+      "canonical_title": "harvest sky",
+      "preferred_title": "harvest sky",
+      "preferred_track_id": 3082526421,
+      "rejected_derivative_titles": [
+        "harvest sky (Danny L Harle C Mix)",
+        "harvest sky (Milkfish remix)"
+      ]
+    },
+    {
+      "artist": "møme",
+      "available_versions": 2,
+      "canonical_title": "sail away",
+      "preferred_title": "Sail Away",
+      "preferred_track_id": 588243542,
+      "rejected_derivative_titles": [
+        "Sail Away (Fred Falke Remix)"
+      ]
+    },
+    {
+      "artist": "sophie",
+      "available_versions": 2,
+      "canonical_title": "ponyboy",
+      "preferred_title": "Ponyboy",
+      "preferred_track_id": 2471885031,
+      "rejected_derivative_titles": [
+        "Ponyboy (Faast Boy Remix)"
+      ]
+    },
+    {
+      "artist": "sophie",
+      "available_versions": 2,
+      "canonical_title": "infatuation",
+      "preferred_title": "Infatuation",
+      "preferred_track_id": 2471885061,
+      "rejected_derivative_titles": [
+        "Infatuation (Lichtbogen Dreamin' Remix)"
+      ]
+    },
+    {
+      "artist": "varg2tm",
+      "available_versions": 2,
+      "canonical_title": "h2d",
+      "preferred_title": "H2D",
+      "preferred_track_id": 2713297901,
+      "rejected_derivative_titles": [
+        "H2D (Eurohead x Varg²™ Remix)"
+      ]
+    },
+    {
+      "artist": "future",
+      "available_versions": 2,
+      "canonical_title": "mask off",
+      "preferred_title": "Mask Off",
+      "preferred_track_id": 142337683,
+      "rejected_derivative_titles": [
+        "Mask Off (Marshmello Remix)"
+      ]
+    },
+    {
+      "artist": "deadmau5",
+      "available_versions": 2,
+      "canonical_title": "ghosts n stuff feat rob swire",
+      "preferred_title": "Ghosts 'n' Stuff (feat. Rob Swire)",
+      "preferred_track_id": 3456916511,
+      "rejected_derivative_titles": [
+        "Ghosts 'n' Stuff (feat. Rob Swire) (Extended Mix)"
+      ]
+    }
+  ],
+  "catalog_rows": 272853,
+  "content_sha256": "e0a8602758355ebd46d33aaa2fb90c65d78175aaf53bdbb82c4ef2da10125f92",
+  "cross_artist_same_canonical_title_groups": 22938,
+  "curated_legitimate_controls_present": 6,
+  "curated_legitimate_false_positive_samples": [],
+  "curated_legitimate_false_positives": 0,
+  "explicit_derivative_false_negative_samples": [],
+  "explicit_derivative_false_negatives": 0,
+  "filtered_fraction": 0.06205172748696185,
+  "filtered_rows": 16931,
+  "filtered_samples": [
+    {
+      "artist": "Flume",
+      "row": 33,
+      "title": "Say It (feat. Tove Lo) (Clean Bandit Remix)",
+      "track_id": 3875884111,
+      "version_tags": [
+        "remix"
+      ]
+    },
+    {
+      "artist": "Flume",
+      "row": 38,
+      "title": "Never Be Like You (feat. Kai) (Disclosure Remix)",
+      "track_id": 3875829771,
+      "version_tags": [
+        "remix"
+      ]
+    },
+    {
+      "artist": "Lorde",
+      "row": 39,
+      "title": "Tennis Court (Flume Remix)",
+      "track_id": 2160392617,
+      "version_tags": [
+        "remix"
+      ]
+    },
+    {
+      "artist": "Lady Gaga",
+      "row": 58,
+      "title": "911 (Charli XCX & A. G. Cook Remix)",
+      "track_id": 1483154302,
+      "version_tags": [
+        "remix"
+      ]
+    },
+    {
+      "artist": "Ninajirachi",
+      "row": 92,
+      "title": "It's You (underscores' \"It’s U\" Remix)",
+      "track_id": 3822640221,
+      "version_tags": [
+        "remix"
+      ]
+    },
+    {
+      "artist": "GFOTY",
+      "row": 118,
+      "title": "GRWM (eww) (izid99 Remix)",
+      "track_id": 3884569001,
+      "version_tags": [
+        "remix"
+      ]
+    },
+    {
+      "artist": "GFOTY",
+      "row": 120,
+      "title": "Don't Wanna / Let's Do It (Bucks Mix)",
+      "track_id": 1213625582,
+      "version_tags": [
+        "remix"
+      ]
+    },
+    {
+      "artist": "GFOTY",
+      "row": 123,
+      "title": "Tongue (Lil Data Remix)",
+      "track_id": 1213601452,
+      "version_tags": [
+        "remix"
+      ]
+    },
+    {
+      "artist": "John Summit",
+      "row": 133,
+      "title": "Where You Are (Zedd Remix)",
+      "track_id": 2377626875,
+      "version_tags": [
+        "remix"
+      ]
+    },
+    {
+      "artist": "Twxn",
+      "row": 137,
+      "title": "TELESCOPE (Slowed)",
+      "track_id": 2853446582,
+      "version_tags": [
+        "slowed"
+      ]
+    },
+    {
+      "artist": "Oklou",
+      "row": 155,
+      "title": "harvest sky (Danny L Harle C Mix)",
+      "track_id": 3111889311,
+      "version_tags": [
+        "remix"
+      ]
+    },
+    {
+      "artist": "Milk & Bone",
+      "row": 174,
+      "title": "Blossom Tree (Remix)",
+      "track_id": 4035018191,
+      "version_tags": [
+        "remix"
+      ]
+    },
+    {
+      "artist": "BK Gudda",
+      "row": 304,
+      "title": "Brooklyn Battery Tunnel (Remix, Pt. 2 - Sped Up)",
+      "track_id": 3661962412,
+      "version_tags": [
+        "remix",
+        "sped_up"
+      ]
+    },
+    {
+      "artist": "deadmau5",
+      "row": 379,
+      "title": "Ghosts 'n' Stuff (feat. Rob Swire) (Extended Mix)",
+      "track_id": 3360677091,
+      "version_tags": [
+        "remix"
+      ]
+    },
+    {
+      "artist": "deadmau5",
+      "row": 382,
+      "title": "Professional Griefers (feat. Gerard Way) (Vocal Mix)",
+      "track_id": 3360685851,
+      "version_tags": [
+        "remix"
+      ]
+    },
+    {
+      "artist": "deadmau5",
+      "row": 385,
+      "title": "The Veldt Cinema (BYNX Edit)",
+      "track_id": 2292325385,
+      "version_tags": [
+        "edit"
+      ]
+    },
+    {
+      "artist": "deadmau5",
+      "row": 388,
+      "title": "I Remember (Radio Edit)",
+      "track_id": 3440942221,
+      "version_tags": [
+        "edit"
+      ]
+    },
+    {
+      "artist": "deadmau5",
+      "row": 389,
+      "title": "The Veldt (feat. Chris James) (Radio Edit)",
+      "track_id": 3360690531,
+      "version_tags": [
+        "edit"
+      ]
+    },
+    {
+      "artist": "deadmau5",
+      "row": 390,
+      "title": "Channel 43 (Radio Edit)",
+      "track_id": 3350247231,
+      "version_tags": [
+        "edit"
+      ]
+    },
+    {
+      "artist": "Diplo",
+      "row": 407,
+      "title": "Wish (feat. Trippie Redd) (Trippie Mix)",
+      "track_id": 2495396711,
+      "version_tags": [
+        "remix"
+      ]
+    },
+    {
+      "artist": "Krewella",
+      "row": 475,
+      "title": "Eternal (SATOSHI Remix)",
+      "track_id": 3962998361,
+      "version_tags": [
+        "remix"
+      ]
+    },
+    {
+      "artist": "Nicky Romero",
+      "row": 476,
+      "title": "Legacy (Radio Edit)",
+      "track_id": 70566205,
+      "version_tags": [
+        "edit"
+      ]
+    },
+    {
+      "artist": "Swedish House Mafia",
+      "row": 492,
+      "title": "Antidote (Radio Edit)",
+      "track_id": 15875230,
+      "version_tags": [
+        "edit"
+      ]
+    },
+    {
+      "artist": "Justin Bieber",
+      "row": 590,
+      "title": "Mood (Remix)",
+      "track_id": 1131925412,
+      "version_tags": [
+        "remix"
+      ]
+    },
+    {
+      "artist": "Tokyo Machine",
+      "row": 638,
+      "title": "ROCK IT (VIP)",
+      "track_id": 1070217662,
+      "version_tags": [
+        "edit"
+      ]
+    }
+  ],
+  "generic_rules_only": true,
+  "independent_explicit_derivative_rows": 11470,
+  "index_path": "ml_data\\deepvibe_index_v5.npz",
+  "index_sha256": "f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9",
+  "kind": "real-catalog-generic-version-quality-audit",
+  "production_deployed": false,
+  "query_version_exception": "canonical queries exclude derivatives; a derivative query may admit only candidates carrying the same derivative tag classes",
+  "schema_version": 10,
+  "unlabelled_cover_policy": "Do not guess original ownership from title/artist strings. Explicit cover metadata is filtered; unlabelled cross-artist recordings are flagged in blinded human evaluation. A future automatic exclusion requires trustworthy work/original-release attribution."
+}

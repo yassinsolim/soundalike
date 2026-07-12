@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; media-src https: http: blob: data:; connect-src 'none'">
+  <title>Soundalike blind listening evaluation</title>
+  <style>
+    :root{color-scheme:dark;--bg:#101215;--panel:#191d22;--ink:#f3f5f7;--muted:#aab2bd;--line:#343b45;--accent:#72e3a6;--space:1rem}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,sans-serif}
+    main{max-width:1050px;margin:auto;padding:clamp(1rem,3vw,2.5rem)}h1,h2,h3{line-height:1.15}
+    .panel,.list,.track{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:var(--space);margin:var(--space) 0}
+    .tools{display:flex;gap:.7rem;flex-wrap:wrap;align-items:center}.muted,.shared{color:var(--muted)}
+    button,.button,select,input[type=number]{font:inherit;color:var(--ink);background:#242a31;border:1px solid #56606d;border-radius:7px;padding:.55rem .8rem}
+    button,.button{cursor:pointer}.button input{position:absolute;opacity:0;width:1px}button:hover,.button:hover{border-color:var(--accent)}
+    fieldset{border:0;padding:.4rem 0;margin:0}legend{font-weight:650}.choices{display:flex;gap:.8rem;flex-wrap:wrap}
+    label{display:inline-flex;gap:.35rem;align-items:center}.track-head{display:flex;justify-content:space-between;gap:1rem}
+    .columns{display:grid;grid-template-columns:1fr 1fr;gap:1rem}.status{border-left:4px solid var(--accent);padding-left:.7rem}
+    audio{width:100%;margin-top:.5rem}.danger{color:#ffb4ab}.hidden{display:none!important}
+    @media(max-width:760px){.columns{grid-template-columns:1fr}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+  </style>
+</head>
+<body>
+<main>
+  <h1>Blind served-list listening study</h1>
+  <p class="muted">Runs locally. No analytics, uploads, external scripts, or network collection. A supplied public preview URL is contacted only when you play its audio.</p>
+  <p class="muted">A complete session covers 60 seeds and usually takes 90–150 minutes. Stop anytime: progress autosaves in this browser, and partial signed exports can be resumed or merged with other anonymous raters.</p>
+  <section class="panel" aria-labelledby="setup-title">
+    <h2 id="setup-title">1. Load locked study files</h2>
+    <div class="tools">
+      <label class="button">Protocol JSON<input id="protocol-file" type="file" accept=".json,application/json"></label>
+      <label class="button">Served lists JSON<input id="lists-file" type="file" accept=".json,application/json"></label>
+      <button id="load" type="button">Validate and begin</button>
+      <label class="button">Resume/import export<input id="resume-file" type="file" accept=".json,application/json"></label>
+    </div>
+    <p id="setup-status" class="status" role="status">Select both files. The private method key must not be loaded here.</p>
+  </section>
+  <section id="study" class="hidden">
+    <div class="tools">
+      <button id="prev" type="button">Previous seed</button><button id="next" type="button">Next seed</button>
+      <button id="export" type="button">Export partial/current ratings</button>
+      <span id="progress" class="status" role="status"></span>
+    </div>
+    <article id="seed"></article>
+  </section>
+</main>
+<script>
+"use strict";
+const $=id=>document.getElementById(id), enc=new TextEncoder();
+let selected={}, protocol=null, pack=null, state=null, orderedSeeds=[];
+const readFile=file=>file.text().then(JSON.parse);
+const canonical=value=>{
+  if(Array.isArray(value))return"["+value.map(canonical).join(",")+"]";
+  if(value&&typeof value==="object")return"{"+Object.keys(value).sort().map(k=>JSON.stringify(k)+":"+canonical(value[k])).join(",")+"}";
+  return JSON.stringify(value);
+};
+const hex=bytes=>[...new Uint8Array(bytes)].map(x=>x.toString(16).padStart(2,"0")).join("");
+const sha=async value=>hex(await crypto.subtle.digest("SHA-256",enc.encode(typeof value==="string"?value:canonical(value))));
+const docHash=async doc=>{const copy={...doc};delete copy.content_sha256;return sha(copy)};
+const randomHex=n=>{const a=new Uint8Array(n);crypto.getRandomValues(a);return hex(a)};
+const storageKey=()=>`soundalike-human-v10:${protocol.content_sha256}:${state.anonymous_rater_id}:${state.session_id}`;
+const now=()=>new Date().toISOString();
+function touch(rating){
+  const t=Date.now();rating.rated_at=now();rating.interaction_ms=Math.max(1,t-state.lastInteractionAt);
+  state.lastInteractionAt=t;state.last_activity_at=rating.rated_at;save();
+}
+function save(){if(state)localStorage.setItem(storageKey(),JSON.stringify(state))}
+async function hmac(payload,keyHex){
+  const key=await crypto.subtle.importKey("raw",enc.encode(keyHex),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
+  return hex(await crypto.subtle.sign("HMAC",key,enc.encode(canonical(payload))));
+}
+async function deterministicOrder(items,label){
+  const scored=await Promise.all(items.map(async(item,i)=>({
+    item,score:await sha(`${pack.content_sha256}\0${state.anonymous_rater_id}\0${state.session_id}\0${label}\0${item.seed_id||item.list_id||i}`)
+  })));
+  return scored.sort((a,b)=>a.score.localeCompare(b.score)).map(x=>x.item);
+}
+function emptyState(){
+  const token=randomHex(24), started=now();
+  return {schema_version:10,source_kind:"human_listener",provider:"standalone_local_evaluator",
+    anonymous_rater_id:"anon-"+token.slice(0,24),session_id:"session-"+randomHex(12),
+    protocol_sha256:protocol.content_sha256,served_lists_sha256:pack.content_sha256,
+    local_session_key:randomHex(32),started_at:started,last_activity_at:started,
+    current_seed:0,result_ratings:{},list_ratings:{},lastInteractionAt:Date.now()};
+}
+async function begin(){
+  try{
+    if(!selected.protocol||!selected.lists)throw Error("Select both JSON files.");
+    protocol=selected.protocol;pack=selected.lists;
+    if(protocol.schema_version!==10||pack.schema_version!==10)throw Error("Expected schema version 10.");
+    if(await docHash(protocol)!==protocol.content_sha256||await docHash(pack)!==pack.content_sha256)throw Error("Content hash mismatch.");
+    if(protocol.served_lists_sha256!==pack.content_sha256)throw Error("Files are not hash-bound.");
+    if(protocol.rankings_state!=="RANKINGS_LOCKED"||pack.rankings_state!=="RANKINGS_LOCKED")throw Error("Rankings are not locked.");
+    if(pack.seeds.some(s=>s.lists.length!==2||s.lists.some(l=>l.ranking.length!==5)))throw Error("Every seed must have two five-result lists.");
+    const opaque=/^[LT]-[a-f0-9]{20}$/;
+    if(pack.seeds.some(s=>s.results.some(r=>!opaque.test(r.result_id))||s.lists.some(l=>!opaque.test(l.list_id)||l.ranking.some((r,i)=>!opaque.test(r.result_id)||r.position!==i+1))))throw Error("Unsafe or malformed opaque IDs/positions.");
+    state=emptyState();orderedSeeds=await deterministicOrder(pack.seeds,"seed-order");
+    $("study").classList.remove("hidden");$("setup-status").textContent="Locked files validated. Autosave is active.";
+    save();await render();
+  }catch(error){$("setup-status").textContent=error.message;$("setup-status").classList.add("danger")}
+}
+function ratingControls(result){
+  const rating=state.result_ratings[result.result_id]||{};
+  const id=escapeAttr(result.result_id);
+  const score=Number.isInteger(rating.score_0_10)&&rating.score_0_10>=0&&rating.score_0_10<=10?String(rating.score_0_10):"";
+  const labels=[["not_similar","Not similar"],["somewhat_similar","Somewhat similar"],["very_similar","Very similar"]];
+  return `<fieldset data-result="${id}"><legend>How similar does this sound to the seed?</legend><div class="choices">
+    ${labels.map(([v,t])=>`<label><input type="radio" name="sim-${id}" value="${v}" ${rating.similarity===v?"checked":""}>${t}</label>`).join("")}
+    </div><div class="choices"><label>Optional score (0–10) <input type="number" min="0" max="10" step="1" value="${escapeAttr(score)}" data-score></label>
+    <label><input type="checkbox" data-junk ${rating.junk_or_version?"checked":""}> Junk, duplicate, cover, remix, or wrong version</label></div></fieldset>`;
+}
+function listControls(list){
+  const r=state.list_ratings[list.list_id]||{}, opts=[0,1,2,3];
+  const id=escapeAttr(list.list_id);
+  return `<fieldset data-list="${id}"><legend>Whole-list judgment</legend><div class="choices">
+    ${[["not_coherent","Not coherent"],["somewhat_coherent","Somewhat coherent"],["very_coherent","Very coherent"]].map(([v,t])=>`<label><input type="radio" name="coh-${id}" value="${v}" ${r.whole_list_coherence===v?"checked":""}>${t}</label>`).join("")}
+    <label>Unrelated results in positions 1–3 <select data-unrelated><option value="">Choose</option>${opts.map(v=>`<option value="${v}" ${r.unrelated_positions_1_to_3===v?"selected":""}>${v}</option>`).join("")}</select></label>
+    </div></fieldset>`;
+}
+async function render(){
+  state.current_seed=Math.max(0,Math.min(state.current_seed,orderedSeeds.length-1));
+  const seed=orderedSeeds[state.current_seed], resultMap=Object.fromEntries(seed.results.map(r=>[r.result_id,r]));
+  const lists=await deterministicOrder(seed.lists,`list-order:${seed.seed_id}`), seen=new Set();
+  $("progress").textContent=`Seed ${state.current_seed+1} of ${orderedSeeds.length} · partial sessions may be exported`;
+  $("seed").innerHTML=`<header><h2>${escapeHtml(seed.query.title)} — ${escapeHtml(seed.query.artist)}</h2><p class="muted">Scene: ${escapeHtml(seed.scene)}. Listen to the seed first; no method identity is available in this page or the public pack.</p>`+
+    (seed.query.preview_url?`<audio controls preload="none" src="${escapeAttr(seed.query.preview_url)}">Seed preview unavailable.</audio>`:`<p class="muted">No supplied seed preview URL; use a legal local/player copy if available.</p>`)+`</header><div class="columns">`+
+    lists.map((list,index)=>`<section class="list"><h3>List ${index?"B":"A"}</h3>`+
+      list.ranking.map(item=>{const r=resultMap[item.result_id],shared=seen.has(item.result_id);seen.add(item.result_id);
+        return `<article class="track"><div class="track-head"><strong>${escapeHtml(item.position)}. ${escapeHtml(r.title)}</strong><span>${escapeHtml(r.artist)}</span></div>`+
+          (r.preview_url?`<audio controls preload="none" src="${escapeAttr(r.preview_url)}">Preview unavailable.</audio>`:`<p class="muted">No supplied public preview URL.</p>`)+
+          (shared?`<p class="shared">Shared result: rated once; this judgment is accounted for in both lists.</p>`:ratingControls(r))+`</article>`}).join("")+
+      listControls(list)+`</section>`).join("")+`</div>`;
+  bindInputs();save();
+}
+function bindInputs(){
+  document.querySelectorAll("[data-result]").forEach(fs=>{
+    const id=fs.dataset.result, ensure=()=>state.result_ratings[id]||(state.result_ratings[id]={similarity:null,score_0_10:null,junk_or_version:false});
+    fs.querySelectorAll('input[type=radio]').forEach(x=>x.onchange=()=>{const r=ensure();r.similarity=x.value;touch(r)});
+    fs.querySelector("[data-score]").onchange=e=>{const r=ensure();r.score_0_10=e.target.value===""?null:Number(e.target.value);touch(r)};
+    fs.querySelector("[data-junk]").onchange=e=>{const r=ensure();r.junk_or_version=e.target.checked;touch(r)};
+  });
+  document.querySelectorAll("[data-list]").forEach(fs=>{
+    const id=fs.dataset.list, ensure=()=>state.list_ratings[id]||(state.list_ratings[id]={whole_list_coherence:null,unrelated_positions_1_to_3:null});
+    fs.querySelectorAll('input[type=radio]').forEach(x=>x.onchange=()=>{const r=ensure();r.whole_list_coherence=x.value;touch(r)});
+    fs.querySelector("select").onchange=e=>{const r=ensure();r.unrelated_positions_1_to_3=e.target.value===""?null:Number(e.target.value);touch(r)};
+  });
+}
+async function exportRatings(){
+  const payload={...state};delete payload.current_seed;delete payload.lastInteractionAt;
+  payload.result_ratings=Object.fromEntries(Object.entries(payload.result_ratings).filter(([,r])=>
+    ["not_similar","somewhat_similar","very_similar"].includes(r.similarity)&&typeof r.junk_or_version==="boolean"));
+  payload.list_ratings=Object.fromEntries(Object.entries(payload.list_ratings).filter(([,r])=>
+    ["not_coherent","somewhat_coherent","very_coherent"].includes(r.whole_list_coherence)&&Number.isInteger(r.unrelated_positions_1_to_3)));
+  payload.exported_at=now();payload.duration_ms=Math.max(1,Date.now()-Date.parse(payload.started_at));
+  payload.integrity_notice="Local-key HMAC provides integrity, not identity or authenticity; the key is included in this export.";
+  payload.integrity_hmac_sha256=await hmac(payload,payload.local_session_key);
+  const blob=new Blob([JSON.stringify(payload,null,2)+"\n"],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`human-ratings-v10-${payload.session_id}.json`;a.click();URL.revokeObjectURL(a.href);
+}
+async function resume(file){
+  try{
+    if(!protocol||!pack)throw Error("Load and validate the locked study files first.");
+    const imported=await readFile(file),sig=imported.integrity_hmac_sha256,payload={...imported};delete payload.integrity_hmac_sha256;
+    if(imported.protocol_sha256!==protocol.content_sha256||imported.served_lists_sha256!==pack.content_sha256)throw Error("Import belongs to another study pack.");
+    if(await hmac(payload,imported.local_session_key)!==sig)throw Error("Import integrity HMAC mismatch.");
+    state={...imported,current_seed:0,lastInteractionAt:Date.now()};delete state.integrity_hmac_sha256;delete state.exported_at;delete state.duration_ms;delete state.integrity_notice;
+    orderedSeeds=await deterministicOrder(pack.seeds,"seed-order");save();await render();$("setup-status").textContent="Valid partial session resumed.";
+  }catch(error){$("setup-status").textContent=error.message;$("setup-status").classList.add("danger")}
+}
+function escapeHtml(v){const d=document.createElement("div");d.textContent=String(v??"");return d.innerHTML}
+function escapeAttr(v){return escapeHtml(v).replaceAll('"',"&quot;")}
+$("protocol-file").onchange=e=>readFile(e.target.files[0]).then(v=>selected.protocol=v);
+$("lists-file").onchange=e=>readFile(e.target.files[0]).then(v=>selected.lists=v);
+$("resume-file").onchange=e=>resume(e.target.files[0]);$("load").onclick=begin;$("export").onclick=exportRatings;
+$("prev").onclick=async()=>{state.current_seed--;await render()};$("next").onclick=async()=>{state.current_seed++;await render()};
+</script>
+</body>
+</html>

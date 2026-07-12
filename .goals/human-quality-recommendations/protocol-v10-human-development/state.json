@@ -1,0 +1,19 @@
+{
+  "schema_version": 10,
+  "phase": "RANKINGS_LOCKED",
+  "rankings_state": "RANKINGS_LOCKED",
+  "ratings_count_at_freeze": 0,
+  "human_rater_exports_ingested": 0,
+  "sonic_human_report_exists": false,
+  "production_deployment_blocked": true,
+  "served_lists_sha256": "458abcb809378dbc16506c9d0055477bc26d74585416b38f53863b07341c9815",
+  "protocol_sha256": "2ce53bbf601618a8541d881a124e4cb961f5813707e8aa1d30c1495b952ec06a",
+  "private_method_key_sha256": "470c1a774409cff420886053d5bbdc0fba71c793db3fca8a9bc1d6c11caabe55",
+  "collector_public_key_sha256": "a493effcb022422786b90574b888f911fad49dde74d4646c23a21a2cf77fd185",
+  "collector_allowed_signers_sha256": "62510f8c1aaad6661df2eab2a7f8bcb631f5e2dcb09c694bdf0c1d14eb3e7052",
+  "evaluator_sha256": "fa31022c809770b7db2813303caa8a228d0bdd11806bba06bdb9413005b7a22b",
+  "source_v9_lists_file_sha256": "7717bc924acc8b72b3739c90f35b56798f05a3ee731ef42593132684f084b82d",
+  "source_v9_key_file_sha256": "e72ed0e25ab6d1a5e1835ef0cc5abfbbf5175242acf8d45bedfbf0b64c2dbedb",
+  "locked_at": "2026-07-12T19:54:58.132417+00:00",
+  "content_sha256": "4e34f0f2037fea2f549edb87994face4efb7f6f4a672ecd2d6ba25b3731c5c0d"
+}

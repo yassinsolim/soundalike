@@ -1,0 +1,77 @@
+{
+  "schema_version": 10,
+  "kind": "iteration-10-quality-security-resource-evidence",
+  "quality_gate": {
+    "command": ".\\.venv\\Scripts\\python.exe -m pytest tests\\ -q",
+    "passed": true,
+    "tests_passed": 511,
+    "tests_failed": 0,
+    "wall_seconds": 21.10
+  },
+  "build": {
+    "command": ".\\.venv\\Scripts\\python.exe -m build",
+    "passed": true,
+    "sdist_bytes": 87858999,
+    "sdist_sha256": "f34a3aac9b17a6b78b17f6f20fab7b5dbc5be2870d1b307a1096efca8d224251",
+    "wheel_bytes": 87776509,
+    "wheel_sha256": "73ee088f43d1719709542deeb4b57e84e140c20c51e1f14c63295817ca8b5951"
+  },
+  "dependency_audit": {
+    "command": ".\\.venv\\Scripts\\python.exe -m pip_audit",
+    "passed": true,
+    "known_vulnerabilities": 0,
+    "new_optional_dependencies": {
+      "networkx": "3.6.1",
+      "laion-clap": "1.1.7"
+    },
+    "notes": [
+      "Local project soundalike is not on PyPI and was skipped.",
+      "CUDA-local torch, torchaudio, and torchvision build suffixes are not on PyPI and were skipped.",
+      "GitHub Dependabot API was unavailable because this checkout has no gh authentication."
+    ]
+  },
+  "secret_scan": {
+    "local_command": ".\\.venv\\Scripts\\detect-secrets.exe -c 1 scan <staged files>",
+    "credential_or_private_key_findings": 0,
+    "reviewed_false_positives": "SHA-256 values, content hashes, and public Ed25519 keys only",
+    "github_secret_scan": "unavailable: repository does not have GitHub Advanced Security enabled",
+    "collector_private_key_committed": false,
+    "method_role_key_committed": false
+  },
+  "protocol": {
+    "phase": "RANKINGS_LOCKED",
+    "ratings_count_at_freeze": 0,
+    "served_lists_content_sha256": "458abcb809378dbc16506c9d0055477bc26d74585416b38f53863b07341c9815",
+    "protocol_content_sha256": "2ce53bbf601618a8541d881a124e4cb961f5813707e8aa1d30c1495b952ec06a",
+    "state_content_sha256": "4e34f0f2037fea2f549edb87994face4efb7f6f4a672ecd2d6ba25b3731c5c0d",
+    "state_signature_verified": true,
+    "state_signer_fingerprint": "SHA256:c9Vzptc7X6TbwM/tHyOvOt25dGF8BPjeEvC60/iw+Do",
+    "collector_fingerprint": "SHA256:pzZfnWuEifekquayAp1aDGlxjBLivMgY9FYHtO0IxV4"
+  },
+  "resources": {
+    "hardware": "NVIDIA GeForce RTX 5080",
+    "mtat_local_audio_preparation_seconds": 40.772,
+    "artist_supcon_embedding_seconds": 0.226,
+    "fma_supcon_embedding_seconds": 0.076,
+    "laion_clap_embedding_seconds": 8.647,
+    "fma_regularizer_embedding_seconds": 0.257,
+    "triplet_projection_grid_training_seconds": 12.318,
+    "evaluator_html_bytes": 14792,
+    "locked_served_lists_bytes": 257661,
+    "unique_result_ratings_per_full_study": 480,
+    "duplicate_method_positions_accounted_without_second_rating": 120,
+    "resolved_result_previews": 119,
+    "resolved_seed_previews": 22,
+    "estimated_complete_rater_minutes": "90-150"
+  },
+  "release": {
+    "real_human_rater_exports_available": false,
+    "sonic_human_report_created": false,
+    "fresh_commercial_final_opened": false,
+    "catalog_reembedded": false,
+    "recommender_deployed": false,
+    "production_changed": false,
+    "production_version_retained": "2026.07.11-dual-sonic64"
+  },
+  "immutable_goal_modified": false
+}

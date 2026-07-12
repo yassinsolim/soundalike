@@ -120,7 +120,12 @@ class LastfmListRanker(CatalogPolicyRanker):
                 title, artist = str(self.titles[row]), str(self.artists[row])
                 if row == query_row or seed_artists & _artist_parts(artist):
                     continue
-                if self.quality_filter.is_junk(title, artist):
+                if not self.quality_filter.is_eligible_for_query(
+                    seed_title,
+                    str(self.artists[query_row]),
+                    title,
+                    artist,
+                ):
                     continue
                 if self.quality_filter.seed_title_in_result(seed_title, title):
                     continue
@@ -135,6 +140,8 @@ class LastfmListRanker(CatalogPolicyRanker):
                 )
                 candidates.append({
                     "row": row,
+                    "title": title,
+                    "artist": artist,
                     "G": graph,
                     "A": a_value,
                     "S": style,
@@ -215,6 +222,9 @@ class LastfmListRanker(CatalogPolicyRanker):
             if float(item["song_consistency"]) >= policy.sigma
         ]
         candidates.sort(key=lambda item: (-float(item["score"]), int(item["row"])))
+        candidates = [
+            dict(item) for item in self.quality_filter.prefer_canonical(candidates)
+        ]
         ranked: List[Dict[str, Any]] = []
         used_artists = set()
         for item in candidates:
