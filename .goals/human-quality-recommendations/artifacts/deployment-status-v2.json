@@ -1,0 +1,682 @@
+{
+  "schema_version": 2,
+  "checked_at": "2026-07-11",
+  "target": "https://soundalike.yassin.app",
+  "deployment": {
+    "trigger": "PR #30 squash merge to main via connected GitHub auto-deploy",
+    "merge_sha": "c24f749db5f605dbc9387a5f194b8bcdc8166dfd",
+    "release_tag": "index-2026.07.11-dual-sonic64",
+    "release_sha256": "f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9",
+    "status": "production serving dual_sonic64_guardrail"
+  },
+  "homepage": {
+    "status": 200,
+    "content_type": "text/html; charset=utf-8"
+  },
+  "first_cold_recommend_latency_ms": 18866,
+  "warm_recommend_latency_ms": {
+    "samples": 12,
+    "mean": 859.8940083320485,
+    "p50": 860.5403999972623,
+    "p95": 977.1833999984665
+  },
+  "verification": {
+    "seed_count": 12,
+    "all_search_ok": true,
+    "all_recommend_ok": true,
+    "all_dual_method": true,
+    "all_index_version": true,
+    "all_library_size": true,
+    "all_previews_ok": true
+  },
+  "records": [
+    {
+      "requested": {
+        "title": "Goodies",
+        "artist": "Ciara",
+        "scene": "r&b"
+      },
+      "search": {
+        "ok": true,
+        "row": 13772,
+        "title": "Goodies (feat. Petey Pablo)",
+        "artist": "Ciara",
+        "latency_ms": 582.8173000045354
+      },
+      "recommend": {
+        "ok": true,
+        "method": "dual_sonic64_guardrail",
+        "retrieval_mode": "dual_sonic64_guardrail",
+        "index_version": "2026.07.11-dual-sonic64",
+        "library_size": 272853,
+        "latency_ms": 1016.0502999933669,
+        "top5": [
+          {
+            "title": "Soldier (feat. T.I. & Lil' Wayne)",
+            "artist": "Destiny's Child",
+            "deezer_id": 581082
+          },
+          {
+            "title": "Lovin' It",
+            "artist": "Ariana Grande",
+            "deezer_id": 2425612915
+          },
+          {
+            "title": "Please",
+            "artist": "Toni Braxton",
+            "deezer_id": 3380593681
+          },
+          {
+            "title": "Obsessed",
+            "artist": "Mariah Carey",
+            "deezer_id": 4109366
+          },
+          {
+            "title": "After the Afterparty (feat. RAYE, Stefflon Don and Rita Ora) (VIP Mix)",
+            "artist": "Charli xcx",
+            "deezer_id": 141338549
+          }
+        ]
+      },
+      "preview": {
+        "ok": true,
+        "latency_ms": 343.8841000024695,
+        "has_url": true
+      }
+    },
+    {
+      "requested": {
+        "title": "LUNCH",
+        "artist": "Billie Eilish",
+        "scene": "alternative-pop"
+      },
+      "search": {
+        "ok": true,
+        "row": 7034,
+        "title": "LUNCH",
+        "artist": "Billie Eilish",
+        "latency_ms": 559.51369999093
+      },
+      "recommend": {
+        "ok": true,
+        "method": "dual_sonic64_guardrail",
+        "retrieval_mode": "dual_sonic64_guardrail",
+        "index_version": "2026.07.11-dual-sonic64",
+        "library_size": 272853,
+        "latency_ms": 778.1156999990344,
+        "top5": [
+          {
+            "title": "Pale Blue Eyes",
+            "artist": "Lucy Rose",
+            "deezer_id": 3149463251
+          },
+          {
+            "title": "So Good",
+            "artist": "Warpaint",
+            "deezer_id": 138547687
+          },
+          {
+            "title": "Siberian Nights",
+            "artist": "The Kills",
+            "deezer_id": 125662352
+          },
+          {
+            "title": "MEMORY",
+            "artist": "Sophia",
+            "deezer_id": 1669710302
+          },
+          {
+            "title": "Before You Break My Heart",
+            "artist": "JADE",
+            "deezer_id": 3547436931
+          }
+        ]
+      },
+      "preview": {
+        "ok": true,
+        "latency_ms": 499.209499990684,
+        "has_url": true
+      }
+    },
+    {
+      "requested": {
+        "title": "Harmony Hall",
+        "artist": "Vampire Weekend",
+        "scene": "indie"
+      },
+      "search": {
+        "ok": true,
+        "row": 34617,
+        "title": "Harmony Hall",
+        "artist": "Vampire Weekend",
+        "latency_ms": 551.4249999978347
+      },
+      "recommend": {
+        "ok": true,
+        "method": "dual_sonic64_guardrail",
+        "retrieval_mode": "dual_sonic64_guardrail",
+        "index_version": "2026.07.11-dual-sonic64",
+        "library_size": 272853,
+        "latency_ms": 850.3360000031535,
+        "top5": [
+          {
+            "title": "Cornerstone",
+            "artist": "Arctic Monkeys",
+            "deezer_id": 4315583
+          },
+          {
+            "title": "Daydreamin’",
+            "artist": "ZAYN",
+            "deezer_id": 4030783851
+          },
+          {
+            "title": "Over Your Shoulder",
+            "artist": "Cage The Elephant",
+            "deezer_id": 2798489492
+          },
+          {
+            "title": "Old Black Magic",
+            "artist": "Josh Ritter",
+            "deezer_id": 611658742
+          },
+          {
+            "title": "Toune de bière",
+            "artist": "Bob Bissonnette",
+            "deezer_id": 2762105751
+          }
+        ]
+      },
+      "preview": {
+        "ok": true,
+        "latency_ms": 275.5481000058353,
+        "has_url": true
+      }
+    },
+    {
+      "requested": {
+        "title": "Hotel California",
+        "artist": "Eagles",
+        "scene": "classic-rock"
+      },
+      "search": {
+        "ok": true,
+        "row": 2874,
+        "title": "Hotel California (2013 Remaster)",
+        "artist": "Eagles",
+        "latency_ms": 560.5299999879207
+      },
+      "recommend": {
+        "ok": true,
+        "method": "dual_sonic64_guardrail",
+        "retrieval_mode": "dual_sonic64_guardrail",
+        "index_version": "2026.07.11-dual-sonic64",
+        "library_size": 272853,
+        "latency_ms": 885.4804000002332,
+        "top5": [
+          {
+            "title": "Crazy Mama",
+            "artist": "J.J. Cale",
+            "deezer_id": 1172216
+          },
+          {
+            "title": "Holy Spirit",
+            "artist": "Al Green",
+            "deezer_id": 111962406
+          },
+          {
+            "title": "Shining",
+            "artist": "Mac DeMarco",
+            "deezer_id": 3401618131
+          },
+          {
+            "title": "Johnny Too Bad",
+            "artist": "Taj Mahal",
+            "deezer_id": 571594
+          },
+          {
+            "title": "Olhos Coloridos",
+            "artist": "Sandra De Sá",
+            "deezer_id": 119547886
+          }
+        ]
+      },
+      "preview": {
+        "ok": true,
+        "latency_ms": 292.18459999538027,
+        "has_url": true
+      }
+    },
+    {
+      "requested": {
+        "title": "Dumb Dumb",
+        "artist": "Red Velvet",
+        "scene": "k-pop"
+      },
+      "search": {
+        "ok": true,
+        "row": 141328,
+        "title": "Dumb Dumb",
+        "artist": "Red Velvet",
+        "latency_ms": 676.2943999929121
+      },
+      "recommend": {
+        "ok": true,
+        "method": "dual_sonic64_guardrail",
+        "retrieval_mode": "dual_sonic64_guardrail",
+        "index_version": "2026.07.11-dual-sonic64",
+        "library_size": 272853,
+        "latency_ms": 836.8036000028951,
+        "top5": [
+          {
+            "title": "8-BIT HEART",
+            "artist": "ITZY",
+            "deezer_id": 3641465682
+          },
+          {
+            "title": "PEACH GELATO",
+            "artist": "TWICE",
+            "deezer_id": 3451046561
+          },
+          {
+            "title": "$$$",
+            "artist": "(G)I-DLE",
+            "deezer_id": 1863010717
+          },
+          {
+            "title": "Next Level (Lionclad Remix)",
+            "artist": "aespa",
+            "deezer_id": 1489558622
+          },
+          {
+            "title": "Bombastic Love",
+            "artist": "Britney Spears",
+            "deezer_id": 540200
+          }
+        ]
+      },
+      "preview": {
+        "ok": true,
+        "latency_ms": 332.3330999992322,
+        "has_url": true
+      }
+    },
+    {
+      "requested": {
+        "title": "How Soon Is Now?",
+        "artist": "The Smiths",
+        "scene": "post-punk"
+      },
+      "search": {
+        "ok": true,
+        "row": 7644,
+        "title": "How Soon Is Now? (2008 Remaster)",
+        "artist": "The Smiths",
+        "latency_ms": 580.7362999912584
+      },
+      "recommend": {
+        "ok": true,
+        "method": "dual_sonic64_guardrail",
+        "retrieval_mode": "dual_sonic64_guardrail",
+        "index_version": "2026.07.11-dual-sonic64",
+        "library_size": 272853,
+        "latency_ms": 916.4289000036661,
+        "top5": [
+          {
+            "title": "Amelia",
+            "artist": "The Mission",
+            "deezer_id": 2504232
+          },
+          {
+            "title": "Way of Life (2024 Digital Master)",
+            "artist": "New Order",
+            "deezer_id": 3092592841
+          },
+          {
+            "title": "Living in Another World (1997 Remaster)",
+            "artist": "Talk Talk",
+            "deezer_id": 3136912
+          },
+          {
+            "title": "Hopes Go Astray",
+            "artist": "The Northern Pikes",
+            "deezer_id": 3247467
+          },
+          {
+            "title": "Ship of Fools (2009 Remaster)",
+            "artist": "Erasure",
+            "deezer_id": 14638331
+          }
+        ]
+      },
+      "preview": {
+        "ok": true,
+        "latency_ms": 455.0144000095315,
+        "has_url": true
+      }
+    },
+    {
+      "requested": {
+        "title": "This Means War",
+        "artist": "Avenged Sevenfold",
+        "scene": "metal"
+      },
+      "search": {
+        "ok": true,
+        "row": 36311,
+        "title": "This Means War",
+        "artist": "Avenged Sevenfold",
+        "latency_ms": 556.0972999955993
+      },
+      "recommend": {
+        "ok": true,
+        "method": "dual_sonic64_guardrail",
+        "retrieval_mode": "dual_sonic64_guardrail",
+        "index_version": "2026.07.11-dual-sonic64",
+        "library_size": 272853,
+        "latency_ms": 873.7179000017932,
+        "top5": [
+          {
+            "title": "Headtrip",
+            "artist": "Sevendust",
+            "deezer_id": 3675499
+          },
+          {
+            "title": "Shout 2000",
+            "artist": "Disturbed",
+            "deezer_id": 663995
+          },
+          {
+            "title": "Love-Hate-Sex-Pain",
+            "artist": "Godsmack",
+            "deezer_id": 6489136
+          },
+          {
+            "title": "Sad But True",
+            "artist": "Metallica",
+            "deezer_id": 136408136
+          },
+          {
+            "title": "Vendetta",
+            "artist": "Slipknot",
+            "deezer_id": 1195562
+          }
+        ]
+      },
+      "preview": {
+        "ok": true,
+        "latency_ms": 283.8005000085104,
+        "has_url": true
+      }
+    },
+    {
+      "requested": {
+        "title": "Plastic Love",
+        "artist": "Mariya Takeuchi",
+        "scene": "city-pop"
+      },
+      "search": {
+        "ok": true,
+        "row": 62065,
+        "title": "Plastic Love",
+        "artist": "Mariya Takeuchi",
+        "latency_ms": 552.6722999929916
+      },
+      "recommend": {
+        "ok": true,
+        "method": "dual_sonic64_guardrail",
+        "retrieval_mode": "dual_sonic64_guardrail",
+        "index_version": "2026.07.11-dual-sonic64",
+        "library_size": 272853,
+        "latency_ms": 860.5403999972623,
+        "top5": [
+          {
+            "title": "Manatsu no Sequence",
+            "artist": "Momoko Kikuchi",
+            "deezer_id": 2665413102
+          },
+          {
+            "title": "HE'S MY MUSIC",
+            "artist": "Anri",
+            "deezer_id": 951804252
+          },
+          {
+            "title": "Girls And Boys",
+            "artist": "Marcus Miller",
+            "deezer_id": 66027599
+          },
+          {
+            "title": "Get Hot!",
+            "artist": "Himiko Kikuchi",
+            "deezer_id": 2813520732
+          },
+          {
+            "title": "Stuttgart Aria I",
+            "artist": "Biréli Lagrène and Jaco Pastorius",
+            "deezer_id": 63124336
+          }
+        ]
+      },
+      "preview": {
+        "ok": true,
+        "latency_ms": 322.83850001113024,
+        "has_url": true
+      }
+    },
+    {
+      "requested": {
+        "title": "Bangarang",
+        "artist": "Skrillex",
+        "scene": "electronic"
+      },
+      "search": {
+        "ok": true,
+        "row": 18726,
+        "title": "Bangarang (feat. Sirah)",
+        "artist": "Skrillex",
+        "latency_ms": 561.6156000032788
+      },
+      "recommend": {
+        "ok": true,
+        "method": "dual_sonic64_guardrail",
+        "retrieval_mode": "dual_sonic64_guardrail",
+        "index_version": "2026.07.11-dual-sonic64",
+        "library_size": 272853,
+        "latency_ms": 977.1833999984665,
+        "top5": [
+          {
+            "title": "Rubber Band Boiz",
+            "artist": "12th Planet",
+            "deezer_id": 730946062
+          },
+          {
+            "title": "Troupe",
+            "artist": "Spag Heddy",
+            "deezer_id": 603302952
+          },
+          {
+            "title": "Get Down",
+            "artist": "Bear Grillz",
+            "deezer_id": 100779170
+          },
+          {
+            "title": "Next Level (VIP)",
+            "artist": "Ivory",
+            "deezer_id": 826177232
+          },
+          {
+            "title": "Berzerk",
+            "artist": "Dion Timmer",
+            "deezer_id": 432762612
+          }
+        ]
+      },
+      "preview": {
+        "ok": true,
+        "latency_ms": 318.8718000019435,
+        "has_url": true
+      }
+    },
+    {
+      "requested": {
+        "title": "So What",
+        "artist": "Miles Davis",
+        "scene": "jazz"
+      },
+      "search": {
+        "ok": true,
+        "row": 39254,
+        "title": "So What (feat. John Coltrane, Cannonball Adderley & Bill Evans)",
+        "artist": "Miles Davis",
+        "latency_ms": 573.4785000095144
+      },
+      "recommend": {
+        "ok": true,
+        "method": "dual_sonic64_guardrail",
+        "retrieval_mode": "dual_sonic64_guardrail",
+        "index_version": "2026.07.11-dual-sonic64",
+        "library_size": 272853,
+        "latency_ms": 782.2922999912407,
+        "top5": [
+          {
+            "title": "Blue Greens",
+            "artist": "Charles Mingus",
+            "deezer_id": 672448
+          },
+          {
+            "title": "Shuffle Boil (Take 5) (Album Version)",
+            "artist": "Thelonious Monk",
+            "deezer_id": 2556442
+          },
+          {
+            "title": "New-Ma",
+            "artist": "Lee Morgan",
+            "deezer_id": 90379357
+          },
+          {
+            "title": "Kathy's Waltz",
+            "artist": "The Dave Brubeck Quartet",
+            "deezer_id": 3571291
+          },
+          {
+            "title": "There'll Be Some Changes Made",
+            "artist": "Dave Brubeck",
+            "deezer_id": 625733
+          }
+        ]
+      },
+      "preview": {
+        "ok": true,
+        "latency_ms": 288.1000000052154,
+        "has_url": true
+      }
+    },
+    {
+      "requested": {
+        "title": "Safaera",
+        "artist": "Bad Bunny",
+        "scene": "latin"
+      },
+      "search": {
+        "ok": true,
+        "row": 11855,
+        "title": "Safaera",
+        "artist": "Bad Bunny",
+        "latency_ms": 571.1952999990899
+      },
+      "recommend": {
+        "ok": true,
+        "method": "dual_sonic64_guardrail",
+        "retrieval_mode": "dual_sonic64_guardrail",
+        "index_version": "2026.07.11-dual-sonic64",
+        "library_size": 272853,
+        "latency_ms": 767.2580999933416,
+        "top5": [
+          {
+            "title": "SURFERITA (feat. iZaak)",
+            "artist": "Myke Towers",
+            "deezer_id": 3429928241
+          },
+          {
+            "title": "La Curiosidad (Red Grand Prix Remix)",
+            "artist": "Jay Wheeler",
+            "deezer_id": 1162056112
+          },
+          {
+            "title": "En La De Ella",
+            "artist": "JHAYCO",
+            "deezer_id": 1971070497
+          },
+          {
+            "title": "SI TÚ SUPIERAS (Bonus Track)",
+            "artist": "Feid",
+            "deezer_id": 1463412162
+          },
+          {
+            "title": "Billetes",
+            "artist": "Nicky Jam",
+            "deezer_id": 1169153772
+          }
+        ]
+      },
+      "preview": {
+        "ok": true,
+        "latency_ms": 300.30629999237135,
+        "has_url": true
+      }
+    },
+    {
+      "requested": {
+        "title": "stupid horse",
+        "artist": "100 gecs",
+        "scene": "hyperpop"
+      },
+      "search": {
+        "ok": true,
+        "row": 1313,
+        "title": "stupid horse",
+        "artist": "100 gecs",
+        "latency_ms": 544.083300002967
+      },
+      "recommend": {
+        "ok": true,
+        "method": "dual_sonic64_guardrail",
+        "retrieval_mode": "dual_sonic64_guardrail",
+        "index_version": "2026.07.11-dual-sonic64",
+        "library_size": 272853,
+        "latency_ms": 774.5211000001291,
+        "top5": [
+          {
+            "title": "clusper (feat. Chi-Chi)",
+            "artist": "Vylet Pony",
+            "deezer_id": 3927834261
+          },
+          {
+            "title": "Only U (No Intro)",
+            "artist": "Ashanti",
+            "deezer_id": 1102518
+          },
+          {
+            "title": "Fuck Like This",
+            "artist": "Ayesha Erotica",
+            "deezer_id": 2718862392
+          },
+          {
+            "title": "Melt in late summer",
+            "artist": "MAISONdes",
+            "deezer_id": 1477044982
+          },
+          {
+            "title": "Igloo",
+            "artist": "Kiss Of Life",
+            "deezer_id": 3046402801
+          }
+        ]
+      },
+      "preview": {
+        "ok": true,
+        "latency_ms": 303.26260000583716,
+        "has_url": true
+      }
+    }
+  ]
+}

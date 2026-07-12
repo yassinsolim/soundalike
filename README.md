@@ -288,6 +288,49 @@ genuinely scene-coherent picks. For example, *So What* by Miles Davis returns Br
 Morgan and Ahmad Jamal; *Your Hand in Mine* by Explosions in the Sky returns If These Trees Could
 Talk, This Will Destroy You and Mono; *Ditto* by NewJeans returns CHUU and LOONA.
 
+### Real-world retrieval benchmark and pretrained sonic retrieval
+
+The version-4 benchmark keeps all 93 sourced relationships auditable, but only its final 20
+credible **pure-sonic** pairs decide retrieval. Samples/interpolations, legal disputes,
+covers/remixes, and weak listicles remain diagnostic-only. The final artists are disjoint from
+all development/validation artists, and the audit rejects indirect graph-component leakage.
+
+The raw local encoder remains honestly weak. On the real 272,853-song index it scores only
+`0.0300` primary. The frozen production path has one Recall@50 hit; the selected system has two:
+
+| Final held-out pure-sonic metric | Frozen production | Dual-Sonic64 |
+|---|---:|---:|
+| Recall@20 | 0.0500 | 0.0500 |
+| Recall@50 | 0.0500 | **0.1000** |
+| MRR | 0.0063 | 0.0059 |
+| Primary (`0.5 × R@50 + 0.5 × MRR`) | 0.0281 | **0.0529** |
+
+That is an **+88.3% relative primary gain** with no manual-judgment blend. One existing hit moves
+from rank 8 to 11 while a new hit enters at rank 37, so Recall@50 doubles. No scene contribution
+regresses by more than 3.1%. The pair bootstrap is wide (absolute-delta 95% interval
+−0.0026..0.0770; 63.9% positive), and the suite was reused to compare sequential challengers, so
+this is evidence that clears the frozen +20% engineering threshold—not a population-significance
+claim.
+
+Dual-Sonic64 combines compressed EfficientNet and calibrated LAION-CLAP spectrogram embeddings
+with source-independent Wikipedia song-article priors. It preserves the reviewed guarded top five,
+appends the quality-filtered baseline top ten as a regression guardrail, then fills the tail from
+the learned candidate order. Direct judgments are **17/20** on both the retained UX set and the
+final 20 seeds versus **11/20** for the original baseline; they remain secondary evidence.
+
+PANNs Cnn14, VGGish, eight-vector late interaction, chroma-FFT DSP, CLAP title/artist text,
+hard-negative metric learning, and pageview-heavy learned reranking all failed to improve the
+final deciding score and are recorded rather than hidden.
+
+Independent validation remains disjoint and is never a ranking feature. ListenBrainz agreement
+moves 0.1389→0.1611 (delta CI −0.0333..0.0722) and Deezer 0.0667→0.0833
+(0.0000..0.0333): improved point estimates, statistically equivalent within uncertainty.
+The production deployment at <https://soundalike.yassin.app> reports
+`dual_sonic64_guardrail` / `2026.07.11-dual-sonic64`; 12 diverse live searches,
+recommendations, and fresh preview lookups passed.
+Full ranked outputs, negative results, source categories, resource measurements, and reproduce
+commands are in `.goals/human-quality-recommendations/artifacts/` and the case study.
+
 ### Growing the library past the bundle limit
 
 The ~87k-song index ships bundled (75 MB, under GitHub's 100 MB per-file cap), so the tool works
@@ -597,6 +640,9 @@ pytest -q
 - [x] **Recommendation benchmark** — label-free precision/coverage metrics + measured library-size trade-off
 - [x] **Diversity + multi-seed** — MMR re-ranking, per-artist caps, and blend several songs into one taste
 - [x] **Web app + right-click integration** — `soundalike serve` (paste a song / Spotify "Copy Song Link" → instant soundalikes) and a Spicetify extension for an in-app right-click menu
+- [x] **Categorized real-world benchmark** — 93 sourced pairs separate pure-sonic and diagnostic relationships, with a 20-pair final artist-disjoint split, transitive graph audit, frozen 272,853-song outputs, and pair bootstrap uncertainty
+- [x] **Pretrained sonic retrieval** — dual PCA64 EfficientNet/CLAP retrieval lifts final pure-sonic primary 0.0281→0.0529 (+88.3%) while the guarded top five retains 17/20 direct passes
+- [x] **Desktop/hosted Dual-Sonic64 parity** — the 299 MB checksum-pinned release index carries both 64-d matrices and source-independent priors; numpy serving paths expose the active method/version and have exact parity tests
 - [ ] Inline audio previews in the web UI
 
 Contributions welcome — this is meant to be community-built.

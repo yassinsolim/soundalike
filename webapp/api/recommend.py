@@ -4,7 +4,7 @@ Body: {"query": "Title - Artist"}  or  {"row": <int>}  plus optional
       {"n", "alpha", "diversity", "max_per_artist"}.
 
 Returns library-mode soundalikes (numpy only, no torch). Only songs already in
-the 87k library can be seeded here; the desktop app (`soundalike serve`) handles
+the 272,853-song library can be seeded here; the desktop app (`soundalike serve`) handles
 arbitrary songs via on-the-fly neural embedding.
 """
 
@@ -63,7 +63,7 @@ class handler(BaseHTTPRequestHandler):
                     return self._send(422, {
                         "ok": False,
                         "error": f"“{title}” isn't in the hosted library. "
-                                 "The hosted demo covers 87k songs; for anything else, "
+                                 "The hosted demo covers 272,853 songs; for anything else, "
                                  "run the desktop app (soundalike serve).",
                     })
             res = reco.recommend(

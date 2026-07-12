@@ -1,6 +1,6 @@
 """Vercel serverless function: GET /api/search?q=...
 
-Substring search over the 87k-track library — powers the seed picker /
+Substring search over the 272,853-track library — powers the seed picker /
 autocomplete in the web UI. Returns up to `limit` {row, title, artist}.
 """
 

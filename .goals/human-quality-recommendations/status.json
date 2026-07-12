@@ -1,0 +1,19 @@
+{
+  "goal_id": "human-quality-recommendations",
+  "status": "building",
+  "iteration": 3,
+  "initial_sha": "680820bc7792587f1b2d61a97a60f95df0b8a549",
+  "created_at": "2026-07-11T03:15:48-06:00",
+  "history": [
+    {
+      "iteration": 1,
+      "verdict": "FAIL",
+      "summary": "Evaluation leakage (MANUAL_PAIRS overlaps eval seeds), no frozen baseline, synthetic-only tests (not production), unverified claims (5/5 coherence), prohibited commit-metadata violation. Three approaches implemented but production validation incomplete. Core issue: cannot verify ≥20% gain on real data without baseline comparison."
+    },
+    {
+      "iteration": 2,
+      "verdict": "FAIL",
+      "summary": "AC#5 (deployment) NOT MET: production site still serves baseline, not winner method. AC#3 (≥20% improvement) NOT MET: held-out pair retrieval shows +2.25% (not 20%); reported 49.75% mixes retrieval +2.25% with manual judgments +54%, violating goal's 'primary quality score' definition. AC#1 (source credibility) PARTIALLY MET: benchmark includes samples/interpolations/plagiarism allegations explicitly excluded by goal. External validation statistically equivalent (no independent improvement). Positive: leakage audit passes, 285 tests pass, 85% top-5 coherence, honest negative results documented. Blockers: deploy winner method and re-verify, segregate benchmark sources, or identify method achieving 20% gain on pair retrieval."
+    }
+  ]
+}
