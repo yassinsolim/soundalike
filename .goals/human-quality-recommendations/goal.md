@@ -85,7 +85,6 @@ lists and scene/style coherence.
 
 **Commit convention:**
 - Conventional commits (default), with required `[B]`/`[I]` role marker.
-- Do not add attribution trailers or generated-by taglines.
 
 **Guidelines:**
 - No AGENTS.md, CONSTITUTION.md, or repository guideline directory was found.

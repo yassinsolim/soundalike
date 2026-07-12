@@ -1,0 +1,2168 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "soundalike-pure-sonic-v5",
+  "created_at": "2026-07-12T06:32:05.161080+00:00",
+  "pairs": [
+    {
+      "id": "FINAL-LB001",
+      "split": "final",
+      "scene": "k-pop",
+      "catalog_tier": "popular",
+      "query": {
+        "title": "Magnetic",
+        "artist": "ILLIT"
+      },
+      "target": {
+        "title": "CRAZY",
+        "artist": "LE SSERAFIM"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=e614e432-ca77-41c1-82c1-4e3a24ebbb0c&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "e614e432-ca77-41c1-82c1-4e3a24ebbb0c",
+            "recording_mbid": "466ffbca-63c3-4769-a317-7050ce79c643",
+            "recording_name": "CRAZY",
+            "artist_credit_name": "LE SSERAFIM",
+            "similarity_score": 218,
+            "response_rank": 1
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/e614e432-ca77-41c1-82c1-4e3a24ebbb0c",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: ILLIT ? Magnetic."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/466ffbca-63c3-4769-a317-7050ce79c643",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: LE SSERAFIM ? CRAZY."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB002",
+      "split": "final",
+      "scene": "folk-pop",
+      "catalog_tier": "niche",
+      "query": {
+        "title": "Sailor Song",
+        "artist": "Gigi Perez"
+      },
+      "target": {
+        "title": "That’s So True",
+        "artist": "Gracie Abrams"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=4de2fca3-e37a-4399-b121-9c4a6cb298b5&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "4de2fca3-e37a-4399-b121-9c4a6cb298b5",
+            "recording_mbid": "a6ff57e9-5ba8-4a32-8ac3-e5e8c42796dc",
+            "recording_name": "That’s So True",
+            "artist_credit_name": "Gracie Abrams",
+            "similarity_score": 207,
+            "response_rank": 2
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/4de2fca3-e37a-4399-b121-9c4a6cb298b5",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Gigi Perez ? Sailor Song."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/a6ff57e9-5ba8-4a32-8ac3-e5e8c42796dc",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Gracie Abrams ? That’s So True."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB003",
+      "split": "final",
+      "scene": "new-wave",
+      "catalog_tier": "deep_cut",
+      "query": {
+        "title": "Everybody Wants to Rule the World",
+        "artist": "Tears for Fears"
+      },
+      "target": {
+        "title": "Every Breath You Take",
+        "artist": "The Police"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=e4b347be-ecb2-44ff-aaa8-3d4c517d7ea5&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "e4b347be-ecb2-44ff-aaa8-3d4c517d7ea5",
+            "recording_mbid": "3e19df7a-3f9a-4d42-adbf-31867646f602",
+            "recording_name": "Every Breath You Take",
+            "artist_credit_name": "The Police",
+            "similarity_score": 162,
+            "response_rank": 2
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/e4b347be-ecb2-44ff-aaa8-3d4c517d7ea5",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Tears for Fears ? Everybody Wants to Rule the World."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/3e19df7a-3f9a-4d42-adbf-31867646f602",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: The Police ? Every Breath You Take."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB004",
+      "split": "final",
+      "scene": "indie-dance",
+      "catalog_tier": "popular",
+      "query": {
+        "title": "What You Know",
+        "artist": "Two Door Cinema Club"
+      },
+      "target": {
+        "title": "Pumped Up Kicks",
+        "artist": "Foster the People"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=cadde50b-8c42-4a16-af00-185fcc3827f4&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "cadde50b-8c42-4a16-af00-185fcc3827f4",
+            "recording_mbid": "55cfb83f-adc1-4730-a71b-90b369fd3f84",
+            "recording_name": "Pumped Up Kicks",
+            "artist_credit_name": "Foster the People",
+            "similarity_score": 134,
+            "response_rank": 1
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/cadde50b-8c42-4a16-af00-185fcc3827f4",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Two Door Cinema Club ? What You Know."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/55cfb83f-adc1-4730-a71b-90b369fd3f84",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Foster the People ? Pumped Up Kicks."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB005",
+      "split": "final",
+      "scene": "indie-pop",
+      "catalog_tier": "deep_cut",
+      "query": {
+        "title": "Sweater Weather",
+        "artist": "The Neighbourhood"
+      },
+      "target": {
+        "title": "End of Beginning",
+        "artist": "Djo"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=4e9f954e-df92-40d9-b68d-8abcd4eae4da&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "4e9f954e-df92-40d9-b68d-8abcd4eae4da",
+            "recording_mbid": "74f3b043-c0b4-4590-8c10-bfc4e3a06fef",
+            "recording_name": "End of Beginning",
+            "artist_credit_name": "Djo",
+            "similarity_score": 118,
+            "response_rank": 2
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/4e9f954e-df92-40d9-b68d-8abcd4eae4da",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: The Neighbourhood ? Sweater Weather."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/74f3b043-c0b4-4590-8c10-bfc4e3a06fef",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Djo ? End of Beginning."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB006",
+      "split": "final",
+      "scene": "piano-rock",
+      "catalog_tier": "niche",
+      "query": {
+        "title": "Somewhere Only We Know",
+        "artist": "Keane"
+      },
+      "target": {
+        "title": "Yellow",
+        "artist": "Coldplay"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=0868857f-740f-47c1-a2c7-b6323c185c63&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "0868857f-740f-47c1-a2c7-b6323c185c63",
+            "recording_mbid": "729cf505-94eb-4fbe-bc76-cbae44cff091",
+            "recording_name": "Yellow",
+            "artist_credit_name": "Coldplay",
+            "similarity_score": 107,
+            "response_rank": 1
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/0868857f-740f-47c1-a2c7-b6323c185c63",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Keane ? Somewhere Only We Know."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/729cf505-94eb-4fbe-bc76-cbae44cff091",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Coldplay ? Yellow."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB007",
+      "split": "final",
+      "scene": "psychedelic-pop",
+      "catalog_tier": "deep_cut",
+      "query": {
+        "title": "The Less I Know the Better",
+        "artist": "Tame Impala"
+      },
+      "target": {
+        "title": "Walking on a Dream",
+        "artist": "Empire of the Sun"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=78be434c-0908-458f-9693-f16cdebb68ef&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "78be434c-0908-458f-9693-f16cdebb68ef",
+            "recording_mbid": "170dfa5d-0235-446d-9f3d-d235c01abc91",
+            "recording_name": "Walking on a Dream",
+            "artist_credit_name": "Empire of the Sun",
+            "similarity_score": 105,
+            "response_rank": 2
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/78be434c-0908-458f-9693-f16cdebb68ef",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Tame Impala ? The Less I Know the Better."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/170dfa5d-0235-446d-9f3d-d235c01abc91",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Empire of the Sun ? Walking on a Dream."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB008",
+      "split": "final",
+      "scene": "dream-pop",
+      "catalog_tier": "deep_cut",
+      "query": {
+        "title": "No One Noticed",
+        "artist": "The Marías"
+      },
+      "target": {
+        "title": "Juna",
+        "artist": "Clairo"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=d13a634b-9f69-4256-9415-b7e95aac101d&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "d13a634b-9f69-4256-9415-b7e95aac101d",
+            "recording_mbid": "016d187f-0e11-4171-82e9-15f04fafa097",
+            "recording_name": "Juna",
+            "artist_credit_name": "Clairo",
+            "similarity_score": 105,
+            "response_rank": 2
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/d13a634b-9f69-4256-9415-b7e95aac101d",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: The Marías ? No One Noticed."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/016d187f-0e11-4171-82e9-15f04fafa097",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Clairo ? Juna."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB009",
+      "split": "final",
+      "scene": "k-pop",
+      "catalog_tier": "popular",
+      "query": {
+        "title": "Ditto",
+        "artist": "NewJeans"
+      },
+      "target": {
+        "title": "Whiplash",
+        "artist": "aespa"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=adf44a12-e5f4-48aa-9029-b9ef4b5f1d6d&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "adf44a12-e5f4-48aa-9029-b9ef4b5f1d6d",
+            "recording_mbid": "24dd7fe2-068b-456f-93f2-1eb5400f03dd",
+            "recording_name": "Whiplash",
+            "artist_credit_name": "aespa",
+            "similarity_score": 101,
+            "response_rank": 2
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/adf44a12-e5f4-48aa-9029-b9ef4b5f1d6d",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: NewJeans ? Ditto."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/24dd7fe2-068b-456f-93f2-1eb5400f03dd",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: aespa ? Whiplash."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB010",
+      "split": "final",
+      "scene": "psychedelic-pop",
+      "catalog_tier": "deep_cut",
+      "query": {
+        "title": "Ghostride",
+        "artist": "Crumb"
+      },
+      "target": {
+        "title": "You Are The Right One",
+        "artist": "Sports"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=9b792b2a-df4d-407e-aa19-532c4b9e0c81&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "9b792b2a-df4d-407e-aa19-532c4b9e0c81",
+            "recording_mbid": "537f2df8-d1a6-4e22-9a6a-18393cdbb988",
+            "recording_name": "You Are The Right One",
+            "artist_credit_name": "Sports",
+            "similarity_score": 100,
+            "response_rank": 1
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/9b792b2a-df4d-407e-aa19-532c4b9e0c81",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Crumb ? Ghostride."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/537f2df8-d1a6-4e22-9a6a-18393cdbb988",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Sports ? You Are The Right One."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB011",
+      "split": "final",
+      "scene": "dream-pop",
+      "catalog_tier": "popular",
+      "query": {
+        "title": "Duvet",
+        "artist": "bôa"
+      },
+      "target": {
+        "title": "Lovers Rock",
+        "artist": "TV Girl"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=f4d36326-da1b-4b43-af19-7113c2adb92d&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "f4d36326-da1b-4b43-af19-7113c2adb92d",
+            "recording_mbid": "697eea7f-0067-496c-bc50-2921538e2cc4",
+            "recording_name": "Lovers Rock",
+            "artist_credit_name": "TV Girl",
+            "similarity_score": 95,
+            "response_rank": 1
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/f4d36326-da1b-4b43-af19-7113c2adb92d",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: bôa ? Duvet."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/697eea7f-0067-496c-bc50-2921538e2cc4",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: TV Girl ? Lovers Rock."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB012",
+      "split": "final",
+      "scene": "alternative-rock",
+      "catalog_tier": "deep_cut",
+      "query": {
+        "title": "Where Is My Mind?",
+        "artist": "Pixies"
+      },
+      "target": {
+        "title": "Take Me Out",
+        "artist": "Franz Ferdinand"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=d201070b-ff15-49ce-877b-f91032617faf&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "d201070b-ff15-49ce-877b-f91032617faf",
+            "recording_mbid": "a1818245-54db-4881-86be-7ff3180c3e06",
+            "recording_name": "Take Me Out",
+            "artist_credit_name": "Franz Ferdinand",
+            "similarity_score": 82,
+            "response_rank": 2
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/d201070b-ff15-49ce-877b-f91032617faf",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Pixies ? Where Is My Mind?."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/a1818245-54db-4881-86be-7ff3180c3e06",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Franz Ferdinand ? Take Me Out."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB013",
+      "split": "final",
+      "scene": "bedroom-pop",
+      "catalog_tier": "niche",
+      "query": {
+        "title": "Beanie",
+        "artist": "Chezile"
+      },
+      "target": {
+        "title": "the perfect pair",
+        "artist": "beabadoobee"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=bdcf8037-9584-4c0a-9782-141478385bbb&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "bdcf8037-9584-4c0a-9782-141478385bbb",
+            "recording_mbid": "b503cb6f-ef3b-4e5e-8237-37f22810f484",
+            "recording_name": "the perfect pair",
+            "artist_credit_name": "beabadoobee",
+            "similarity_score": 81,
+            "response_rank": 2
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/bdcf8037-9584-4c0a-9782-141478385bbb",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Chezile ? Beanie."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/b503cb6f-ef3b-4e5e-8237-37f22810f484",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: beabadoobee ? the perfect pair."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB014",
+      "split": "final",
+      "scene": "dream-pop",
+      "catalog_tier": "niche",
+      "query": {
+        "title": "Fade Into You",
+        "artist": "Mazzy Star"
+      },
+      "target": {
+        "title": "Linger",
+        "artist": "The Cranberries"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=2fb9bc6b-d4da-497e-ad3f-fabf12fe72cf&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "2fb9bc6b-d4da-497e-ad3f-fabf12fe72cf",
+            "recording_mbid": "c181fb92-5699-43ee-9f6e-c7ddc338aea3",
+            "recording_name": "Linger",
+            "artist_credit_name": "The Cranberries",
+            "similarity_score": 78,
+            "response_rank": 1
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/2fb9bc6b-d4da-497e-ad3f-fabf12fe72cf",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Mazzy Star ? Fade Into You."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/c181fb92-5699-43ee-9f6e-c7ddc338aea3",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: The Cranberries ? Linger."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB015",
+      "split": "final",
+      "scene": "indie-folk",
+      "catalog_tier": "popular",
+      "query": {
+        "title": "The Night We Met",
+        "artist": "Lord Huron"
+      },
+      "target": {
+        "title": "Until I Found You",
+        "artist": "Stephen Sanchez"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=3d3342ea-8c03-4fb9-976f-eb151bd68365&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "3d3342ea-8c03-4fb9-976f-eb151bd68365",
+            "recording_mbid": "5d132952-d348-48dd-94ce-b42644ceeb2f",
+            "recording_name": "Until I Found You",
+            "artist_credit_name": "Stephen Sanchez",
+            "similarity_score": 76,
+            "response_rank": 7
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/3d3342ea-8c03-4fb9-976f-eb151bd68365",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Lord Huron ? The Night We Met."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/5d132952-d348-48dd-94ce-b42644ceeb2f",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Stephen Sanchez ? Until I Found You."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB016",
+      "split": "final",
+      "scene": "uk-garage/bedroom-pop",
+      "catalog_tier": "popular",
+      "query": {
+        "title": "Pain",
+        "artist": "PinkPantheress"
+      },
+      "target": {
+        "title": "C U Girl",
+        "artist": "Steve Lacy"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=cdfe8a75-28c0-4029-831b-e61257519f4a&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "cdfe8a75-28c0-4029-831b-e61257519f4a",
+            "recording_mbid": "7d81daec-341a-4931-bec6-8b0f533254c3",
+            "recording_name": "C U Girl",
+            "artist_credit_name": "Steve Lacy",
+            "similarity_score": 69,
+            "response_rank": 1
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/cdfe8a75-28c0-4029-831b-e61257519f4a",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: PinkPantheress ? Pain."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/7d81daec-341a-4931-bec6-8b0f533254c3",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Steve Lacy ? C U Girl."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB017",
+      "split": "final",
+      "scene": "dream-pop",
+      "catalog_tier": "popular",
+      "query": {
+        "title": "Apocalypse",
+        "artist": "Cigarettes After Sex"
+      },
+      "target": {
+        "title": "Space Song",
+        "artist": "Beach House"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=a847bc14-7d8e-4009-ae3c-e7b60ecc71d3&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "a847bc14-7d8e-4009-ae3c-e7b60ecc71d3",
+            "recording_mbid": "5a8f7959-6906-4672-ac64-f994e98976ae",
+            "recording_name": "Space Song",
+            "artist_credit_name": "Beach House",
+            "similarity_score": 68,
+            "response_rank": 1
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/a847bc14-7d8e-4009-ae3c-e7b60ecc71d3",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Cigarettes After Sex ? Apocalypse."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/5a8f7959-6906-4672-ac64-f994e98976ae",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Beach House ? Space Song."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB018",
+      "split": "final",
+      "scene": "shoegaze",
+      "catalog_tier": "deep_cut",
+      "query": {
+        "title": "When the Sun Hits",
+        "artist": "Slowdive"
+      },
+      "target": {
+        "title": "When You Sleep",
+        "artist": "My Bloody Valentine"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=ddfee9ee-aa94-48b7-b963-d0b69bef7c72&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "ddfee9ee-aa94-48b7-b963-d0b69bef7c72",
+            "recording_mbid": "ebd67461-fbe7-4f48-a68a-0a57ee8a15c9",
+            "recording_name": "When You Sleep",
+            "artist_credit_name": "My Bloody Valentine",
+            "similarity_score": 67,
+            "response_rank": 1
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/ddfee9ee-aa94-48b7-b963-d0b69bef7c72",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Slowdive ? When the Sun Hits."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/ebd67461-fbe7-4f48-a68a-0a57ee8a15c9",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: My Bloody Valentine ? When You Sleep."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB019",
+      "split": "final",
+      "scene": "indie-pop",
+      "catalog_tier": "deep_cut",
+      "query": {
+        "title": "My Love Mine All Mine",
+        "artist": "Mitski"
+      },
+      "target": {
+        "title": "From the Start",
+        "artist": "Laufey"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=8f667b90-a2a4-46ea-8806-e957ea78c7bd&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "8f667b90-a2a4-46ea-8806-e957ea78c7bd",
+            "recording_mbid": "07d30250-a5a4-496f-9bd2-d0d8047d275b",
+            "recording_name": "From the Start",
+            "artist_credit_name": "Laufey",
+            "similarity_score": 66,
+            "response_rank": 9
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/8f667b90-a2a4-46ea-8806-e957ea78c7bd",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Mitski ? My Love Mine All Mine."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/07d30250-a5a4-496f-9bd2-d0d8047d275b",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Laufey ? From the Start."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB020",
+      "split": "final",
+      "scene": "alternative-rock",
+      "catalog_tier": "deep_cut",
+      "query": {
+        "title": "Ironic",
+        "artist": "Alanis Morissette"
+      },
+      "target": {
+        "title": "Song 2",
+        "artist": "Blur"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=245329cb-8cdb-43ba-8fe4-0b3e1aad8761&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "245329cb-8cdb-43ba-8fe4-0b3e1aad8761",
+            "recording_mbid": "b39b7227-c271-4ab8-912b-cb1fe2fc0e5e",
+            "recording_name": "Song 2",
+            "artist_credit_name": "Blur",
+            "similarity_score": 65,
+            "response_rank": 1
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/245329cb-8cdb-43ba-8fe4-0b3e1aad8761",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Alanis Morissette ? Ironic."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/b39b7227-c271-4ab8-912b-cb1fe2fc0e5e",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Blur ? Song 2."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB021",
+      "split": "final",
+      "scene": "dream-pop",
+      "catalog_tier": "popular",
+      "query": {
+        "title": "Show Me How",
+        "artist": "Men I Trust"
+      },
+      "target": {
+        "title": "Metamodernity",
+        "artist": "Vansire"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=dbad831a-7a9d-416e-9ef0-11e740fef6a0&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "dbad831a-7a9d-416e-9ef0-11e740fef6a0",
+            "recording_mbid": "69eddd1e-edb3-459b-9012-9ae50a0aa0b8",
+            "recording_name": "Metamodernity",
+            "artist_credit_name": "Vansire",
+            "similarity_score": 60,
+            "response_rank": 7
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/dbad831a-7a9d-416e-9ef0-11e740fef6a0",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Men I Trust ? Show Me How."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/69eddd1e-edb3-459b-9012-9ae50a0aa0b8",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Vansire ? Metamodernity."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB022",
+      "split": "final",
+      "scene": "synth-pop",
+      "catalog_tier": "deep_cut",
+      "query": {
+        "title": "On Melancholy Hill",
+        "artist": "Gorillaz"
+      },
+      "target": {
+        "title": "Something About Us",
+        "artist": "Daft Punk"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=842fbdae-8839-46e6-8a02-7f500a2b6597&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "842fbdae-8839-46e6-8a02-7f500a2b6597",
+            "recording_mbid": "defbfcb2-7a5c-4456-be28-b7e5ccf92cc2",
+            "recording_name": "Something About Us",
+            "artist_credit_name": "Daft Punk",
+            "similarity_score": 57,
+            "response_rank": 15
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/842fbdae-8839-46e6-8a02-7f500a2b6597",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Gorillaz ? On Melancholy Hill."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/defbfcb2-7a5c-4456-be28-b7e5ccf92cc2",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Daft Punk ? Something About Us."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB023",
+      "split": "final",
+      "scene": "bedroom-pop",
+      "catalog_tier": "deep_cut",
+      "query": {
+        "title": "Mrs Magic",
+        "artist": "Strawberry Guy"
+      },
+      "target": {
+        "title": "Telephones",
+        "artist": "Vacations"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=7ea4728a-3cfb-4546-a651-7b27eaea9c48&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "7ea4728a-3cfb-4546-a651-7b27eaea9c48",
+            "recording_mbid": "a63b1608-2ff9-4aa3-9947-2997fa45545c",
+            "recording_name": "Telephones",
+            "artist_credit_name": "Vacations",
+            "similarity_score": 57,
+            "response_rank": 4
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/7ea4728a-3cfb-4546-a651-7b27eaea9c48",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Strawberry Guy ? Mrs Magic."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/a63b1608-2ff9-4aa3-9947-2997fa45545c",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Vacations ? Telephones."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB024",
+      "split": "final",
+      "scene": "surf-rock",
+      "catalog_tier": "popular",
+      "query": {
+        "title": "Freaks",
+        "artist": "Surf Curse"
+      },
+      "target": {
+        "title": "Jealous",
+        "artist": "Eyedress"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=63180294-3515-45e8-b418-72d04597ca35&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "63180294-3515-45e8-b418-72d04597ca35",
+            "recording_mbid": "82a51cd9-d106-496b-867e-bde37fa99da9",
+            "recording_name": "Jealous",
+            "artist_credit_name": "Eyedress",
+            "similarity_score": 51,
+            "response_rank": 7
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/63180294-3515-45e8-b418-72d04597ca35",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Surf Curse ? Freaks."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/82a51cd9-d106-496b-867e-bde37fa99da9",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Eyedress ? Jealous."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB025",
+      "split": "final",
+      "scene": "grunge",
+      "catalog_tier": "deep_cut",
+      "query": {
+        "title": "Nutshell",
+        "artist": "Alice in Chains"
+      },
+      "target": {
+        "title": "Everlong",
+        "artist": "Foo Fighters"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=05c905cf-152a-40b4-8c87-b0f15446371d&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "05c905cf-152a-40b4-8c87-b0f15446371d",
+            "recording_mbid": "9160e42b-8fae-402d-9cee-d6826c5cce33",
+            "recording_name": "Everlong",
+            "artist_credit_name": "Foo Fighters",
+            "similarity_score": 51,
+            "response_rank": 1
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/05c905cf-152a-40b4-8c87-b0f15446371d",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Alice in Chains ? Nutshell."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/9160e42b-8fae-402d-9cee-d6826c5cce33",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Foo Fighters ? Everlong."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB026",
+      "split": "final",
+      "scene": "post-punk",
+      "catalog_tier": "deep_cut",
+      "query": {
+        "title": "Love Will Tear Us Apart",
+        "artist": "Joy Division"
+      },
+      "target": {
+        "title": "Tainted Love",
+        "artist": "Soft Cell"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=41746834-4a27-42f5-b651-61ef0ca59549&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "41746834-4a27-42f5-b651-61ef0ca59549",
+            "recording_mbid": "ef4c6855-949e-4e22-b41e-8e0a2d372d5f",
+            "recording_name": "Tainted Love",
+            "artist_credit_name": "Soft Cell",
+            "similarity_score": 50,
+            "response_rank": 10
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/41746834-4a27-42f5-b651-61ef0ca59549",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Joy Division ? Love Will Tear Us Apart."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/ef4c6855-949e-4e22-b41e-8e0a2d372d5f",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Soft Cell ? Tainted Love."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB027",
+      "split": "final",
+      "scene": "classic-rock",
+      "catalog_tier": "popular",
+      "query": {
+        "title": "Wish You Were Here",
+        "artist": "Pink Floyd"
+      },
+      "target": {
+        "title": "Stairway to Heaven",
+        "artist": "Led Zeppelin"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=feecff58-8ee2-4a7f-ac23-dc8ce7925286&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "feecff58-8ee2-4a7f-ac23-dc8ce7925286",
+            "recording_mbid": "ccfdd180-22e1-49b9-bd81-b5fcf2c6474e",
+            "recording_name": "Stairway to Heaven",
+            "artist_credit_name": "Led Zeppelin",
+            "similarity_score": 50,
+            "response_rank": 1
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/feecff58-8ee2-4a7f-ac23-dc8ce7925286",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Pink Floyd ? Wish You Were Here."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/ccfdd180-22e1-49b9-bd81-b5fcf2c6474e",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Led Zeppelin ? Stairway to Heaven."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB028",
+      "split": "final",
+      "scene": "ambient-idm",
+      "catalog_tier": "deep_cut",
+      "query": {
+        "title": "Olson",
+        "artist": "Boards of Canada"
+      },
+      "target": {
+        "title": "i",
+        "artist": "Aphex Twin"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=fabedb70-a874-4078-bd17-4a8272ec62d0&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "fabedb70-a874-4078-bd17-4a8272ec62d0",
+            "recording_mbid": "12db16d7-6541-4a3e-9fc1-fa1f27501bbb",
+            "recording_name": "i",
+            "artist_credit_name": "Aphex Twin",
+            "similarity_score": 49,
+            "response_rank": 1
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/fabedb70-a874-4078-bd17-4a8272ec62d0",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Boards of Canada ? Olson."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/12db16d7-6541-4a3e-9fc1-fa1f27501bbb",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Aphex Twin ? i."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB029",
+      "split": "final",
+      "scene": "pop-rock",
+      "catalog_tier": "deep_cut",
+      "query": {
+        "title": "Lovefool",
+        "artist": "The Cardigans"
+      },
+      "target": {
+        "title": "The Middle",
+        "artist": "Jimmy Eat World"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=42f6cca7-10c3-46b0-8028-b27ba4f2d596&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "42f6cca7-10c3-46b0-8028-b27ba4f2d596",
+            "recording_mbid": "e3b7cd96-c41d-497a-b401-dc7494f638db",
+            "recording_name": "The Middle",
+            "artist_credit_name": "Jimmy Eat World",
+            "similarity_score": 49,
+            "response_rank": 8
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/42f6cca7-10c3-46b0-8028-b27ba4f2d596",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: The Cardigans ? Lovefool."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/e3b7cd96-c41d-497a-b401-dc7494f638db",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Jimmy Eat World ? The Middle."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB030",
+      "split": "final",
+      "scene": "indie-pop",
+      "catalog_tier": "deep_cut",
+      "query": {
+        "title": "Sex, Drugs, Etc.",
+        "artist": "Beach Weather"
+      },
+      "target": {
+        "title": "we fell in love in october",
+        "artist": "girl in red"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=87bf04f8-c29e-46e8-9ac4-6b2a7ce65154&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "87bf04f8-c29e-46e8-9ac4-6b2a7ce65154",
+            "recording_mbid": "46bfc9d7-a4d9-4a1b-b1f6-0b23216229f2",
+            "recording_name": "we fell in love in october",
+            "artist_credit_name": "girl in red",
+            "similarity_score": 47,
+            "response_rank": 13
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/87bf04f8-c29e-46e8-9ac4-6b2a7ce65154",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Beach Weather ? Sex, Drugs, Etc.."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/46bfc9d7-a4d9-4a1b-b1f6-0b23216229f2",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: girl in red ? we fell in love in october."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB031",
+      "split": "final",
+      "scene": "electropop/hyperpop",
+      "catalog_tier": "popular",
+      "query": {
+        "title": "Oblivion",
+        "artist": "Grimes"
+      },
+      "target": {
+        "title": "365",
+        "artist": "Charli xcx"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=5640e03c-af18-4d9c-8d68-60e2e99b16d4&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "5640e03c-af18-4d9c-8d68-60e2e99b16d4",
+            "recording_mbid": "bd9fd6a1-d41b-4b82-9ead-a4f958749a77",
+            "recording_name": "365",
+            "artist_credit_name": "Charli xcx",
+            "similarity_score": 45,
+            "response_rank": 1
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/5640e03c-af18-4d9c-8d68-60e2e99b16d4",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Grimes ? Oblivion."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/bd9fd6a1-d41b-4b82-9ead-a4f958749a77",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Charli xcx ? 365."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB032",
+      "split": "final",
+      "scene": "indie-folk",
+      "catalog_tier": "niche",
+      "query": {
+        "title": "Velvet Ring",
+        "artist": "Big Thief"
+      },
+      "target": {
+        "title": "anything",
+        "artist": "Adrianne Lenker"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=184f97c1-a1f1-4fc5-bbca-74bb9e30cde5&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "184f97c1-a1f1-4fc5-bbca-74bb9e30cde5",
+            "recording_mbid": "838007f9-4e8d-4698-8098-45877ac64e12",
+            "recording_name": "anything",
+            "artist_credit_name": "Adrianne Lenker",
+            "similarity_score": 43,
+            "response_rank": 1
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/184f97c1-a1f1-4fc5-bbca-74bb9e30cde5",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Big Thief ? Velvet Ring."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/838007f9-4e8d-4698-8098-45877ac64e12",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Adrianne Lenker ? anything."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB033",
+      "split": "final",
+      "scene": "indie-rock",
+      "catalog_tier": "deep_cut",
+      "query": {
+        "title": "Real Love Baby",
+        "artist": "Father John Misty"
+      },
+      "target": {
+        "title": "Oysters in My Pocket",
+        "artist": "Royel Otis"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=5f6c748e-71cd-4389-af06-8439f4cfcecd&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "5f6c748e-71cd-4389-af06-8439f4cfcecd",
+            "recording_mbid": "b3437bef-1592-4991-932e-e06987593263",
+            "recording_name": "Oysters in My Pocket",
+            "artist_credit_name": "Royel Otis",
+            "similarity_score": 43,
+            "response_rank": 2
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/5f6c748e-71cd-4389-af06-8439f4cfcecd",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Father John Misty ? Real Love Baby."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/b3437bef-1592-4991-932e-e06987593263",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Royel Otis ? Oysters in My Pocket."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB034",
+      "split": "final",
+      "scene": "darkwave",
+      "catalog_tier": "niche",
+      "query": {
+        "title": "did i tell u that i miss u",
+        "artist": "adore"
+      },
+      "target": {
+        "title": "Goth",
+        "artist": "Sidewalks and Skeletons"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=801ddadc-62cc-424c-80c8-c5d819bff0f3&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "801ddadc-62cc-424c-80c8-c5d819bff0f3",
+            "recording_mbid": "5e81a7b3-7cf3-49fc-b12a-bc2ee21741d9",
+            "recording_name": "Goth",
+            "artist_credit_name": "Sidewalks and Skeletons",
+            "similarity_score": 41,
+            "response_rank": 3
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/801ddadc-62cc-424c-80c8-c5d819bff0f3",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: adore ? did i tell u that i miss u."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/5e81a7b3-7cf3-49fc-b12a-bc2ee21741d9",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Sidewalks and Skeletons ? Goth."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB035",
+      "split": "final",
+      "scene": "indie-pop",
+      "catalog_tier": "deep_cut",
+      "query": {
+        "title": "Always Forever",
+        "artist": "Cults"
+      },
+      "target": {
+        "title": "Alien Blues",
+        "artist": "Vundabar"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=73ef3aa2-fd28-4743-b8ce-de42ddf885bf&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "73ef3aa2-fd28-4743-b8ce-de42ddf885bf",
+            "recording_mbid": "4b95928f-5bb5-433e-9b57-c6b275c12bd8",
+            "recording_name": "Alien Blues",
+            "artist_credit_name": "Vundabar",
+            "similarity_score": 40,
+            "response_rank": 10
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/73ef3aa2-fd28-4743-b8ce-de42ddf885bf",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Cults ? Always Forever."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/4b95928f-5bb5-433e-9b57-c6b275c12bd8",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Vundabar ? Alien Blues."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB036",
+      "split": "final",
+      "scene": "indie-folk",
+      "catalog_tier": "niche",
+      "query": {
+        "title": "rises the moon",
+        "artist": "Liana Flores"
+      },
+      "target": {
+        "title": "welcome and goodbye",
+        "artist": "Dream, Ivory"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=9fb62336-68b7-43fa-a220-e7f3637c7cc5&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "9fb62336-68b7-43fa-a220-e7f3637c7cc5",
+            "recording_mbid": "22507385-e68c-4885-a906-d8559795ead3",
+            "recording_name": "welcome and goodbye",
+            "artist_credit_name": "Dream, Ivory",
+            "similarity_score": 40,
+            "response_rank": 8
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/9fb62336-68b7-43fa-a220-e7f3637c7cc5",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Liana Flores ? rises the moon."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/22507385-e68c-4885-a906-d8559795ead3",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Dream, Ivory ? welcome and goodbye."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB037",
+      "split": "final",
+      "scene": "indie-rock",
+      "catalog_tier": "deep_cut",
+      "query": {
+        "title": "Chamber of Reflection",
+        "artist": "Mac DeMarco"
+      },
+      "target": {
+        "title": "Looking Out for You",
+        "artist": "Joy Again"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=d8721fd8-6f1c-4c6e-8b0e-52e9b88169fc&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "d8721fd8-6f1c-4c6e-8b0e-52e9b88169fc",
+            "recording_mbid": "47125aa0-58c2-47d5-a8e9-25d9781b6fac",
+            "recording_name": "Looking Out for You",
+            "artist_credit_name": "Joy Again",
+            "similarity_score": 39,
+            "response_rank": 11
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/d8721fd8-6f1c-4c6e-8b0e-52e9b88169fc",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Mac DeMarco ? Chamber of Reflection."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/47125aa0-58c2-47d5-a8e9-25d9781b6fac",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Joy Again ? Looking Out for You."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB038",
+      "split": "final",
+      "scene": "pop-ballad",
+      "catalog_tier": "popular",
+      "query": {
+        "title": "Summertime Sadness",
+        "artist": "Lana Del Rey"
+      },
+      "target": {
+        "title": "Set Fire to the Rain",
+        "artist": "Adele"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=8c712e50-1822-4caf-9eb1-6d9cf6f8556f&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "8c712e50-1822-4caf-9eb1-6d9cf6f8556f",
+            "recording_mbid": "d1e0a99e-1894-457b-ba6a-985eeef4d0c4",
+            "recording_name": "Set Fire to the Rain",
+            "artist_credit_name": "Adele",
+            "similarity_score": 39,
+            "response_rank": 7
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/8c712e50-1822-4caf-9eb1-6d9cf6f8556f",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Lana Del Rey ? Summertime Sadness."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/d1e0a99e-1894-457b-ba6a-985eeef4d0c4",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Adele ? Set Fire to the Rain."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB039",
+      "split": "final",
+      "scene": "alternative-pop",
+      "catalog_tier": "popular",
+      "query": {
+        "title": "Crush",
+        "artist": "Ethel Cain"
+      },
+      "target": {
+        "title": "Headlock",
+        "artist": "Imogen Heap"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=b2750447-ef78-4089-8388-0b5b950e73ad&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "b2750447-ef78-4089-8388-0b5b950e73ad",
+            "recording_mbid": "d871b5ab-0a48-4b93-95d7-be3e6a599248",
+            "recording_name": "Headlock",
+            "artist_credit_name": "Imogen Heap",
+            "similarity_score": 38,
+            "response_rank": 1
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/b2750447-ef78-4089-8388-0b5b950e73ad",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Ethel Cain ? Crush."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/d871b5ab-0a48-4b93-95d7-be3e6a599248",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Imogen Heap ? Headlock."
+        }
+      ]
+    },
+    {
+      "id": "FINAL-LB040",
+      "split": "final",
+      "scene": "alternative-rnb/hip-hop",
+      "catalog_tier": "deep_cut",
+      "query": {
+        "title": "SLOW DANCING IN THE DARK",
+        "artist": "Joji"
+      },
+      "target": {
+        "title": "See You Again",
+        "artist": "Tyler, The Creator feat. Kali Uchis"
+      },
+      "evidence_category": "category_a_sonic",
+      "evidence_subtype": "independent_human_musical_similarity",
+      "deciding_primary": true,
+      "category_reason": "The independent ListenBrainz similar-recordings dataset explicitly returns this cross-artist recording pair from aggregated human listening sessions. It is musical-similarity evidence, not an audio feature or project metadata prior.",
+      "sources": [
+        {
+          "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=642c3516-7866-447f-8e68-3535fd807fc8&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+          "publisher": "ListenBrainz / MetaBrainz Foundation",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "independent_human_listening_similarity_dataset",
+          "documentation_url": "https://github.com/metabrainz/listenbrainz-server/blob/76381b7097f2cccfbf407aacb0436ce4500dd8e9/listenbrainz_spark/similarity/recording/common.py",
+          "documentation_excerpt": "Generate similar recordings based on grouping listening activity into user sessions.",
+          "response_excerpt": {
+            "reference_mbid": "642c3516-7866-447f-8e68-3535fd807fc8",
+            "recording_mbid": "e232b26b-2100-4269-9f96-3f3f49c57c2d",
+            "recording_name": "See You Again",
+            "artist_credit_name": "Tyler, The Creator feat. Kali Uchis",
+            "similarity_score": 38,
+            "response_rank": 6
+          },
+          "excerpt": "Generate similar recordings based on grouping listening activity into user sessions."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/642c3516-7866-447f-8e68-3535fd807fc8",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical query recording identity: Joji ? SLOW DANCING IN THE DARK."
+        },
+        {
+          "url": "https://musicbrainz.org/recording/e232b26b-2100-4269-9f96-3f3f49c57c2d",
+          "publisher": "MusicBrainz",
+          "published_at": null,
+          "accessed_at": "2026-07-11",
+          "source_class": "canonical_recording_identity",
+          "excerpt": "Canonical target recording identity: Tyler, The Creator feat. Kali Uchis ? See You Again."
+        }
+      ]
+    }
+  ],
+  "content_sha256": "cd15bc2bbe961ab20afd635ce294738d458908f7472a3a16057493a0356d967f"
+}

@@ -1,0 +1,977 @@
+{
+  "schema_version": 1,
+  "opened_at": "2026-07-12T08:46:37.358939+00:00",
+  "open_number": 1,
+  "method_id": "audio-rank-stratified-tail-v1",
+  "metrics": {
+    "production_baseline": {
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.0,
+      "recall_at_10": 0.0,
+      "recall_at_20": 0.0,
+      "recall_at_50": 0.0,
+      "mrr": 0.0,
+      "ndcg_at_10": 0.0,
+      "ndcg_at_50": 0.0,
+      "primary": 0.0
+    },
+    "iteration3_deployed": {
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.0,
+      "recall_at_10": 0.0,
+      "recall_at_20": 0.0,
+      "recall_at_50": 0.025,
+      "mrr": 0.0008333333333333333,
+      "ndcg_at_10": 0.0,
+      "ndcg_at_50": 0.005046227164552496,
+      "primary": 0.0002777777777777778
+    },
+    "raw_encoder": {
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.0,
+      "recall_at_10": 0.0,
+      "recall_at_20": 0.0,
+      "recall_at_50": 0.0,
+      "mrr": 0.0,
+      "ndcg_at_10": 0.0,
+      "ndcg_at_50": 0.0,
+      "primary": 0.0
+    },
+    "audio_priors_zero": {
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.0,
+      "recall_at_10": 0.025,
+      "recall_at_20": 0.025,
+      "recall_at_50": 0.025,
+      "mrr": 0.003125,
+      "ndcg_at_10": 0.007886621919643219,
+      "ndcg_at_50": 0.007886621919643219,
+      "primary": 0.012003873973214405
+    },
+    "winner": {
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.0,
+      "recall_at_10": 0.0,
+      "recall_at_20": 0.025,
+      "recall_at_50": 0.025,
+      "mrr": 0.0017857142857142857,
+      "ndcg_at_10": 0.0,
+      "ndcg_at_50": 0.006398950620245388,
+      "primary": 0.0005952380952380952
+    }
+  },
+  "comparison_to_production_baseline": {
+    "absolute_delta": 0.0005952380952380952,
+    "relative_gain": 595238095.2380952,
+    "ci95_low": 0.0,
+    "ci95_high": 0.0017857142857142857,
+    "probability_positive": 0.6364,
+    "improved_pairs": 1,
+    "worsened_pairs": 0,
+    "unchanged_pairs": 39,
+    "passes": {
+      "relative_gain": true,
+      "positive_absolute": true,
+      "recall_at_10_non_regression": true,
+      "mrr_non_regression": true,
+      "ci_excludes_zero": false,
+      "meaningful_count": false,
+      "scene_no_regression": true
+    },
+    "final_pass": false,
+    "per_scene": {
+      "alternative-pop": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "alternative-rnb/hip-hop": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "alternative-rock": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "ambient-idm": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "bedroom-pop": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "classic-rock": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "darkwave": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "dream-pop": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "electropop/hyperpop": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "folk-pop": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "grunge": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "indie-dance": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "indie-folk": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "indie-pop": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.005952380952380952,
+        "relative_delta": 0.0
+      },
+      "indie-rock": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "k-pop": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "new-wave": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "piano-rock": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "pop-ballad": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "pop-rock": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "post-punk": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "psychedelic-pop": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "shoegaze": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "surf-rock": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "synth-pop": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "uk-garage/bedroom-pop": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      }
+    }
+  },
+  "pairs": [
+    {
+      "pair_id": "FINAL-LB001",
+      "scene": "k-pop",
+      "query": {
+        "title": "Magnetic",
+        "artist": "ILLIT"
+      },
+      "target": {
+        "title": "CRAZY",
+        "artist": "LE SSERAFIM"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB002",
+      "scene": "folk-pop",
+      "query": {
+        "title": "Sailor Song",
+        "artist": "Gigi Perez"
+      },
+      "target": {
+        "title": "That’s So True",
+        "artist": "Gracie Abrams"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB003",
+      "scene": "new-wave",
+      "query": {
+        "title": "Everybody Wants to Rule the World",
+        "artist": "Tears for Fears"
+      },
+      "target": {
+        "title": "Every Breath You Take",
+        "artist": "The Police"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB004",
+      "scene": "indie-dance",
+      "query": {
+        "title": "What You Know",
+        "artist": "Two Door Cinema Club"
+      },
+      "target": {
+        "title": "Pumped Up Kicks",
+        "artist": "Foster the People"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB005",
+      "scene": "indie-pop",
+      "query": {
+        "title": "Sweater Weather",
+        "artist": "The Neighbourhood"
+      },
+      "target": {
+        "title": "End of Beginning",
+        "artist": "Djo"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB006",
+      "scene": "piano-rock",
+      "query": {
+        "title": "Somewhere Only We Know",
+        "artist": "Keane"
+      },
+      "target": {
+        "title": "Yellow",
+        "artist": "Coldplay"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB007",
+      "scene": "psychedelic-pop",
+      "query": {
+        "title": "The Less I Know the Better",
+        "artist": "Tame Impala"
+      },
+      "target": {
+        "title": "Walking on a Dream",
+        "artist": "Empire of the Sun"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB008",
+      "scene": "dream-pop",
+      "query": {
+        "title": "No One Noticed",
+        "artist": "The Marías"
+      },
+      "target": {
+        "title": "Juna",
+        "artist": "Clairo"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB009",
+      "scene": "k-pop",
+      "query": {
+        "title": "Ditto",
+        "artist": "NewJeans"
+      },
+      "target": {
+        "title": "Whiplash",
+        "artist": "aespa"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB010",
+      "scene": "psychedelic-pop",
+      "query": {
+        "title": "Ghostride",
+        "artist": "Crumb"
+      },
+      "target": {
+        "title": "You Are The Right One",
+        "artist": "Sports"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB011",
+      "scene": "dream-pop",
+      "query": {
+        "title": "Duvet",
+        "artist": "bôa"
+      },
+      "target": {
+        "title": "Lovers Rock",
+        "artist": "TV Girl"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB012",
+      "scene": "alternative-rock",
+      "query": {
+        "title": "Where Is My Mind?",
+        "artist": "Pixies"
+      },
+      "target": {
+        "title": "Take Me Out",
+        "artist": "Franz Ferdinand"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB013",
+      "scene": "bedroom-pop",
+      "query": {
+        "title": "Beanie",
+        "artist": "Chezile"
+      },
+      "target": {
+        "title": "the perfect pair",
+        "artist": "beabadoobee"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB014",
+      "scene": "dream-pop",
+      "query": {
+        "title": "Fade Into You",
+        "artist": "Mazzy Star"
+      },
+      "target": {
+        "title": "Linger",
+        "artist": "The Cranberries"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB015",
+      "scene": "indie-folk",
+      "query": {
+        "title": "The Night We Met",
+        "artist": "Lord Huron"
+      },
+      "target": {
+        "title": "Until I Found You",
+        "artist": "Stephen Sanchez"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB016",
+      "scene": "uk-garage/bedroom-pop",
+      "query": {
+        "title": "Pain",
+        "artist": "PinkPantheress"
+      },
+      "target": {
+        "title": "C U Girl",
+        "artist": "Steve Lacy"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB017",
+      "scene": "dream-pop",
+      "query": {
+        "title": "Apocalypse",
+        "artist": "Cigarettes After Sex"
+      },
+      "target": {
+        "title": "Space Song",
+        "artist": "Beach House"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB018",
+      "scene": "shoegaze",
+      "query": {
+        "title": "When the Sun Hits",
+        "artist": "Slowdive"
+      },
+      "target": {
+        "title": "When You Sleep",
+        "artist": "My Bloody Valentine"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB019",
+      "scene": "indie-pop",
+      "query": {
+        "title": "My Love Mine All Mine",
+        "artist": "Mitski"
+      },
+      "target": {
+        "title": "From the Start",
+        "artist": "Laufey"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB020",
+      "scene": "alternative-rock",
+      "query": {
+        "title": "Ironic",
+        "artist": "Alanis Morissette"
+      },
+      "target": {
+        "title": "Song 2",
+        "artist": "Blur"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB021",
+      "scene": "dream-pop",
+      "query": {
+        "title": "Show Me How",
+        "artist": "Men I Trust"
+      },
+      "target": {
+        "title": "Metamodernity",
+        "artist": "Vansire"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB022",
+      "scene": "synth-pop",
+      "query": {
+        "title": "On Melancholy Hill",
+        "artist": "Gorillaz"
+      },
+      "target": {
+        "title": "Something About Us",
+        "artist": "Daft Punk"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB023",
+      "scene": "bedroom-pop",
+      "query": {
+        "title": "Mrs Magic",
+        "artist": "Strawberry Guy"
+      },
+      "target": {
+        "title": "Telephones",
+        "artist": "Vacations"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB024",
+      "scene": "surf-rock",
+      "query": {
+        "title": "Freaks",
+        "artist": "Surf Curse"
+      },
+      "target": {
+        "title": "Jealous",
+        "artist": "Eyedress"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB025",
+      "scene": "grunge",
+      "query": {
+        "title": "Nutshell",
+        "artist": "Alice in Chains"
+      },
+      "target": {
+        "title": "Everlong",
+        "artist": "Foo Fighters"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB026",
+      "scene": "post-punk",
+      "query": {
+        "title": "Love Will Tear Us Apart",
+        "artist": "Joy Division"
+      },
+      "target": {
+        "title": "Tainted Love",
+        "artist": "Soft Cell"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB027",
+      "scene": "classic-rock",
+      "query": {
+        "title": "Wish You Were Here",
+        "artist": "Pink Floyd"
+      },
+      "target": {
+        "title": "Stairway to Heaven",
+        "artist": "Led Zeppelin"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB028",
+      "scene": "ambient-idm",
+      "query": {
+        "title": "Olson",
+        "artist": "Boards of Canada"
+      },
+      "target": {
+        "title": "i",
+        "artist": "Aphex Twin"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 30,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB029",
+      "scene": "pop-rock",
+      "query": {
+        "title": "Lovefool",
+        "artist": "The Cardigans"
+      },
+      "target": {
+        "title": "The Middle",
+        "artist": "Jimmy Eat World"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB030",
+      "scene": "indie-pop",
+      "query": {
+        "title": "Sex, Drugs, Etc.",
+        "artist": "Beach Weather"
+      },
+      "target": {
+        "title": "we fell in love in october",
+        "artist": "girl in red"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 8,
+        "winner": 14
+      }
+    },
+    {
+      "pair_id": "FINAL-LB031",
+      "scene": "electropop/hyperpop",
+      "query": {
+        "title": "Oblivion",
+        "artist": "Grimes"
+      },
+      "target": {
+        "title": "365",
+        "artist": "Charli xcx"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB032",
+      "scene": "indie-folk",
+      "query": {
+        "title": "Velvet Ring",
+        "artist": "Big Thief"
+      },
+      "target": {
+        "title": "anything",
+        "artist": "Adrianne Lenker"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB033",
+      "scene": "indie-rock",
+      "query": {
+        "title": "Real Love Baby",
+        "artist": "Father John Misty"
+      },
+      "target": {
+        "title": "Oysters in My Pocket",
+        "artist": "Royel Otis"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB034",
+      "scene": "darkwave",
+      "query": {
+        "title": "did i tell u that i miss u",
+        "artist": "adore"
+      },
+      "target": {
+        "title": "Goth",
+        "artist": "Sidewalks and Skeletons"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB035",
+      "scene": "indie-pop",
+      "query": {
+        "title": "Always Forever",
+        "artist": "Cults"
+      },
+      "target": {
+        "title": "Alien Blues",
+        "artist": "Vundabar"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB036",
+      "scene": "indie-folk",
+      "query": {
+        "title": "rises the moon",
+        "artist": "Liana Flores"
+      },
+      "target": {
+        "title": "welcome and goodbye",
+        "artist": "Dream, Ivory"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB037",
+      "scene": "indie-rock",
+      "query": {
+        "title": "Chamber of Reflection",
+        "artist": "Mac DeMarco"
+      },
+      "target": {
+        "title": "Looking Out for You",
+        "artist": "Joy Again"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB038",
+      "scene": "pop-ballad",
+      "query": {
+        "title": "Summertime Sadness",
+        "artist": "Lana Del Rey"
+      },
+      "target": {
+        "title": "Set Fire to the Rain",
+        "artist": "Adele"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB039",
+      "scene": "alternative-pop",
+      "query": {
+        "title": "Crush",
+        "artist": "Ethel Cain"
+      },
+      "target": {
+        "title": "Headlock",
+        "artist": "Imogen Heap"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    },
+    {
+      "pair_id": "FINAL-LB040",
+      "scene": "alternative-rnb/hip-hop",
+      "query": {
+        "title": "SLOW DANCING IN THE DARK",
+        "artist": "Joji"
+      },
+      "target": {
+        "title": "See You Again",
+        "artist": "Tyler, The Creator feat. Kali Uchis"
+      },
+      "ranks": {
+        "production_baseline": 0,
+        "iteration3_deployed": 0,
+        "raw_encoder": 0,
+        "audio_priors_zero": 0,
+        "winner": 0
+      }
+    }
+  ]
+}

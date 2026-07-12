@@ -40,10 +40,12 @@ _TITLE_JUNK_PATTERNS: List[str] = [
     r"\breverb\b",
     r"\bsped[- ]up\b",
     r"\bspeed[- ]up\b",
-    r"\bnightcore\b",
-    # Karaoke / backing tracks
-    r"\bkaraoke\b",
-    r"\bkaraōke\b",
+    r"\bnightcore(?:d|'d)?\b",
+    # Karaoke / backing-track variants.  Keep legitimate originals titled
+    # "Karaoke", "Karaoke Bar", etc.; derivative context is required.
+    r"\bkara(?:oke|ōke)\s+(?:version|mix|edit|track|instrumental)\b",
+    r"(?:\(|\[|\s+-\s*)kara(?:oke|ōke)(?:\s+version)?(?:\)|\]|$)",
+    r"\b(?:unreleased|official|instrumental)\s+kara(?:oke|ōke)\b",
     r"\bbacking\s+track\b",
     r"\binstrumental\s+(?:version|mix|cover|track)\b",
     r"\ba\s+cappella\b",
@@ -91,7 +93,7 @@ _ARTIST_JUNK_PATTERNS: List[str] = [
     r"\bsound-?alike\b",
     r"\binstrumental\s+all\s+stars?\b",
     r"\bmarimba\s+remix\b",
-    r"\bnightcore\b",
+    r"\bnightcore(?:d|'d)?\b",
     r"\bslowed\b",
 ]
 

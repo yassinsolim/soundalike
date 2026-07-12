@@ -1,0 +1,573 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-07-12",
+  "target": "https://soundalike.yassin.app",
+  "iteration4_deployed": false,
+  "reason": "Once-opened FINAL failed; production was intentionally unchanged.",
+  "stats": {
+    "ok": true,
+    "library_size": 272853,
+    "version": "2026.07.11-dual-sonic64"
+  },
+  "search_status": 200,
+  "verification": {
+    "requested": 10,
+    "recommend_ok": 10,
+    "all_retained_method": true,
+    "all_retained_version": true,
+    "preview_ok": 10,
+    "mean_latency_ms": 2872.9470699996455
+  },
+  "records": [
+    {
+      "query": {
+        "title": "Goodies",
+        "artist": "Ciara"
+      },
+      "status": 200,
+      "latency_ms": 20091.38690000691,
+      "method": "dual_sonic64_guardrail",
+      "index_version": "2026.07.11-dual-sonic64",
+      "library_size": 272853,
+      "top5": [
+        {
+          "title": "Soldier (feat. T.I. & Lil' Wayne)",
+          "artist": "Destiny's Child",
+          "deezer_id": 581082,
+          "neural_sim": 0.3695,
+          "vibe_sim": 0.2025,
+          "spotify_url": "https://open.spotify.com/search/Soldier%20%28feat.%20T.I.%20%26%20Lil%27%20Wayne%29%20Destiny%27s%20Child"
+        },
+        {
+          "title": "Lovin' It",
+          "artist": "Ariana Grande",
+          "deezer_id": 2425612915,
+          "neural_sim": 0.3654,
+          "vibe_sim": 0.1817,
+          "spotify_url": "https://open.spotify.com/search/Lovin%27%20It%20Ariana%20Grande"
+        },
+        {
+          "title": "Please",
+          "artist": "Toni Braxton",
+          "deezer_id": 3380593681,
+          "neural_sim": 0.46,
+          "vibe_sim": 0.1604,
+          "spotify_url": "https://open.spotify.com/search/Please%20Toni%20Braxton"
+        },
+        {
+          "title": "Obsessed",
+          "artist": "Mariah Carey",
+          "deezer_id": 4109366,
+          "neural_sim": 0.3436,
+          "vibe_sim": 0.2402,
+          "spotify_url": "https://open.spotify.com/search/Obsessed%20Mariah%20Carey"
+        },
+        {
+          "title": "After the Afterparty (feat. RAYE, Stefflon Don and Rita Ora) (VIP Mix)",
+          "artist": "Charli xcx",
+          "deezer_id": 141338549,
+          "neural_sim": 0.4068,
+          "vibe_sim": 0.1833,
+          "spotify_url": "https://open.spotify.com/search/After%20the%20Afterparty%20%28feat.%20RAYE%2C%20Stefflon%20Don%20and%20Rita%20Ora%29%20%28VIP%20Mix%29%20Charli%20xcx"
+        }
+      ],
+      "preview_status": 200,
+      "preview_has_url": true
+    },
+    {
+      "query": {
+        "title": "LUNCH",
+        "artist": "Billie Eilish"
+      },
+      "status": 200,
+      "latency_ms": 949.5115000026999,
+      "method": "dual_sonic64_guardrail",
+      "index_version": "2026.07.11-dual-sonic64",
+      "library_size": 272853,
+      "top5": [
+        {
+          "title": "Pale Blue Eyes",
+          "artist": "Lucy Rose",
+          "deezer_id": 3149463251,
+          "neural_sim": 0.3818,
+          "vibe_sim": 0.2072,
+          "spotify_url": "https://open.spotify.com/search/Pale%20Blue%20Eyes%20Lucy%20Rose"
+        },
+        {
+          "title": "So Good",
+          "artist": "Warpaint",
+          "deezer_id": 138547687,
+          "neural_sim": 0.3455,
+          "vibe_sim": 0.3183,
+          "spotify_url": "https://open.spotify.com/search/So%20Good%20Warpaint"
+        },
+        {
+          "title": "Siberian Nights",
+          "artist": "The Kills",
+          "deezer_id": 125662352,
+          "neural_sim": 0.3893,
+          "vibe_sim": 0.2919,
+          "spotify_url": "https://open.spotify.com/search/Siberian%20Nights%20The%20Kills"
+        },
+        {
+          "title": "MEMORY",
+          "artist": "Sophia",
+          "deezer_id": 1669710302,
+          "neural_sim": 0.3966,
+          "vibe_sim": 0.1964,
+          "spotify_url": "https://open.spotify.com/search/MEMORY%20Sophia"
+        },
+        {
+          "title": "Before You Break My Heart",
+          "artist": "JADE",
+          "deezer_id": 3547436931,
+          "neural_sim": 0.3585,
+          "vibe_sim": 0.2177,
+          "spotify_url": "https://open.spotify.com/search/Before%20You%20Break%20My%20Heart%20JADE"
+        }
+      ],
+      "preview_status": 200,
+      "preview_has_url": true
+    },
+    {
+      "query": {
+        "title": "Only Shallow",
+        "artist": "My Bloody Valentine"
+      },
+      "status": 200,
+      "latency_ms": 961.1571999994339,
+      "method": "dual_sonic64_guardrail",
+      "index_version": "2026.07.11-dual-sonic64",
+      "library_size": 272853,
+      "top5": [
+        {
+          "title": "Beneath (2001 Remaster)",
+          "artist": "Ride",
+          "deezer_id": 65088096,
+          "neural_sim": 0.4251,
+          "vibe_sim": 0.1846,
+          "spotify_url": "https://open.spotify.com/search/Beneath%20%282001%20Remaster%29%20Ride"
+        },
+        {
+          "title": "Happy When It Rains",
+          "artist": "The Jesus And Mary Chain",
+          "deezer_id": 13776447,
+          "neural_sim": 0.3296,
+          "vibe_sim": 0.2159,
+          "spotify_url": "https://open.spotify.com/search/Happy%20When%20It%20Rains%20The%20Jesus%20And%20Mary%20Chain"
+        },
+        {
+          "title": "The Itchy Glowbo Blow",
+          "artist": "Cocteau Twins",
+          "deezer_id": 948635,
+          "neural_sim": 0.4211,
+          "vibe_sim": 0.2139,
+          "spotify_url": "https://open.spotify.com/search/The%20Itchy%20Glowbo%20Blow%20Cocteau%20Twins"
+        },
+        {
+          "title": "Tundra Leech",
+          "artist": "Darkthrone",
+          "deezer_id": 131253264,
+          "neural_sim": 0.3476,
+          "vibe_sim": 0.1954,
+          "spotify_url": "https://open.spotify.com/search/Tundra%20Leech%20Darkthrone"
+        },
+        {
+          "title": "San Cristobal De Las Casas",
+          "artist": "Swirlies",
+          "deezer_id": 4357034,
+          "neural_sim": 0.3398,
+          "vibe_sim": 0.2246,
+          "spotify_url": "https://open.spotify.com/search/San%20Cristobal%20De%20Las%20Casas%20Swirlies"
+        }
+      ],
+      "preview_status": 200,
+      "preview_has_url": true
+    },
+    {
+      "query": {
+        "title": "Master of Puppets",
+        "artist": "Metallica"
+      },
+      "status": 200,
+      "latency_ms": 1037.5835000013467,
+      "method": "dual_sonic64_guardrail",
+      "index_version": "2026.07.11-dual-sonic64",
+      "library_size": 272853,
+      "top5": [
+        {
+          "title": "The New Order",
+          "artist": "Testament",
+          "deezer_id": 3603333,
+          "neural_sim": 0.5529,
+          "vibe_sim": 0.2457,
+          "spotify_url": "https://open.spotify.com/search/The%20New%20Order%20Testament"
+        },
+        {
+          "title": "Skin O' My Teeth (1992 Mix Remaster)",
+          "artist": "Megadeth",
+          "deezer_id": 2174203477,
+          "neural_sim": 0.5377,
+          "vibe_sim": 0.1777,
+          "spotify_url": "https://open.spotify.com/search/Skin%20O%27%20My%20Teeth%20%281992%20Mix%20Remaster%29%20Megadeth"
+        },
+        {
+          "title": "Crumbs",
+          "artist": "Ministry",
+          "deezer_id": 6632675,
+          "neural_sim": 0.522,
+          "vibe_sim": 0.2262,
+          "spotify_url": "https://open.spotify.com/search/Crumbs%20Ministry"
+        },
+        {
+          "title": "One Step over the Line",
+          "artist": "Sodom",
+          "deezer_id": 3783068132,
+          "neural_sim": 0.5322,
+          "vibe_sim": 0.2447,
+          "spotify_url": "https://open.spotify.com/search/One%20Step%20over%20the%20Line%20Sodom"
+        },
+        {
+          "title": "You Can't Stop Rock And Roll",
+          "artist": "Twisted Sister",
+          "deezer_id": 3803546022,
+          "neural_sim": 0.46,
+          "vibe_sim": 0.2359,
+          "spotify_url": "https://open.spotify.com/search/You%20Can%27t%20Stop%20Rock%20And%20Roll%20Twisted%20Sister"
+        }
+      ],
+      "preview_status": 200,
+      "preview_has_url": true
+    },
+    {
+      "query": {
+        "title": "Plastic Love",
+        "artist": "Mariya Takeuchi"
+      },
+      "status": 200,
+      "latency_ms": 1073.6915999877965,
+      "method": "dual_sonic64_guardrail",
+      "index_version": "2026.07.11-dual-sonic64",
+      "library_size": 272853,
+      "top5": [
+        {
+          "title": "Manatsu no Sequence",
+          "artist": "Momoko Kikuchi",
+          "deezer_id": 2665413102,
+          "neural_sim": 0.4493,
+          "vibe_sim": 0.2205,
+          "spotify_url": "https://open.spotify.com/search/Manatsu%20no%20Sequence%20Momoko%20Kikuchi"
+        },
+        {
+          "title": "HE'S MY MUSIC",
+          "artist": "Anri",
+          "deezer_id": 951804252,
+          "neural_sim": 0.4493,
+          "vibe_sim": 0.2198,
+          "spotify_url": "https://open.spotify.com/search/HE%27S%20MY%20MUSIC%20Anri"
+        },
+        {
+          "title": "Girls And Boys",
+          "artist": "Marcus Miller",
+          "deezer_id": 66027599,
+          "neural_sim": 0.4829,
+          "vibe_sim": 0.2787,
+          "spotify_url": "https://open.spotify.com/search/Girls%20And%20Boys%20Marcus%20Miller"
+        },
+        {
+          "title": "Get Hot!",
+          "artist": "Himiko Kikuchi",
+          "deezer_id": 2813520732,
+          "neural_sim": 0.4381,
+          "vibe_sim": 0.1998,
+          "spotify_url": "https://open.spotify.com/search/Get%20Hot%21%20Himiko%20Kikuchi"
+        },
+        {
+          "title": "Stuttgart Aria I",
+          "artist": "Biréli Lagrène and Jaco Pastorius",
+          "deezer_id": 63124336,
+          "neural_sim": 0.4736,
+          "vibe_sim": 0.1735,
+          "spotify_url": "https://open.spotify.com/search/Stuttgart%20Aria%20I%20Bir%C3%A9li%20Lagr%C3%A8ne%20and%20Jaco%20Pastorius"
+        }
+      ],
+      "preview_status": 200,
+      "preview_has_url": true
+    },
+    {
+      "query": {
+        "title": "Ditto",
+        "artist": "NewJeans"
+      },
+      "status": 200,
+      "latency_ms": 934.8721999995178,
+      "method": "dual_sonic64_guardrail",
+      "index_version": "2026.07.11-dual-sonic64",
+      "library_size": 272853,
+      "top5": [
+        {
+          "title": "XO, My Cyberlove",
+          "artist": "CHUU",
+          "deezer_id": 3748348252,
+          "neural_sim": 0.4808,
+          "vibe_sim": 0.1722,
+          "spotify_url": "https://open.spotify.com/search/XO%2C%20My%20Cyberlove%20CHUU"
+        },
+        {
+          "title": "Fedexx Girl (Feat. 창모)",
+          "artist": "BIBI",
+          "deezer_id": 1928125037,
+          "neural_sim": 0.5025,
+          "vibe_sim": 0.1977,
+          "spotify_url": "https://open.spotify.com/search/Fedexx%20Girl%20%28Feat.%20%EC%B0%BD%EB%AA%A8%29%20BIBI"
+        },
+        {
+          "title": "Bouquet",
+          "artist": "MISAMO",
+          "deezer_id": 2111655787,
+          "neural_sim": 0.4363,
+          "vibe_sim": 0.1751,
+          "spotify_url": "https://open.spotify.com/search/Bouquet%20MISAMO"
+        },
+        {
+          "title": "HELLO (NAYEON, MOMO, CHAEYOUNG)",
+          "artist": "TWICE",
+          "deezer_id": 1533348952,
+          "neural_sim": 0.4255,
+          "vibe_sim": 0.1925,
+          "spotify_url": "https://open.spotify.com/search/HELLO%20%28NAYEON%2C%20MOMO%2C%20CHAEYOUNG%29%20TWICE"
+        },
+        {
+          "title": "Chaotic",
+          "artist": "LOONA",
+          "deezer_id": 1609686512,
+          "neural_sim": 0.4201,
+          "vibe_sim": 0.2776,
+          "spotify_url": "https://open.spotify.com/search/Chaotic%20LOONA"
+        }
+      ],
+      "preview_status": 200,
+      "preview_has_url": true
+    },
+    {
+      "query": {
+        "title": "Xtal",
+        "artist": "Aphex Twin"
+      },
+      "status": 200,
+      "latency_ms": 903.442199996789,
+      "method": "dual_sonic64_guardrail",
+      "index_version": "2026.07.11-dual-sonic64",
+      "library_size": 272853,
+      "top5": [
+        {
+          "title": "Into Dreams",
+          "artist": "Golden Boy",
+          "deezer_id": 1267017642,
+          "neural_sim": 0.4285,
+          "vibe_sim": 0.1513,
+          "spotify_url": "https://open.spotify.com/search/Into%20Dreams%20Golden%20Boy"
+        },
+        {
+          "title": "BETRAYER",
+          "artist": "Nuvfr",
+          "deezer_id": 2148859267,
+          "neural_sim": 0.4191,
+          "vibe_sim": 0.1843,
+          "spotify_url": "https://open.spotify.com/search/BETRAYER%20Nuvfr"
+        },
+        {
+          "title": "TERMINATE",
+          "artist": "Nedaj",
+          "deezer_id": 3160009761,
+          "neural_sim": 0.3658,
+          "vibe_sim": 0.1527,
+          "spotify_url": "https://open.spotify.com/search/TERMINATE%20Nedaj"
+        },
+        {
+          "title": "Why Complaining?",
+          "artist": "Lee \"Scratch\" Perry",
+          "deezer_id": 2061323,
+          "neural_sim": 0.412,
+          "vibe_sim": 0.1609,
+          "spotify_url": "https://open.spotify.com/search/Why%20Complaining%3F%20Lee%20%22Scratch%22%20Perry"
+        },
+        {
+          "title": "strxwberryPILK",
+          "artist": "strxwberrymilk",
+          "deezer_id": 2634337382,
+          "neural_sim": 0.3529,
+          "vibe_sim": 0.1303,
+          "spotify_url": "https://open.spotify.com/search/strxwberryPILK%20strxwberrymilk"
+        }
+      ],
+      "preview_status": 200,
+      "preview_has_url": true
+    },
+    {
+      "query": {
+        "title": "Nights",
+        "artist": "Frank Ocean"
+      },
+      "status": 200,
+      "latency_ms": 928.650200003176,
+      "method": "dual_sonic64_guardrail",
+      "index_version": "2026.07.11-dual-sonic64",
+      "library_size": 272853,
+      "top5": [
+        {
+          "title": "Barry Bonds",
+          "artist": "Kanye West",
+          "deezer_id": 630827282,
+          "neural_sim": 0.3612,
+          "vibe_sim": 0.1689,
+          "spotify_url": "https://open.spotify.com/search/Barry%20Bonds%20Kanye%20West"
+        },
+        {
+          "title": "Beauty Doesn’t Cry",
+          "artist": "Jacquees",
+          "deezer_id": 550180672,
+          "neural_sim": 0.4229,
+          "vibe_sim": 0.1575,
+          "spotify_url": "https://open.spotify.com/search/Beauty%20Doesn%E2%80%99t%20Cry%20Jacquees"
+        },
+        {
+          "title": "Smoke Again",
+          "artist": "Chance The Rapper",
+          "deezer_id": 2221733517,
+          "neural_sim": 0.406,
+          "vibe_sim": 0.129,
+          "spotify_url": "https://open.spotify.com/search/Smoke%20Again%20Chance%20The%20Rapper"
+        },
+        {
+          "title": "Sedated",
+          "artist": "YoungBoy Never Broke Again",
+          "deezer_id": 1977706227,
+          "neural_sim": 0.4056,
+          "vibe_sim": 0.2206,
+          "spotify_url": "https://open.spotify.com/search/Sedated%20YoungBoy%20Never%20Broke%20Again"
+        },
+        {
+          "title": "Every Little Thing (Stripped)",
+          "artist": "Russell Dickerson",
+          "deezer_id": 940014122,
+          "neural_sim": 0.3843,
+          "vibe_sim": 0.2071,
+          "spotify_url": "https://open.spotify.com/search/Every%20Little%20Thing%20%28Stripped%29%20Russell%20Dickerson"
+        }
+      ],
+      "preview_status": 200,
+      "preview_has_url": true
+    },
+    {
+      "query": {
+        "title": "So What",
+        "artist": "Miles Davis"
+      },
+      "status": 200,
+      "latency_ms": 913.3735000068555,
+      "method": "dual_sonic64_guardrail",
+      "index_version": "2026.07.11-dual-sonic64",
+      "library_size": 272853,
+      "top5": [
+        {
+          "title": "Sun Star (Alternate Take Version)",
+          "artist": "John Coltrane",
+          "deezer_id": 62347552,
+          "neural_sim": 0.356,
+          "vibe_sim": 0.2018,
+          "spotify_url": "https://open.spotify.com/search/Sun%20Star%20%28Alternate%20Take%20Version%29%20John%20Coltrane"
+        },
+        {
+          "title": "Dexterity",
+          "artist": "Paul Chambers",
+          "deezer_id": 3232014,
+          "neural_sim": 0.3724,
+          "vibe_sim": 0.1501,
+          "spotify_url": "https://open.spotify.com/search/Dexterity%20Paul%20Chambers"
+        },
+        {
+          "title": "Visitation",
+          "artist": "Paul Chamber",
+          "deezer_id": 41659421,
+          "neural_sim": 0.3562,
+          "vibe_sim": 0.1696,
+          "spotify_url": "https://open.spotify.com/search/Visitation%20Paul%20Chamber"
+        },
+        {
+          "title": "Duo",
+          "artist": "Pharoah Sanders",
+          "deezer_id": 850219082,
+          "neural_sim": 0.3855,
+          "vibe_sim": 0.1532,
+          "spotify_url": "https://open.spotify.com/search/Duo%20Pharoah%20Sanders"
+        },
+        {
+          "title": "But Not For Me",
+          "artist": "Ahmad Jamal",
+          "deezer_id": 5726087,
+          "neural_sim": 0.479,
+          "vibe_sim": 0.1956,
+          "spotify_url": "https://open.spotify.com/search/But%20Not%20For%20Me%20Ahmad%20Jamal"
+        }
+      ],
+      "preview_status": 200,
+      "preview_has_url": true
+    },
+    {
+      "query": {
+        "title": "Titi Me Pregunto",
+        "artist": "Bad Bunny"
+      },
+      "status": 200,
+      "latency_ms": 935.8018999919295,
+      "method": "dual_sonic64_guardrail",
+      "index_version": "2026.07.11-dual-sonic64",
+      "library_size": 272853,
+      "top5": [
+        {
+          "title": "Narcotics",
+          "artist": "Dei V",
+          "deezer_id": 3279578161,
+          "neural_sim": 0.474,
+          "vibe_sim": 0.1525,
+          "spotify_url": "https://open.spotify.com/search/Narcotics%20Dei%20V"
+        },
+        {
+          "title": "Plastic Smile",
+          "artist": "Chronic Law",
+          "deezer_id": 925572192,
+          "neural_sim": 0.4468,
+          "vibe_sim": 0.164,
+          "spotify_url": "https://open.spotify.com/search/Plastic%20Smile%20Chronic%20Law"
+        },
+        {
+          "title": "Gato de Noche",
+          "artist": "Ñengo Flow",
+          "deezer_id": 2076598387,
+          "neural_sim": 0.542,
+          "vibe_sim": 0.1023,
+          "spotify_url": "https://open.spotify.com/search/Gato%20de%20Noche%20%C3%91engo%20Flow"
+        },
+        {
+          "title": "MARTINI",
+          "artist": "Lyanno",
+          "deezer_id": 2138831407,
+          "neural_sim": 0.3492,
+          "vibe_sim": 0.1647,
+          "spotify_url": "https://open.spotify.com/search/MARTINI%20Lyanno"
+        },
+        {
+          "title": "LA MELO EST DANS LA BOUNCE",
+          "artist": "Genezio",
+          "deezer_id": 3034516661,
+          "neural_sim": 0.5157,
+          "vibe_sim": 0.1823,
+          "spotify_url": "https://open.spotify.com/search/LA%20MELO%20EST%20DANS%20LA%20BOUNCE%20Genezio"
+        }
+      ],
+      "preview_status": 200,
+      "preview_has_url": true
+    }
+  ]
+}

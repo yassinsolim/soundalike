@@ -1,0 +1,1168 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-07-12",
+  "summary": {
+    "unique_urls": 190,
+    "http_200": 186,
+    "access_controlled_403": 2,
+    "stale_404": 2,
+    "corrected_stale_urls": 2,
+    "usable_with_corrections_or_access_control": 190
+  },
+  "records": [
+    {
+      "url": "http://www.koreaherald.com/view.php?ud=20201026001026",
+      "status": 200,
+      "final_url": "https://www.koreaherald.com/article/2460140",
+      "reachable": true
+    },
+    {
+      "url": "http://www.popmatters.com/pm/review/fergie-the-dutchess/",
+      "status": 404,
+      "final_url": "https://www.popmatters.com/pm/review/fergie-the-dutchess/",
+      "reachable": true
+    },
+    {
+      "url": "https://archive.org/details/spin-02-june-1985",
+      "status": 200,
+      "final_url": "https://archive.org/details/spin-02-june-1985",
+      "reachable": true
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Already_Gone_(Kelly_Clarkson_song)",
+      "status": 200,
+      "final_url": "https://en.wikipedia.org/wiki/Already_Gone_(Kelly_Clarkson_song)",
+      "reachable": true
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Are_You_Gonna_Be_My_Girl",
+      "status": 200,
+      "final_url": "https://en.wikipedia.org/wiki/Are_You_Gonna_Be_My_Girl",
+      "reachable": true
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Best_Song_Ever",
+      "status": 200,
+      "final_url": "https://en.wikipedia.org/wiki/Best_Song_Ever",
+      "reachable": true
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Born_This_Way_(song)",
+      "status": 200,
+      "final_url": "https://en.wikipedia.org/wiki/Born_This_Way_(song)",
+      "reachable": true
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Brave_(Sara_Bareilles_song)",
+      "status": 200,
+      "final_url": "https://en.wikipedia.org/wiki/Brave_(Sara_Bareilles_song)",
+      "reachable": true
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Come_as_You_Are_(Nirvana_song)",
+      "status": 200,
+      "final_url": "https://en.wikipedia.org/wiki/Come_as_You_Are_(Nirvana_song)",
+      "reachable": true
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Hail_to_the_King_(Avenged_Sevenfold_album)",
+      "status": 200,
+      "final_url": "https://en.wikipedia.org/wiki/Hail_to_the_King_(Avenged_Sevenfold_album)",
+      "reachable": true
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Halo_(Beyonc%C3%A9_song)",
+      "status": 200,
+      "final_url": "https://en.wikipedia.org/wiki/Halo_(Beyonc%C3%A9_song)",
+      "reachable": true
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Killing_an_Arab",
+      "status": 200,
+      "final_url": "https://en.wikipedia.org/wiki/Killing_an_Arab",
+      "reachable": true
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Last_Nite",
+      "status": 200,
+      "final_url": "https://en.wikipedia.org/wiki/Last_Nite",
+      "reachable": true
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Lust_for_Life_(Iggy_Pop_song)",
+      "status": 200,
+      "final_url": "https://en.wikipedia.org/wiki/Lust_for_Life_(Iggy_Pop_song)",
+      "reachable": true
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Mr._Brightside",
+      "status": 200,
+      "final_url": "https://en.wikipedia.org/wiki/Mr._Brightside",
+      "reachable": true
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Pump_It_Up_(Elvis_Costello_song)",
+      "status": 200,
+      "final_url": "https://en.wikipedia.org/wiki/Pump_It_Up_(Elvis_Costello_song)",
+      "reachable": true
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Warning_(Green_Day_song)",
+      "status": 200,
+      "final_url": "https://en.wikipedia.org/wiki/Warning_(Green_Day_song)",
+      "reachable": true
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Why_Don%27t_You_Get_a_Job%3F",
+      "status": 200,
+      "final_url": "https://en.wikipedia.org/wiki/Why_Don%27t_You_Get_a_Job%3F",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=05c905cf-152a-40b4-8c87-b0f15446371d&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=05c905cf-152a-40b4-8c87-b0f15446371d&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=0868857f-740f-47c1-a2c7-b6323c185c63&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=0868857f-740f-47c1-a2c7-b6323c185c63&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=184f97c1-a1f1-4fc5-bbca-74bb9e30cde5&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=184f97c1-a1f1-4fc5-bbca-74bb9e30cde5&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=245329cb-8cdb-43ba-8fe4-0b3e1aad8761&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=245329cb-8cdb-43ba-8fe4-0b3e1aad8761&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=2fb9bc6b-d4da-497e-ad3f-fabf12fe72cf&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=2fb9bc6b-d4da-497e-ad3f-fabf12fe72cf&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=3d3342ea-8c03-4fb9-976f-eb151bd68365&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=3d3342ea-8c03-4fb9-976f-eb151bd68365&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=41746834-4a27-42f5-b651-61ef0ca59549&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=41746834-4a27-42f5-b651-61ef0ca59549&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=42f6cca7-10c3-46b0-8028-b27ba4f2d596&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=42f6cca7-10c3-46b0-8028-b27ba4f2d596&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=4de2fca3-e37a-4399-b121-9c4a6cb298b5&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=4de2fca3-e37a-4399-b121-9c4a6cb298b5&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=4e9f954e-df92-40d9-b68d-8abcd4eae4da&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=4e9f954e-df92-40d9-b68d-8abcd4eae4da&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=5640e03c-af18-4d9c-8d68-60e2e99b16d4&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=5640e03c-af18-4d9c-8d68-60e2e99b16d4&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=5f6c748e-71cd-4389-af06-8439f4cfcecd&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=5f6c748e-71cd-4389-af06-8439f4cfcecd&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=63180294-3515-45e8-b418-72d04597ca35&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=63180294-3515-45e8-b418-72d04597ca35&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=642c3516-7866-447f-8e68-3535fd807fc8&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=642c3516-7866-447f-8e68-3535fd807fc8&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=73ef3aa2-fd28-4743-b8ce-de42ddf885bf&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=73ef3aa2-fd28-4743-b8ce-de42ddf885bf&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=78be434c-0908-458f-9693-f16cdebb68ef&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=78be434c-0908-458f-9693-f16cdebb68ef&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=7ea4728a-3cfb-4546-a651-7b27eaea9c48&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=7ea4728a-3cfb-4546-a651-7b27eaea9c48&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=801ddadc-62cc-424c-80c8-c5d819bff0f3&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=801ddadc-62cc-424c-80c8-c5d819bff0f3&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=842fbdae-8839-46e6-8a02-7f500a2b6597&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=842fbdae-8839-46e6-8a02-7f500a2b6597&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=87bf04f8-c29e-46e8-9ac4-6b2a7ce65154&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=87bf04f8-c29e-46e8-9ac4-6b2a7ce65154&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=8c712e50-1822-4caf-9eb1-6d9cf6f8556f&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=8c712e50-1822-4caf-9eb1-6d9cf6f8556f&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=8f667b90-a2a4-46ea-8806-e957ea78c7bd&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=8f667b90-a2a4-46ea-8806-e957ea78c7bd&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=9b792b2a-df4d-407e-aa19-532c4b9e0c81&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=9b792b2a-df4d-407e-aa19-532c4b9e0c81&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=9fb62336-68b7-43fa-a220-e7f3637c7cc5&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=9fb62336-68b7-43fa-a220-e7f3637c7cc5&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=a847bc14-7d8e-4009-ae3c-e7b60ecc71d3&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=a847bc14-7d8e-4009-ae3c-e7b60ecc71d3&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=adf44a12-e5f4-48aa-9029-b9ef4b5f1d6d&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=adf44a12-e5f4-48aa-9029-b9ef4b5f1d6d&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=b2750447-ef78-4089-8388-0b5b950e73ad&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=b2750447-ef78-4089-8388-0b5b950e73ad&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=bdcf8037-9584-4c0a-9782-141478385bbb&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=bdcf8037-9584-4c0a-9782-141478385bbb&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=cadde50b-8c42-4a16-af00-185fcc3827f4&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=cadde50b-8c42-4a16-af00-185fcc3827f4&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=cdfe8a75-28c0-4029-831b-e61257519f4a&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=cdfe8a75-28c0-4029-831b-e61257519f4a&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=d13a634b-9f69-4256-9415-b7e95aac101d&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=d13a634b-9f69-4256-9415-b7e95aac101d&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=d201070b-ff15-49ce-877b-f91032617faf&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=d201070b-ff15-49ce-877b-f91032617faf&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=d8721fd8-6f1c-4c6e-8b0e-52e9b88169fc&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=d8721fd8-6f1c-4c6e-8b0e-52e9b88169fc&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=dbad831a-7a9d-416e-9ef0-11e740fef6a0&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=dbad831a-7a9d-416e-9ef0-11e740fef6a0&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=ddfee9ee-aa94-48b7-b963-d0b69bef7c72&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=ddfee9ee-aa94-48b7-b963-d0b69bef7c72&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=e4b347be-ecb2-44ff-aaa8-3d4c517d7ea5&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=e4b347be-ecb2-44ff-aaa8-3d4c517d7ea5&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=e614e432-ca77-41c1-82c1-4e3a24ebbb0c&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=e614e432-ca77-41c1-82c1-4e3a24ebbb0c&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=f4d36326-da1b-4b43-af19-7113c2adb92d&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=f4d36326-da1b-4b43-af19-7113c2adb92d&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=fabedb70-a874-4078-bd17-4a8272ec62d0&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=fabedb70-a874-4078-bd17-4a8272ec62d0&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=feecff58-8ee2-4a7f-ac23-dc8ce7925286&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "status": 200,
+      "final_url": "https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbids=feecff58-8ee2-4a7f-ac23-dc8ce7925286&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/016d187f-0e11-4171-82e9-15f04fafa097",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/016d187f-0e11-4171-82e9-15f04fafa097",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/05c905cf-152a-40b4-8c87-b0f15446371d",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/05c905cf-152a-40b4-8c87-b0f15446371d",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/07d30250-a5a4-496f-9bd2-d0d8047d275b",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/07d30250-a5a4-496f-9bd2-d0d8047d275b",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/0868857f-740f-47c1-a2c7-b6323c185c63",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/0868857f-740f-47c1-a2c7-b6323c185c63",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/12db16d7-6541-4a3e-9fc1-fa1f27501bbb",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/12db16d7-6541-4a3e-9fc1-fa1f27501bbb",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/170dfa5d-0235-446d-9f3d-d235c01abc91",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/170dfa5d-0235-446d-9f3d-d235c01abc91",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/184f97c1-a1f1-4fc5-bbca-74bb9e30cde5",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/184f97c1-a1f1-4fc5-bbca-74bb9e30cde5",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/22507385-e68c-4885-a906-d8559795ead3",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/22507385-e68c-4885-a906-d8559795ead3",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/245329cb-8cdb-43ba-8fe4-0b3e1aad8761",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/245329cb-8cdb-43ba-8fe4-0b3e1aad8761",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/24dd7fe2-068b-456f-93f2-1eb5400f03dd",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/24dd7fe2-068b-456f-93f2-1eb5400f03dd",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/2fb9bc6b-d4da-497e-ad3f-fabf12fe72cf",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/2fb9bc6b-d4da-497e-ad3f-fabf12fe72cf",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/3d3342ea-8c03-4fb9-976f-eb151bd68365",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/3d3342ea-8c03-4fb9-976f-eb151bd68365",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/3e19df7a-3f9a-4d42-adbf-31867646f602",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/3e19df7a-3f9a-4d42-adbf-31867646f602",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/41746834-4a27-42f5-b651-61ef0ca59549",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/41746834-4a27-42f5-b651-61ef0ca59549",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/42f6cca7-10c3-46b0-8028-b27ba4f2d596",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/42f6cca7-10c3-46b0-8028-b27ba4f2d596",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/466ffbca-63c3-4769-a317-7050ce79c643",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/466ffbca-63c3-4769-a317-7050ce79c643",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/46bfc9d7-a4d9-4a1b-b1f6-0b23216229f2",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/46bfc9d7-a4d9-4a1b-b1f6-0b23216229f2",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/47125aa0-58c2-47d5-a8e9-25d9781b6fac",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/47125aa0-58c2-47d5-a8e9-25d9781b6fac",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/4b95928f-5bb5-433e-9b57-c6b275c12bd8",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/4b95928f-5bb5-433e-9b57-c6b275c12bd8",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/4de2fca3-e37a-4399-b121-9c4a6cb298b5",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/4de2fca3-e37a-4399-b121-9c4a6cb298b5",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/4e9f954e-df92-40d9-b68d-8abcd4eae4da",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/4e9f954e-df92-40d9-b68d-8abcd4eae4da",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/537f2df8-d1a6-4e22-9a6a-18393cdbb988",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/537f2df8-d1a6-4e22-9a6a-18393cdbb988",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/55cfb83f-adc1-4730-a71b-90b369fd3f84",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/55cfb83f-adc1-4730-a71b-90b369fd3f84",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/5640e03c-af18-4d9c-8d68-60e2e99b16d4",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/5640e03c-af18-4d9c-8d68-60e2e99b16d4",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/5a8f7959-6906-4672-ac64-f994e98976ae",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/5a8f7959-6906-4672-ac64-f994e98976ae",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/5d132952-d348-48dd-94ce-b42644ceeb2f",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/5d132952-d348-48dd-94ce-b42644ceeb2f",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/5e81a7b3-7cf3-49fc-b12a-bc2ee21741d9",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/5e81a7b3-7cf3-49fc-b12a-bc2ee21741d9",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/5f6c748e-71cd-4389-af06-8439f4cfcecd",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/5f6c748e-71cd-4389-af06-8439f4cfcecd",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/63180294-3515-45e8-b418-72d04597ca35",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/63180294-3515-45e8-b418-72d04597ca35",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/642c3516-7866-447f-8e68-3535fd807fc8",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/642c3516-7866-447f-8e68-3535fd807fc8",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/697eea7f-0067-496c-bc50-2921538e2cc4",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/697eea7f-0067-496c-bc50-2921538e2cc4",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/69eddd1e-edb3-459b-9012-9ae50a0aa0b8",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/69eddd1e-edb3-459b-9012-9ae50a0aa0b8",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/729cf505-94eb-4fbe-bc76-cbae44cff091",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/729cf505-94eb-4fbe-bc76-cbae44cff091",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/73ef3aa2-fd28-4743-b8ce-de42ddf885bf",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/73ef3aa2-fd28-4743-b8ce-de42ddf885bf",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/74f3b043-c0b4-4590-8c10-bfc4e3a06fef",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/74f3b043-c0b4-4590-8c10-bfc4e3a06fef",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/78be434c-0908-458f-9693-f16cdebb68ef",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/78be434c-0908-458f-9693-f16cdebb68ef",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/7d81daec-341a-4931-bec6-8b0f533254c3",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/7d81daec-341a-4931-bec6-8b0f533254c3",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/7ea4728a-3cfb-4546-a651-7b27eaea9c48",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/7ea4728a-3cfb-4546-a651-7b27eaea9c48",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/801ddadc-62cc-424c-80c8-c5d819bff0f3",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/801ddadc-62cc-424c-80c8-c5d819bff0f3",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/82a51cd9-d106-496b-867e-bde37fa99da9",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/82a51cd9-d106-496b-867e-bde37fa99da9",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/838007f9-4e8d-4698-8098-45877ac64e12",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/838007f9-4e8d-4698-8098-45877ac64e12",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/842fbdae-8839-46e6-8a02-7f500a2b6597",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/842fbdae-8839-46e6-8a02-7f500a2b6597",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/87bf04f8-c29e-46e8-9ac4-6b2a7ce65154",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/87bf04f8-c29e-46e8-9ac4-6b2a7ce65154",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/8c712e50-1822-4caf-9eb1-6d9cf6f8556f",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/8c712e50-1822-4caf-9eb1-6d9cf6f8556f",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/8f667b90-a2a4-46ea-8806-e957ea78c7bd",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/8f667b90-a2a4-46ea-8806-e957ea78c7bd",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/9160e42b-8fae-402d-9cee-d6826c5cce33",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/9160e42b-8fae-402d-9cee-d6826c5cce33",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/9b792b2a-df4d-407e-aa19-532c4b9e0c81",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/9b792b2a-df4d-407e-aa19-532c4b9e0c81",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/9fb62336-68b7-43fa-a220-e7f3637c7cc5",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/9fb62336-68b7-43fa-a220-e7f3637c7cc5",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/a1818245-54db-4881-86be-7ff3180c3e06",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/a1818245-54db-4881-86be-7ff3180c3e06",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/a63b1608-2ff9-4aa3-9947-2997fa45545c",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/a63b1608-2ff9-4aa3-9947-2997fa45545c",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/a6ff57e9-5ba8-4a32-8ac3-e5e8c42796dc",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/a6ff57e9-5ba8-4a32-8ac3-e5e8c42796dc",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/a847bc14-7d8e-4009-ae3c-e7b60ecc71d3",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/a847bc14-7d8e-4009-ae3c-e7b60ecc71d3",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/adf44a12-e5f4-48aa-9029-b9ef4b5f1d6d",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/adf44a12-e5f4-48aa-9029-b9ef4b5f1d6d",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/b2750447-ef78-4089-8388-0b5b950e73ad",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/b2750447-ef78-4089-8388-0b5b950e73ad",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/b3437bef-1592-4991-932e-e06987593263",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/b3437bef-1592-4991-932e-e06987593263",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/b39b7227-c271-4ab8-912b-cb1fe2fc0e5e",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/b39b7227-c271-4ab8-912b-cb1fe2fc0e5e",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/b503cb6f-ef3b-4e5e-8237-37f22810f484",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/b503cb6f-ef3b-4e5e-8237-37f22810f484",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/bd9fd6a1-d41b-4b82-9ead-a4f958749a77",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/bd9fd6a1-d41b-4b82-9ead-a4f958749a77",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/bdcf8037-9584-4c0a-9782-141478385bbb",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/bdcf8037-9584-4c0a-9782-141478385bbb",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/c181fb92-5699-43ee-9f6e-c7ddc338aea3",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/c181fb92-5699-43ee-9f6e-c7ddc338aea3",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/cadde50b-8c42-4a16-af00-185fcc3827f4",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/cadde50b-8c42-4a16-af00-185fcc3827f4",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/ccfdd180-22e1-49b9-bd81-b5fcf2c6474e",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/ccfdd180-22e1-49b9-bd81-b5fcf2c6474e",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/cdfe8a75-28c0-4029-831b-e61257519f4a",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/cdfe8a75-28c0-4029-831b-e61257519f4a",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/d13a634b-9f69-4256-9415-b7e95aac101d",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/d13a634b-9f69-4256-9415-b7e95aac101d",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/d1e0a99e-1894-457b-ba6a-985eeef4d0c4",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/d1e0a99e-1894-457b-ba6a-985eeef4d0c4",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/d201070b-ff15-49ce-877b-f91032617faf",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/d201070b-ff15-49ce-877b-f91032617faf",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/d871b5ab-0a48-4b93-95d7-be3e6a599248",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/d871b5ab-0a48-4b93-95d7-be3e6a599248",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/d8721fd8-6f1c-4c6e-8b0e-52e9b88169fc",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/d8721fd8-6f1c-4c6e-8b0e-52e9b88169fc",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/dbad831a-7a9d-416e-9ef0-11e740fef6a0",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/dbad831a-7a9d-416e-9ef0-11e740fef6a0",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/ddfee9ee-aa94-48b7-b963-d0b69bef7c72",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/ddfee9ee-aa94-48b7-b963-d0b69bef7c72",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/defbfcb2-7a5c-4456-be28-b7e5ccf92cc2",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/defbfcb2-7a5c-4456-be28-b7e5ccf92cc2",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/e232b26b-2100-4269-9f96-3f3f49c57c2d",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/e232b26b-2100-4269-9f96-3f3f49c57c2d",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/e3b7cd96-c41d-497a-b401-dc7494f638db",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/e3b7cd96-c41d-497a-b401-dc7494f638db",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/e4b347be-ecb2-44ff-aaa8-3d4c517d7ea5",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/e4b347be-ecb2-44ff-aaa8-3d4c517d7ea5",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/e614e432-ca77-41c1-82c1-4e3a24ebbb0c",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/e614e432-ca77-41c1-82c1-4e3a24ebbb0c",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/ebd67461-fbe7-4f48-a68a-0a57ee8a15c9",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/ebd67461-fbe7-4f48-a68a-0a57ee8a15c9",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/ef4c6855-949e-4e22-b41e-8e0a2d372d5f",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/ef4c6855-949e-4e22-b41e-8e0a2d372d5f",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/f4d36326-da1b-4b43-af19-7113c2adb92d",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/f4d36326-da1b-4b43-af19-7113c2adb92d",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/fabedb70-a874-4078-bd17-4a8272ec62d0",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/fabedb70-a874-4078-bd17-4a8272ec62d0",
+      "reachable": true
+    },
+    {
+      "url": "https://musicbrainz.org/recording/feecff58-8ee2-4a7f-ac23-dc8ce7925286",
+      "status": 200,
+      "final_url": "https://musicbrainz.org/recording/feecff58-8ee2-4a7f-ac23-dc8ce7925286",
+      "reachable": true
+    },
+    {
+      "url": "https://musictalkers.com/reviews/7960-review-last-train-home-john-mayer",
+      "status": 200,
+      "final_url": "https://musictalkers.com/reviews/7960-review-last-train-home-john-mayer",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/features/lists-and-guides/8726-the-top-100-tracks-of-2011/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/features/lists-and-guides/8726-the-top-100-tracks-of-2011/",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/reviews/albums/12511-friendly-fires/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/reviews/albums/12511-friendly-fires/",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/reviews/albums/1440-chicago-underground-quartet/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/reviews/albums/1440-chicago-underground-quartet/",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/reviews/albums/18284-partynextdoor-partynextdoor/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/reviews/albums/18284-partynextdoor-partynextdoor/",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/reviews/albums/18423-the-world-is-a-beautiful-place-i-am-no-longer-afra-whenever-if-ever/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/reviews/albums/18423-the-world-is-a-beautiful-place-i-am-no-longer-afra-whenever-if-ever/",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/reviews/albums/19094-the-war-on-drugs-lost-in-the-dream/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/reviews/albums/19094-the-war-on-drugs-lost-in-the-dream/",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/reviews/albums/19791-jhene-aiko-souled-out/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/reviews/albums/19791-jhene-aiko-souled-out/",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/reviews/albums/20253-reflection/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/reviews/albums/20253-reflection/",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/reviews/albums/billie-eilish-hit-me-hard-and-soft/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/reviews/albums/billie-eilish-hit-me-hard-and-soft/",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/reviews/albums/durand-jones-and-the-indications-american-love-call/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/reviews/albums/durand-jones-and-the-indications-american-love-call/",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/reviews/albums/iggy-azalea-in-my-defense/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/reviews/albums/iggy-azalea-in-my-defense/",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/reviews/albums/japanese-breakfast-soft-sounds-from-another-planet/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/reviews/albums/japanese-breakfast-soft-sounds-from-another-planet/",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/reviews/albums/king-gizzard-and-the-lizard-wizard-infest-the-rats-nest/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/reviews/albums/king-gizzard-and-the-lizard-wizard-infest-the-rats-nest/",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/reviews/albums/liam-gallagher-as-you-were/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/reviews/albums/liam-gallagher-as-you-were/",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/reviews/albums/maggie-rogers-heard-it-in-a-past-life/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/reviews/albums/maggie-rogers-heard-it-in-a-past-life/",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/reviews/albums/mgmt-little-dark-age/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/reviews/albums/mgmt-little-dark-age/",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/reviews/albums/nothing-dance-on-the-blacktop/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/reviews/albums/nothing-dance-on-the-blacktop/",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/reviews/albums/shygirl-alias-ep/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/reviews/albums/shygirl-alias-ep/",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/reviews/albums/sigrid-sucker-punch/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/reviews/albums/sigrid-sucker-punch/",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/reviews/albums/taylor-swift-lover/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/reviews/albums/taylor-swift-lover/",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/reviews/albums/theon-cross-fyah/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/reviews/albums/theon-cross-fyah/",
+      "reachable": true
+    },
+    {
+      "url": "https://pitchfork.com/reviews/tracks/vampire-weekend-harmony-hall/",
+      "status": 200,
+      "final_url": "https://pitchfork.com/reviews/tracks/vampire-weekend-harmony-hall/",
+      "reachable": true
+    },
+    {
+      "url": "https://variety.com/2021/music/album-reviews/brandi-carlile-in-these-silent-days-album-review-1235078811/",
+      "status": 200,
+      "final_url": "https://variety.com/2021/music/album-reviews/brandi-carlile-in-these-silent-days-album-review-1235078811/",
+      "reachable": true
+    },
+    {
+      "url": "https://web.archive.org/web/20130819004132/http://www.rollingstone.com/music/news/pete-townshend-responds-to-furious-one-direction-fans-20130816",
+      "status": 200,
+      "final_url": "https://web.archive.org/web/20130819004132/http://www.rollingstone.com/music/news/pete-townshend-responds-to-furious-one-direction-fans-20130816",
+      "reachable": true
+    },
+    {
+      "url": "https://web.archive.org/web/20181029112329/http://english.yonhapnews.co.kr/kwave/2018/06/07/3001000000AEN20180607008500315.html",
+      "status": 200,
+      "final_url": "https://web.archive.org/web/20181029112329/http://english.yonhapnews.co.kr/kwave/2018/06/07/3001000000AEN20180607008500315.html",
+      "reachable": true
+    },
+    {
+      "url": "https://www.allmusic.com/album/the-back-room-mw0000362641",
+      "status": 403,
+      "final_url": "https://www.allmusic.com/album/the-back-room-mw0000362641",
+      "reachable": true
+    },
+    {
+      "url": "https://www.avclub.com/screw-the-strokes-how-the-dandy-warhols-kick-started-t-1798238625",
+      "status": 200,
+      "final_url": "https://www.avclub.com/screw-the-strokes-how-the-dandy-warhols-kick-started-t-1798238625",
+      "reachable": true
+    },
+    {
+      "url": "https://www.bbc.co.uk/music/reviews/pp4h",
+      "status": 200,
+      "final_url": "https://www.bbc.co.uk/music/reviews/pp4h/",
+      "reachable": true
+    },
+    {
+      "url": "https://www.billboard.com/articles/news/list/9395318/best-songs-of-2020-top-50-so-far",
+      "status": 200,
+      "final_url": "https://www.billboard.com/media/lists/best-songs-of-2020-top-50-so-far-9395318/",
+      "reachable": true
+    },
+    {
+      "url": "https://www.billboard.com/music/music-news/red-velvet-dumb-mv-red-album-6692444/",
+      "status": 200,
+      "final_url": "https://www.billboard.com/music/music-news/red-velvet-dumb-mv-red-album-6692444/",
+      "reachable": true
+    },
+    {
+      "url": "https://www.clashmusic.com/reviews/arctic-monkeys-live-at-the-fillmore-miami-beach/",
+      "status": 200,
+      "final_url": "https://www.clashmusic.com/live/arctic-monkeys-live-at-the-fillmore-miami-beach/",
+      "reachable": true
+    },
+    {
+      "url": "https://www.dailylobo.com/article/2003/07/maroon_5_falls_short_of_their_influences",
+      "status": 200,
+      "final_url": "https://www.dailylobo.com/article/2003/07/maroon_5_falls_short_of_their_influences",
+      "reachable": true
+    },
+    {
+      "url": "https://www.dailytelegraph.com.au/entertainment/music/ragnbone-man-looks-here-to-stay/news-story/beed90ee80446fe58652d9fc36ca6528",
+      "status": 403,
+      "final_url": "https://www.dailytelegraph.com.au/entertainment/music/ragnbone-man-looks-here-to-stay/news-story/beed90ee80446fe58652d9fc36ca6528",
+      "reachable": true
+    },
+    {
+      "url": "https://www.digitalspy.com/music/single-reviews/a215297/taio-cruz-ft-keha-dirty-picture-215297/",
+      "status": 200,
+      "final_url": "https://www.digitalspy.com/music/single-reviews/a215297/taio-cruz-ft-keha-dirty-picture-215297/",
+      "reachable": true
+    },
+    {
+      "url": "https://www.euphoriazine.com/blog/2022/07/covers-james-bay/",
+      "status": 200,
+      "final_url": "https://www.euphoriazine.com/blog/2022/07/covers-james-bay/",
+      "reachable": true
+    },
+    {
+      "url": "https://www.independent.co.uk/arts-entertainment/music/reviews/rina-sawayama-album-review-bad-friend-dynasty-a9468046.html",
+      "status": 200,
+      "final_url": "https://www.independent.co.uk/arts-entertainment/music/reviews/rina-sawayama-album-review-bad-friend-dynasty-a9468046.html",
+      "reachable": true
+    },
+    {
+      "url": "https://www.latimes.com/archives/la-xpm-1985-06-04-ca-6699-story.html",
+      "status": 200,
+      "final_url": "https://www.latimes.com/archives/la-xpm-1985-06-04-ca-6699-story.html",
+      "reachable": true
+    },
+    {
+      "url": "https://www.nme.com/features/music-interviews/fontaines-d-c-grian-chatten-interview-at-home-romance-favourite-new-album-3784142",
+      "status": 200,
+      "final_url": "https://www.nme.com/features/music-interviews/fontaines-d-c-grian-chatten-interview-at-home-romance-favourite-new-album-3784142",
+      "reachable": true
+    },
+    {
+      "url": "https://www.nytimes.com/2012/10/16/arts/music/jason-aldeans-night-train-sky-ferreiras-ghost.html",
+      "status": 200,
+      "final_url": "https://www.nytimes.com/2012/10/16/arts/music/jason-aldeans-night-train-sky-ferreiras-ghost.html",
+      "reachable": true
+    },
+    {
+      "url": "https://www.nytimes.com/interactive/2019/12/18/arts/music/my-chemical-romance-black-parade.html",
+      "status": 200,
+      "final_url": "https://www.nytimes.com/interactive/2019/12/18/arts/music/my-chemical-romance-black-parade.html",
+      "reachable": true
+    },
+    {
+      "url": "https://www.rollingstone.com/music/music-features/chris-stapleton-starting-over-1052956/",
+      "status": 200,
+      "final_url": "https://www.rollingstone.com/music/music-features/chris-stapleton-starting-over-1052956/",
+      "reachable": true
+    },
+    {
+      "url": "https://www.rollingstone.com/music/music-news/hold-it-against-me-is-primo-britney-94558/",
+      "status": 200,
+      "final_url": "https://www.rollingstone.com/music/music-news/hold-it-against-me-is-primo-britney-94558/",
+      "reachable": true
+    },
+    {
+      "url": "https://www.slantmagazine.com/music/ciara-goodies/",
+      "status": 200,
+      "final_url": "https://www.slantmagazine.com/music/ciara-goodies/",
+      "reachable": true
+    },
+    {
+      "url": "https://www.slantmagazine.com/music/haim-days-are-gone/",
+      "status": 200,
+      "final_url": "https://www.slantmagazine.com/music/haim-days-are-gone/",
+      "reachable": true
+    },
+    {
+      "url": "https://www.spin.com/2013/07/girl-talk-kanye-marilyn-manson-mashup/",
+      "status": 200,
+      "final_url": "https://www.spinmagazine.com/2013/07/girl-talk-kanye-marilyn-manson-mashup/",
+      "reachable": true
+    },
+    {
+      "url": "https://www.spin.com/2016/01/rihanna-anti-impulsive-reviews-tidal-leak/",
+      "status": 200,
+      "final_url": "https://www.spinmagazine.com/2016/01/rihanna-anti-impulsive-reviews-tidal-leak/",
+      "reachable": true
+    },
+    {
+      "url": "https://www.theguardian.com/music/2012/nov/12/how-we-made-town-malice",
+      "status": 200,
+      "final_url": "https://www.theguardian.com/music/2012/nov/12/how-we-made-town-malice",
+      "reachable": true
+    },
+    {
+      "url": "https://www.theguardian.com/music/2015/may/22/the-playlist-pop-emmi-little-mix-pyco-and-more",
+      "status": 200,
+      "final_url": "https://www.theguardian.com/music/2015/may/22/the-playlist-pop-emmi-little-mix-pyco-and-more",
+      "reachable": true
+    },
+    {
+      "url": "https://www.theguardian.com/music/2018/apr/02/hall-and-oates-how-we-made-i-cant-go-for-that-no-can-do",
+      "status": 404,
+      "final_url": "https://www.theguardian.com/music/2018/apr/02/hall-and-oates-how-we-made-i-cant-go-for-that-no-can-do",
+      "reachable": true
+    },
+    {
+      "url": "https://www.uncut.co.uk/reviews/muse-resistance-5653/",
+      "status": 200,
+      "final_url": "https://www.uncut.co.uk/reviews/muse-resistance-5653/",
+      "reachable": true
+    },
+    {
+      "url": "https://www.vice.com/en/article/landfill-indie-johnny-borrell-razorlight-the-strokes-kooks-definitive-history/",
+      "status": 200,
+      "final_url": "https://www.vice.com/en/article/landfill-indie-johnny-borrell-razorlight-the-strokes-kooks-definitive-history/",
+      "reachable": true
+    }
+  ],
+  "corrections": [
+    {
+      "stale_url": "https://www.theguardian.com/music/2018/apr/02/hall-and-oates-how-we-made-i-cant-go-for-that-no-can-do",
+      "replacement_url": "https://www.theguardian.com/music/2018/apr/02/hall-and-oates-how-we-made-i-cant-go-for-that-no-can-do-interview",
+      "replacement_status": 200,
+      "reason": "Guardian canonical slug changed after benchmark freeze."
+    },
+    {
+      "stale_url": "http://www.popmatters.com/pm/review/fergie-the-dutchess/",
+      "replacement_url": "https://web.archive.org/web/20090217042503id_/http://www.popmatters.com/pm/review/fergie-the-dutchess",
+      "replacement_status": 200,
+      "reason": "Original publisher URL is no longer live; archived named-critic review preserves the cited text."
+    }
+  ]
+}

@@ -288,48 +288,63 @@ genuinely scene-coherent picks. For example, *So What* by Miles Davis returns Br
 Morgan and Ahmad Jamal; *Your Hand in Mine* by Explosions in the Sky returns If These Trees Could
 Talk, This Will Destroy You and Mono; *Ditto* by NewJeans returns CHUU and LOONA.
 
-### Real-world retrieval benchmark and pretrained sonic retrieval
+### Real-world retrieval benchmark and the failed final audio test
 
-The version-4 benchmark keeps all 93 sourced relationships auditable, but only its final 20
-credible **pure-sonic** pairs decide retrieval. Samples/interpolations, legal disputes,
-covers/remixes, and weak listicles remain diagnostic-only. The final artists are disjoint from
-all development/validation artists, and the audit rejects indirect graph-component leakage.
+Version 5 freezes **107 Category-A musical-similarity pairs** across 85 named scenes. It includes
+popular, deep-cut, and niche music, short source excerpts, URLs, access dates, source classes, and
+category rationales. The 67-pair development split and 40-pair FINAL split are separated by
+connected artist components; all previous held-out rows are development-only. The FINAL manifest
+and four target-agnostic baseline rankings were SHA-256 frozen before any iteration-4 training.
+The protocol locked one method and allowed exactly one final opening. Its finalized state binds the
+winner-ranking hash and is sealed by a detached Ed25519 signature whose private key was destroyed.
 
-The raw local encoder remains honestly weak. On the real 272,853-song index it scores only
-`0.0300` primary. The frozen production path has one Recall@50 hit; the selected system has two:
+The predeclared primary metric emphasizes useful ranks:
+`mean(NDCG@10, MRR, Recall@10)`. Iteration 4 trained and indexed the complete 272,853-song
+catalogue with three new audio models (cross-artist FMA supervised contrastive, FMA BYOL, and
+EfficientNet/CLAP audio distillation), a 3-window MaxSim index, and an audio-only reranker trained
+on 3,967 independent listening-similarity pairs after excluding every benchmark artist.
 
-| Final held-out pure-sonic metric | Frozen production | Dual-Sonic64 |
+DEV favored a learned audio head plus a rank-stratified multi-representation tail:
+
+| Development Category-A metric | Frozen production | Locked audio method |
 |---|---:|---:|
-| Recall@20 | 0.0500 | 0.0500 |
-| Recall@50 | 0.0500 | **0.1000** |
-| MRR | 0.0063 | 0.0059 |
-| Primary (`0.5 × R@50 + 0.5 × MRR`) | 0.0281 | **0.0529** |
+| Recall@10 | 0.02985 | **0.04478** |
+| Recall@50 | 0.02985 | **0.07463** |
+| MRR | 0.00485 | **0.01254** |
+| Primary | 0.01506 | **0.02558** |
 
-That is an **+88.3% relative primary gain** with no manual-judgment blend. One existing hit moves
-from rank 8 to 11 while a new hit enters at rank 37, so Recall@50 doubles. No scene contribution
-regresses by more than 3.1%. The pair bootstrap is wide (absolute-delta 95% interval
-−0.0026..0.0770; 63.9% positive), and the suite was reused to compare sequential challengers, so
-this is evidence that clears the frozen +20% engineering threshold—not a population-significance
-claim.
+That DEV gain was +69.9% with no worsened pair and a paired-bootstrap primary-delta interval of
+**0.000116..0.028508**. Candidate diagnostics also showed why simpler models failed: SupCon and
+BYOL almost never put the counterpart inside the first 1,000 candidates; distillation reached
+candidate Recall@1000 0.145 but no top-50 hit.
 
-Dual-Sonic64 combines compressed EfficientNet and calibrated LAION-CLAP spectrogram embeddings
-with source-independent Wikipedia song-article priors. It preserves the reviewed guarded top five,
-appends the quality-filtered baseline top ten as a regression guardrail, then fills the tail from
-the learned candidate order. Direct judgments are **17/20** on both the retained UX set and the
-final 20 seeds versus **11/20** for the original baseline; they remain secondary evidence.
+The untouched FINAL set was then opened once. It **failed** the predeclared acceptance criteria:
 
-PANNs Cnn14, VGGish, eight-vector late interaction, chroma-FFT DSP, CLAP title/artist text,
-hard-negative metric learning, and pageview-heavy learned reranking all failed to improve the
-final deciding score and are recorded rather than hidden.
+| Once-opened FINAL (40 pairs) | R@10 | R@20 | R@50 | MRR | Primary |
+|---|---:|---:|---:|---:|---:|
+| Pre-goal production | 0 | 0 | 0 | 0 | 0 |
+| Iteration-3 deployed | 0 | 0 | 0.025 | 0.000833 | 0.000278 |
+| Raw encoder | 0 | 0 | 0 | 0 | 0 |
+| All-priors-zero audio ablation | **0.025** | **0.025** | **0.025** | **0.003125** | **0.012004** |
+| Locked iteration-4 method | 0 | 0.025 | 0.025 | 0.001786 | 0.000595 |
 
-Independent validation remains disjoint and is never a ranking feature. ListenBrainz agreement
-moves 0.1389→0.1611 (delta CI −0.0333..0.0722) and Deezer 0.0667→0.0833
-(0.0000..0.0333): improved point estimates, statistically equivalent within uncertainty.
-The production deployment at <https://soundalike.yassin.app> reports
-`dual_sonic64_guardrail` / `2026.07.11-dual-sonic64`; 12 diverse live searches,
-recommendations, and fresh preview lookups passed.
-Full ranked outputs, negative results, source categories, resource measurements, and reproduce
-commands are in `.goals/human-quality-recommendations/artifacts/` and the case study.
+The locked method improved only one pair, at rank 14. Its paired primary-delta 95% interval was
+**0..0.001786**, so it includes zero; the required meaningful-count and confidence checks fail.
+The scene guardrail passed only because every frozen production scene contribution was zero.
+The zero production denominator also makes a relative-gain headline meaningless. The direct
+all-priors-zero audio ablation was stronger at useful ranks, but it too moved only one pair and is
+not sufficient evidence to ship. The locked research package would total 508,847,827 bytes; cold
+load was 10.86 s and process RSS reached 2.85 GB (2.21 GB delta), too close to the hosted 3 GB limit
+to justify a speculative release. Local ranking averaged 79.2 ms (p95 92.1 ms).
+
+Accordingly, **no iteration-4 retrieval method was deployed and no completion claim is made**.
+Production remains the previously reviewed `dual_sonic64_guardrail` because its guarded top five
+retained 17/20 direct UX passes; that is a secondary manual-UX result, not proof of retrieval gain.
+Independent ListenBrainz/Deezer validation from iteration 3 remains statistically equivalent.
+The live site still reports `2026.07.11-dual-sonic64`; previews and search were not changed.
+
+The frozen protocol, exact DEV/FINAL reports, source records, negative findings, and hashes are in
+`.goals/human-quality-recommendations/` and the case study.
 
 ### Growing the library past the bundle limit
 
@@ -640,9 +655,10 @@ pytest -q
 - [x] **Recommendation benchmark** — label-free precision/coverage metrics + measured library-size trade-off
 - [x] **Diversity + multi-seed** — MMR re-ranking, per-artist caps, and blend several songs into one taste
 - [x] **Web app + right-click integration** — `soundalike serve` (paste a song / Spotify "Copy Song Link" → instant soundalikes) and a Spicetify extension for an in-app right-click menu
-- [x] **Categorized real-world benchmark** — 93 sourced pairs separate pure-sonic and diagnostic relationships, with a 20-pair final artist-disjoint split, transitive graph audit, frozen 272,853-song outputs, and pair bootstrap uncertainty
-- [x] **Pretrained sonic retrieval** — dual PCA64 EfficientNet/CLAP retrieval lifts final pure-sonic primary 0.0281→0.0529 (+88.3%) while the guarded top five retains 17/20 direct passes
-- [x] **Desktop/hosted Dual-Sonic64 parity** — the 299 MB checksum-pinned release index carries both 64-d matrices and source-independent priors; numpy serving paths expose the active method/version and have exact parity tests
+- [x] **Once-opened retrieval protocol** — 107 Category-A pairs, 85 scenes, a 40-pair artist-component-disjoint FINAL split, frozen baseline rankings, SHA-256 state, and a machine-enforced single opening
+- [x] **Substantial audio experiments** — FMA SupCon, FMA BYOL, audio-teacher distillation, independent-pair metric learning, and multi-window late interaction all indexed and tested on 272,853 songs; negative results are retained
+- [x] **Honest final rejection** — DEV improved, but FINAL moved one pair with a confidence interval touching zero; no iteration-4 method was shipped
+- [x] **Desktop/hosted Dual-Sonic64 parity** — retained as the prior manual-UX behavior, not described as a statistically established retrieval improvement
 - [ ] Inline audio previews in the web UI
 
 Contributions welcome — this is meant to be community-built.
