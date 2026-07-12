@@ -1,0 +1,460 @@
+{
+  "schema_version": 1,
+  "source": "MusicBrainz community tags with audio-nearest propagation",
+  "asset_sha256": "d8ef2158373f226194ffcc9c8d87d45f902be4c109be81f6f8a2fe2c0d959ccf",
+  "genre_blending_selection": "All opened v6 pairs whose source scene contains /, fusion, blend, hyperpop, digicore, or crunk; no artist-specific selection.",
+  "records": [
+    {
+      "query": "Nirvana",
+      "candidate": "Killing Joke",
+      "record_id": "DEV-OPENED-DEV-L002",
+      "scene": "grunge/post-punk"
+    },
+    {
+      "query": "The Beatles",
+      "candidate": "The Offspring",
+      "record_id": "DEV-OPENED-DEV-L003",
+      "scene": "pop/ska-punk"
+    },
+    {
+      "query": "Green Day",
+      "candidate": "The Kinks",
+      "record_id": "DEV-OPENED-DEV-L005",
+      "scene": "punk-rock/classic-rock"
+    },
+    {
+      "query": "The Killers",
+      "candidate": "David Bowie",
+      "record_id": "DEV-OPENED-DEV-L006",
+      "scene": "indie-rock/glam-rock"
+    },
+    {
+      "query": "One Direction",
+      "candidate": "The Who",
+      "record_id": "DEV-OPENED-DEV-L008",
+      "scene": "boy-band-pop/classic-rock"
+    },
+    {
+      "query": "The Strokes",
+      "candidate": "Tom Petty and the Heartbreakers",
+      "record_id": "DEV-OPENED-DEV-L009",
+      "scene": "indie/heartland-rock"
+    },
+    {
+      "query": "Mariya Takeuchi",
+      "candidate": "Yubin",
+      "record_id": "DEV-OPENED-DEV-L011",
+      "scene": "city-pop/k-pop"
+    },
+    {
+      "query": "Beyoncé",
+      "candidate": "Kelly Clarkson",
+      "record_id": "DEV-OPENED-DEV-L012",
+      "scene": "r&b/pop"
+    },
+    {
+      "query": "The Weeknd",
+      "candidate": "Rod Stewart",
+      "record_id": "DEV-OPENED-DEV-L013",
+      "scene": "synthwave/r&b-pop"
+    },
+    {
+      "query": "Arctic Monkeys",
+      "candidate": "Black Sabbath",
+      "record_id": "DEV-OPENED-DEV-L014",
+      "scene": "desert-rock/heavy-metal"
+    },
+    {
+      "query": "The Jam",
+      "candidate": "The Supremes",
+      "record_id": "DEV-OPENED-DEV-L015",
+      "scene": "mod-revival/motown"
+    },
+    {
+      "query": "Michael Jackson",
+      "candidate": "Daryl Hall & John Oates",
+      "record_id": "DEV-OPENED-DEV-L016",
+      "scene": "post-disco/synth-funk"
+    },
+    {
+      "query": "TWICE",
+      "candidate": "Dua Lipa",
+      "record_id": "DEV-OPENED-DEV-L017",
+      "scene": "k-pop/synthwave-pop"
+    },
+    {
+      "query": "Fontaines D.C.",
+      "candidate": "The La's",
+      "record_id": "DEV-OPENED-DEV-L019",
+      "scene": "jangle-pop/post-punk"
+    },
+    {
+      "query": "My Chemical Romance",
+      "candidate": "Slade",
+      "record_id": "DEV-OPENED-DEV-L020",
+      "scene": "emo/glam-rock"
+    },
+    {
+      "query": "M83",
+      "candidate": "The Smashing Pumpkins",
+      "record_id": "DEV-OPENED-DEV-L021",
+      "scene": "synth-pop/dream-pop"
+    },
+    {
+      "query": "HAIM",
+      "candidate": "Carly Rae Jepsen",
+      "record_id": "DEV-OPENED-DEV-L022",
+      "scene": "soft-rock/pop"
+    },
+    {
+      "query": "Muse",
+      "candidate": "Blondie",
+      "record_id": "DEV-OPENED-DEV-L023",
+      "scene": "alternative/glam-rock"
+    },
+    {
+      "query": "Elvis Costello and the Attractions",
+      "candidate": "Bob Dylan",
+      "record_id": "DEV-OPENED-DEV-L024",
+      "scene": "new-wave/folk-rock"
+    },
+    {
+      "query": "Britney Spears",
+      "candidate": "AC/DC",
+      "record_id": "DEV-OPENED-DEV-L025",
+      "scene": "dance-pop/hard-rock"
+    },
+    {
+      "query": "Chris Stapleton",
+      "candidate": "Willie Nelson",
+      "record_id": "DEV-OPENED-DEV-L026",
+      "scene": "country/folk"
+    },
+    {
+      "query": "John Mayer",
+      "candidate": "Toto",
+      "record_id": "DEV-OPENED-DEV-L028",
+      "scene": "soft-rock/synth-pop"
+    },
+    {
+      "query": "Maroon 5",
+      "candidate": "Stevie Wonder",
+      "record_id": "DEV-OPENED-DEV-L029",
+      "scene": "pop-rock/funk"
+    },
+    {
+      "query": "Rag'n'Bone Man",
+      "candidate": "Hozier",
+      "record_id": "DEV-OPENED-DEV-L030",
+      "scene": "soul/indie-rock"
+    },
+    {
+      "query": "Rihanna",
+      "candidate": "Etta James",
+      "record_id": "DEV-OPENED-DEV-L031",
+      "scene": "r&b/soul"
+    },
+    {
+      "query": "Taio Cruz",
+      "candidate": "Benny Benassi",
+      "record_id": "DEV-OPENED-DEV-L032",
+      "scene": "dance-pop/electro-house"
+    },
+    {
+      "query": "The Dandy Warhols",
+      "candidate": "The Rolling Stones",
+      "record_id": "DEV-OPENED-DEV-L033",
+      "scene": "garage-rock/classic-rock"
+    },
+    {
+      "query": "Red Velvet",
+      "candidate": "Jessie J feat. Ariana Grande & Nicki Minaj",
+      "record_id": "DEV-OPENED-DEV-L034",
+      "scene": "k-pop/brassy-pop"
+    },
+    {
+      "query": "Harry Styles",
+      "candidate": "James Bay",
+      "record_id": "DEV-OPENED-DEV-L035",
+      "scene": "synth-pop/indie-rock"
+    },
+    {
+      "query": "Fifth Harmony feat. Kid Ink",
+      "candidate": "Jason Derulo feat. 2 Chainz",
+      "record_id": "DEV-OPENED-DEV-L036",
+      "scene": "pop/horn-driven-r&b"
+    },
+    {
+      "query": "Vampire Weekend",
+      "candidate": "Grateful Dead",
+      "record_id": "DEV-OPENED-DEV-L037",
+      "scene": "indie-rock/jam-rock"
+    },
+    {
+      "query": "Ciara feat. Petey Pablo",
+      "candidate": "Usher feat. Lil Jon & Ludacris",
+      "record_id": "DEV-OPENED-DEV-L038",
+      "scene": "crunk-r&b"
+    },
+    {
+      "query": "The Smiths",
+      "candidate": "Bo Diddley",
+      "record_id": "DEV-OPENED-DEV-L039",
+      "scene": "post-punk/r&b-rhythm"
+    },
+    {
+      "query": "Little Mix",
+      "candidate": "Whitney Houston",
+      "record_id": "DEV-OPENED-DEV-L040",
+      "scene": "girl-group-pop/eighties-pop"
+    },
+    {
+      "query": "Rina Sawayama",
+      "candidate": "Justin Timberlake",
+      "record_id": "DEV-OPENED-DEV-L041",
+      "scene": "alternative-pop/r&b-rock"
+    },
+    {
+      "query": "Sky Ferreira",
+      "candidate": "Yes",
+      "record_id": "DEV-OPENED-DEV-L042",
+      "scene": "electropop/art-rock"
+    },
+    {
+      "query": "Brandi Carlile feat. Lucius",
+      "candidate": "Joni Mitchell",
+      "record_id": "DEV-OPENED-DEV-L043",
+      "scene": "acoustic-pop/folk"
+    },
+    {
+      "query": "Kanye West",
+      "candidate": "Marilyn Manson",
+      "record_id": "DEV-OPENED-DEV-L051",
+      "scene": "industrial-rap/rock"
+    },
+    {
+      "query": "Friendly Fires",
+      "candidate": "Depeche Mode",
+      "record_id": "DEV-OPENED-DEV-P021",
+      "scene": "dance-rock/new-wave"
+    },
+    {
+      "query": "Chicago Underground Quartet",
+      "candidate": "Dizzy Gillespie",
+      "record_id": "DEV-OPENED-DEV-P029",
+      "scene": "avant-jazz/bebop"
+    },
+    {
+      "query": "The World Is A Beautiful Place & I Am No Longer Afraid To Die",
+      "candidate": "American Football",
+      "record_id": "DEV-OPENED-DEV-P055",
+      "scene": "emo/post-rock"
+    },
+    {
+      "query": "Jhene Aiko",
+      "candidate": "The Brothers Johnson",
+      "record_id": "DEV-OPENED-DEV-P063",
+      "scene": "neo-soul/funk"
+    },
+    {
+      "query": "King Gizzard & The Lizard Wizard",
+      "candidate": "Deep Purple",
+      "record_id": "DEV-OPENED-DEV-P140",
+      "scene": "thrash/hard-rock"
+    },
+    {
+      "query": "Nothing",
+      "candidate": "Dinosaur Jr.",
+      "record_id": "DEV-OPENED-DEV-P160",
+      "scene": "shoegaze/alternative-rock"
+    },
+    {
+      "query": "Shygirl",
+      "candidate": "DMX",
+      "record_id": "DEV-OPENED-DEV-P165",
+      "scene": "club/hip-hop"
+    },
+    {
+      "query": "PinkPantheress",
+      "candidate": "Steve Lacy",
+      "record_id": "DEV-OPENED-FINAL-LB016",
+      "scene": "uk-garage/bedroom-pop"
+    },
+    {
+      "query": "Grimes",
+      "candidate": "Charli xcx",
+      "record_id": "DEV-OPENED-FINAL-LB031",
+      "scene": "electropop/hyperpop"
+    },
+    {
+      "query": "Joji",
+      "candidate": "Tyler, The Creator feat. Kali Uchis",
+      "record_id": "DEV-OPENED-FINAL-LB040",
+      "scene": "alternative-rnb/hip-hop"
+    },
+    {
+      "query": "100 gecs",
+      "candidate": "femtanyl",
+      "record_id": "FINAL-FRESH-046",
+      "scene": "hyperpop-digicore"
+    },
+    {
+      "query": "SOPHIE",
+      "candidate": "Caroline Polachek",
+      "record_id": "FINAL-FRESH-047",
+      "scene": "hyperpop-digicore"
+    },
+    {
+      "query": "A. G. Cook",
+      "candidate": "Danny L Harle",
+      "record_id": "FINAL-FRESH-048",
+      "scene": "hyperpop-digicore"
+    },
+    {
+      "query": "underscores",
+      "candidate": "Jane Remover",
+      "record_id": "FINAL-FRESH-049",
+      "scene": "hyperpop-digicore"
+    },
+    {
+      "query": "food house",
+      "candidate": "Gupi",
+      "record_id": "FINAL-FRESH-050",
+      "scene": "hyperpop-digicore"
+    },
+    {
+      "query": "Alice Longyu Gao",
+      "candidate": "Fraxiom",
+      "record_id": "FINAL-FRESH-051",
+      "scene": "hyperpop-digicore"
+    }
+  ],
+  "selected_policy_threshold": 0.0,
+  "selected_policy": {
+    "coverage": {
+      "catalogue_artists": 18258,
+      "direct_tag_artists": 208,
+      "direct_tag_fraction": 0.011392266403768211,
+      "propagated_artists": 18050,
+      "covered_artists": 18258,
+      "covered_fraction": 1.0
+    },
+    "false_exclusions": {
+      "threshold": 0.0,
+      "supplied_pairs": 54,
+      "evaluated_pairs": 47,
+      "unresolved_pairs": 7,
+      "count": 0,
+      "rate": 0.0,
+      "pairs": []
+    },
+    "source": {
+      "cache": "ml_data\\iteration7\\musicbrainz-tag-cache.json",
+      "graph_source_independent": true,
+      "provider": "MusicBrainz community artist tags",
+      "relationship": "independent scene/style metadata",
+      "used_by_catalog_graph": false,
+      "used_by_graph_or_benchmark": false,
+      "used_by_music4all": false,
+      "uses_lastfm": false,
+      "uses_music4all": false
+    }
+  },
+  "diagnostic_threshold_0_15": {
+    "coverage": {
+      "catalogue_artists": 18258,
+      "direct_tag_artists": 208,
+      "direct_tag_fraction": 0.011392266403768211,
+      "propagated_artists": 18050,
+      "covered_artists": 18258,
+      "covered_fraction": 1.0
+    },
+    "false_exclusions": {
+      "threshold": 0.15,
+      "supplied_pairs": 54,
+      "evaluated_pairs": 47,
+      "unresolved_pairs": 7,
+      "count": 3,
+      "rate": 0.06382978723404255,
+      "pairs": [
+        {
+          "query": "Kanye West",
+          "candidate": "Marilyn Manson",
+          "overlap": 0.12582600116729736
+        },
+        {
+          "query": "Shygirl",
+          "candidate": "DMX",
+          "overlap": 0.09347105026245117
+        },
+        {
+          "query": "100 gecs",
+          "candidate": "femtanyl",
+          "overlap": 0.0
+        }
+      ]
+    },
+    "source": {
+      "cache": "ml_data\\iteration7\\musicbrainz-tag-cache.json",
+      "graph_source_independent": true,
+      "provider": "MusicBrainz community artist tags",
+      "relationship": "independent scene/style metadata",
+      "used_by_catalog_graph": false,
+      "used_by_graph_or_benchmark": false,
+      "used_by_music4all": false,
+      "uses_lastfm": false,
+      "uses_music4all": false
+    }
+  },
+  "diagnostic_threshold_0_25": {
+    "coverage": {
+      "catalogue_artists": 18258,
+      "direct_tag_artists": 208,
+      "direct_tag_fraction": 0.011392266403768211,
+      "propagated_artists": 18050,
+      "covered_artists": 18258,
+      "covered_fraction": 1.0
+    },
+    "false_exclusions": {
+      "threshold": 0.25,
+      "supplied_pairs": 54,
+      "evaluated_pairs": 47,
+      "unresolved_pairs": 7,
+      "count": 4,
+      "rate": 0.0851063829787234,
+      "pairs": [
+        {
+          "query": "Arctic Monkeys",
+          "candidate": "Black Sabbath",
+          "overlap": 0.2236328125
+        },
+        {
+          "query": "Kanye West",
+          "candidate": "Marilyn Manson",
+          "overlap": 0.12582600116729736
+        },
+        {
+          "query": "Shygirl",
+          "candidate": "DMX",
+          "overlap": 0.09347105026245117
+        },
+        {
+          "query": "100 gecs",
+          "candidate": "femtanyl",
+          "overlap": 0.0
+        }
+      ]
+    },
+    "source": {
+      "cache": "ml_data\\iteration7\\musicbrainz-tag-cache.json",
+      "graph_source_independent": true,
+      "provider": "MusicBrainz community artist tags",
+      "relationship": "independent scene/style metadata",
+      "used_by_catalog_graph": false,
+      "used_by_graph_or_benchmark": false,
+      "used_by_music4all": false,
+      "uses_lastfm": false,
+      "uses_music4all": false
+    }
+  }
+}

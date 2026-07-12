@@ -11,3 +11,4 @@
 .goals/human-quality-recommendations/protocol-v6/frozen-state.sig binary
 .goals/human-quality-recommendations/protocol-v6/frozen-allowed-signers binary
 .goals/human-quality-recommendations/protocol-v6/frozen-signer.pub binary
+.goals/human-quality-recommendations/protocol-v8-development/* binary

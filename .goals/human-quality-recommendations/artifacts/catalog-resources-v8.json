@@ -1,0 +1,351 @@
+{
+  "assets": {
+    "graph": {
+      "arrays": {
+        "artist_audio": {
+          "dtype": "float16",
+          "shape": [
+            18258,
+            157
+          ],
+          "uncompressed_bytes": 5733012
+        },
+        "artist_names": {
+          "dtype": "<U74",
+          "shape": [
+            18258
+          ],
+          "uncompressed_bytes": 5404368
+        },
+        "full_indices": {
+          "dtype": "int16",
+          "shape": [
+            18258,
+            96
+          ],
+          "uncompressed_bytes": 3505536
+        },
+        "full_weights": {
+          "dtype": "float16",
+          "shape": [
+            18258,
+            96
+          ],
+          "uncompressed_bytes": 3505536
+        },
+        "metadata": {
+          "dtype": "<U400",
+          "shape": [],
+          "uncompressed_bytes": 1600
+        },
+        "source_mapped": {
+          "dtype": "uint8",
+          "shape": [
+            18258
+          ],
+          "uncompressed_bytes": 18258
+        },
+        "track_artist_ids": {
+          "dtype": "int32",
+          "shape": [
+            272853
+          ],
+          "uncompressed_bytes": 1091412
+        },
+        "track_indptr": {
+          "dtype": "int32",
+          "shape": [
+            18259
+          ],
+          "uncompressed_bytes": 73036
+        },
+        "track_rows": {
+          "dtype": "int32",
+          "shape": [
+            272853
+          ],
+          "uncompressed_bytes": 1091412
+        }
+      },
+      "bytes": 11423703,
+      "dtypes": {
+        "artist_audio": "float16",
+        "artist_names": "<U74",
+        "full_indices": "int16",
+        "full_weights": "float16",
+        "metadata": "<U400",
+        "source_mapped": "uint8",
+        "track_artist_ids": "int32",
+        "track_indptr": "int32",
+        "track_rows": "int32"
+      },
+      "path": "ml_data\\iteration7\\catalog-artist-graph-full-v8.npz",
+      "sha256": "59a5047377251ba603c144ef83584225b4d40a71bd57c252d1f8832c101f10e0"
+    },
+    "index": {
+      "arrays": {
+        "artists": {
+          "dtype": "<U84",
+          "shape": [
+            272853
+          ],
+          "uncompressed_bytes": 91678608
+        },
+        "clap": {
+          "dtype": "float16",
+          "shape": [
+            272853,
+            64
+          ],
+          "uncompressed_bytes": 34925184
+        },
+        "feature_names": {
+          "dtype": "<U13",
+          "shape": [
+            29
+          ],
+          "uncompressed_bytes": 1508
+        },
+        "neural": {
+          "dtype": "float16",
+          "shape": [
+            272853,
+            384
+          ],
+          "uncompressed_bytes": 209551104
+        },
+        "sonic": {
+          "dtype": "float16",
+          "shape": [
+            272853,
+            64
+          ],
+          "uncompressed_bytes": 34925184
+        },
+        "titles": {
+          "dtype": "<U263",
+          "shape": [
+            272853
+          ],
+          "uncompressed_bytes": 287041356
+        },
+        "track_ids": {
+          "dtype": "int64",
+          "shape": [
+            272853
+          ],
+          "uncompressed_bytes": 2182824
+        },
+        "vibe": {
+          "dtype": "float32",
+          "shape": [
+            272853,
+            29
+          ],
+          "uncompressed_bytes": 31650948
+        },
+        "wiki": {
+          "dtype": "float16",
+          "shape": [
+            272853
+          ],
+          "uncompressed_bytes": 545706
+        },
+        "wiki_specific": {
+          "dtype": "uint8",
+          "shape": [
+            272853
+          ],
+          "uncompressed_bytes": 272853
+        }
+      },
+      "bytes": 299288526,
+      "dtypes": {
+        "artists": "<U84",
+        "clap": "float16",
+        "feature_names": "<U13",
+        "neural": "float16",
+        "sonic": "float16",
+        "titles": "<U263",
+        "track_ids": "int64",
+        "vibe": "float32",
+        "wiki": "float16",
+        "wiki_specific": "uint8"
+      },
+      "path": "ml_data\\deepvibe_index_v5.npz",
+      "sha256": "f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9"
+    },
+    "policy": {
+      "bytes": 978,
+      "format": "json",
+      "path": ".goals\\human-quality-recommendations\\artifacts\\catalog-policy-v8.json",
+      "sha256": "0be692c8302aa985745b010bbb5e4344f099b906ec420564ff010ab74b3bb0ef"
+    },
+    "rows": {
+      "bytes": 1833,
+      "format": "json",
+      "path": "ml_data\\iteration7\\resource-rows-v8.json",
+      "sha256": "5f3bd6c9d99507435e98acf77e7f6230f09e02e70944250d7652bbc3e5da3eb4"
+    },
+    "style": {
+      "arrays": {
+        "artist_names": {
+          "dtype": "<U74",
+          "shape": [
+            18258
+          ],
+          "uncompressed_bytes": 5404368
+        },
+        "confidence": {
+          "dtype": "float16",
+          "shape": [
+            18258
+          ],
+          "uncompressed_bytes": 36516
+        },
+        "direct_mask": {
+          "dtype": "uint8",
+          "shape": [
+            18258
+          ],
+          "uncompressed_bytes": 18258
+        },
+        "metadata": {
+          "dtype": "<U846",
+          "shape": [],
+          "uncompressed_bytes": 3384
+        },
+        "scene_names": {
+          "dtype": "<U18",
+          "shape": [
+            22
+          ],
+          "uncompressed_bytes": 1584
+        },
+        "style_vectors": {
+          "dtype": "float16",
+          "shape": [
+            18258,
+            22
+          ],
+          "uncompressed_bytes": 803352
+        }
+      },
+      "bytes": 575524,
+      "dtypes": {
+        "artist_names": "<U74",
+        "confidence": "float16",
+        "direct_mask": "uint8",
+        "metadata": "<U846",
+        "scene_names": "<U18",
+        "style_vectors": "float16"
+      },
+      "path": "ml_data\\iteration7\\catalog-style-v8.npz",
+      "sha256": "d8ef2158373f226194ffcc9c8d87d45f902be4c109be81f6f8a2fe2c0d959ccf"
+    }
+  },
+  "candidate": "compact_graph_first",
+  "cold_recommendation_latency_ms": 108.60910000337753,
+  "core_index_post_gc_rss_bytes": 1191428096,
+  "determinism": {
+    "output_sha256": "2d608dab1a86880caaf0c9d37f521a8665b443caf57c0f52bca5a76e020258d7",
+    "passed": true,
+    "repetitions": 2
+  },
+  "errors": [],
+  "fallback_count": 0,
+  "first_recommendation_latency_ms": 108.60910000337753,
+  "gates": {
+    "compact_graph_only_full": true,
+    "deterministic_output": true,
+    "peak": {
+      "limit_bytes": 1610612736,
+      "measured_bytes": 1492938752,
+      "passed": true
+    },
+    "platform": {
+      "headroom_bytes": 654544896,
+      "limit_bytes": 2147483648,
+      "passed": true
+    },
+    "resident_target": {
+      "blocking": false,
+      "infeasible_nonblocking": true,
+      "measured_bytes": 1218555904,
+      "reason": "core production index alone exceeds resident target",
+      "target_bytes": 1181116006,
+      "target_met": false
+    },
+    "style_present": true,
+    "zero_errors": true,
+    "zero_fallbacks": true
+  },
+  "graph_contract": {
+    "masked_variants_alias_full": [],
+    "masked_variants_present": [],
+    "only_full": true,
+    "passed": true,
+    "silent_fallback_declared": false,
+    "variants": [
+      "full"
+    ]
+  },
+  "headroom_bytes": 654544896,
+  "load_seconds": 5.911659600009443,
+  "passed": true,
+  "peak_poll_interval_seconds": 0.01,
+  "peak_poll_samples": 630,
+  "peak_rss_bytes": 1492938752,
+  "platform_limit": {
+    "documentation_as_of": "2026-07-01",
+    "documentation_url": "https://vercel.com/docs/functions/limitations",
+    "documented_maximums_bytes": {
+      "Enterprise": 4294967296,
+      "Hobby": 2147483648,
+      "Pro": 4294967296
+    },
+    "limit_basis": "conservative Hobby maximum; no project plan claimed",
+    "limit_used_bytes": 2147483648,
+    "project_tier": "unknown",
+    "project_tier_credential_verification": {
+      "available": false,
+      "reason": "Vercel CLI credentials unavailable"
+    },
+    "provider": "Vercel Functions"
+  },
+  "policy": {
+    "audio_weight": 0.3,
+    "style_guard_min": 0.0,
+    "style_weight": 0.35
+  },
+  "post_gc_resident_rss_bytes": 1218555904,
+  "process_start_rss_bytes": 153022464,
+  "query_modes": {
+    "audio_projected_artist_bridge": 10,
+    "catalog_artist_graph": 12
+  },
+  "runtime_components": [
+    "WebRecommender(enhance=False)",
+    "CatalogArtistGraph",
+    "CatalogStyleIndex",
+    "CatalogPolicy",
+    "CatalogPolicyRanker"
+  ],
+  "schema_version": 1,
+  "style": {
+    "artist_count": 18258,
+    "present": true,
+    "scene_count": 22
+  },
+  "units": {
+    "duration": "seconds",
+    "latency": "milliseconds",
+    "memory": "bytes"
+  },
+  "warm_latency": {
+    "count": 20,
+    "mean_ms": 112.69505000163917,
+    "p50_ms": 116.06490000121994,
+    "p95_ms": 131.00585001011495
+  }
+}

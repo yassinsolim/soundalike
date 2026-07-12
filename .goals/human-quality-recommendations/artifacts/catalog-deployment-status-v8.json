@@ -1,0 +1,33 @@
+{
+  "schema_version": 8,
+  "created_at": "2026-07-12",
+  "iteration7_deployed": false,
+  "deployment_attempted": false,
+  "production_unchanged": true,
+  "release_assets_uploaded": false,
+  "manifest_updated": false,
+  "repository_pushed_for_deployment": false,
+  "fresh_final_created": false,
+  "fresh_final_opened": false,
+  "final_open_count": 0,
+  "blocking_preconditions": {
+    "scene_held_out_all_pass": false,
+    "direct_review_pass": false,
+    "resource_gate_pass": true
+  },
+  "decision": "CV and direct-review preconditions failed, so FINAL creation/opening and deployment were prohibited.",
+  "live_unchanged_verification": {
+    "url": "https://soundalike.yassin.app/api/stats",
+    "observed_at": "2026-07-12",
+    "http_ok": true,
+    "library_size": 272853,
+    "version": "2026.07.11-dual-sonic64",
+    "method_expected": "dual_sonic64_guardrail"
+  },
+  "evidence_sha256": {
+    "catalog-dev-cv-v8.json": "1c4379115788f0e5536fa2eb569041687b8b16a44944b756ec0453f898a05530",
+    "catalog-direct-validation-v8.json": "56c21c7d71acee751aa02e1669b7fcde596411c5a4e89feef86c7fefa059022b",
+    "catalog-resources-v8.json": "a546bc06804f6e8d496626ae6e04c172d44fc272c2cbb86829da646ccb7ab697",
+    "catalog-policy-v8.json": "0be692c8302aa985745b010bbb5e4344f099b906ec420564ff010ab74b3bb0ef"
+  }
+}

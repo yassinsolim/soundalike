@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "method_id": "graph-first-audio-scene-v8-dev",
+  "selection_source": "nested and scene-held-out opened DEV only",
+  "final_labels_compared": false,
+  "policy": {
+    "audio_weight": 0.3,
+    "style_weight": 0.35,
+    "style_guard_min": 0.0
+  },
+  "numeric_parameter_count": 3,
+  "formula": {
+    "G": "0.7*normalized_graph_edge_weight + 0.3/log2(graph_edge_rank+1)",
+    "A": "mean(Sonic64 cosine01, CLAP cosine01, 1/(1+vibe_distance))",
+    "S": "MusicBrainz-derived broad style overlap",
+    "score": "G + audio_weight*A + style_weight*S",
+    "top3_guard": "S >= style_guard_min when at least 3 qualify"
+  },
+  "graph_variant": "full unmasked direct edges; masks diagnostic only",
+  "cv_report": ".goals\\human-quality-recommendations\\artifacts\\catalog-dev-cv-v8.json",
+  "cv_sha256": "1c4379115788f0e5536fa2eb569041687b8b16a44944b756ec0453f898a05530",
+  "cv_preconditions_passed": false,
+  "fresh_final_allowed": false
+}

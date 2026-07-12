@@ -1,0 +1,22 @@
+{
+  "schema_version": 8,
+  "phase": "DEVELOPMENT_LOCKED",
+  "final_open_count": 0,
+  "fresh_final_blocked": true,
+  "deployment_blocked": true,
+  "all_preconditions_passed": false,
+  "protocol_path": ".goals\\human-quality-recommendations\\protocol-v8-development\\development-protocol.json",
+  "protocol_sha256": "9cfce22c2a842b6933889bf506a7991e8bbe7c9ca23875b408916c4129a58246",
+  "development_input_sha256": {
+    "benchmarks\\soundalike_multipositive.v7.json": "b2fbf24962f0d1b73cdfee0e333b5ae9b3befdcb364a5f420dc465650b570324",
+    "ml_data\\iteration5\\collaborative\\item2vec-full.npz": "59a24b298e93773d59307b7c1dc24e4cbfffb6ae24122537fb51ae669e468ecd",
+    "ml_data\\iteration6\\catalog_graph\\catalog-artist-graph.npz": "10cc0e8490d834439a22e3c434bab5b8383ea49aa80536fa5bc516d3726861b5",
+    "ml_data\\iteration7\\catalog-artist-graph-full-v8.npz": "59a5047377251ba603c144ef83584225b4d40a71bd57c252d1f8832c101f10e0",
+    "ml_data\\iteration7\\catalog-style-v8.npz": "d8ef2158373f226194ffcc9c8d87d45f902be4c109be81f6f8a2fe2c0d959ccf",
+    "ml_data\\iteration7\\musicbrainz-tag-cache.json": "aeb182d730a55b0a892ca23ddb4ff818f0616d764d9f48b68a638a396c6a4107"
+  },
+  "created_at": "2026-07-12T15:01:29.407000+00:00",
+  "detached_signature_required": true,
+  "integrity_signature": "0d7b97dc19620e99ea47157e092d5695786d6f3f3534f8416ec811646a0b2eeb",
+  "signature_algorithm": "SHA-256 canonical JSON plus detached Ed25519"
+}

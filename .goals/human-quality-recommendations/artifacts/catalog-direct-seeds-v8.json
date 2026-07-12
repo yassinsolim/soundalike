@@ -1,0 +1,144 @@
+{
+  "content_sha256": "a974f96e31364b4f5e11a958a8b72a656411af1e7d78761dab20d75c3c3638e8",
+  "inspection_rules": {
+    "automatic_seed_failure": [
+      "any junk result",
+      "any duplicate result",
+      "any seed-title variant"
+    ],
+    "coherent_results_required_per_list": 4,
+    "positions_1_to_3": "no unrelated result",
+    "positions_inspected_per_list": 5,
+    "required_seed_passes": 16,
+    "total_seeds": 20
+  },
+  "policy_manifest_sha256": "0be692c8302aa985745b010bbb5e4344f099b906ec420564ff010ab74b3bb0ef",
+  "results_inspected": false,
+  "schema_version": 1,
+  "seed_count": 20,
+  "seeds": [
+    {
+      "artist": "Tyler The Creator",
+      "id": "direct-01",
+      "scene": "hip_hop",
+      "title": "EARFQUAKE"
+    },
+    {
+      "artist": "Kendrick Lamar",
+      "id": "direct-02",
+      "scene": "hip_hop",
+      "title": "PRIDE."
+    },
+    {
+      "artist": "SZA",
+      "id": "direct-03",
+      "scene": "rnb_soul",
+      "title": "Good Days"
+    },
+    {
+      "artist": "my bloody valentine",
+      "id": "direct-04",
+      "scene": "shoegaze_dream_pop",
+      "title": "Only Shallow"
+    },
+    {
+      "artist": "Cocteau Twins",
+      "id": "direct-05",
+      "scene": "shoegaze_dream_pop",
+      "title": "Heaven or Las Vegas"
+    },
+    {
+      "artist": "Arctic Monkeys",
+      "id": "direct-06",
+      "scene": "rock",
+      "title": "Do I Wanna Know?"
+    },
+    {
+      "artist": "Charli xcx",
+      "id": "direct-07",
+      "scene": "hyperpop_digicore",
+      "title": "Vroom Vroom"
+    },
+    {
+      "artist": "SOPHIE",
+      "id": "direct-08",
+      "scene": "hyperpop_digicore",
+      "title": "Immaterial"
+    },
+    {
+      "artist": "underscores",
+      "id": "direct-09",
+      "scene": "hyperpop_digicore",
+      "title": "Spoiled little brat"
+    },
+    {
+      "artist": "Aphex Twin",
+      "id": "direct-10",
+      "scene": "electronic",
+      "title": "Xtal"
+    },
+    {
+      "artist": "Daft Punk",
+      "id": "direct-11",
+      "scene": "electronic",
+      "title": "Something About Us"
+    },
+    {
+      "artist": "Deftones",
+      "id": "direct-12",
+      "scene": "metal",
+      "title": "Change (In the House of Flies)"
+    },
+    {
+      "artist": "Black Sabbath",
+      "id": "direct-13",
+      "scene": "metal",
+      "title": "War Pigs"
+    },
+    {
+      "artist": "John Coltrane",
+      "id": "direct-14",
+      "scene": "jazz",
+      "title": "Naima"
+    },
+    {
+      "artist": "Herbie Hancock",
+      "id": "direct-15",
+      "scene": "jazz",
+      "title": "Cantaloupe Island"
+    },
+    {
+      "artist": "Mariya Takeuchi",
+      "id": "direct-16",
+      "scene": "city_pop",
+      "title": "Plastic Love"
+    },
+    {
+      "artist": "NewJeans",
+      "id": "direct-17",
+      "scene": "asian_pop",
+      "title": "Ditto"
+    },
+    {
+      "artist": "Bad Bunny",
+      "id": "direct-18",
+      "scene": "latin",
+      "title": "Ojitos Lindos"
+    },
+    {
+      "artist": "Burna Boy",
+      "id": "direct-19",
+      "scene": "african",
+      "title": "Last Last"
+    },
+    {
+      "artist": "Gorillaz",
+      "id": "direct-20",
+      "scene": "art_rock",
+      "title": "Feel Good Inc."
+    }
+  ],
+  "set_id": "catalog-v8-direct-dev-adjacent-difficult-20",
+  "set_status": "new separate previously unreviewed",
+  "target_blind": true
+}
