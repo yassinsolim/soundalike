@@ -13,3 +13,4 @@
 .goals/human-quality-recommendations/protocol-v6/frozen-signer.pub binary
 .goals/human-quality-recommendations/protocol-v8-development/* binary
 .goals/human-quality-recommendations/protocol-v8-gated-development-*/* binary
+.goals/human-quality-recommendations/protocol-v9-powered-development-*/* binary

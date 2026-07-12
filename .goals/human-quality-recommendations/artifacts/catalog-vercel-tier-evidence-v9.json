@@ -1,0 +1,70 @@
+{
+  "schema_version": 9,
+  "created_at": "2026-07-12T18:04:12.901022+00:00",
+  "linked_project": {
+    "projectName": "soundalike",
+    "projectId": "prj_dIRX8P1uu7SVtYJqkbImGLADIgBa",
+    "orgId": "team_7KDYLvkpFCn35sRqOT8Ap96z",
+    "metadata_sha256": "1a901c47b6d16b9c6d640ccfc289d479c2fc6d538fef0d98e8ffc1628fd675fe"
+  },
+  "credential_environment_variable_names": [],
+  "credentials_or_token_values_recorded": false,
+  "cli_attempts": [
+    {
+      "command": "vercel.cmd whoami",
+      "returncode": 1,
+      "status": "failed",
+      "reason": "Error: No existing credentials found. Please run `vercel login` or pass \"--token\""
+    },
+    {
+      "command": "vercel.cmd project inspect soundalike --yes",
+      "returncode": 1,
+      "status": "failed",
+      "reason": "Error: No existing credentials found. Please run `vercel login` or pass \"--token\""
+    }
+  ],
+  "project_api_attempt": {
+    "method": "GET",
+    "endpoint": "/v9/projects/<linked-project>?teamId=<linked-team>",
+    "status": 403,
+    "authenticated": false,
+    "outcome": "forbidden without credentials"
+  },
+  "github_public_deployment_evidence": {
+    "status": 200,
+    "vercel_bot_deployment_found": true,
+    "latest_public_production": {
+      "created_at": "2026-07-12T05:27:48Z",
+      "sha": "2366b7c1344f4edacdcd0568501f8dfe5c3e3641",
+      "creator": "vercel[bot]"
+    },
+    "tier_or_memory_exposed": false
+  },
+  "official_documentation": {
+    "url": "https://vercel.com/docs/functions/limitations",
+    "last_updated": "2026-07-01",
+    "documented_memory_limits_bytes": {
+      "Hobby_default_and_maximum": 2147483648,
+      "Pro_Enterprise_default": 2147483648,
+      "Pro_Enterprise_maximum": 4294967296
+    },
+    "project_specific_tier_exposed": false
+  },
+  "candidate_resources": {
+    "unchanged_asset_set_from_v8_measurement": true,
+    "resource_artifact": ".goals\\human-quality-recommendations\\artifacts\\catalog-gated-resources-v8.json",
+    "resource_artifact_sha256": "ef31fbf21bd2f41b181e3dd421e7ed9062b03e5e9f2f8896603429cf3f48c18c",
+    "peak_rss_bytes": 1494294528,
+    "load_seconds": 7.958867499997723,
+    "warm_p95_ms": 265.4788949912472,
+    "graph_bytes": 12160029,
+    "index_bytes": 299288526,
+    "v9_adds_runtime_arrays": false
+  },
+  "project_tier": "unknown",
+  "actual_memory_limit_bytes": null,
+  "tier_verified": false,
+  "passed": false,
+  "fail_closed_reason": "Linked project identity and real Vercel deployment are verified, but local metadata and public GitHub deployments expose no plan; CLI has no credentials and the project API returns 403. Official limits differ by plan, so no plan or memory limit is assumed.",
+  "content_sha256": "17dd3cca4d504072cea7615ff5a7d5924f9fe74ebc776f8c029a86f39fce7034"
+}

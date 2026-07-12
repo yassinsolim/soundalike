@@ -15,6 +15,7 @@ env/
 .env
 .cache/
 .soundalike/
+.serena/
 *.token.json
 
 # Personal data exports (from `soundalike pull`)

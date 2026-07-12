@@ -622,6 +622,75 @@ Reproduce the non-FINAL development run:
 .\.venv\Scripts\python.exe -m pytest tests\ -q
 ```
 
+### Powered served-list sonic DEV (iteration 9)
+
+Iteration 9 replaces the one-counterpart proxy with a list-level DEV benchmark of the **actual
+served top 10**. The frozen gold contains 60 catalogue-resolved seeds across 13 scenes and 815
+eligible positives (minimum 5 per seed, grades 1–3). Every seed has a normalized, hash-bound
+Music-Map snapshot; 40 also retain an independent category-A critic/editorial track comparison,
+and 6 counterpart artists are confirmed by both source classes. Last.fm, Music4All, Deezer,
+ListenBrainz, and MusicBrainz never supply deciding relevance labels.
+
+The two predeclared co-primaries remain separate:
+
+1. exponential-gain graded nDCG@10 over source-supported track or artist relevance; and
+2. a method-blind top-5 coherence pass requiring independently supported positions 1–3, at least
+   4/5 supported, and no junk or same-artist variant.
+
+The challenger drops Music4All as a mandatory conjunct. It has exactly three parameters:
+Last.fm confidence `tau`, per-track `min(audio, style)` threshold `sigma`, and one audio tie-break
+weight. Music4All has only a fixed optional corroboration weight/bonus and never gates coverage.
+Nested five-fold DEV selected `(tau=.35, sigma=.35, audio_weight=0)`.
+
+| Powered out-of-fold DEV | Production | Challenger |
+|---|---:|---:|
+| graded nDCG@10 | 0.08112 | **0.20069** |
+| MRR@10 | 0.31546 | **0.59278** |
+| candidate recall@1000 | 0.43258 | **0.57893** |
+| strict top-5 coherence | 2/60 (3.3%) | **16/60 (26.7%)** |
+
+nDCG improves **+147.4%** (absolute +0.11957, paired-bootstrap CI
+`[+0.08094,+0.16154]`, 34 seeds improved). No scene regresses; scene-held-out nDCG improves
++145.9%. The policy fires 36/60, abstains for 23 seeds without Last.fm coverage and one below
+`tau`, and no longer has Music4All coverage abstentions. Candidate recall, MRR, the improved-seed
+count, CI, absolute gain, and every scene all pass.
+
+The deciding coherence co-primary still fails decisively. A second independent model-assisted
+blind read, grounded per result in the frozen Music-Map/category-A evidence or a disclosed
+MusicBrainz-direct supporting tag, finds production 1/60 and challenger 5/60. Its conservative
+review also flags 13 and 9 version/cover candidates respectively. This corroborates the failed
+coherence gate rather than rescuing it. Exact category-A track retrieval is
+unchanged at 1/36 and remains diagnostic only. Public Deezer preview checks found 449/773 unique
+listed tracks available; preview data was never used for selection.
+
+The linked Vercel project and public Vercel-bot production deployment are real, but no credential
+environment variable or CLI login is available and the project API returns 403. Official limits
+are plan-dependent (Hobby 2 GB; Pro/Enterprise up to 4 GB), while local metadata and GitHub
+deployments expose no plan. The actual tier therefore remains unknown and the platform gate fails
+closed.
+
+Because coherence is below 80% and the tier is unverified, `final_open_count` remains **0**:
+no fresh FINAL was created, no winner was wired, and production remains untouched.
+
+Reproduce the complete non-FINAL run:
+
+```powershell
+$Replay = ".cache\iteration9-replay"
+New-Item -ItemType Directory -Force $Replay | Out-Null
+.\.venv\Scripts\python.exe -m soundalike.ml.catalog_list_gold_v9 `
+  --output "$Replay\gold.json"
+.\.venv\Scripts\python.exe -m soundalike.ml.catalog_v9 freeze `
+  --protocol "$Replay\protocol" --gold "$Replay\gold.json"
+.\.venv\Scripts\python.exe -m soundalike.ml.catalog_v9 evaluate `
+  --protocol "$Replay\protocol" --gold "$Replay\gold.json" `
+  --report "$Replay\dev.json" --blind-lists "$Replay\blind-lists.json" `
+  --judgments "$Replay\judgments.json" --blind-key "$Replay\blind-key.json"
+.\.venv\Scripts\python.exe -m soundalike.ml.catalog_compact_v9 "$Replay\dev.json"
+.\.venv\Scripts\python.exe -m soundalike.ml.catalog_tier_v9 `
+  --output "$Replay\tier.json"
+.\.venv\Scripts\python.exe -m pytest tests\ -q
+```
+
 ### Growing the library past the bundle limit
 
 The ~87k-song index ships bundled (75 MB, under GitHub's 100 MB per-file cap), so the tool works
