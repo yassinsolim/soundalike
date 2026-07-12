@@ -691,6 +691,100 @@ New-Item -ItemType Directory -Force $Replay | Out-Null
 .\.venv\Scripts\python.exe -m pytest tests\ -q
 ```
 
+### Human audio calibration and blinded list study (iteration 10)
+
+Iteration 9 exposed the core measurement problem: 94% of its “sonic” positives were
+Gnod/Music-Map taste affinity, not audible similarity. A search found no downloadable public
+human sonic gold for commercial tracks. The
+[MIREX AMS protocol](https://web.archive.org/web/20220521123954id_/https://music-ir.org/mirex/wiki/2019:Audio_Music_Similarity_and_Retrieval)
+is public, but its Evalutron judgments are not treated as available gold. Iteration 10 therefore
+uses the only downloadable human relative-similarity anchor found:
+[MagnaTagATune](https://web.archive.org/web/20231211051442id_/https://mirg.city.ac.uk/codeapps/the-magnatagatune-dataset).
+Its music is not the commercial serving catalog, so it calibrates audio geometry only.
+
+The official files contain 533 triads, 7,650 odd-one-out votes, 31,382 clip metadata rows, and
+1,019 compared clips. `clipN_numvotes` means listeners chose clip N as the odd item; the other
+two clips form the human-similar pair. Ties are excluded rather than broken. Requiring at least
+three votes leaves 307 constraints. Deterministic artist-community partitioning retains
+**86 train / 28 DEV / 29 once-opened TEST**, with **97 / 35 / 35 artists and zero artist overlap**.
+All CSV/archive hashes and the important licensing distinction are in
+`benchmarks/evidence/v10/magnatagatune-provenance.json`: City publicly hosts the data and asks for
+citation, but the page states no dataset-wide audio redistribution license. CSVs and audio remain
+under gitignored `ml_data`; no audio is committed or re-hosted.
+
+| Held-out human odd-one-out TEST (29) | Correct | Accuracy | Wilson 95% CI |
+|---|---:|---:|---:|
+| current artist-SupCon encoder | 16 | 55.2% | [37.5%, 71.6%] |
+| FMA cross-artist SupCon | 16 | 55.2% | [37.5%, 71.6%] |
+| production-compatible 29-D vibe/DSP | 13 | 44.8% | [28.4%, 62.5%] |
+| pretrained LAION-CLAP music/audio | 17 | 58.6% | [40.7%, 74.5%] |
+| 32-D MTAT-triplet projection + FMA regularization | **19** | **65.5%** | **[47.3%, 80.1%]** |
+
+The compact projection was selected only on DEV (23/28, 82.1%) and trained only on MTAT train
+plus independent FMA geometry preservation. It beats the incumbent by 10.3 absolute TEST points,
+but the paired bootstrap CI is **[-13.8, +34.5] points** (`P(delta>0)=0.758`). The predeclared
+shipping rule required at least +5 points **and a CI lower bound above zero**, so it is an honest
+negative: **the 272,853-song catalog was not re-embedded and production did not change**.
+The full once-opened report is
+`.goals/human-quality-recommendations/artifacts/magnatagatune-human-calibration-v10.json`.
+
+Version handling is now generic and query-aware: explicit remixes/mixes, edits, instrumentals,
+covers, karaoke/tribute recordings, slowed/reverb/nightcore/sped-up versions, medleys/mashups, and
+seed-title variants are excluded for a canonical query; a derivative query may admit only the same
+version classes. Within one artist/canonical title, an available original outranks derivatives.
+The real 272,853-row audit filtered 16,931 explicit candidates, found **0 false negatives** among
+11,470 independently recognizable derivative rows, **0 false positives** across six risky-title
+controls, and 4,353 same-artist groups where an original can replace a derivative. Unlabelled covers
+cannot be inferred safely from title/artist alone; the human UI flags them instead of inventing
+original ownership. See `catalog-version-quality-audit-v10.json`.
+
+#### Run the local blinded A/B study
+
+`benchmarks/human_eval_v10.html` implements the MIREX/Evalutron shape over the already-frozen
+actual served lists: 60 seeds / 13 scenes, two randomized method aliases, five artist-filtered
+results each, 3-class similarity plus optional 0–10, junk/version flags, unrelated positions 1–3,
+whole-list coherence, preview playback, localStorage autosave, and signed partial export/import.
+Shared tracks are shown/rated once per seed and credited identically to both lists. A complete rater
+usually needs 90–150 minutes; partial sessions are valid.
+
+```powershell
+# Serve locally (ratings never leave the browser):
+.\.venv\Scripts\python.exe -m http.server 8000
+# Open http://localhost:8000/benchmarks/human_eval_v10.html and import:
+# .goals/human-quality-recommendations/protocol-v10-human-development/protocol-v10.json
+# .goals/human-quality-recommendations/protocol-v10-human-development/served-lists-v10.json
+```
+
+The public list content hash is
+`458abcb809378dbc16506c9d0055477bc26d74585416b38f53863b07341c9815`.
+`state.json` entered `RANKINGS_LOCKED` with zero ratings before distribution and has a detached
+Ed25519 signature (`SHA256:c9Vzptc7X6TbwM/tHyOvOt25dGF8BPjeEvC60/iw+Do`). The salted method key
+is intentionally **not committed**; the local owner copy is
+`ml_data/human_eval_v10/method-key-v10.json`.
+
+```powershell
+# After checking that the file came from a real listener, the local study
+# operator approves it. Browser HMAC alone is not accepted as human proof:
+.\.venv\Scripts\python.exe -m soundalike.ml.human_eval_v10 approve `
+  --export ratings\rater-1.json `
+  --collector-key ml_data\human_eval_v10\collector_signer
+
+# After collecting actual anonymous exports:
+.\.venv\Scripts\python.exe -m soundalike.ml.human_aggregate_v10 `
+  --protocol .goals\human-quality-recommendations\protocol-v10-human-development\protocol-v10.json `
+  --lists .goals\human-quality-recommendations\protocol-v10-human-development\served-lists-v10.json `
+  --key ml_data\human_eval_v10\method-key-v10.json `
+  --exports ratings\rater-1.json ratings\rater-2.json `
+  --output ml_data\human_eval_v10\sonic_human-v10.json
+```
+
+The aggregator requires that trusted local collector's detached Ed25519 approval in addition to
+pack hashes/HMACs, rejects Last.fm/Deezer/Music4All/Gnod/editorial/model rows, merges repeated
+anonymous rater/seed work reproducibly, and reports agreement, per-seed nDCG/coherence,
+junk/top-3 counts, and seed-paired bootstrap CIs using only complete same-rater A/B pairs. With no
+real listener exports it fails closed and deletes/refuses a `sonic_human` report. **No real human
+ratings existed in this run, so AC#3 is not claimed and no ranking/deployment change was made.**
+
 ### Growing the library past the bundle limit
 
 The ~87k-song index ships bundled (75 MB, under GitHub's 100 MB per-file cap), so the tool works

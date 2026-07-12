@@ -351,7 +351,7 @@ def test_hosted_quality_rules_match_desktop_edge_cases():
     )
     assert hosted_mask.tolist() == desktop_mask.tolist() == [
         False, False, False, True, True, False, True, True,
-        False, False, False, False, True, True,
+        False, False, False, False, True, False,
     ]
 
 

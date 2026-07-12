@@ -24,7 +24,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from difflib import SequenceMatcher
-from typing import List, Optional, Sequence
+from typing import Any, Iterable, List, Mapping, Optional, Sequence
 
 import numpy as np
 
@@ -62,6 +62,15 @@ _TITLE_JUNK_PATTERNS: List[str] = [
     r"\bstring\s+(?:quartet|version)\b",
     r"\borchestral\s+version\b",
     r"\bremake\b",
+    # Mix/remix/version suffixes.  These are intentionally contextual rather
+    # than matching the bare word "mix" (legitimate originals include titles
+    # such as "Mixed Emotions").  Query-aware callers may allow the same class
+    # when the seed itself is a remix/edit; see ``is_eligible_for_query``.
+    r"(?:\(|\[)[^)\]]*\b(?:re)?mix(?:es)?\b[^)\]]*(?:\)|\])",
+    r"\s+-\s+[^-]*\b(?:re)?mix(?:es)?\b[^-]*$",
+    r"\b(?:club|radio|extended|dub|dance|house|vocal)\s+mix\b",
+    r"(?:\(|\[|\s+-\s*)[^)\]]*\b(?:rework|bootleg|vip|edit)\b[^)\]]*(?:\)|\]|$)",
+    r"\bchopnotslop\b",
     # TikTok / meme edits
     r"\bmarimba\s+remix\b",
     r"\bringtone\b",
@@ -100,6 +109,64 @@ _ARTIST_JUNK_PATTERNS: List[str] = [
 _TITLE_RE = re.compile("|".join(_TITLE_JUNK_PATTERNS), re.IGNORECASE)
 _ARTIST_RE = re.compile("|".join(_ARTIST_JUNK_PATTERNS), re.IGNORECASE)
 
+# Stable labels used by the query-aware exception and canonical preference.
+_VERSION_PATTERNS = {
+    "slowed": re.compile(r"\bslowed\b", re.IGNORECASE),
+    "reverb": re.compile(r"\breverb\b", re.IGNORECASE),
+    "nightcore": re.compile(r"\bnightcore(?:d|'d)?\b", re.IGNORECASE),
+    "sped_up": re.compile(r"\b(?:sped|speed)[- ]up\b", re.IGNORECASE),
+    "karaoke": re.compile(r"\bkara(?:oke|ōke)\b|\bbacking\s+track\b", re.IGNORECASE),
+    "tribute": re.compile(
+        r"^tribute\s+to\b|\btribute\s+(?:version|recording|band|artists?)\b"
+        r"|\boriginally\s+performed\s+by\b|\bas\s+made\s+famous\s+by\b",
+        re.IGNORECASE,
+    ),
+    "cover": re.compile(
+        r"\bcover\s+(?:version|record)\b|\(\s*cover(?:\s+of\b[^)]*)?\s*\)"
+        r"|\s+-\s+cover(?:\s+of\b.*)?$|\bin\s+the\s+style\s+of\b",
+        re.IGNORECASE,
+    ),
+    "instrumental": re.compile(
+        r"\binstrumental\s+(?:version|mix|cover|track)\b"
+        r"|\ba\s+cappella\b|\bpiano\s+version\b"
+        r"|\bstring\s+(?:quartet|version)\b|\borchestral\s+version\b"
+        r"|\b8\s*bit\s+(?:version|cover)\b|\bringtone\b"
+        r"|\blo-?fi\s+(?:version|remix|cover|study)\b",
+        re.IGNORECASE,
+    ),
+    "remix": re.compile(
+        r"(?:\(|\[)[^)\]]*\b(?:re)?mix(?:es)?\b[^)\]]*(?:\)|\])"
+        r"|\s+-\s+[^-]*\b(?:re)?mix(?:es)?\b[^-]*$"
+        r"|\b(?:club|radio|extended|dub|dance|house|vocal)\s+mix\b"
+        r"|\bchopnotslop\b",
+        re.IGNORECASE,
+    ),
+    "edit": re.compile(
+        r"(?:\(|\[|\s+-\s*)[^)\]]*\b(?:rework|bootleg|vip|edit)\b"
+        r"[^)\]]*(?:\)|\]|$)",
+        re.IGNORECASE,
+    ),
+    "mashup": re.compile(r"\b(?:mashup|medley)\b|\bx\s+\w.*\bx\s+\w", re.IGNORECASE),
+}
+_REMASTER_RE = re.compile(
+    r"(?:\(|\[|\s+-\s*)\s*(?:\d{4}\s+)?(?:re)?master(?:ed)?"
+    r"(?:\s+\d{4})?\s*(?:\)|\]|$)",
+    re.IGNORECASE,
+)
+_LIVE_RE = re.compile(
+    r"(?:\(|\[|\s+-\s*)[^)\]]*\blive(?:\s+at|\s+from|\s+\d{4})?\b"
+    r"[^)\]]*(?:\)|\]|$)",
+    re.IGNORECASE,
+)
+_VERSION_SUFFIX_RE = re.compile(
+    r"\s*(?:\(|\[)[^)\]]*(?:remix|mix|edit|rework|bootleg|vip|instrumental|"
+    r"karaoke|cover|slowed|reverb|nightcore|sped[- ]up|live|remaster(?:ed)?)"
+    r"[^)\]]*(?:\)|\])\s*$"
+    r"|\s+-\s+[^-]*(?:remix|mix|edit|rework|bootleg|vip|instrumental|"
+    r"karaoke|cover|slowed|reverb|nightcore|sped[- ]up|live|remaster(?:ed)?).*$",
+    re.IGNORECASE,
+)
+
 
 def _nfkd(s: str) -> str:
     return unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode()
@@ -131,6 +198,88 @@ class TitleQualityFilter:
         t = _nfkd(str(title))
         a = _nfkd(str(artist))
         return bool(self._title_re.search(t) or self._artist_re.search(a))
+
+    def version_tags(self, title: str, artist: str = "") -> frozenset[str]:
+        """Return generic derivative/version labels found in title or artist.
+
+        No artist-specific allow/deny rules are used.  Explicit source metadata
+        wins over guesses: an unlabelled cover cannot be identified reliably
+        from title/artist strings alone and should be surfaced to human review.
+        """
+        value = f"{_nfkd(str(title))} {_nfkd(str(artist))}"
+        return frozenset(
+            name for name, pattern in _VERSION_PATTERNS.items()
+            if pattern.search(value)
+        )
+
+    def is_eligible_for_query(
+        self,
+        seed_title: str,
+        seed_artist: str,
+        result_title: str,
+        result_artist: str = "",
+    ) -> bool:
+        """Apply derivative filtering with the explicit query-version exception.
+
+        A canonical seed receives only canonical/remastered/live recordings.
+        When the seed itself is a derivative, candidates carrying only the same
+        derivative classes are allowed.  Mashups remain strict: a mashup query
+        may match mashups, but a remix query does not implicitly permit mashups.
+        """
+        result_tags = self.version_tags(result_title, result_artist)
+        if not result_tags:
+            return not self.is_junk(result_title, result_artist)
+        seed_tags = self.version_tags(seed_title, seed_artist)
+        if not seed_tags:
+            return False
+        return result_tags <= seed_tags
+
+    def canonical_title(self, title: str) -> str:
+        """Normalize a recording title after removing explicit version suffixes."""
+        value = _nfkd(str(title)).casefold().strip()
+        previous = None
+        while value != previous:
+            previous = value
+            value = _VERSION_SUFFIX_RE.sub("", value).strip()
+        value = re.sub(r"[^a-z0-9]+", " ", value)
+        return " ".join(value.split())
+
+    def version_priority(self, title: str, artist: str = "") -> int:
+        """Lower is a safer canonical choice within one artist/title group."""
+        tags = self.version_tags(title, artist)
+        if tags:
+            return 20 + len(tags)
+        value = f"{_nfkd(str(title))} {_nfkd(str(artist))}"
+        if _REMASTER_RE.search(value):
+            return 1
+        if _LIVE_RE.search(value):
+            return 3
+        return 0
+
+    def prefer_canonical(
+        self,
+        candidates: Iterable[Mapping[str, Any]],
+        *,
+        title_field: str = "title",
+        artist_field: str = "artist",
+    ) -> List[Mapping[str, Any]]:
+        """Stable within-artist/title dedup that prefers an original recording.
+
+        The first-ranked item wins between equal-priority variants.  This helper
+        never compares different artists, avoiding popularity and artist-specific
+        rules while preventing remixes/remasters from displacing an available
+        canonical recording by the same artist.
+        """
+        values = list(candidates)
+        winners: dict[tuple[str, str], tuple[int, int]] = {}
+        for position, item in enumerate(values):
+            title, artist = str(item[title_field]), str(item[artist_field])
+            key = (self.canonical_title(title), _nfkd(artist).casefold().strip())
+            priority = self.version_priority(title, artist)
+            if key not in winners or (priority, position) < winners[key]:
+                winners[key] = (priority, position)
+        selected = {position for _, position in winners.values()}
+        return [item for position, item in enumerate(values) if position in selected]
 
     def keep_mask(
         self, titles: Sequence[str], artists: Optional[Sequence[str]] = None

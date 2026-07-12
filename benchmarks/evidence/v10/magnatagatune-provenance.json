@@ -1,0 +1,111 @@
+{
+  "schema_version": 10,
+  "dataset": "MagnaTagATune",
+  "accessed_at": "2026-07-12",
+  "official_host": "https://mirg.city.ac.uk/datasets/magnatagatune",
+  "archived_dataset_page": "https://web.archive.org/web/20231211051442id_/https://mirg.city.ac.uk/codeapps/the-magnatagatune-dataset",
+  "paper": {
+    "citation": "Law, E.; West, K.; Mandel, M.; Bay, M.; Downie, J. S. (2009). Evaluation of Algorithms Using Games: The Case of Music Tagging. ISMIR 2009.",
+    "url": "https://ismir2009.ismir.net/proceedings/OS5-5.pdf"
+  },
+  "license_and_terms": {
+    "csv_access": "The City MIRG page publicly hosts the files and asks users to cite the 2009 paper.",
+    "audio_origin": "30-second segments of music from the Magnatune label.",
+    "explicit_dataset_wide_audio_license_found": false,
+    "redistribution_decision": "No audio is committed or re-hosted. Official archive parts and only needed extracted clips remain in gitignored ml_data for local research.",
+    "metadata_decision": "Only schema/count/hash/provenance and aggregate evaluation results are committed; the downloaded CSVs remain gitignored."
+  },
+  "files": {
+    "comparisons_final.csv": {
+      "url": "https://mirg.city.ac.uk/datasets/magnatagatune/comparisons_final.csv",
+      "bytes": 131947,
+      "sha256": "cf210e087ed5b3f3f8b164626e1d2857cf0ba9ae66bd9229bafe042889107a98"
+    },
+    "clip_info_final.csv": {
+      "url": "https://mirg.city.ac.uk/datasets/magnatagatune/clip_info_final.csv",
+      "bytes": 8608397,
+      "sha256": "cb6108a10d3a91f0bfd7d2fbec2382559d15f20c8d28093f14e12162a47a3e78"
+    },
+    "mp3.zip.001": {
+      "url": "https://mirg.city.ac.uk/datasets/magnatagatune/mp3.zip.001",
+      "bytes": 1100000000,
+      "sha256": "f857fe185968773058cc71662c2ef5d8f2d4b7338e3c122cfd52f82dcb9760b9"
+    },
+    "mp3.zip.002": {
+      "url": "https://mirg.city.ac.uk/datasets/magnatagatune/mp3.zip.002",
+      "bytes": 1100000000,
+      "sha256": "fc2e1ec441755556ed1398b1808f1b08b6034372f8bc27394510c0c58cdb52ce"
+    },
+    "mp3.zip.003": {
+      "url": "https://mirg.city.ac.uk/datasets/magnatagatune/mp3.zip.003",
+      "bytes": 772769864,
+      "sha256": "83a689824c17e82f6eb81cdbc4e4ca239a4cfc1fb41f1a5c80b861caec90450f"
+    }
+  },
+  "actual_schema": {
+    "comparisons_final.csv": [
+      "clip1_id",
+      "clip2_id",
+      "clip3_id",
+      "clip1_numvotes",
+      "clip2_numvotes",
+      "clip3_numvotes",
+      "clip1_mp3_path",
+      "clip2_mp3_path",
+      "clip3_mp3_path"
+    ],
+    "clip_info_final.csv": [
+      "clip_id",
+      "track_number",
+      "title",
+      "artist",
+      "album",
+      "url",
+      "segmentStart",
+      "segmentEnd",
+      "original_url",
+      "mp3_path"
+    ]
+  },
+  "actual_counts": {
+    "comparison_rows": 533,
+    "metadata_clip_rows": 31382,
+    "unique_compared_clips": 1019,
+    "compared_artists": 214,
+    "all_vote_events": 7650,
+    "rows_with_unique_odd_one_out_winner": 446,
+    "rows_with_tied_maximum_vote": 87,
+    "minimum_three_votes_unique_winner_rows": 307,
+    "artist_disjoint_retained_constraints": 143,
+    "local_audio_clips_extracted_for_all_compared_rows": 1019,
+    "local_audio_clips_used_by_retained_split": 255
+  },
+  "vote_interpretation": {
+    "meaning": "clipN_numvotes counts listeners selecting clip N as the odd item; the other two clips form the human-similar pair.",
+    "primary_metric": "Predict the odd clip as the item opposite the closest representation-space pair.",
+    "ties": "Excluded, never broken.",
+    "confidence": "(winner votes - runner-up votes) / total votes; winner share is also retained.",
+    "minimum_total_votes": 3
+  },
+  "split": {
+    "algorithm": "weighted Louvain artist communities (resolution 1.0, seed 20260712), exact whole-community 60/20/20 assignment, discard cross-community rows",
+    "train_constraints": 86,
+    "dev_constraints": 28,
+    "test_constraints": 29,
+    "train_artists": 97,
+    "dev_artists": 35,
+    "test_artists": 35,
+    "artist_overlap": {
+      "train_dev": [],
+      "train_test": [],
+      "dev_test": []
+    }
+  },
+  "mirex_evalutron_context": {
+    "mirex_protocol_archive": "https://web.archive.org/web/20220521123954id_/https://music-ir.org/mirex/wiki/2019:Audio_Music_Similarity_and_Retrieval",
+    "protocol_summary": "MIREX AMS used artist-filtered query-by-example lists, about 120 queries, five results, randomized human review, three similarity classes, and an optional continuous 0-10 score.",
+    "evalutron_citation": "Gruzd, A. A.; Downie, J. S.; Jones, M. C.; Lee, J. H. (2007). Evalutron 6000: Collecting Music Relevance Judgments. JCDL 2007.",
+    "evalutron_doi": "https://doi.org/10.1145/1255175.1255307",
+    "gold_availability": "The task protocol is public, but the secured human judgment corpus is not used or claimed as downloadable commercial-track sonic gold."
+  }
+}

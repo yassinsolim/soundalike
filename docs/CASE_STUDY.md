@@ -47,6 +47,10 @@ run it" lives in the [README](../README.md); this is the "how it was built and w
   candidate recall 0.1996→0.2654 and nDCG@10 0.03477→0.04882, but nested folds gained only
   6.0%-18.6%, scene-held-out validation passed 4/17 scenes, and a new direct review passed 13/20.
   Preconditions failed, so no protocol-v8 FINAL was created or opened.
+- **Human calibration result:** MagnaTagATune's real odd-one-out votes put the current artist-SupCon
+  encoder at 16/29 (55.2%) and a DEV-selected, FMA-regularized 32-D projection at 19/29 (65.5%).
+  The +10.3-point paired CI still spans zero, so the catalog was not re-embedded. A signed,
+  60-seed blinded-list evaluator is ready, but no real listener exports existed in this run.
 - **Built and validated on:** an NVIDIA RTX 5080, the full automated suite, and a clean packaged
   wheel.
 
@@ -1195,7 +1199,119 @@ co-primary and hosted-tier precondition failed. No fresh FINAL directory or iden
 
 ---
 
-## 13. Security & correctness
+## 13. Human audio calibration and an actual-list listening protocol
+
+Iteration 9's large retrieval gain was real on its labels but not evidence of sound: 768/815
+positives came from a taste-affinity map, and two coherence judges passed only 16/60 and 5/60.
+Relabelling current outputs would have manufactured the missing ground truth. Instead, the next
+iteration separated two questions:
+
+1. does an audio representation agree with any downloadable human similarity judgments; and
+2. do people judge the **actual served commercial-track lists** better?
+
+### What public human evidence actually exists
+
+No public, downloadable commercial-track human sonic gold was found. MIREX's Audio Music
+Similarity protocol is public and directly motivates this study: artist-filtered query-by-example,
+five results per method, randomized human presentation, `not / somewhat / very similar`, and an
+optional 0–10 score. The secured Evalutron judgments are not treated as an available dataset.
+Protocol source:
+[MIREX AMS](https://web.archive.org/web/20220521123954id_/https://music-ir.org/mirex/wiki/2019:Audio_Music_Similarity_and_Retrieval);
+system citation: Gruzd et al.,
+[“Evalutron 6000”](https://doi.org/10.1145/1255175.1255307), JCDL 2007.
+
+The usable public anchor is MagnaTagATune's triadic human comparison file. The City-hosted page
+credits Law et al. (ISMIR 2009), publicly links the data, and asks for citation, but states no
+dataset-wide redistribution license for the Magnatune audio. Therefore:
+
+- the two CSVs, three verified archive parts, extracted clips, mels, and checkpoints remain under
+  gitignored `ml_data`;
+- no copyrighted audio is committed or re-hosted;
+- only source URLs, exact schemas/counts/hashes, aggregate scores, and code are committed in
+  `benchmarks/evidence/v10/magnatagatune-provenance.json`.
+
+The released CSVs have 533 rows, 7,650 votes, 1,019 compared clips, and 31,382 clip metadata rows.
+A `clipN_numvotes` value is an odd-one-out vote for clip N; the other two are the similar pair.
+Tied maxima are excluded. Requiring at least three votes yields 307 unambiguous rows.
+
+### Artist-isolated training and the once-opened audio test
+
+All compared artists form one connected graph, so a naive component split is impossible. A
+deterministic weighted-Louvain partition (resolution 1.0, seed 20260712) assigns whole artist
+communities to splits and discards crossing rows. It retains 86 train / 28 DEV / 29 TEST
+constraints and 97 / 35 / 35 artists, with no artist or clip crossing a split.
+
+The representation set and +5-point material-win/positive-CI rule were hash-locked before TEST.
+The compact projection was trained only on MTAT train. Independent FMA mels regularized it by
+preserving frozen artist-SupCon pair geometry; neither commercial benchmark labels nor v9 outputs
+entered training. Twenty-four projection configurations were selected on MTAT DEV, where the
+chosen 32-D model reached 23/28. TEST then opened exactly once:
+
+| Human odd-one-out TEST | Correct | Accuracy | Wilson 95% CI |
+|---|---:|---:|---:|
+| artist-SupCon incumbent | 16/29 | 55.2% | [37.5%, 71.6%] |
+| FMA cross-artist SupCon | 16/29 | 55.2% | [37.5%, 71.6%] |
+| 29-D vibe/DSP | 13/29 | 44.8% | [28.4%, 62.5%] |
+| pretrained LAION-CLAP | 17/29 | 58.6% | [40.7%, 74.5%] |
+| MTAT triplet projection + FMA regularization | **19/29** | **65.5%** | **[47.3%, 80.1%]** |
+
+The projection's +10.3-point paired delta has CI `[-13.8,+34.5]` points and
+`P(delta>0)=0.758`. It clears the point estimate but **fails the predeclared CI evidence**. This
+is a negative release decision: no 272,853-row spec-cache re-embedding, song tie-break change,
+commercial FINAL, or production deployment occurred.
+
+GPU work ran on the RTX 5080: fixed-encoder extraction took 0.23 s and 0.08 s, CLAP 8.65 s,
+512-sample FMA regularizer extraction 0.26 s, and the 24-model projection sweep 12.32 s after
+40.77 s of CPU audio/DSP preparation. Input/checkpoint hashes and exact prediction vectors are
+in `magnatagatune-human-calibration-v10.json`.
+
+### Version quality on the real index
+
+The title filter now classifies versions rather than relying on isolated phrases. A canonical
+query excludes explicit remix/mix, edit, instrumental, cover, karaoke/tribute, slowed/reverb,
+nightcore/sped-up, medley/mashup, and seed-title variants. A derivative seed can admit only the
+same derivative classes. Within one artist/canonical title, an available original wins over its
+derivatives. There are no artist-specific rules.
+
+On all 272,853 real rows, 16,931 are filtered; an independent recognizer identifies 11,470 explicit
+derivatives with zero false negatives, and six risky legitimate controls have zero false positives.
+There are 4,353 same-artist canonical groups where an original replaces a derivative. Unlabelled
+cross-artist covers cannot be inferred honestly from title and artist strings; those remain an
+explicit human junk/version flag until trustworthy work/original-release attribution exists.
+
+### Frozen blinded commercial-list evaluator
+
+The standalone `benchmarks/human_eval_v10.html` rates the already-generated production/challenger
+lists for 60 seeds across 13 scenes. It keeps method identity out of the HTML and public pack,
+uses a private random salt for opaque list IDs, randomizes seed/list order per local session,
+filters same-artist results, plays available public previews, autosaves to localStorage, resumes
+signed partial exports, and never uploads ratings. Shared tracks across methods are rated once and
+credited to both positions. Each result gets the MIREX 3-class judgment, optional 0–10, and a
+junk/version flag; each list gets top-3 unrelated count and whole-list coherence.
+
+The public served-list content hash is
+`458abcb809378dbc16506c9d0055477bc26d74585416b38f53863b07341c9815`.
+The state entered `RANKINGS_LOCKED` with zero ratings and is detached-Ed25519-signed by public key
+fingerprint `SHA256:c9Vzptc7X6TbwM/tHyOvOt25dGF8BPjeEvC60/iw+Do`. The 600 method positions
+collapse to 480 unique per-seed results, so 120 duplicates are not rated twice; 119 result and
+22 seed preview URLs resolved at freeze. The role key stays gitignored.
+
+The browser HMAC proves portable integrity, not humanity. Before aggregation, the local study
+operator checks the export and signs its exact bytes with a separate gitignored collector key
+(public fingerprint `SHA256:pzZfnWuEifekquayAp1aDGlxjBLivMgY9FYHtO0IxV4`). The aggregation CLI
+requires that detached approval; rejects any export containing Last.fm, Deezer, Music4All, Gnod,
+editorial, model, or proxy evidence; requires interactive timestamps/durations and a valid local
+HMAC; merges repeated anonymous rater/seed submissions deterministically; and reports pairwise
+agreement/kappa, per-seed nDCG/coherence/junk/top-3 counts, plus bootstrap CIs from complete
+same-rater A/B deltas averaged within seed.
+
+**Stop decision:** no actual listener export was supplied in this run. The aggregator therefore
+fails closed and cannot create a `sonic_human` report. Human AC#3 is not claimed, the locked v9
+challenger is not promoted, and production remains `2026.07.11-dual-sonic64`.
+
+---
+
+## 14. Security & correctness
 
 - **No passwords, ever.** Live Spotify access uses OAuth 2.0 **Authorization Code + PKCE** with a
   local loopback callback, CSRF `state` validation, and cached auto-refreshing tokens.
@@ -1206,9 +1322,9 @@ co-primary and hosted-tier precondition failed. No fresh FINAL directory or iden
   FINAL pairs before training. Exact deciding item edges were removed from every Music4All user
   context (2,236 co-occurrences to zero), target-agnostic rankings entered `RANKINGS_LOCKED`, and
   FINAL opened once. Tests reject artist/track duplicates, split overlap, and protocol tampering.
-- **Real-index derivative audit.** On 272,853 rows the filter removes 1,361 candidates. An
-  independent pattern set found 348 obvious slowed/reverb/nightcore/karaoke/cover/mashup variants
-  with zero false negatives; six curated legitimate risky titles had zero false positives.
+- **Real-index derivative audit.** On 272,853 rows the generic v10 filter removes 16,931 explicit
+  versions. An independent pattern set found 11,470 recognizable derivatives with zero false
+  negatives; six curated legitimate risky titles had zero false positives.
 - **Release integrity.** Desktop and hosted downloads pin SHA-256; hosted download is atomic and
   fails before loading on a mismatch, and numpy object pickles are disabled.
 - **Automated tests** cover the recommenders, OAuth/PKCE, DSP, vibe and vibe-aware engines,
@@ -1220,12 +1336,13 @@ co-primary and hosted-tier precondition failed. No fresh FINAL directory or iden
 
 ---
 
-## 14. What I'd build next
+## 15. What I'd build next
 
 - **Persist a personal acoustic-feature store** so the engines cover a user's entire Spotify
   library, not just what's in a preview catalog.
-- **Blind multi-reviewer listening panel** — add preview-level judgments beyond the sourced-pair
-  benchmark and publish agreement, rather than letting one reviewer tune and test the same list.
+- **Run the frozen multi-reviewer panel** — the local signed evaluator now exists; recruit anonymous
+  listeners, merge only actual exports, publish agreement/CIs, and still ship nothing unless the
+  predeclared human-list gates pass.
 - **A 512-d or a downloadable (non-bundled) index** — the downloadable index now exists (fetched from
   a GitHub Release past the 100 MB bundle cap), so library coverage can grow further; a wider encoder,
   though, was measured *not* to help (512-d matched 384-d). The next encoder gain should come from a
@@ -1242,7 +1359,7 @@ co-primary and hosted-tier precondition failed. No fresh FINAL directory or iden
 
 ---
 
-## 14. Skills demonstrated
+## 16. Skills demonstrated
 
 For anyone evaluating this as a portfolio piece, the work spans:
 
@@ -1256,7 +1373,7 @@ For anyone evaluating this as a portfolio piece, the work spans:
   CUDA memory-layout and precision tuning, reading cuDNN kernel selection.
 - **API integration & security:** OAuth 2.0 PKCE, token lifecycle management, rate-limit handling,
   secret hygiene.
-- **Software engineering:** clean package design, a 479-test suite, packaging, a documented CLI,
+- **Software engineering:** clean package design, a 511-test suite, packaging, a documented CLI,
   decoupling I/O from compute (the harvest-once spec cache), and reviewed, merged pull requests.
   Includes a reproducible human-aligned evaluation suite, three ranking improvements (quality
   filter, genre reranker, collaborative graph), and desktop/hosted parity tests.

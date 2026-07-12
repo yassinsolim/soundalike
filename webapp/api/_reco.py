@@ -108,6 +108,14 @@ _CONTEXT_TITLE_JUNK_RE = re.compile(
     r"\(\s*cover(?:\s+of\b[^)]*)?\s*\)|\s+-\s+cover(?:\s+of\b.*)?$",
     re.IGNORECASE,
 )
+_CONTEXT_VERSION_JUNK_RE = re.compile(
+    r"(?:\(|\[)[^)\]]*\b(?:re)?mix(?:es)?\b[^)\]]*(?:\)|\])"
+    r"|\s+-\s+[^-]*\b(?:re)?mix(?:es)?\b[^-]*$"
+    r"|\b(?:club|radio|extended|dub|dance|house|vocal)\s+mix\b"
+    r"|(?:\(|\[|\s+-\s*)[^)\]]*\b(?:rework|bootleg|vip|edit)\b"
+    r"[^)\]]*(?:\)|\]|$)|\bchopnotslop\b",
+    re.IGNORECASE,
+)
 
 
 class _TitleQualityFilter:
@@ -122,6 +130,7 @@ class _TitleQualityFilter:
             not (
                 _TITLE_JUNK_RE.search(self._plain(title))
                 or _CONTEXT_TITLE_JUNK_RE.search(self._plain(title))
+                or _CONTEXT_VERSION_JUNK_RE.search(self._plain(title))
                 or _MULTI_X_MASHUP_RE.search(self._plain(title))
                 or _LEADING_TRIBUTE_RE.search(self._plain(title))
                 or _ARTIST_JUNK_RE.search(self._plain(artist))

@@ -192,19 +192,34 @@ def test_paired_bootstrap_aligns_by_pair_id():
     assert result["ci95_low"] == result["ci95_high"] == 0
 
 
-def test_winner_top_five_has_no_junk_or_seed_title_variants():
+def test_historical_winner_top_five_exposes_only_the_two_new_version_misses():
     method = _json(ALL_WINNER)["methods"]["dual_sonic"]
     quality = TitleQualityFilter()
+    version_misses = []
     for pair in method["pairs"]:
         seen = set()
         for result in pair["ranked_outputs"][:5]:
-            assert not quality.is_junk(result["title"], result["artist"])
+            if quality.is_junk(result["title"], result["artist"]):
+                version_misses.append((
+                    pair["pair_id"], result["title"],
+                    tuple(sorted(quality.version_tags(
+                        result["title"], result["artist"]
+                    ))),
+                ))
             assert not quality.seed_title_in_result(
                 pair["query_catalogue"]["title"], result["title"]
             )
             key = (result["title"].casefold(), result["artist"].casefold())
             assert key not in seen
             seen.add(key)
+    assert version_misses == [
+        ("F02", "Next Level (Lionclad Remix)", ("remix",)),
+        (
+            "F06",
+            "After the Afterparty (feat. RAYE, Stefflon Don and Rita Ora) (VIP Mix)",
+            ("edit", "remix"),
+        ),
+    ]
 
 
 def test_external_validation_is_disjoint_and_equivalent_or_better():
