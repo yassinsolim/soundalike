@@ -1086,7 +1086,116 @@ hosted, release, manifest, or live-production path changed.
 
 ---
 
-## 12. Security & correctness
+## 12. Powered sonic list gold: retrieval passed, coherence stopped release
+
+Iteration 8's 61 single-counterpart records left 60 scores pinned to zero. Iteration 9 therefore
+froze a harder, higher-dynamic-range unit: each observation is the two methods' **actual served
+top-10 list**, not an embedding distance or one exact target.
+
+### Independent gold and scorer lock
+
+The DEV set has 60 real, catalogue-resolved seeds across 13 required scenes: rap, R&B, indie,
+shoegaze, hyperpop, electronic, metal, jazz, city/J/K-pop, Latin/Afrobeats, pop, rock, and
+difficult blends. The 815 positives have at least five per seed and at least two grades. Evidence
+is independent of the candidate graph and Deezer validation:
+
+- 60 HTTP-200 Gnod Music-Map pages, normalized with source rank, affinity, retrieved claim,
+  access date, raw-response SHA-256, and normalized-snapshot SHA-256;
+- 40 existing category-A track comparisons carrying publisher, source class, URL, access date,
+  and retrieved critic/editorial evidence;
+- 6 target artists where both independent source classes explicitly agree.
+
+Artist-level relevance is disclosed: a served track inherits grade 1 or 2 only when its artist is
+explicitly present on the seed's similar-artist map. Category-A exact recordings receive grade 3.
+Samples, legal claims, covers/remixes, weak listicles, junk variants, same-artist results, and
+seed-title mashups are ineligible. No model invented a relevance label.
+
+Before evaluating any real policy, `protocol-v9-powered-development-r2` locked and Ed25519-signed the
+gold, snapshots, scorer source, policy source, complete 48-policy grid, production index, graph,
+and style asset. The co-primary was fixed as:
+
+```text
+co-primary 1 = exponential-gain graded nDCG@10 on actual served lists
+co-primary 2 = top-5 evidence-grounded coherence pass
+               (positions 1-3 all coherent, >=4/5 coherent, zero junk)
+
+advance only if:
+  nDCG relative >=20%, absolute >=.02, bootstrap CI low >0, >=10 seeds improve
+  every scene >=-10%, candidate recall improves, MRR non-regresses
+  coherence >=80% and >=10 percentage points above production
+```
+
+The exact category-A recording target is retained only as an underpowered diagnostic.
+
+### Last.fm-first policy
+
+Music4All's 5% track coverage caused iteration 8 to abstain before judging quality. The v9 policy
+uses exactly three tunables and no artist/scene/popularity branch:
+
+```text
+tau          = Last.fm top-neighborhood confidence threshold
+sigma        = per-track min(audio similarity, style consistency) threshold
+audio_weight = the single graph-ranking audio tie-break
+
+G = Last.fm component + 0.15 * optional Music4All component
+score = G + audio_weight * A
+```
+
+A shared Music4All neighbor adds a fixed 0.05 confidence bonus, but Music4All is never required.
+Missing Last.fm, confidence below `tau`, or fewer than five song-consistent candidates returns the
+exact production ordering.
+
+### Powered DEV result
+
+Nested five-fold selection chose `(tau=.35, sigma=.35, audio_weight=0)`.
+
+| Out-of-fold metric | Production | Challenger | Change |
+|---|---:|---:|---:|
+| graded nDCG@10 | 0.081117 | **0.200690** | **+147.4%** |
+| MRR@10 | 0.315463 | **0.592778** | +87.9% |
+| Recall@10 | 0.058693 | **0.143664** | +144.8% |
+| candidate recall@1000 | 0.432576 | **0.578932** | +33.8% |
+| strict coherence passes | 2/60 | **16/60** | +14 seeds |
+
+Absolute nDCG gain is +0.119573; the 10,000-sample paired-bootstrap CI is
+`[+0.080937,+0.161538]`, probability-positive 1.0, with 34 improved / 0 worsened /
+26 unchanged. Every scene is non-regressing; scene-held-out aggregate gain is +145.9% with the
+same zero-regression floor. Thus every retrieval, power, candidate, MRR, junk, and scene gate
+passes.
+
+The gate fires 36/60 and abstains 24/60: 23 missing Last.fm, one below `tau`, and **zero**
+Music4All-missing abstentions. Evaluation covered 48 policies × 60 records in 88.0 seconds.
+The selected lists contain both complete 10-result orders, source grade/rationale/uncertainty,
+gate components, track IDs, and preview availability. Public preview verification found 449
+available and 324 unavailable among 773 unique tracks.
+
+### Why DEV still failed
+
+The independent coherence axis is not close to release quality. The locked strict scorer passes
+16/60 (26.7%), not 80%. A separate method-blind model-assisted review then judged all 600 top-5
+positions without reading the unblinding key. It required a frozen Music-Map/category-A citation
+or disclosed MusicBrainz-direct supporting tags for every positive assertion; unsupported cases
+were high-uncertainty failures. After unblinding, production passes 1/60 and the challenger 5/60
+(58/300 vs 123/300 coherent positions). The conservative review also flags 13 production and 9
+challenger version/cover candidates. It confirms the lists are nowhere near the 80% bar and adds a
+second independent reason not to release.
+
+Exact category-A top-10 hits remain 1/36 for both methods. This diagnostic does not override the
+powered nDCG gain or the failed list-coherence gate.
+
+The compact runtime assets are unchanged from iteration 8 (12.16 MB graph, measured 1.494 GB peak
+RSS, 7.96 s load, 265.5 ms warm p95). The linked Vercel project and public Vercel-bot deployment
+are verified, but the actual plan is not: there are no local credential variables, CLI inspection
+requires login, the project API returns 403, and GitHub deployment metadata exposes no tier.
+Official memory limits vary by plan, so the tier gate remains fail-closed.
+
+**Stop decision:** powered retrieval passed strongly, but the independently grounded coherence
+co-primary and hosted-tier precondition failed. No fresh FINAL directory or identity exists,
+`final_open_count=0`, and no canonical, hosted, release, manifest, or live-production path changed.
+
+---
+
+## 13. Security & correctness
 
 - **No passwords, ever.** Live Spotify access uses OAuth 2.0 **Authorization Code + PKCE** with a
   local loopback callback, CSRF `state` validation, and cached auto-refreshing tokens.
@@ -1111,7 +1220,7 @@ hosted, release, manifest, or live-production path changed.
 
 ---
 
-## 13. What I'd build next
+## 14. What I'd build next
 
 - **Persist a personal acoustic-feature store** so the engines cover a user's entire Spotify
   library, not just what's in a preview catalog.

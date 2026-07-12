@@ -1,0 +1,609 @@
+{
+  "schema_version": 9,
+  "blind_lists_sha256": "705b24fb2014c9c04d2577388bbc3d79f0e3678c32791443fbfa5513f5f83e83",
+  "judgments_sha256": "1a6195cb5d58fa03642c8923650399c65f53d82bee32008b1da48471c6c0e3a6",
+  "revealed_after_judgment_hash_locked": true,
+  "records": [
+    {
+      "id": "DEV-SONIC-001",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-001",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-002",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-002",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-003",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-003",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-004",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-004",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-005",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-005",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-006",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-006",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-007",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-007",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-008",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-008",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-009",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-009",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-010",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-010",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-011",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-011",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-012",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-012",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-013",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-013",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-014",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-014",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-015",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-015",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-016",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-016",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-017",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-017",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-018",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-018",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-019",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-019",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-020",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-020",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-021",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-021",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-022",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-022",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-023",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-023",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-024",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-024",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-025",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-025",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-026",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-026",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-027",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-027",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-028",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-028",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-029",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-029",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-030",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-030",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-031",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-031",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-032",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-032",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-033",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-033",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-034",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-034",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-035",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-035",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-036",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-036",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-037",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-037",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-038",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-038",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-039",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-039",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-040",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-040",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-041",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-041",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-042",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-042",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-043",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-043",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-044",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-044",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-045",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-045",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-046",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-046",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-047",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-047",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-048",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-048",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-049",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-049",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-050",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-050",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-051",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-051",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-052",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-052",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-053",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-053",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-054",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-054",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-055",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-055",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-056",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-056",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-057",
+      "alias": "A",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-057",
+      "alias": "B",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-058",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-058",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-059",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-059",
+      "alias": "B",
+      "method_role": "production_baseline"
+    },
+    {
+      "id": "DEV-SONIC-060",
+      "alias": "A",
+      "method_role": "challenger"
+    },
+    {
+      "id": "DEV-SONIC-060",
+      "alias": "B",
+      "method_role": "production_baseline"
+    }
+  ],
+  "content_sha256": "84dde5e3b68f5fa6271e44f9163628dc2cc1b402adca792386aeae1402778f87"
+}

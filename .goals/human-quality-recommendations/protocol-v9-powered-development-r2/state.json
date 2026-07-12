@@ -1,0 +1,22 @@
+{
+  "schema_version": 9,
+  "phase": "DEVELOPMENT_SCORER_LOCKED",
+  "policy_tuning_started": false,
+  "final_open_count": 0,
+  "fresh_final_blocked": true,
+  "deployment_blocked": true,
+  "input_sha256": {
+    "benchmarks\\soundalike_list_gold.v9.json": "6e7954b27118a8d1c02965b86afb9bc7cb6baafca7650b6931b93de18266deff",
+    "benchmarks\\evidence\\v9\\music-map.normalized.json": "bdfa4e1037801afb9c683cc35c654bec20ba7e7779f0245c021dc4db50e300c7",
+    "ml_data\\deepvibe_index_v5.npz": "f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9",
+    "ml_data\\iteration8\\catalog-artist-graph-dual-v8.npz": "6a691f16f4b9d5ae015f5cb2959a4ba538af6fefe1446d89f72c64104ecf0f43",
+    "ml_data\\iteration7\\catalog-style-v8.npz": "d8ef2158373f226194ffcc9c8d87d45f902be4c109be81f6f8a2fe2c0d959ccf",
+    "src\\soundalike\\ml\\catalog_list_gold_v9.py": "bc15f9ce9fde7d6d38a1e7bf48de853d2061853d9dd86806a8f0312142525e50",
+    "src\\soundalike\\ml\\catalog_policy_v9.py": "8073ae523bce3a707594c8eeb0b263b229c6e983cb108a8db06ca92a9f7daa6d",
+    "src\\soundalike\\ml\\catalog_cv_v9.py": "8cd11c7cc136edd248685e6f0d19dbde2394771b7327829344ce821a5b4e92ed",
+    "src\\soundalike\\ml\\catalog_v9.py": "b44327a59b10a9fc81e838c90ad8bd8a4c2f5b5cb256d0a4156562cbaa106d9c"
+  },
+  "protocol_sha256": "6474c1e5e2f765e9cb7dc464f718b171841c7e8130541527b7ee327386eab88d",
+  "created_at": "2026-07-12T18:02:29.931370+00:00",
+  "integrity_signature": "9206a003d58fcc9fc089383555490a6c927b37f382913db59011d46d48e2cdf0"
+}

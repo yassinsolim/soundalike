@@ -1,0 +1,1087 @@
+{
+  "schema_version": 9,
+  "blind_lists_sha256": "705b24fb2014c9c04d2577388bbc3d79f0e3678c32791443fbfa5513f5f83e83",
+  "records": [
+    {
+      "id": "DEV-SONIC-001",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-001",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.4,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-002",
+      "alias": "A",
+      "coherence_pass": true,
+      "coherence_fraction_at_5": 0.8,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-002",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-003",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-003",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.6,
+      "unrelated_positions_1_to_3": 1,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-004",
+      "alias": "A",
+      "coherence_pass": true,
+      "coherence_fraction_at_5": 0.8,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-004",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-005",
+      "alias": "A",
+      "coherence_pass": true,
+      "coherence_fraction_at_5": 1.0,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-005",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-006",
+      "alias": "A",
+      "coherence_pass": true,
+      "coherence_fraction_at_5": 1.0,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-006",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-007",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-007",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.6,
+      "unrelated_positions_1_to_3": 1,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-008",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.8,
+      "unrelated_positions_1_to_3": 1,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-008",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.8,
+      "unrelated_positions_1_to_3": 1,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-009",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-009",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.4,
+      "unrelated_positions_1_to_3": 1,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-010",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.6,
+      "unrelated_positions_1_to_3": 1,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-010",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-011",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-011",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-012",
+      "alias": "A",
+      "coherence_pass": true,
+      "coherence_fraction_at_5": 0.8,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-012",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-013",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.4,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-013",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.4,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-014",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.6,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-014",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.6,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-015",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-015",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-016",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.4,
+      "unrelated_positions_1_to_3": 1,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-016",
+      "alias": "B",
+      "coherence_pass": true,
+      "coherence_fraction_at_5": 0.8,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-017",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.4,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-017",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-018",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-018",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.8,
+      "unrelated_positions_1_to_3": 1,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-019",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-019",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-020",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-020",
+      "alias": "B",
+      "coherence_pass": true,
+      "coherence_fraction_at_5": 1.0,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-021",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-021",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.4,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-022",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-022",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-023",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.6,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-023",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-024",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.6,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-024",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-025",
+      "alias": "A",
+      "coherence_pass": true,
+      "coherence_fraction_at_5": 0.8,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-025",
+      "alias": "B",
+      "coherence_pass": true,
+      "coherence_fraction_at_5": 0.8,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-026",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.6,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-026",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-027",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-027",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-028",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-028",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-029",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-029",
+      "alias": "B",
+      "coherence_pass": true,
+      "coherence_fraction_at_5": 1.0,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-030",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.4,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-030",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-031",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.6,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-031",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.6,
+      "unrelated_positions_1_to_3": 1,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-032",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.6,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-032",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.6,
+      "unrelated_positions_1_to_3": 1,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-033",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-033",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-034",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-034",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-035",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.4,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-035",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.4,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-036",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-036",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-037",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-037",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-038",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-038",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-039",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-039",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-040",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-040",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-041",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-041",
+      "alias": "B",
+      "coherence_pass": true,
+      "coherence_fraction_at_5": 1.0,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-042",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-042",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-043",
+      "alias": "A",
+      "coherence_pass": true,
+      "coherence_fraction_at_5": 0.8,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-043",
+      "alias": "B",
+      "coherence_pass": true,
+      "coherence_fraction_at_5": 0.8,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-044",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-044",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-045",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-045",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-046",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.4,
+      "unrelated_positions_1_to_3": 1,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-046",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.4,
+      "unrelated_positions_1_to_3": 1,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-047",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-047",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-048",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.4,
+      "unrelated_positions_1_to_3": 1,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-048",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.4,
+      "unrelated_positions_1_to_3": 1,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-049",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-049",
+      "alias": "B",
+      "coherence_pass": true,
+      "coherence_fraction_at_5": 0.8,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-050",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.4,
+      "unrelated_positions_1_to_3": 1,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-050",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-051",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-051",
+      "alias": "B",
+      "coherence_pass": true,
+      "coherence_fraction_at_5": 0.8,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-052",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-052",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.8,
+      "unrelated_positions_1_to_3": 1,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-053",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.6,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-053",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-054",
+      "alias": "A",
+      "coherence_pass": true,
+      "coherence_fraction_at_5": 1.0,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-054",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.6,
+      "unrelated_positions_1_to_3": 1,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-055",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-055",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-056",
+      "alias": "A",
+      "coherence_pass": true,
+      "coherence_fraction_at_5": 1.0,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-056",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.6,
+      "unrelated_positions_1_to_3": 1,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-057",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 2,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-057",
+      "alias": "B",
+      "coherence_pass": true,
+      "coherence_fraction_at_5": 1.0,
+      "unrelated_positions_1_to_3": 0,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-058",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-058",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.2,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-059",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.8,
+      "unrelated_positions_1_to_3": 1,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-059",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.8,
+      "unrelated_positions_1_to_3": 1,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-060",
+      "alias": "A",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    },
+    {
+      "id": "DEV-SONIC-060",
+      "alias": "B",
+      "coherence_pass": false,
+      "coherence_fraction_at_5": 0.0,
+      "unrelated_positions_1_to_3": 3,
+      "junk_count": 0,
+      "judgment_basis": "frozen independent Music-Map/category-A evidence only; method identity hidden"
+    }
+  ],
+  "content_sha256": "1a6195cb5d58fa03642c8923650399c65f53d82bee32008b1da48471c6c0e3a6"
+}
