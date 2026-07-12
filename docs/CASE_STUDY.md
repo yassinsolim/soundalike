@@ -35,11 +35,12 @@ run it" lives in the [README](../README.md); this is the "how it was built and w
   **regressed real cross-artist recommendation** (and botched niche genres like city pop/hyperpop).
   An internal metric had rewarded the wrong thing, so I **reverted** and built a `cross_artist_agreement`
   metric that measures inter-artist geometry — the honest "measure, ship, re-measure, revert" loop.
-- **Human-quality retrieval result:** a categorized final 20-pair pure-sonic benchmark exposes the
-  encoder's weakness; dual EfficientNet/CLAP retrieval raises frozen production primary
-  **0.0281→0.0529 (+88.3%)** while preserving a reviewed 17/20 top-five UX result.
-- **Built and validated on:** an NVIDIA RTX 5080 (Blackwell), 308 automated tests, a clean
-  packaged wheel.
+- **Human-quality retrieval result:** a 107-pair, component-disjoint protocol exposed another
+  failed generalization. The locked audio-only method improved DEV primary 0.01506→0.02558, but
+  the once-opened 40-pair FINAL test moved one counterpart to rank 14, with primary 0→0.000595
+  and a paired 95% interval touching zero. It was rejected and not deployed.
+- **Built and validated on:** an NVIDIA RTX 5080, the full automated suite, and a clean packaged
+  wheel.
 
 ---
 
@@ -413,129 +414,134 @@ into trance — a candidate for the next objective iteration, now measurable via
 
 ---
 
-## 7. Ranking quality: clean evidence and dual-Sonic64 retrieval
+## 7. Ranking quality: the once-opened audio test
 
-The first ranking iteration evaluated synthetic clusters with a leaking hand-written graph. The
-second fixed leakage and ran the real catalogue, but actual pair retrieval improved only **2.25%**;
-the much larger direct-list improvement (11/20 to 17/20) had been blended into the headline. The
-blend is gone. Direct judgments are now a secondary guardrail only.
+Iteration 3 fixed category leakage and deployed a manually coherent guardrail, but its advertised
++88.3% retrieval result was one additional counterpart at rank 37. Recall@10 fell 0.05→0, MRR
+fell 0.00625→0.00590, and the paired interval [-0.00256, 0.07703] crossed zero. The held-out set
+had also been reused for challenger selection, and removing Wikipedia/notability priors reduced the
+reported method to zero hits. It was not evidence that the +20% goal had been met.
 
-### Clean relationship categories and a final disjoint set
+### A new benchmark before new training
 
-Version 4 contains 93 sourced recording pairs. Every source has a URL, publisher, specific evidence
-context, and retrieval date. The relationship determines whether a row can decide retrieval:
+Version 5 was built before fitting iteration-4 models. It contains 107 deciding Category-A pairs
+across 85 named scenes and stores URLs, short excerpts, source classes, access dates, and category
+rationales. A post-freeze audit checked 190 unique URLs: 186 returned 200, two were
+publisher-access-controlled, and two stale slugs have verified canonical/archive replacements in the
+audit artifact. Samples, interpolations, covers, remixes, legal allegations, and weak listicles do not
+enter the metric. Named criticism/participant accounts provide the editorial rows; the independent
+ListenBrainz similar-recordings dataset supplies human-listening musical-similarity rows, with its
+session-based limitation stated explicitly. MusicBrainz recording IDs verify identity.
 
-| Evidence category | Rows | Deciding? |
-|---|---:|---|
-| Credible pure sonic comparison | 54 | only final held-out rows |
-| Sample / interpolation | 9 | no; diagnostic only |
-| Legal / plagiarism dispute | 9 | no; diagnostic only |
-| Cover / remix / adaptation / contrafact | 5 | no; diagnostic only |
-| Weak or unsupported assertion | 16 | no; diagnostic only |
+The 67 development and 40 FINAL pairs share no artist or transitive artist component. Tracks and
+artists are unique, and popular, deep-cut, and niche strata are present. Every prior v4 held-out row
+is development-only. Before training, the protocol froze and hashed:
 
-The final 20 pure-sonic pairs were selected from named criticism, artist accounts, or specific
-musicological descriptions. Both exact original recordings exist in the frozen catalogue; a remix,
-live recording, cover, or other derivative can no longer substitute for a missing target. Their 49
-credited artists do not occur in the 147 development/validation artists. A connected-component
-audit covers benchmark, manual, and graph edges transitively and reports no bridge.
+- `benchmarks/soundalike_pairs.v5.json`;
+- the 40-pair FINAL manifest;
+- ranked outputs for pre-goal production, iteration-3 deployed, raw encoder, and all-priors-zero
+  audio baselines; and
+- a signed state document with `final_open_count = 0`.
 
-The deciding metric remained:
+The primary was predeclared as `mean(NDCG@10, MRR, Recall@10)`. Success required ≥20% relative
+and positive absolute gain, non-regressing Recall@10 and MRR, paired-bootstrap CI above zero, at
+least five improved FINAL pairs, and no scene regression beyond 10%. The selected configuration,
+checkpoint hashes, and DEV report were locked before the state machine permitted one opening. Review
+then hardened the transition further: future runs must enter `RANKINGS_LOCKED`, binding the exact
+target-agnostic ranking file hash before `open-final`. The historical failed run generated that file
+14 seconds before opening but predated the explicit transition; this limitation is recorded in state.
 
-```
-primary = 0.5 ? Recall@50 + 0.5 ? mean reciprocal rank
-```
+### Materially different audio experiments
 
-Missing sides score zero. Manual judgments and external artist agreement never enter it. Sequential
-challengers did reuse the held-out suite, as the requested iterate-until-threshold workflow requires;
-no held-out pair identity, target, rank, ListenBrainz response, or Deezer response is a training or
-serving feature. The bootstrap is therefore descriptive, not a once-opened significance test.
+All models excluded every benchmark artist where catalogue rows were used for training. Titles,
+artists, Wikipedia/pageviews, popularity, manual pairs, benchmark identities, and FINAL outcomes
+were never model inputs.
 
-### The encoder is weak; the guardrail union is what fixed retrieval
+| Approach | Substantial training/index run | DEV result |
+|---|---|---|
+| Cross-artist FMA SupCon ResNet | 153,600 examples, 1,200 updates; 272,853-row 128-d index | R@10 0; R@50 0.0149 |
+| FMA BYOL ResNet | 102,400 examples, 800 updates; full 128-d index | no top-50 hit |
+| EfficientNet/CLAP audio distillation | 256,000 examples, 1,000 updates; 15,570 benchmark rows excluded; full 128-d index | candidate R@1000 0.145, no top-50 hit |
+| Independent-pair audio metric/reranker | 3,967 cross-artist positives with zero benchmark-artist overlap | useful only as a two-stage head |
+| Three-window MaxSim | 3×128 vectors for all 272,853 tracks over a five-signal candidate union | union R@1000 0.217, but reranker had no top-50 hit |
 
-| Final 20 pure-sonic pairs | R@10 | R@20 | R@50 | MRR | Primary |
-|---|---:|---:|---:|---:|---:|
-| Raw local encoder | 0.0500 | 0.0500 | 0.0500 | 0.0100 | 0.0300 |
-| Frozen production baseline | 0.0500 | 0.0500 | 0.0500 | 0.0063 | 0.0281 |
-| **Dual-Sonic64 guardrail** | 0.0000 | 0.0500 | **0.1000** | 0.0059 | **0.0529** |
+Candidate recall was the main failure: the learned FMA models usually never admitted the known
+counterpart to the first 1,000 candidates. Distillation admitted more counterparts but could not
+order them usefully. The locked method therefore used a learned audio-only candidate head and a
+rank-stratified tail across EfficientNet, distilled audio, SupCon, and CLAP. The tail is a candidate-
+recall mechanism, not a metadata prior.
 
-The selected system improves the frozen primary **0.0281?0.0529 (+88.3%)** and doubles Recall@50.
-The existing hit moves from rank 8 to 11; a second exact counterpart enters at rank 37. The largest
-scene change is ?3.1%, inside the ?10% guardrail. Pair-bootstrap absolute delta is
-**?0.0026..0.0770** (95% interval; 63.9% positive), so the evidence clears the predeclared
-engineering threshold but does not establish a precise population effect.
+### DEV selection
 
-### Materially different real-index challengers
+| Development Category-A metric | Pre-goal production | Locked audio method |
+|---|---:|---:|
+| Recall@10 | 0.02985 | **0.04478** |
+| Recall@50 | 0.02985 | **0.07463** |
+| MRR | 0.00485 | **0.01254** |
+| NDCG@10 | 0.01048 | **0.01944** |
+| Primary | 0.01506 | **0.02558** |
 
-All representations were executed against the real 272,853 rows:
+Relative DEV gain was **+69.9%**. Four pairs improved, none worsened, and the paired primary-delta
+95% interval was **[0.000116, 0.028508]**. This was sufficient to lock the configuration; no FINAL
+rank or metric had been read.
 
-| Challenger | Measurement and decision |
-|---|---|
-| VGGish mean / three-window max | zero pure-pair Recall@50; rejected |
-| PANNs Cnn14 AudioSet | 112.99 s full build; no new validation hit |
-| LAION-CLAP HTSAT | 337.98 s full build; useful candidate signal after calibration |
-| EfficientNet eight-vector late interaction | 435.90 s build; no extra validation hit |
-| Chroma-FFT harmonic DSP | 106.75 s build; no Recall@50 gain |
-| CLAP title/artist text | 167.89 s build; semantic text did not retrieve exact sonic pairs |
-| Dev-only hard-negative metric | overfit development and failed to generalize |
-| Pageview-heavy learned reranker | zero final held-out hits; rejected |
-| **Dual-Sonic64 + source-independent priors + guardrail union** | selected |
+### FINAL opened once — failure
 
-CLAP and EfficientNet are each compressed to 64 float16 dimensions. PCA fitting excludes every
-benchmark artist. Wikipedia contributes only generic song-article existence/notability features;
-benchmark URLs, pair edges, and labels are not indexed. ListenBrainz and Deezer remain validation-
-only and are not features.
+The state machine opened FINAL at `2026-07-12T08:46:37Z` and immediately finalized it. A second
+open is rejected programmatically. The finalized state and bound ranking hash are sealed by a
+detached Ed25519 signature (`protocol-v5/state.sig`); the private key was not retained, and the
+committed public key verifies the artifact independently.
 
-### Selected production policy
+| Once-opened FINAL (40 pairs) | R@1 | R@5 | R@10 | R@20 | R@50 | MRR | NDCG@10 | Primary |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Pre-goal production | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Iteration-3 deployed | 0 | 0 | 0 | 0 | 0.025 | 0.000833 | 0 | 0.000278 |
+| Raw encoder | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| All-priors-zero audio ablation | 0 | 0 | **0.025** | **0.025** | **0.025** | **0.003125** | **0.007887** | **0.012004** |
+| Locked method | 0 | 0 | 0 | 0.025 | 0.025 | 0.001786 | 0 | 0.000595 |
 
-The final candidate union has three explicit stages:
+The locked method moved one pair to rank 14. Its absolute primary delta was 0.000595; the paired
+95% interval **[0, 0.001786]** includes zero and P(delta>0)=0.6364. The per-scene no-regression
+check passed (all production scene contributions were zero), but one improved pair is below the
+predeclared five-pair minimum. The production baseline's zero primary makes a relative percentage
+undefined in practical terms. The all-priors-zero audio baseline found one pair at rank 8 and was
+stronger than the locked method at useful ranks, but it also failed confidence and count criteria.
 
-1. keep the quality-filtered, MMR-diversified, guarded-centroid top five;
-2. append all quality-filtered frozen-baseline top-ten rows not already present, preserving known
-   retrieval hits and the scene guardrail;
-3. fill to the requested depth from the 25% EfficientNet / 75% CLAP candidate score plus the fixed
-   source-independent priors, deduplicating recordings but not suppressing an exact song merely
-   because another song by that artist scored higher.
+**Verdict: FINAL failed.** It was not reopened, no hyperparameter was changed afterward, and no
+iteration-4 model was deployed. A future attempt requires a new protocol and new component-disjoint
+FINAL set.
 
-The final and retained UX sets each pass **17/20** direct top-five judgments. The original baseline
-passed 11/20. Three final failures are documented rather than relabelled. All top fives reject seed-
-title variants, slowed/reverb, karaoke, tribute, covers, and mashups. These judgments are never
-blended into pair retrieval.
+### Product and resource decision
 
-Independent validation stays disjoint:
+Production remains the prior `dual_sonic64_guardrail`, whose guarded top five retained 17/20 direct
+manual UX passes versus 11/20 for the original baseline. That result is secondary and subjective;
+it is not blended with retrieval and is not described as clearing the goal. The current site and
+release are unchanged, so search and preview behavior were not put at risk by a failed experiment.
 
-| External overlap@15 | Baseline | Winner | Paired delta 95% CI |
-|---|---:|---:|---:|
-| ListenBrainz | 0.1389 | **0.1611** | ?0.0333..0.0722 |
-| Deezer related artists | 0.0667 | **0.0833** | 0.0000..0.0333 |
+Training used an RTX 5080: SupCon 617.84 s, BYOL 390.55 s, distillation 319.65 s. Full-catalog
+embedding passes took 38.66–43.05 s; the 3-window index took 109.73 s. The three selected float16
+matrices total 209,551,488 bytes plus a 7,813-byte scorer. With the 299,288,526-byte base index,
+the research package would be 508,847,827 bytes. Measured cold load was 10.86 s; process RSS rose
+2.21 GB to 2.85 GB, uncomfortably close to the hosted 3 GB limit. Twenty local rankings averaged
+79.2 ms (p95 92.1 ms). These are research assets only because FINAL failed; the deployed index is
+unchanged.
 
-The point estimates improve and remain statistically equivalent within uncertainty.
-
-### Resources and reproduction
-
-The checksum-pinned release index is **299,288,526 bytes**. It contains the unchanged neural/vibe
-arrays, two 64-d float16 sonic matrices, and two compact source-prior columns. On the i9-14900KF,
-local cold load is **5.89 s**, RSS after load is **1.258 GB**, and 20 final queries measure **133 ms
-mean / 146 ms p95**. Research checkpoints are not served. Desktop and hosted numpy paths are pinned
-by exact parity tests and report `dual_sonic64_guardrail`; arbitrary previews without aligned CLAP
-features report the explicit legacy fallback. Production measured **18.87 s** for the first cold
-recommendation and **860 ms mean / 977 ms p95** over 12 warm, diverse seeds; all 12 searches,
-recommendations, index-version checks, and fresh Deezer preview lookups passed.
+Reproduction and immutable evidence:
 
 ```powershell
 $env:PYTHONPATH = "src;."
-.\.venv\Scripts\python.exe -m soundalike.ml.real_benchmark `
+.\.venv\Scripts\python.exe -m soundalike.ml.final_protocol freeze `
+  --benchmark benchmarks\soundalike_pairs.v5.json `
   --index ml_data\deepvibe_index_v5.npz `
-  --benchmark benchmarks\soundalike_pairs.v4.json `
-  --split held_out --evidence-category pure_sonic `
-  --methods raw_encoder,production_baseline,quality_filter,dual_sonic `
-  --out .goals\human-quality-recommendations\artifacts\held-out-final-winner-v4.json
+  --protocol-dir .goals\human-quality-recommendations\protocol-v5
 
-.\.venv\Scripts\python.exe -m soundalike.ml.external_validation `
-  --index ml_data\deepvibe_index_v5.npz `
-  --benchmark benchmarks\soundalike_pairs.v4.json `
-  --truth benchmarks\external_artist_truth.v1.json `
-  --out .goals\human-quality-recommendations\artifacts\external-validation-final-v4.json
+# Training/evaluation APIs are in soundalike.ml.audio_experiments.
+# `lock` and `open-final` now refuse because this protocol is FINALIZED.
+.\.venv\Scripts\python.exe -m pytest tests\ -q
 ```
+
+Exact records are in `artifacts/audio-dev-results-v5.json`, `artifacts/final-once-v5.json`, and
+`protocol-v5/state.json`.
 
 ---
 
@@ -545,15 +551,19 @@ $env:PYTHONPATH = "src;."
   local loopback callback, CSRF `state` validation, and cached auto-refreshing tokens.
 - **No secrets in git.** Credentials live only in a git-ignored `.env`; the repo ships a
   `.env.example` template.
-- **No data leakage in training.** The 93-row benchmark has a final 20-pair, 49-artist set disjoint
-  from 147 development/validation artists; tests reject direct and transitive graph paths into it.
-  Diagnostic categories cannot decide the score, and the contaminated static graph stays retired.
+- **No data leakage in training.** The 107-row Category-A benchmark has a 40-pair FINAL set
+  separated from development by connected artist components. The distillation and independent-pair
+  trainers exclude every benchmark artist; tests reject artist/track duplicates and split overlap.
+  FINAL was opened once after checkpoint/configuration hashes were locked.
+- **Real-index derivative audit.** On 272,853 rows the filter removes 1,361 candidates. An
+  independent pattern set found 348 obvious slowed/reverb/nightcore/karaoke/cover/mashup variants
+  with zero false negatives; six curated legitimate risky titles had zero false positives.
 - **Release integrity.** Desktop and hosted downloads pin SHA-256; hosted download is atomic and
   fails before loading on a mismatch, and numpy object pickles are disabled.
-- **308 automated tests** cover the recommenders, OAuth/PKCE, DSP, vibe and vibe-aware engines,
+- **399 automated tests** cover the recommenders, OAuth/PKCE, DSP, vibe and vibe-aware engines,
   the spec cache, recommendation benchmarks, diversity/MMR, GeM pooling, ML split logic, the
-  categorized production benchmark, Dual-Sonic64 guardrails, derivative false positives,
-  checksum handling, and exact desktop/hosted parity.
+  categorized production benchmark, one-open protocol, audio experiments, real-index derivative
+  false-positive/negative checks, checksum handling, and exact desktop/hosted parity.
 
 
 ---

@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "measured_at": "2026-07-12",
+  "hardware": {
+    "cpu": "Intel Core i9-14900KF",
+    "gpu": "NVIDIA GeForce RTX 5080",
+    "ram_bytes": 51539607552
+  },
+  "selected_research_method": {
+    "method": "audio-rank-stratified-tail-v1",
+    "final_pass": false,
+    "deployed": false,
+    "base_index_bytes": 299288526,
+    "auxiliary_asset_bytes": 209559301,
+    "total_disk_bytes": 508847827,
+    "cold_load_seconds": 10.858932900009677,
+    "rss_before_bytes": 642031616,
+    "rss_after_bytes": 2853883904,
+    "rss_delta_bytes": 2211852288,
+    "latency_ms": {
+      "samples": 20,
+      "mean": 79.18507999784197,
+      "p50": 84.23600000242004,
+      "p95": 92.12331499584255,
+      "max": 137.26190000306815
+    }
+  },
+  "training": {
+    "supcon_seconds": 617.8383939999912,
+    "byol_seconds": 390.54616710000846,
+    "distillation_seconds": 319.6474748000037,
+    "supcon_index_seconds": 43.050840900003095,
+    "byol_index_seconds": 38.6586135999969,
+    "distillation_index_seconds": 40.663163600009284,
+    "multiwindow_index_seconds": 109.73029330000281
+  },
+  "production": {
+    "unchanged": true,
+    "reason": "Once-opened FINAL failed; research assets were not uploaded.",
+    "live_evidence": "artifacts/live-retained-production-v5.json"
+  }
+}

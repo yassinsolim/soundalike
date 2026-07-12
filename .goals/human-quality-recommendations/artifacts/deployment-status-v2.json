@@ -3,8 +3,9 @@
   "checked_at": "2026-07-11",
   "target": "https://soundalike.yassin.app",
   "deployment": {
-    "trigger": "PR #30 squash merge to main via connected GitHub auto-deploy",
-    "merge_sha": "c24f749db5f605dbc9387a5f194b8bcdc8166dfd",
+    "trigger": "Connected production deployment from origin/main direct commit",
+    "source_sha": "2366b7c1344f4edacdcd0568501f8dfe5c3e3641",
+    "provenance_note": "An earlier artifact incorrectly described a pull-request merge; the served iteration-3 source was the direct main commit above.",
     "release_tag": "index-2026.07.11-dual-sonic64",
     "release_sha256": "f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9",
     "status": "production serving dual_sonic64_guardrail"

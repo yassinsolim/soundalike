@@ -1,0 +1,368 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-12",
+  "benchmark": "benchmarks/soundalike_pairs.v5.json development only (67 Category-A pairs; 62 rankable)",
+  "selection_policy": {
+    "final_opened": false,
+    "final_open_count": 0,
+    "primary": "mean(NDCG@10, MRR, Recall@10)",
+    "selection_split": "development only",
+    "metadata_priors_used": false
+  },
+  "baselines": {
+    "pre_goal_production": {
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.014925373134328358,
+      "recall_at_10": 0.029850746268656716,
+      "recall_at_20": 0.029850746268656716,
+      "recall_at_50": 0.029850746268656716,
+      "mrr": 0.004850746268656716,
+      "ndcg_at_10": 0.010482353492839857,
+      "ndcg_at_50": 0.010482353492839857,
+      "primary": 0.015061282010051096
+    },
+    "iteration3_deployed": {
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.014925373134328358,
+      "recall_at_10": 0.014925373134328358,
+      "recall_at_20": 0.04477611940298507,
+      "recall_at_50": 0.07462686567164178,
+      "mrr": 0.007039400322982413,
+      "ndcg_at_10": 0.006428008329453627,
+      "ndcg_at_50": 0.02027142557951949,
+      "primary": 0.009464260595588131
+    },
+    "raw_encoder": {
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.0,
+      "recall_at_10": 0.0,
+      "recall_at_20": 0.0,
+      "recall_at_50": 0.0,
+      "mrr": 0.0006007352430033967,
+      "ndcg_at_10": 0.0,
+      "ndcg_at_50": 0.0,
+      "primary": 0.00020024508100113225,
+      "candidate_recall_at_50": 0.0,
+      "candidate_recall_at_200": 0.03225806451612903,
+      "candidate_recall_at_1000": 0.12903225806451613,
+      "primary_bootstrap_ci95": {
+        "mean": 0.00019976069024109732,
+        "ci95_low": 7.760096791216096e-05,
+        "ci95_high": 0.0003764547232223241,
+        "n_iterations": 20000
+      }
+    },
+    "all_priors_zero_audio": {
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.0,
+      "recall_at_10": 0.0,
+      "recall_at_20": 0.0,
+      "recall_at_50": 0.014925373134328358,
+      "mrr": 0.0008638539658759939,
+      "ndcg_at_10": 0.0,
+      "ndcg_at_50": 0.0030126729340611918,
+      "primary": 0.00028795132195866464,
+      "candidate_recall_at_50": 0.016129032258064516,
+      "candidate_recall_at_200": 0.03225806451612903,
+      "candidate_recall_at_1000": 0.11290322580645161,
+      "primary_bootstrap_ci95": {
+        "mean": 0.0002859405561778392,
+        "ci95_low": 5.4047747001724365e-05,
+        "ci95_high": 0.0006906235528908857,
+        "n_iterations": 20000
+      }
+    }
+  },
+  "approaches": {
+    "fma_cross_artist_supcon": {
+      "metrics": {
+        "recall_at_1": 0.0,
+        "recall_at_5": 0.0,
+        "recall_at_10": 0.0,
+        "recall_at_20": 0.0,
+        "recall_at_50": 0.014925373134328358,
+        "mrr": 0.0003903126475100769,
+        "ndcg_at_10": 0.0,
+        "ndcg_at_50": 0.0026582625903583744,
+        "primary": 0.0001301042158366923,
+        "candidate_recall_at_50": 0.016129032258064516,
+        "candidate_recall_at_200": 0.016129032258064516,
+        "candidate_recall_at_1000": 0.016129032258064516,
+        "primary_bootstrap_ci95": {
+          "mean": 0.00012971775296128287,
+          "ci95_low": 1.9485702544286287e-05,
+          "ci95_high": 0.0003427833880778919,
+          "n_iterations": 20000
+        }
+      },
+      "training": {
+        "phase": "supcon",
+        "epoch": 1200,
+        "loss": 5.027955532073975,
+        "config_hash": "f9cfee419da6",
+        "timestamp": "2026-07-12T07:10:24.734701+00:00",
+        "wall_seconds": 617.8383939999912,
+        "extra": {
+          "steps": 1200,
+          "epochs_completed": 8,
+          "device": "cuda"
+        }
+      },
+      "resources": [
+        {
+          "phase": "supcon",
+          "wall_seconds": 617.8383939999912,
+          "peak_gpu_mb": 955.8662109375,
+          "peak_ram_mb": 0.0,
+          "n_rows": 153600,
+          "rows_per_sec": 248.6087000931868,
+          "extra": {}
+        }
+      ]
+    },
+    "fma_byol": {
+      "metrics": {
+        "recall_at_1": 0.0,
+        "recall_at_5": 0.0,
+        "recall_at_10": 0.0,
+        "recall_at_20": 0.0,
+        "recall_at_50": 0.0,
+        "mrr": 5.9215082893386174e-05,
+        "ndcg_at_10": 0.0,
+        "ndcg_at_50": 0.0,
+        "primary": 1.973836096446206e-05,
+        "candidate_recall_at_50": 0.0,
+        "candidate_recall_at_200": 0.0,
+        "candidate_recall_at_1000": 0.016129032258064516,
+        "primary_bootstrap_ci95": {
+          "mean": 1.9776364664543088e-05,
+          "ci95_low": 9.182715919369131e-06,
+          "ci95_high": 3.530759439536342e-05,
+          "n_iterations": 20000
+        }
+      },
+      "training": {
+        "phase": "byol",
+        "epoch": 800,
+        "loss": -0.9721114635467529,
+        "config_hash": "c4d84dd3d73c",
+        "timestamp": "2026-07-12T07:20:03.204890+00:00",
+        "wall_seconds": 390.54616710000846,
+        "extra": {
+          "steps": 800,
+          "epochs_completed": 6,
+          "device": "cuda"
+        }
+      },
+      "resources": [
+        {
+          "phase": "byol",
+          "wall_seconds": 390.54616710000846,
+          "peak_gpu_mb": 1082.16162109375,
+          "peak_ram_mb": 0.0,
+          "n_rows": 102400,
+          "rows_per_sec": 262.19691454244406,
+          "extra": {}
+        }
+      ]
+    },
+    "audio_teacher_distillation": {
+      "metrics": {
+        "recall_at_1": 0.0,
+        "recall_at_5": 0.0,
+        "recall_at_10": 0.0,
+        "recall_at_20": 0.0,
+        "recall_at_50": 0.0,
+        "mrr": 0.0009694046503084835,
+        "ndcg_at_10": 0.0,
+        "ndcg_at_50": 0.0,
+        "primary": 0.0003231348834361612,
+        "candidate_recall_at_50": 0.0,
+        "candidate_recall_at_200": 0.06451612903225806,
+        "candidate_recall_at_1000": 0.14516129032258066,
+        "primary_bootstrap_ci95": {
+          "mean": 0.00032197479700708846,
+          "ci95_low": 0.00010398828084017816,
+          "ci95_high": 0.0006011089404988561,
+          "n_iterations": 20000
+        }
+      },
+      "training": {
+        "phase": "distill",
+        "epoch": 1000,
+        "loss": -0.9186039566993713,
+        "config_hash": "1a51cd2956ef",
+        "timestamp": "2026-07-12T07:28:54.587759+00:00",
+        "wall_seconds": 319.6474748000037,
+        "extra": {
+          "steps": 1000,
+          "epochs_completed": 1,
+          "device": "cuda",
+          "excluded_rows": 15570,
+          "teacher_dim": 128
+        }
+      },
+      "resources": [
+        {
+          "phase": "distill",
+          "wall_seconds": 319.6474748000037,
+          "peak_gpu_mb": 938.53564453125,
+          "peak_ram_mb": 0.0,
+          "n_rows": 256000,
+          "rows_per_sec": 800.8822849614986,
+          "extra": {}
+        }
+      ]
+    },
+    "independent_pair_audio_metric": {
+      "metrics": {
+        "recall_at_1": 0.0,
+        "recall_at_5": 0.0,
+        "recall_at_10": 0.0,
+        "recall_at_20": 0.0,
+        "recall_at_50": 0.0,
+        "mrr": 0.00025352538703318805,
+        "ndcg_at_10": 0.0,
+        "ndcg_at_50": 0.0,
+        "primary": 8.450846234439602e-05,
+        "candidate_recall_at_50": 0.0,
+        "candidate_recall_at_200": 0.0,
+        "candidate_recall_at_1000": 0.06451612903225806,
+        "primary_bootstrap_ci95": {
+          "mean": 8.456515161031037e-05,
+          "ci95_low": 4.494982900147459e-05,
+          "ci95_high": 0.00013268381133589946,
+          "n_iterations": 20000
+        }
+      },
+      "training": {
+        "method": "independent_pair_audio_metric",
+        "created_at": "2026-07-12T07:44:01.265910+00:00",
+        "positive_pairs": 3967,
+        "training_pairs": 3571,
+        "validation_pairs": 396,
+        "benchmark_artist_overlap": [],
+        "epochs": 80,
+        "steps": 1120,
+        "batch_size": 256,
+        "temperature": 0.07,
+        "learning_rate": 0.0003,
+        "best_validation_loss": 4.418424606323242,
+        "wall_seconds": 6.721659899994847
+      }
+    },
+    "multivector_late_interaction": {
+      "method": "supcon_multivector_late_interaction",
+      "configuration": {
+        "candidate_union_per_signal": 5000,
+        "signals": [
+          "production_audio",
+          "efficientnet",
+          "clap",
+          "distilled_audio",
+          "supcon"
+        ],
+        "windows": 3,
+        "window_frames": 128,
+        "reranker": "mean_query_max_candidate_cosine"
+      },
+      "metrics": {
+        "recall_at_1": 0.0,
+        "recall_at_5": 0.0,
+        "recall_at_10": 0.0,
+        "recall_at_20": 0.0,
+        "recall_at_50": 0.0,
+        "mrr": 0.00013388821665543093,
+        "ndcg_at_10": 0.0,
+        "ndcg_at_50": 0.0,
+        "primary": 4.462940555181031e-05
+      },
+      "candidate_union_recall": {
+        "recall_at_50": 0.05,
+        "recall_at_200": 0.11666666666666667,
+        "recall_at_1000": 0.21666666666666667,
+        "recall_at_5000": 0.48333333333333334
+      },
+      "n_rankable": 60,
+      "wall_seconds": 44.45956760000263
+    },
+    "audio_rank_stratified_tail": {
+      "metrics": {
+        "recall_at_1": 0.0,
+        "recall_at_5": 0.014925373134328358,
+        "recall_at_10": 0.04477611940298507,
+        "recall_at_20": 0.04477611940298507,
+        "recall_at_50": 0.07462686567164178,
+        "mrr": 0.012536156427166493,
+        "ndcg_at_10": 0.019441818171122515,
+        "ndcg_at_50": 0.024961544471907245,
+        "primary": 0.025584698000424694
+      },
+      "comparison_to_pre_goal": {
+        "absolute_delta": 0.010523415990373599,
+        "relative_gain": 0.6987065232994193,
+        "ci95_low": 0.00011570056693277797,
+        "ci95_high": 0.028507618248514364,
+        "probability_positive": 0.9838,
+        "improved_pairs": 4,
+        "worsened_pairs": 0,
+        "unchanged_pairs": 63
+      },
+      "configuration": {
+        "base_candidates": 10,
+        "per_signal_candidates": 8,
+        "scorer_weight": 1.0,
+        "head_size": 10,
+        "tail_stride": 6,
+        "tail_depth": 60,
+        "tail_signals": [
+          "efficientnet_sonic64",
+          "distilled_audio128",
+          "fma_supcon128",
+          "clap64"
+        ]
+      },
+      "training_pairs": 3967,
+      "benchmark_artist_overlap": []
+    }
+  },
+  "candidate_recall_diagnosis": {
+    "single_learned_models": "Counterparts almost never entered top 1,000 for SupCon/BYOL; distillation reached candidate Recall@1000 0.145 but no top-50 hits. Candidate generation, not only reranking, was the blocker.",
+    "multi_signal_union": {
+      "recall_at_50": 0.05,
+      "recall_at_200": 0.11666666666666667,
+      "recall_at_1000": 0.21666666666666667,
+      "recall_at_5000": 0.48333333333333334
+    },
+    "selected_tail": "Rank-stratified audio-only tail increased R@50 0.02985 to 0.07463 while the learned head increased R@10 0.02985 to 0.04478."
+  },
+  "negative_findings": [
+    "FMA SupCon indexed all 272,853 tracks but produced zero top-10 hits and one top-50 hit.",
+    "FMA BYOL indexed all tracks but produced no top-50 hit.",
+    "Teacher distillation improved candidate Recall@1000 to 0.145 but produced no top-50 hit.",
+    "Independent-pair projection and expanded pair scorer did not improve useful-rank retrieval.",
+    "Three-window MaxSim over a five-signal candidate union produced no top-50 hit."
+  ],
+  "winner_dev_pairs": [
+    {
+      "pair_id": "DEV-L007",
+      "rank": 43
+    },
+    {
+      "pair_id": "DEV-L010",
+      "rank": 2
+    },
+    {
+      "pair_id": "DEV-L012",
+      "rank": 6
+    },
+    {
+      "pair_id": "DEV-L038",
+      "rank": 8
+    },
+    {
+      "pair_id": "DEV-P130",
+      "rank": 40
+    }
+  ]
+}

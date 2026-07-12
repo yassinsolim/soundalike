@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-07-12",
+  "dependency_files_changed": [],
+  "pip_audit": {
+    "command": ".venv\\Scripts\\python.exe -m pip_audit -r requirements.txt",
+    "result": "pass",
+    "known_vulnerabilities": 0
+  },
+  "dependabot_alerts": {
+    "result": "unavailable",
+    "reason": "GitHub CLI is not authenticated in this environment; no dependency files changed."
+  },
+  "secret_scanning": {
+    "github_service": "unavailable because GitHub Advanced Security is not enabled for this repository",
+    "local_command": "detect-secrets scan <staged files>",
+    "result": "pass after review",
+    "findings_reviewed": "All findings were SHA-256/checkpoint/config hashes; no credentials, tokens, private keys, or passwords."
+  },
+  "build": {
+    "command": ".venv\\Scripts\\python.exe -m build",
+    "result": "pass",
+    "artifacts": [
+      "soundalike-0.1.0.tar.gz",
+      "soundalike-0.1.0-py3-none-any.whl"
+    ]
+  },
+  "tests": {
+    "command": ".venv\\Scripts\\python.exe -m pytest tests\\ -q",
+    "result": "399 passed in 19.15s"
+  },
+  "review_fixes": [
+    "PyTorch scorer checkpoints load with weights_only=True.",
+    "Protocol reads verify state plus benchmark, index, manifest, baseline, method, DEV report, asset, and committed winner-ranking hashes.",
+    "Future final runs require a RANKINGS_LOCKED transition before open-final.",
+    "Finalized state is sealed by detached Ed25519 signature SHA256:wplu3kTiYyJbMn50V23Wqn1BpIaTjhHONshYeLFhlUA; private key not retained.",
+    "SupCon cross-artist masking performs one vector transfer instead of per-element CUDA writes.",
+    "Distillation objective documents temperature invariance instead of claiming a nonexistent sharpening effect.",
+    "Unknown FMA genre sentinel -1 is excluded from SupCon positive masks.",
+    "Rankings commit preconditions are checked before locked-state artifact access.",
+    "Zero-positive SupCon batches retain a zero-gradient computation path so backward remains valid."
+  ]
+}

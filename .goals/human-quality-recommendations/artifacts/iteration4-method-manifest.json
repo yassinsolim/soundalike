@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "method_id": "audio-rank-stratified-tail-v1",
+  "created_at": "2026-07-12",
+  "configuration": {
+    "base_candidates": 10,
+    "per_signal_candidates": 8,
+    "scorer_weight": 1.0,
+    "head_size": 10,
+    "tail_stride": 6,
+    "tail_depth": 60,
+    "tail_signals": [
+      "efficientnet_sonic64",
+      "distilled_audio128",
+      "fma_supcon128",
+      "clap64"
+    ]
+  },
+  "prohibited_priors": {
+    "wikipedia": 0.0,
+    "popularity": 0.0,
+    "notability": 0.0,
+    "manual_pairs": 0.0,
+    "benchmark_artist_features": 0.0
+  },
+  "training": {
+    "fma_tracks": 24980,
+    "distillation_catalog_rows": 272853,
+    "distillation_excluded_benchmark_rows": 15570,
+    "independent_listening_pairs": 3967,
+    "benchmark_artist_overlap": []
+  },
+  "assets": [
+    {
+      "path": "ml_data/iteration4/distill/catalog_embeddings.f16.npy",
+      "sha256": "b0bb6dddaf1dafa4ccfcb9d40952e1d095240bd3bceccf6d154655cc424a619c",
+      "bytes": 69850496
+    },
+    {
+      "path": "ml_data/iteration4/supcon/catalog_embeddings.f16.npy",
+      "sha256": "1893bffb96301d90e2b0a83b4a513ee86711056e112aa73b3f4e7ad6f67e9d5f",
+      "bytes": 69850496
+    },
+    {
+      "path": "ml_data/iteration4/byol/catalog_embeddings.f16.npy",
+      "sha256": "40d8a44bc34bb5dc5b7cc526d0aad6609b3b087655ec4a2cac712cd6b3dbde94",
+      "bytes": 69850496
+    },
+    {
+      "path": "ml_data/iteration4/pair_scorer/pair_scorer.pt",
+      "sha256": "0174805dbdddb280ecfe3e3b27fa79212bfd13b160f893cb6b4047bb79d1b463",
+      "bytes": 7813
+    }
+  ],
+  "dev_report": ".goals\\human-quality-recommendations\\artifacts\\audio-dev-results-v5.json",
+  "dev_primary": 0.025584698000424694,
+  "dev_relative_gain": 0.6987065232994193,
+  "dev_ci95": [
+    0.00011570056693277797,
+    0.028507618248514364
+  ]
+}

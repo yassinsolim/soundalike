@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "measured_at": "2026-07-12",
+  "index_rows": 272853,
+  "filter_removed": 1361,
+  "independent_obvious_variant_rows": 348,
+  "obvious_false_negatives": 0,
+  "curated_legitimate_rows": [
+    {
+      "title": "Karaoke",
+      "artist": "Cass McCombs",
+      "kept": true
+    },
+    {
+      "title": "A Tribute To Someone",
+      "artist": "Herbie Hancock",
+      "kept": true
+    },
+    {
+      "title": "Love X Love",
+      "artist": "George Benson",
+      "kept": true
+    },
+    {
+      "title": "Karaoke Bar",
+      "artist": "Angus & Julia Stone",
+      "kept": true
+    },
+    {
+      "title": "Cover Me",
+      "artist": "Bruce Springsteen",
+      "kept": true
+    },
+    {
+      "title": "Karaoke",
+      "artist": "Drake",
+      "kept": true
+    }
+  ],
+  "curated_false_positives": 0
+}

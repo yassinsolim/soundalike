@@ -1,0 +1,5 @@
+# Detached protocol signatures cover exact bytes; never rewrite line endings.
+.goals/human-quality-recommendations/protocol-v5/state.json -text
+.goals/human-quality-recommendations/protocol-v5/state.sig -text
+.goals/human-quality-recommendations/protocol-v5/allowed_signers -text
+.goals/human-quality-recommendations/protocol-v5/signer.pub -text

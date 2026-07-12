@@ -6,6 +6,9 @@ identified and that real tracks are never suppressed.
 
 from __future__ import annotations
 
+import re
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -202,3 +205,55 @@ def test_quality_filter_integration_with_numpy_index():
     mask = keep_mask(list(titles_arr), list(artists_arr))
     assert mask[0] and mask[2]
     assert not mask[1]
+
+
+def _real_index_path() -> Path:
+    candidates = (
+        Path("ml_data/deepvibe_index_v5.npz"),
+        Path("src/soundalike/data/deepvibe_index.npz"),
+    )
+    path = next((candidate for candidate in candidates if candidate.exists()), None)
+    if path is None:
+        pytest.skip("No real recommendation index is available")
+    return path
+
+
+def test_real_index_obvious_derivatives_have_no_false_negatives():
+    """Every independently recognizable variant in the real index is removed."""
+    obvious_variant = re.compile(
+        r"\b(?:slowed|reverb|nightcore|mashup|cover version|karaoke version)\b"
+        r"|\s+-\s+karaoke$|^tribute\s+to\b",
+        re.IGNORECASE,
+    )
+    with np.load(_real_index_path(), allow_pickle=False) as index:
+        titles = index["titles"].astype(str)
+        artists = index["artists"].astype(str)
+    rows = np.asarray([
+        bool(obvious_variant.search(title) or obvious_variant.search(artist))
+        for title, artist in zip(titles, artists)
+    ])
+    assert int(rows.sum()) >= 10, "Real-index audit did not find enough variants"
+    kept = TitleQualityFilter().keep_mask(titles, artists)
+    assert not kept[rows].any()
+
+
+def test_real_index_legitimate_titles_have_no_false_positives():
+    """Curated real songs containing risky words remain searchable."""
+    legitimate = {
+        ("cover me", "bruce springsteen"),
+        ("love x love", "george benson"),
+        ("a tribute to someone", "herbie hancock"),
+        ("karaoke", "drake"),
+        ("karaoke", "cass mccombs"),
+        ("karaoke bar", "angus & julia stone"),
+    }
+    with np.load(_real_index_path(), allow_pickle=False) as index:
+        titles = index["titles"].astype(str)
+        artists = index["artists"].astype(str)
+    selected = np.asarray([
+        (title.casefold(), artist.casefold()) in legitimate
+        for title, artist in zip(titles, artists)
+    ])
+    assert int(selected.sum()) >= 3, "Curated real-index originals are missing"
+    kept = TitleQualityFilter().keep_mask(titles, artists)
+    assert kept[selected].all()

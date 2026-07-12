@@ -5,11 +5,11 @@ tiny Python serverless functions that recommend from the 272,853-song library us
 **numpy only** (no PyTorch). You can host it on a subdomain like
 `soundalike.yassin.app` and let anyone try it in the browser.
 
-> **Release status (2026-07-11):** Dual-Sonic64 uses the versioned
-> `index-2026.07.11-dual-sonic64` release asset. Desktop and hosted paths checksum the
-> same 272,853-row index and expose `dual_sonic64_guardrail` plus the active index
-> version in recommendation responses. Production was live-verified on 12 diverse
-> seeds with search and fresh preview lookups passing.
+> **Release status (2026-07-12):** Production still serves the versioned
+> `index-2026.07.11-dual-sonic64` asset and reports `dual_sonic64_guardrail`.
+> A later audio-only method improved development but failed its once-opened final test, so it was
+> not uploaded or deployed. The retained release previously passed 12 live search/recommendation/
+> preview checks; that manual UX evidence is not a claim of significant retrieval improvement.
 
 ---
 
