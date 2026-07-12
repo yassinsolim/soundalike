@@ -9,7 +9,22 @@ element (media playback doesn't need CORS).
 import json
 import urllib.request
 from http.server import BaseHTTPRequestHandler
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlsplit
+
+
+def _track_id(path):
+    parsed = urlsplit(path)
+    params = parse_qs(parsed.query, keep_blank_values=True)
+    if (
+        parsed.path != "/api/preview"
+        or set(params) != {"id"}
+        or len(params["id"]) != 1
+    ):
+        return None
+    value = params["id"][0]
+    if not value.isdigit() or len(value) > 20 or int(value) <= 0:
+        return None
+    return value
 
 
 class handler(BaseHTTPRequestHandler):
@@ -18,15 +33,17 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Cache-Control", "public, max-age=600")
+        self.send_header("Access-Control-Allow-Methods", "GET")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
 
     def do_GET(self):
-        params = parse_qs(urlparse(self.path).query)
-        tid = (params.get("id", [""])[0]).strip()
-        if not tid.isdigit():
+        tid = _track_id(self.path)
+        if tid is None:
             return self._send(400, {"ok": False, "error": "bad id"})
         try:
             with urllib.request.urlopen(
@@ -34,9 +51,14 @@ class handler(BaseHTTPRequestHandler):
             ) as r:
                 data = json.loads(r.read().decode("utf-8"))
             preview = data.get("preview") or ""
-            cover = ((data.get("album") or {}).get("cover_medium")) or ""
             if not preview:
                 return self._send(404, {"ok": False, "error": "no preview"})
-            self._send(200, {"ok": True, "preview": preview, "cover": cover})
-        except Exception as e:
-            self._send(502, {"ok": False, "error": f"{type(e).__name__}"})
+            origin = urlsplit(preview)
+            if origin.scheme != "https" or not (
+                origin.hostname == "dzcdn.net"
+                or (origin.hostname or "").endswith(".dzcdn.net")
+            ):
+                return self._send(502, {"ok": False, "error": "preview provider"})
+            self._send(200, {"ok": True, "preview": preview})
+        except Exception:
+            self._send(502, {"ok": False, "error": "preview provider"})

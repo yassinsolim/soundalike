@@ -1,0 +1,27 @@
+{
+  "schema_version": 11,
+  "artifact_kind": "signed_audio_access_only_erratum",
+  "rankings_state": "RANKINGS_LOCKED",
+  "ratings_count_at_erratum": 0,
+  "created_at": "2026-07-12T20:50:56.315332+00:00",
+  "old_protocol_sha256": "2ce53bbf601618a8541d881a124e4cb961f5813707e8aa1d30c1495b952ec06a",
+  "new_protocol_sha256": "24ab0485833f45350a974eb2aa9bcd499fe89bd9ce2fb620ab19345cf8a329f0",
+  "old_served_lists_sha256": "458abcb809378dbc16506c9d0055477bc26d74585416b38f53863b07341c9815",
+  "new_served_lists_sha256": "e22979e8f2debf3d1880f070dcd185d538ee30a2f6f819982a6238c9fe36757d",
+  "old_list_order_sha256": "39428533a7e335438968e5b413514b886561e6e79ef57315fce590f7adc677e2",
+  "new_list_order_sha256": "39428533a7e335438968e5b413514b886561e6e79ef57315fce590f7adc677e2",
+  "list_order_semantically_identical": true,
+  "private_method_key_sha256": "470c1a774409cff420886053d5bbdc0fba71c793db3fca8a9bc1d6c11caabe55",
+  "method_assignments": "unchanged; the original private method key is reused",
+  "blinding": "unchanged opaque seed/result/list identities; no role added",
+  "change_scope": "Stable Deezer IDs and on-demand audio-access metadata only; no ranked track, position, method assignment, candidate generation, or ranking changed.",
+  "source_catalog_index": {
+    "row_count": 272853,
+    "file_sha256": "f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9",
+    "stable_id_field": "track_ids (Deezer track IDs)",
+    "seed_id_coverage": "60/60",
+    "unique_result_id_coverage": "480/480"
+  },
+  "evaluator_sha256": "d367f9188165539389cf6d7a61fe99a02864bb7bf97a5ab9593a0174566fc13f",
+  "content_sha256": "c40a69357e9c8af4de4649105c7c5886b8bfb50c973cc10f59ae44c9af274e27"
+}

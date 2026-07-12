@@ -740,26 +740,65 @@ original ownership. See `catalog-version-quality-audit-v10.json`.
 
 #### Run the local blinded A/B study
 
-`benchmarks/human_eval_v10.html` implements the MIREX/Evalutron shape over the already-frozen
-actual served lists: 60 seeds / 13 scenes, two randomized method aliases, five artist-filtered
-results each, 3-class similarity plus optional 0–10, junk/version flags, unrelated positions 1–3,
-whole-list coherence, preview playback, localStorage autosave, and signed partial export/import.
-Shared tracks are shown/rated once per seed and credited identically to both lists. A complete rater
-usually needs 90–150 minutes; partial sessions are valid.
+`benchmarks/human_eval_v11.html` is the audio-ready successor to the verified v10 evaluator. It
+keeps the same 60 seeds, opaque list/result IDs, ranked positions, blinded method assignments,
+localStorage autosave/reload, HMAC export/import, and collector-signature workflow. A signed metadata-only
+erratum adds explicit stable Deezer IDs; it does **not** contain expiring signed CDN URLs.
 
 ```powershell
-# Serve locally (ratings never leave the browser):
-.\.venv\Scripts\python.exe -m http.server 8000
-# Open http://localhost:8000/benchmarks/human_eval_v10.html and import:
-# .goals/human-quality-recommendations/protocol-v10-human-development/protocol-v10.json
-# .goals/human-quality-recommendations/protocol-v10-human-development/served-lists-v10.json
+# One command: opens a loopback-only page and same-origin /api/preview proxy.
+# Click "Load bundled locked study"; ratings never leave the browser.
+.\.venv\Scripts\python.exe -m soundalike.ml.human_eval_v11 serve
 ```
 
-The public list content hash is
-`458abcb809378dbc16506c9d0055477bc26d74585416b38f53863b07341c9815`.
-`state.json` entered `RANKINGS_LOCKED` with zero ratings before distribution and has a detached
-Ed25519 signature (`SHA256:c9Vzptc7X6TbwM/tHyOvOt25dGF8BPjeEvC60/iw+Do`). The salted method key
-is intentionally **not committed**; the local owner copy is
+Audio is resolved only after clicking **Load legal 30s preview**. The request is exactly
+`GET /api/preview?id=<numeric Deezer track ID>` with no body, credentials, referrer, rating value,
+rater ID, session ID, or localStorage data. A returned URL is accepted only from Deezer's HTTPS
+CDN, held in an in-memory `Map` for the current page session, and refreshed once on playback
+failure. A no-preview response is shown visibly; neutral **Open in Deezer** and **Open in Spotify**
+fallbacks do not reveal method identity. CSP limits connections to loopback/same-origin and
+`https://soundalike.yassin.app`; the loopback server rejects non-`127.0.0.1` Host headers and
+denies framing to resist DNS rebinding. There are no analytics or external scripts.
+
+Opening the HTML directly uses the production preview endpoint. Its cross-origin response was
+verified live (`Access-Control-Allow-Origin: *`); the evaluator still forces `cache: "no-store"`,
+`credentials: "omit"`, and `referrerPolicy: "no-referrer"`. The local server is preferred because
+the API request remains same-origin.
+
+The full live audit requested all 480 unique results plus 60 seeds:
+
+| audio coverage | before: frozen URL | v11: fresh endpoint |
+|---|---:|---:|
+| unique results | 119/480 (24.8%) | **457/480 (95.2%)** |
+| seeds | 22/60 (36.7%) | **59/60 (98.3%)** |
+| ranked positions | 149/600 (24.8%) | **558/600 (93.0%)** |
+| endpoint errors | — | **0** |
+
+The exact legal Deezer ceiling observed was 23 result rows and one seed with no preview (42/600
+positions after duplicate accounting), all listed in
+`human-eval-preview-audit-v11.json`. Chrome 150 played a sampled preview through completion
+(29.989 s; API 200, media 206), showed the 404 no-preview fallback, and emitted no rating request.
+
+```powershell
+# Repeat the 540-row live audit; only 533 deduplicated numeric IDs are requested.
+.\.venv\Scripts\python.exe -m soundalike.ml.human_eval_v11 audit `
+  --output .goals\human-quality-recommendations\artifacts\human-eval-preview-audit-v11.json
+```
+
+One full rater completes about **480 unique result ratings + 120 list judgments** over 60 seeds in
+90–150 minutes. Collect at least **3 independent raters, ideally 5**; one rater is descriptive only.
+Partial export/resume remains valid.
+
+The original signed v10 protocol remains byte-for-byte untouched. Its served-list hash is
+`458abcb809378dbc16506c9d0055477bc26d74585416b38f53863b07341c9815`; the audio-metadata pack hash
+is `e22979e8f2debf3d1880f070dcd185d538ee30a2f6f819982a6238c9fe36757d`. Both old and new
+list-order hashes are exactly
+`39428533a7e335438968e5b413514b886561e6e79ef57315fce590f7adc677e2`. The signed erratum binds
+both hashes, the unchanged private-key hash, the 272,853-row index SHA-256, and evaluator SHA-256.
+Aggregation pins its Ed25519 signer (`SHA256:Kc16O/t3h+jVLyKIEjlqjcmGPKR1bYmJoj0HDqs7IKM`),
+re-verifies the original signed v10 state, and checks every old/new title, artist, track ID, list ID,
+and position rather than trusting the erratum directory as its own root.
+The private method key remains intentionally uncommitted at
 `ml_data/human_eval_v10/method-key-v10.json`.
 
 ```powershell
@@ -771,11 +810,11 @@ is intentionally **not committed**; the local owner copy is
 
 # After collecting actual anonymous exports:
 .\.venv\Scripts\python.exe -m soundalike.ml.human_aggregate_v10 `
-  --protocol .goals\human-quality-recommendations\protocol-v10-human-development\protocol-v10.json `
-  --lists .goals\human-quality-recommendations\protocol-v10-human-development\served-lists-v10.json `
+  --protocol .goals\human-quality-recommendations\protocol-v11-audio-access-erratum\protocol-v11.json `
+  --lists .goals\human-quality-recommendations\protocol-v11-audio-access-erratum\served-lists-v11.json `
   --key ml_data\human_eval_v10\method-key-v10.json `
   --exports ratings\rater-1.json ratings\rater-2.json `
-  --output ml_data\human_eval_v10\sonic_human-v10.json
+  --output ml_data\human_eval_v10\sonic_human-v11.json
 ```
 
 The aggregator requires that trusted local collector's detached Ed25519 approval in addition to

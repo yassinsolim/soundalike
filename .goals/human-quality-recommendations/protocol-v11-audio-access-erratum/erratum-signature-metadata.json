@@ -1,0 +1,9 @@
+{
+  "algorithm": "Ed25519 detached SSH signature",
+  "namespace": "soundalike-human-eval-audio-erratum",
+  "identity": "soundalike-human-eval-audio-erratum",
+  "artifact_sha256": "48ce5d711e7baad80abb628931796110f674da4ce39dc0e77a51a6340148b509",
+  "signer_public_key_sha256": "ce941bfc0a672c04e7bebeebc8ed87eb61a8a64d754889a6f0d1da232a62b687",
+  "allowed_signers_sha256": "2bf04a1db9ee7f52b40007170a7fd6a6c96e934bead3ac86e4f6dc4031aa7d2c",
+  "signature_sha256": "54e7feb5452e5b40e73a134470705a5d5895225e6a10234bee485c7cbb642cad"
+}

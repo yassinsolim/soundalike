@@ -1,0 +1,113 @@
+{
+  "schema_version": 11,
+  "artifact_kind": "live_preview_resolution_audit",
+  "served_lists_sha256": "e22979e8f2debf3d1880f070dcd185d538ee30a2f6f819982a6238c9fe36757d",
+  "checked_at": "2026-07-12T20:37:35.760524+00:00",
+  "endpoint": "https://soundalike.yassin.app/api/preview",
+  "external_request": {
+    "method": "GET",
+    "query_parameters": [
+      "id (numeric Deezer track ID only)"
+    ],
+    "body": null,
+    "credentials": "none",
+    "ratings_rater_session_transmitted": false,
+    "signed_preview_urls_persisted": false
+  },
+  "unique_deezer_ids_requested": 533,
+  "unique_results": {
+    "total": 480,
+    "id_covered": 480,
+    "available": 457,
+    "no_preview": 23,
+    "errors": 0
+  },
+  "seeds": {
+    "total": 60,
+    "id_covered": 60,
+    "available": 59,
+    "no_preview": 1,
+    "errors": 0
+  },
+  "ranked_positions": {
+    "total": 600,
+    "available": 558,
+    "no_preview": 42,
+    "errors": 0,
+    "resolvable_fraction": 0.93
+  },
+  "no_preview_result_deezer_ids": [
+    754055,
+    10701677,
+    72795468,
+    138837351,
+    530917111,
+    814965292,
+    1489558622,
+    1533348922,
+    1863010717,
+    1875266267,
+    2138831407,
+    2471203541,
+    2491963721,
+    2688601362,
+    2764339541,
+    2966352111,
+    3303056591,
+    3451046561,
+    3526710731,
+    3588288521,
+    3641465682,
+    3787771642,
+    4032819001
+  ],
+  "no_preview_seed_deezer_ids": [
+    646715112
+  ],
+  "errors": [],
+  "observed_cors": [
+    "*"
+  ],
+  "observed_cache_control": [
+    "public, max-age=600"
+  ],
+  "chrome_playback": {
+    "status": "verified",
+    "browser": "Chrome 150.0.0.0",
+    "evaluator_origin": "http://127.0.0.1:8877 (loopback verification only)",
+    "available_sample": {
+      "deezer_track_id": 664138382,
+      "preview_api_status": 200,
+      "cdn_media_status": 206,
+      "duration_seconds": 29.988563,
+      "playback_completed": true
+    },
+    "no_preview_sample": {
+      "deezer_track_id": 646715112,
+      "preview_api_status": 404,
+      "visible_message": "No legal Deezer preview exists for this track.",
+      "fallback_links_visible": true
+    },
+    "privacy_observation": {
+      "preview_request": "GET /api/preview?id=664138382",
+      "request_body": null,
+      "referer_header": "empty",
+      "rating_requests_observed": 0,
+      "local_storage_contained_signed_preview_url": false,
+      "autosave_reload_restored_ratings": true
+    },
+    "production_endpoint_sample": {
+      "deezer_track_id": 425695622,
+      "request": "GET https://soundalike.yassin.app/api/preview?id=425695622",
+      "request_body": null,
+      "origin_header": "null (direct file evaluator)",
+      "referer_header": "empty",
+      "response_status": 200,
+      "access_control_allow_origin": "*",
+      "media_status": 206,
+      "duration_seconds": 29.988563,
+      "playback_started": true
+    }
+  },
+  "content_sha256": "7afd89075f9e1aba95cff963525ff4aaf6c59be7a08192d93f6417e834769e00"
+}
