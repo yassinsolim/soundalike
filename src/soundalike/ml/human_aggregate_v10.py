@@ -22,7 +22,20 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, Mapping, Optional, Sequence, Union
 
-from .human_eval_v10 import canonical_bytes, content_hash
+from .human_eval_v10 import canonical_bytes, content_hash, file_hash
+from .human_eval_v11 import (
+    ERRATUM_IDENTITY,
+    ERRATUM_NAMESPACE,
+    TRUSTED_ERRATUM_ALLOWED_SIGNERS_FILE,
+    TRUSTED_V10_FILES,
+    TRUSTED_V10_KEY,
+    TRUSTED_V10_LISTS,
+    TRUSTED_V10_PROTOCOL,
+    TRUSTED_V11_ERRATUM,
+    TRUSTED_V11_LISTS,
+    TRUSTED_V11_PROTOCOL,
+    ranking_order_hash,
+)
 
 CLASSES = {"not_similar": 0, "somewhat_similar": 1, "very_similar": 2}
 COHERENCE = {"not_coherent": 0, "somewhat_coherent": 1, "very_coherent": 2}
@@ -32,6 +45,143 @@ FORBIDDEN = ("last.fm", "lastfm", "deezer", "music4all", "gnod", "model",
 
 class AggregateError(ValueError):
     """Input is not valid actual interactive human-listener evidence."""
+
+
+def _verify_audio_access_erratum(
+    protocol_path: Path,
+    protocol: Mapping[str, Any],
+    lists: Mapping[str, Any],
+    key: Mapping[str, Any],
+) -> None:
+    """Allow only the signed metadata-only v11 successor of the v10 pack."""
+    if protocol.get("audio_access_erratum_file") != "audio-access-erratum-v11.json":
+        raise AggregateError("key/list hash mismatch")
+    directory = protocol_path.parent
+    artifact = directory / "audio-access-erratum-v11.json"
+    signature = directory / "audio-access-erratum-v11.sig"
+    allowed = directory / "erratum-allowed-signers"
+    if not all(path.is_file() for path in (artifact, signature, allowed)):
+        raise AggregateError("signed audio-access erratum is incomplete")
+    erratum = json.loads(artifact.read_text(encoding="utf-8"))
+    if (
+        erratum.get("schema_version") != 11
+        or content_hash(erratum) != erratum.get("content_sha256")
+        or erratum.get("content_sha256") != TRUSTED_V11_ERRATUM
+    ):
+        raise AggregateError("audio-access erratum content hash mismatch")
+    if (
+        protocol.get("content_sha256") != TRUSTED_V11_PROTOCOL
+        or lists.get("content_sha256") != TRUSTED_V11_LISTS
+        or key.get("content_sha256") != TRUSTED_V10_KEY
+        or file_hash(allowed) != TRUSTED_ERRATUM_ALLOWED_SIGNERS_FILE
+    ):
+        raise AggregateError("audio-access erratum is not rooted in the trusted study")
+
+    predecessor = protocol_path.parent.parent / "protocol-v10-human-development"
+    if any(
+        not (predecessor / name).is_file()
+        or file_hash(predecessor / name) != digest
+        for name, digest in TRUSTED_V10_FILES.items()
+    ):
+        raise AggregateError("trusted v10 predecessor files are missing or changed")
+    old_protocol = json.loads(
+        (predecessor / "protocol-v10.json").read_text(encoding="utf-8")
+    )
+    old_lists = json.loads(
+        (predecessor / "served-lists-v10.json").read_text(encoding="utf-8")
+    )
+    old_state = json.loads((predecessor / "state.json").read_text(encoding="utf-8"))
+    if not (
+        content_hash(old_protocol) == old_protocol.get("content_sha256")
+        == TRUSTED_V10_PROTOCOL
+        and content_hash(old_lists) == old_lists.get("content_sha256")
+        == TRUSTED_V10_LISTS
+        and old_protocol.get("served_lists_sha256") == TRUSTED_V10_LISTS
+        and old_protocol.get("private_key_sha256") == TRUSTED_V10_KEY
+        and old_state.get("served_lists_sha256") == TRUSTED_V10_LISTS
+        and old_state.get("protocol_sha256") == TRUSTED_V10_PROTOCOL
+    ):
+        raise AggregateError("trusted v10 predecessor binding mismatch")
+
+    # The metadata successor must retain every displayed identity, not merely
+    # opaque list IDs.  This prevents swapping Deezer IDs under a valid order.
+    if len(old_lists["seeds"]) != len(lists["seeds"]):
+        raise AggregateError("audio-access erratum changed seed identities")
+    for old_seed, new_seed in zip(old_lists["seeds"], lists["seeds"]):
+        if (
+            old_seed["seed_id"] != new_seed["seed_id"]
+            or old_seed["scene"] != new_seed["scene"]
+            or any(
+                old_seed["query"][field] != new_seed["query"][field]
+                for field in ("title", "artist", "track_id")
+            )
+            or new_seed["query"].get("deezer_track_id")
+            != old_seed["query"]["track_id"]
+        ):
+            raise AggregateError("audio-access erratum changed a seed identity")
+        old_results = {row["result_id"]: row for row in old_seed["results"]}
+        new_results = {row["result_id"]: row for row in new_seed["results"]}
+        if set(old_results) != set(new_results):
+            raise AggregateError("audio-access erratum changed result identities")
+        for result_id, old_result in old_results.items():
+            new_result = new_results[result_id]
+            if (
+                any(
+                    old_result[field] != new_result[field]
+                    for field in ("track_id", "title", "artist")
+                )
+                or new_result.get("deezer_track_id") != old_result["track_id"]
+            ):
+                raise AggregateError("audio-access erratum changed a track identity")
+
+    new_order = ranking_order_hash(lists)
+    if not (
+        protocol.get("predecessor_served_lists_sha256")
+        == key.get("served_lists_sha256")
+        == erratum.get("old_served_lists_sha256")
+        and protocol.get("served_lists_sha256")
+        == lists.get("content_sha256")
+        == erratum.get("new_served_lists_sha256")
+        and protocol.get("content_sha256") == erratum.get("new_protocol_sha256")
+        and protocol.get("private_key_sha256")
+        == key.get("content_sha256")
+        == erratum.get("private_method_key_sha256")
+        and protocol.get("ranking_order_sha256")
+        == new_order
+        == erratum.get("old_list_order_sha256")
+        == erratum.get("new_list_order_sha256")
+        and erratum.get("list_order_semantically_identical") is True
+    ):
+        raise AggregateError("audio-access erratum binding/parity mismatch")
+    executable = shutil.which("ssh-keygen")
+    if executable is None:
+        raise AggregateError("ssh-keygen is required to verify audio-access erratum")
+    verified = subprocess.run(
+        [
+            executable, "-Y", "verify", "-f", str(allowed),
+            "-I", ERRATUM_IDENTITY, "-n", ERRATUM_NAMESPACE,
+            "-s", str(signature),
+        ],
+        input=artifact.read_bytes(),
+        capture_output=True,
+        check=False,
+    )
+    if verified.returncode:
+        raise AggregateError("audio-access erratum signature is invalid")
+    predecessor_verified = subprocess.run(
+        [
+            executable, "-Y", "verify",
+            "-f", str(predecessor / "allowed_signers"),
+            "-I", "soundalike-human-eval",
+            "-n", "soundalike-human-eval",
+            "-s", str(predecessor / "state.sig"),
+        ],
+        input=(predecessor / "state.json").read_bytes(),
+        capture_output=True,
+        check=False,
+    )
+    if predecessor_verified.returncode:
+        raise AggregateError("trusted v10 predecessor signature is invalid")
 
 
 def sign_export(payload: Mapping[str, Any], local_session_key: str) -> str:
@@ -64,7 +214,7 @@ def _load_bound(protocol_path: Path, lists_path: Path, key_path: Path):
     if protocol.get("private_key_sha256") != key["content_sha256"]:
         raise AggregateError("protocol/key hash mismatch")
     if key.get("served_lists_sha256") != lists["content_sha256"]:
-        raise AggregateError("key/list hash mismatch")
+        _verify_audio_access_erratum(protocol_path, protocol, lists, key)
     collector_allowed = protocol_path.parent / "collector_allowed_signers"
     if not collector_allowed.is_file():
         raise AggregateError("trusted collector allowed-signers file is missing")

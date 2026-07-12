@@ -1309,6 +1309,62 @@ same-rater A/B deltas averaged within seed.
 fails closed and cannot create a `sonic_human` report. Human AC#3 is not claimed, the locked v9
 challenger is not promoted, and production remains `2026.07.11-dual-sonic64`.
 
+### Audio-access readiness erratum (iteration 11)
+
+The signed v10 study was structurally ready but only froze URLs for 119/480 unique results and
+22/60 seeds. Because those Deezer CDN URLs are signed and expire, simply re-freezing a larger URL
+set would still fail during a long multi-rater collection. Iteration 11 therefore leaves every
+recommendation and the prior signed protocol untouched, and creates a separately signed
+**audio-access-only erratum**.
+
+The 272,853-row index SHA-256
+`f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9` supplied stable Deezer IDs
+for **480/480 unique results and 60/60 seeds**. The revised public pack contains those IDs and
+access policy, not signed CDN URLs. Its hash is
+`e22979e8f2debf3d1880f070dcd185d538ee30a2f6f819982a6238c9fe36757d`.
+The old and new list-order manifests both hash to
+`39428533a7e335438968e5b413514b886561e6e79ef57315fce590f7adc677e2`; list IDs, result IDs,
+positions, method-key hash, and blinding are unchanged. The original v10 protocol/list/state/
+signature byte hashes are regression-tested, and the new Ed25519 erratum binds the old/new pack,
+order, evaluator, private-key, and catalog-index hashes.
+The aggregator pins the new signer fingerprint, re-verifies the original signed v10 state against
+hard-coded predecessor file hashes, and compares every old/new title, artist, track ID, opaque ID,
+and ranked position. It therefore does not trust a replaceable allowed-signers file beside the
+erratum.
+
+The listener now asks the existing `/api/preview` behavior for a fresh URL on demand. The browser
+sends only one numeric Deezer ID in the query: no body, credentials, referrer, rating, anonymous
+rater ID, session ID, or localStorage value. The URL is checked for an HTTPS `dzcdn.net` origin,
+kept only in an in-memory session `Map`, and replaced once if playback fails. CSP permits only the
+loopback/same-origin API or `soundalike.yassin.app` plus Deezer media; there are no analytics.
+No-preview and network failures are visible, with neutral no-referrer Deezer/Spotify links.
+
+The production endpoint was exhaustively queried for all 480 results and 60 seeds:
+
+| category | available | no preview | errors |
+|---|---:|---:|---:|
+| unique result rows | **457/480** | 23 | 0 |
+| seeds | **59/60** | 1 | 0 |
+| ranked positions | **558/600 (93.0%)** | 42 | 0 |
+
+This is above the 90% position target. The 23 result Deezer IDs and one seed ID defining the exact
+current legal ceiling are recorded in `human-eval-preview-audit-v11.json`; no resolved CDN URL is.
+Production CORS returned `Access-Control-Allow-Origin: *`. Chrome 150 independently verified a
+fresh API 200, CDN media 206, 29.989-second playback through completion, an explicit 404
+no-preview state, empty referrer, zero rating requests, and no preview URL in localStorage.
+
+The preferred launch is one loopback command:
+
+```powershell
+.\.venv\Scripts\python.exe -m soundalike.ml.human_eval_v11 serve
+```
+
+One listener still represents 480 unique result grades plus 120 list judgments (90–150 minutes).
+The study instructions now require at least three independent raters, ideally five. Export/import
+HMACs, collector signatures, reloadable localStorage autosave, and the existing private role key
+remain compatible through verified erratum binding. No human ratings were created here, no FINAL was opened, no recommendation order
+or deployed model changed, and AC#3 remains intentionally unclaimed pending actual raters.
+
 ---
 
 ## 14. Security & correctness

@@ -15,3 +15,4 @@
 .goals/human-quality-recommendations/protocol-v8-gated-development-*/* binary
 .goals/human-quality-recommendations/protocol-v9-powered-development-*/* binary
 .goals/human-quality-recommendations/protocol-v10-human-development/* binary
+.goals/human-quality-recommendations/protocol-v11-audio-access-erratum/* binary
