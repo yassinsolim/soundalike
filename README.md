@@ -435,6 +435,76 @@ curl.exe -L -o ml_data\iteration5\raw\userid_trackid_count.tsv.bz2 `
   --report .goals\human-quality-recommendations\artifacts\collaborative-dev-v6.json
 ```
 
+### Catalogue-wide graph and multi-positive evaluation (iteration 6)
+
+Iteration 6 addressed the measured 5% Music4All track-coverage ceiling before doing more ranking
+work. A 569,202,935-byte Last.fm-360K archive (MD5
+`635e6ed3fc873aa4ba33aba0ebce02b1`) supplied 17,559,530 public
+user/artist/play tuples. The dataset is distributed with Last.fm's permission for **non-commercial
+use** ([Zenodo 10.5281/zenodo.6090214](https://doi.org/10.5281/zenodo.6090214)); that restriction is
+recorded rather than described as a permissive software license. Exact normalized mapping learned
+collaborative vectors for 6,126/18,258 catalogue artists, directly covering 142,767/272,853 tracks
+(52.3%). An audio-centroid-to-collaborative-anchor projection then gave every catalogue artist a
+static graph neighborhood: **100% effective track and query-artist coverage**. Direct source coverage
+and projected coverage are reported separately.
+
+Before graph training or DEV selection, protocol v7 froze and Ed25519-signed a new benchmark:
+**60 untouched FINAL seeds, 14 scenes, and 6-12 graded positives per seed**. Opened v6 queries became
+40 multi-positive DEV seeds. Relevance is explicitly artist-level *taste affinity*, sourced from
+Deezer related artists with independent ListenBrainz session evidence where available; it is not
+called acoustic similarity. The separate 20-seed preview/list review remains the sonic/scene axis.
+Production baseline lists, source URLs/excerpts/access dates, index hash, metric policy, and labels
+were frozen before tuning. The winner and rankings were hash-locked before FINAL opened once.
+The signed benchmark's top-level source summary incompletely names only ListenBrainz; its per-record
+fields show the actual primary source is Deezer for 100/100 records, with additional ListenBrainz
+evidence on 38. The signed file was not rewritten post-FINAL; the source audit records this erratum
+and the builder now emits both source families.
+
+Candidate generation cleared its pre-ranking DEV gate:
+
+| DEV candidate recall | @100 | @500 | @1000 |
+|---|---:|---:|---:|
+| Audio only | 0.196 | 0.441 | 0.576 |
+| Music4All sparse graph | 0.328 | 0.440 | 0.464 |
+| Catalogue-wide artist graph | 0.460 | 0.460 | 0.460 |
+| Hybrid union | **0.532** | **0.704** | **0.766** |
+
+The DEV-selected hybrid used graph strength/rank, sparse Music4All rank, audio/vibe scene
+consistency, quality filtering, one-result-per-artist output, and a generic positions-1-3 scene
+guard. Static popularity/notability remained exactly zero. On DEV, graded nDCG@10 rose
+0.0713→0.2444 (+242.8%, absolute +0.1731, paired 95% CI [0.1066, 0.2434]).
+
+The fresh once-opened FINAL **did not confirm the gain**:
+
+| FINAL (60 seeds) | nDCG@10 | MRR@10 | Recall@10 |
+|---|---:|---:|---:|
+| Frozen production baseline | **0.05250** | **0.15661** | **0.04457** |
+| Current deployed iteration-3 method | 0.07735 | 0.20935 | 0.05846 |
+| Locked two-hop-masked hybrid | 0.04286 | 0.14034 | 0.03333 |
+| Music4All sparse diagnostic | 0.08348 | 0.18544 | 0.07582 |
+| Full graph diagnostic (unmasked) | 0.16560 | 0.39532 | 0.12919 |
+
+The locked winner regressed **18.3%** versus the frozen baseline (absolute -0.00963,
+CI [-0.04409, 0.02610]), improved 8/60 seeds, worsened 15, and failed nDCG, MRR, recall,
+improved-count, confidence, and scene gates. The independent-source full graph looked strong, but
+220 deciding edges were present in the source graph. Direct masking removed all exact edges and
+strict transitive masking broke 17,132 two-hop paths to zero; graph nDCG then collapsed from 0.16560
+to 0.00238. That anti-memorization result prevents a post-hoc switch to the attractive unmasked
+diagnostic.
+
+Cold-start query resolution improved from 16/20 to **20/20**, and all 100 locked top-five results
+had Deezer previews, but direct coherence still failed at **12/20** (required 16). Hyperpop,
+digicore, city-pop, Pixies, Starboy, and JVKE exposed scene errors. MusicBrainz community-tag
+validation on 11 benchmark-disjoint seeds improved 0.0871→0.1165, but its paired CI
+[-0.0148, 0.0692] is statistically equivalent and cannot override the two deciding failures.
+
+The compact static additions total 25,222,632 bytes. Measured process RSS was 2.12 GB
+(+921 MB after loading the current production index and research ranker), total cold load was
+10.75 s, and warm recommendation latency was 0.100 s mean / 0.120 s p95. These fit the measured
+3 GB hosted envelope, but quality—not resources—blocked release. **Iteration 6 was not deployed or
+retuned after FINAL.** Live verification on ten seeds confirms 272,853 tracks,
+`2026.07.11-dual-sonic64`, working search/recommend requests, and 50/50 available previews.
+
 ### Growing the library past the bundle limit
 
 The ~87k-song index ships bundled (75 MB, under GitHub's 100 MB per-file cap), so the tool works
@@ -749,6 +819,8 @@ pytest -q
 - [x] **Honest audio-final rejection** — iteration-4 DEV improved, but FINAL moved one pair with a confidence interval touching zero; no iteration-4 method was shipped
 - [x] **Collaborative candidate experiment** — Music4All-Onion item2vec over 115,468 mapped users, audio/collaborative/production candidate union, learned DEV reranker, exact-edge-masked topology ablation, and an 88-pair fresh once-opened FINAL
 - [x] **Honest collaborative-final rejection** — candidate recall improved on DEV but collapsed on fresh FINAL; the locked method regressed current production, direct judgment passed 13/20, and no iteration-5 asset was deployed
+- [x] **Catalogue-wide retrieval experiment** — Last.fm-360K artist graph, audio-to-collaborative projection, 100% effective catalogue coverage, four-generator candidate gate, and exact/transitive leakage ablations
+- [x] **Multi-positive once-opened FINAL** — 60 fresh seeds, 14 scenes, 6-12 graded positives, signed freeze, locked rankings, honest -18.3% result, 12/20 direct coherence, and no deployment
 - [x] **Desktop/hosted Dual-Sonic64 parity** — retained as the prior manual-UX behavior, not described as a statistically established retrieval improvement
 - [ ] Inline audio previews in the web UI
 

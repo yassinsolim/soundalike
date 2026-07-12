@@ -695,7 +695,173 @@ curl.exe -L -o ml_data\iteration5\raw\userid_trackid_count.tsv.bz2 `
 
 ---
 
-## 9. Security & correctness
+## 9. Catalogue-wide graph: coverage fixed, fresh FINAL still failed
+
+Iteration 5 proved that a 13,680-row collaborative index could not retrieve most of a 272,853-track
+catalogue. Iteration 6 therefore gated candidate recall before reranking and built a static
+catalogue-wide artist graph.
+
+### Source, mapping, and cold-start bridge
+
+[Last.fm-360K](https://doi.org/10.5281/zenodo.6090214) contains 17,559,530
+`user, artist, plays` rows from 359,347 users. The 569,202,935-byte archive matched published MD5
+`635e6ed3fc873aa4ba33aba0ebce02b1`. Its license is accurately recorded as Last.fm permission for
+**non-commercial use** (`other-nc` on Zenodo), not CC-BY or a permissive software license.
+Music4All-Onion remained a second, CC-BY-4.0, track-level source.
+
+A six-epoch 64-dimensional skip-gram model used only catalogue-mapped artists. It directly mapped
+6,126/18,258 artists and 142,767/272,853 tracks (33.6% artist, 52.3% track coverage). The direct
+numbers miss the requested coverage target, so they are not hidden. A precomputed audio-centroid
+bridge mapped every remaining catalogue artist to eight directly collaborative artist anchors and
+distilled their vectors. Exact k-NN over the combined direct/projected vectors gives the runtime
+graph **100% effective artist and track coverage**. Query modes distinguish
+`catalog_artist_graph` from `audio_projected_artist_bridge`; no global popularity fallback is used.
+
+The runtime NPZ is 23,242,398 bytes. It stores artist/audio centroids, track-to-artist CSR data, and
+three graph variants; it contains no users, play histories, API keys, or visitor credentials.
+
+### Stronger measurement frozen before tuning
+
+Protocol v7 replaced the one-positive noise floor with a graded multi-positive design. It froze:
+
+- 40 opened v6 queries expanded into multi-positive DEV records;
+- 60 fresh FINAL queries, 14 scenes, popular/deep-cut/niche tiers;
+- 6-12 independently sourced relevant artists per seed, grades 1-3;
+- production/current-audio baseline lists and the complete 272,853-row index hash;
+- source URLs, excerpts, algorithm/relationship, access dates, metric policy, and component audit.
+
+The automated primary is graded nDCG@10; MRR@10 and Recall@10 are non-regression gates. Automated
+labels measure **taste affinity** from independent Deezer related artists plus ListenBrainz session
+similarity where available. They are never described as acoustic similarity. A separate locked
+20-seed list/preview inspection measures sonic/scene coherence. Shipping requires both axes.
+
+One frozen metadata summary is incomplete: `source_policy.automated_evaluation` names ListenBrainz
+only, while the authoritative per-record fields show Deezer as the primary source for 100/100
+records and additional ListenBrainz evidence on 38. Rewriting a signed, once-opened benchmark would
+be worse than preserving the error. The source audit records the erratum, and the builder now emits
+both source families. Both remain independent of Last.fm-360K and Music4All training.
+
+The frozen state was SHA-256-bound and detached-Ed25519-signed before training. The ephemeral private
+key was destroyed. After DEV-only selection, three assets and the method manifest were hash-locked;
+all target-blind rankings entered `RANKINGS_LOCKED`; FINAL opened once; the finalized state was
+separately signed.
+
+### Candidate gate and DEV selection
+
+| DEV candidate recall (40 seeds) | @100 | @500 | @1000 |
+|---|---:|---:|---:|
+| Audio only | 0.1956 | 0.4413 | 0.5758 |
+| Music4All sparse | 0.3282 | 0.4403 | 0.4636 |
+| Catalogue-wide graph | 0.4604 | 0.4604 | 0.4604 |
+| Hybrid union | **0.5322** | **0.7038** | **0.7656** |
+
+The hybrid's +0.1897 absolute lift over audio at @1000 cleared the predeclared +0.10 gate. Only then
+was a linear reranker selected on DEV. It uses catalogue-graph strength/rank, Music4All strength/rank,
+audio/vibe scene consistency, source agreement, real-index quality filtering, artist caps, and a
+generic scene-consistency floor for positions 1-3. Static popularity/notability is exactly zero.
+
+| DEV ranked list | nDCG@10 | MRR@10 | Recall@10 |
+|---|---:|---:|---:|
+| Frozen production | 0.07131 | 0.19913 | 0.06014 |
+| Audio only | 0.03227 | 0.08486 | 0.02986 |
+| Music4All sparse | **0.24825** | **0.51857** | 0.19903 |
+| Catalogue graph | 0.19624 | 0.37913 | 0.17986 |
+| Locked hybrid | 0.24444 | 0.49027 | **0.22028** |
+
+The locked hybrid gained +242.8% nDCG relative, absolute +0.17313, paired
+CI [0.10662, 0.24343]. FINAL labels and artists were not read during selection.
+
+### Exact and transitive masking
+
+The benchmark and graph sources are independently operated, so cross-source agreement is legitimate
+evaluation evidence. A stronger anti-memorization check was nevertheless predeclared. Across 706
+FINAL query-positive artist relationships, the full Last.fm graph contained 220 exact directed
+relationships. Direct masking removed every one (220→0). A read-only pre-mutation audit found
+17,132 two-hop
+`query→intermediate→positive` paths and deterministically removed 10,141 edge slots until the path
+count was also zero. The deciding method used this strict variant. Full and direct-only graphs were
+locked diagnostics, never post-FINAL alternatives.
+
+### Once-opened FINAL
+
+| FINAL (60 seeds) | nDCG@10 | MRR@10 | Recall@10 |
+|---|---:|---:|---:|
+| Frozen production baseline | **0.05250** | **0.15661** | **0.04457** |
+| Deployed iteration-3 control | 0.07735 | 0.20935 | 0.05846 |
+| Audio only | 0.02597 | 0.08048 | 0.02824 |
+| Music4All sparse diagnostic | 0.08348 | 0.18544 | 0.07582 |
+| Full catalogue graph diagnostic | **0.16560** | **0.39532** | **0.12919** |
+| Direct-edge-masked graph | 0.00175 | 0.01042 | 0.00278 |
+| Two-hop-masked graph | 0.00238 | 0.01667 | 0.00139 |
+| **Locked two-hop-masked hybrid** | **0.04286** | **0.14034** | **0.03333** |
+
+The winner regressed -18.3% against frozen production (absolute -0.00963,
+CI [-0.04409, 0.02610], P(positive)=0.291). It improved 8/60 seeds, worsened 15, left 37
+unchanged, and failed every predeclared gain, confidence, improved-count, MRR, recall, and scene
+gate. African and classical fell 100%; electronic, hip-hop, indie-alternative, and pop also exceeded
+the maximum -10% scene regression.
+
+The unmasked graph's apparent +215% lift is informative but not releasable: removing independent
+direct agreement collapsed nDCG to 0.00175, and breaking all two-hop paths left 0.00238. The fresh
+result therefore does not show topology generalization beyond deciding-edge agreement. No method was
+reselected after opening.
+
+### Direct and external checks
+
+Replacing four absent iteration-5 queries with in-catalog equivalents fixed direct measurability:
+20/20 queries resolved and all 100 top-five tracks exposed a Deezer preview. The locked method still
+passed only **12/20** scene-coherence judgments (required 16). It fixed Post Malone's crossover list,
+but failed Frank Ocean twice, both hyperpop/digicore replacements, city-pop, Pixies (trip-hop still
+rank 1), Starboy, and JVKE. Preview availability and actual ranked metadata were inspected; no human
+audible-playback claim is made.
+
+Independent MusicBrainz community tags measured style consistency on 11 benchmark-disjoint seeds.
+Mean tag Jaccard improved 0.08708→0.11646; paired delta +0.02937,
+CI [-0.01485, 0.06916]. This is statistically equivalent and supportive only.
+
+### Resources and release decision
+
+The sparse graph, catalogue graph, and scorer total 25,222,632 bytes. Production-index load was
+3.92 s; research hybrid assets loaded in 5.24 s; total cold load was 10.75 s. Process RSS reached
+2.12 GB, a +921 MB measured delta after production-index load. Sixteen warm queries averaged
+99.9 ms (p50 105.8 ms, p95 119.8 ms). The package fits the measured 3 GB Vercel envelope, but the
+quality gates fail.
+
+**Verdict: no deployment.** The canonical and hosted serving paths, release assets, and manifest
+remain unchanged. Live verification on ten diverse seeds confirms 272,853 tracks,
+`2026.07.11-dual-sonic64`, successful search/recommend requests, and 50/50 preview URLs.
+
+Reproduce the pre-FINAL stages (the finalized protocol rejects a second open):
+
+```powershell
+curl.exe -L -o ml_data\iteration6\source\lastfm-dataset-360K.tar.gz `
+  https://zenodo.org/api/records/6090214/files/lastfm-dataset-360K.tar.gz/content
+
+.\.venv\Scripts\python.exe -m soundalike.ml.catalog_benchmark `
+  --index ml_data\deepvibe_index_v5.npz `
+  --v6 benchmarks\soundalike_pairs.v6.json `
+  --cache ml_data\iteration6\listenbrainz-v7-cache.json `
+  --output benchmarks\soundalike_multipositive.v7.json `
+  --dev-count 40 --final-count 60
+
+.\.venv\Scripts\python.exe -m soundalike.ml.catalog_graph `
+  --archive ml_data\iteration6\source\lastfm-dataset-360K.tar.gz `
+  --index ml_data\deepvibe_index_v5.npz `
+  --benchmark benchmarks\soundalike_multipositive.v7.json `
+  --output-dir ml_data\iteration6\catalog_graph
+
+.\.venv\Scripts\python.exe -m soundalike.ml.catalog_rerank dev `
+  --index ml_data\deepvibe_index_v5.npz `
+  --benchmark benchmarks\soundalike_multipositive.v7.json `
+  --sparse ml_data\iteration5\collaborative\item2vec-final-edges-masked.npz `
+  --catalog ml_data\iteration6\catalog_graph\catalog-artist-graph.npz `
+  --scorer ml_data\iteration6\catalog_graph\hybrid-scorer-v7.json `
+  --report .goals\human-quality-recommendations\artifacts\catalog-hybrid-dev-v7.json
+```
+
+---
+
+## 10. Security & correctness
 
 - **No passwords, ever.** Live Spotify access uses OAuth 2.0 **Authorization Code + PKCE** with a
   local loopback callback, CSRF `state` validation, and cached auto-refreshing tokens.
@@ -711,7 +877,7 @@ curl.exe -L -o ml_data\iteration5\raw\userid_trackid_count.tsv.bz2 `
   with zero false negatives; six curated legitimate risky titles had zero false positives.
 - **Release integrity.** Desktop and hosted downloads pin SHA-256; hosted download is atomic and
   fails before loading on a mismatch, and numpy object pickles are disabled.
-- **408 automated tests** cover the recommenders, OAuth/PKCE, DSP, vibe and vibe-aware engines,
+- **Automated tests** cover the recommenders, OAuth/PKCE, DSP, vibe and vibe-aware engines,
   the spec cache, recommendation benchmarks, diversity/MMR, GeM pooling, ML split logic, the
   categorized production benchmarks, one-open protocol, audio and collaborative experiments,
   graph-edge masking, candidate unions, no-notability ablation, real-index derivative checks,
@@ -720,7 +886,7 @@ curl.exe -L -o ml_data\iteration5\raw\userid_trackid_count.tsv.bz2 `
 
 ---
 
-## 9. What I'd build next
+## 11. What I'd build next
 
 - **Persist a personal acoustic-feature store** so the engines cover a user's entire Spotify
   library, not just what's in a preview catalog.
@@ -742,7 +908,7 @@ curl.exe -L -o ml_data\iteration5\raw\userid_trackid_count.tsv.bz2 `
 
 ---
 
-## 10. Skills demonstrated
+## 12. Skills demonstrated
 
 For anyone evaluating this as a portfolio piece, the work spans:
 
@@ -756,7 +922,7 @@ For anyone evaluating this as a portfolio piece, the work spans:
   CUDA memory-layout and precision tuning, reading cuDNN kernel selection.
 - **API integration & security:** OAuth 2.0 PKCE, token lifecycle management, rate-limit handling,
   secret hygiene.
-- **Software engineering:** clean package design, a 408-test suite, packaging, a documented CLI,
+- **Software engineering:** clean package design, a 419-test suite, packaging, a documented CLI,
   decoupling I/O from compute (the harvest-once spec cache), and reviewed, merged pull requests.
   Includes a reproducible human-aligned evaluation suite, three ranking improvements (quality
   filter, genre reranker, collaborative graph), and desktop/hosted parity tests.

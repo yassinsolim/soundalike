@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "method_id": "catalog-hybrid-twohop-masked-v7",
+  "configuration": {
+    "candidate_configuration": {
+      "audio_candidates": 1000,
+      "sparse_candidates": 1000,
+      "catalog_candidates": 1000,
+      "union_candidates": 1800,
+      "max_candidates_per_artist": 16,
+      "final_max_per_artist": 1,
+      "bridge_anchors": 8,
+      "scene_guard_positions": 3,
+      "scene_guard_quantile": 0.35
+    },
+    "scorer": {
+      "feature_names": [
+        "audio_blend",
+        "sonic_cosine",
+        "clap_cosine",
+        "vibe_cosine",
+        "catalog_graph_strength",
+        "catalog_graph_reciprocal_rank",
+        "music4all_strength",
+        "music4all_reciprocal_rank",
+        "source_agreement",
+        "scene_consistency",
+        "global_popularity_zero"
+      ],
+      "coefficients": [
+        0.15000000596046448,
+        0.0,
+        0.0,
+        0.0,
+        1.5,
+        0.5,
+        0.20000000298023224,
+        4.0,
+        0.25,
+        0.20000000298023224,
+        0.0
+      ],
+      "scene_guard": true,
+      "global_popularity_weight": 0.0
+    },
+    "deciding_graph_variant": "twohop",
+    "static_popularity_weight": 0.0,
+    "scene_guard_positions": [
+      1,
+      2,
+      3
+    ]
+  },
+  "assets": [
+    {
+      "path": "ml_data\\iteration6\\catalog_graph\\catalog-artist-graph.npz",
+      "sha256": "10cc0e8490d834439a22e3c434bab5b8383ea49aa80536fa5bc516d3726861b5",
+      "role": "catalog-wide graph with full/direct/twohop variants"
+    },
+    {
+      "path": "ml_data\\iteration5\\collaborative\\item2vec-final-edges-masked.npz",
+      "sha256": "29d165496cf44f961e011eceddde4dbf18aeecfaecd91b2ea2ac2bf54ca8a861",
+      "role": "independent Music4All sparse graph"
+    },
+    {
+      "path": "ml_data\\iteration6\\catalog_graph\\hybrid-scorer-v7.json",
+      "sha256": "2a3013c7218e10254f7cb2d7480052b200dfc705c8975238f6a749270fdd2637",
+      "role": "DEV-selected linear scorer"
+    }
+  ],
+  "selection": {
+    "split": "development-only",
+    "final_labels_compared": false,
+    "candidate_recall_gate": {
+      "minimum_absolute_lift_at_1000": 0.1,
+      "absolute_lift_at_1000": 0.18972222222222213,
+      "passes": true
+    },
+    "dev_metrics": {
+      "production": {
+        "ndcg_at_10": 0.0713106130333799,
+        "mrr_at_10": 0.19912698412698412,
+        "recall_at_10": 0.06013888888888889,
+        "primary": 0.0713106130333799
+      },
+      "audio_only": {
+        "ndcg_at_10": 0.0322707277499022,
+        "mrr_at_10": 0.08486111111111111,
+        "recall_at_10": 0.02986111111111111,
+        "primary": 0.0322707277499022
+      },
+      "music4all_sparse": {
+        "ndcg_at_10": 0.2482467196370905,
+        "mrr_at_10": 0.5185714285714285,
+        "recall_at_10": 0.19902777777777778,
+        "primary": 0.2482467196370905
+      },
+      "catalog_graph": {
+        "ndcg_at_10": 0.19623961703047588,
+        "mrr_at_10": 0.3791269841269841,
+        "recall_at_10": 0.1798611111111111,
+        "primary": 0.19623961703047588
+      },
+      "hybrid": {
+        "ndcg_at_10": 0.24443915364229607,
+        "mrr_at_10": 0.4902678571428572,
+        "recall_at_10": 0.22027777777777774,
+        "primary": 0.24443915364229607
+      }
+    },
+    "dev_comparison": {
+      "baseline_primary": 0.0713106130333799,
+      "winner_primary": 0.24443915364229607,
+      "absolute_delta": 0.17312854060891616,
+      "relative_gain": 2.427808894699533,
+      "ci95_low": 0.1066185879234341,
+      "ci95_high": 0.24342834885523487,
+      "probability_positive": 1.0
+    }
+  },
+  "release_policy": "ship only if v7 retrieval and direct-coherence gates pass"
+}

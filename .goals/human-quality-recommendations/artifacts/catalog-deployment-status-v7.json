@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-07-12T13:42:35.390674+00:00",
+  "url": "https://soundalike.yassin.app",
+  "iteration6_deployed": false,
+  "deployment_attempted": false,
+  "production_unchanged": true,
+  "retained_method": "dual_sonic64_guardrail",
+  "reason": "Fresh v7 FINAL and direct-coherence gates failed; release is prohibited.",
+  "stats": {
+    "ok": true,
+    "library_size": 272853,
+    "version": "2026.07.11-dual-sonic64"
+  },
+  "records": [
+    {
+      "query": {
+        "title": "Redbone",
+        "artist": "Childish Gambino"
+      },
+      "search_status": 200,
+      "recommend_status": 200,
+      "method": "dual_sonic64_guardrail",
+      "index_version": "2026.07.11-dual-sonic64",
+      "result_count": 5,
+      "previews_available": 5
+    },
+    {
+      "query": {
+        "title": "Kid A",
+        "artist": "Radiohead"
+      },
+      "search_status": 200,
+      "recommend_status": 200,
+      "method": "dual_sonic64_guardrail",
+      "index_version": "2026.07.11-dual-sonic64",
+      "result_count": 5,
+      "previews_available": 5
+    },
+    {
+      "query": {
+        "title": "Alison",
+        "artist": "Slowdive"
+      },
+      "search_status": 200,
+      "recommend_status": 200,
+      "method": "dual_sonic64_guardrail",
+      "index_version": "2026.07.11-dual-sonic64",
+      "result_count": 5,
+      "previews_available": 5
+    },
+    {
+      "query": {
+        "title": "Enter Sandman",
+        "artist": "Metallica"
+      },
+      "search_status": 200,
+      "recommend_status": 200,
+      "method": "dual_sonic64_guardrail",
+      "index_version": "2026.07.11-dual-sonic64",
+      "result_count": 5,
+      "previews_available": 5
+    },
+    {
+      "query": {
+        "title": "Round Midnight",
+        "artist": "Thelonious Monk"
+      },
+      "search_status": 200,
+      "recommend_status": 200,
+      "method": "dual_sonic64_guardrail",
+      "index_version": "2026.07.11-dual-sonic64",
+      "result_count": 5,
+      "previews_available": 5
+    },
+    {
+      "query": {
+        "title": "Where Is My Mind?",
+        "artist": "Pixies"
+      },
+      "search_status": 200,
+      "recommend_status": 200,
+      "method": "dual_sonic64_guardrail",
+      "index_version": "2026.07.11-dual-sonic64",
+      "result_count": 5,
+      "previews_available": 5
+    },
+    {
+      "query": {
+        "title": "Starboy",
+        "artist": "The Weeknd"
+      },
+      "search_status": 200,
+      "recommend_status": 200,
+      "method": "dual_sonic64_guardrail",
+      "index_version": "2026.07.11-dual-sonic64",
+      "result_count": 5,
+      "previews_available": 5
+    },
+    {
+      "query": {
+        "title": "Chemical",
+        "artist": "Post Malone"
+      },
+      "search_status": 200,
+      "recommend_status": 200,
+      "method": "dual_sonic64_guardrail",
+      "index_version": "2026.07.11-dual-sonic64",
+      "result_count": 5,
+      "previews_available": 5
+    },
+    {
+      "query": {
+        "title": "Remember Summer Days",
+        "artist": "Anri"
+      },
+      "search_status": 200,
+      "recommend_status": 200,
+      "method": "dual_sonic64_guardrail",
+      "index_version": "2026.07.11-dual-sonic64",
+      "result_count": 5,
+      "previews_available": 5
+    },
+    {
+      "query": {
+        "title": "money machine",
+        "artist": "100 gecs"
+      },
+      "search_status": 200,
+      "recommend_status": 200,
+      "method": "dual_sonic64_guardrail",
+      "index_version": "2026.07.11-dual-sonic64",
+      "result_count": 5,
+      "previews_available": 5
+    }
+  ],
+  "all_search_ok": true,
+  "all_recommend_ok": true,
+  "previews_available": 50,
+  "repository_pushed": false,
+  "release_assets_uploaded": false,
+  "manifest_updated": false
+}

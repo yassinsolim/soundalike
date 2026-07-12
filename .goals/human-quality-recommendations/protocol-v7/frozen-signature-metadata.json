@@ -1,0 +1,11 @@
+{
+  "algorithm": "Ed25519",
+  "namespace": "soundalike-protocol",
+  "principal": "soundalike-protocol",
+  "signed_file": "frozen-state.json",
+  "signed_file_sha256": "bf716013018e14a393e10243cb7942c6f8a785ab51364fad30249adbff535f8d",
+  "signature_file": "frozen-state.sig",
+  "public_key_file": "frozen-signer.pub",
+  "allowed_signers_file": "frozen-allowed-signers",
+  "private_key_retained": false
+}

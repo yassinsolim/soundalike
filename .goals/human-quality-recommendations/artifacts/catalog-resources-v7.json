@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-12T13:38:55.117289+00:00",
+  "runtime_assets": {
+    "sparse_graph_bytes": 1978816,
+    "catalog_graph_bytes": 23242398,
+    "scorer_bytes": 1418,
+    "added_runtime_bytes": 25222632
+  },
+  "load_seconds": {
+    "production_index": 3.9187439999950584,
+    "hybrid_assets": 5.2445584000088274,
+    "total": 10.754367999994429
+  },
+  "rss_bytes": {
+    "start": 163254272,
+    "after_production_index": 1199915008,
+    "after_hybrid": 2120998912,
+    "hybrid_delta": 921083904
+  },
+  "latency_seconds": {
+    "first_recommendation": 0.08259330000146292,
+    "warm_mean": 0.09988991875161446,
+    "warm_p50": 0.1058476000034716,
+    "warm_p95": 0.11983140000666026,
+    "samples": 16
+  },
+  "query_modes": {
+    "catalog=catalog_artist_graph;music4all=artist": 6,
+    "catalog=audio_projected_artist_bridge;music4all=track": 2,
+    "catalog=catalog_artist_graph;music4all=audio_bridge": 3,
+    "catalog=catalog_artist_graph;music4all=track": 2,
+    "catalog=audio_projected_artist_bridge;music4all=audio_bridge": 3
+  },
+  "deployment_assessment": "Measured against the existing serverless path. Shipping remains forbidden unless both fresh FINAL and direct coherence pass."
+}

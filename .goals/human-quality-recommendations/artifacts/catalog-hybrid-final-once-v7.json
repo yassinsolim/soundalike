@@ -1,0 +1,6209 @@
+{
+  "schema_version": 7,
+  "opened_at": "2026-07-12T13:33:01.385281+00:00",
+  "open_number": 1,
+  "method_id": "catalog-hybrid-twohop-masked-v7",
+  "primary_axis": "taste_affinity",
+  "metrics": {
+    "production_baseline": {
+      "ndcg_at_10": 0.05249501672540055,
+      "mrr_at_10": 0.1566137566137566,
+      "recall_at_10": 0.044570707070707066,
+      "primary": 0.05249501672540055
+    },
+    "iteration3_deployed": {
+      "ndcg_at_10": 0.07734795382328953,
+      "mrr_at_10": 0.20935185185185184,
+      "recall_at_10": 0.058459595959595954,
+      "primary": 0.07734795382328953
+    },
+    "audio_priors_zero": {
+      "ndcg_at_10": 0.02594100738873365,
+      "mrr_at_10": 0.08865079365079365,
+      "recall_at_10": 0.029166666666666664,
+      "primary": 0.02594100738873365
+    },
+    "winner": {
+      "ndcg_at_10": 0.04286497350674586,
+      "mrr_at_10": 0.14034391534391535,
+      "recall_at_10": 0.03333333333333333,
+      "primary": 0.04286497350674586
+    },
+    "audio_only": {
+      "ndcg_at_10": 0.0259661608611129,
+      "mrr_at_10": 0.08048280423280424,
+      "recall_at_10": 0.02824074074074074,
+      "primary": 0.0259661608611129
+    },
+    "catalog_graph_direct_masked": {
+      "ndcg_at_10": 0.0017547378525515694,
+      "mrr_at_10": 0.010416666666666666,
+      "recall_at_10": 0.0027777777777777775,
+      "primary": 0.0017547378525515694
+    },
+    "catalog_graph_full": {
+      "ndcg_at_10": 0.165596539728394,
+      "mrr_at_10": 0.3953174603174603,
+      "recall_at_10": 0.12918771043771043,
+      "primary": 0.165596539728394
+    },
+    "catalog_graph_twohop_masked": {
+      "ndcg_at_10": 0.0023838803099058914,
+      "mrr_at_10": 0.016666666666666666,
+      "recall_at_10": 0.0013888888888888887,
+      "primary": 0.0023838803099058914
+    },
+    "hybrid_direct_masked_ablation": {
+      "ndcg_at_10": 0.02987165690857751,
+      "mrr_at_10": 0.11597222222222221,
+      "recall_at_10": 0.018055555555555554,
+      "primary": 0.02987165690857751
+    },
+    "hybrid_full_graph_ablation": {
+      "ndcg_at_10": 0.15159536259672352,
+      "mrr_at_10": 0.3340013227513227,
+      "recall_at_10": 0.12720959595959594,
+      "primary": 0.15159536259672352
+    },
+    "hybrid_twohop_masked": {
+      "ndcg_at_10": 0.04286497350674586,
+      "mrr_at_10": 0.14034391534391535,
+      "recall_at_10": 0.03333333333333333,
+      "primary": 0.04286497350674586
+    },
+    "music4all_sparse": {
+      "ndcg_at_10": 0.08347830521800086,
+      "mrr_at_10": 0.18543650793650795,
+      "recall_at_10": 0.07582070707070707,
+      "primary": 0.08347830521800086
+    }
+  },
+  "candidate_recall": {
+    "audio_only": {
+      "recall_at_100": 0.12525252525252525,
+      "recall_at_500": 0.2988846801346801,
+      "recall_at_1000": 0.4031355218855219
+    },
+    "catalog_graph_direct_masked": {
+      "recall_at_100": 0.013888888888888888,
+      "recall_at_500": 0.013888888888888888,
+      "recall_at_1000": 0.013888888888888888
+    },
+    "catalog_graph_full": {
+      "recall_at_100": 0.31805976430976435,
+      "recall_at_500": 0.31805976430976435,
+      "recall_at_1000": 0.31805976430976435
+    },
+    "catalog_graph_twohop_masked": {
+      "recall_at_100": 0.0013888888888888887,
+      "recall_at_500": 0.0013888888888888887,
+      "recall_at_1000": 0.0013888888888888887
+    },
+    "hybrid_union_twohop_masked": {
+      "recall_at_100": 0.16010101010101013,
+      "recall_at_500": 0.3122474747474748,
+      "recall_at_1000": 0.4091329966329967
+    },
+    "music4all_sparse": {
+      "recall_at_100": 0.15340909090909094,
+      "recall_at_500": 0.22243265993265995,
+      "recall_at_1000": 0.26182659932659935
+    }
+  },
+  "comparison_to_production_baseline": {
+    "baseline_primary": 0.05249501672540055,
+    "winner_primary": 0.04286497350674586,
+    "absolute_delta": -0.00963004321865469,
+    "relative_gain": -0.1834468073232376,
+    "ci95_low": -0.04409052865144725,
+    "ci95_high": 0.02610221558446309,
+    "probability_positive": 0.29115,
+    "improved_seeds": 8,
+    "worsened_seeds": 15,
+    "unchanged_seeds": 37,
+    "per_scene": {
+      "african": {
+        "baseline_primary": 0.21056854230618832,
+        "winner_primary": 0.0,
+        "relative_delta": -1.0
+      },
+      "asian-pop": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "classical": {
+        "baseline_primary": 0.12992082930392332,
+        "winner_primary": 0.0,
+        "relative_delta": -1.0
+      },
+      "dance-electronic": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "electronic": {
+        "baseline_primary": 0.07532254501524643,
+        "winner_primary": 0.017879102324294186,
+        "relative_delta": -0.7626327904789306
+      },
+      "folk-country": {
+        "baseline_primary": 0.0,
+        "winner_primary": 0.0,
+        "relative_delta": 0.0
+      },
+      "hip-hop": {
+        "baseline_primary": 0.06529731371287116,
+        "winner_primary": 0.006368664746953334,
+        "relative_delta": -0.9024666653982434
+      },
+      "indie-alternative": {
+        "baseline_primary": 0.013781918954911583,
+        "winner_primary": 0.002050341369584059,
+        "relative_delta": -0.8512296164059678
+      },
+      "jazz": {
+        "baseline_primary": 0.04303650353325134,
+        "winner_primary": 0.09558940331214728,
+        "relative_delta": 1.2211238242970164
+      },
+      "metal": {
+        "baseline_primary": 0.04767760619811783,
+        "winner_primary": 0.23950625127873454,
+        "relative_delta": 4.023453784225214
+      },
+      "pop": {
+        "baseline_primary": 0.0059065366949621065,
+        "winner_primary": 0.0,
+        "relative_delta": -1.0
+      },
+      "r&b-soul": {
+        "baseline_primary": 0.09218273582915754,
+        "winner_primary": 0.09079287474981192,
+        "relative_delta": -0.015077238344514445
+      },
+      "reggae-dub-ska": {
+        "baseline_primary": 0.05569814645182316,
+        "winner_primary": 0.44243112017515607,
+        "relative_delta": 6.9433724164922195
+      },
+      "rock": {
+        "baseline_primary": 0.01589253539937261,
+        "winner_primary": 0.12144300776549699,
+        "relative_delta": 6.6415124908446765
+      }
+    },
+    "passes": {
+      "relative_gain": false,
+      "minimum_absolute_gain": false,
+      "ci_excludes_zero": false,
+      "minimum_improved_seeds": false,
+      "recall_at_10_non_regression": false,
+      "mrr_at_10_non_regression": false,
+      "scene_no_regression": false
+    },
+    "retrieval_pass": false
+  },
+  "records": [
+    {
+      "record_id": "FINAL-MP-020",
+      "scene": "african",
+      "catalog_tier": "deep_cut",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.21056854230618832,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.08333333333333333
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.1668716216934124,
+          "mrr_at_10": 0.3333333333333333,
+          "recall_at_10": 0.08333333333333333
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.15430491655687353,
+          "mrr_at_10": 0.14285714285714285,
+          "recall_at_10": 0.16666666666666666
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.09647343268438108,
+          "mrr_at_10": 0.1,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.25,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.25
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-031",
+      "scene": "asian-pop",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.3333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.25
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.08333333333333333
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-002",
+      "scene": "classical",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.11663823979135995,
+          "mrr_at_10": 0.3333333333333333,
+          "recall_at_10": 0.16666666666666666
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.10927848820187003,
+          "mrr_at_10": 0.25,
+          "recall_at_10": 0.16666666666666666
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.25,
+          "recall_at_500": 0.5833333333333334,
+          "recall_at_1000": 0.6666666666666666
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.3333333333333333,
+          "recall_at_1000": 0.5833333333333334
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-015",
+      "scene": "dance-electronic",
+      "catalog_tier": "deep_cut",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.05533264739989459,
+          "mrr_at_10": 0.2,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.04767760619811783,
+          "mrr_at_10": 0.14285714285714285,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.16666666666666666
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.3333333333333333,
+          "recall_at_500": 0.3333333333333333,
+          "recall_at_1000": 0.3333333333333333
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-007",
+      "scene": "electronic",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.16666666666666666
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-018",
+      "scene": "folk-country",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.06160088200375218,
+          "mrr_at_10": 0.25,
+          "recall_at_10": 0.08333333333333333
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.09024366098836642,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.08333333333333333
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.07151640929717674,
+          "mrr_at_10": 0.3333333333333333,
+          "recall_at_10": 0.08333333333333333
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.42691150030673103,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.3333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.20660292349735793,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.25
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.4166666666666667,
+          "recall_at_500": 0.75,
+          "recall_at_1000": 0.9166666666666666
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.16666666666666666
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.9166666666666666,
+          "recall_at_500": 0.9166666666666666,
+          "recall_at_1000": 0.9166666666666666
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.25,
+          "recall_at_500": 0.5833333333333334,
+          "recall_at_1000": 0.8333333333333334
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.4166666666666667,
+          "recall_at_1000": 0.5
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-001",
+      "scene": "hip-hop",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.013781918954911584,
+          "mrr_at_10": 0.1,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.12655465301383656,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.16666666666666666
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.016983105991875556,
+          "mrr_at_10": 0.16666666666666666,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.5,
+          "recall_at_1000": 0.8333333333333334
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.5833333333333334,
+          "recall_at_500": 0.5833333333333334,
+          "recall_at_1000": 0.5833333333333334
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.25,
+          "recall_at_500": 0.5833333333333334,
+          "recall_at_1000": 0.75
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.4166666666666667,
+          "recall_at_500": 0.5833333333333334,
+          "recall_at_1000": 0.6666666666666666
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-004",
+      "scene": "indie-alternative",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.4166666666666667
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.16666666666666666
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.08333333333333333
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-012",
+      "scene": "jazz",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.11888174194312888,
+          "mrr_at_10": 0.16666666666666666,
+          "recall_at_10": 0.08333333333333333
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.12910951059975403,
+          "mrr_at_10": 0.2,
+          "recall_at_10": 0.08333333333333333
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.4166666666666667,
+          "recall_at_1000": 0.5
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.4166666666666667
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-036",
+      "scene": "metal",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.04767760619811783,
+          "mrr_at_10": 0.14285714285714285,
+          "recall_at_10": 0.08333333333333333
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.05533264739989459,
+          "mrr_at_10": 0.2,
+          "recall_at_10": 0.08333333333333333
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.041345756864734746,
+          "mrr_at_10": 0.1,
+          "recall_at_10": 0.08333333333333333
+        },
+        "winner": {
+          "ndcg_at_10": 0.23950625127873454,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.5042557567097061,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.5
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.24975553109228887,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.25
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.5997955751264042,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.5833333333333334
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.1430328185943535,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.23950625127873454,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.25,
+          "recall_at_500": 0.5833333333333334,
+          "recall_at_1000": 0.6666666666666666
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 1.0,
+          "recall_at_500": 1.0,
+          "recall_at_1000": 1.0
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.6666666666666666,
+          "recall_at_500": 0.8333333333333334,
+          "recall_at_1000": 0.9166666666666666
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.75,
+          "recall_at_500": 0.75,
+          "recall_at_1000": 0.75
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-003",
+      "scene": "pop",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.3438026738364056,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.25
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.23012948973873715,
+          "mrr_at_10": 0.16666666666666666,
+          "recall_at_10": 0.16666666666666666
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.3333333333333333,
+          "recall_at_1000": 0.5833333333333334
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.8333333333333334,
+          "recall_at_500": 0.8333333333333334,
+          "recall_at_1000": 0.8333333333333334
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.3333333333333333
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.16666666666666666
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-022",
+      "scene": "r&b-soul",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.09024366098836642,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.08333333333333333
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.06939353377559153,
+          "mrr_at_10": 0.2,
+          "recall_at_10": 0.16666666666666666
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.03008122032945548,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.08333333333333333
+        },
+        "winner": {
+          "ndcg_at_10": 0.04767760619811783,
+          "mrr_at_10": 0.14285714285714285,
+          "recall_at_10": 0.08333333333333333
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.03008122032945548,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.08333333333333333
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.22788598758696824,
+          "mrr_at_10": 0.3333333333333333,
+          "recall_at_10": 0.25
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.36238599018247397,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.25
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.01504061016472774,
+          "mrr_at_10": 0.125,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.2466132392781579,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.25
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.04767760619811783,
+          "mrr_at_10": 0.14285714285714285,
+          "recall_at_10": 0.08333333333333333
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.6666666666666666,
+          "recall_at_1000": 0.6666666666666666
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.25,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.25
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.6666666666666666,
+          "recall_at_500": 0.6666666666666666,
+          "recall_at_1000": 0.6666666666666666
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.5,
+          "recall_at_500": 0.9166666666666666,
+          "recall_at_1000": 0.9166666666666666
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.5833333333333334,
+          "recall_at_500": 0.5833333333333334,
+          "recall_at_1000": 0.5833333333333334
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-056",
+      "scene": "reggae-dub-ska",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.05569814645182316,
+          "mrr_at_10": 0.1111111111111111,
+          "recall_at_10": 0.16666666666666666
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.4111944622031191,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.25
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.44243112017515607,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.25
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.4445205317097753,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.25
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.09647343268438108,
+          "mrr_at_10": 0.1,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.5094265894780022,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.3333333333333333
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.395344125390577,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.44243112017515607,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.25
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.4166666666666667,
+          "recall_at_500": 0.75,
+          "recall_at_1000": 0.8333333333333334
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.6666666666666666,
+          "recall_at_500": 0.6666666666666666,
+          "recall_at_1000": 0.6666666666666666
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.5833333333333334,
+          "recall_at_500": 0.75,
+          "recall_at_1000": 0.9166666666666666
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.3333333333333333,
+          "recall_at_500": 0.3333333333333333,
+          "recall_at_1000": 0.3333333333333333
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-005",
+      "scene": "rock",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.77237251839549,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.5
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.6206190911324169,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.5
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.25
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 1.0,
+          "recall_at_500": 1.0,
+          "recall_at_1000": 1.0
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.25
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.5
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-008",
+      "scene": "classical",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.1430328185943535,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.08333333333333333
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.1430328185943535,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.08333333333333333
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.19071042479247133,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.19398213656998015,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.4166666666666667,
+          "recall_at_500": 0.6666666666666666,
+          "recall_at_1000": 0.8333333333333334
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.25,
+          "recall_at_500": 0.4166666666666667,
+          "recall_at_1000": 0.6666666666666666
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-016",
+      "scene": "dance-electronic",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.21056854230618832,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.11888174194312888,
+          "mrr_at_10": 0.16666666666666666,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.3333333333333333,
+          "recall_at_500": 0.5833333333333334,
+          "recall_at_1000": 0.75
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.4166666666666667,
+          "recall_at_1000": 0.5
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-011",
+      "scene": "electronic",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.2721423291941075,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.4536398316298543,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.25
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.26748133692432907,
+          "mrr_at_10": 0.16666666666666666,
+          "recall_at_10": 0.25
+        },
+        "winner": {
+          "ndcg_at_10": 0.1430328185943535,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.08333333333333333
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.27184361929434087,
+          "mrr_at_10": 0.16666666666666666,
+          "recall_at_10": 0.25
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.21454922789153022,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.6322042829333383,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.3333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.43901395088751993,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.25
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.1430328185943535,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.1430328185943535,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.08333333333333333
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.3333333333333333,
+          "recall_at_500": 0.8333333333333334,
+          "recall_at_1000": 0.8333333333333334
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.4166666666666667,
+          "recall_at_500": 0.4166666666666667,
+          "recall_at_1000": 0.4166666666666667
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.3333333333333333,
+          "recall_at_500": 0.6666666666666666,
+          "recall_at_1000": 0.8333333333333334
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.16666666666666666
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-006",
+      "scene": "hip-hop",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.041345756864734746,
+          "mrr_at_10": 0.1,
+          "recall_at_10": 0.08333333333333333
+        },
+        "winner": {
+          "ndcg_at_10": 0.05094931797562667,
+          "mrr_at_10": 0.16666666666666666,
+          "recall_at_10": 0.08333333333333333
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.04512183049418321,
+          "mrr_at_10": 0.125,
+          "recall_at_10": 0.08333333333333333
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.09024366098836642,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.10868787678833129,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.16666666666666666
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.07749341740312479,
+          "mrr_at_10": 0.25,
+          "recall_at_10": 0.16666666666666666
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.04512183049418321,
+          "mrr_at_10": 0.125,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.05094931797562667,
+          "mrr_at_10": 0.16666666666666666,
+          "recall_at_10": 0.08333333333333333
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.3333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.25,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.25
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.25
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.25
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-017",
+      "scene": "indie-alternative",
+      "catalog_tier": "deep_cut",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.014352389587088413,
+          "mrr_at_10": 0.1111111111111111,
+          "recall_at_10": 0.08333333333333333
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.023838803099058916,
+          "mrr_at_10": 0.3333333333333333,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.014352389587088413,
+          "mrr_at_10": 0.1111111111111111,
+          "recall_at_10": 0.08333333333333333
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.25,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.25
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.3333333333333333,
+          "recall_at_1000": 0.5833333333333334
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.3333333333333333,
+          "recall_at_500": 0.5833333333333334,
+          "recall_at_1000": 0.6666666666666666
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-053",
+      "scene": "jazz",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.015892535399372607,
+          "mrr_at_10": 0.14285714285714285,
+          "recall_at_10": 0.08333333333333333
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.1430328185943535,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.09024366098836642,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.4166666666666667
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.3333333333333333,
+          "recall_at_500": 0.3333333333333333,
+          "recall_at_1000": 0.3333333333333333
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.3333333333333333,
+          "recall_at_1000": 0.4166666666666667
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.25
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-010",
+      "scene": "pop",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.041345756864734746,
+          "mrr_at_10": 0.1,
+          "recall_at_10": 0.08333333333333333
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.07151640929717674,
+          "mrr_at_10": 0.3333333333333333,
+          "recall_at_10": 0.08333333333333333
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.1437353913420884,
+          "mrr_at_10": 0.25,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.04767760619811783,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.03008122032945548,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.4166666666666667,
+          "recall_at_500": 0.5833333333333334,
+          "recall_at_1000": 0.75
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.16666666666666666
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.25,
+          "recall_at_500": 0.6666666666666666,
+          "recall_at_1000": 0.75
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.4166666666666667,
+          "recall_at_500": 0.5,
+          "recall_at_1000": 0.5833333333333334
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-047",
+      "scene": "r&b-soul",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.04512183049418321,
+          "mrr_at_10": 0.125,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.25
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.25,
+          "recall_at_500": 0.3333333333333333,
+          "recall_at_1000": 0.4166666666666667
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-014",
+      "scene": "rock",
+      "catalog_tier": "niche",
+      "positive_count": 10,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.1,
+          "recall_at_500": 0.1,
+          "recall_at_1000": 0.1
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-028",
+      "scene": "classical",
+      "catalog_tier": "niche",
+      "positive_count": 9,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.3793633430839735,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.3333333333333333
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.45408385435368653,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.3333333333333333
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.26412277031041276,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.3333333333333333
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.43240663900531806,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.4444444444444444
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.25861482957054027,
+          "mrr_at_10": 0.3333333333333333,
+          "recall_at_10": 0.3333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.17666613951075152,
+          "mrr_at_10": 0.2,
+          "recall_at_10": 0.2222222222222222
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.5555555555555556,
+          "recall_at_500": 0.5555555555555556,
+          "recall_at_1000": 0.6666666666666666
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.5555555555555556,
+          "recall_at_500": 0.5555555555555556,
+          "recall_at_1000": 0.5555555555555556
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.5555555555555556,
+          "recall_at_500": 0.5555555555555556,
+          "recall_at_1000": 0.6666666666666666
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.1111111111111111,
+          "recall_at_1000": 0.1111111111111111
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-048",
+      "scene": "dance-electronic",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.12910951059975403,
+          "mrr_at_10": 0.2,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.10528427115309416,
+          "mrr_at_10": 0.125,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.16666666666666666
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-025",
+      "scene": "electronic",
+      "catalog_tier": "niche",
+      "positive_count": 8,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.05693445903711669,
+          "mrr_at_10": 0.2,
+          "recall_at_10": 0.125
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.3434046970895132,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.125
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.3434046970895132,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.125
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.125,
+          "recall_at_1000": 0.125
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.125,
+          "recall_at_500": 0.125,
+          "recall_at_1000": 0.125
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.25,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.25
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.25,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.25
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-009",
+      "scene": "hip-hop",
+      "catalog_tier": "deep_cut",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.25
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-029",
+      "scene": "indie-alternative",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.05094931797562667,
+          "mrr_at_10": 0.16666666666666666,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.04512183049418321,
+          "mrr_at_10": 0.125,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.25,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.25
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-064",
+      "scene": "jazz",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.12910951059975403,
+          "mrr_at_10": 0.2,
+          "recall_at_10": 0.08333333333333333
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.12969196359557314,
+          "mrr_at_10": 0.2,
+          "recall_at_10": 0.16666666666666666
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.28676820993644186,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.42398690437519126,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.1665593481412467,
+          "mrr_at_10": 0.16666666666666666,
+          "recall_at_10": 0.16666666666666666
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.28676820993644186,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.21525180063926513,
+          "mrr_at_10": 0.3333333333333333,
+          "recall_at_10": 0.16666666666666666
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.28676820993644186,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.25,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.25
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.4166666666666667,
+          "recall_at_1000": 0.5
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.3333333333333333,
+          "recall_at_500": 0.5,
+          "recall_at_1000": 0.5
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-019",
+      "scene": "pop",
+      "catalog_tier": "deep_cut",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.04767760619811783,
+          "mrr_at_10": 0.14285714285714285,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.09647343268438108,
+          "mrr_at_10": 0.1,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.04512183049418321,
+          "mrr_at_10": 0.125,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.4166666666666667,
+          "recall_at_500": 0.4166666666666667,
+          "recall_at_1000": 0.4166666666666667
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.16666666666666666
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.16666666666666666
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-052",
+      "scene": "r&b-soul",
+      "catalog_tier": "deep_cut",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.11888174194312888,
+          "mrr_at_10": 0.16666666666666666,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.10528427115309416,
+          "mrr_at_10": 0.125,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.3333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.4166666666666667,
+          "recall_at_500": 0.4166666666666667,
+          "recall_at_1000": 0.4166666666666667
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.4166666666666667
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.5
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-026",
+      "scene": "rock",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.21270938826116983,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.25
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.17197088719125456,
+          "mrr_at_10": 0.3333333333333333,
+          "recall_at_10": 0.25
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.3333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.5,
+          "recall_at_500": 0.5,
+          "recall_at_1000": 0.5
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.25
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.3333333333333333
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-030",
+      "scene": "classical",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.25712881414521277,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.25
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.2908695808852972,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.25
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.1668716216934124,
+          "mrr_at_10": 0.3333333333333333,
+          "recall_at_10": 0.08333333333333333
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.043057168761265245,
+          "mrr_at_10": 0.1111111111111111,
+          "recall_at_10": 0.08333333333333333
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.3341335425823941,
+          "mrr_at_10": 0.3333333333333333,
+          "recall_at_10": 0.25
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.23012948973873715,
+          "mrr_at_10": 0.16666666666666666,
+          "recall_at_10": 0.16666666666666666
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.4342099704964437,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.3333333333333333,
+          "recall_at_500": 0.75,
+          "recall_at_1000": 0.75
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.3333333333333333,
+          "recall_at_500": 0.3333333333333333,
+          "recall_at_1000": 0.3333333333333333
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.5,
+          "recall_at_500": 0.6666666666666666,
+          "recall_at_1000": 0.8333333333333334
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.4166666666666667,
+          "recall_at_500": 0.5,
+          "recall_at_1000": 0.5
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-041",
+      "scene": "electronic",
+      "catalog_tier": "deep_cut",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.08333333333333333
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-013",
+      "scene": "hip-hop",
+      "catalog_tier": "deep_cut",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.06160088200375218,
+          "mrr_at_10": 0.25,
+          "recall_at_10": 0.08333333333333333
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.1518445429921186,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.16666666666666666
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.5833333333333334,
+          "recall_at_1000": 0.75
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.5833333333333334
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.08333333333333333
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-033",
+      "scene": "indie-alternative",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.12910951059975403,
+          "mrr_at_10": 0.2,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.10528427115309416,
+          "mrr_at_10": 0.125,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.25,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.25
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-023",
+      "scene": "pop",
+      "catalog_tier": "deep_cut",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.07775882652757331,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.16666666666666666
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.06150138456123011,
+          "mrr_at_10": 0.2,
+          "recall_at_10": 0.16666666666666666
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.3333333333333333,
+          "recall_at_1000": 0.3333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.16666666666666666
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.3333333333333333
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-065",
+      "scene": "r&b-soul",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.4628527539865788,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.4774786347289132,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.03008122032945548,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.08333333333333333
+        },
+        "winner": {
+          "ndcg_at_10": 0.17311403892380897,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.03008122032945548,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.08333333333333333
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.3225060169885899,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.4166666666666667
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.4254253457200325,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.25
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.09024366098836642,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.1430328185943535,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.3477784805266554,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.4166666666666667
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.10159762962663223,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.16666666666666666
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.17311403892380897,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.5833333333333334,
+          "recall_at_1000": 0.75
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.5833333333333334,
+          "recall_at_500": 0.5833333333333334,
+          "recall_at_1000": 0.5833333333333334
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.5,
+          "recall_at_500": 0.8333333333333334,
+          "recall_at_1000": 0.8333333333333334
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.5833333333333334,
+          "recall_at_500": 0.75,
+          "recall_at_1000": 0.75
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-032",
+      "scene": "rock",
+      "catalog_tier": "deep_cut",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.11124774779560827,
+          "mrr_at_10": 0.14285714285714285,
+          "recall_at_10": 0.08333333333333333
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.10046672710961889,
+          "mrr_at_10": 0.1111111111111111,
+          "recall_at_10": 0.08333333333333333
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.5779587251643714,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.4166666666666667
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.7533339028683087,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.6666666666666666
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.4447740372385426,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.3333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.6862137062758742,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.4166666666666667
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.3337432433868248,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.5779587251643714,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.4166666666666667
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.25,
+          "recall_at_500": 0.75,
+          "recall_at_1000": 0.9166666666666666
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.5833333333333334,
+          "recall_at_500": 0.5833333333333334,
+          "recall_at_1000": 0.5833333333333334
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.6666666666666666,
+          "recall_at_500": 0.8333333333333334,
+          "recall_at_1000": 1.0
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.8333333333333334,
+          "recall_at_500": 0.8333333333333334,
+          "recall_at_1000": 0.9166666666666666
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-037",
+      "scene": "classical",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-045",
+      "scene": "electronic",
+      "catalog_tier": "niche",
+      "positive_count": 9,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.05610589428786275,
+          "mrr_at_10": 0.2,
+          "recall_at_10": 0.1111111111111111
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.04365887179399293,
+          "mrr_at_10": 0.1111111111111111,
+          "recall_at_10": 0.1111111111111111
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.1111111111111111,
+          "recall_at_500": 0.2222222222222222,
+          "recall_at_1000": 0.2222222222222222
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.3333333333333333,
+          "recall_at_500": 0.3333333333333333,
+          "recall_at_1000": 0.3333333333333333
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.1111111111111111,
+          "recall_at_500": 0.1111111111111111,
+          "recall_at_1000": 0.2222222222222222
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-021",
+      "scene": "hip-hop",
+      "catalog_tier": "popular",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.2626171332852173,
+          "mrr_at_10": 0.25,
+          "recall_at_10": 0.16666666666666666
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.562756001492978,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.25
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.40063921524714896,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.25
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.34878385355155256,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.5,
+          "recall_at_1000": 0.8333333333333334
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.4166666666666667,
+          "recall_at_500": 0.4166666666666667,
+          "recall_at_1000": 0.4166666666666667
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.3333333333333333,
+          "recall_at_1000": 0.5
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-043",
+      "scene": "indie-alternative",
+      "catalog_tier": "niche",
+      "positive_count": 11,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.09647343268438108,
+          "mrr_at_10": 0.1,
+          "recall_at_10": 0.09090909090909091
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.1668716216934124,
+          "mrr_at_10": 0.3333333333333333,
+          "recall_at_10": 0.09090909090909091
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.04512183049418321,
+          "mrr_at_10": 0.125,
+          "recall_at_10": 0.09090909090909091
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.043057168761265245,
+          "mrr_at_10": 0.1111111111111111,
+          "recall_at_10": 0.09090909090909091
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.18181818181818182,
+          "recall_at_500": 0.36363636363636365,
+          "recall_at_1000": 0.8181818181818182
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.36363636363636365,
+          "recall_at_500": 0.36363636363636365,
+          "recall_at_1000": 0.36363636363636365
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.09090909090909091,
+          "recall_at_500": 0.5454545454545454,
+          "recall_at_1000": 0.6363636363636364
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.18181818181818182,
+          "recall_at_500": 0.5454545454545454,
+          "recall_at_1000": 0.7272727272727273
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-024",
+      "scene": "pop",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-070",
+      "scene": "r&b-soul",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.17381661167154389,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.16666666666666666
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.32396560337694474,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.3333333333333333
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.3929044063241809,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.3333333333333333
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.7405016640029417,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.4166666666666667
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.5236168689841743,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.4166666666666667
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.1430328185943535,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.32396560337694474,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.3333333333333333
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.25,
+          "recall_at_500": 0.5,
+          "recall_at_1000": 0.75
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.9166666666666666,
+          "recall_at_500": 0.9166666666666666,
+          "recall_at_1000": 0.9166666666666666
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.5833333333333334,
+          "recall_at_500": 0.75,
+          "recall_at_1000": 0.8333333333333334
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.5,
+          "recall_at_500": 0.5,
+          "recall_at_1000": 0.5
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-038",
+      "scene": "rock",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.3337432433868248,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.3337432433868248,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.25
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.16666666666666666
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.08333333333333333
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-062",
+      "scene": "classical",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.19071039260350625,
+          "mrr_at_10": 0.25,
+          "recall_at_10": 0.16666666666666666
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.05533264739989459,
+          "mrr_at_10": 0.2,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.07151640929717674,
+          "mrr_at_10": 0.3333333333333333,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.3333333333333333,
+          "recall_at_500": 0.3333333333333333,
+          "recall_at_1000": 0.4166666666666667
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.3333333333333333,
+          "recall_at_500": 0.6666666666666666,
+          "recall_at_1000": 0.6666666666666666
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.4166666666666667,
+          "recall_at_1000": 0.5
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-046",
+      "scene": "electronic",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.09024366098836642,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.08333333333333333
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.1430328185943535,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.08333333333333333
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.018444215799964865,
+          "mrr_at_10": 0.2,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.013781918954911584,
+          "mrr_at_10": 0.1,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.4166666666666667,
+          "recall_at_500": 0.5833333333333334,
+          "recall_at_1000": 0.5833333333333334
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.16666666666666666
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.4166666666666667,
+          "recall_at_1000": 0.5833333333333334
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-027",
+      "scene": "hip-hop",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.4151760292119922,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.4166666666666667
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.15212304518768524,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.25
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.8333333333333334,
+          "recall_at_500": 0.8333333333333334,
+          "recall_at_1000": 0.8333333333333334
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-044",
+      "scene": "indie-alternative",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.09024366098836642,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.08333333333333333
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.3298253786977071,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.25
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.23950625127873454,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.3333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.4166666666666667,
+          "recall_at_500": 0.4166666666666667,
+          "recall_at_1000": 0.4166666666666667
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.16666666666666666
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-034",
+      "scene": "pop",
+      "catalog_tier": "deep_cut",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.33343093764569404,
+          "mrr_at_10": 0.3333333333333333,
+          "recall_at_10": 0.3333333333333333
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.29060010864647146,
+          "mrr_at_10": 0.3333333333333333,
+          "recall_at_10": 0.25
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.43837606926333916,
+          "mrr_at_10": 0.3333333333333333,
+          "recall_at_10": 0.4166666666666667
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.9166666666666666,
+          "recall_at_500": 0.9166666666666666,
+          "recall_at_1000": 0.9166666666666666
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.5,
+          "recall_at_500": 0.75,
+          "recall_at_1000": 0.8333333333333334
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.75,
+          "recall_at_500": 0.8333333333333334,
+          "recall_at_1000": 0.8333333333333334
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-072",
+      "scene": "r&b-soul",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.020533627334584057,
+          "mrr_at_10": 0.25,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.4166666666666667,
+          "recall_at_1000": 0.4166666666666667
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.3333333333333333,
+          "recall_at_500": 0.3333333333333333,
+          "recall_at_1000": 0.3333333333333333
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-059",
+      "scene": "rock",
+      "catalog_tier": "deep_cut",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.2721423291941075,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.35360136090054184,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.5204603370595723,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.25
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.4973367522426302,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.25
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.2721423291941075,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.2721423291941075,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.3333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.3333333333333333,
+          "recall_at_500": 0.3333333333333333,
+          "recall_at_1000": 0.3333333333333333
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.25,
+          "recall_at_500": 0.6666666666666666,
+          "recall_at_1000": 0.9166666666666666
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.4166666666666667,
+          "recall_at_500": 0.8333333333333334,
+          "recall_at_1000": 0.8333333333333334
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-049",
+      "scene": "electronic",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.05094931797562667,
+          "mrr_at_10": 0.16666666666666666,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.25
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.3333333333333333
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-035",
+      "scene": "hip-hop",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.041345756864734746,
+          "mrr_at_10": 0.1,
+          "recall_at_10": 0.08333333333333333
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.041345756864734746,
+          "mrr_at_10": 0.1,
+          "recall_at_10": 0.08333333333333333
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.11124774779560827,
+          "mrr_at_10": 0.14285714285714285,
+          "recall_at_10": 0.08333333333333333
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.11124774779560827,
+          "mrr_at_10": 0.14285714285714285,
+          "recall_at_10": 0.08333333333333333
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.04767760619811783,
+          "mrr_at_10": 0.14285714285714285,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.3333333333333333,
+          "recall_at_500": 0.6666666666666666,
+          "recall_at_1000": 0.75
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.25,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.25
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.25,
+          "recall_at_500": 0.5,
+          "recall_at_1000": 0.5833333333333334
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.16666666666666666
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-050",
+      "scene": "indie-alternative",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.3333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.3333333333333333,
+          "recall_at_500": 0.3333333333333333,
+          "recall_at_1000": 0.3333333333333333
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-039",
+      "scene": "pop",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.07151640929717674,
+          "mrr_at_10": 0.3333333333333333,
+          "recall_at_10": 0.08333333333333333
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.09024366098836642,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.08333333333333333
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.041345756864734746,
+          "mrr_at_10": 0.1,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.06160088200375218,
+          "mrr_at_10": 0.25,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.05533264739989459,
+          "mrr_at_10": 0.2,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.5,
+          "recall_at_1000": 0.75
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.16666666666666666
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.3333333333333333,
+          "recall_at_1000": 0.6666666666666666
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.5,
+          "recall_at_1000": 0.5
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-069",
+      "scene": "rock",
+      "catalog_tier": "deep_cut",
+      "positive_count": 11,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.023838803099058916,
+          "mrr_at_10": 0.3333333333333333,
+          "recall_at_10": 0.09090909090909091
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.018444215799964865,
+          "mrr_at_10": 0.2,
+          "recall_at_10": 0.09090909090909091
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.2727272727272727
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.2727272727272727,
+          "recall_at_500": 0.2727272727272727,
+          "recall_at_1000": 0.2727272727272727
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.18181818181818182,
+          "recall_at_500": 0.2727272727272727,
+          "recall_at_1000": 0.2727272727272727
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.2727272727272727,
+          "recall_at_500": 0.2727272727272727,
+          "recall_at_1000": 0.45454545454545453
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-055",
+      "scene": "electronic",
+      "catalog_tier": "niche",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.24019436993949753,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.3333333333333333
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.262226801900683,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.3333333333333333
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.25,
+          "recall_at_1000": 0.25
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.08333333333333333,
+          "recall_at_1000": 0.08333333333333333
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.08333333333333333,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.16666666666666666
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        }
+      }
+    },
+    {
+      "record_id": "FINAL-MP-057",
+      "scene": "hip-hop",
+      "catalog_tier": "popular",
+      "positive_count": 12,
+      "metrics": {
+        "production_baseline": {
+          "ndcg_at_10": 0.15681473754926506,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        },
+        "iteration3_deployed": {
+          "ndcg_at_10": 0.16356644592893754,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.16666666666666666
+        },
+        "audio_priors_zero": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "winner": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "audio_only": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "music4all_sparse": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_full": {
+          "ndcg_at_10": 0.1430328185943535,
+          "mrr_at_10": 1.0,
+          "recall_at_10": 0.08333333333333333
+        },
+        "catalog_graph_direct_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "catalog_graph_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_full_graph_ablation": {
+          "ndcg_at_10": 0.09024366098836642,
+          "mrr_at_10": 0.5,
+          "recall_at_10": 0.08333333333333333
+        },
+        "hybrid_direct_masked_ablation": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        },
+        "hybrid_twohop_masked": {
+          "ndcg_at_10": 0.0,
+          "mrr_at_10": 0.0,
+          "recall_at_10": 0.0
+        }
+      },
+      "candidate_recall": {
+        "audio_only": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.3333333333333333,
+          "recall_at_1000": 0.5833333333333334
+        },
+        "catalog_graph_direct_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "catalog_graph_full": {
+          "recall_at_100": 0.16666666666666666,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.16666666666666666
+        },
+        "catalog_graph_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        },
+        "hybrid_union_twohop_masked": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.16666666666666666,
+          "recall_at_1000": 0.25
+        },
+        "music4all_sparse": {
+          "recall_at_100": 0.0,
+          "recall_at_500": 0.0,
+          "recall_at_1000": 0.0
+        }
+      }
+    }
+  ]
+}

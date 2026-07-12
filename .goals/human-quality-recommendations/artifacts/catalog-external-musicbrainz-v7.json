@@ -1,0 +1,266 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-12T14:11:54.879265+00:00",
+  "source": {
+    "provider": "MusicBrainz community artist tags",
+    "endpoint": "https://musicbrainz.org/ws/2/artist/",
+    "relationship": "independent scene/style metadata",
+    "used_by_graph_or_benchmark": false
+  },
+  "metric_scope": "scene/style consistency, not co-listening",
+  "benchmark_artist_overlap": [
+    "bad bunny",
+    "death",
+    "my bloody valentine",
+    "sza",
+    "the strokes",
+    "tool",
+    "wizkid"
+  ],
+  "resolved_seeds": 11,
+  "baseline_mean": 0.08708487172819214,
+  "hybrid_mean": 0.11645635753994887,
+  "comparison": {
+    "baseline_mean": 0.08708487172819214,
+    "winner_mean": 0.11645635753994887,
+    "absolute_delta": 0.029371485811756748,
+    "ci95_low": -0.014845579615174957,
+    "ci95_high": 0.06915578151635977
+  },
+  "records": [
+    {
+      "query": {
+        "title": "Lose Yourself",
+        "artist": "Eminem",
+        "scene": "hip-hop"
+      },
+      "query_tags": [
+        "actor",
+        "boom bap",
+        "conscious hip hop",
+        "detroit",
+        "detroit hip hop",
+        "hardcore hip hop",
+        "hip hop",
+        "midwest hip hop",
+        "midwestern hip hop",
+        "pop rap",
+        "rap"
+      ],
+      "production_tag_jaccard_at_10": 0.1297675131885658,
+      "hybrid_tag_jaccard_at_10": 0.18166505836784472
+    },
+    {
+      "query": {
+        "title": "Xtal",
+        "artist": "Aphex Twin",
+        "scene": "electronic"
+      },
+      "query_tags": [
+        "acid breaks",
+        "acid techno",
+        "ambient",
+        "ambient techno",
+        "british",
+        "drill and bass",
+        "electroacoustic",
+        "electronic",
+        "electronica",
+        "experimental",
+        "idm",
+        "techno"
+      ],
+      "production_tag_jaccard_at_10": 0.022619047619047615,
+      "hybrid_tag_jaccard_at_10": 0.14730264575465815
+    },
+    {
+      "query": {
+        "title": "Take Five",
+        "artist": "Dave Brubeck",
+        "scene": "jazz"
+      },
+      "query_tags": [
+        "cool jazz",
+        "jazz"
+      ],
+      "production_tag_jaccard_at_10": 0.2502489177489177,
+      "hybrid_tag_jaccard_at_10": 0.12552308802308804
+    },
+    {
+      "query": {
+        "title": "Ditto",
+        "artist": "NewJeans",
+        "scene": "k-pop"
+      },
+      "query_tags": [
+        "4th gen k pop",
+        "girl group",
+        "k pop",
+        "kpop",
+        "throwback sound"
+      ],
+      "production_tag_jaccard_at_10": 0.04523809523809523,
+      "hybrid_tag_jaccard_at_10": 0.03333333333333333
+    },
+    {
+      "query": {
+        "title": "Hard Times",
+        "artist": "Paramore",
+        "scene": "pop-rock"
+      },
+      "query_tags": [
+        "acoustic rock",
+        "alternative",
+        "alternative rock",
+        "emo",
+        "female fronted",
+        "female vocalists",
+        "new wave",
+        "pop",
+        "pop punk",
+        "pop rock",
+        "power pop",
+        "rock"
+      ],
+      "production_tag_jaccard_at_10": 0.028653381642512077,
+      "hybrid_tag_jaccard_at_10": 0.16765406162464985
+    },
+    {
+      "query": {
+        "title": "Oblivion",
+        "artist": "Grimes",
+        "scene": "electronic"
+      },
+      "query_tags": [
+        "alternative rock",
+        "ambient",
+        "art pop",
+        "avant garde",
+        "avant garde pop",
+        "dream pop",
+        "electronic",
+        "ethereal wave",
+        "indie rock",
+        "indietronica",
+        "pop",
+        "synth pop"
+      ],
+      "production_tag_jaccard_at_10": 0.046527868266998694,
+      "hybrid_tag_jaccard_at_10": 0.033650793650793646
+    },
+    {
+      "query": {
+        "title": "Kyoto",
+        "artist": "Phoebe Bridgers",
+        "scene": "folk-rock"
+      },
+      "query_tags": [
+        "alternative folk",
+        "chamber pop",
+        "christmas music",
+        "contemporary folk",
+        "female vocals",
+        "folk",
+        "indie",
+        "indie folk",
+        "indie rock",
+        "queer",
+        "singer songwriter"
+      ],
+      "production_tag_jaccard_at_10": 0.05346153846153846,
+      "hybrid_tag_jaccard_at_10": 0.08562451437451438
+    },
+    {
+      "query": {
+        "title": "Heart-Shaped Box",
+        "artist": "Nirvana",
+        "scene": "grunge"
+      },
+      "query_tags": [
+        "90s",
+        "acoustic rock",
+        "alternative rock",
+        "american",
+        "grunge",
+        "noise rock",
+        "punk",
+        "punk rock",
+        "rock",
+        "seattle",
+        "sludge metal",
+        "usa"
+      ],
+      "production_tag_jaccard_at_10": 0.1086501626168809,
+      "hybrid_tag_jaccard_at_10": 0.15271358543417365
+    },
+    {
+      "query": {
+        "title": "Human Nature",
+        "artist": "Michael Jackson",
+        "scene": "pop"
+      },
+      "query_tags": [
+        "american",
+        "contemporary r b",
+        "dance",
+        "dance pop",
+        "disco",
+        "new jack swing",
+        "pop",
+        "pop rock",
+        "pop soul",
+        "post disco",
+        "r b",
+        "soul"
+      ],
+      "production_tag_jaccard_at_10": 0.11250545764864647,
+      "hybrid_tag_jaccard_at_10": 0.14822775263951735
+    },
+    {
+      "query": {
+        "title": "Hung Up",
+        "artist": "Madonna",
+        "scene": "pop"
+      },
+      "query_tags": [
+        "art pop",
+        "contemporary r b",
+        "dance music",
+        "dance pop",
+        "electronic",
+        "electronica",
+        "electropop",
+        "folk music",
+        "jazz",
+        "pop",
+        "pop rock",
+        "synth pop"
+      ],
+      "production_tag_jaccard_at_10": 0.11055295996236902,
+      "hybrid_tag_jaccard_at_10": 0.18244631185807655
+    },
+    {
+      "query": {
+        "title": "Them Changes",
+        "artist": "Thundercat",
+        "scene": "funk"
+      },
+      "query_tags": [
+        "dance",
+        "electronic",
+        "electronica",
+        "funk",
+        "funktronica",
+        "house",
+        "indie soul",
+        "jazz fusion",
+        "nu jazz",
+        "pop",
+        "psychedelic soul",
+        "soul"
+      ],
+      "production_tag_jaccard_at_10": 0.049708646616541355,
+      "hybrid_tag_jaccard_at_10": 0.02287878787878788
+    }
+  ]
+}
