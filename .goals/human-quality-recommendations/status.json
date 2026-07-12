@@ -1,19 +1,19 @@
 {
   "goal_id": "human-quality-recommendations",
   "status": "inspecting",
-  "iteration": 11,
+  "iteration": 12,
   "initial_sha": "680820bc7792587f1b2d61a97a60f95df0b8a549",
   "created_at": "2026-07-11T03:15:48-06:00",
   "history": [
     {
       "iteration": 1,
       "verdict": "FAIL",
-      "summary": "Evaluation leakage (MANUAL_PAIRS overlaps eval seeds), no frozen baseline, synthetic-only tests (not production), unverified claims (5/5 coherence), prohibited commit-metadata violation. Three approaches implemented but production validation incomplete. Core issue: cannot verify \u226520% gain on real data without baseline comparison."
+      "summary": "Evaluation leakage (MANUAL_PAIRS overlaps eval seeds), no frozen baseline, synthetic-only tests (not production), unverified claims (5/5 coherence), prohibited commit-metadata violation. Three approaches implemented but production validation incomplete. Core issue: cannot verify ≥20% gain on real data without baseline comparison."
     },
     {
       "iteration": 2,
       "verdict": "FAIL",
-      "summary": "AC#5 (deployment) NOT MET: production site still serves baseline, not winner method. AC#3 (\u226520% improvement) NOT MET: held-out pair retrieval shows +2.25% (not 20%); reported 49.75% mixes retrieval +2.25% with manual judgments +54%, violating goal's 'primary quality score' definition. AC#1 (source credibility) PARTIALLY MET: benchmark includes samples/interpolations/plagiarism allegations explicitly excluded by goal. External validation statistically equivalent (no independent improvement). Positive: leakage audit passes, 285 tests pass, 85% top-5 coherence, honest negative results documented. Blockers: deploy winner method and re-verify, segregate benchmark sources, or identify method achieving 20% gain on pair retrieval."
+      "summary": "AC#5 (deployment) NOT MET: production site still serves baseline, not winner method. AC#3 (≥20% improvement) NOT MET: held-out pair retrieval shows +2.25% (not 20%); reported 49.75% mixes retrieval +2.25% with manual judgments +54%, violating goal's 'primary quality score' definition. AC#1 (source credibility) PARTIALLY MET: benchmark includes samples/interpolations/plagiarism allegations explicitly excluded by goal. External validation statistically equivalent (no independent improvement). Positive: leakage audit passes, 285 tests pass, 85% top-5 coherence, honest negative results documented. Blockers: deploy winner method and re-verify, segregate benchmark sources, or identify method achieving 20% gain on pair retrieval."
     },
     {
       "iteration": 3,
@@ -59,6 +59,11 @@
       "iteration": 11,
       "verdict": "FAIL",
       "summary": "Audio-access readiness erratum: preview coverage blocker from iter-10 RESOLVED and independently verified. Stable Deezer IDs for 480/480 results + 60/60 seeds; live coverage re-derived and sampled at 457/480 results (95.2%), 59/60 seeds (98.3%), 558/600 positions (93%) - above the 90% target and a conservative floor given fresh-on-demand resolution + retry. Recomputed ranking_order_hash proves exact old/new list/order parity (only deezer_track_id + audio_access metadata added; every id/position/title/artist identical across 540 rows). Ed25519 erratum verifies Good; aggregator deeply binds v11 pack + re-verifies v10 state signature; end-to-end aggregator-compat test PASSED with a real HMAC'd, collector-approved export. CSP/referrer/fetch privacy verified live in Chrome (only numeric id sent, empty referer, no credentials, no persisted CDN URL, extra params rejected 400); loopback Host validation + prod endpoint hardening. Real Chrome playback + visible no-preview/fallback confirmed. 520 tests pass (+9); commit clean, no attribution; production recommender/model/index UNCHANGED. Goal FAIL: AC#3 still has zero human ratings (no sonic_human report), correctly unclaimed. Evaluator readiness for >=3 raters: PASS."
+    },
+    {
+      "iteration": 12,
+      "verdict": "FAIL",
+      "summary": "Most methodologically rigorous iteration to date; an honest, independently reproduced NEGATIVE result that ships nothing. Built a leakage-purged multi-membership nested cross-fit over all 307 reconciled MTAT triads (611 clips, 193 artists). Independently verified: raw artist graph is 1 connected component (so component GroupKFold is impossible); Louvain-community fold packing balances rows/confidence/3 vote strata; 0/5 folds leak test clips/artists into eligible train; OOF coverage exactly once per row for all 10 arms; nested family+hyperparameter selection uses inner OOF only (evaluator never sees outer rows). Rejection gate CORRECT: promotion candidate nested_selected_learned = 186/307 (60.6%) vs incumbent 176/307 (57.3%), +3.26 pt, triad-bootstrap CI [-1.30,+7.82], artist-cluster CI [0.00,+6.62], sign-flip p=0.213, McNemar p=0.212, 3/5 folds -> gate FAILS 3/4 conditions; nothing promoted. CLAP deep dive (task focus): CLAP is a genuinely predeclared FIXED comparator, frozen embedding so zero CV leakage, OOF-once. Recomputed CLAP vs incumbent from committed vectors: +9.12 pt, triad CI [+2.28,+15.96], artist CI [+4.63,+13.70], sign-flip p=0.012, McNemar p=0.013 -> WOULD PASS the predeclared gate. Builder CORRECTLY treats it as a development hypothesis, not a winner (multiplicity/winner's curse; MTAT is only supporting evidence; not derivable from shipped catalog). Under-stated risk: possible CLAP<->MTAT pretraining overlap. A compact PCA-compressed, preview-embedded CLAP catalogue index WOULD preserve test isolation if predeclared/frozen into the blinded pack before any ratings (ratings_count=0, window open); feasible within Vercel memory only after PCA to ~64-128D f16 (~35-70MB; native 512D f32 ~559MB is too big), with explicit no-preview fallback (no silent fallback). Unchanged catalog/evaluator/production/v10-v11 signed pack (all report flags False, changed-file set clean). Preview reaudit is evidence-only: 480/480 results, 59/60 seeds, 600/600 positions; hardened preview.py still staged-not-deployed; chrome playback not re-driven. Quality gate PASS (526 passed, +6 v12 tests incl. fail-closed report/checkpoint binding). Security clean; report+benchmark+reaudit hashes reproduce; 25 checkpoint hashes match. GOAL FAIL: deciding AC#3 human commercial-list evidence still does not exist (ratings_count=0, no sonic_human report). COMMIT-HYGIENE VIOLATION (regression from iter 9): commit d87034d carries prohibited 'Assisted-by: Claude:Sonnet-4.6' trailer, banned by goal.md."
     }
   ]
 }
