@@ -1,0 +1,11 @@
+{
+  "algorithm": "Ed25519",
+  "namespace": "soundalike-protocol",
+  "principal": "soundalike-protocol",
+  "signed_file": "state.json",
+  "signed_file_sha256": "2dbe84259d7f43ebb742301093c8f5243442e5c8e81eb2c7d056e3fa37314ce2",
+  "signature_file": "state.sig",
+  "public_key_file": "signer.pub",
+  "allowed_signers_file": "allowed_signers",
+  "private_key_retained": false
+}

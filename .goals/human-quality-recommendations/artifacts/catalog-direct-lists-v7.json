@@ -1,0 +1,2419 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-12T13:35:31.705163+00:00",
+  "method_locked_before_judgment": true,
+  "used_for_tuning": false,
+  "axis": "sonic_similarity_and_scene_coherence",
+  "pass_rule": "at least four coherent top-five results and no unrelated-scene result in positions 1-3; junk and seed-title variants fail",
+  "preview_policy": "Deezer preview availability is HTTP-verified. Metadata and preview inspection are separate from taste-affinity FINAL labels.",
+  "query_modes": {
+    "catalog=catalog_artist_graph;music4all=artist": 6,
+    "catalog=audio_projected_artist_bridge;music4all=track": 2,
+    "catalog=catalog_artist_graph;music4all=audio_bridge": 3,
+    "catalog=catalog_artist_graph;music4all=track": 2,
+    "catalog=audio_projected_artist_bridge;music4all=audio_bridge": 4,
+    "catalog=audio_projected_artist_bridge;music4all=artist": 3
+  },
+  "records": [
+    {
+      "requested_query": {
+        "title": "Redbone",
+        "artist": "Childish Gambino",
+        "scene": "alternative-r&b"
+      },
+      "query_found": true,
+      "resolved_query": {
+        "title": "Redbone",
+        "artist": "Childish Gambino",
+        "row": 15613
+      },
+      "query_mode": "catalog=catalog_artist_graph;music4all=artist",
+      "methods": {
+        "current_production": [
+          {
+            "title": "Nowhere",
+            "artist": "June Marieezy",
+            "track_id": 73135147,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/0/4/6/0/04695b072e4f63c1edea577e267b77e6.mp3?hdnea=exp=1783864191~acl=/api/1/1/0/4/6/0/04695b072e4f63c1edea577e267b77e6.mp3*~data=user_id=0,application_id=42~hmac=387f8780bb6a089453c6028cf1dcf642136e3825e88ca9159ca501f4526dc98d"
+            }
+          },
+          {
+            "title": "Long for the Days",
+            "artist": "Conya Doss",
+            "track_id": 3528041941,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/6/8/1/0/681c8649454efb9fe7d6b46472899496.mp3?hdnea=exp=1783864191~acl=/api/1/1/6/8/1/0/681c8649454efb9fe7d6b46472899496.mp3*~data=user_id=0,application_id=42~hmac=2bb48602f9423627a4b27bf83adc5566101d47f5617b3898245c05abe08e77b9"
+            }
+          },
+          {
+            "title": "Fall In Love (Your Funeral) (Album Version)",
+            "artist": "Erykah Badu",
+            "track_id": 5645247,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/0/8/4/0/084720cab95747b0cad78737d0e0f155.mp3?hdnea=exp=1783864191~acl=/api/1/1/0/8/4/0/084720cab95747b0cad78737d0e0f155.mp3*~data=user_id=0,application_id=42~hmac=73491e1ab9d1262ce7dce88324463890933e50f4b7bbbe12eb82a68bc41d5a79"
+            }
+          },
+          {
+            "title": "Motor City 9",
+            "artist": "J Dilla",
+            "track_id": 3127084381,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/c/8/f/0/c8f79dd41b9f32120476d3afea3714a1.mp3?hdnea=exp=1783864192~acl=/api/1/1/c/8/f/0/c8f79dd41b9f32120476d3afea3714a1.mp3*~data=user_id=0,application_id=42~hmac=716dc0c4d35a1fb5a62976c2afe60c366838dd6d70debfef0541d42f9d32dae4"
+            }
+          },
+          {
+            "title": "No More Rain (In This Cloud)",
+            "artist": "Angie Stone",
+            "track_id": 1097349482,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/4/2/0/0/420d8a2bc9811e997e8396de42c5ca04.mp3?hdnea=exp=1783864192~acl=/api/1/1/4/2/0/0/420d8a2bc9811e997e8396de42c5ca04.mp3*~data=user_id=0,application_id=42~hmac=5767e5b66fb8360d52b6808d0cc3d0f5cddf9816cf0980e9c4aa41eca197a1c5"
+            }
+          }
+        ],
+        "locked_catalog_hybrid": [
+          {
+            "title": "Same Drugs",
+            "artist": "Chance The Rapper",
+            "track_id": 125544836,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/a/e/7/0/ae7808bc2edde4df23c7d9be540cb103.mp3?hdnea=exp=1783864192~acl=/api/1/1/a/e/7/0/ae7808bc2edde4df23c7d9be540cb103.mp3*~data=user_id=0,application_id=42~hmac=84189cb56eb02ce932c99fd65d7bbabd7e90e85c2b9116e7df9fdb565de18afa"
+            }
+          },
+          {
+            "title": "My Favorite Part",
+            "artist": "Mac Miller",
+            "track_id": 131391768,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/5/b/c/0/5bcdefc3f3883036e6e014b4d69fa6cc.mp3?hdnea=exp=1783864192~acl=/api/1/1/5/b/c/0/5bcdefc3f3883036e6e014b4d69fa6cc.mp3*~data=user_id=0,application_id=42~hmac=9457de3fadf9427942118fc09c0ccb9fc2b33e4c15232c6c411dc2a2d68f5fb6"
+            }
+          },
+          {
+            "title": "Diamond In The Ruff",
+            "artist": "Sampa The Great",
+            "track_id": 750379872,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/d/d/d/0/ddd35d1c0e842cda22b404132e69cef7.mp3?hdnea=exp=1783864192~acl=/api/1/1/d/d/d/0/ddd35d1c0e842cda22b404132e69cef7.mp3*~data=user_id=0,application_id=42~hmac=abda8fee86410d49e0421a763193e7165060b7aafb85e4b37d7d07024bb68e68"
+            }
+          },
+          {
+            "title": "OG Beeper",
+            "artist": "A$AP Rocky",
+            "track_id": 503169212,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/9/0/5/0/905cae4563513ff10a7e8898106b652b.mp3?hdnea=exp=1783864193~acl=/api/1/1/9/0/5/0/905cae4563513ff10a7e8898106b652b.mp3*~data=user_id=0,application_id=42~hmac=d0f74aa424d8a201298e1e0b9c4f8b22d89ada80407ec87756a1bdb3ec6bd1d2"
+            }
+          },
+          {
+            "title": "Thug Tears",
+            "artist": "JPEGMAFIA",
+            "track_id": 3398119771,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/7/d/f/0/7df9dae8d8e273bde8e890fc8eba6328.mp3?hdnea=exp=1783864193~acl=/api/1/1/7/d/f/0/7df9dae8d8e273bde8e890fc8eba6328.mp3*~data=user_id=0,application_id=42~hmac=28afed7cc485ad43ce31ac89622cc4d49432a1ab87b9dab73c8dab09f4d1e247"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "requested_query": {
+        "title": "Nights",
+        "artist": "Frank Ocean",
+        "scene": "alternative-r&b"
+      },
+      "query_found": true,
+      "resolved_query": {
+        "title": "Nights",
+        "artist": "Frank Ocean",
+        "row": 18361
+      },
+      "query_mode": "catalog=audio_projected_artist_bridge;music4all=track",
+      "methods": {
+        "current_production": [
+          {
+            "title": "Barry Bonds",
+            "artist": "Kanye West",
+            "track_id": 630827282,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/f/4/9/0/f49cad0f247146281804fad233160a6a.mp3?hdnea=exp=1783864193~acl=/api/1/1/f/4/9/0/f49cad0f247146281804fad233160a6a.mp3*~data=user_id=0,application_id=42~hmac=3766be433f6566196a6cc3902d88e7ac9e94cd609af4f140ebcc5fd104c3d303"
+            }
+          },
+          {
+            "title": "Beauty Doesn’t Cry",
+            "artist": "Jacquees",
+            "track_id": 550180672,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/7/1/2/0/712189ade0a2d98649b98605d03b3cf4.mp3?hdnea=exp=1783864194~acl=/api/1/1/7/1/2/0/712189ade0a2d98649b98605d03b3cf4.mp3*~data=user_id=0,application_id=42~hmac=5a7e142a15b8093bdf39032214e42544280e911039ea80b00b2d9edd001eae9b"
+            }
+          },
+          {
+            "title": "Smoke Again",
+            "artist": "Chance The Rapper",
+            "track_id": 2221733517,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/3/8/1/0/3818f2a085a31e15f68886789da1dca8.mp3?hdnea=exp=1783864194~acl=/api/1/1/3/8/1/0/3818f2a085a31e15f68886789da1dca8.mp3*~data=user_id=0,application_id=42~hmac=fdcf6b2a32d002021bd3f856d536b4abba4977ab327ad62d9d1fed945a31cabc"
+            }
+          },
+          {
+            "title": "Sedated",
+            "artist": "YoungBoy Never Broke Again",
+            "track_id": 1977706227,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/f/8/5/0/f851e9136e7f0546a5e1b048bbd4373d.mp3?hdnea=exp=1783864194~acl=/api/1/1/f/8/5/0/f851e9136e7f0546a5e1b048bbd4373d.mp3*~data=user_id=0,application_id=42~hmac=ed10cd34d366c995dfbb146cabd45e3a469d92d92ebe6073949d0a27776ec682"
+            }
+          },
+          {
+            "title": "Every Little Thing (Stripped)",
+            "artist": "Russell Dickerson",
+            "track_id": 940014122,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/c/5/1/0/c51847a0302b4776f712677846ab4a0d.mp3?hdnea=exp=1783864194~acl=/api/1/1/c/5/1/0/c51847a0302b4776f712677846ab4a0d.mp3*~data=user_id=0,application_id=42~hmac=6b0d6436f0b1920dcb04736c3cae3c4f710b7757001684cae4b6dd4223e06b3a"
+            }
+          }
+        ],
+        "locked_catalog_hybrid": [
+          {
+            "title": "Histoire d'amitié",
+            "artist": "Styleto",
+            "track_id": 3173230791,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/0/3/5/0/0350c75c2bec76225e6dd0e9cdac314d.mp3?hdnea=exp=1783864194~acl=/api/1/1/0/3/5/0/0350c75c2bec76225e6dd0e9cdac314d.mp3*~data=user_id=0,application_id=42~hmac=2b6ad039d9fb3a4884b1a69f85ce55c06e2c49047ad86fcadab33fe291ebe464"
+            }
+          },
+          {
+            "title": "Waiting Room",
+            "artist": "Rex Orange County",
+            "track_id": 1893468507,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/a/e/c/0/aec738445bddb4424f30c5d2868e8be7.mp3?hdnea=exp=1783864195~acl=/api/1/1/a/e/c/0/aec738445bddb4424f30c5d2868e8be7.mp3*~data=user_id=0,application_id=42~hmac=a20b340f9950204623a6fc5b4db19c7fcc842d834ab4a608549d8fa366bcb959"
+            }
+          },
+          {
+            "title": "Lost",
+            "artist": "Jay Scøtt",
+            "track_id": 1508193322,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/4/8/f/0/48f2e7a45c42121d6d5fa1c6bbe09ceb.mp3?hdnea=exp=1783864195~acl=/api/1/1/4/8/f/0/48f2e7a45c42121d6d5fa1c6bbe09ceb.mp3*~data=user_id=0,application_id=42~hmac=92a9d9da63b427887b090a26f60ec2cbb25afb0e1875076aa16f51ccb87a1b5d"
+            }
+          },
+          {
+            "title": "Real Friends",
+            "artist": "Kanye West",
+            "track_id": 122237212,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/7/6/e/0/76e71f203e7f35253e0205c0371584b6.mp3?hdnea=exp=1783864195~acl=/api/1/1/7/6/e/0/76e71f203e7f35253e0205c0371584b6.mp3*~data=user_id=0,application_id=42~hmac=509c75aeed314cf4a77bf6fd00ca3f4f6e0491273b656508595da49c87f95d8c"
+            }
+          },
+          {
+            "title": "Butterfly",
+            "artist": "Malter",
+            "track_id": 496181842,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/f/9/2/0/f92e1f3d566eb9c61af140f1e2b76549.mp3?hdnea=exp=1783864195~acl=/api/1/1/f/9/2/0/f92e1f3d566eb9c61af140f1e2b76549.mp3*~data=user_id=0,application_id=42~hmac=6af2c3cd0049abc473ceb7dca1a03650538dd9cf694c687ed78020123c2200f1"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "requested_query": {
+        "title": "Chanel",
+        "artist": "Frank Ocean",
+        "scene": "alternative-r&b"
+      },
+      "query_found": true,
+      "resolved_query": {
+        "title": "Chanel",
+        "artist": "Frank Ocean",
+        "row": 47664
+      },
+      "query_mode": "catalog=audio_projected_artist_bridge;music4all=track",
+      "methods": {
+        "current_production": [
+          {
+            "title": "Bichotita",
+            "artist": "Ele A El Dominio",
+            "track_id": 556129282,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/9/1/2/0/912e3e1e9fccc24e546c054459d865d0.mp3?hdnea=exp=1783864196~acl=/api/1/1/9/1/2/0/912e3e1e9fccc24e546c054459d865d0.mp3*~data=user_id=0,application_id=42~hmac=197409b74458549b44f1cd02fe57b2b9743fa73bce030ef9550a2509b826a86e"
+            }
+          },
+          {
+            "title": "Goat 2.0",
+            "artist": "Eric Bellinger",
+            "track_id": 424922602,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/e/f/5/0/ef5245479215e32382b995181dd83d13.mp3?hdnea=exp=1783864196~acl=/api/1/1/e/f/5/0/ef5245479215e32382b995181dd83d13.mp3*~data=user_id=0,application_id=42~hmac=3e28bd273a5cdb1a0aef968935b7d2d136a52d5a7655a40afb885de704b88b4c"
+            }
+          },
+          {
+            "title": "Day 3: When You Want to Love",
+            "artist": "Tom Misch",
+            "track_id": 1893827667,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/f/6/c/0/f6c5e3764cbe66cfc5b4f84175ac0ce9.mp3?hdnea=exp=1783864196~acl=/api/1/1/f/6/c/0/f6c5e3764cbe66cfc5b4f84175ac0ce9.mp3*~data=user_id=0,application_id=42~hmac=9932448d4eb121fcdfd692a46e8fb8d8bbefe41a75a523281928ac10bb664bdc"
+            }
+          },
+          {
+            "title": "Love and Feeling",
+            "artist": "Chet Faker",
+            "track_id": 29255971,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/c/f/7/0/cf75aa7beb711154153415f94c34a1f5.mp3?hdnea=exp=1783864196~acl=/api/1/1/c/f/7/0/cf75aa7beb711154153415f94c34a1f5.mp3*~data=user_id=0,application_id=42~hmac=3684c70ed1ec10aa958adfacfb592869f9f9aca4a3c0a7e80f26a6698b17b2c3"
+            }
+          },
+          {
+            "title": "Even The Odds",
+            "artist": "Big Sean",
+            "track_id": 437147202,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/5/1/e/0/51e2a167a5c9d6679a421912a2cf6021.mp3?hdnea=exp=1783864196~acl=/api/1/1/5/1/e/0/51e2a167a5c9d6679a421912a2cf6021.mp3*~data=user_id=0,application_id=42~hmac=057ae4822d9486e947627157814f925c7656d2d58be393ef947153753efb4f16"
+            }
+          }
+        ],
+        "locked_catalog_hybrid": [
+          {
+            "title": "Saint Pablo",
+            "artist": "Kanye West",
+            "track_id": 126772767,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/8/7/1/0/87188b90de7f795025ff4e921896bd9a.mp3?hdnea=exp=1783864197~acl=/api/1/1/8/7/1/0/87188b90de7f795025ff4e921896bd9a.mp3*~data=user_id=0,application_id=42~hmac=516cf13850ade0ca34c4fe1c37129324b4a2761c5b04fdecfef9e243d50e4826"
+            }
+          },
+          {
+            "title": "from chi to saint mary",
+            "artist": "millkzy",
+            "track_id": 3031387461,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/9/4/a/0/94a8df1009375f797205e7f17c5cbcf6.mp3?hdnea=exp=1783864197~acl=/api/1/1/9/4/a/0/94a8df1009375f797205e7f17c5cbcf6.mp3*~data=user_id=0,application_id=42~hmac=d2ec15c7e967840eef17914a0844236bcaa23808fa1b17b1c59760d3e1eaa8b6"
+            }
+          },
+          {
+            "title": "Laser Lights",
+            "artist": "Rex Orange County",
+            "track_id": 781907782,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/d/4/f/0/d4f015986c6dd6fc3546f943f6f3b6bc.mp3?hdnea=exp=1783864197~acl=/api/1/1/d/4/f/0/d4f015986c6dd6fc3546f943f6f3b6bc.mp3*~data=user_id=0,application_id=42~hmac=17e71eda404542cb875ee0443ed556bdde9ea32d44e9ca36ae485009f1bbddd7"
+            }
+          },
+          {
+            "title": "Buzzé",
+            "artist": "Jay Scøtt",
+            "track_id": 2941998681,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/0/6/f/0/06f055c18248620912a9aac53eac8778.mp3?hdnea=exp=1783864197~acl=/api/1/1/0/6/f/0/06f055c18248620912a9aac53eac8778.mp3*~data=user_id=0,application_id=42~hmac=9377a64bacb491ce3699ba09479e529b63e0b2a37d5afc4ef0ce19b294968949"
+            }
+          },
+          {
+            "title": "Histoire d'amitié",
+            "artist": "Styleto",
+            "track_id": 3173230791,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/0/3/5/0/0350c75c2bec76225e6dd0e9cdac314d.mp3?hdnea=exp=1783864197~acl=/api/1/1/0/3/5/0/0350c75c2bec76225e6dd0e9cdac314d.mp3*~data=user_id=0,application_id=42~hmac=fa57fb34f8b85a5b45c436b520aabecadafd0c5235129907d7284b09395cb5ab"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "requested_query": {
+        "title": "Exit Music (For a Film)",
+        "artist": "Radiohead",
+        "scene": "art-rock"
+      },
+      "query_found": true,
+      "resolved_query": {
+        "title": "Exit Music (For A Film)",
+        "artist": "Radiohead",
+        "row": 70665
+      },
+      "query_mode": "catalog=catalog_artist_graph;music4all=audio_bridge",
+      "methods": {
+        "current_production": [
+          {
+            "title": "The Longing",
+            "artist": "Tamino",
+            "track_id": 1915355257,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/b/2/a/0/b2aad6766dce9c4c4a1c3e8c28d21b0e.mp3?hdnea=exp=1783864198~acl=/api/1/1/b/2/a/0/b2aad6766dce9c4c4a1c3e8c28d21b0e.mp3*~data=user_id=0,application_id=42~hmac=ad210c05f2fbf09be75d037f6322b8315815d6f020a7ef2f611c2f37d577d854"
+            }
+          },
+          {
+            "title": "Wait",
+            "artist": "Alexi Murdoch",
+            "track_id": 1761139107,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/b/b/0/0/bb081ea3b42b2cc697e9bf899334d94c.mp3?hdnea=exp=1783864198~acl=/api/1/1/b/b/0/0/bb081ea3b42b2cc697e9bf899334d94c.mp3*~data=user_id=0,application_id=42~hmac=744748dc1779415de45fd2f9a12af2cd7a14247158f1231da68a0915a2750740"
+            }
+          },
+          {
+            "title": "In a Different Time",
+            "artist": "Jesse marchant",
+            "track_id": 3124906521,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/b/9/9/0/b991169acad7c17dbe4e69fef13a70da.mp3?hdnea=exp=1783864198~acl=/api/1/1/b/9/9/0/b991169acad7c17dbe4e69fef13a70da.mp3*~data=user_id=0,application_id=42~hmac=862191e34886194a47e3070542fde5c06a2cefc91591d9e401d01d51379bd929"
+            }
+          },
+          {
+            "title": "Honest Man",
+            "artist": "Luke Sital-Singh",
+            "track_id": 70553887,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/d/4/4/0/d4481eb5f9fe53af648cbecdd6d98888.mp3?hdnea=exp=1783864198~acl=/api/1/1/d/4/4/0/d4481eb5f9fe53af648cbecdd6d98888.mp3*~data=user_id=0,application_id=42~hmac=78aad28381eeeadf9ce4c9844240d7bf009acd831dbcdafa3bef8811627e3778"
+            }
+          },
+          {
+            "title": "Concrete Heart",
+            "artist": "Great Lake Swimmers",
+            "track_id": 1634523152,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/6/5/4/0/6545a5f09613a0580e8ebd8a8bc12b56.mp3?hdnea=exp=1783864199~acl=/api/1/1/6/5/4/0/6545a5f09613a0580e8ebd8a8bc12b56.mp3*~data=user_id=0,application_id=42~hmac=ef626c1f14aa49e3947d8325445afe48cc1d0573e60932878958b2bdc4f2a9d1"
+            }
+          }
+        ],
+        "locked_catalog_hybrid": [
+          {
+            "title": "A Case of You",
+            "artist": "Joni Mitchell",
+            "track_id": 2607675,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/f/8/f/0/f8fe13531ecb163a5bb4d4f1e920e2b3.mp3?hdnea=exp=1783864199~acl=/api/1/1/f/8/f/0/f8fe13531ecb163a5bb4d4f1e920e2b3.mp3*~data=user_id=0,application_id=42~hmac=134ec17f9a18eb1bffa97d67fd1c10633110b1f74e3433396654606b5e2ad1d1"
+            }
+          },
+          {
+            "title": "<restart>",
+            "artist": "Oscar Lang",
+            "track_id": 679413712,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/0/7/1/0/071488d7974f0ade8c2b867f577bda91.mp3?hdnea=exp=1783864199~acl=/api/1/1/0/7/1/0/071488d7974f0ade8c2b867f577bda91.mp3*~data=user_id=0,application_id=42~hmac=2bccf2fa3ce903229d2d56e47335f8a09f5bf7a7c9fd453282581c0394e5c192"
+            }
+          },
+          {
+            "title": "Lost Cause",
+            "artist": "Beck",
+            "track_id": 916537,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/6/c/c/0/6cceeb932601dccd0e4b2dec58702f39.mp3?hdnea=exp=1783864199~acl=/api/1/1/6/c/c/0/6cceeb932601dccd0e4b2dec58702f39.mp3*~data=user_id=0,application_id=42~hmac=31f3fd3750933bed7e48b816322afa1cf64a94baad516b350294a174953a2119"
+            }
+          },
+          {
+            "title": "Way To Blue",
+            "artist": "Nick Drake",
+            "track_id": 1760955747,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/4/3/9/0/439fe819aa3efce6781b6bf5d3f32af1.mp3?hdnea=exp=1783864199~acl=/api/1/1/4/3/9/0/439fe819aa3efce6781b6bf5d3f32af1.mp3*~data=user_id=0,application_id=42~hmac=770672edbc38c297095c97a1153763b29b8720cb66dd8db7aff74f71963d7b0b"
+            }
+          },
+          {
+            "title": "Free",
+            "artist": "SASAMI",
+            "track_id": 592450622,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/c/7/d/0/c7dbfc3fe83b399bb7d82007d25da4f6.mp3?hdnea=exp=1783864199~acl=/api/1/1/c/7/d/0/c7dbfc3fe83b399bb7d82007d25da4f6.mp3*~data=user_id=0,application_id=42~hmac=066d7af9cfec92c7d7971f228c8938eecfaf1b25ba02bd482d449228ed28702f"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "requested_query": {
+        "title": "Kid A",
+        "artist": "Radiohead",
+        "scene": "idm-art-rock"
+      },
+      "query_found": true,
+      "resolved_query": {
+        "title": "Kid A",
+        "artist": "Radiohead",
+        "row": 178952
+      },
+      "query_mode": "catalog=catalog_artist_graph;music4all=audio_bridge",
+      "methods": {
+        "current_production": [
+          {
+            "title": "Parallel 2",
+            "artist": "Four Tet",
+            "track_id": 1173510212,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/7/0/8/0/7086c98364fec68b7d402c6da6369a92.mp3?hdnea=exp=1783864200~acl=/api/1/1/7/0/8/0/7086c98364fec68b7d402c6da6369a92.mp3*~data=user_id=0,application_id=42~hmac=acb43d73532028dcbbca8684f69f0ad3e962a4cd179e461de336e1f8e2372cba"
+            }
+          },
+          {
+            "title": "S.A.D.",
+            "artist": "Atoms For Peace",
+            "track_id": 826242582,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/4/2/5/0/42516f18d695434381affd1fcee55e11.mp3?hdnea=exp=1783864200~acl=/api/1/1/4/2/5/0/42516f18d695434381affd1fcee55e11.mp3*~data=user_id=0,application_id=42~hmac=e461c07c37e2a2bb31c683498ae209617fa06c8230456596b1f3c0fe3a67aabf"
+            }
+          },
+          {
+            "title": "Nordkap",
+            "artist": "Christian Löffler",
+            "track_id": 3328822741,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/0/8/9/0/0894153c75fdaed2bf6bf75a2bfaabb5.mp3?hdnea=exp=1783864200~acl=/api/1/1/0/8/9/0/0894153c75fdaed2bf6bf75a2bfaabb5.mp3*~data=user_id=0,application_id=42~hmac=650537166f0beb5d4a6827361c1e96344b229a7cb673f509f8f167d014b76b02"
+            }
+          },
+          {
+            "title": "Tha",
+            "artist": "Aphex Twin",
+            "track_id": 123789738,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/c/2/6/0/c26038d965e6c9193c304895d46431b2.mp3?hdnea=exp=1783864200~acl=/api/1/1/c/2/6/0/c26038d965e6c9193c304895d46431b2.mp3*~data=user_id=0,application_id=42~hmac=48b723c42a9257d24816f694d1cee5f3b1c4d0a40d1949a556e11b034c3be38b"
+            }
+          },
+          {
+            "title": "The Tenant",
+            "artist": "Marcel Dettmann",
+            "track_id": 139498119,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/f/0/3/0/f03da81a0edcf94de92ac9374e344bea.mp3?hdnea=exp=1783864201~acl=/api/1/1/f/0/3/0/f03da81a0edcf94de92ac9374e344bea.mp3*~data=user_id=0,application_id=42~hmac=eb532de6afeb2599e5e9da8d157728941b5fede1b350abae93aae1fdeab88668"
+            }
+          }
+        ],
+        "locked_catalog_hybrid": [
+          {
+            "title": "Cymbal Rush",
+            "artist": "Thom Yorke",
+            "track_id": 937593,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/9/f/7/0/9f7b5435dcc39b95f061866aea7cd281.mp3?hdnea=exp=1783864201~acl=/api/1/1/9/f/7/0/9f7b5435dcc39b95f061866aea7cd281.mp3*~data=user_id=0,application_id=42~hmac=e57197a8237ba80db52aedb10d259d6ed2675585909b382e1430740c8041c2a6"
+            }
+          },
+          {
+            "title": "For Marmish",
+            "artist": "Floating Points",
+            "track_id": 3611064892,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/a/e/9/0/ae997467521e3e68e3d27aed162328b0.mp3?hdnea=exp=1783864201~acl=/api/1/1/a/e/9/0/ae997467521e3e68e3d27aed162328b0.mp3*~data=user_id=0,application_id=42~hmac=45258ffa8b1eea2e9ac852e055ca60082fd1e5bfb7f8bc8bad78bd81df6182c7"
+            }
+          },
+          {
+            "title": "Eyes Closed",
+            "artist": "BADBADNOTGOOD",
+            "track_id": 1543678172,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/8/0/0/0/800efe3c993f8232a10a0cd523437a60.mp3?hdnea=exp=1783864201~acl=/api/1/1/8/0/0/0/800efe3c993f8232a10a0cd523437a60.mp3*~data=user_id=0,application_id=42~hmac=23530a034534510706b11b5e94d9e28523f21b50406dc0401c4a7d0c5b5eb066"
+            }
+          },
+          {
+            "title": "Locked",
+            "artist": "Four Tet",
+            "track_id": 408329482,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/6/d/0/0/6d0947b119a70369ab6fbb615ee9e485.mp3?hdnea=exp=1783864201~acl=/api/1/1/6/d/0/0/6d0947b119a70369ab6fbb615ee9e485.mp3*~data=user_id=0,application_id=42~hmac=e0572245c8bf5baa29c5ce43da04ce24dcd837d5ec3cd6a7469e043a88916feb"
+            }
+          },
+          {
+            "title": "Football",
+            "artist": "Youth Lagoon",
+            "track_id": 3068795801,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/7/1/2/0/7122964f994b3d5d280945b25ba2ae87.mp3?hdnea=exp=1783864202~acl=/api/1/1/7/1/2/0/7122964f994b3d5d280945b25ba2ae87.mp3*~data=user_id=0,application_id=42~hmac=89b0e15fbf677e617a3f5b78ee1987728bcaa3ab7e66235b707d0d1299850cee"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "requested_query": {
+        "title": "Alison",
+        "artist": "Slowdive",
+        "scene": "shoegaze"
+      },
+      "query_found": true,
+      "resolved_query": {
+        "title": "Alison",
+        "artist": "Slowdive",
+        "row": 173431
+      },
+      "query_mode": "catalog=catalog_artist_graph;music4all=track",
+      "methods": {
+        "current_production": [
+          {
+            "title": "Pathétique",
+            "artist": "Roar",
+            "track_id": 2723439922,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/9/0/2/0/902d0cbe6fed8b07af28d409002a263f.mp3?hdnea=exp=1783864202~acl=/api/1/1/9/0/2/0/902d0cbe6fed8b07af28d409002a263f.mp3*~data=user_id=0,application_id=42~hmac=51fd473401a5de6597a0a3528d3c6572849989ac96aeba9ae1cadafd913bad81"
+            }
+          },
+          {
+            "title": "here to die",
+            "artist": "lefty",
+            "track_id": 2396045795,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/6/4/9/0/6499f99d12c1b3d0f07418aa7e3a1128.mp3?hdnea=exp=1783864202~acl=/api/1/1/6/4/9/0/6499f99d12c1b3d0f07418aa7e3a1128.mp3*~data=user_id=0,application_id=42~hmac=798869f573e4b515ddbb7c3ef7cd934c3209543d6e422d7cdc78dcf28ea43ef6"
+            }
+          },
+          {
+            "title": "In Our Angelhood",
+            "artist": "Cocteau Twins",
+            "track_id": 105291618,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/c/8/4/0/c843437043ef6e00c9b9956830920bb0.mp3?hdnea=exp=1783864202~acl=/api/1/1/c/8/4/0/c843437043ef6e00c9b9956830920bb0.mp3*~data=user_id=0,application_id=42~hmac=0d7fb04cbdeccdf7e69c7267e5b2630f815ba13d94cf9a2706118864c7584c68"
+            }
+          },
+          {
+            "title": "John on the Ceiling",
+            "artist": "Bdrmm",
+            "track_id": 3054654681,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/7/c/9/0/7c92ef6317cd18223116077e09ab43ac.mp3?hdnea=exp=1783864203~acl=/api/1/1/7/c/9/0/7c92ef6317cd18223116077e09ab43ac.mp3*~data=user_id=0,application_id=42~hmac=bdd738f3f6e345ae06e68a14a20f997fac2a4e6ba44026c6f0aa4e9e440f212f"
+            }
+          },
+          {
+            "title": "In Undertow",
+            "artist": "Alvvays",
+            "track_id": 853252162,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/b/8/4/0/b8487f97f810cab80aee3aebbfe72be4.mp3?hdnea=exp=1783864203~acl=/api/1/1/b/8/4/0/b8487f97f810cab80aee3aebbfe72be4.mp3*~data=user_id=0,application_id=42~hmac=75d90ef1b7f614011a32858c392e93cabd8ac960baa1fd1c7d92a51b054d4ef6"
+            }
+          }
+        ],
+        "locked_catalog_hybrid": [
+          {
+            "title": "The Garden",
+            "artist": "Tamaryn",
+            "track_id": 4031809011,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/2/f/c/0/2fcc1409d21e4884acc8a824c3f3fc49.mp3?hdnea=exp=1783864203~acl=/api/1/1/2/f/c/0/2fcc1409d21e4884acc8a824c3f3fc49.mp3*~data=user_id=0,application_id=42~hmac=258cd7e93186209b6e60c4d38db0555b9704981339149ebb06f7ece9b6d98d06"
+            }
+          },
+          {
+            "title": "Blown a Wish",
+            "artist": "my bloody valentine",
+            "track_id": 14639356,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/c/9/a/0/c9ac14a99327204b905d6090428f1ad4.mp3?hdnea=exp=1783864203~acl=/api/1/1/c/9/a/0/c9ac14a99327204b905d6090428f1ad4.mp3*~data=user_id=0,application_id=42~hmac=172c92959e9c102d3920f6b5a6cf701b4c02d6460aac990840d8576cf5577f33"
+            }
+          },
+          {
+            "title": "Ceremony",
+            "artist": "Galaxie 500",
+            "track_id": 16384111,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/1/e/8/0/1e8665512600d2a30e4354e1db0772df.mp3?hdnea=exp=1783864203~acl=/api/1/1/1/e/8/0/1e8665512600d2a30e4354e1db0772df.mp3*~data=user_id=0,application_id=42~hmac=11fa38f60ac3e12f54b6af221db51ecb06adf1d58f84c1eb69c848f17b233beb"
+            }
+          },
+          {
+            "title": "I Don't Care",
+            "artist": "LSD and the Search for God",
+            "track_id": 117917140,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/4/1/f/0/41f232152cc838d51a75919f88949687.mp3?hdnea=exp=1783864203~acl=/api/1/1/4/1/f/0/41f232152cc838d51a75919f88949687.mp3*~data=user_id=0,application_id=42~hmac=27692c49caf720d6382e92fc825bc49d220f319baff4e1548d2ccc870f3aaff6"
+            }
+          },
+          {
+            "title": "Pearl (Edit)",
+            "artist": "Chapterhouse",
+            "track_id": 7583408,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/5/d/4/0/5d483ce8e77943ab1c9003d3eb1b1d50.mp3?hdnea=exp=1783864204~acl=/api/1/1/5/d/4/0/5d483ce8e77943ab1c9003d3eb1b1d50.mp3*~data=user_id=0,application_id=42~hmac=dd0da843eec38a8375440994ae4c481ec049bc70e1b40f671432c699f0e71a7a"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "requested_query": {
+        "title": "Souvlaki Space Station",
+        "artist": "Slowdive",
+        "scene": "shoegaze"
+      },
+      "query_found": true,
+      "resolved_query": {
+        "title": "Souvlaki Space Station",
+        "artist": "Slowdive",
+        "row": 21226
+      },
+      "query_mode": "catalog=catalog_artist_graph;music4all=track",
+      "methods": {
+        "current_production": [
+          {
+            "title": "Backwards",
+            "artist": "LSD and the Search for God",
+            "track_id": 117917142,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/e/8/7/0/e8797d1915b58864f3c4069cfb3a4e91.mp3?hdnea=exp=1783864204~acl=/api/1/1/e/8/7/0/e8797d1915b58864f3c4069cfb3a4e91.mp3*~data=user_id=0,application_id=42~hmac=ec4272e0a0c66becc1489dad0971366ab617ead3067319b27323d7daddfb9c1d"
+            }
+          },
+          {
+            "title": "Eternal Recurrence",
+            "artist": "Ride",
+            "track_id": 661713332,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/d/9/4/0/d94986bd959a583cd8abd565d5817757.mp3?hdnea=exp=1783864204~acl=/api/1/1/d/9/4/0/d94986bd959a583cd8abd565d5817757.mp3*~data=user_id=0,application_id=42~hmac=680de1ba5e63cd3cafaa92299351029b4f1f752f80b46a50e7c5e108c11c88cc"
+            }
+          },
+          {
+            "title": "Two Girls",
+            "artist": "Ringo Deathstarr",
+            "track_id": 8019389,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/e/2/a/0/e2a8c842e19efb66566220be7320dcd5.mp3?hdnea=exp=1783864204~acl=/api/1/1/e/2/a/0/e2a8c842e19efb66566220be7320dcd5.mp3*~data=user_id=0,application_id=42~hmac=92db73cf1ba4a4a895cfb154ccb2d17edca191e1fe8f57570c2404bec578b900"
+            }
+          },
+          {
+            "title": "Christmas Kids",
+            "artist": "Roar",
+            "track_id": 2723422712,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/3/0/4/0/3041cce7accce6357a2a10832210920c.mp3?hdnea=exp=1783864205~acl=/api/1/1/3/0/4/0/3041cce7accce6357a2a10832210920c.mp3*~data=user_id=0,application_id=42~hmac=bacaabe1aca26d7cc1271ec2ad1d73d6bf38501a14b1da7056e7ae81c1573651"
+            }
+          },
+          {
+            "title": "Touching Sky",
+            "artist": "Lights & Motion",
+            "track_id": 1564308402,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/7/3/b/0/73b981b9c2a7e7cea8071f8a79d110da.mp3?hdnea=exp=1783864205~acl=/api/1/1/7/3/b/0/73b981b9c2a7e7cea8071f8a79d110da.mp3*~data=user_id=0,application_id=42~hmac=7278ea1502b7a0ea9d8057555972d3e423d96f4827489dd0ad5953fa92f6cb29"
+            }
+          }
+        ],
+        "locked_catalog_hybrid": [
+          {
+            "title": "Soon",
+            "artist": "my bloody valentine",
+            "track_id": 14639358,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/f/0/8/0/f0815d4655028579e1f58de01927f6ae.mp3?hdnea=exp=1783864205~acl=/api/1/1/f/0/8/0/f0815d4655028579e1f58de01927f6ae.mp3*~data=user_id=0,application_id=42~hmac=ee827f189ce3bd40c2499c1d2112e2309ed3149f104935aacef6fb454886055d"
+            }
+          },
+          {
+            "title": "Breather",
+            "artist": "Chapterhouse",
+            "track_id": 7583407,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/4/1/3/0/41328ff1a79466aa535f77ff4f262d0c.mp3?hdnea=exp=1783864205~acl=/api/1/1/4/1/3/0/41328ff1a79466aa535f77ff4f262d0c.mp3*~data=user_id=0,application_id=42~hmac=c0f94080b1d546f477527a7958b4ceec00ce18bb79b7c941269b40a50f91bacd"
+            }
+          },
+          {
+            "title": "I Don't Care",
+            "artist": "LSD and the Search for God",
+            "track_id": 117917140,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/4/1/f/0/41f232152cc838d51a75919f88949687.mp3?hdnea=exp=1783864205~acl=/api/1/1/4/1/f/0/41f232152cc838d51a75919f88949687.mp3*~data=user_id=0,application_id=42~hmac=6dab76615af339a83599b19e1bddcd0debd56572595d00dd5c6b95c6c0a0b25e"
+            }
+          },
+          {
+            "title": "Scenic",
+            "artist": "Ozean",
+            "track_id": 2606007422,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/5/5/4/0/554e4edc5f4b7a5db169f2b29adc7fec.mp3?hdnea=exp=1783864206~acl=/api/1/1/5/5/4/0/554e4edc5f4b7a5db169f2b29adc7fec.mp3*~data=user_id=0,application_id=42~hmac=66f4652b2f580b554b1875ae8342fcd2653ac9ecc051ddf1a046b49205d9120e"
+            }
+          },
+          {
+            "title": "Swoon",
+            "artist": "Whirr",
+            "track_id": 3223469491,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/d/8/6/0/d8659ba9a9f9600d8e554b9d01754959.mp3?hdnea=exp=1783864206~acl=/api/1/1/d/8/6/0/d8659ba9a9f9600d8e554b9d01754959.mp3*~data=user_id=0,application_id=42~hmac=8e0c383af977cbe1a4b3d526797d1820fc62a8a7d39ea82d064361d909bfbee3"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "requested_query": {
+        "title": "money machine",
+        "artist": "100 gecs",
+        "scene": "hyperpop"
+      },
+      "query_found": true,
+      "resolved_query": {
+        "title": "money machine",
+        "artist": "100 gecs",
+        "row": 1304
+      },
+      "query_mode": "catalog=audio_projected_artist_bridge;music4all=audio_bridge",
+      "methods": {
+        "current_production": [
+          {
+            "title": "NEVER MET! (feat. Glitch Gum)",
+            "artist": "CMTEN",
+            "track_id": 1048908662,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/2/f/e/0/2fe7596ff4f9238ea23eac1ee981fded.mp3?hdnea=exp=1783864206~acl=/api/1/1/2/f/e/0/2fe7596ff4f9238ea23eac1ee981fded.mp3*~data=user_id=0,application_id=42~hmac=da21fb7635ae391a5a54756e2d44f6e330f02fa9c552bf7b2c1ca5c14a2882f0"
+            }
+          },
+          {
+            "title": "Do It (Yves Remix)",
+            "artist": "underscores",
+            "track_id": 3787771642,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/f/6/9/0/f69a07b7b7d1f24e471dbe1ec140d1be.mp3?hdnea=exp=1783864206~acl=/api/1/1/f/6/9/0/f69a07b7b7d1f24e471dbe1ec140d1be.mp3*~data=user_id=0,application_id=42~hmac=f3a3f72c6bb65c00233bedbe7ace15016efdf838d531a060af4aa86ab012eebd"
+            }
+          },
+          {
+            "title": "Dumb Bitch Juice",
+            "artist": "Alice Longyu Gao",
+            "track_id": 814965292,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/2/2/3/0/2233fc49698f3ec4a7ababef2651c8da.mp3?hdnea=exp=1783864207~acl=/api/1/1/2/2/3/0/2233fc49698f3ec4a7ababef2651c8da.mp3*~data=user_id=0,application_id=42~hmac=fbf75f8f80621b2bdb340735afbc8316c9f4d7fa371f48ad593f733544a5aec7"
+            }
+          },
+          {
+            "title": "DRUIDS",
+            "artist": "Skrillex",
+            "track_id": 3303056591,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/d/f/1/0/df1c95e4b969ab36c0a454a0718f05b7.mp3?hdnea=exp=1783864207~acl=/api/1/1/d/f/1/0/df1c95e4b969ab36c0a454a0718f05b7.mp3*~data=user_id=0,application_id=42~hmac=38708da264ffc1b26febba84ceb17bf8eab1ba5ce7ab1f0763752bbb1552329e"
+            }
+          },
+          {
+            "title": "Skin Cleared",
+            "artist": "Ashnikko",
+            "track_id": 3588288521,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/a/c/a/0/aca139fb0c9b7371741b8d18070378a2.mp3?hdnea=exp=1783864207~acl=/api/1/1/a/c/a/0/aca139fb0c9b7371741b8d18070378a2.mp3*~data=user_id=0,application_id=42~hmac=7b70feddd3cf771e04ef3aa2603fb313aa3cbc05840b9526f03399f9f22ebefb"
+            }
+          }
+        ],
+        "locked_catalog_hybrid": [
+          {
+            "title": "The Life",
+            "artist": "Fifth Harmony",
+            "track_id": 125513416,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/1/8/1/0/18135648245d6fc2c0adfa4cd978afac.mp3?hdnea=exp=1783864207~acl=/api/1/1/1/8/1/0/18135648245d6fc2c0adfa4cd978afac.mp3*~data=user_id=0,application_id=42~hmac=bc5477063c5c809fcbc8e5eb79e21edff911e69f77ea8cf2c65148dd5893ca64"
+            }
+          },
+          {
+            "title": "Girls (BRLLNT Remix)",
+            "artist": "aespa",
+            "track_id": 1954582797,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/9/4/8/0/948dd333d4f61ff0aa76a5876748cd4d.mp3?hdnea=exp=1783864207~acl=/api/1/1/9/4/8/0/948dd333d4f61ff0aa76a5876748cd4d.mp3*~data=user_id=0,application_id=42~hmac=f96372c52a355c2f350ca81e24e6dcf3caa7b7c4efad8e1fbcb7728b88d6d993"
+            }
+          },
+          {
+            "title": "Atenção",
+            "artist": "Anitta",
+            "track_id": 108075546,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/f/a/2/0/fa22a8296927611510d452b3457a9c5a.mp3?hdnea=exp=1783864207~acl=/api/1/1/f/a/2/0/fa22a8296927611510d452b3457a9c5a.mp3*~data=user_id=0,application_id=42~hmac=44cc9b1ad08362ed866ca171f38661f19ffd2f1ed701be1d5dcd86c3de2b298d"
+            }
+          },
+          {
+            "title": "Not Your Way",
+            "artist": "MisterWives",
+            "track_id": 94754770,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/f/2/6/0/f26c0c1e88b1a99e66995515d5b42bea.mp3?hdnea=exp=1783864208~acl=/api/1/1/f/2/6/0/f26c0c1e88b1a99e66995515d5b42bea.mp3*~data=user_id=0,application_id=42~hmac=e87bcb5136719fd0b91d5109d02b746c91606e7f3014973ae8d6588dcce879a7"
+            }
+          },
+          {
+            "title": "Midnight Mayoi",
+            "artist": "Mori Calliope",
+            "track_id": 2826594112,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/2/7/8/0/278416e36ebef13f506f867f1b06756d.mp3?hdnea=exp=1783864208~acl=/api/1/1/2/7/8/0/278416e36ebef13f506f867f1b06756d.mp3*~data=user_id=0,application_id=42~hmac=66ce0181de53ce2ea7b1bf5e0b8f1fb4f9d54c6af9b129bd72ce4e73c6b2a38d"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "requested_query": {
+        "title": "venus fly trap",
+        "artist": "brakence",
+        "scene": "digicore"
+      },
+      "query_found": true,
+      "resolved_query": {
+        "title": "venus fly trap",
+        "artist": "brakence",
+        "row": 1281
+      },
+      "query_mode": "catalog=audio_projected_artist_bridge;music4all=audio_bridge",
+      "methods": {
+        "current_production": [
+          {
+            "title": "Coney Island",
+            "artist": "SEB",
+            "track_id": 3484476221,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/9/3/7/0/9375f930da64c58d5ba321903c01e649.mp3?hdnea=exp=1783864208~acl=/api/1/1/9/3/7/0/9375f930da64c58d5ba321903c01e649.mp3*~data=user_id=0,application_id=42~hmac=7403765db72ce91bc17cd540a8026499fefdc3a5cbe509b7ab5f8f29fd787cbc"
+            }
+          },
+          {
+            "title": "Oh My",
+            "artist": "Nines",
+            "track_id": 488993892,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/d/2/e/0/d2e20476c6eb38b8e81163cd524a0242.mp3?hdnea=exp=1783864208~acl=/api/1/1/d/2/e/0/d2e20476c6eb38b8e81163cd524a0242.mp3*~data=user_id=0,application_id=42~hmac=d0a08e1760582913ca463427b916822a6ae021243a28aa43e18cb0270dba4b20"
+            }
+          },
+          {
+            "title": "Gamins des sables",
+            "artist": "Jeremy Frerot",
+            "track_id": 2894151731,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/7/7/9/0/7794bfdc4a2cde311994686c25fed8d0.mp3?hdnea=exp=1783864208~acl=/api/1/1/7/7/9/0/7794bfdc4a2cde311994686c25fed8d0.mp3*~data=user_id=0,application_id=42~hmac=e815bd68819fb82309d12495381f9948b0c877ccc6e5beb7cf8857069debdd34"
+            }
+          },
+          {
+            "title": "quoi d'neuf",
+            "artist": "Spider ZED",
+            "track_id": 3771183252,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/d/9/7/0/d971b07cae4e21b92ef3b0844683f31a.mp3?hdnea=exp=1783864209~acl=/api/1/1/d/9/7/0/d971b07cae4e21b92ef3b0844683f31a.mp3*~data=user_id=0,application_id=42~hmac=c2d2c54279e26366c4150a5fd17832023549c02a2949bffaef3af691c924b40e"
+            }
+          },
+          {
+            "title": "Wonderland (Highs & Lows)",
+            "artist": "French The Kid",
+            "track_id": 4063032151,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/7/4/6/0/7465a1d476e9e3ae3e23a4a849cdac59.mp3?hdnea=exp=1783864209~acl=/api/1/1/7/4/6/0/7465a1d476e9e3ae3e23a4a849cdac59.mp3*~data=user_id=0,application_id=42~hmac=79f9ca632999ac9484a16720ac97e10a57d5443e939bc17568c65cb54d7d6f47"
+            }
+          }
+        ],
+        "locked_catalog_hybrid": [
+          {
+            "title": "C'est comme ça",
+            "artist": "Fuso",
+            "track_id": 2685199502,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/f/3/c/0/f3c2103648c264153e4edc47ff62a924.mp3?hdnea=exp=1783864209~acl=/api/1/1/f/3/c/0/f3c2103648c264153e4edc47ff62a924.mp3*~data=user_id=0,application_id=42~hmac=bb0f31b51620d81f7657e52d8e29e64ac6c1c76b3dffccb80d59156e84b15697"
+            }
+          },
+          {
+            "title": "For Da Love Of Da Game",
+            "artist": "Eric Roberson, Raheem DeVaughn & V.",
+            "track_id": 9676060,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/b/c/4/0/bc4b18818559380a78727c50c5bfbbf0.mp3?hdnea=exp=1783864209~acl=/api/1/1/b/c/4/0/bc4b18818559380a78727c50c5bfbbf0.mp3*~data=user_id=0,application_id=42~hmac=69a7328bdd1987a39893b05938ca8ac71343f9f62de5c2f95043e5ec43f4e7d7"
+            }
+          },
+          {
+            "title": "Boom Boom Pow",
+            "artist": "The Black Eyed Peas",
+            "track_id": 7706034,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/8/d/1/0/8d1c0d6bdb3defeb91e98812a5e0eeac.mp3?hdnea=exp=1783864209~acl=/api/1/1/8/d/1/0/8d1c0d6bdb3defeb91e98812a5e0eeac.mp3*~data=user_id=0,application_id=42~hmac=5349394dc90a1e9f4527a4c17aac8aa260c71cc6781a9850fdbcb0dd58f0c279"
+            }
+          },
+          {
+            "title": "The Lazy Song",
+            "artist": "Bruno Mars",
+            "track_id": 7216938,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/e/6/6/0/e66991b4b9756d46d54e556f6d04be89.mp3?hdnea=exp=1783864209~acl=/api/1/1/e/6/6/0/e66991b4b9756d46d54e556f6d04be89.mp3*~data=user_id=0,application_id=42~hmac=2e30f29555eaa77b186b8fda4beafd36b39cfb7addce7ed5cfe8297a56543a19"
+            }
+          },
+          {
+            "title": "More Than Friends",
+            "artist": "24kGoldn",
+            "track_id": 1588599362,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/4/8/8/0/48808313275065885e9de7c2249f68b8.mp3?hdnea=exp=1783864210~acl=/api/1/1/4/8/8/0/48808313275065885e9de7c2249f68b8.mp3*~data=user_id=0,application_id=42~hmac=88343f31ecb99cdbf16d067ecd0e9e27c8bc8acc583159a53c60264828c85f5f"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "requested_query": {
+        "title": "Remember Summer Days",
+        "artist": "Anri",
+        "scene": "city-pop"
+      },
+      "query_found": true,
+      "resolved_query": {
+        "title": "Remember Summer Days",
+        "artist": "Anri",
+        "row": 59452
+      },
+      "query_mode": "catalog=audio_projected_artist_bridge;music4all=audio_bridge",
+      "methods": {
+        "current_production": [
+          {
+            "title": "Calendar ni Initial",
+            "artist": "Momoko Kikuchi",
+            "track_id": 2665413082,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/a/5/c/0/a5c5b19db1ba71748354420356cfc681.mp3?hdnea=exp=1783864210~acl=/api/1/1/a/5/c/0/a5c5b19db1ba71748354420356cfc681.mp3*~data=user_id=0,application_id=42~hmac=12babf89a0fa7848bf3505a6c18048efbc2e98c54e3d87c0e58ccedf3733fa5e"
+            }
+          },
+          {
+            "title": "You",
+            "artist": "George Duke",
+            "track_id": 579101,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/0/0/e/0/00e086187480f5d150083bd830ccd98f.mp3?hdnea=exp=1783864210~acl=/api/1/1/0/0/e/0/00e086187480f5d150083bd830ccd98f.mp3*~data=user_id=0,application_id=42~hmac=608cd384f43e8fbbe31cc9fa6c9d15a5abd948da0c50b95c89aa0add6f55ace0"
+            }
+          },
+          {
+            "title": "You're the One (2022 Remaster)",
+            "artist": "Fujimal Yoshino",
+            "track_id": 1934166337,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/a/3/8/0/a38d9278404598c84426ccf30707491b.mp3?hdnea=exp=1783864210~acl=/api/1/1/a/3/8/0/a38d9278404598c84426ccf30707491b.mp3*~data=user_id=0,application_id=42~hmac=f5a05aedad6afc545f8fed5ad39b15a275d25dfc78c8117b8a30a651f2051cc2"
+            }
+          },
+          {
+            "title": "Rio No Yume",
+            "artist": "Masayoshi Takanaka",
+            "track_id": 1548138402,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/8/9/0/0/890eaaebd04e6faab4120e841f2d6bd9.mp3?hdnea=exp=1783864211~acl=/api/1/1/8/9/0/0/890eaaebd04e6faab4120e841f2d6bd9.mp3*~data=user_id=0,application_id=42~hmac=c88dcf35a7d4f56b2b8de9fab4a423983efd7fafd3e6b53655c92ffed18e6e05"
+            }
+          },
+          {
+            "title": "Baby Talk",
+            "artist": "Himiko Kikuchi",
+            "track_id": 3017303481,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/3/c/7/0/3c7ecdd395e42c0e73c08e33127c84df.mp3?hdnea=exp=1783864211~acl=/api/1/1/3/c/7/0/3c7ecdd395e42c0e73c08e33127c84df.mp3*~data=user_id=0,application_id=42~hmac=63c79b79364709c95881f57ee84e632deb1b3e9959812277f6497f5ee3e9d20b"
+            }
+          }
+        ],
+        "locked_catalog_hybrid": [
+          {
+            "title": "Reach For It",
+            "artist": "George Duke",
+            "track_id": 579079,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/f/2/9/0/f291a652c9093193b3cc4af8ee58943f.mp3?hdnea=exp=1783864211~acl=/api/1/1/f/2/9/0/f291a652c9093193b3cc4af8ee58943f.mp3*~data=user_id=0,application_id=42~hmac=c5330618b51e336e7831ed72178d21dcb385930d896866f6d85ef6a047a3c928"
+            }
+          },
+          {
+            "title": "Un Espacio",
+            "artist": "Baby Lores",
+            "track_id": 3148095431,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/4/e/8/0/4e89a96dead659cb4c999fc697b46e53.mp3?hdnea=exp=1783864211~acl=/api/1/1/4/e/8/0/4e89a96dead659cb4c999fc697b46e53.mp3*~data=user_id=0,application_id=42~hmac=7c5bc5d2f57e5a3b2914fa0ab7dd8f38f1a86355a5607cc17eb4237982d6979f"
+            }
+          },
+          {
+            "title": "Tom Sawyer",
+            "artist": "Rush",
+            "track_id": 1762603787,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/3/d/c/0/3dc645672b54a5aba7d3d2326b2b9206.mp3?hdnea=exp=1783864211~acl=/api/1/1/3/d/c/0/3dc645672b54a5aba7d3d2326b2b9206.mp3*~data=user_id=0,application_id=42~hmac=3e1b5676e7a2ee174471d99729971286eb3f1b9dc634291aae30f7effe183356"
+            }
+          },
+          {
+            "title": "Smoke on the Water (2012 Remaster)",
+            "artist": "Deep Purple",
+            "track_id": 121716038,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/6/2/1/0/62153be8f03776282d4fb2f1a6b3b92d.mp3?hdnea=exp=1783864212~acl=/api/1/1/6/2/1/0/62153be8f03776282d4fb2f1a6b3b92d.mp3*~data=user_id=0,application_id=42~hmac=d550cc1acf7f210b549382e68763e37599cf93318b43706188e694be7ee44052"
+            }
+          },
+          {
+            "title": "Red Baron",
+            "artist": "Billy Cobham",
+            "track_id": 729853,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/a/6/7/0/a67d7ee19bfee47977aa3ca4cd53a020.mp3?hdnea=exp=1783864212~acl=/api/1/1/a/6/7/0/a67d7ee19bfee47977aa3ca4cd53a020.mp3*~data=user_id=0,application_id=42~hmac=eb940ca9d67f62813fa731b2e3b77d818e197da5077c853822d5688fa5721f0d"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "requested_query": {
+        "title": "Enter Sandman",
+        "artist": "Metallica",
+        "scene": "metal"
+      },
+      "query_found": true,
+      "resolved_query": {
+        "title": "Enter Sandman",
+        "artist": "Metallica",
+        "row": 54155
+      },
+      "query_mode": "catalog=catalog_artist_graph;music4all=artist",
+      "methods": {
+        "current_production": [
+          {
+            "title": "Keep It In The Family",
+            "artist": "Anthrax",
+            "track_id": 1084230652,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/c/1/5/0/c1529f3dd5e88964ff1439ca5d1b0146.mp3?hdnea=exp=1783864212~acl=/api/1/1/c/1/5/0/c1529f3dd5e88964ff1439ca5d1b0146.mp3*~data=user_id=0,application_id=42~hmac=7a98d2129e3a2d74a0aff8ccd33de6e3f465fba2ca668f2806451c58e0d292f4"
+            }
+          },
+          {
+            "title": "Frozen Soul (feat. Gost)",
+            "artist": "Frozen Soul",
+            "track_id": 2125728267,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/3/f/4/0/3f4df8565de93f748a5e80ccbc449fa9.mp3?hdnea=exp=1783864212~acl=/api/1/1/3/f/4/0/3f4df8565de93f748a5e80ccbc449fa9.mp3*~data=user_id=0,application_id=42~hmac=a5290c224ac10fbd8d2e7bd778ef5c4ea90ec87dc671a52f02c5df6eab843ad7"
+            }
+          },
+          {
+            "title": "Sweet Leaf/Funky Fresh Country Club",
+            "artist": "Ugly Kid Joe",
+            "track_id": 2172361,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/9/1/a/0/91a2ac14e841dd8e5dc37eebb0099884.mp3?hdnea=exp=1783864213~acl=/api/1/1/9/1/a/0/91a2ac14e841dd8e5dc37eebb0099884.mp3*~data=user_id=0,application_id=42~hmac=cc37b13fbebacb1b64d62a7d8026eadcef254f38baf9d0d3535846c8b191fed6"
+            }
+          },
+          {
+            "title": "Evil That's Within (Remastered 2004 / Remixed)",
+            "artist": "Megadeth",
+            "track_id": 3088966,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/d/6/a/0/d6af765c21bb4bf62581825dd90ec667.mp3?hdnea=exp=1783864213~acl=/api/1/1/d/6/a/0/d6af765c21bb4bf62581825dd90ec667.mp3*~data=user_id=0,application_id=42~hmac=7e4bfb2697d1c6564065f73cff9a1bfa6dc93025f8f29e6e89fbb8fc701811dc"
+            }
+          },
+          {
+            "title": "Spieluhr",
+            "artist": "Rammstein",
+            "track_id": 14381642,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/f/0/9/0/f098400a9dcfbf407fbea2a91b2fa668.mp3?hdnea=exp=1783864213~acl=/api/1/1/f/0/9/0/f098400a9dcfbf407fbea2a91b2fa668.mp3*~data=user_id=0,application_id=42~hmac=daf8d93f1c88074744a8e2954512cd92adba9954c4f423746dcb9006a56b95ed"
+            }
+          }
+        ],
+        "locked_catalog_hybrid": [
+          {
+            "title": "Disconnect (Remastered 2019)",
+            "artist": "Megadeth",
+            "track_id": 3783342752,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/b/c/2/0/bc25583f0d0527eacbd892f5ae34ae07.mp3?hdnea=exp=1783864213~acl=/api/1/1/b/c/2/0/bc25583f0d0527eacbd892f5ae34ae07.mp3*~data=user_id=0,application_id=42~hmac=9a0f3f85db95037399e28c49b6350ba782aac2ed5f1150e5135d73dc1e08904f"
+            }
+          },
+          {
+            "title": "The Hunt",
+            "artist": "Sepultura",
+            "track_id": 81934804,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/5/c/8/0/5c82386b9e5738c90b89c09e35768df7.mp3?hdnea=exp=1783864213~acl=/api/1/1/5/c/8/0/5c82386b9e5738c90b89c09e35768df7.mp3*~data=user_id=0,application_id=42~hmac=292b457a404e00becdeefa825aaaa1c1e091c5b347767d6ba826992f296cef0d"
+            }
+          },
+          {
+            "title": "Mein Teil",
+            "artist": "Rammstein",
+            "track_id": 630594472,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/3/c/8/0/3c897f90ac7dc9e2046f853687027027.mp3?hdnea=exp=1783864213~acl=/api/1/1/3/c/8/0/3c897f90ac7dc9e2046f853687027027.mp3*~data=user_id=0,application_id=42~hmac=fd903baceaeac7fed4776fbeac3d255279855a5debe1250206f5cafd7a31b659"
+            }
+          },
+          {
+            "title": "Everytime I Die",
+            "artist": "Children Of Bodom",
+            "track_id": 2213465777,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/9/5/5/0/955d92967fe0d4c69dda8b5baea68d91.mp3?hdnea=exp=1783864214~acl=/api/1/1/9/5/5/0/955d92967fe0d4c69dda8b5baea68d91.mp3*~data=user_id=0,application_id=42~hmac=d6a18ee17bcc55f4a49e7d2ddac66daed0dc96e3b40e0a4cba557cf60e2979c2"
+            }
+          },
+          {
+            "title": "Under a Glass Moon",
+            "artist": "Dream Theater",
+            "track_id": 2814117,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/9/b/7/0/9b789e9fac1455f14eb2165cc7cf433c.mp3?hdnea=exp=1783864214~acl=/api/1/1/9/b/7/0/9b789e9fac1455f14eb2165cc7cf433c.mp3*~data=user_id=0,application_id=42~hmac=6beeba76937d5e635858a640e331562b33562a86e65f0e58658b0c5d0aed9ca8"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "requested_query": {
+        "title": "Fade to Black",
+        "artist": "Metallica",
+        "scene": "metal-ballad"
+      },
+      "query_found": true,
+      "resolved_query": {
+        "title": "Fade To Black (Remastered)",
+        "artist": "Metallica",
+        "row": 72777
+      },
+      "query_mode": "catalog=catalog_artist_graph;music4all=artist",
+      "methods": {
+        "current_production": [
+          {
+            "title": "A Room With A View",
+            "artist": "Death Angel",
+            "track_id": 77901536,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/c/d/5/0/cd575abbd4fb4c56a8572b805ead04b7.mp3?hdnea=exp=1783864214~acl=/api/1/1/c/d/5/0/cd575abbd4fb4c56a8572b805ead04b7.mp3*~data=user_id=0,application_id=42~hmac=4d6fa565ce7ee3efa39f0b071c044e1bb30582cd31ae1d4c435728c2db1964f9"
+            }
+          },
+          {
+            "title": "Three Angels (Album Version)",
+            "artist": "Headstones",
+            "track_id": 516130412,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/f/1/4/0/f146c4d4bfcf7ac2fb479d787351c026.mp3?hdnea=exp=1783864214~acl=/api/1/1/f/1/4/0/f146c4d4bfcf7ac2fb479d787351c026.mp3*~data=user_id=0,application_id=42~hmac=6a9eb5a8c105ffb65641919a82c93859c3a0c5c4ce2817d12afaa234e6f77db8"
+            }
+          },
+          {
+            "title": "The Ballad",
+            "artist": "Testament",
+            "track_id": 5194661,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/0/7/6/0/076c14d33c1f438974295e0911be8ba7.mp3?hdnea=exp=1783864215~acl=/api/1/1/0/7/6/0/076c14d33c1f438974295e0911be8ba7.mp3*~data=user_id=0,application_id=42~hmac=d9f5a1c8ba72f6f7ed34aa9235731e240ecabea300cc4de7571662034fd66865"
+            }
+          },
+          {
+            "title": "Cyclopian Scape",
+            "artist": "High On Fire",
+            "track_id": 10972695,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/6/1/1/0/6113afde4703b58d5ad2fb189f4dca53.mp3?hdnea=exp=1783864215~acl=/api/1/1/6/1/1/0/6113afde4703b58d5ad2fb189f4dca53.mp3*~data=user_id=0,application_id=42~hmac=fc490a41c8598251b6dffcb2eb4f1aea364e3a4c442f64381b6bca10d69f6c04"
+            }
+          },
+          {
+            "title": "Wanted Dead Or Alive",
+            "artist": "Bon Jovi",
+            "track_id": 538586992,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/c/a/5/0/ca578a7a5d4f69dd2d141bacff96b2fb.mp3?hdnea=exp=1783864215~acl=/api/1/1/c/a/5/0/ca578a7a5d4f69dd2d141bacff96b2fb.mp3*~data=user_id=0,application_id=42~hmac=f997f05135022014fbda8a4e17f5aff50905e1b5213943c65eac0b72bb812e02"
+            }
+          }
+        ],
+        "locked_catalog_hybrid": [
+          {
+            "title": "The Ballad",
+            "artist": "Testament",
+            "track_id": 5194661,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/0/7/6/0/076c14d33c1f438974295e0911be8ba7.mp3?hdnea=exp=1783864215~acl=/api/1/1/0/7/6/0/076c14d33c1f438974295e0911be8ba7.mp3*~data=user_id=0,application_id=42~hmac=d9f5a1c8ba72f6f7ed34aa9235731e240ecabea300cc4de7571662034fd66865"
+            }
+          },
+          {
+            "title": "Everytime I Die",
+            "artist": "Children Of Bodom",
+            "track_id": 2213465777,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/9/5/5/0/955d92967fe0d4c69dda8b5baea68d91.mp3?hdnea=exp=1783864215~acl=/api/1/1/9/5/5/0/955d92967fe0d4c69dda8b5baea68d91.mp3*~data=user_id=0,application_id=42~hmac=542be48ff3af86be2df59d55c544ddcb726217040af05086ad7f2f277041c6bf"
+            }
+          },
+          {
+            "title": "A Room With A View",
+            "artist": "Death Angel",
+            "track_id": 77901536,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/c/d/5/0/cd575abbd4fb4c56a8572b805ead04b7.mp3?hdnea=exp=1783864216~acl=/api/1/1/c/d/5/0/cd575abbd4fb4c56a8572b805ead04b7.mp3*~data=user_id=0,application_id=42~hmac=4d8ab0f4fb0d9d95327a3f3e77322f997011141ed89c940827049c2c7cb39f2f"
+            }
+          },
+          {
+            "title": "Mein Teil",
+            "artist": "Rammstein",
+            "track_id": 630594472,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/3/c/8/0/3c897f90ac7dc9e2046f853687027027.mp3?hdnea=exp=1783864216~acl=/api/1/1/3/c/8/0/3c897f90ac7dc9e2046f853687027027.mp3*~data=user_id=0,application_id=42~hmac=c11eb6b317c5f99ef780fac94ea4597979d316339539ff7197203f410b1a7596"
+            }
+          },
+          {
+            "title": "Planet Caravan",
+            "artist": "Pantera",
+            "track_id": 662924,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/5/f/8/0/5f8e49cf6e1712c07d0a1ca34debfdec.mp3?hdnea=exp=1783864216~acl=/api/1/1/5/f/8/0/5f8e49cf6e1712c07d0a1ca34debfdec.mp3*~data=user_id=0,application_id=42~hmac=63ca53a5816fba93ba723fa959d933c8b302082b668f08b356391efdb5bc2433"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "requested_query": {
+        "title": "Round Midnight",
+        "artist": "Thelonious Monk",
+        "scene": "jazz"
+      },
+      "query_found": true,
+      "resolved_query": {
+        "title": "'Round Midnight",
+        "artist": "Thelonious Monk",
+        "row": 132760
+      },
+      "query_mode": "catalog=catalog_artist_graph;music4all=artist",
+      "methods": {
+        "current_production": [
+          {
+            "title": "Tahiti",
+            "artist": "Milt Jackson",
+            "track_id": 3332379,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/9/4/9/0/949d6f09a52085468238690dffa324e1.mp3?hdnea=exp=1783864216~acl=/api/1/1/9/4/9/0/949d6f09a52085468238690dffa324e1.mp3*~data=user_id=0,application_id=42~hmac=cdeb29e6cc516552607359af0346efa303fb101eaa3490ffcf218f7f6fab1df6"
+            }
+          },
+          {
+            "title": "Summer Night (2022 Remaster)",
+            "artist": "Miles Davis",
+            "track_id": 70606924,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/5/2/0/0/52041882003b6bbf25bb90dd0b667983.mp3?hdnea=exp=1783864217~acl=/api/1/1/5/2/0/0/52041882003b6bbf25bb90dd0b667983.mp3*~data=user_id=0,application_id=42~hmac=7d9a646faf68fd4bcfbcefef0c030c350a1b825cde615298309293f6384b6862"
+            }
+          },
+          {
+            "title": "I'm Glad There Is You",
+            "artist": "Chet Baker",
+            "track_id": 910156892,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/9/8/e/0/98e06faad89c5b1341a83d145a2ed4f4.mp3?hdnea=exp=1783864217~acl=/api/1/1/9/8/e/0/98e06faad89c5b1341a83d145a2ed4f4.mp3*~data=user_id=0,application_id=42~hmac=98ba4641b76d629e44f85dc447dbedf9811272042b20d162c2998682156cf6a6"
+            }
+          },
+          {
+            "title": "What Is There To Say? (Album Version)",
+            "artist": "Bill Evans",
+            "track_id": 2114192957,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/b/6/e/0/b6e67d8e4944f3e33d67315ac00e5907.mp3?hdnea=exp=1783864217~acl=/api/1/1/b/6/e/0/b6e67d8e4944f3e33d67315ac00e5907.mp3*~data=user_id=0,application_id=42~hmac=40ebc081bc6811f71efc8dc0b140b4efdb784ffb2ced060293a8c2d664133b20"
+            }
+          },
+          {
+            "title": "Over The Rainbow",
+            "artist": "Lou Donaldson",
+            "track_id": 3540926,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/1/8/a/0/18a62e6ecba875acbf51305a545f3907.mp3?hdnea=exp=1783864217~acl=/api/1/1/1/8/a/0/18a62e6ecba875acbf51305a545f3907.mp3*~data=user_id=0,application_id=42~hmac=7cfa3091b48564ef26aa655adc784a25dd23b5fb1c97786ba5c5ad77c1fb33c3"
+            }
+          }
+        ],
+        "locked_catalog_hybrid": [
+          {
+            "title": "Spanish Key (single)",
+            "artist": "Miles Davis",
+            "track_id": 7011495,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/5/8/c/0/58c8cb6bd54f0b3b52385676c8a5ffc3.mp3?hdnea=exp=1783864217~acl=/api/1/1/5/8/c/0/58c8cb6bd54f0b3b52385676c8a5ffc3.mp3*~data=user_id=0,application_id=42~hmac=47e835a6546e129ab08696d5a8aa8730a154a35cfaa96964aca23f9914f47e35"
+            }
+          },
+          {
+            "title": "Jelly Roll",
+            "artist": "Charles Mingus",
+            "track_id": 66863682,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/a/3/7/0/a37731901b93aa81b061fd5b29e2c340.mp3?hdnea=exp=1783864217~acl=/api/1/1/a/3/7/0/a37731901b93aa81b061fd5b29e2c340.mp3*~data=user_id=0,application_id=42~hmac=9c0f14b8dbab6cf5530e5ad5143874b1120db8fb271128af4207a9d2c1a95a2a"
+            }
+          },
+          {
+            "title": "Stuart Davis for the Masses: New York",
+            "artist": "Jazz At Lincoln Center Orchestra",
+            "track_id": 717231872,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/6/6/6/0/666b9d6aac6361af98b4ac86da0c9c42.mp3?hdnea=exp=1783864218~acl=/api/1/1/6/6/6/0/666b9d6aac6361af98b4ac86da0c9c42.mp3*~data=user_id=0,application_id=42~hmac=d900d644534723230cd675f1027accb3e8b7854093abd68406f32fff6976ae33"
+            }
+          },
+          {
+            "title": "Well You Needn't",
+            "artist": "Thelonious Monk Septet",
+            "track_id": 1174659,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/7/1/7/0/717e9a6a0d84f8853aef17b03589c8ba.mp3?hdnea=exp=1783864218~acl=/api/1/1/7/1/7/0/717e9a6a0d84f8853aef17b03589c8ba.mp3*~data=user_id=0,application_id=42~hmac=c7bd173c3ff0323386a606b424f9e5e244d0214baaeee653a6b82d33179db2b4"
+            }
+          },
+          {
+            "title": "The Things We Did Last Summer",
+            "artist": "Freddie Hubbard",
+            "track_id": 124885404,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/9/0/0/0/900c5d4618e61ef50d400fd827793a67.mp3?hdnea=exp=1783864218~acl=/api/1/1/9/0/0/0/900c5d4618e61ef50d400fd827793a67.mp3*~data=user_id=0,application_id=42~hmac=eb283ae52f75d94ee7293f8b4cfef4f17627c90c88664b2b6c29ba2980a19a98"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "requested_query": {
+        "title": "So What",
+        "artist": "Miles Davis",
+        "scene": "modal-jazz"
+      },
+      "query_found": true,
+      "resolved_query": {
+        "title": "So What (Album Version)",
+        "artist": "Miles Davis",
+        "row": 221630
+      },
+      "query_mode": "catalog=catalog_artist_graph;music4all=artist",
+      "methods": {
+        "current_production": [
+          {
+            "title": "Sun Star (Alternate Take Version)",
+            "artist": "John Coltrane",
+            "track_id": 62347552,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/1/2/8/0/128a61d5a5895ec70eb156f57080529c.mp3?hdnea=exp=1783864218~acl=/api/1/1/1/2/8/0/128a61d5a5895ec70eb156f57080529c.mp3*~data=user_id=0,application_id=42~hmac=332ef812b19d97e96175d0ea10c1a08ad5256e66c2da88d471a883263f3c28ef"
+            }
+          },
+          {
+            "title": "Dexterity",
+            "artist": "Paul Chambers",
+            "track_id": 3232014,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/1/9/d/0/19dee04aaeb0fff9f201719d5b720d12.mp3?hdnea=exp=1783864218~acl=/api/1/1/1/9/d/0/19dee04aaeb0fff9f201719d5b720d12.mp3*~data=user_id=0,application_id=42~hmac=42e9dcacbe38bb5db9989501960b06881a524743d8cfb8001a85714d2c16045c"
+            }
+          },
+          {
+            "title": "Visitation",
+            "artist": "Paul Chamber",
+            "track_id": 41659421,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/6/3/1/0/631c90f9fe3a08b6dd12858cf6ae428a.mp3?hdnea=exp=1783864219~acl=/api/1/1/6/3/1/0/631c90f9fe3a08b6dd12858cf6ae428a.mp3*~data=user_id=0,application_id=42~hmac=24ba78e54175a646f676063ec276bcc4ad406b6f3077c796497666cf44ac02d3"
+            }
+          },
+          {
+            "title": "Duo",
+            "artist": "Pharoah Sanders",
+            "track_id": 850219082,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/5/7/a/0/57a642c41aa165d4c87ebfd308b66536.mp3?hdnea=exp=1783864219~acl=/api/1/1/5/7/a/0/57a642c41aa165d4c87ebfd308b66536.mp3*~data=user_id=0,application_id=42~hmac=84160b65e6ffc854efee51a00f1c4dd2f17b0202033f6478074a118e46d282b8"
+            }
+          },
+          {
+            "title": "But Not For Me",
+            "artist": "Ahmad Jamal",
+            "track_id": 5726087,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/b/b/2/0/bb22e69c071cadc5909fbbdf6b2de0a0.mp3?hdnea=exp=1783864219~acl=/api/1/1/b/b/2/0/bb22e69c071cadc5909fbbdf6b2de0a0.mp3*~data=user_id=0,application_id=42~hmac=8a4f3fc63063c213f55ba309a4114369c70f91f0fef885e41b73788a792d0016"
+            }
+          }
+        ],
+        "locked_catalog_hybrid": [
+          {
+            "title": "Lazy Bird (Remastered) (From \"Blue Train\")",
+            "artist": "John Coltrane",
+            "track_id": 140532699,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/2/d/2/0/2d2d269e506f43da27cd580838eaccec.mp3?hdnea=exp=1783864219~acl=/api/1/1/2/d/2/0/2d2d269e506f43da27cd580838eaccec.mp3*~data=user_id=0,application_id=42~hmac=e125274d29f01b1f190159b715490e63f93969361e129659a1c5ac655469244e"
+            }
+          },
+          {
+            "title": "Green Dolphin Street",
+            "artist": "Bill Evans",
+            "track_id": 548631112,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/e/6/4/0/e649f7ee214a5043c08fd458b2c731d8.mp3?hdnea=exp=1783864219~acl=/api/1/1/e/6/4/0/e649f7ee214a5043c08fd458b2c731d8.mp3*~data=user_id=0,application_id=42~hmac=c2a726898784e281972a7f8f023b4cbfc90aa1fa5a4e60eff5d69359c67429b7"
+            }
+          },
+          {
+            "title": "Little One",
+            "artist": "Miles Davis;Herbie Hancock",
+            "track_id": 15636710,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/4/a/6/0/4a65fd4d0bcccc8acec9d6a4aba90445.mp3?hdnea=exp=1783864220~acl=/api/1/1/4/a/6/0/4a65fd4d0bcccc8acec9d6a4aba90445.mp3*~data=user_id=0,application_id=42~hmac=1ebab3fc65c9a358b0b42642b0bccc932f6b22e3b2781a26f6cbb8757ca170b1"
+            }
+          },
+          {
+            "title": "Song With Orange (Alternate)",
+            "artist": "Charles Mingus",
+            "track_id": 14935317,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/0/7/2/0/072cd264ae84b0cc9d9ead51480bca08.mp3?hdnea=exp=1783864220~acl=/api/1/1/0/7/2/0/072cd264ae84b0cc9d9ead51480bca08.mp3*~data=user_id=0,application_id=42~hmac=8a445525b62e5fb6e146f8a72d814fbdc116db8f49750956fc525d023ea0b475"
+            }
+          },
+          {
+            "title": "Maiden Voyage (Album Version)",
+            "artist": "Herbie Hancock",
+            "track_id": 14886406,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/f/e/2/0/fe22a0f9315908468d3a766acee1e25b.mp3?hdnea=exp=1783864220~acl=/api/1/1/f/e/2/0/fe22a0f9315908468d3a766acee1e25b.mp3*~data=user_id=0,application_id=42~hmac=44917d623b1d98f5293acd7866d042cc741b9bea37a0ab877346da712f94264b"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "requested_query": {
+        "title": "Where Is My Mind?",
+        "artist": "Pixies",
+        "scene": "indie-rock"
+      },
+      "query_found": true,
+      "resolved_query": {
+        "title": "Where Is My Mind?",
+        "artist": "Pixies",
+        "row": 26205
+      },
+      "query_mode": "catalog=catalog_artist_graph;music4all=audio_bridge",
+      "methods": {
+        "current_production": [
+          {
+            "title": "Limo Wreck (Rehearsal Version)",
+            "artist": "Soundgarden",
+            "track_id": 78690549,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/7/d/c/0/7dc87e0bbe1bcf786118185d3117c41d.mp3?hdnea=exp=1783864220~acl=/api/1/1/7/d/c/0/7dc87e0bbe1bcf786118185d3117c41d.mp3*~data=user_id=0,application_id=42~hmac=331e7cb460e30d8df5398397a81e7f7f41c2cde085c7ab9be6e526a9353818fd"
+            }
+          },
+          {
+            "title": "Kicked It in the Sun",
+            "artist": "Built To Spill",
+            "track_id": 14628579,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/9/e/7/0/9e72cdcb89643766b0fba0efe2589045.mp3?hdnea=exp=1783864221~acl=/api/1/1/9/e/7/0/9e72cdcb89643766b0fba0efe2589045.mp3*~data=user_id=0,application_id=42~hmac=2c1e5b035b488e72469d343fd03cb37e11c891dec3d898fda0d7dafed2d68bbd"
+            }
+          },
+          {
+            "title": "Afternoon With The Axolotls",
+            "artist": "Hum",
+            "track_id": 1045213,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/6/8/3/0/683fe997fcd23203d76759ea6eb69176.mp3?hdnea=exp=1783864221~acl=/api/1/1/6/8/3/0/683fe997fcd23203d76759ea6eb69176.mp3*~data=user_id=0,application_id=42~hmac=af8db37cd2aff65503fe0a06f7252af65fb153086a771f68520c49f16f835087"
+            }
+          },
+          {
+            "title": "Elevator",
+            "artist": "Box Car Racer",
+            "track_id": 2191396,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/f/d/9/0/fd95bb328d29fbacfde396c48ad251db.mp3?hdnea=exp=1783864221~acl=/api/1/1/f/d/9/0/fd95bb328d29fbacfde396c48ad251db.mp3*~data=user_id=0,application_id=42~hmac=5e3c01d69d76a0620ccee622950856c36c1de9c853b07d5cd46e0ac53dd5b5d1"
+            }
+          },
+          {
+            "title": "The Red",
+            "artist": "Chevelle",
+            "track_id": 541867,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/3/2/c/0/32cd8c40c3722de601c8bebdbb1d436b.mp3?hdnea=exp=1783864221~acl=/api/1/1/3/2/c/0/32cd8c40c3722de601c8bebdbb1d436b.mp3*~data=user_id=0,application_id=42~hmac=68ea0f6158bb5fe9818f7a2bd35803a13395c328e2e52ef6935f356adcdac1dc"
+            }
+          }
+        ],
+        "locked_catalog_hybrid": [
+          {
+            "title": "Mezzanine",
+            "artist": "Massive Attack",
+            "track_id": 3129754,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/8/6/d/0/86dbda513a82274c60e3ff2c61fa36bd.mp3?hdnea=exp=1783864221~acl=/api/1/1/8/6/d/0/86dbda513a82274c60e3ff2c61fa36bd.mp3*~data=user_id=0,application_id=42~hmac=458b0f14ca41df68b7f6a43f0db926cd8e4b45eb89a1394ac717ae2527eab6f3"
+            }
+          },
+          {
+            "title": "Who Knows",
+            "artist": "Joy Again",
+            "track_id": 1733359147,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/3/e/4/0/3e453019b1bf9d33232b2e559a9bda10.mp3?hdnea=exp=1783864222~acl=/api/1/1/3/e/4/0/3e453019b1bf9d33232b2e559a9bda10.mp3*~data=user_id=0,application_id=42~hmac=e44d1d60939a12274287f8824b32239dd600837d390e0c36e157070515c6beeb"
+            }
+          },
+          {
+            "title": "Incinerate",
+            "artist": "Sonic Youth",
+            "track_id": 1762763537,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/7/a/7/0/7a7abfcbbb8d5330a20004d3019f5469.mp3?hdnea=exp=1783864222~acl=/api/1/1/7/a/7/0/7a7abfcbbb8d5330a20004d3019f5469.mp3*~data=user_id=0,application_id=42~hmac=9a78aa109ee526e305179f40b5b2955ec15a68777380f8027e782c2ca0d8b905"
+            }
+          },
+          {
+            "title": "Learn to Love Again",
+            "artist": "Wallows",
+            "track_id": 3198728011,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/c/d/8/0/cd80c872f6dda3afe9af2255d4a4b750.mp3?hdnea=exp=1783864222~acl=/api/1/1/c/d/8/0/cd80c872f6dda3afe9af2255d4a4b750.mp3*~data=user_id=0,application_id=42~hmac=78eb3e110bacb79c60e88d0475a050b972c945066cc38a2de017c421a9949435"
+            }
+          },
+          {
+            "title": "Walk On The Ocean",
+            "artist": "Miles Kane",
+            "track_id": 3595466602,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/e/7/3/0/e73d5dc609278468ff30090dc15825a9.mp3?hdnea=exp=1783864222~acl=/api/1/1/e/7/3/0/e73d5dc609278468ff30090dc15825a9.mp3*~data=user_id=0,application_id=42~hmac=d5583b4521ee155f203f85fb6a97882a68b63c5ff540abb3b10d72725d0bf4fa"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "requested_query": {
+        "title": "Heroin",
+        "artist": "The Velvet Underground",
+        "scene": "art-rock"
+      },
+      "query_found": true,
+      "resolved_query": {
+        "title": "Heroin",
+        "artist": "The Velvet Underground",
+        "row": 84550
+      },
+      "query_mode": "catalog=catalog_artist_graph;music4all=artist",
+      "methods": {
+        "current_production": [
+          {
+            "title": "Situation: Relation",
+            "artist": "Rainer Maria",
+            "track_id": 1982451987,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/6/1/f/0/61f92e8975ecbcdc41689ca79011bba7.mp3?hdnea=exp=1783864222~acl=/api/1/1/6/1/f/0/61f92e8975ecbcdc41689ca79011bba7.mp3*~data=user_id=0,application_id=42~hmac=6f91052cc37194ff6f07cf312db27a17a1eaaedc29581036b5d51274fe92e11c"
+            }
+          },
+          {
+            "title": "Busman's Holiday",
+            "artist": "Allah-Las",
+            "track_id": 1642106472,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/0/9/7/0/097a9bea27139cf3214fe1c667a2594d.mp3?hdnea=exp=1783864223~acl=/api/1/1/0/9/7/0/097a9bea27139cf3214fe1c667a2594d.mp3*~data=user_id=0,application_id=42~hmac=f831b06d7c6e0a671639ba3bdfc2787b7489bb9a7ce9ac115ae385b022132a99"
+            }
+          },
+          {
+            "title": "Foal",
+            "artist": "Holy Fawn",
+            "track_id": 447733632,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/1/e/3/0/1e3067153882504c702995d58381e2d0.mp3?hdnea=exp=1783864223~acl=/api/1/1/1/e/3/0/1e3067153882504c702995d58381e2d0.mp3*~data=user_id=0,application_id=42~hmac=381ee6caf5fd3655eefa86f7412690005690f3c9cc11c782672c4d9354780c55"
+            }
+          },
+          {
+            "title": "Unison",
+            "artist": "Pinegrove",
+            "track_id": 3492525091,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/b/7/3/0/b7345d3e63ef5bd663854a893df34752.mp3?hdnea=exp=1783864223~acl=/api/1/1/b/7/3/0/b7345d3e63ef5bd663854a893df34752.mp3*~data=user_id=0,application_id=42~hmac=0f00e6c6e6d927f1f821f0366d86b43466f66eccef3f5e9418de19d881dacfe6"
+            }
+          },
+          {
+            "title": "The Summer Ends",
+            "artist": "American Football",
+            "track_id": 1982411177,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/2/0/3/0/203c327f539161203973892a044fc697.mp3?hdnea=exp=1783864223~acl=/api/1/1/2/0/3/0/203c327f539161203973892a044fc697.mp3*~data=user_id=0,application_id=42~hmac=198f4aba47e20d68da4750fd7ab90726a17977e57fea34a5a3731fff76ea4fb8"
+            }
+          }
+        ],
+        "locked_catalog_hybrid": [
+          {
+            "title": "Two Sisters",
+            "artist": "The Kinks",
+            "track_id": 3802993302,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/7/5/5/0/7556c64800d52b70995f214ed6a47fc4.mp3?hdnea=exp=1783864223~acl=/api/1/1/7/5/5/0/7556c64800d52b70995f214ed6a47fc4.mp3*~data=user_id=0,application_id=42~hmac=295bc1a04a9c0876fc134b934b35f95543e5cc426d780c4deff1d0480051f4c0"
+            }
+          },
+          {
+            "title": "Crazy Feeling",
+            "artist": "Lou Reed",
+            "track_id": 97082590,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/6/4/0/0/6401062e7829cc1070de586881f6eca9.mp3?hdnea=exp=1783864223~acl=/api/1/1/6/4/0/0/6401062e7829cc1070de586881f6eca9.mp3*~data=user_id=0,application_id=42~hmac=109aa139ab8b5f54170d65566603c461b39f36dd04c28b5677aadfd47ed017d8"
+            }
+          },
+          {
+            "title": "Listen, The Snow Is Falling",
+            "artist": "Galaxie 500",
+            "track_id": 17144274,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/0/7/f/0/07fc3aac941ffdc0f737450aa267fe57.mp3?hdnea=exp=1783864224~acl=/api/1/1/0/7/f/0/07fc3aac941ffdc0f737450aa267fe57.mp3*~data=user_id=0,application_id=42~hmac=106a5fd8f27a465fda924e0e43c643302fd19ba821fc105e08f8763dbb802eab"
+            }
+          },
+          {
+            "title": "The End (Live At The Rainbow Theatre / 1974)",
+            "artist": "Nico",
+            "track_id": 541803922,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/8/6/0/0/86010eb60adf1b0ce708658347a845a1.mp3?hdnea=exp=1783864224~acl=/api/1/1/8/6/0/0/86010eb60adf1b0ce708658347a845a1.mp3*~data=user_id=0,application_id=42~hmac=c142ddd613dfa497bbd866105a2058473973b64dbcb8ca2c101261cd037beec6"
+            }
+          },
+          {
+            "title": "The Abandoned Hospital Ship",
+            "artist": "The Flaming Lips",
+            "track_id": 2658843,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/9/5/4/0/954ec6710b0da1c8be58537d760700bc.mp3?hdnea=exp=1783864224~acl=/api/1/1/9/5/4/0/954ec6710b0da1c8be58537d760700bc.mp3*~data=user_id=0,application_id=42~hmac=0f51012eb84550b431e11dba941d404d4ca66ee3b0c5e3c197fc3bcd8ae676b0"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "requested_query": {
+        "title": "Starboy",
+        "artist": "The Weeknd",
+        "scene": "r&b-pop"
+      },
+      "query_found": true,
+      "resolved_query": {
+        "title": "Starboy",
+        "artist": "The Weeknd",
+        "row": 76472
+      },
+      "query_mode": "catalog=audio_projected_artist_bridge;music4all=artist",
+      "methods": {
+        "current_production": [
+          {
+            "title": "Forbidden",
+            "artist": "Chris Brown",
+            "track_id": 1814621967,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/5/8/9/0/589f20bff45d2ee8d02f0650eedeae46.mp3?hdnea=exp=1783864224~acl=/api/1/1/5/8/9/0/589f20bff45d2ee8d02f0650eedeae46.mp3*~data=user_id=0,application_id=42~hmac=f9793c3a7b73b34a667307ff354f3e76e3a29c1599b466bab7110bb94f102d18"
+            }
+          },
+          {
+            "title": "Hunting Nirvana",
+            "artist": "SAINt JHN",
+            "track_id": 3198815561,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/7/5/1/0/7513a0f6acc053d327de58aa5124ed89.mp3?hdnea=exp=1783864225~acl=/api/1/1/7/5/1/0/7513a0f6acc053d327de58aa5124ed89.mp3*~data=user_id=0,application_id=42~hmac=9ea57440f640e7c764b29a05297f10608112daa502f19346e62854ba4985132a"
+            }
+          },
+          {
+            "title": "cut so deep",
+            "artist": "Summrs",
+            "track_id": 2548338512,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/6/2/2/0/6222211cad2f07512adbdea742898318.mp3?hdnea=exp=1783864225~acl=/api/1/1/6/2/2/0/6222211cad2f07512adbdea742898318.mp3*~data=user_id=0,application_id=42~hmac=4f345d6d4eb39113009a4ac965afa6a5b7359d37be07364213f468df1778b27f"
+            }
+          },
+          {
+            "title": "Ville",
+            "artist": "Jumo",
+            "track_id": 144394380,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/d/2/5/0/d25d6d5e40bf63a86e1b003a95622285.mp3?hdnea=exp=1783864225~acl=/api/1/1/d/2/5/0/d25d6d5e40bf63a86e1b003a95622285.mp3*~data=user_id=0,application_id=42~hmac=fe975186a0ffce993a1cfc39494a6f54d6f4c8718a15ed7e099a87148386120c"
+            }
+          },
+          {
+            "title": "Blessed",
+            "artist": "FKJ",
+            "track_id": 140813719,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/8/f/9/0/8f916692371d44e6d25fa45036571a90.mp3?hdnea=exp=1783864225~acl=/api/1/1/8/f/9/0/8f916692371d44e6d25fa45036571a90.mp3*~data=user_id=0,application_id=42~hmac=86c604dc6840de5d49798e89f540d930a8f98055d0123da56ed192254e363d99"
+            }
+          }
+        ],
+        "locked_catalog_hybrid": [
+          {
+            "title": "Rich Man (Yellow Claw Remix)",
+            "artist": "aespa",
+            "track_id": 3548942561,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/a/e/2/0/ae2eb00257f7c6be37c9dc6e1c7ce0fe.mp3?hdnea=exp=1783864225~acl=/api/1/1/a/e/2/0/ae2eb00257f7c6be37c9dc6e1c7ce0fe.mp3*~data=user_id=0,application_id=42~hmac=a099d9476038e0f727e99ecb238fa9328a78091d7be766f842242db71762f305"
+            }
+          },
+          {
+            "title": "i don't like being left behind",
+            "artist": "Leyla Ebrahimi",
+            "track_id": 3630528562,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/5/5/8/0/558eab387fba2375278b1db2b47c19dd.mp3?hdnea=exp=1783864225~acl=/api/1/1/5/5/8/0/558eab387fba2375278b1db2b47c19dd.mp3*~data=user_id=0,application_id=42~hmac=533a363d677e04514cf84a9f7c0c962d0b769e1fce874d62fdeaee84bfdf0c09"
+            }
+          },
+          {
+            "title": "Sanctify",
+            "artist": "Olly Alexander (Years & Years)",
+            "track_id": 469394232,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/e/1/c/0/e1c402552b15c6dd32621ef6031a093d.mp3?hdnea=exp=1783864226~acl=/api/1/1/e/1/c/0/e1c402552b15c6dd32621ef6031a093d.mp3*~data=user_id=0,application_id=42~hmac=1ec71f002029f4fe2031e466ad85788b6125f88d0f90f638421ef5667b8d1da4"
+            }
+          },
+          {
+            "title": "Break from Toronto",
+            "artist": "PARTYNEXTDOOR",
+            "track_id": 2349426035,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/7/6/1/0/761671e3b5d89dc2039bcf53a48ec231.mp3?hdnea=exp=1783864226~acl=/api/1/1/7/6/1/0/761671e3b5d89dc2039bcf53a48ec231.mp3*~data=user_id=0,application_id=42~hmac=bf686a31f0aa7f3d8adb5c1703ab5b3e76777073732ab8bd1a6527a43396daa0"
+            }
+          },
+          {
+            "title": "Wonder",
+            "artist": "Shawn Mendes",
+            "track_id": 1097366382,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/a/3/6/0/a36912734e6841470e81413b7c6bb85c.mp3?hdnea=exp=1783864226~acl=/api/1/1/a/3/6/0/a36912734e6841470e81413b7c6bb85c.mp3*~data=user_id=0,application_id=42~hmac=a17a49e2345747a2e86d7f53d2e531bd2b4695108301030e037115af748c58b8"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "requested_query": {
+        "title": "Save Your Tears",
+        "artist": "The Weeknd",
+        "scene": "synth-pop"
+      },
+      "query_found": true,
+      "resolved_query": {
+        "title": "Save Your Tears (Remix)",
+        "artist": "The Weeknd",
+        "row": 4111
+      },
+      "query_mode": "catalog=audio_projected_artist_bridge;music4all=artist",
+      "methods": {
+        "current_production": [
+          {
+            "title": "ACID RAIN",
+            "artist": "Chris Grey",
+            "track_id": 3906429851,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/5/c/4/0/5c40a24cd18ef117a8d48c138308f5b5.mp3?hdnea=exp=1783864226~acl=/api/1/1/5/c/4/0/5c40a24cd18ef117a8d48c138308f5b5.mp3*~data=user_id=0,application_id=42~hmac=f793542481c99c37a9fd5a13c6c82e6ecb987469632a41a66ceb1f4e231429a8"
+            }
+          },
+          {
+            "title": "I Feel Good",
+            "artist": "Pink Sweat$",
+            "track_id": 1514621762,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/6/b/2/0/6b238758e9467a7f363967f13a49e7e7.mp3?hdnea=exp=1783864227~acl=/api/1/1/6/b/2/0/6b238758e9467a7f363967f13a49e7e7.mp3*~data=user_id=0,application_id=42~hmac=9a21cb3209e98cd1027a9b9fe650e0af096bea2518641c9cf5b1745402b96bdf"
+            }
+          },
+          {
+            "title": "Aerial Head",
+            "artist": "Lava La Rue",
+            "track_id": 2633773432,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/1/a/1/0/1a131a04f2f5e963683e88478d97fbd3.mp3?hdnea=exp=1783864227~acl=/api/1/1/1/a/1/0/1a131a04f2f5e963683e88478d97fbd3.mp3*~data=user_id=0,application_id=42~hmac=a6255a0e9a849eab5c9648eba3762cb11a61c5886e92ae65f25a15fc032006f6"
+            }
+          },
+          {
+            "title": "Since U Been Gone",
+            "artist": "Kelly Clarkson",
+            "track_id": 62118993,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/f/e/2/0/fe2dca0975590ae0cdb456a5abc31763.mp3?hdnea=exp=1783864227~acl=/api/1/1/f/e/2/0/fe2dca0975590ae0cdb456a5abc31763.mp3*~data=user_id=0,application_id=42~hmac=390a76e41eff4460a41791383c16f07dfcc59482d26ab158d8d5956faebb95dd"
+            }
+          },
+          {
+            "title": "Coco Blood",
+            "artist": "Celeste",
+            "track_id": 822660352,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/7/d/8/0/7d8c2dd41e21078f76a311928add8d37.mp3?hdnea=exp=1783864227~acl=/api/1/1/7/d/8/0/7d8c2dd41e21078f76a311928add8d37.mp3*~data=user_id=0,application_id=42~hmac=a1e721ab2c5f1589b3edc53f17f6026266e485e8d4a11983e0554de39085ba16"
+            }
+          }
+        ],
+        "locked_catalog_hybrid": [
+          {
+            "title": "Far away",
+            "artist": "Madame Monsieur",
+            "track_id": 904185652,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/3/6/d/0/36d8a036116edfba9439c12acb131c53.mp3?hdnea=exp=1783864227~acl=/api/1/1/3/6/d/0/36d8a036116edfba9439c12acb131c53.mp3*~data=user_id=0,application_id=42~hmac=af11a79afb3b5834911bcbf292ac0d38b99b07e9e4ee15836bee176735695d09"
+            }
+          },
+          {
+            "title": "Teach Me How To Love",
+            "artist": "Shawn Mendes",
+            "track_id": 1165396812,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/d/c/f/0/dcf19ddc7041d6dfcb2882fe6afd09f2.mp3?hdnea=exp=1783864227~acl=/api/1/1/d/c/f/0/dcf19ddc7041d6dfcb2882fe6afd09f2.mp3*~data=user_id=0,application_id=42~hmac=c0614697748ea7936245a8f5964a694c87e47d60f5ce8b5a04116c5bc06deeb3"
+            }
+          },
+          {
+            "title": "Real",
+            "artist": "Olly Alexander (Years & Years)",
+            "track_id": 1761478757,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/e/c/b/0/ecb7c8023d6f4164f14843eccfeeda3f.mp3?hdnea=exp=1783864228~acl=/api/1/1/e/c/b/0/ecb7c8023d6f4164f14843eccfeeda3f.mp3*~data=user_id=0,application_id=42~hmac=91da6d54dd2bad7f1fcde025f511a8213263101dc780b1b2396f0910b039b0ec"
+            }
+          },
+          {
+            "title": "Break from Toronto",
+            "artist": "PARTYNEXTDOOR",
+            "track_id": 2349426035,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/7/6/1/0/761671e3b5d89dc2039bcf53a48ec231.mp3?hdnea=exp=1783864228~acl=/api/1/1/7/6/1/0/761671e3b5d89dc2039bcf53a48ec231.mp3*~data=user_id=0,application_id=42~hmac=a9c543cf09174edce6daee6084b0c56dee096f38c1c99c9cd95c75b228204143"
+            }
+          },
+          {
+            "title": "Azalea",
+            "artist": "Kenshi Yonezu",
+            "track_id": 3066665361,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/e/4/c/0/e4ce0b6c1f8510aca627a0add5f367f4.mp3?hdnea=exp=1783864228~acl=/api/1/1/e/4/c/0/e4ce0b6c1f8510aca627a0add5f367f4.mp3*~data=user_id=0,application_id=42~hmac=ed85b39f9d7518b77e021d9db01f25d593b73014275eed0b48d2f29cec3cd548"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "requested_query": {
+        "title": "Chemical",
+        "artist": "Post Malone",
+        "scene": "guitar-pop"
+      },
+      "query_found": true,
+      "resolved_query": {
+        "title": "Chemical",
+        "artist": "Post Malone",
+        "row": 21652
+      },
+      "query_mode": "catalog=audio_projected_artist_bridge;music4all=artist",
+      "methods": {
+        "current_production": [
+          {
+            "title": "All We Ever Do Is Talk",
+            "artist": "Del Water Gap",
+            "track_id": 3484489751,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/8/c/1/0/8c12e0050d11176ebc96dbaf36990c19.mp3?hdnea=exp=1783864228~acl=/api/1/1/8/c/1/0/8c12e0050d11176ebc96dbaf36990c19.mp3*~data=user_id=0,application_id=42~hmac=9a5d79704c553650378c31c2b1e451ba3aeab89cc6a07ae62a526a2859235603"
+            }
+          },
+          {
+            "title": "Zero",
+            "artist": "Chris Brown",
+            "track_id": 115705672,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/9/4/f/0/94f3f2857d860c2f30512394d9b90bab.mp3?hdnea=exp=1783864229~acl=/api/1/1/9/4/f/0/94f3f2857d860c2f30512394d9b90bab.mp3*~data=user_id=0,application_id=42~hmac=fc1e344142a1be9fc34d5db5948ab61fe082d052629eeaf44222b0da30fb8b2a"
+            }
+          },
+          {
+            "title": "Love Me To Heaven",
+            "artist": "Jonas Brothers",
+            "track_id": 3278141801,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/d/f/f/0/dff16d8557bcb89e0dbd94ce320f88dc.mp3?hdnea=exp=1783864229~acl=/api/1/1/d/f/f/0/dff16d8557bcb89e0dbd94ce320f88dc.mp3*~data=user_id=0,application_id=42~hmac=167e8b7daac801f76f4befcd8c0c8fa4b448af0047cd0c8ce081d0ca5f6bd62c"
+            }
+          },
+          {
+            "title": "COMPLETE MESS",
+            "artist": "5 Seconds of Summer",
+            "track_id": 3788171122,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/8/f/3/0/8f3d96bce83393e9d8cbe4b072d2f89f.mp3?hdnea=exp=1783864229~acl=/api/1/1/8/f/3/0/8f3d96bce83393e9d8cbe4b072d2f89f.mp3*~data=user_id=0,application_id=42~hmac=e4452f517f7b3dbc99b3bfd05ccb976b502208900293a07f4938b80ce315b36a"
+            }
+          },
+          {
+            "title": "Drivin' With You",
+            "artist": "Fitz",
+            "track_id": 3076707761,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/2/a/e/0/2ae5882914594a580309327a9ac914d1.mp3?hdnea=exp=1783864229~acl=/api/1/1/2/a/e/0/2ae5882914594a580309327a9ac914d1.mp3*~data=user_id=0,application_id=42~hmac=7e1bf299aef46adb31b0e1ff1c2890723246a9f942192a8ae29f0045feaca080"
+            }
+          }
+        ],
+        "locked_catalog_hybrid": [
+          {
+            "title": "Mr. Know It All",
+            "artist": "Teddy Swims",
+            "track_id": 3931143901,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/9/1/1/0/91186b8958202dd72bd19b5989190618.mp3?hdnea=exp=1783864229~acl=/api/1/1/9/1/1/0/91186b8958202dd72bd19b5989190618.mp3*~data=user_id=0,application_id=42~hmac=eefa1316501a163b202d232c5f0efd65ef45324f68a70942c19c04c2e0117e0c"
+            }
+          },
+          {
+            "title": "Ocean Drive",
+            "artist": "Pia Mia",
+            "track_id": 440302622,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/e/4/6/0/e46c483abbfabc132857841b68176f96.mp3?hdnea=exp=1783864229~acl=/api/1/1/e/4/6/0/e46c483abbfabc132857841b68176f96.mp3*~data=user_id=0,application_id=42~hmac=b04b6f4c63532456e99b90a15f97afbd9bba15d69aaf30e779d290a6795b9ef5"
+            }
+          },
+          {
+            "title": "Younger",
+            "artist": "Ruel",
+            "track_id": 510741442,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/2/4/8/0/2486a86a9debf123c52e8906ab7b2b72.mp3?hdnea=exp=1783864230~acl=/api/1/1/2/4/8/0/2486a86a9debf123c52e8906ab7b2b72.mp3*~data=user_id=0,application_id=42~hmac=33b3bf30b79bbe771ae57cd0061140f4678801539785f915e042100465688784"
+            }
+          },
+          {
+            "title": "Self Care",
+            "artist": "Mac Miller",
+            "track_id": 533802022,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/c/f/6/0/cf63dbdf46f3193d8860d36b4b5b0dd6.mp3?hdnea=exp=1783864230~acl=/api/1/1/c/f/6/0/cf63dbdf46f3193d8860d36b4b5b0dd6.mp3*~data=user_id=0,application_id=42~hmac=6be330b2e5719c7052a4ccfdb12de36b960e84c36938ec7f29c76838d7e7e13b"
+            }
+          },
+          {
+            "title": "Bad Intentions",
+            "artist": "Niykee Heaton",
+            "track_id": 121219110,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/b/d/6/0/bd607f1d129cbc9dca0b109bfe5e48cf.mp3?hdnea=exp=1783864230~acl=/api/1/1/b/d/6/0/bd607f1d129cbc9dca0b109bfe5e48cf.mp3*~data=user_id=0,application_id=42~hmac=5f34baa0e515f7cd27c22af6f1ce7dfd89c9f5e55ede62e32c2e176a13bc3ff3"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "requested_query": {
+        "title": "Golden Hour",
+        "artist": "JVKE",
+        "scene": "piano-pop"
+      },
+      "query_found": true,
+      "resolved_query": {
+        "title": "golden hour (ILLENIUM & NURKO Remix)",
+        "artist": "JVKE",
+        "row": 172593
+      },
+      "query_mode": "catalog=audio_projected_artist_bridge;music4all=audio_bridge",
+      "methods": {
+        "current_production": [
+          {
+            "title": "Illuminate (Forester Remix)",
+            "artist": "The Kite String Tangle",
+            "track_id": 2868970772,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/c/9/2/0/c927269119f87ab260dc197478793d70.mp3?hdnea=exp=1783864230~acl=/api/1/1/c/9/2/0/c927269119f87ab260dc197478793d70.mp3*~data=user_id=0,application_id=42~hmac=51e8807a6d4983aa94e867bf5a09e50f241e907109d21df58db40e73bda7989b"
+            }
+          },
+          {
+            "title": "A New Life",
+            "artist": "Burkhard Dallwitz",
+            "track_id": 1166571982,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/2/7/a/0/27a90de2c5dbeba3af90051299756037.mp3?hdnea=exp=1783864230~acl=/api/1/1/2/7/a/0/27a90de2c5dbeba3af90051299756037.mp3*~data=user_id=0,application_id=42~hmac=4efc724cbd9d677bafbbc6543522533cc2d99b9f4a25dd334d90e91e53e80d82"
+            }
+          },
+          {
+            "title": "Music for 18 Musicians: Section VI",
+            "artist": "Steve Reich and Musicians",
+            "track_id": 3245620711,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/9/2/d/0/92d6d42b8720d59a726791d662b15b81.mp3?hdnea=exp=1783864231~acl=/api/1/1/9/2/d/0/92d6d42b8720d59a726791d662b15b81.mp3*~data=user_id=0,application_id=42~hmac=a0fcf5f3d08dbf10d24fdfebb6542d9338138f2445da76611f6ca406da063972"
+            }
+          },
+          {
+            "title": "Insieme",
+            "artist": "Ludovico Einaudi",
+            "track_id": 1006940482,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/8/2/c/0/82c1a3d7b2ec79b9c93d762bbaef0fc0.mp3?hdnea=exp=1783864231~acl=/api/1/1/8/2/c/0/82c1a3d7b2ec79b9c93d762bbaef0fc0.mp3*~data=user_id=0,application_id=42~hmac=b0e809af04df0d8d94ba515b767660396ff03ba7bccd380eb9776c988e81d656"
+            }
+          },
+          {
+            "title": "Zurna Africa",
+            "artist": "OTIOT",
+            "track_id": 736264722,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/2/d/b/0/2db7ee03d725ef6e820ac5b926ea2869.mp3?hdnea=exp=1783864231~acl=/api/1/1/2/d/b/0/2db7ee03d725ef6e820ac5b926ea2869.mp3*~data=user_id=0,application_id=42~hmac=1859437b655a21c580e549d9ded7eb407d6072d16d734a8ae4c6f38f6338241c"
+            }
+          }
+        ],
+        "locked_catalog_hybrid": [
+          {
+            "title": "Party Police",
+            "artist": "Alvvays",
+            "track_id": 853252002,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/b/a/5/0/ba56e452a1322b118ca97aeeb6b21f78.mp3?hdnea=exp=1783864231~acl=/api/1/1/b/a/5/0/ba56e452a1322b118ca97aeeb6b21f78.mp3*~data=user_id=0,application_id=42~hmac=a39facfe5cf24266634cf026f76ab761ae4f269e01457e0bb0e9075be09ce0f3"
+            }
+          },
+          {
+            "title": "Firm Foundation (He Won't)[Feat. Chandler Moore]",
+            "artist": "Maverick City Music",
+            "track_id": 1592351821,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/f/7/7/0/f77732723c641f1d027ec0f3575b0f0b.mp3?hdnea=exp=1783864231~acl=/api/1/1/f/7/7/0/f77732723c641f1d027ec0f3575b0f0b.mp3*~data=user_id=0,application_id=42~hmac=365887c9aa676a00cf129b7b602a4f8cfdb852e3aa2c0eeaaa55c644de549edd"
+            }
+          },
+          {
+            "title": "Towelket ha odayakana",
+            "artist": "Kaneko Ayano",
+            "track_id": 1995188567,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/c/8/b/0/c8bf1b23b540fdf75318da25857087be.mp3?hdnea=exp=1783864232~acl=/api/1/1/c/8/b/0/c8bf1b23b540fdf75318da25857087be.mp3*~data=user_id=0,application_id=42~hmac=0d58a1f5605b7bad6e57c6cc18b979ed6e3f957e0e1646b35edf03b91c5bf215"
+            }
+          },
+          {
+            "title": "Vulnerability (Original Mix)",
+            "artist": "Mitis",
+            "track_id": 96121548,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/5/c/2/0/5c2b236e38c643e6114f0f7fbe455ea5.mp3?hdnea=exp=1783864232~acl=/api/1/1/5/c/2/0/5c2b236e38c643e6114f0f7fbe455ea5.mp3*~data=user_id=0,application_id=42~hmac=7ef443f937fbcef9277875eceadb0b1e4f49f4cc11518f01652562dd915cbc23"
+            }
+          },
+          {
+            "title": "Pretty Sweet",
+            "artist": "Frank Ocean",
+            "track_id": 717273942,
+            "preview": {
+              "http_status": 200,
+              "available": true,
+              "url": "https://cdnt-preview.dzcdn.net/api/1/1/4/7/c/0/47ceb83b1ecfc8e50e4b1c7af0dc377f.mp3?hdnea=exp=1783864232~acl=/api/1/1/4/7/c/0/47ceb83b1ecfc8e50e4b1c7af0dc377f.mp3*~data=user_id=0,application_id=42~hmac=9f9a069f97fe7d0351a3cf3bb26c56eaa20499e6d8f998dfb062c46821c9a547"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

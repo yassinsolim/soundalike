@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-12",
+  "method_locked_before_judgment": true,
+  "used_for_tuning": false,
+  "axis": "sonic_similarity_and_scene_coherence",
+  "lists_artifact": ".goals\\human-quality-recommendations\\artifacts\\catalog-direct-lists-v7.json",
+  "lists_sha256": "927d721aee1de2e877b0879f059cb70e7f5d881cbbff3ce30c5b9b8f1e4ad1ad",
+  "policy": "Pass requires at least four coherent top-five results and no unrelated-scene result in positions 1-3. Missing queries and junk/seed variants fail.",
+  "summary": {
+    "passes": 12,
+    "total": 20,
+    "pass_rate": 0.6,
+    "required_passes": 16,
+    "passes_gate": false,
+    "resolved_queries": 20,
+    "previews_available": 100
+  },
+  "judgments": [
+    {
+      "seed": "Childish Gambino - Redbone",
+      "pass": true,
+      "reason": "Five adjacent alternative hip-hop/R&B artists; no wrong-scene top-three item."
+    },
+    {
+      "seed": "Frank Ocean - Nights",
+      "pass": false,
+      "reason": "Only Rex Orange County and Kanye West are clearly adjacent; the list is too diffuse to count four coherent results."
+    },
+    {
+      "seed": "Frank Ocean - Chanel",
+      "pass": false,
+      "reason": "Kanye West and Rex Orange County are adjacent, but obscure/off-scene items prevent four coherent results."
+    },
+    {
+      "seed": "Radiohead - Exit Music (For a Film)",
+      "pass": true,
+      "reason": "Five subdued art-rock/songwriter peers preserve the acoustic and melancholic scene."
+    },
+    {
+      "seed": "Radiohead - Kid A",
+      "pass": true,
+      "reason": "Thom Yorke, Floating Points, Four Tet, BADBADNOTGOOD, and Youth Lagoon form a coherent experimental electronic set."
+    },
+    {
+      "seed": "Slowdive - Alison",
+      "pass": true,
+      "reason": "Five cross-artist shoegaze and dream-pop recordings."
+    },
+    {
+      "seed": "Slowdive - Souvlaki Space Station",
+      "pass": true,
+      "reason": "Five coherent shoegaze/post-rock recordings."
+    },
+    {
+      "seed": "100 gecs - money machine",
+      "pass": false,
+      "reason": "Mainstream pop and dance-pop dominate; position 1 is not a convincing hyperpop soundalike."
+    },
+    {
+      "seed": "brakence - venus fly trap",
+      "pass": false,
+      "reason": "R&B and mainstream pop dominate, with unrelated positions 1-3 for a digicore seed."
+    },
+    {
+      "seed": "Anri - Remember Summer Days",
+      "pass": false,
+      "reason": "Funk/fusion adjacency is outweighed by Latin and hard-rock positions 2-4; city-pop coherence fails."
+    },
+    {
+      "seed": "Metallica - Enter Sandman",
+      "pass": true,
+      "reason": "Five coherent metal peers across thrash, industrial, and progressive metal."
+    },
+    {
+      "seed": "Metallica - Fade to Black",
+      "pass": true,
+      "reason": "Metal ballads and adjacent metal peers dominate without an unrelated top-three result."
+    },
+    {
+      "seed": "Thelonious Monk - Round Midnight",
+      "pass": true,
+      "reason": "Five jazz recordings spanning canonical hard-bop and big-band peers."
+    },
+    {
+      "seed": "Miles Davis - So What",
+      "pass": true,
+      "reason": "Five modal/hard-bop jazz peers; collaborator credits remain within scene."
+    },
+    {
+      "seed": "Pixies - Where Is My Mind?",
+      "pass": false,
+      "reason": "Massive Attack trip-hop remains at position 1, repeating the known scene mismatch."
+    },
+    {
+      "seed": "The Velvet Underground - Heroin",
+      "pass": true,
+      "reason": "Five coherent art-rock, proto-indie, and songwriter peers."
+    },
+    {
+      "seed": "The Weeknd - Starboy",
+      "pass": false,
+      "reason": "An aespa remix and an unrelated obscure item occupy positions 1-2; only three clear R&B/pop peers remain."
+    },
+    {
+      "seed": "The Weeknd - Save Your Tears",
+      "pass": true,
+      "reason": "Five adjacent synth-pop, contemporary pop, and R&B artists with no obvious top-three scene break."
+    },
+    {
+      "seed": "Post Malone - Chemical",
+      "pass": true,
+      "reason": "Teddy Swims, Pia Mia, and Ruel preserve pop/R&B crossover at the top; the full list remains adjacent."
+    },
+    {
+      "seed": "JVKE - Golden Hour",
+      "pass": false,
+      "reason": "Indie rock, gospel, and J-pop occupy positions 1-3 for a piano-pop seed."
+    }
+  ],
+  "preview_disclosure": "All 100 locked-result Deezer preview URLs returned as available and the actual ranked metadata was inspected. No claim of human audible playback is made."
+}

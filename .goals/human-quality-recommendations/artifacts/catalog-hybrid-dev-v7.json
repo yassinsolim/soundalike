@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "split": "development-only",
+  "final_labels_compared": false,
+  "benchmark_sha256": "b2fbf24962f0d1b73cdfee0e333b5ae9b3befdcb364a5f420dc465650b570324",
+  "index_sha256": "f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9",
+  "records": 40,
+  "candidate_recall": {
+    "audio_only": {
+      "recall_at_100": 0.19555555555555554,
+      "recall_at_500": 0.44125,
+      "recall_at_1000": 0.5758333333333334
+    },
+    "music4all_sparse": {
+      "recall_at_100": 0.32819444444444446,
+      "recall_at_500": 0.44027777777777777,
+      "recall_at_1000": 0.4636111111111111
+    },
+    "catalog_wide_graph": {
+      "recall_at_100": 0.4604166666666666,
+      "recall_at_500": 0.4604166666666666,
+      "recall_at_1000": 0.4604166666666666
+    },
+    "hybrid_union": {
+      "recall_at_100": 0.5322222222222223,
+      "recall_at_500": 0.7037500000000001,
+      "recall_at_1000": 0.7655555555555555
+    }
+  },
+  "candidate_recall_gate": {
+    "minimum_absolute_lift_at_1000": 0.1,
+    "absolute_lift_at_1000": 0.18972222222222213,
+    "passes": true
+  },
+  "metrics": {
+    "production": {
+      "ndcg_at_10": 0.0713106130333799,
+      "mrr_at_10": 0.19912698412698412,
+      "recall_at_10": 0.06013888888888889,
+      "primary": 0.0713106130333799
+    },
+    "audio_only": {
+      "ndcg_at_10": 0.0322707277499022,
+      "mrr_at_10": 0.08486111111111111,
+      "recall_at_10": 0.02986111111111111,
+      "primary": 0.0322707277499022
+    },
+    "music4all_sparse": {
+      "ndcg_at_10": 0.2482467196370905,
+      "mrr_at_10": 0.5185714285714285,
+      "recall_at_10": 0.19902777777777778,
+      "primary": 0.2482467196370905
+    },
+    "catalog_graph": {
+      "ndcg_at_10": 0.19623961703047588,
+      "mrr_at_10": 0.3791269841269841,
+      "recall_at_10": 0.1798611111111111,
+      "primary": 0.19623961703047588
+    },
+    "hybrid": {
+      "ndcg_at_10": 0.24443915364229607,
+      "mrr_at_10": 0.4902678571428572,
+      "recall_at_10": 0.22027777777777774,
+      "primary": 0.24443915364229607
+    }
+  },
+  "comparisons_to_production": {
+    "audio_only": {
+      "baseline_primary": 0.0713106130333799,
+      "winner_primary": 0.0322707277499022,
+      "absolute_delta": -0.03903988528347771,
+      "relative_gain": -0.547462483111784,
+      "ci95_low": -0.06893791929550719,
+      "ci95_high": -0.012859624958278292,
+      "probability_positive": 0.00115
+    },
+    "music4all_sparse": {
+      "baseline_primary": 0.0713106130333799,
+      "winner_primary": 0.2482467196370905,
+      "absolute_delta": 0.17693610660371056,
+      "relative_gain": 2.4812029945793377,
+      "ci95_low": 0.11360596210390454,
+      "ci95_high": 0.24032038042913426,
+      "probability_positive": 1.0
+    },
+    "catalog_graph": {
+      "baseline_primary": 0.0713106130333799,
+      "winner_primary": 0.19623961703047588,
+      "absolute_delta": 0.12492900399709599,
+      "relative_gain": 1.751899172969075,
+      "ci95_low": 0.06524020571381055,
+      "ci95_high": 0.18713599791557575,
+      "probability_positive": 1.0
+    },
+    "hybrid": {
+      "baseline_primary": 0.0713106130333799,
+      "winner_primary": 0.24443915364229607,
+      "absolute_delta": 0.17312854060891616,
+      "relative_gain": 2.427808894699533,
+      "ci95_low": 0.1066185879234341,
+      "ci95_high": 0.24342834885523487,
+      "probability_positive": 1.0
+    }
+  },
+  "ablations": {
+    "graph_only": {
+      "ndcg_at_10": 0.19623961703047588,
+      "mrr_at_10": 0.3791269841269841,
+      "recall_at_10": 0.1798611111111111,
+      "primary": 0.19623961703047588
+    },
+    "audio_only": {
+      "ndcg_at_10": 0.0322707277499022,
+      "mrr_at_10": 0.08486111111111111,
+      "recall_at_10": 0.02986111111111111,
+      "primary": 0.0322707277499022
+    },
+    "hybrid": {
+      "ndcg_at_10": 0.24443915364229607,
+      "mrr_at_10": 0.4902678571428572,
+      "recall_at_10": 0.22027777777777774,
+      "primary": 0.24443915364229607
+    },
+    "music4all_sparse": {
+      "ndcg_at_10": 0.2482467196370905,
+      "mrr_at_10": 0.5185714285714285,
+      "recall_at_10": 0.19902777777777778,
+      "primary": 0.2482467196370905
+    },
+    "static_popularity_weight": 0.0
+  },
+  "query_modes": {
+    "catalog=catalog_artist_graph;music4all=artist": 18,
+    "catalog=catalog_artist_graph;music4all=track": 8,
+    "catalog=catalog_artist_graph;music4all=audio_bridge": 2,
+    "catalog=audio_projected_artist_bridge;music4all=artist": 6,
+    "catalog=audio_projected_artist_bridge;music4all=audio_bridge": 5,
+    "catalog=audio_projected_artist_bridge;music4all=track": 1
+  },
+  "selected_scorer": {
+    "feature_names": [
+      "audio_blend",
+      "sonic_cosine",
+      "clap_cosine",
+      "vibe_cosine",
+      "catalog_graph_strength",
+      "catalog_graph_reciprocal_rank",
+      "music4all_strength",
+      "music4all_reciprocal_rank",
+      "source_agreement",
+      "scene_consistency",
+      "global_popularity_zero"
+    ],
+    "coefficients": [
+      0.15000000596046448,
+      0.0,
+      0.0,
+      0.0,
+      1.5,
+      0.5,
+      0.20000000298023224,
+      4.0,
+      0.25,
+      0.20000000298023224,
+      0.0
+    ],
+    "scene_guard": true,
+    "global_popularity_weight": 0.0
+  },
+  "scene_guard": {
+    "positions": 3,
+    "rule": "candidates below DEV-fixed scene-consistency quantile 0.35 cannot occupy positions 1-3"
+  },
+  "wall_seconds": 117.23799490000238,
+  "content_sha256": "c1fb5895078285e9a0f34da04c5febba20799232b717aee60ff1b81458afa769"
+}

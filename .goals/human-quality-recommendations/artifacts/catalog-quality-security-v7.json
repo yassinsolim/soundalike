@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-12",
+  "quality_gate": {
+    "command": ".\\.venv\\Scripts\\python.exe -m pytest tests\\ -q",
+    "passed": true,
+    "tests": 419,
+    "seconds": 18.88
+  },
+  "package_build": {
+    "command": ".\\.venv\\Scripts\\python.exe -m build",
+    "passed": true
+  },
+  "dependency_scans": {
+    "requirements_pip_audit": "No known vulnerabilities found",
+    "installed_environment_pip_audit": "No known vulnerabilities found; local CUDA torch packages and the project are not on PyPI and were skipped",
+    "dependency_manifests_changed": false,
+    "pip_check": "One pre-existing research-environment conflict: laion-clap 1.1.7 declares numpy<2 while the local research venv has numpy 2.4.6; neither package/version was changed by iteration 6."
+  },
+  "secret_scans": {
+    "github_secret_scanning": "Unavailable because GitHub Advanced Security is not enabled for yassinsolim/soundalike",
+    "local_full_staged_scan": {
+      "files_scanned": 32,
+      "private_key_or_aws_findings": 0,
+      "retained_private_signing_keys": 0,
+      "public_keys_and_detached_signatures_only": true
+    }
+  },
+  "reviews": {
+    "code_review": "Substantive findings fixed: featured-credit split isolation, measured projection coverage, direct gate binding, read-only topology count, external overlap reporting.",
+    "security_review": "No high-confidence vulnerabilities after detached-signature enforcement fix.",
+    "final_rereview": "No substantive security findings; external overlap and cold-bridge measurement findings fixed."
+  },
+  "immutable_goal_modified": false,
+  "quality_filter_real_index": {
+    "source_artifact": ".goals/human-quality-recommendations/artifacts/quality-filter-real-index-v5.json",
+    "filter_logic_changed": false,
+    "index_rows": 272853,
+    "obvious_false_negatives": 0,
+    "curated_false_positives": 0
+  },
+  "deployment": {
+    "iteration6_deployed": false,
+    "reason": "Fresh FINAL and direct-coherence gates failed."
+  }
+}

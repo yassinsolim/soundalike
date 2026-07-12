@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "sources": {
+    "catalog_graph": {
+      "name": "Last.fm-360K",
+      "doi": "https://doi.org/10.5281/zenodo.6090214",
+      "url": "https://zenodo.org/api/records/6090214/files/lastfm-dataset-360K.tar.gz/content",
+      "archive_md5": "635e6ed3fc873aa4ba33aba0ebce02b1",
+      "license": "Last.fm permission; non-commercial use only (Zenodo license other-nc)",
+      "statistics": "17,559,530 user-artist-play tuples from 359,347 users"
+    },
+    "sparse_track_graph": {
+      "name": "Music4All-Onion",
+      "doi": "https://doi.org/10.5281/zenodo.6609677",
+      "license": "CC-BY-4.0"
+    },
+    "final_benchmark": [
+      "Deezer related artists",
+      "ListenBrainz session similarity"
+    ]
+  },
+  "source_independence": {
+    "same_dataset_or_api": false,
+    "training": [
+      "Last.fm-360K",
+      "Music4All-Onion"
+    ],
+    "evaluation": [
+      "Deezer",
+      "ListenBrainz"
+    ]
+  },
+  "coverage": {
+    "catalogue_tracks": 272853,
+    "catalogue_artists": 18258,
+    "source_mapped_tracks": 142767,
+    "source_mapped_artists": 6126,
+    "track_coverage": 0.5232377873800178,
+    "query_artist_coverage": 0.33552415379559647,
+    "effective_graph_tracks": 272853,
+    "effective_graph_artists": 18258,
+    "effective_track_coverage": 1.0,
+    "effective_query_artist_coverage": 1.0,
+    "cold_start_bridge_coverage": 1.0
+  },
+  "cold_start_projection": {
+    "method": "audio-centroid-to-collaborative-anchor-distillation",
+    "anchors": 8,
+    "projected_artists": 12132,
+    "backend": "torch-NVIDIA GeForce RTX 5080",
+    "seconds": 1.215017299997271,
+    "static_popularity_used": false
+  },
+  "leakage_mask_audit": {
+    "final_positive_edges": 706,
+    "exact_edges_present_before_mask": 220,
+    "directed_edge_slots_removed": 440,
+    "exact_edges_present_after_mask": 0,
+    "two_hop_paths_before_mask": 17132,
+    "edge_slots_removed_to_break_two_hop_paths": 10141,
+    "two_hop_paths_after_mask": 0,
+    "two_hop_paths_before_mask_progressive_legacy": 6823,
+    "counting_correction": "Read-only count on the original direct-masked graph; the earlier 6823 count was order-dependent during mutation."
+  },
+  "benchmark_counts": {
+    "development": 40,
+    "final": 60,
+    "final_scenes": 14,
+    "minimum_positives": 6,
+    "maximum_positives": 12
+  },
+  "runtime_contains_secret": false,
+  "visitor_credentials_required": false,
+  "projection_validation": {
+    "artists_with_nonempty_full_graph_neighborhood": 18258,
+    "catalogue_artists": 18258,
+    "tracks_whose_artist_has_graph_neighborhood": 272853,
+    "catalogue_tracks": 272853,
+    "measured_effective_artist_coverage": 1.0,
+    "measured_effective_track_coverage": 1.0
+  },
+  "benchmark_source_declaration_erratum": {
+    "frozen_top_level_value": "ListenBrainz session-based similar recordings",
+    "actual_record_level_primary_source": "Deezer related artists for 100/100 records",
+    "records_with_additional_listenbrainz_evidence": 38,
+    "impact": "No source-family leakage: both evaluation services are independent of Last.fm-360K and Music4All. The signed benchmark is not modified after FINAL; per-record sources are authoritative.",
+    "future_builder_fixed": true
+  }
+}
