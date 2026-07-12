@@ -1,0 +1,84 @@
+{
+  "schema_version": 8,
+  "created_at": "2026-07-12",
+  "quality_gate": {
+    "command": ".\\.venv\\Scripts\\python.exe -m pytest tests\\ -q",
+    "passed": true,
+    "tests_passed": 459,
+    "duration_seconds": 19.34
+  },
+  "package_build": {
+    "command": ".\\.venv\\Scripts\\python.exe -m build",
+    "passed": true,
+    "artifacts": [
+      "soundalike-0.1.0.tar.gz",
+      "soundalike-0.1.0-py3-none-any.whl"
+    ]
+  },
+  "dependency_audit": {
+    "command": ".\\.venv\\Scripts\\python.exe -m pip_audit",
+    "passed": true,
+    "packages_audited": 28,
+    "known_vulnerabilities": 0,
+    "skipped": [
+      {
+        "package": "soundalike",
+        "version": "0.1.0",
+        "reason": "local package not on PyPI"
+      },
+      {
+        "package": "torch",
+        "version": "2.13.0+cu130",
+        "reason": "custom CUDA build not on PyPI"
+      },
+      {
+        "package": "torchaudio",
+        "version": "2.11.0+cu130",
+        "reason": "custom CUDA build not on PyPI"
+      },
+      {
+        "package": "torchvision",
+        "version": "0.28.0+cu130",
+        "reason": "custom CUDA build not on PyPI"
+      }
+    ],
+    "dependency_manifest_changes": 0
+  },
+  "security_review": {
+    "passed": true,
+    "specialized_review_findings": 0,
+    "categories": "injection, path handling, subprocess, signatures, deserialization, network, secrets, resource DoS, silent fallbacks"
+  },
+  "secret_scan": {
+    "command": "detect-secrets 1.5.0 over every staged ACM file",
+    "passed": true,
+    "true_secrets": 0,
+    "private_keys": 0,
+    "findings_reviewed": "Hex high-entropy findings are explicit SHA-256/MD5/content/integrity hashes; no credential detector finding.",
+    "github_mcp": {
+      "attempted": true,
+      "available": false,
+      "reason": "Repository does not have GitHub Advanced Security enabled"
+    },
+    "local_all_staged_files": true
+  },
+  "integrity": {
+    "git_diff_check": true,
+    "immutable_goal_modified": false,
+    "protocol_v7_modified": false,
+    "protocol_v8_development_signature_verified": true,
+    "signature_algorithm": "Ed25519 detached SSH signature",
+    "final_open_count": 0,
+    "fresh_final_created": false
+  },
+  "review": {
+    "code_review_findings": 0,
+    "security_review_findings": 0
+  },
+  "evidence_sha256": {
+    "catalog-dev-cv-v8.json": "1c4379115788f0e5536fa2eb569041687b8b16a44944b756ec0453f898a05530",
+    "catalog-direct-validation-v8.json": "56c21c7d71acee751aa02e1669b7fcde596411c5a4e89feef86c7fefa059022b",
+    "catalog-resources-v8.json": "a546bc06804f6e8d496626ae6e04c172d44fc272c2cbb86829da646ccb7ab697",
+    "catalog-deployment-status-v8.json": "863043ca2636c5d52d9bb40d4a2bfef2a224087bb2f81d5b5b0ef84ea273626e"
+  }
+}

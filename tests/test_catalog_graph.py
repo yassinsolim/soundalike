@@ -7,6 +7,7 @@ import pytest
 
 from soundalike.ml.catalog_graph import (
     CatalogArtistGraph,
+    compact_full_graph,
     mask_final_topology,
 )
 from soundalike.ml.catalog_protocol import ProtocolError, validate_benchmark
@@ -82,6 +83,78 @@ def test_catalog_track_expansion_interleaves_artists(tmp_path):
     )
     assert rows.tolist()[:2] == [2, 3]
     assert len(rows) == len(set(rows.tolist()))
+
+
+def test_compact_full_graph_round_trip_preserves_full_ranking_and_dtypes(
+    tmp_path,
+):
+    source = _graph_asset(tmp_path / "source.npz")
+    compact = compact_full_graph(source, tmp_path / "compact.npz")
+    original = CatalogArtistGraph(source)
+    runtime = CatalogArtistGraph(compact)
+
+    query = np.asarray([1.0, 0.0], dtype=np.float32)
+    expected = original.artist_neighbors("a", query, variant="full")
+    actual = runtime.artist_neighbors("a", query, variant="full")
+    assert actual[0].tolist() == expected[0].tolist()
+    np.testing.assert_allclose(actual[1], expected[1], rtol=1e-3)
+    assert runtime.variants["full"][0].dtype == np.int16
+    assert runtime.variants["full"][1].dtype == np.float16
+    assert runtime.artist_audio.dtype == np.float16
+
+
+def test_compact_full_graph_omits_masks_and_reduces_bytes(tmp_path):
+    source = _graph_asset(tmp_path / "source.npz")
+    compact = compact_full_graph(source, tmp_path / "compact.npz")
+    with np.load(compact, allow_pickle=False) as asset:
+        assert set(asset.files) == {
+            "artist_names",
+            "track_artist_ids",
+            "track_rows",
+            "track_indptr",
+            "source_mapped",
+            "artist_audio",
+            "full_indices",
+            "full_weights",
+            "metadata",
+        }
+        metadata = json.loads(str(asset["metadata"].item()))
+        assert metadata["intended_signal"] == "full_unmasked"
+        assert metadata["masked_variants"]["included"] is False
+        assert metadata["silent_fallback"] is False
+        assert len(metadata["source_sha256"]) == 64
+    assert compact.stat().st_size < source.stat().st_size * 0.85
+
+
+def test_compact_graph_rejects_absent_mask_without_fallback(tmp_path):
+    compact = compact_full_graph(
+        _graph_asset(tmp_path / "source.npz"), tmp_path / "compact.npz"
+    )
+    graph = CatalogArtistGraph(compact)
+    with pytest.raises(ValueError, match="twohop.*absent.*No fallback"):
+        graph.artist_neighbors(
+            "a", np.asarray([1.0, 0.0]), variant="twohop"
+        )
+
+
+def test_catalog_graph_requires_full_but_keeps_legacy_variants(tmp_path):
+    legacy = CatalogArtistGraph(_graph_asset(tmp_path / "legacy.npz"))
+    assert set(legacy.variants) == {"full", "direct", "twohop"}
+    assert legacy.variants["full"][0].dtype == np.int32
+    assert legacy.variants["full"][1].dtype == np.float32
+    rows, _, _ = legacy.artist_neighbors(
+        "a", np.asarray([1.0, 0.0]), variant="twohop"
+    )
+    assert rows.tolist() == [1]
+
+    missing = tmp_path / "missing-full.npz"
+    np.savez_compressed(
+        missing,
+        artist_names=np.asarray(["a"]),
+        full_indices_missing=np.asarray([[-1]], dtype=np.int16),
+    )
+    with pytest.raises(ValueError, match="requires the full variant"):
+        CatalogArtistGraph(missing)
 
 
 def test_two_hop_mask_breaks_direct_and_transitive_paths():

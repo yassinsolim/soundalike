@@ -505,6 +505,57 @@ The compact static additions total 25,222,632 bytes. Measured process RSS was 2.
 retuned after FINAL.** Live verification on ten seeds confirms 272,853 tracks,
 `2026.07.11-dual-sonic64`, working search/recommend requests, and 50/50 available previews.
 
+### Graph-first generalization preflight (iteration 7)
+
+Iteration 7 did **not** consume another FINAL. It first corrected the signed-v7 provenance summary
+in a new detached-Ed25519-signed development protocol: Deezer related artists supplied the primary
+labels for 100/100 v7 records, while ListenBrainz supplied secondary evidence for 38. Last.fm-360K
+and Music4All share neither dataset, operator, API, nor numeric IDs with Deezer. A read-only audit
+found legitimate cross-source agreement on 430/1,170 resolved Last.fm→Deezer artist edges (36.8%)
+and 285/346 Music4All learned top-96 neighborhoods (82.4%). Unmasked Last.fm direct edges were
+therefore predeclared as the intended query-conditioned collaborative signal; masks remain
+mechanism diagnostics, not deciding constraints.
+
+The 11-feature scorer was replaced by a three-parameter policy fixed before any new FINAL:
+
+`G = 0.7·normalized_edge_weight + 0.3/log2(edge_rank+1)`
+
+`score = G + audio_weight·A + style_weight·S`
+
+Here `A` is a fixed Sonic64/CLAP/vibe blend and `S` is broad style overlap from MusicBrainz
+community tags. The catalogue-wide style asset directly labels 208 artists and deterministically
+propagates audio-nearest multi-label vectors to all 18,258 artists; it is 575,524 bytes and does not
+use Last.fm, Music4All, benchmark labels, or popularity. The selected DEV policy was
+`audio_weight=0.30`, `style_weight=0.35`, `style_guard_min=0.0`. At the selected zero guard it
+excluded 0/47 resolved genre-blending positives; diagnostic thresholds 0.15 and 0.25 would falsely
+exclude 3/47 and 4/47.
+
+All legitimate opened evidence was considered: v6 is the de-duplicated Category-A superset of
+v1-v5, and all 100 now-opened v7 records were included. Five of 295 records were catalogue
+unresolvable, leaving 290 records and 254 unique queries. Against the **currently deployed**
+`dual_sonic64_guardrail`, nested five-fold relative composite gains were **+14.7%, +18.6%, +6.0%,
++18.1%, and +8.5%**—every fold missed the required +20%. Overall candidate recall@1000 improved
+0.1996→0.2654, nDCG@10 0.03477→0.04882, MRR 0.08707→0.10353, and Recall@10
+0.02844→0.04520, but the predeclared 80% relevance/20% independent-style composite improved only
+0.19461→0.22035 (**+13.2%**). Only 4/17 broad scene-held-out folds passed every gate; African
+(-13.6%), classical (-25.3%), reggae/dub/ska (-36.1%), and `other` (-10.7%) breached the -10% floor.
+
+A separately locked, previously unreviewed 20-seed direct review resolved all queries and exposed
+previews for all 100 challenger and 100 production results. Actual names, artists, G/A/S
+rationales, propagated styles, and junk flags were recorded position by position. The challenger
+passed **13/20**, below 16: SOPHIE, underscores, Daft Punk, Mariya Takeuchi, NewJeans, Bad Bunny,
+and Gorillaz failed; no junk or seed-title variant appeared.
+
+The serving candidate now stores only the full graph (`int16` neighbors / `float16` weights), cutting
+the graph 23.2→11.4 MB (50.8%). An isolated process measured 5.91 s load, **1.493 GB peak RSS**,
+1.219 GB resident (the core index alone was 1.191 GB, so the 1.1 GB resident target is not feasible
+without reformatting it), 110 ms first recommendation, and 113 ms warm mean / 133 ms p95, with zero
+fallbacks. The conservative documented Vercel Hobby limit is 2 GB, leaving 655 MB peak headroom.
+
+Because cross-validation and direct review both failed, the protocol remained
+`DEVELOPMENT_LOCKED` with `final_open_count=0`: **no fresh FINAL was built or opened, no release
+asset was uploaded, and production remains unchanged.**
+
 ### Growing the library past the bundle limit
 
 The ~87k-song index ships bundled (75 MB, under GitHub's 100 MB per-file cap), so the tool works

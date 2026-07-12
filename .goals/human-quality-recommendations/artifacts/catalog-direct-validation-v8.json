@@ -1,0 +1,131 @@
+{
+  "coherence_inferred": false,
+  "effective_passes": 13,
+  "gate_met": false,
+  "judgments": 20,
+  "lists_sha256": "1f0fcb07c6390c4c2d4094a73b299e83f7dc5d9a977e27cf96c16358f538a5fe",
+  "per_seed": [
+    {
+      "automatic_failure": false,
+      "effective_pass": true,
+      "human_pass": true,
+      "id": "direct-01"
+    },
+    {
+      "automatic_failure": false,
+      "effective_pass": true,
+      "human_pass": true,
+      "id": "direct-02"
+    },
+    {
+      "automatic_failure": false,
+      "effective_pass": true,
+      "human_pass": true,
+      "id": "direct-03"
+    },
+    {
+      "automatic_failure": false,
+      "effective_pass": true,
+      "human_pass": true,
+      "id": "direct-04"
+    },
+    {
+      "automatic_failure": false,
+      "effective_pass": true,
+      "human_pass": true,
+      "id": "direct-05"
+    },
+    {
+      "automatic_failure": false,
+      "effective_pass": true,
+      "human_pass": true,
+      "id": "direct-06"
+    },
+    {
+      "automatic_failure": false,
+      "effective_pass": true,
+      "human_pass": true,
+      "id": "direct-07"
+    },
+    {
+      "automatic_failure": false,
+      "effective_pass": false,
+      "human_pass": false,
+      "id": "direct-08"
+    },
+    {
+      "automatic_failure": false,
+      "effective_pass": false,
+      "human_pass": false,
+      "id": "direct-09"
+    },
+    {
+      "automatic_failure": false,
+      "effective_pass": true,
+      "human_pass": true,
+      "id": "direct-10"
+    },
+    {
+      "automatic_failure": false,
+      "effective_pass": false,
+      "human_pass": false,
+      "id": "direct-11"
+    },
+    {
+      "automatic_failure": false,
+      "effective_pass": true,
+      "human_pass": true,
+      "id": "direct-12"
+    },
+    {
+      "automatic_failure": false,
+      "effective_pass": true,
+      "human_pass": true,
+      "id": "direct-13"
+    },
+    {
+      "automatic_failure": false,
+      "effective_pass": true,
+      "human_pass": true,
+      "id": "direct-14"
+    },
+    {
+      "automatic_failure": false,
+      "effective_pass": true,
+      "human_pass": true,
+      "id": "direct-15"
+    },
+    {
+      "automatic_failure": false,
+      "effective_pass": false,
+      "human_pass": false,
+      "id": "direct-16"
+    },
+    {
+      "automatic_failure": false,
+      "effective_pass": false,
+      "human_pass": false,
+      "id": "direct-17"
+    },
+    {
+      "automatic_failure": false,
+      "effective_pass": false,
+      "human_pass": false,
+      "id": "direct-18"
+    },
+    {
+      "automatic_failure": false,
+      "effective_pass": true,
+      "human_pass": true,
+      "id": "direct-19"
+    },
+    {
+      "automatic_failure": false,
+      "effective_pass": false,
+      "human_pass": false,
+      "id": "direct-20"
+    }
+  ],
+  "required_passes": 16,
+  "schema_version": 1
+}

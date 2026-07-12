@@ -1,0 +1,227 @@
+{
+  "schema_version": 8,
+  "audit_kind": "record-level-source-independence",
+  "inputs": {
+    "v7_benchmark_path": "benchmarks\\soundalike_multipositive.v7.json",
+    "v7_benchmark_sha256": "b2fbf24962f0d1b73cdfee0e333b5ae9b3befdcb364a5f420dc465650b570324",
+    "catalog_graph_path": "ml_data\\iteration6\\catalog_graph\\catalog-artist-graph.npz",
+    "catalog_graph_sha256": "10cc0e8490d834439a22e3c434bab5b8383ea49aa80536fa5bc516d3726861b5",
+    "music4all_full_path": "ml_data\\iteration5\\collaborative\\item2vec-full.npz",
+    "music4all_full_sha256": "59a24b298e93773d59307b7c1dc24e4cbfffb6ae24122537fb51ae669e468ecd"
+  },
+  "signed_v7_erratum": {
+    "frozen_incorrect_declaration": "ListenBrainz session-based similar recordings",
+    "actual_primary_source": "Deezer related artists",
+    "records": 100,
+    "records_with_deezer_primary": 100,
+    "records_with_listenbrainz_secondary": 38,
+    "all_record_primary_sources_are_deezer": true
+  },
+  "deezer_directed_edges": {
+    "unique_query_positive_artist_edges": 1170,
+    "identity": "normalized artist names, directed query->positive"
+  },
+  "lastfm_360k_vs_deezer": {
+    "dataset": "Last.fm-360K user/artist play histories vs Deezer related artists",
+    "operator": "Last.fm dataset publisher vs Deezer service",
+    "api": "offline Last.fm-360K archive vs api.deezer.com related-artists API",
+    "id_namespace": "catalogue artist rows/names vs Deezer numeric artist/track IDs",
+    "same_dataset": false,
+    "same_operator": false,
+    "same_api": false,
+    "shared_numeric_id_namespace": false,
+    "resolved_deezer_edges": 1170,
+    "full_top_neighbor_edge_overlap": 430,
+    "overlap_fraction_of_resolved": 0.36752136752136755,
+    "overlap_examples": [
+      [
+        "99zed",
+        "baker ya maker"
+      ],
+      [
+        "99zed",
+        "mvko"
+      ],
+      [
+        "99zed",
+        "ytd"
+      ],
+      [
+        "a ha",
+        "culture club"
+      ],
+      [
+        "a ha",
+        "cyndi lauper"
+      ],
+      [
+        "a ha",
+        "duran duran"
+      ],
+      [
+        "a ha",
+        "erasure"
+      ],
+      [
+        "a ha",
+        "eurythmics"
+      ],
+      [
+        "a ha",
+        "inxs"
+      ],
+      [
+        "a ha",
+        "pet shop boys"
+      ],
+      [
+        "a ha",
+        "rick astley"
+      ],
+      [
+        "a ha",
+        "roxette"
+      ],
+      [
+        "a ha",
+        "simply red"
+      ],
+      [
+        "a ha",
+        "tina turner"
+      ],
+      [
+        "a tribe called quest",
+        "de la soul"
+      ],
+      [
+        "a tribe called quest",
+        "digable planets"
+      ],
+      [
+        "a tribe called quest",
+        "gang starr"
+      ],
+      [
+        "a tribe called quest",
+        "mos def"
+      ],
+      [
+        "a tribe called quest",
+        "pete rock"
+      ],
+      [
+        "a tribe called quest",
+        "q tip"
+      ]
+    ]
+  },
+  "music4all_onion_vs_deezer": {
+    "dataset": "Music4All-Onion listening histories vs Deezer related artists",
+    "operator": "Music4All-Onion researchers/Last.fm extraction vs Deezer service",
+    "api": "offline Music4All-Onion corpus vs api.deezer.com related-artists API",
+    "id_namespace": "Music4All track IDs/catalogue rows vs Deezer numeric IDs",
+    "same_dataset": false,
+    "same_operator": false,
+    "same_api": false,
+    "shared_numeric_id_namespace": false,
+    "overlap_kind": "learned top-96 artist-neighborhood overlap from L2-normalized Music4All artist vectors; not raw cooccurrence",
+    "raw_cooccurrence_available": false,
+    "resolved_deezer_edges": 346,
+    "learned_top96_artist_neighborhood_overlap": 285,
+    "overlap_fraction_of_resolved": 0.8236994219653179,
+    "overlap_examples": [
+      [
+        "a ha",
+        "culture club"
+      ],
+      [
+        "a ha",
+        "cyndi lauper"
+      ],
+      [
+        "a ha",
+        "duran duran"
+      ],
+      [
+        "a ha",
+        "erasure"
+      ],
+      [
+        "a ha",
+        "eurythmics"
+      ],
+      [
+        "a ha",
+        "genesis"
+      ],
+      [
+        "a ha",
+        "inxs"
+      ],
+      [
+        "a ha",
+        "roxette"
+      ],
+      [
+        "a ha",
+        "simply red"
+      ],
+      [
+        "a ha",
+        "tina turner"
+      ],
+      [
+        "a tribe called quest",
+        "gang starr"
+      ],
+      [
+        "a tribe called quest",
+        "mos def"
+      ],
+      [
+        "a tribe called quest",
+        "pete rock"
+      ],
+      [
+        "a tribe called quest",
+        "slick rick"
+      ],
+      [
+        "a tribe called quest",
+        "souls of mischief"
+      ],
+      [
+        "a tribe called quest",
+        "the roots"
+      ],
+      [
+        "alvvays",
+        "japanese breakfast"
+      ],
+      [
+        "armin van buuren",
+        "ummet ozcan"
+      ],
+      [
+        "art blakey",
+        "dizzy gillespie"
+      ],
+      [
+        "art blakey",
+        "joe henderson"
+      ]
+    ]
+  },
+  "id_isolation": {
+    "passed": true,
+    "catalog_graph_forbidden_id_fields": [],
+    "music4all_forbidden_id_fields": [],
+    "statement": "Deezer numeric artist and track IDs never enter either training asset. Normalized artist names are used only for this read-only overlap audit."
+  },
+  "decision": {
+    "unmasked_lastfm_full_direct_edges_allowed": true,
+    "rationale": "Unmasked full direct edges are intended legitimate query-conditioned collaborative signal because dataset, operator, API, and ID namespace are independent.",
+    "mask_policy": "Direct and two-hop masks are mechanism diagnostics only and never deciding constraints."
+  }
+}

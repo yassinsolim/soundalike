@@ -1,0 +1,9 @@
+{
+  "algorithm": "Ed25519 detached SSH signature",
+  "namespace": "soundalike-protocol",
+  "identity": "soundalike-protocol",
+  "state_sha256": "d4a42afe35efa2e734b5cac2cd4ac2e90cbd1d3c7759eb21f3cd42ade5987c65",
+  "public_key_sha256": "7c320cd8bd32eb5488e9bd1dca1cd8a00655e35e016e08975d519b32904d909e",
+  "allowed_signers_sha256": "87fb55a91f7ab19a6f3866679222f7703f27c6ea3922b5b822f764b92ea6b1bb",
+  "signature_sha256": "b39756b5e5dfa148d13f95a3c467826ae15f04e7380b6232bce0d4adf872cb69"
+}

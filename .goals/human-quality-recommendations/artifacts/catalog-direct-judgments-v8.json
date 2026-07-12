@@ -1,0 +1,3516 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-12",
+  "reviewer_policy": "Actual locked names/artists, preview availability, audio-derived similarity, propagated MusicBrainz styles, and junk flags inspected; no claim of audible playback. Pass applies to catalog_policy list only; production is comparison.",
+  "lists_sha256": "1f0fcb07c6390c4c2d4094a73b299e83f7dc5d9a977e27cf96c16358f538a5fe",
+  "judgments": [
+    {
+      "id": "direct-01",
+      "pass": true,
+      "reason": "Four established alternative-hip-hop peers plus one obscure but tag/audio-adjacent opener; no obvious wrong-scene top-three item.",
+      "positions": [
+        {
+          "list": "catalog_policy",
+          "position": 1,
+          "title": "With You",
+          "artist": "Oblvyn",
+          "rationale": "Oblvyn is obscure, but the hip-hop-leading style vector and audio score make it adjacent rather than clearly off-scene.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.555151641368866,
+          "style_overlap": 0.7052187919616699,
+          "style_labels": [
+            "hip_hop",
+            "rock",
+            "pop",
+            "metal"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 2,
+          "title": "Let the Flakes Fall Where They May",
+          "artist": "Bop Alloy",
+          "rationale": "Bop Alloy is a coherent alternative-hip-hop peer.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6046067476272583,
+          "style_overlap": 0.8377008438110352,
+          "style_labels": [
+            "hip_hop",
+            "punk",
+            "pop",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 3,
+          "title": "WHEN I BALL",
+          "artist": "BROCKHAMPTON",
+          "rationale": "BROCKHAMPTON is a strong alternative-hip-hop match.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6304594874382019,
+          "style_overlap": 0.85064697265625,
+          "style_labels": [
+            "hip_hop",
+            "punk",
+            "pop",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 4,
+          "title": "After Alley Life",
+          "artist": "Jeremiah Jae",
+          "rationale": "Jeremiah Jae is coherent experimental hip-hop.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5838722586631775,
+          "style_overlap": 0.7420721054077148,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "jazz"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 5,
+          "title": "WHOLE WORLD (feat. Maxo)",
+          "artist": "Earl Sweatshirt",
+          "rationale": "Earl Sweatshirt is a strong adjacent match.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6187170743942261,
+          "style_overlap": 0.859105110168457,
+          "style_labels": [
+            "hip_hop",
+            "punk",
+            "pop",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "title": "Reb&Vodka",
+          "artist": "Bones",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.569, and broad styles [hip_hop, metal, electronic, pop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5692762136459351,
+          "style_overlap": 0.5220742225646973,
+          "style_labels": [
+            "hip_hop",
+            "metal",
+            "electronic",
+            "pop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "title": "Let the Flakes Fall Where They May",
+          "artist": "Bop Alloy",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.605, and broad styles [hip_hop, punk, pop, rnb_soul].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6046067476272583,
+          "style_overlap": 0.8377008438110352,
+          "style_labels": [
+            "hip_hop",
+            "punk",
+            "pop",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "title": "No Fuss",
+          "artist": "OG Parker",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.593, and broad styles [hip_hop, rnb_soul, pop, punk].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5927372574806213,
+          "style_overlap": 0.5761027336120605,
+          "style_labels": [
+            "hip_hop",
+            "rnb_soul",
+            "pop",
+            "punk"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "title": "Angels (When She Shuts Her Eyes)",
+          "artist": "Mac Miller",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.619, and broad styles [hip_hop, pop, punk, jazz].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.619333803653717,
+          "style_overlap": 0.8040409088134766,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "jazz"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "title": "nuts",
+          "artist": "Lil Peep",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.581, and broad styles [hip_hop, pop, rnb_soul, electronic].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.581384539604187,
+          "style_overlap": 0.5542669296264648,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "rnb_soul",
+            "electronic"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "direct-02",
+      "pass": true,
+      "reason": "All five are hip-hop peers spanning contemporary and classic scenes.",
+      "positions": [
+        {
+          "list": "catalog_policy",
+          "position": 1,
+          "title": "Both Eyes Closed (From \"Highest 2 Lowest\")",
+          "artist": "A$AP Rocky",
+          "rationale": "A$AP Rocky is a direct contemporary hip-hop peer.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6672767996788025,
+          "style_overlap": 0.85577392578125,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 2,
+          "title": "Loaded",
+          "artist": "MellowHype",
+          "rationale": "MellowHype is coherent alternative hip-hop.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6297397017478943,
+          "style_overlap": 0.86212158203125,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "jazz"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 3,
+          "title": "Dispear",
+          "artist": "Nas & Damian \"Jr. Gong\" Marley",
+          "rationale": "Nas and Damian Marley remain hip-hop/reggae adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6712474822998047,
+          "style_overlap": 0.85302734375,
+          "style_labels": [
+            "hip_hop",
+            "punk",
+            "pop",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 4,
+          "title": "Show Me",
+          "artist": "Joey Bada$$",
+          "rationale": "Joey Bada$$ is a direct lyrical hip-hop peer.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6837115287780762,
+          "style_overlap": 0.85546875,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 5,
+          "title": "Promoter (feat. Man Like Devin & B-Real)",
+          "artist": "Dizzy Wright",
+          "rationale": "Dizzy Wright is a coherent rap peer.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6404492855072021,
+          "style_overlap": 0.8369140625,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "title": "(O.J.) Wake Up",
+          "artist": "Snoop Dogg",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.675, and broad styles [hip_hop, pop, punk, rnb_soul].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6749296188354492,
+          "style_overlap": 0.788482666015625,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "title": "Bucktown (Vocal Mix)",
+          "artist": "Smif-N-Wessun",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.650, and broad styles [hip_hop, pop, punk, rnb_soul].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6501367688179016,
+          "style_overlap": 0.78515625,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "title": "It's Hot (Some Like It Hot)",
+          "artist": "JAŸ-Z",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.662, and broad styles [pop, punk, hip_hop, rnb_soul].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6621974110603333,
+          "style_overlap": 0.75,
+          "style_labels": [
+            "pop",
+            "punk",
+            "hip_hop",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "title": "The Chase, Part II",
+          "artist": "A Tribe Called Quest",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.672, and broad styles [hip_hop, pop, punk, rnb_soul].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6723390817642212,
+          "style_overlap": 0.7576904296875,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "title": "We Live (Danger) (Explicit Album Version)",
+          "artist": "Royce Da 5'9\"",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.688, and broad styles [hip_hop, pop, punk, rnb_soul].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6884938478469849,
+          "style_overlap": 0.816864013671875,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "direct-03",
+      "pass": true,
+      "reason": "Five pop/R&B singers remain coherent for SZA; no top-three scene break.",
+      "positions": [
+        {
+          "list": "catalog_policy",
+          "position": 1,
+          "title": "bye",
+          "artist": "Ariana Grande",
+          "rationale": "Ariana Grande is pop/R&B adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6437636017799377,
+          "style_overlap": 1.0,
+          "style_labels": [
+            "pop",
+            "hip_hop",
+            "rnb_soul",
+            "electronic"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 2,
+          "title": "Lost The Breakup",
+          "artist": "Maisie Peters",
+          "rationale": "Maisie Peters is a looser pop but still melodic singer-songwriter match.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6694198846817017,
+          "style_overlap": 0.9400634765625,
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "electronic",
+            "hip_hop"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 3,
+          "title": "사계 Four Seasons",
+          "artist": "TAEYEON",
+          "rationale": "TAEYEON remains polished pop/R&B adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6555668115615845,
+          "style_overlap": 0.94683837890625,
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "electronic",
+            "hip_hop"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 4,
+          "title": "Rhythm and You",
+          "artist": "Don Louis",
+          "rationale": "Don Louis is R&B adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6782671809196472,
+          "style_overlap": 0.9599609375,
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "hip_hop",
+            "electronic"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 5,
+          "title": "i should've fucked your brother",
+          "artist": "Olivia O'Brien",
+          "rationale": "Olivia O?Brien is pop/R&B adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6464515328407288,
+          "style_overlap": 0.89923095703125,
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "electronic",
+            "rock"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "title": "Toxic",
+          "artist": "Summer Walker",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.582, and broad styles [rnb_soul, pop, hip_hop, folk_country].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5820598006248474,
+          "style_overlap": 0.82012939453125,
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "hip_hop",
+            "folk_country"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "title": "Bad Boy",
+          "artist": "Queen Naija",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.577, and broad styles [rnb_soul, folk_country].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5769973993301392,
+          "style_overlap": 0.353515625,
+          "style_labels": [
+            "rnb_soul",
+            "folk_country"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "title": "DM",
+          "artist": "Valentina",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.614, and broad styles [pop, rnb_soul, folk_country, electronic].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6137410402297974,
+          "style_overlap": 0.84271240234375,
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "folk_country",
+            "electronic"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "title": "My Man & Me",
+          "artist": "Eloise",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.629, and broad styles [rnb_soul, pop, hip_hop, electronic].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6290830969810486,
+          "style_overlap": 0.88623046875,
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "hip_hop",
+            "electronic"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "title": "POOKIE’S REQUIEM (feat. Summer Walker) (hehe look y'all I made it longer)",
+          "artist": "SAILORR",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.566, and broad styles [pop, rnb_soul, hip_hop, electronic].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5661477446556091,
+          "style_overlap": 0.929443359375,
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "hip_hop",
+            "electronic"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "direct-04",
+      "pass": true,
+      "reason": "All five are shoegaze/dream-pop artists with strong scene tags.",
+      "positions": [
+        {
+          "list": "catalog_policy",
+          "position": 1,
+          "title": "Morningrise",
+          "artist": "Slowdive",
+          "rationale": "Slowdive is a canonical shoegaze match.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6546391248703003,
+          "style_overlap": 0.7303009033203125,
+          "style_labels": [
+            "pop",
+            "rock",
+            "art_rock",
+            "shoegaze_dream_pop"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 2,
+          "title": "Tree Chopped Down",
+          "artist": "Swirlies",
+          "rationale": "Swirlies is a canonical noisy shoegaze match.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6499091982841492,
+          "style_overlap": 0.82464599609375,
+          "style_labels": [
+            "rock",
+            "pop",
+            "shoegaze_dream_pop",
+            "metal"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 3,
+          "title": "Plastic Bag",
+          "artist": "CASTLEBEAT",
+          "rationale": "CASTLEBEAT is dream-pop/indie adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6348158121109009,
+          "style_overlap": 0.8621001243591309,
+          "style_labels": [
+            "rock",
+            "pop",
+            "shoegaze_dream_pop",
+            "electronic"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 4,
+          "title": "It's Not a Movie",
+          "artist": "Woah",
+          "rationale": "Woah is shoegaze/dream-pop adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.659709632396698,
+          "style_overlap": 0.8478500843048096,
+          "style_labels": [
+            "pop",
+            "rock",
+            "shoegaze_dream_pop",
+            "electronic"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 5,
+          "title": "Age of Fluctuation",
+          "artist": "Parannoul",
+          "rationale": "Parannoul is a strong modern shoegaze match.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6517986059188843,
+          "style_overlap": 0.8674507141113281,
+          "style_labels": [
+            "rock",
+            "punk",
+            "shoegaze_dream_pop",
+            "metal"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "title": "Beneath (2001 Remaster)",
+          "artist": "Ride",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.639, and broad styles [rock, punk, shoegaze_dream_pop, pop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6386125087738037,
+          "style_overlap": 0.8951864242553711,
+          "style_labels": [
+            "rock",
+            "punk",
+            "shoegaze_dream_pop",
+            "pop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "title": "Happy When It Rains",
+          "artist": "The Jesus And Mary Chain",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.628, and broad styles [rock, metal, punk, shoegaze_dream_pop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6281043887138367,
+          "style_overlap": 0.7848987579345703,
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "shoegaze_dream_pop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "title": "The Itchy Glowbo Blow",
+          "artist": "Cocteau Twins",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.603, and broad styles [pop, rock, shoegaze_dream_pop, punk].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6034662127494812,
+          "style_overlap": 0.8001861572265625,
+          "style_labels": [
+            "pop",
+            "rock",
+            "shoegaze_dream_pop",
+            "punk"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "title": "Tundra Leech",
+          "artist": "Darkthrone",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.613, and broad styles [rock, metal, punk, shoegaze_dream_pop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6128697395324707,
+          "style_overlap": 0.7249503135681152,
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "shoegaze_dream_pop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "title": "San Cristobal De Las Casas",
+          "artist": "Swirlies",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.639, and broad styles [rock, pop, shoegaze_dream_pop, metal].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6392440795898438,
+          "style_overlap": 0.82464599609375,
+          "style_labels": [
+            "rock",
+            "pop",
+            "shoegaze_dream_pop",
+            "metal"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "direct-05",
+      "pass": true,
+      "reason": "All five remain within dream-pop, ethereal, or shoegaze scenes.",
+      "positions": [
+        {
+          "list": "catalog_policy",
+          "position": 1,
+          "title": "Dreams Made Flesh (Remastered)",
+          "artist": "This Mortal Coil",
+          "rationale": "This Mortal Coil is a canonical ethereal/dream-pop match.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6204922199249268,
+          "style_overlap": 0.7740064859390259,
+          "style_labels": [
+            "pop",
+            "rock",
+            "folk_country",
+            "electronic"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 2,
+          "title": "Sugarfix",
+          "artist": "Tamaryn",
+          "rationale": "Tamaryn is a strong shoegaze match.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6759514808654785,
+          "style_overlap": 0.8908185958862305,
+          "style_labels": [
+            "rock",
+            "shoegaze_dream_pop",
+            "punk",
+            "pop"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 3,
+          "title": "Don't Suffer Alone",
+          "artist": "all under heaven",
+          "rationale": "all under heaven is modern shoegaze adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6664363741874695,
+          "style_overlap": 0.9025025367736816,
+          "style_labels": [
+            "rock",
+            "shoegaze_dream_pop",
+            "pop",
+            "electronic"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 4,
+          "title": "Lilies (Flood Mix)",
+          "artist": "Cranes",
+          "rationale": "Cranes remains ethereal/experimental dream-pop adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6488770842552185,
+          "style_overlap": 0.7523857355117798,
+          "style_labels": [
+            "electronic",
+            "jazz",
+            "pop",
+            "rock"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 5,
+          "title": "Blackout",
+          "artist": "Lush",
+          "rationale": "Lush is a canonical shoegaze match.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.7167526483535767,
+          "style_overlap": 0.8623731136322021,
+          "style_labels": [
+            "rock",
+            "punk",
+            "shoegaze_dream_pop",
+            "pop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "title": "Take",
+          "artist": "Lush",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.677, and broad styles [rock, punk, shoegaze_dream_pop, pop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6774770021438599,
+          "style_overlap": 0.8623731136322021,
+          "style_labels": [
+            "rock",
+            "punk",
+            "shoegaze_dream_pop",
+            "pop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "title": "The Unshakable Demon",
+          "artist": "Autumn's Grey Solace",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.654, and broad styles [pop, rock, shoegaze_dream_pop, jazz].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6543467044830322,
+          "style_overlap": 0.7584460973739624,
+          "style_labels": [
+            "pop",
+            "rock",
+            "shoegaze_dream_pop",
+            "jazz"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "title": "I'll Be Near You",
+          "artist": "Xmal Deutschland",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.669, and broad styles [rock, shoegaze_dream_pop, pop, punk].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6688852310180664,
+          "style_overlap": 0.8669593334197998,
+          "style_labels": [
+            "rock",
+            "shoegaze_dream_pop",
+            "pop",
+            "punk"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "title": "Flame",
+          "artist": "W O L F C L U B",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.670, and broad styles [electronic, pop, rock, punk].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6695253849029541,
+          "style_overlap": 0.8237724304199219,
+          "style_labels": [
+            "electronic",
+            "pop",
+            "rock",
+            "punk"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "title": "To the Beginning",
+          "artist": "Kalafina",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.584, and broad styles [pop, rock, asian_pop, electronic].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5836519002914429,
+          "style_overlap": 0.7299187183380127,
+          "style_labels": [
+            "pop",
+            "rock",
+            "asian_pop",
+            "electronic"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "direct-06",
+      "pass": true,
+      "reason": "Five indie/garage-rock peers; no unrelated top-three recommendation.",
+      "positions": [
+        {
+          "list": "catalog_policy",
+          "position": 1,
+          "title": "Howl",
+          "artist": "Declan McKenna",
+          "rationale": "Declan McKenna is indie-rock adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6405329704284668,
+          "style_overlap": 0.7996128797531128,
+          "style_labels": [
+            "pop",
+            "rock",
+            "electronic",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 2,
+          "title": "Nothing At All",
+          "artist": "Joe P",
+          "rationale": "Joe P is modern indie-rock adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6174840927124023,
+          "style_overlap": 0.8336819410324097,
+          "style_labels": [
+            "rock",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 3,
+          "title": "Music When The Lights Go Out",
+          "artist": "The Libertines",
+          "rationale": "The Libertines is a direct indie-rock peer.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6378645896911621,
+          "style_overlap": 0.8047177791595459,
+          "style_labels": [
+            "rock",
+            "punk",
+            "pop",
+            "reggae_caribbean"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 4,
+          "title": "All the Way (2023 Remastered Version)",
+          "artist": "Rival Sons",
+          "rationale": "Rival Sons is a heavier but coherent rock match.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6625949740409851,
+          "style_overlap": 0.8593429327011108,
+          "style_labels": [
+            "rock",
+            "pop",
+            "punk",
+            "electronic"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 5,
+          "title": "Taking Pictures Of You",
+          "artist": "The Kooks",
+          "rationale": "The Kooks is a direct indie-rock peer.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6424074769020081,
+          "style_overlap": 0.7413296699523926,
+          "style_labels": [
+            "pop",
+            "rock",
+            "punk",
+            "asian_pop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "title": "Sinister Kid",
+          "artist": "The Black Keys",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.644, and broad styles [rock, pop, punk, electronic].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6436939239501953,
+          "style_overlap": 0.8215612173080444,
+          "style_labels": [
+            "rock",
+            "pop",
+            "punk",
+            "electronic"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "title": "Things Are Changin' (Live)",
+          "artist": "Gary Clark Jr.",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.686, and broad styles [pop, rock, blues, rnb_soul].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6862737536430359,
+          "style_overlap": 0.756453275680542,
+          "style_labels": [
+            "pop",
+            "rock",
+            "blues",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "title": "Black Blizzard",
+          "artist": "Little Hurricane",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.665, and broad styles [rock, pop, electronic, folk_country].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.664802610874176,
+          "style_overlap": 0.7513210773468018,
+          "style_labels": [
+            "rock",
+            "pop",
+            "electronic",
+            "folk_country"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "title": "Losing All Sense",
+          "artist": "Grizzly Bear",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.461, and broad styles [rock, pop, folk_country, jazz].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.46117207407951355,
+          "style_overlap": 0.7412204742431641,
+          "style_labels": [
+            "rock",
+            "pop",
+            "folk_country",
+            "jazz"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "title": "New Lover",
+          "artist": "Josh Ritter",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.637, and broad styles [rnb_soul, pop, folk_country, rock].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6366230845451355,
+          "style_overlap": 0.4769395589828491,
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "folk_country",
+            "rock"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "direct-07",
+      "pass": true,
+      "reason": "The list spans electronic pop and hyperpop, with GFOTY and 8485 anchoring the specific scene; top three remain adjacent.",
+      "positions": [
+        {
+          "list": "catalog_policy",
+          "position": 1,
+          "title": "We Can Be Friends (feat. Herizen)",
+          "artist": "What So Not",
+          "rationale": "What So Not is electronic-pop adjacent, though less specifically hyperpop.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6755262613296509,
+          "style_overlap": 0.74249267578125,
+          "style_labels": [
+            "electronic",
+            "pop",
+            "hip_hop",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 2,
+          "title": "Drown Her",
+          "artist": "GFOTY",
+          "rationale": "GFOTY is a direct PC Music/hyperpop match.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5986553430557251,
+          "style_overlap": 0.8399658203125,
+          "style_labels": [
+            "pop",
+            "electronic",
+            "hyperpop_digicore",
+            "rock"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 3,
+          "title": "not your homie",
+          "artist": "Jagwar Twin",
+          "rationale": "Jagwar Twin is glitchy alternative-pop adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6180879473686218,
+          "style_overlap": 0.8065185546875,
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "hyperpop_digicore"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 4,
+          "title": "crows",
+          "artist": "Naomi Jon",
+          "rationale": "Naomi Jon is a looser electronic-pop match.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6401009559631348,
+          "style_overlap": 0.7545166015625,
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 5,
+          "title": "COOL_DNB_SONG",
+          "artist": "8485",
+          "rationale": "8485 is a direct digicore/hyperpop match.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6450682282447815,
+          "style_overlap": 0.89453125,
+          "style_labels": [
+            "pop",
+            "rock",
+            "hyperpop_digicore",
+            "electronic"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "title": "Mine",
+          "artist": "aespa",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.688, and broad styles [pop, electronic, rnb_soul, rock].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6883831024169922,
+          "style_overlap": 0.766693115234375,
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rnb_soul",
+            "rock"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "title": "8-BIT HEART",
+          "artist": "ITZY",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.669, and broad styles [pop, electronic, rock, rnb_soul].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6690444946289062,
+          "style_overlap": 0.68365478515625,
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "title": "Hands To Myself",
+          "artist": "Selena Gomez",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.627, and broad styles [pop, electronic, rnb_soul, rock].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6268976926803589,
+          "style_overlap": 0.7388916015625,
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rnb_soul",
+            "rock"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "title": "Luxurious",
+          "artist": "Gwen Stefani",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.637, and broad styles [pop, electronic, rnb_soul, rock].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6374231576919556,
+          "style_overlap": 0.69970703125,
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rnb_soul",
+            "rock"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "title": "Cyber Sex",
+          "artist": "Doja Cat",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.651, and broad styles [pop, rnb_soul, electronic, asian_pop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6514697074890137,
+          "style_overlap": 0.675689697265625,
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "electronic",
+            "asian_pop"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "direct-08",
+      "pass": false,
+      "reason": "Generic pop and a soundtrack-style item dominate positions 1-3; fewer than four convincing SOPHIE/hyperpop matches.",
+      "positions": [
+        {
+          "list": "catalog_policy",
+          "position": 1,
+          "title": "Tudo Pah",
+          "artist": "PRISCILLA",
+          "rationale": "PRISCILLA is generic pop/R&B rather than a convincing SOPHIE match.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6018855571746826,
+          "style_overlap": 0.7765737771987915,
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "electronic",
+            "hip_hop"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 2,
+          "title": "What Have They Done To Us (ft. Sasha Alex Sloan) (from the series Arcane League of Legends)",
+          "artist": "Mako",
+          "rationale": "Mako soundtrack pop is an obvious scene break at position 2.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.4982699155807495,
+          "style_overlap": 0.4222918152809143,
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "folk_country",
+            "rock"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 3,
+          "title": "LOVE INSANE",
+          "artist": "MAX",
+          "rationale": "MAX is generic pop, not experimental hyperpop.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5837888121604919,
+          "style_overlap": 0.8758548498153687,
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rnb_soul",
+            "rock"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 4,
+          "title": "GET UP BITCH! shake ya ass (with Anitta)",
+          "artist": "Victoria",
+          "rationale": "Victoria is dance-pop adjacent but not enough to recover the list.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6030505895614624,
+          "style_overlap": 0.7758152484893799,
+          "style_labels": [
+            "hip_hop",
+            "electronic",
+            "rnb_soul",
+            "pop"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 5,
+          "title": "Pas d'après",
+          "artist": "Valentina",
+          "rationale": "Valentina is generic French pop.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5544142127037048,
+          "style_overlap": 0.6560295820236206,
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "folk_country",
+            "electronic"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "title": "paw, paw!",
+          "artist": "ILLIT",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.631, and broad styles [pop, electronic, rnb_soul, rock].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6306250691413879,
+          "style_overlap": 0.8681990504264832,
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rnb_soul",
+            "rock"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "title": "4 noviosS",
+          "artist": "Six Sex",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.531, and broad styles [electronic, pop, experimental, hyperpop_digicore].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5310187339782715,
+          "style_overlap": 0.9374797940254211,
+          "style_labels": [
+            "electronic",
+            "pop",
+            "experimental",
+            "hyperpop_digicore"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "title": "Job Application",
+          "artist": "Chase Icon",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.602, and broad styles [electronic, pop, hyperpop_digicore, rnb_soul].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6019208431243896,
+          "style_overlap": 0.9198141098022461,
+          "style_labels": [
+            "electronic",
+            "pop",
+            "hyperpop_digicore",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "title": "Hyena",
+          "artist": "Coone",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.534, and broad styles [electronic, rock, punk, metal].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5343403816223145,
+          "style_overlap": 0.8375093936920166,
+          "style_labels": [
+            "electronic",
+            "rock",
+            "punk",
+            "metal"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "title": "Real Shit",
+          "artist": "Nicolas Julian",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.646, and broad styles [hip_hop, pop, electronic, rnb_soul].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6456226706504822,
+          "style_overlap": 0.5973402261734009,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "electronic",
+            "rnb_soul"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "direct-09",
+      "pass": false,
+      "reason": "Position 1 is an unrelated generic dance item and only two results are clear digicore/hyperpop peers.",
+      "positions": [
+        {
+          "list": "catalog_policy",
+          "position": 1,
+          "title": "Dance 4 Me",
+          "artist": "Nsikak David",
+          "rationale": "Nsikak David is an unrelated generic dance opener.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.48342227935791016,
+          "style_overlap": 0.83642578125,
+          "style_labels": [
+            "pop",
+            "electronic",
+            "hip_hop",
+            "hyperpop_digicore"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 2,
+          "title": "Kismet",
+          "artist": "WHOKILLEDXIX",
+          "rationale": "WHOKILLEDXIX is a direct hyperpop/digicore match.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6322964429855347,
+          "style_overlap": 0.80029296875,
+          "style_labels": [
+            "pop",
+            "hip_hop",
+            "hyperpop_digicore",
+            "electronic"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 3,
+          "title": "so bitter (daycore)",
+          "artist": "Stxlkin",
+          "rationale": "Stxlkin is hyperpop-adjacent despite the daycore naming.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.54071444272995,
+          "style_overlap": 0.868408203125,
+          "style_labels": [
+            "pop",
+            "electronic",
+            "hyperpop_digicore",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 4,
+          "title": "One More Weekend",
+          "artist": "Maude Latour",
+          "rationale": "Maude Latour is generic pop rather than digicore.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6212166547775269,
+          "style_overlap": 0.87347412109375,
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 5,
+          "title": "The Circle",
+          "artist": "Jagwar Twin",
+          "rationale": "Jagwar Twin is alternative/glitch-pop adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5849196910858154,
+          "style_overlap": 0.9166259765625,
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "hyperpop_digicore"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "title": "Back Pocket",
+          "artist": "Vulfpeck",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.575, and broad styles [rnb_soul, rock, pop, electronic].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5753307342529297,
+          "style_overlap": 0.631439208984375,
+          "style_labels": [
+            "rnb_soul",
+            "rock",
+            "pop",
+            "electronic"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "title": "Boot Me Up",
+          "artist": "FEM&M",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.514, and broad styles [electronic, experimental, rock, punk].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5137600898742676,
+          "style_overlap": 0.57989501953125,
+          "style_labels": [
+            "electronic",
+            "experimental",
+            "rock",
+            "punk"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "title": "Rainy Boots",
+          "artist": "Will Stetson",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.678, and broad styles [pop, rock, electronic, rnb_soul].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6780846118927002,
+          "style_overlap": 0.73095703125,
+          "style_labels": [
+            "pop",
+            "rock",
+            "electronic",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "title": "Control",
+          "artist": "Kid Bloom",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.629, and broad styles [pop, rnb_soul, rock, electronic].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6293437480926514,
+          "style_overlap": 0.707977294921875,
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "rock",
+            "electronic"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "title": "30days30days30days",
+          "artist": "Prince Daddy & the Hyena",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.654, and broad styles [rock, punk, pop, experimental].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6540683507919312,
+          "style_overlap": 0.607147216796875,
+          "style_labels": [
+            "rock",
+            "punk",
+            "pop",
+            "experimental"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "direct-10",
+      "pass": true,
+      "reason": "All five are IDM, bass, or experimental electronic peers.",
+      "positions": [
+        {
+          "list": "catalog_policy",
+          "position": 1,
+          "title": "artov chain",
+          "artist": "Autechre",
+          "rationale": "Autechre is a canonical IDM match.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.592231035232544,
+          "style_overlap": 0.8161239624023438,
+          "style_labels": [
+            "electronic",
+            "experimental"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 2,
+          "title": "Good Lies",
+          "artist": "Overmono",
+          "rationale": "Overmono is coherent contemporary electronic music.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6147962808609009,
+          "style_overlap": 0.5771484375,
+          "style_labels": [
+            "electronic"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 3,
+          "title": "Nomade",
+          "artist": "Jumo",
+          "rationale": "Jumo is electronic/leftfield adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6015076637268066,
+          "style_overlap": 0.6996656656265259,
+          "style_labels": [
+            "electronic",
+            "jazz",
+            "hip_hop",
+            "reggae_caribbean"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 4,
+          "title": "Showreel, Pt. 2",
+          "artist": "Djrum",
+          "rationale": "Djrum is a strong experimental electronic match.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5892302989959717,
+          "style_overlap": 0.6994543075561523,
+          "style_labels": [
+            "electronic",
+            "jazz",
+            "hip_hop",
+            "reggae_caribbean"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 5,
+          "title": "Heartbeat",
+          "artist": "DJ Planet Express",
+          "rationale": "DJ Planet Express remains club/electronic adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5934410095214844,
+          "style_overlap": 0.6621848344802856,
+          "style_labels": [
+            "electronic",
+            "jazz",
+            "reggae_caribbean",
+            "hip_hop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "title": "Into Dreams",
+          "artist": "Golden Boy",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.616, and broad styles [electronic, punk, experimental, pop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6157524585723877,
+          "style_overlap": 0.6171303391456604,
+          "style_labels": [
+            "electronic",
+            "punk",
+            "experimental",
+            "pop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "title": "BETRAYER",
+          "artist": "Nuvfr",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.628, and broad styles [electronic].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6281938552856445,
+          "style_overlap": 0.5771484375,
+          "style_labels": [
+            "electronic"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "title": "TERMINATE",
+          "artist": "Nedaj",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.622, and broad styles [electronic].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6220589876174927,
+          "style_overlap": 0.5771484375,
+          "style_labels": [
+            "electronic"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "title": "Why Complaining?",
+          "artist": "Lee \"Scratch\" Perry",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.637, and broad styles [rock, rnb_soul, folk_country, reggae_caribbean].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6372705698013306,
+          "style_overlap": 0.0,
+          "style_labels": [
+            "rock",
+            "rnb_soul",
+            "folk_country",
+            "reggae_caribbean"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "title": "strxwberryPILK",
+          "artist": "strxwberrymilk",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.642, and broad styles [electronic, experimental, reggae_caribbean, punk].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6418681740760803,
+          "style_overlap": 0.6483056545257568,
+          "style_labels": [
+            "electronic",
+            "experimental",
+            "reggae_caribbean",
+            "punk"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "direct-11",
+      "pass": false,
+      "reason": "The list drifts from the mellow French-house seed into video-game novelty and generic EDM; fewer than four stylistic matches.",
+      "positions": [
+        {
+          "list": "catalog_policy",
+          "position": 1,
+          "title": "Digging Deeper (Extended Mix)",
+          "artist": "Alison Goldfrapp",
+          "rationale": "Alison Goldfrapp is electronic-pop adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5308098793029785,
+          "style_overlap": 0.7136857509613037,
+          "style_labels": [
+            "electronic",
+            "pop",
+            "jazz",
+            "folk_country"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 2,
+          "title": "Lazer Pink",
+          "artist": "Sunset Neon",
+          "rationale": "Sunset Neon is synthwave adjacent but not a close song-level match.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.49957677721977234,
+          "style_overlap": 0.7098108530044556,
+          "style_labels": [
+            "electronic",
+            "rock",
+            "pop",
+            "experimental"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 3,
+          "title": "Mii Channel",
+          "artist": "GameChops",
+          "rationale": "GameChops Mii Channel is a novelty/video-game scene break at position 3.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5815945863723755,
+          "style_overlap": 0.7848781943321228,
+          "style_labels": [
+            "electronic",
+            "pop",
+            "hip_hop",
+            "soundtrack"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 4,
+          "title": "Thirsty (feat. RudeBoyz)",
+          "artist": "Moonchild Sanelly",
+          "rationale": "Moonchild Sanelly is leftfield pop rather than mellow French house.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.4831054210662842,
+          "style_overlap": 0.7269308567047119,
+          "style_labels": [
+            "electronic",
+            "pop",
+            "hip_hop",
+            "rock"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 5,
+          "title": "It Came from Planet Earth",
+          "artist": "Stephen Walking",
+          "rationale": "Stephen Walking is generic EDM.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5054024457931519,
+          "style_overlap": 0.7603606581687927,
+          "style_labels": [
+            "electronic",
+            "pop",
+            "experimental",
+            "soundtrack"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "title": "Penthouse Serenade (Remastered 2023)",
+          "artist": "Alan Braxe",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.579, and broad styles [electronic, experimental, pop, soundtrack].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5788863897323608,
+          "style_overlap": 0.6571826934814453,
+          "style_labels": [
+            "electronic",
+            "experimental",
+            "pop",
+            "soundtrack"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "title": "Why",
+          "artist": "Honey Dijon",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.604, and broad styles [electronic, pop, rnb_soul, rock].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6042999625205994,
+          "style_overlap": 0.6353423595428467,
+          "style_labels": [
+            "electronic",
+            "pop",
+            "rnb_soul",
+            "rock"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "title": "SAY MY NAME",
+          "artist": "Bomel",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.596, and broad styles [electronic, experimental, jazz, pop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5957518815994263,
+          "style_overlap": 0.6555622816085815,
+          "style_labels": [
+            "electronic",
+            "experimental",
+            "jazz",
+            "pop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "title": "Parachute",
+          "artist": "Benny Sings",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.636, and broad styles [rnb_soul, rock, folk_country, pop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6356686353683472,
+          "style_overlap": 0.15672200918197632,
+          "style_labels": [
+            "rnb_soul",
+            "rock",
+            "folk_country",
+            "pop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "title": "State of Clarity",
+          "artist": "Guru",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.628, and broad styles [hip_hop, pop, rnb_soul, punk].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6283484697341919,
+          "style_overlap": 0.24503445625305176,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "rnb_soul",
+            "punk"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "direct-12",
+      "pass": true,
+      "reason": "Five alternative-metal, shoegaze-metal, or Team Sleep peers preserve the Deftones scene.",
+      "positions": [
+        {
+          "list": "catalog_policy",
+          "position": 1,
+          "title": "Sacrifice Me",
+          "artist": "Unprocessed",
+          "rationale": "Unprocessed is modern alternative metal.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6671680212020874,
+          "style_overlap": 0.8206681609153748,
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "experimental"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 2,
+          "title": "Ataraxia",
+          "artist": "Team Sleep",
+          "rationale": "Team Sleep is a direct Deftones-adjacent project.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6910111308097839,
+          "style_overlap": 0.39523959159851074,
+          "style_labels": [
+            "electronic",
+            "pop",
+            "rock",
+            "jazz"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 3,
+          "title": "888",
+          "artist": "SWEET SPINE",
+          "rationale": "SWEET SPINE is alternative metal/shoegaze adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6923205256462097,
+          "style_overlap": 0.7973130941390991,
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "shoegaze_dream_pop"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 4,
+          "title": "The Razor's Apple",
+          "artist": "Fleshwater",
+          "rationale": "Fleshwater is a strong Deftones-adjacent match.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6986605525016785,
+          "style_overlap": 0.7962563037872314,
+          "style_labels": [
+            "rock",
+            "punk",
+            "shoegaze_dream_pop",
+            "metal"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 5,
+          "title": "Silent Call",
+          "artist": "Sundazer",
+          "rationale": "Sundazer remains shoegaze/alternative-metal adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6928082704544067,
+          "style_overlap": 0.8290872573852539,
+          "style_labels": [
+            "rock",
+            "metal",
+            "shoegaze_dream_pop",
+            "pop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "title": "Lost at 22 (Live)",
+          "artist": "Life Of Agony",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.685, and broad styles [rock, punk, pop, metal].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6850358843803406,
+          "style_overlap": 0.5480514764785767,
+          "style_labels": [
+            "rock",
+            "punk",
+            "pop",
+            "metal"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "title": "Stone",
+          "artist": "Alice In Chains",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.703, and broad styles [rock, metal].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.7028542757034302,
+          "style_overlap": 0.8161239624023438,
+          "style_labels": [
+            "rock",
+            "metal"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "title": "Hellraiser",
+          "artist": "Motörhead",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.693, and broad styles [rock, metal, punk, shoegaze_dream_pop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6925022602081299,
+          "style_overlap": 0.7978767156600952,
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "shoegaze_dream_pop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "title": "The Perfume of Decay",
+          "artist": "Tigercub",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.678, and broad styles [rock, metal, shoegaze_dream_pop, pop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6780256032943726,
+          "style_overlap": 0.8309190273284912,
+          "style_labels": [
+            "rock",
+            "metal",
+            "shoegaze_dream_pop",
+            "pop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "title": "It's Not a Prop",
+          "artist": "Heatmiser",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.643, and broad styles [rock, punk, pop, shoegaze_dream_pop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6428228616714478,
+          "style_overlap": 0.6187155246734619,
+          "style_labels": [
+            "rock",
+            "punk",
+            "pop",
+            "shoegaze_dream_pop"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "direct-13",
+      "pass": true,
+      "reason": "The first four are canonical heavy-rock/metal peers; the fifth is unrelated but outside positions 1-3.",
+      "positions": [
+        {
+          "list": "catalog_policy",
+          "position": 1,
+          "title": "Louie Louie",
+          "artist": "Motörhead",
+          "rationale": "Mot?rhead is a canonical heavy-rock/metal peer.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5132731199264526,
+          "style_overlap": 0.607177734375,
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "shoegaze_dream_pop"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 2,
+          "title": "Angel",
+          "artist": "Judas Priest",
+          "rationale": "Judas Priest is a canonical metal peer.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6180709600448608,
+          "style_overlap": 0.463958740234375,
+          "style_labels": [
+            "rock",
+            "punk",
+            "pop",
+            "metal"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 3,
+          "title": "Stairway to Heaven (Remaster)",
+          "artist": "Led Zeppelin",
+          "rationale": "Led Zeppelin is coherent classic heavy rock.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6105036735534668,
+          "style_overlap": 0.5810546875,
+          "style_labels": [
+            "rock",
+            "pop",
+            "punk",
+            "blues"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 4,
+          "title": "Sweating Bullets (Remastered 2004)",
+          "artist": "Megadeth",
+          "rationale": "Megadeth is a strong metal peer.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.605913519859314,
+          "style_overlap": 0.6455078125,
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "shoegaze_dream_pop"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 5,
+          "title": "Sondela (feat. Yumbs, Raspy, Blxckie, Riky Rick & Tshego)",
+          "artist": "Venom",
+          "rationale": "This Venom result is an unrelated contemporary African-pop collaboration, but it is position 5.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.569644033908844,
+          "style_overlap": 0.620361328125,
+          "style_labels": [
+            "rock",
+            "metal",
+            "punk",
+            "electronic"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "title": "The Chairman",
+          "artist": "Truckfighters",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.652, and broad styles [electronic, rock, pop, shoegaze_dream_pop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6524152159690857,
+          "style_overlap": 0.38067626953125,
+          "style_labels": [
+            "electronic",
+            "rock",
+            "pop",
+            "shoegaze_dream_pop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "title": "Mouth (Remastered)",
+          "artist": "Bush",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.550, and broad styles [rock, punk, pop, folk_country].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5498916506767273,
+          "style_overlap": 0.56817626953125,
+          "style_labels": [
+            "rock",
+            "punk",
+            "pop",
+            "folk_country"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "title": "Question Authority",
+          "artist": "Circle Jerks",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.549, and broad styles [rock, punk, pop, metal].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5485866069793701,
+          "style_overlap": 0.4705810546875,
+          "style_labels": [
+            "rock",
+            "punk",
+            "pop",
+            "metal"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "title": "Where We Would Be",
+          "artist": "Porcupine Tree",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.531, and broad styles [electronic, jazz, rock, hip_hop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5310623049736023,
+          "style_overlap": 0.2987060546875,
+          "style_labels": [
+            "electronic",
+            "jazz",
+            "rock",
+            "hip_hop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "title": "State Of Conformity",
+          "artist": "Satanic Surfers",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.523, and broad styles [rock, punk, metal, pop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5232239961624146,
+          "style_overlap": 0.589385986328125,
+          "style_labels": [
+            "rock",
+            "punk",
+            "metal",
+            "pop"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "direct-14",
+      "pass": true,
+      "reason": "All five are canonical jazz artists and ballad/hard-bop peers.",
+      "positions": [
+        {
+          "list": "catalog_policy",
+          "position": 1,
+          "title": "Mood Indigo",
+          "artist": "Charles Mingus and his Jazz Groups",
+          "rationale": "Charles Mingus is a canonical jazz peer.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6330634951591492,
+          "style_overlap": 0.6545054912567139,
+          "style_labels": [
+            "jazz",
+            "classical",
+            "rnb_soul",
+            "rock"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 2,
+          "title": "Teru",
+          "artist": "Jazz At Lincoln Center Orchestra",
+          "rationale": "Jazz at Lincoln Center Orchestra remains straight-ahead jazz.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6016690731048584,
+          "style_overlap": 0.558830738067627,
+          "style_labels": [
+            "jazz",
+            "classical",
+            "rnb_soul",
+            "blues"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 3,
+          "title": "Crepuscule With Nellie (Live At Town Hall / 1959)",
+          "artist": "The Thelonious Monk Orchestra",
+          "rationale": "Thelonious Monk is a canonical jazz peer.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.574951708316803,
+          "style_overlap": 0.704632580280304,
+          "style_labels": [
+            "jazz",
+            "experimental",
+            "rnb_soul",
+            "rock"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 4,
+          "title": "Flamingo (Composite Partial Alternate Take)",
+          "artist": "Charles Mingus",
+          "rationale": "Charles Mingus alternate material remains coherent jazz.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6816920042037964,
+          "style_overlap": 0.6549282073974609,
+          "style_labels": [
+            "jazz",
+            "classical",
+            "rnb_soul",
+            "rock"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 5,
+          "title": "My Old Flame",
+          "artist": "Charlie \"Bird\" Parker",
+          "rationale": "Charlie Parker is a canonical bebop peer.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6233277320861816,
+          "style_overlap": 0.7070279717445374,
+          "style_labels": [
+            "jazz",
+            "experimental",
+            "latin",
+            "gospel"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "title": "Since I Fell For You",
+          "artist": "Lee Morgan",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.659, and broad styles [jazz, experimental, rnb_soul, rock].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6593269109725952,
+          "style_overlap": 0.7051962018013,
+          "style_labels": [
+            "jazz",
+            "experimental",
+            "rnb_soul",
+            "rock"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "title": "Willow Weep For Me (Album Version)",
+          "artist": "Gene Ammons",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.661, and broad styles [jazz, experimental, rnb_soul, latin].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.660861611366272,
+          "style_overlap": 0.7064643502235413,
+          "style_labels": [
+            "jazz",
+            "experimental",
+            "rnb_soul",
+            "latin"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "title": "Ruby My Dear (Alternate Take/Rudy Van Gelder 24-Bit Mastering/2001 Digital Remaster)",
+          "artist": "Thelonious Monk",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.649, and broad styles [jazz].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6485468149185181,
+          "style_overlap": 0.5771484375,
+          "style_labels": [
+            "jazz"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "title": "Lack the Faith But Not the Wine",
+          "artist": "Joshua Redman",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.651, and broad styles [jazz, rnb_soul, classical].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6514283418655396,
+          "style_overlap": 0.5636215209960938,
+          "style_labels": [
+            "jazz",
+            "rnb_soul",
+            "classical"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "title": "Before It's Time to Say Goodbye",
+          "artist": "Kenny Garrett",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.672, and broad styles [jazz, classical, rnb_soul, hip_hop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6720303893089294,
+          "style_overlap": 0.5464310646057129,
+          "style_labels": [
+            "jazz",
+            "classical",
+            "rnb_soul",
+            "hip_hop"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "direct-15",
+      "pass": true,
+      "reason": "Five jazz performances span modern, hard-bop, and jazz-arrangement contexts.",
+      "positions": [
+        {
+          "list": "catalog_policy",
+          "position": 1,
+          "title": "Hearthome City",
+          "artist": "insaneintherainmusic",
+          "rationale": "insaneintherainmusic is a jazz arrangement; unusual source material but still sonically tagged jazz.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6384819149971008,
+          "style_overlap": 0.8180227279663086,
+          "style_labels": [
+            "jazz",
+            "classical",
+            "rnb_soul",
+            "hip_hop"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 2,
+          "title": "No Worries",
+          "artist": "Robert Glasper Trio",
+          "rationale": "Robert Glasper Trio is a direct modern-jazz peer.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6414207816123962,
+          "style_overlap": 0.741079568862915,
+          "style_labels": [
+            "jazz",
+            "rnb_soul",
+            "classical",
+            "blues"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 3,
+          "title": "A Love Supreme Pt. I - Acknowledgement (Take 1/Alternate)",
+          "artist": "John Coltrane Sextet",
+          "rationale": "John Coltrane is a canonical jazz peer.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6541481018066406,
+          "style_overlap": 0.7976541519165039,
+          "style_labels": [
+            "jazz",
+            "classical",
+            "latin",
+            "experimental"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 4,
+          "title": "Santa Claus is Coming to Town",
+          "artist": "Joy Lapps",
+          "rationale": "Joy Lapps is a looser steelpan/jazz arrangement but remains jazz.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6065057516098022,
+          "style_overlap": 0.7443161010742188,
+          "style_labels": [
+            "jazz",
+            "rnb_soul",
+            "classical",
+            "pop"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 5,
+          "title": "Blue Monk",
+          "artist": "Thelonious Sphere Monk",
+          "rationale": "Thelonious Monk is a canonical jazz peer.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.63653963804245,
+          "style_overlap": 0.8150882720947266,
+          "style_labels": [
+            "jazz",
+            "classical",
+            "rnb_soul",
+            "blues"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "title": "Mahjong (Rudy Van Gelder 24 Bit Mastering/1999 Digital Remaster)",
+          "artist": "Wayne Shorter",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.673, and broad styles [jazz, classical, rnb_soul, rock].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6734124422073364,
+          "style_overlap": 0.8156924247741699,
+          "style_labels": [
+            "jazz",
+            "classical",
+            "rnb_soul",
+            "rock"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "title": "Punjab (Remastered 2003 / Rudy Van Gelder Edition)",
+          "artist": "Joe Henderson",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.691, and broad styles [jazz, classical, rnb_soul, rock].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6905922889709473,
+          "style_overlap": 0.8156924247741699,
+          "style_labels": [
+            "jazz",
+            "classical",
+            "rnb_soul",
+            "rock"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "title": "Walking",
+          "artist": "Miles Davis",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.646, and broad styles [rock, jazz, classical].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6456511616706848,
+          "style_overlap": 0.8161239624023438,
+          "style_labels": [
+            "rock",
+            "jazz",
+            "classical"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "title": "Moe Honk",
+          "artist": "Joshua Redman",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.629, and broad styles [jazz, rnb_soul, classical].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6288999319076538,
+          "style_overlap": 0.758772611618042,
+          "style_labels": [
+            "jazz",
+            "rnb_soul",
+            "classical"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "title": "Soul Surge (Remastered 2004/Rudy Van Gelder Edition)",
+          "artist": "Freddie Hubbard",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.670, and broad styles [jazz, classical, rnb_soul, rock].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6702246069908142,
+          "style_overlap": 0.8159513473510742,
+          "style_labels": [
+            "jazz",
+            "classical",
+            "rnb_soul",
+            "rock"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "direct-16",
+      "pass": false,
+      "reason": "Position 1 is unrelated and the remainder mixes city-pop with J-rock and K-pop rather than producing four city-pop matches.",
+      "positions": [
+        {
+          "list": "catalog_policy",
+          "position": 1,
+          "title": "F’d Up",
+          "artist": "Feng",
+          "rationale": "Feng is an unrelated obscure opener with no credible city-pop identity.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.621903121471405,
+          "style_overlap": 0.7597147822380066,
+          "style_labels": [
+            "pop",
+            "rock",
+            "electronic",
+            "hyperpop_digicore"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 2,
+          "title": "Carnaval",
+          "artist": "Taeko Onuki",
+          "rationale": "Taeko Onuki is a canonical city-pop match.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6569969654083252,
+          "style_overlap": 0.8416107892990112,
+          "style_labels": [
+            "pop",
+            "rock",
+            "folk_country",
+            "jazz"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 3,
+          "title": "Chiyokoreito",
+          "artist": "SAYURI",
+          "rationale": "SAYURI is J-rock/pop, adjacent only at a broad regional level.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5355024337768555,
+          "style_overlap": 0.8027842044830322,
+          "style_labels": [
+            "pop",
+            "rock",
+            "punk",
+            "electronic"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 4,
+          "title": "Blue",
+          "artist": "TAEMIN",
+          "rationale": "TAEMIN is K-pop/R&B rather than city-pop.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6236657500267029,
+          "style_overlap": 0.8104264736175537,
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 5,
+          "title": "PARADOX",
+          "artist": "Sora Amamiya",
+          "rationale": "Sora Amamiya is J-pop, not a close city-pop soundalike.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5532336831092834,
+          "style_overlap": 0.8172359466552734,
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "asian_pop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "title": "Manatsu no Sequence",
+          "artist": "Momoko Kikuchi",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.643, and broad styles [rock, pop, jazz, electronic].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.643345832824707,
+          "style_overlap": 0.7175618410110474,
+          "style_labels": [
+            "rock",
+            "pop",
+            "jazz",
+            "electronic"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "title": "HE'S MY MUSIC",
+          "artist": "Anri",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.622, and broad styles [pop, shoegaze_dream_pop, jazz, electronic].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6220682859420776,
+          "style_overlap": 0.5973011255264282,
+          "style_labels": [
+            "pop",
+            "shoegaze_dream_pop",
+            "jazz",
+            "electronic"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "title": "Girls And Boys",
+          "artist": "Marcus Miller",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.674, and broad styles [rnb_soul, jazz, rock, pop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6736539602279663,
+          "style_overlap": 0.6484867930412292,
+          "style_labels": [
+            "rnb_soul",
+            "jazz",
+            "rock",
+            "pop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "title": "Get Hot!",
+          "artist": "Himiko Kikuchi",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.643, and broad styles [jazz, electronic, rock, hip_hop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6428025960922241,
+          "style_overlap": 0.4312291145324707,
+          "style_labels": [
+            "jazz",
+            "electronic",
+            "rock",
+            "hip_hop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "title": "Stuttgart Aria I",
+          "artist": "Biréli Lagrène and Jaco Pastorius",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.494, and broad styles [rnb_soul, pop, electronic, rock].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.49448055028915405,
+          "style_overlap": 0.6522012948989868,
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "electronic",
+            "rock"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "direct-17",
+      "pass": false,
+      "reason": "French R&B appears at position 1 and a Latin remix at position 3; only two clear K-pop peers remain.",
+      "positions": [
+        {
+          "list": "catalog_policy",
+          "position": 1,
+          "title": "Dis-Leur",
+          "artist": "Maud Elka",
+          "rationale": "Maud Elka is French R&B and an unrelated position-1 result.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.660886287689209,
+          "style_overlap": 0.6673297882080078,
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "electronic",
+            "hip_hop"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 2,
+          "title": "DROP TOP",
+          "artist": "MEOVV",
+          "rationale": "MEOVV is a direct K-pop peer.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6742562651634216,
+          "style_overlap": 0.999786376953125,
+          "style_labels": [
+            "pop",
+            "asian_pop"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 3,
+          "title": "Lento (Remix)",
+          "artist": "Lauren Jauregui",
+          "rationale": "Lauren Jauregui Lento remix is Latin-pop/R&B and a top-three scene break.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5527368783950806,
+          "style_overlap": 0.8915567398071289,
+          "style_labels": [
+            "pop",
+            "asian_pop",
+            "rnb_soul",
+            "electronic"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 4,
+          "title": "Bouquet",
+          "artist": "MISAMO",
+          "rationale": "MISAMO is a direct K-pop peer.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6545068621635437,
+          "style_overlap": 0.999786376953125,
+          "style_labels": [
+            "pop",
+            "asian_pop"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 5,
+          "title": "200 KM/H",
+          "artist": "Ronisia",
+          "rationale": "Ronisia is French R&B rather than K-pop.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6677876710891724,
+          "style_overlap": 0.7700357437133789,
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "asian_pop",
+            "electronic"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "title": "XO, My Cyberlove",
+          "artist": "CHUU",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.607, and broad styles [pop, asian_pop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.607058048248291,
+          "style_overlap": 0.999786376953125,
+          "style_labels": [
+            "pop",
+            "asian_pop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "title": "Fedexx Girl (Feat. 창모)",
+          "artist": "BIBI",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.680, and broad styles [pop, rnb_soul, asian_pop, electronic].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6797822713851929,
+          "style_overlap": 0.7923030853271484,
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "asian_pop",
+            "electronic"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "title": "Bouquet",
+          "artist": "MISAMO",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.655, and broad styles [pop, asian_pop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6545068621635437,
+          "style_overlap": 0.999786376953125,
+          "style_labels": [
+            "pop",
+            "asian_pop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "title": "HELLO (NAYEON, MOMO, CHAEYOUNG)",
+          "artist": "TWICE",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.653, and broad styles [pop, rnb_soul, electronic, asian_pop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6526786088943481,
+          "style_overlap": 0.70703125,
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "electronic",
+            "asian_pop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "title": "Chaotic",
+          "artist": "LOONA",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.569, and broad styles [pop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5690118670463562,
+          "style_overlap": 0.70703125,
+          "style_labels": [
+            "pop"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "direct-18",
+      "pass": false,
+      "reason": "Only Jay Wheeler, Morad, and Anuel AA are clear Latin-urban peers; position 3 and the fifth result prevent four coherent matches.",
+      "positions": [
+        {
+          "list": "catalog_policy",
+          "position": 1,
+          "title": "Para Ti",
+          "artist": "Jay Wheeler",
+          "rationale": "Jay Wheeler is a coherent Latin-urban peer.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6406337022781372,
+          "style_overlap": 0.42549610137939453,
+          "style_labels": [
+            "pop",
+            "hip_hop",
+            "rnb_soul",
+            "folk_country"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 2,
+          "title": "Lo Que Tiene",
+          "artist": "Morad",
+          "rationale": "Morad is a coherent Spanish urban peer.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6023358106613159,
+          "style_overlap": 0.40279722213745117,
+          "style_labels": [
+            "pop",
+            "hip_hop",
+            "rnb_soul",
+            "folk_country"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 3,
+          "title": "Guêpier",
+          "artist": "Bushibabe",
+          "rationale": "Bushibabe is an unclear French/African-pop item and a position-3 scene break.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5501062273979187,
+          "style_overlap": 0.4557037353515625,
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "hip_hop",
+            "folk_country"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 4,
+          "title": "Mi Vieja",
+          "artist": "Anuel AA",
+          "rationale": "Anuel AA is a coherent reggaeton peer.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6550085544586182,
+          "style_overlap": 0.5260443687438965,
+          "style_labels": [
+            "pop",
+            "hip_hop",
+            "rnb_soul",
+            "electronic"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 5,
+          "title": "Keeping Me Sane",
+          "artist": "Yung Bleu",
+          "rationale": "Yung Bleu is US R&B/rap rather than Latin.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6146471500396729,
+          "style_overlap": 0.510767936706543,
+          "style_labels": [
+            "pop",
+            "hip_hop",
+            "rnb_soul",
+            "latin"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "title": "Walk On Water (Wooli & Trivecta Remix)",
+          "artist": "SLANDER",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.602, and broad styles [pop, electronic, rnb_soul, rock].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6016473174095154,
+          "style_overlap": 0.09795904159545898,
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rnb_soul",
+            "rock"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "title": "Like An Angel",
+          "artist": "Sofiane Pamart",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.648, and broad styles [rock, pop, folk_country, jazz].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6476333737373352,
+          "style_overlap": 0.08022284507751465,
+          "style_labels": [
+            "rock",
+            "pop",
+            "folk_country",
+            "jazz"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "title": "Apaga a Luz",
+          "artist": "Gloria Groove",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.598, and broad styles [hip_hop, pop, rnb_soul, electronic].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5983321666717529,
+          "style_overlap": 0.5983700752258301,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "rnb_soul",
+            "electronic"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "title": "Handzum $uicide",
+          "artist": "$uicideboy$",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.569, and broad styles [hip_hop, pop, rock, electronic].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5693547129631042,
+          "style_overlap": 0.36767005920410156,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "rock",
+            "electronic"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "title": "LOST IN LOVE",
+          "artist": "BROCKHAMPTON",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.661, and broad styles [hip_hop, punk, pop, rnb_soul].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6612309217453003,
+          "style_overlap": 0.5989742279052734,
+          "style_labels": [
+            "hip_hop",
+            "punk",
+            "pop",
+            "rnb_soul"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "direct-19",
+      "pass": true,
+      "reason": "Four African/Caribbean or Afroswing peers remain coherent; one Latin item appears only at position 4.",
+      "positions": [
+        {
+          "list": "catalog_policy",
+          "position": 1,
+          "title": "Like Gold",
+          "artist": "Masicka",
+          "rationale": "Masicka is Caribbean dancehall adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6614355444908142,
+          "style_overlap": 0.20191740989685059,
+          "style_labels": [
+            "pop",
+            "hip_hop",
+            "punk",
+            "jazz"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 2,
+          "title": "Militerian (feat. Naira Marley)",
+          "artist": "J Hus",
+          "rationale": "J Hus with Naira Marley is a direct Afroswing/Afrobeats match.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5614370703697205,
+          "style_overlap": 0.20945584774017334,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "jazz",
+            "punk"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 3,
+          "title": "Ammunition",
+          "artist": "Dexta Daps",
+          "rationale": "Dexta Daps is Caribbean dancehall adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6615434885025024,
+          "style_overlap": 0.21481025218963623,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "jazz"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 4,
+          "title": "Si Tú Me Quisieras",
+          "artist": "Maikel Delacalle",
+          "rationale": "Maikel Delacalle is Latin urban and the one looser item.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6359552145004272,
+          "style_overlap": 0.20762407779693604,
+          "style_labels": [
+            "pop",
+            "hip_hop",
+            "punk",
+            "jazz"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 5,
+          "title": "99",
+          "artist": "Olamide",
+          "rationale": "Olamide is a direct Afrobeats peer.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.669820249080658,
+          "style_overlap": 0.21509206295013428,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "jazz"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "title": "wo wo (remix)",
+          "artist": "Minz",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.556, and broad styles [hip_hop, pop, punk, rnb_soul].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5561838150024414,
+          "style_overlap": 0.24700713157653809,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "title": "Sans visa",
+          "artist": "Soolking",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.618, and broad styles [pop, rnb_soul, hip_hop, electronic].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6175558567047119,
+          "style_overlap": 0.19761979579925537,
+          "style_labels": [
+            "pop",
+            "rnb_soul",
+            "hip_hop",
+            "electronic"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "title": "Jies",
+          "artist": "BNXN",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.625, and broad styles [rnb_soul, pop, hip_hop, electronic].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.624759316444397,
+          "style_overlap": 0.26722705364227295,
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "hip_hop",
+            "electronic"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "title": "Parce que j'ai mal",
+          "artist": "AMK",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.650, and broad styles [hip_hop, pop, punk, jazz].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6498550772666931,
+          "style_overlap": 0.2157965898513794,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "jazz"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "title": "Noche",
+          "artist": "Lacrim",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.554, and broad styles [hip_hop, pop, punk, rnb_soul].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5544017553329468,
+          "style_overlap": 0.22164416313171387,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "direct-20",
+      "pass": false,
+      "reason": "Usher is an unrelated R&B opener and the rest scatter across synth-pop, phonk, and big-beat; the top three are not a coherent Gorillaz scene.",
+      "positions": [
+        {
+          "list": "catalog_policy",
+          "position": 1,
+          "title": "Love In This Club (Main Version)",
+          "artist": "Usher featuring Young Jeezy",
+          "rationale": "Usher is an unrelated R&B position-1 result.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.576650857925415,
+          "style_overlap": 0.8927001953125,
+          "style_labels": [
+            "electronic",
+            "pop",
+            "hip_hop",
+            "rock"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 2,
+          "title": "So Real",
+          "artist": "Oscar And The Wolf",
+          "rationale": "Oscar and the Wolf is electronic-pop adjacent but not close.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6330142021179199,
+          "style_overlap": 0.7738037109375,
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rnb_soul",
+            "rock"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 3,
+          "title": "Ok Computer",
+          "artist": "Lemaitre",
+          "rationale": "Lemaitre is electronic-pop adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6302623748779297,
+          "style_overlap": 0.86578369140625,
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "hip_hop"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 4,
+          "title": "SHOOTERS",
+          "artist": "FORGOTTENAGE",
+          "rationale": "FORGOTTENAGE is phonk and a scene break.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6526739597320557,
+          "style_overlap": 0.9097900390625,
+          "style_labels": [
+            "pop",
+            "electronic",
+            "rock",
+            "hip_hop"
+          ]
+        },
+        {
+          "list": "catalog_policy",
+          "position": 5,
+          "title": "The Salmon Dance",
+          "artist": "The Chemical Brothers",
+          "rationale": "The Chemical Brothers is alternative electronic adjacent.",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6018519401550293,
+          "style_overlap": 0.726715087890625,
+          "style_labels": [
+            "electronic",
+            "experimental",
+            "pop",
+            "rock"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 1,
+          "title": "The Sound Of The Crowd (2012 Remaster)",
+          "artist": "The Human League",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.607, and broad styles [pop, rock, electronic, rnb_soul].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6070746183395386,
+          "style_overlap": 0.85015869140625,
+          "style_labels": [
+            "pop",
+            "rock",
+            "electronic",
+            "rnb_soul"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 2,
+          "title": "Neckbrace",
+          "artist": "Ratatat",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.611, and broad styles [electronic, jazz, hip_hop, pop].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6108989715576172,
+          "style_overlap": 0.75579833984375,
+          "style_labels": [
+            "electronic",
+            "jazz",
+            "hip_hop",
+            "pop"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 3,
+          "title": "Too Much Of A Good Thing",
+          "artist": "LEISURE",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.620, and broad styles [rnb_soul, pop, jazz, rock].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.6195827722549438,
+          "style_overlap": 0.6966552734375,
+          "style_labels": [
+            "rnb_soul",
+            "pop",
+            "jazz",
+            "rock"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 4,
+          "title": "Snap Out Of It",
+          "artist": "Arctic Monkeys",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.586, and broad styles [pop, rock, punk, electronic].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5855330228805542,
+          "style_overlap": 0.6708984375,
+          "style_labels": [
+            "pop",
+            "rock",
+            "punk",
+            "electronic"
+          ]
+        },
+        {
+          "list": "current_production_dual_sonic",
+          "position": 5,
+          "title": "The One And Only",
+          "artist": "Snoop Dogg",
+          "rationale": "Comparison-only production result; artist/title inspected with preview status available, audio-derived A=0.574, and broad styles [hip_hop, pop, punk, rnb_soul].",
+          "junk": false,
+          "preview_status": "available",
+          "audio_similarity": 0.5736410617828369,
+          "style_overlap": 0.6204833984375,
+          "style_labels": [
+            "hip_hop",
+            "pop",
+            "punk",
+            "rnb_soul"
+          ]
+        }
+      ]
+    }
+  ]
+}

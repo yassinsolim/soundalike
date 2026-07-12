@@ -61,6 +61,71 @@ def _digest(path: Path, algorithm: str = "sha256") -> str:
     return digest.hexdigest()
 
 
+def compact_full_graph(source: str | Path, output: str | Path) -> Path:
+    """Write a deterministic, full-signal-only runtime graph asset."""
+    source_path = Path(source)
+    output_path = Path(output)
+    required = (
+        "artist_names",
+        "track_artist_ids",
+        "track_rows",
+        "track_indptr",
+        "source_mapped",
+        "artist_audio",
+        "full_indices",
+        "full_weights",
+    )
+    source_sha256 = _digest(source_path)
+    with np.load(source_path, allow_pickle=False) as asset:
+        missing = [name for name in required if name not in asset.files]
+        if missing:
+            raise ValueError(
+                "Cannot compact catalog graph; missing required arrays: "
+                + ", ".join(missing)
+            )
+        arrays = {name: np.asarray(asset[name]) for name in required}
+
+    artist_count = len(arrays["artist_names"])
+    indices = arrays["full_indices"]
+    if np.any(indices < -1) or np.any(indices >= artist_count):
+        raise ValueError("Full graph contains an out-of-range artist index")
+    index_dtype = (
+        np.int16
+        if artist_count <= np.iinfo(np.int16).max + 1
+        else np.int32
+    )
+    metadata = {
+        "schema_version": 2,
+        "asset_type": "catalog_artist_graph_runtime",
+        "available_variants": ["full"],
+        "intended_signal": "full_unmasked",
+        "full_unmasked_intended_signal": True,
+        "masked_variants": {
+            "included": False,
+            "available_in": "research_source_only",
+        },
+        "source_sha256": source_sha256,
+        "missing_variant_policy": "error",
+        "silent_fallback": False,
+    }
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(
+        output_path,
+        artist_names=arrays["artist_names"],
+        track_artist_ids=arrays["track_artist_ids"],
+        track_rows=arrays["track_rows"],
+        track_indptr=arrays["track_indptr"],
+        source_mapped=arrays["source_mapped"],
+        artist_audio=np.asarray(
+            _normalise_rows(arrays["artist_audio"]), dtype=np.float16
+        ),
+        full_indices=np.asarray(indices, dtype=index_dtype),
+        full_weights=np.asarray(arrays["full_weights"], dtype=np.float16),
+        metadata=np.asarray(json.dumps(metadata, sort_keys=True)),
+    )
+    return output_path
+
+
 def _normalise_rows(values: np.ndarray) -> np.ndarray:
     values = np.asarray(values, dtype=np.float32)
     return values / np.linalg.norm(values, axis=1, keepdims=True).clip(min=1e-8)
@@ -594,29 +659,68 @@ class CatalogArtistGraph:
     def __init__(self, path: str | Path):
         started = time.perf_counter()
         with np.load(path, allow_pickle=False) as asset:
-            self.artist_names = np.asarray(asset["artist_names"])
-            self.track_artist_ids = np.asarray(
-                asset["track_artist_ids"], dtype=np.int32
+            if "full_indices" not in asset.files or "full_weights" not in asset.files:
+                raise ValueError(
+                    "Catalog graph requires the full variant; no fallback is allowed"
+                )
+            legacy_three_variant = all(
+                f"{name}_{suffix}" in asset.files
+                for name in ("full", "direct", "twohop")
+                for suffix in ("indices", "weights")
             )
-            self.track_rows = np.asarray(asset["track_rows"], dtype=np.int32)
-            self.track_indptr = np.asarray(asset["track_indptr"], dtype=np.int32)
+            self.artist_names = np.asarray(asset["artist_names"])
+            track_dtype = np.int32 if legacy_three_variant else None
+            self.track_artist_ids = np.asarray(
+                asset["track_artist_ids"], dtype=track_dtype
+            )
+            self.track_rows = np.asarray(asset["track_rows"], dtype=track_dtype)
+            self.track_indptr = np.asarray(
+                asset["track_indptr"], dtype=track_dtype
+            )
             self.source_mapped = np.asarray(
                 asset["source_mapped"], dtype=bool
             )
-            self.artist_audio = _normalise_rows(asset["artist_audio"])
-            self.variants = {
-                name: (
-                    np.asarray(asset[f"{name}_indices"], dtype=np.int32),
-                    np.asarray(asset[f"{name}_weights"], dtype=np.float32),
-                )
-                for name in ("full", "direct", "twohop")
-            }
-            self.metadata = json.loads(str(asset["metadata"]))
+            self.artist_audio = (
+                _normalise_rows(asset["artist_audio"])
+                if legacy_three_variant
+                else np.asarray(asset["artist_audio"])
+            )
+            self.variants = {}
+            for name in ("full", "direct", "twohop"):
+                index_key = f"{name}_indices"
+                weight_key = f"{name}_weights"
+                present = (index_key in asset.files, weight_key in asset.files)
+                if any(present) and not all(present):
+                    raise ValueError(
+                        f"Catalog graph variant '{name}' is incomplete"
+                    )
+                if all(present):
+                    self.variants[name] = (
+                        np.asarray(
+                            asset[index_key],
+                            dtype=np.int32 if legacy_three_variant else None,
+                        ),
+                        np.asarray(
+                            asset[weight_key],
+                            dtype=np.float32 if legacy_three_variant else None,
+                        ),
+                    )
+            self.metadata = json.loads(str(asset["metadata"].item()))
         self.artist_lookup = {
             str(name): position
             for position, name in enumerate(self.artist_names)
         }
         self.load_seconds = time.perf_counter() - started
+
+    def _variant(self, variant: str) -> Tuple[np.ndarray, np.ndarray]:
+        try:
+            return self.variants[variant]
+        except KeyError:
+            available = ", ".join(sorted(self.variants))
+            raise ValueError(
+                f"Catalog graph variant '{variant}' is absent; "
+                f"available variants: {available}. No fallback is allowed."
+            ) from None
 
     def _bridge(
         self,
@@ -629,7 +733,7 @@ class CatalogArtistGraph:
         count = min(anchors, int(self.source_mapped.sum()))
         anchor_ids = np.argpartition(score, -count)[-count:]
         anchor_ids = anchor_ids[np.argsort(score[anchor_ids])[::-1]]
-        graph_indices, graph_weights = self.variants[variant]
+        graph_indices, graph_weights = self._variant(variant)
         combined: Dict[int, float] = {}
         for anchor in anchor_ids:
             anchor_weight = max(float(score[anchor]), 0.0)
@@ -658,14 +762,14 @@ class CatalogArtistGraph:
         variant: str = "twohop",
         anchors: int = 8,
     ) -> Tuple[np.ndarray, np.ndarray, str]:
+        indices, weights = self._variant(variant)
         artist_id = self.artist_lookup.get(normalize_text(query_artist))
         if artist_id is not None:
-            indices, weights = self.variants[variant]
             valid = indices[artist_id] >= 0
             if np.any(valid):
                 return (
-                    indices[artist_id, valid],
-                    weights[artist_id, valid],
+                    np.asarray(indices[artist_id, valid], dtype=np.int32),
+                    np.asarray(weights[artist_id, valid], dtype=np.float32),
                     (
                         "catalog_artist_graph"
                         if self.source_mapped[artist_id]

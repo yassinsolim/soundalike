@@ -43,6 +43,10 @@ run it" lives in the [README](../README.md); this is the "how it was built and w
   hybrid candidate R@1000 from 0.0686 audio-only to 0.2353. On a fresh, once-opened 88-pair FINAL,
   however, the exact-edge-masked hybrid regressed current-production primary 0.01156→0.00023 and
   direct inspection passed only 13/20 difficult seeds. It was rejected and not deployed.
+- **Graph-first preflight result:** a signed, low-capacity three-parameter policy improved opened-DEV
+  candidate recall 0.1996→0.2654 and nDCG@10 0.03477→0.04882, but nested folds gained only
+  6.0%-18.6%, scene-held-out validation passed 4/17 scenes, and a new direct review passed 13/20.
+  Preconditions failed, so no protocol-v8 FINAL was created or opened.
 - **Built and validated on:** an NVIDIA RTX 5080, the full automated suite, and a clean packaged
   wheel.
 
@@ -861,7 +865,114 @@ curl.exe -L -o ml_data\iteration6\source\lastfm-dataset-360K.tar.gz `
 
 ---
 
-## 10. Security & correctness
+## 10. Low-capacity graph-first policy: preflight failed before FINAL
+
+Iteration 6 established that independent Last.fm↔Deezer direct-edge agreement was the useful graph
+signal, while the over-conservative mask and 11-feature DEV scorer destroyed it. Iteration 7 treated
+that opened result only as a development hypothesis and added hard preconditions before another
+FINAL could exist.
+
+### Corrected provenance and independent style data
+
+A new detached-Ed25519-signed development protocol preserves v7 byte-for-byte while correcting its
+summary: all 100 record-level primary sources are Deezer related artists; 38 also carry
+ListenBrainz evidence. Last.fm-360K and Music4All-Onion use different datasets, operators, APIs, and
+ID namespaces from Deezer. Their normalized-name overlap is evidence, not a shared key:
+
+| Read-only source-agreement audit | Resolved edges | Overlap | Fraction |
+|---|---:|---:|---:|
+| Last.fm-360K full top-neighbor graph vs Deezer | 1,170 | 430 | 36.8% |
+| Music4All learned top-96 artist neighborhood vs Deezer | 346 | 285 | 82.4% |
+
+The development lock explicitly permits unmasked Last.fm direct edges as the intended
+query-conditioned collaborative signal. Direct/two-hop masks are retained only as mechanism
+diagnostics.
+
+Scene/style consistency comes from a separate source: MusicBrainz community artist tags. General,
+artist-agnostic tag rules produce 22 broad multi-label styles. Of 18,258 catalogue artists, 208 have
+usable direct tags; exact audio-nearest propagation covers the remaining 18,050 while preserving
+the direct anchors. The 575,524-byte float16 asset contains no Last.fm/Music4All data, popularity,
+or benchmark-specific artist boosts. On all opened v6 genre-blending/slash-scene pairs, the selected
+zero guard falsely excludes 0/47 resolved pairs; diagnostic 0.15/0.25 guards exclude 3/47 and 4/47.
+
+### Exact policy and opened-DEV cross-validation
+
+The scorer has exactly three numeric parameters:
+
+```
+G = 0.7 * normalized_graph_edge_weight + 0.3 / log2(graph_edge_rank + 1)
+A = mean(Sonic64 cosine01, CLAP cosine01, 1 / (1 + vibe_distance))
+S = MusicBrainz broad-style cosine overlap
+score = G + audio_weight * A + style_weight * S
+```
+
+Graph-only and graph+audio+scene policies were fixed in the signed grid. Nested selection chose
+`(audio_weight=0.30, style_weight=0.35, style_guard_min=0.0)`. v6 supplies the de-duplicated
+Category-A v1-v5 superset and all 100 opened v7 records were considered. Five catalogue-unresolvable
+records were reported and excluded; 290 records / 254 unique queries remained. No unopened data was
+accepted.
+
+| Opened DEV | nDCG@10 | MRR@10 | Recall@10 | Style@3 | Composite |
+|---|---:|---:|---:|---:|---:|
+| Deployed `dual_sonic` | 0.03477 | 0.08707 | 0.02844 | 0.83396 | 0.19461 |
+| Graph-first policy | **0.04882** | **0.10353** | **0.04520** | **0.90645** | **0.22035** |
+
+The composite is predeclared as `0.80*nDCG@10 + 0.20*MusicBrainz-style@3`; sonic/editorial and
+taste-affinity axes remain separately reported. Candidate recall@1000 improved 0.1996→0.2654 and
+221/290 seeds improved, but the composite gain was only **+13.2%**, below +20%.
+
+Nested held-out-fold gains were +14.7%, +18.6%, +6.0%, +18.1%, and +8.5%. Broad scene-held-out CV
+was stricter: only folk/country, pop, rock, and shoegaze/dream-pop passed all gates (4/17). African
+(-13.6%), classical (-25.3%), reggae/dub/ska (-36.1%), and `other` (-10.7%) breached the -10% floor;
+several additional scenes missed +20%, candidate-recall, MRR, or Recall gates.
+
+### Locked direct review and resources
+
+A separate 20-seed set was locked before ranking. It included mainstream, niche, and blending
+queries across hip-hop/R&B, shoegaze, hyperpop/digicore, electronic, metal, jazz, city/J/K-pop,
+Latin/African, and art-rock. All queries resolved; every challenger and production top-five item had
+a Deezer preview; 0/200 inspected rows were junk. Position-by-position names, artists, G/A/S,
+propagated style labels, preview status, and reviewer rationale are retained. **13/20 passed**, not
+16. Failures were SOPHIE, underscores, Daft Punk, Mariya Takeuchi, NewJeans, Bad Bunny, and
+Gorillaz—mostly the same boundary problem the policy was meant to solve.
+
+The runtime graph drops both diagnostic masks and quantizes full-neighbor IDs/weights, shrinking
+23,242,398→11,423,703 bytes (50.8%); missing masks fail closed rather than aliasing. Isolated
+subprocess measurement found:
+
+- load 5.91 s; first recommendation 108.6 ms;
+- warm mean 112.7 ms, p50 116.1 ms, p95 131.0 ms (20 queries);
+- peak RSS 1,492,938,752 bytes; resident 1,218,555,904 bytes;
+- core index alone 1,191,428,096 bytes, making the 1.1 GB resident target infeasible without a core
+  index format change;
+- conservative Vercel Hobby limit 2 GiB (official docs dated 2026-07-01), 654,544,896 bytes peak
+  headroom, zero errors/fallbacks, deterministic repeated output.
+
+**Stop decision:** both deciding preconditions failed. The development state remains locked with
+`final_open_count=0`; no fresh benchmark was created, no labels were opened, no assets were
+released, and desktop/hosted production remains `2026.07.11-dual-sonic64`.
+
+Reproduce the allowed (opened-DEV only) work:
+
+```powershell
+.\.venv\Scripts\python.exe -m soundalike.ml.catalog_v8 audit `
+  benchmarks\soundalike_multipositive.v7.json `
+  ml_data\iteration6\catalog_graph\catalog-artist-graph.npz `
+  ml_data\iteration5\collaborative\item2vec-full.npz
+
+.\.venv\Scripts\python.exe -m soundalike.ml.catalog_v8 dev-cv `
+  benchmarks\soundalike_pairs.v6.json benchmarks\soundalike_multipositive.v7.json `
+  .goals\human-quality-recommendations\protocol-v7\state.json `
+  ml_data\deepvibe_index_v5.npz ml_data\iteration7\catalog-artist-graph-full-v8.npz `
+  ml_data\iteration7\catalog-style-v8.npz `
+  .goals\human-quality-recommendations\artifacts\catalog-dev-cv-v8.json
+```
+
+There is deliberately no FINAL command in `soundalike.ml.catalog_v8`.
+
+---
+
+## 11. Security & correctness
 
 - **No passwords, ever.** Live Spotify access uses OAuth 2.0 **Authorization Code + PKCE** with a
   local loopback callback, CSRF `state` validation, and cached auto-refreshing tokens.
@@ -886,7 +997,7 @@ curl.exe -L -o ml_data\iteration6\source\lastfm-dataset-360K.tar.gz `
 
 ---
 
-## 11. What I'd build next
+## 12. What I'd build next
 
 - **Persist a personal acoustic-feature store** so the engines cover a user's entire Spotify
   library, not just what's in a preview catalog.
@@ -908,7 +1019,7 @@ curl.exe -L -o ml_data\iteration6\source\lastfm-dataset-360K.tar.gz `
 
 ---
 
-## 12. Skills demonstrated
+## 13. Skills demonstrated
 
 For anyone evaluating this as a portfolio piece, the work spans:
 
