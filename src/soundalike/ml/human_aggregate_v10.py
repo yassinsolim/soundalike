@@ -6,8 +6,8 @@ Usage:
 With no exports (or no actual ratings), the command exits non-zero and removes
 the requested output. Method roles are revealed only in a valid aggregate.
 
-Schema support: 10 (v10/v11), 13 (v13), 14 (v14).  Compatibility is
-preserved — all three schemas use the same validation/aggregation pipeline;
+Schema support: 10 (v10/v11), 13 (v13), 14 (v14), 15 (v15). Compatibility is
+preserved — all four schemas use the same validation/aggregation pipeline;
 only the signed-state verification step differs per schema.
 """
 
@@ -58,6 +58,7 @@ from .human_eval_v14 import (
     TRUSTED_V14_STATE,
     semantic_order_hash as v14_semantic_order_hash,
 )
+from .human_eval_v15 import verify_pack as verify_v15_pack
 
 CLASSES = {"not_similar": 0, "somewhat_similar": 1, "very_similar": 2}
 COHERENCE = {"not_coherent": 0, "somewhat_coherent": 1, "very_coherent": 2}
@@ -243,6 +244,27 @@ def _verify_v14_state(
         raise AggregateError("v14 study state signature is invalid")
 
 
+def _verify_v15_state(
+    protocol_path: Path,
+    protocol: Mapping[str, Any],
+    lists: Mapping[str, Any],
+    key: Mapping[str, Any],
+) -> None:
+    """Verify the mobile-only v15 successor and its unchanged private roles."""
+    try:
+        verified = verify_v15_pack(protocol_path.parent, require_trusted=True)
+    except (OSError, ValueError, KeyError) as exc:
+        raise AggregateError("v15 signed state or predecessor binding is invalid") from exc
+    if (
+        verified["protocol"].get("content_sha256") != protocol.get("content_sha256")
+        or verified["lists"].get("content_sha256") != lists.get("content_sha256")
+        or key.get("content_sha256") != protocol.get("private_key_sha256")
+        or key.get("served_lists_sha256") != lists.get("content_sha256")
+        or key.get("semantic_order_sha256") != lists.get("semantic_order_sha256")
+    ):
+        raise AggregateError("v15 signed state/private-key binding mismatch")
+
+
 def _verify_audio_access_erratum(
     protocol_path: Path,
     protocol: Mapping[str, Any],
@@ -405,7 +427,7 @@ def _load_bound(protocol_path: Path, lists_path: Path, key_path: Path):
         lists.get("schema_version"),
         key.get("schema_version"),
     }
-    if len(schemas) != 1 or next(iter(schemas)) not in {10, 13, 14}:
+    if len(schemas) != 1 or next(iter(schemas)) not in {10, 13, 14, 15}:
         raise AggregateError("protocol/list/key schema versions are incompatible")
     schema = int(next(iter(schemas)))
     for name, doc in (("protocol", protocol), ("lists", lists), ("key", key)):
@@ -417,7 +439,9 @@ def _load_bound(protocol_path: Path, lists_path: Path, key_path: Path):
         raise AggregateError("protocol/list hash mismatch")
     if protocol.get("private_key_sha256") != key["content_sha256"]:
         raise AggregateError("protocol/key hash mismatch")
-    if schema == 14:
+    if schema == 15:
+        _verify_v15_state(protocol_path, protocol, lists, key)
+    elif schema == 14:
         _verify_v14_state(protocol_path, protocol, lists, key)
     elif schema == 13:
         _verify_v13_state(protocol_path, protocol, lists, key)

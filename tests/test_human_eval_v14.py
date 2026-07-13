@@ -19,7 +19,7 @@ Coverage
     - local-only exports; no external script
 * ``human_aggregate_v10.aggregate`` accepts schema 14 with synthetic pack
   (no private keys; skip test if committed pack not yet generated)
-* ``human_aggregate_v10._load_bound`` rejects schema 15
+* ``human_aggregate_v10._load_bound`` rejects unknown future schemas
 * v13 compatibility: _load_bound still accepts schema 13 (regression guard)
 * Private keys / secrets are never committed (static scan)
 
@@ -927,11 +927,11 @@ def test_evaluator_html_no_preview_handling():
 # ---------------------------------------------------------------------------
 
 
-def test_aggregate_rejects_schema_15(tmp_path):
-    """_load_bound must reject unknown schema version 15."""
+def test_aggregate_rejects_unknown_future_schema(tmp_path):
+    """_load_bound must reject unknown future schema versions."""
     from soundalike.ml.human_aggregate_v10 import AggregateError, _load_bound
 
-    for schema in (15, 9, 0):
+    for schema in (16, 9, 0):
         doc = {"schema_version": schema, "rankings_state": "RANKINGS_LOCKED"}
         doc["content_sha256"] = _chash(doc)
         p = tmp_path / f"doc_{schema}.json"
@@ -939,9 +939,9 @@ def test_aggregate_rejects_schema_15(tmp_path):
 
     with pytest.raises(AggregateError, match="schema versions are incompatible"):
         _load_bound(
-            tmp_path / "doc_15.json",
-            tmp_path / "doc_15.json",
-            tmp_path / "doc_15.json",
+            tmp_path / "doc_16.json",
+            tmp_path / "doc_16.json",
+            tmp_path / "doc_16.json",
         )
 
 
