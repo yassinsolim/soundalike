@@ -5,6 +5,10 @@ Usage:
 
 With no exports (or no actual ratings), the command exits non-zero and removes
 the requested output. Method roles are revealed only in a valid aggregate.
+
+Schema support: 10 (v10/v11), 13 (v13), 14 (v14).  Compatibility is
+preserved — all three schemas use the same validation/aggregation pipeline;
+only the signed-state verification step differs per schema.
 """
 
 from __future__ import annotations
@@ -44,6 +48,15 @@ from .human_eval_v13 import (
     TRUSTED_V13_PROTOCOL,
     TRUSTED_V13_STATE,
     semantic_order_hash as v13_semantic_order_hash,
+)
+from .human_eval_v14 import (
+    STATE_IDENTITY as V14_STATE_IDENTITY,
+    STATE_NAMESPACE as V14_STATE_NAMESPACE,
+    TRUSTED_V14_FILES,
+    TRUSTED_V14_LISTS,
+    TRUSTED_V14_PROTOCOL,
+    TRUSTED_V14_STATE,
+    semantic_order_hash as v14_semantic_order_hash,
 )
 
 CLASSES = {"not_similar": 0, "somewhat_similar": 1, "very_similar": 2}
@@ -131,6 +144,103 @@ def _verify_v13_state(
     )
     if verified.returncode:
         raise AggregateError("v13 study state signature is invalid")
+
+
+def _verify_v14_state(
+    protocol_path: Path,
+    protocol: Mapping[str, Any],
+    lists: Mapping[str, Any],
+    key: Mapping[str, Any],
+) -> None:
+    """Verify the v14 identity-corrected study's signed state and semantic binding.
+
+    Trust-anchor enforcement mirrors v13: when the ``TRUSTED_V14_*`` constants
+    are non-empty (post-freeze), all file hashes must match exactly.  When they
+    are still empty sentinels the structural/signature checks still pass but the
+    pinned-hash check is skipped (generation mode).
+    """
+    directory = protocol_path.parent
+    state_path = directory / "state.json"
+    signature = directory / "state.sig"
+    allowed = directory / "allowed_signers"
+    if not all(path.is_file() for path in (state_path, signature, allowed)):
+        raise AggregateError("signed v14 study state is incomplete")
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    semantic = v14_semantic_order_hash(lists)
+
+    # Trust-anchor check: skip if constants are still empty sentinels
+    if TRUSTED_V14_FILES and (
+        protocol.get("content_sha256") != TRUSTED_V14_PROTOCOL
+        or lists.get("content_sha256") != TRUSTED_V14_LISTS
+        or state.get("content_sha256") != TRUSTED_V14_STATE
+        or any(
+            not (directory / name).is_file()
+            or file_hash(directory / name) != digest
+            for name, digest in TRUSTED_V14_FILES.items()
+        )
+    ):
+        raise AggregateError("v14 pack differs from the committed trust anchors")
+
+    if (
+        state.get("schema_version") != 14
+        or content_hash(state) != state.get("content_sha256")
+        or state.get("rankings_state") != "RANKINGS_LOCKED"
+        or state.get("ratings_count_at_freeze") != 0
+        or protocol.get("ratings_count_at_freeze") != 0
+        or lists.get("ratings_count_at_freeze") != 0
+        or not (
+            protocol.get("served_lists_sha256")
+            == lists.get("content_sha256")
+            == state.get("served_lists_sha256")
+        )
+        or protocol.get("content_sha256") != state.get("protocol_sha256")
+        or not (
+            protocol.get("private_key_sha256")
+            == key.get("content_sha256")
+            == state.get("private_method_key_sha256")
+        )
+        or key.get("served_lists_sha256") != lists.get("content_sha256")
+        or not (
+            protocol.get("semantic_order_sha256")
+            == lists.get("semantic_order_sha256")
+            == key.get("semantic_order_sha256")
+            == state.get("semantic_order_sha256")
+            == semantic
+        )
+    ):
+        raise AggregateError("v14 signed state binding mismatch")
+
+    # Supersedes_v13 integrity — must be present with non-zero changed seeds
+    sup = state.get("supersedes_v13", {})
+    if not isinstance(sup, dict) or not sup.get("old_protocol_sha256"):
+        raise AggregateError("v14 state missing supersedes_v13 provenance")
+    if sup.get("ratings_discarded") != 0 or sup.get("ratings_migrated") != 0:
+        raise AggregateError(
+            "v14 supersedes_v13 must record zero discarded/migrated ratings"
+        )
+    if int(sup.get("semantic_diff", {}).get("changed_seed_count", 0)) == 0:
+        raise AggregateError(
+            "v14 supersedes_v13 semantic diff must have at least one change"
+        )
+
+    executable = shutil.which("ssh-keygen")
+    if executable is None:
+        raise AggregateError("ssh-keygen is required to verify v14 study state")
+    verified = subprocess.run(
+        [
+            executable,
+            "-Y", "verify",
+            "-f", str(allowed),
+            "-I", V14_STATE_IDENTITY,
+            "-n", V14_STATE_NAMESPACE,
+            "-s", str(signature),
+        ],
+        input=state_path.read_bytes(),
+        capture_output=True,
+        check=False,
+    )
+    if verified.returncode:
+        raise AggregateError("v14 study state signature is invalid")
 
 
 def _verify_audio_access_erratum(
@@ -295,7 +405,7 @@ def _load_bound(protocol_path: Path, lists_path: Path, key_path: Path):
         lists.get("schema_version"),
         key.get("schema_version"),
     }
-    if len(schemas) != 1 or next(iter(schemas)) not in {10, 13}:
+    if len(schemas) != 1 or next(iter(schemas)) not in {10, 13, 14}:
         raise AggregateError("protocol/list/key schema versions are incompatible")
     schema = int(next(iter(schemas)))
     for name, doc in (("protocol", protocol), ("lists", lists), ("key", key)):
@@ -307,7 +417,9 @@ def _load_bound(protocol_path: Path, lists_path: Path, key_path: Path):
         raise AggregateError("protocol/list hash mismatch")
     if protocol.get("private_key_sha256") != key["content_sha256"]:
         raise AggregateError("protocol/key hash mismatch")
-    if schema == 13:
+    if schema == 14:
+        _verify_v14_state(protocol_path, protocol, lists, key)
+    elif schema == 13:
         _verify_v13_state(protocol_path, protocol, lists, key)
     elif key.get("served_lists_sha256") != lists["content_sha256"]:
         _verify_audio_access_erratum(protocol_path, protocol, lists, key)

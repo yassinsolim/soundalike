@@ -1,0 +1,507 @@
+{
+  "schema_version": 14,
+  "artifact_kind": "artist_identity_collision_audit",
+  "created_at": "2026-07-13T18:42:40.977469+00:00",
+  "commercial_human_ratings_used": 0,
+  "human_labels_used": false,
+  "production_changed": false,
+  "deployed": false,
+  "catalog": {
+    "rows": 272853,
+    "track_ids_tobytes_sha256": "a20632fc8fb4beff406c1858714b14eb0303802a3c3829b085454d10900555f7",
+    "normalized_catalog_keys_audited": 18257,
+    "all_keys_audited": true
+  },
+  "identity_asset": {
+    "path": "ml_data/clap_v14/artist-identity-v14.npz",
+    "sha256": "d47078a70d79354e27052d731096918a3278a1530913c43a3eaeabfa9d9df8dc",
+    "bytes": 8270124,
+    "clap_asset_sha256": "0c204bddb0e038cee8251c21b954b2964c96f61783f87889cff2af1b59c20b40",
+    "rows_with_stable_primary_deezer_id": 176454,
+    "rows_without_stable_primary_deezer_id": 96399,
+    "stable_id_fraction": 0.6466998713593034,
+    "rows_with_contributors": 500,
+    "source_mbid_direct_links": 0,
+    "source_mbid_policy": "stable source identities retained at normalized-name level; no unverified Deezer-MBID link is claimed"
+  },
+  "collision_counts": {
+    "keys_with_multiple_deezer_artist_ids": 138,
+    "keys_with_multiple_source_mbids": 163,
+    "keys_with_case_punctuation_or_transliteration_variants": 6254,
+    "keys_with_multimodal_audio": 7643,
+    "homonym_keys_audio_unresolvable": 49,
+    "unknown_id_keys": 4256
+  },
+  "complete_local_audit": {
+    "path": "ml_data/clap_v14/artist-identity-audit-v14.json",
+    "file_sha256": "845f10a8b6e4f4b5d43b1602fdffaab700e0469070d44b54db9a98eb8bc9eb72",
+    "bytes": 10672189,
+    "all_key_details_content_sha256": "071b87aec15f06259c8fa801a55510934482999e2cd2810eed900cb652754d35",
+    "not_committed_due_to_size": true
+  },
+  "v13_exposure": {
+    "selected_challenger_affected_seed_count": 6,
+    "selected_challenger_affected_slot_count": 6,
+    "selected_challenger_occurrences": [
+      {
+        "seed_id": "DEV-SONIC-024",
+        "position": 2,
+        "row": 271194,
+        "deezer_track_id": 4092065321,
+        "title": "Still Human",
+        "artist": "Chris Brown",
+        "normalized_key": "chris brown",
+        "risk_flags": [
+          "multiple_source_mbids"
+        ],
+        "known_deezer_artist_ids": [
+          102
+        ],
+        "source_mbids": [
+          "2c1828a2-e46b-4ade-a6e9-065ca265d679",
+          "c234fa42-e6a6-443e-937e-2f4b073538a3"
+        ]
+      },
+      {
+        "seed_id": "DEV-SONIC-028",
+        "position": 5,
+        "row": 6660,
+        "deezer_track_id": 1074414202,
+        "title": "I Love Me Too",
+        "artist": "Kirby",
+        "normalized_key": "kirby",
+        "risk_flags": [
+          "multiple_deezer_artist_ids"
+        ],
+        "known_deezer_artist_ids": [
+          189977,
+          293785381
+        ],
+        "source_mbids": [
+          "bee809bd-5b70-4cba-9266-140a9edc2597"
+        ]
+      },
+      {
+        "seed_id": "DEV-SONIC-030",
+        "position": 1,
+        "row": 170212,
+        "deezer_track_id": 445849572,
+        "title": "New Lands",
+        "artist": "Justice",
+        "normalized_key": "justice",
+        "risk_flags": [
+          "multiple_source_mbids"
+        ],
+        "known_deezer_artist_ids": [
+          6404
+        ],
+        "source_mbids": [
+          "444f2191-8841-440e-bbc1-6fd564893946",
+          "f9c1cc73-36ba-4f8d-ba12-7d2490608886"
+        ]
+      },
+      {
+        "seed_id": "DEV-SONIC-044",
+        "position": 2,
+        "row": 12350,
+        "deezer_track_id": 2471347161,
+        "title": "Eve Gene",
+        "artist": "Kirby",
+        "normalized_key": "kirby",
+        "risk_flags": [
+          "multiple_deezer_artist_ids"
+        ],
+        "known_deezer_artist_ids": [
+          189977,
+          293785381
+        ],
+        "source_mbids": [
+          "bee809bd-5b70-4cba-9266-140a9edc2597"
+        ]
+      },
+      {
+        "seed_id": "DEV-SONIC-052",
+        "position": 3,
+        "row": 163287,
+        "deezer_track_id": 16312922,
+        "title": "Cheese And Onions",
+        "artist": "Galaxie 500",
+        "normalized_key": "galaxie 500",
+        "risk_flags": [
+          "multiple_source_mbids"
+        ],
+        "known_deezer_artist_ids": [
+          6038
+        ],
+        "source_mbids": [
+          "4de3cfed-b459-42bd-bfbb-7a843fbc73df",
+          "8ddc1812-2cf8-451c-afd1-e88f9d446e1b"
+        ]
+      },
+      {
+        "seed_id": "DEV-SONIC-057",
+        "position": 4,
+        "row": 222732,
+        "deezer_track_id": 548631112,
+        "title": "Green Dolphin Street",
+        "artist": "Bill Evans",
+        "normalized_key": "bill evans",
+        "risk_flags": [
+          "multiple_deezer_artist_ids"
+        ],
+        "known_deezer_artist_ids": [
+          2060,
+          12404182
+        ],
+        "source_mbids": [
+          "8247a3f2-3a8e-4256-b322-6c57b03a4e36"
+        ]
+      }
+    ],
+    "all_variants_affected_seed_count": 14,
+    "all_variants_unique_seed_row_count": 15,
+    "module_union_reported_result_occurrences": 11
+  },
+  "nothing_root_cause": {
+    "seed_id": "DEV-SONIC-037",
+    "query_row": 216139,
+    "query_deezer_track_id": 490860452,
+    "normalized_key": "nothing",
+    "legacy_graph_artist_id": 12063,
+    "catalog_track_rows": 80,
+    "catalog_rows_with_stable_id": 41,
+    "catalog_deezer_artist_ids": [
+      388063
+    ],
+    "lastfm_source_mbids": [
+      "f4cd6526-6c4b-495e-92e2-747200eae056"
+    ],
+    "source_mbid_metadata": {
+      "provider": "MusicBrainz",
+      "type": "Person",
+      "disambiguation": "US dark ambient/industrial producer Jason William Walton"
+    },
+    "mapping_trace": "Last.fm corpus MBID/name row -> normalize_text(name) -> legacy graph artist_lookup[\"nothing\"] -> graph artist_id 12063; MBID was discarded by v13 build, so the source identity was merged with Deezer catalog name cluster",
+    "top_legacy_graph_neighbors": [
+      {
+        "artist_id": 16883,
+        "artist": "traumatize",
+        "weight": 0.81201171875
+      },
+      {
+        "artist_id": 8629,
+        "artist": "kcee",
+        "weight": 0.81201171875
+      },
+      {
+        "artist_id": 18236,
+        "artist": "zomboy feat lady chann",
+        "weight": 0.8056640625
+      },
+      {
+        "artist_id": 17113,
+        "artist": "uma2rman",
+        "weight": 0.8017578125
+      },
+      {
+        "artist_id": 17611,
+        "artist": "whiney",
+        "weight": 0.79931640625
+      },
+      {
+        "artist_id": 1372,
+        "artist": "aweminus",
+        "weight": 0.79736328125
+      },
+      {
+        "artist_id": 14144,
+        "artist": "sam worsley",
+        "weight": 0.7958984375
+      },
+      {
+        "artist_id": 14425,
+        "artist": "setaoc mass",
+        "weight": 0.7890625
+      },
+      {
+        "artist_id": 1221,
+        "artist": "asc",
+        "weight": 0.78857421875
+      },
+      {
+        "artist_id": 12783,
+        "artist": "peter paul",
+        "weight": 0.78662109375
+      }
+    ],
+    "v13_lastfm_confidence": 0.9853870272636414,
+    "v14_source_profile_confidence": 0.6068337181210518,
+    "guard_threshold": 0.62,
+    "guard_action": "identity_guard_abstained:source_profile_below_0.62",
+    "before": [
+      {
+        "position": 1,
+        "row": 25391,
+        "deezer_track_id": 3274249131,
+        "title": "Breath",
+        "artist": "ASC"
+      },
+      {
+        "position": 2,
+        "row": 193795,
+        "deezer_track_id": 108478786,
+        "title": "Ethiopia Land",
+        "artist": "Peter & Paul"
+      },
+      {
+        "position": 3,
+        "row": 70555,
+        "deezer_track_id": 2204525197,
+        "title": "Black Rose",
+        "artist": "Source Direct"
+      },
+      {
+        "position": 4,
+        "row": 44764,
+        "deezer_track_id": 2338133835,
+        "title": "Hazel Street",
+        "artist": "Submorphics"
+      },
+      {
+        "position": 5,
+        "row": 24413,
+        "deezer_track_id": 2942262191,
+        "title": "The Witch Hunt",
+        "artist": "Cookie Monsta"
+      }
+    ],
+    "after": [
+      {
+        "position": 1,
+        "row": 46785,
+        "deezer_track_id": 97233070,
+        "title": "Killed By An Angel",
+        "artist": "Sunny Day Real Estate"
+      },
+      {
+        "position": 2,
+        "row": 74954,
+        "deezer_track_id": 76126670,
+        "title": "Empty Room",
+        "artist": "Crowbar"
+      },
+      {
+        "position": 3,
+        "row": 180637,
+        "deezer_track_id": 122119734,
+        "title": "Fireal",
+        "artist": "Deftones"
+      },
+      {
+        "position": 4,
+        "row": 110858,
+        "deezer_track_id": 590199692,
+        "title": "Ghetto Blaster",
+        "artist": "Bryan's Magic Tears"
+      },
+      {
+        "position": 5,
+        "row": 167641,
+        "deezer_track_id": 2114448,
+        "title": "Pain",
+        "artist": "Catherine Wheel"
+      }
+    ],
+    "collapse_removed": true
+  },
+  "guard_audit": {
+    "total_abstentions": 24,
+    "preexisting_v13_production_fallbacks": 23,
+    "new_behavior_abstentions": 1,
+    "new_behavior_seed_ids": [
+      "DEV-SONIC-037"
+    ],
+    "records": [
+      {
+        "seed_id": "DEV-SONIC-011",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-014",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-015",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-019",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-022",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-025",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-028",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-033",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-034",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-035",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-036",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-037",
+        "source_profile_confidence": 0.6068337181210518,
+        "v13_already_production_fallback": false,
+        "v14_changes_behavior": true
+      },
+      {
+        "seed_id": "DEV-SONIC-038",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-040",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-042",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-044",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-045",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-046",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-047",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-048",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-055",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-058",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-059",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      },
+      {
+        "seed_id": "DEV-SONIC-060",
+        "source_profile_confidence": 0.0,
+        "v13_already_production_fallback": true,
+        "v14_changes_behavior": false
+      }
+    ],
+    "false_abstention_on_unambiguous_artist_count": 0
+  },
+  "candidate_coverage": {
+    "conservative_clap_fallback": {
+      "known_category_a_targets": 36,
+      "recall_at_50": 0.027777777777777776,
+      "recall_at_200": 0.027777777777777776,
+      "selection_use": false
+    },
+    "graph_clap_union": {
+      "known_category_a_targets": 36,
+      "recall_at_50": 0.027777777777777776,
+      "recall_at_200": 0.027777777777777776,
+      "selection_use": false
+    },
+    "pure_clap": {
+      "known_category_a_targets": 36,
+      "recall_at_50": 0.027777777777777776,
+      "recall_at_200": 0.027777777777777776,
+      "selection_use": false
+    }
+  },
+  "semantic_diff": {
+    "seed_count": 60,
+    "exact_match_count": 58,
+    "changed_seed_count": 2,
+    "changed_position_count": 7,
+    "mean_overlap": 0.9777777777777777
+  },
+  "safety": {
+    "no_artist_specific_ranking_condition": true,
+    "no_benchmark_or_scene_boost": true,
+    "cross_source_unlinked_ids_abstain": true,
+    "same_name_graph_clusters_mixed": false,
+    "production_fallback_on_low_confidence": true
+  },
+  "content_sha256": "bbd9bc8b7b9c52ca30a7ddb9277d37a97b46dbaaa4f8d03bd84f5548deee3afe"
+}

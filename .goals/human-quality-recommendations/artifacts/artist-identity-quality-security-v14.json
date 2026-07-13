@@ -1,0 +1,80 @@
+{
+  "schema_version": 14,
+  "artifact_kind": "artist_identity_quality_security_gate",
+  "created_at": "2026-07-13T20:10:11.338568+00:00",
+  "quality_gate": {
+    "command": ".\\.venv\\Scripts\\python.exe -m pytest tests\\ -q",
+    "passed": true,
+    "tests_passed": 729,
+    "tests_failed": 0
+  },
+  "build": {
+    "command": ".\\.venv\\Scripts\\python.exe -m build",
+    "passed": true,
+    "artifacts": [
+      "soundalike-0.1.0.tar.gz",
+      "soundalike-0.1.0-py3-none-any.whl"
+    ]
+  },
+  "compileall": {
+    "command": ".\\.venv\\Scripts\\python.exe -m compileall -q src",
+    "passed": true
+  },
+  "dependency_audit": {
+    "command": ".\\.venv\\Scripts\\python.exe -m pip_audit",
+    "passed": true,
+    "known_vulnerabilities": 0,
+    "dependencies_skipped": 4
+  },
+  "artifact_integrity": {
+    "self_hashed_artifacts_verified": 4,
+    "signed_pack_verified": true,
+    "private_method_key_binding_verified": true,
+    "ed25519_signature_verified": true,
+    "ranked_preview_positions_available": "600/600"
+  },
+  "direct_list_audit": {
+    "changed_seeds_reviewed": 2,
+    "changed_positions": 7,
+    "new_obvious_scene_collapses": 0,
+    "junk_or_version_count": 0,
+    "same_artist_count": 0,
+    "nothing_collapse_removed": true,
+    "residual_note": "Crowbar at position 2 is heavy/sludge adjacent rather than shoegaze; retained for blinded raters"
+  },
+  "secret_scan": {
+    "github_secret_scanning": {
+      "attempted": true,
+      "completed": false,
+      "reason": "repository does not have GitHub Advanced Security enabled"
+    },
+    "local_detect_secrets": {
+      "version": "1.5.0",
+      "staged_files_scanned": 25,
+      "raw_findings": 69,
+      "verified_findings": 0,
+      "audited_benign": 69,
+      "breakdown": {
+        "sha256_and_content_hash_fields": 65,
+        "synthetic_secret_keywords": 2,
+        "negative_private_key_pattern_tests": 2
+      }
+    },
+    "private_keys_committed": false,
+    "public_ed25519_keys_only": true,
+    "private_key_paths_gitignored": [
+      "ml_data/clap_v14/human_eval/collector_signer",
+      "ml_data/clap_v14/human_eval/method-key-v14.json"
+    ]
+  },
+  "scope": {
+    "goal_md_changed": false,
+    "final_opened": false,
+    "production_changed": false,
+    "deployed": false,
+    "production_version_retained": "2026.07.11-dual-sonic64"
+  },
+  "commercial_human_ratings_used": 0,
+  "ac3_claimed": false,
+  "content_sha256": "c71faadaf7eaebbf8f54aba07aa567ca2766ef503bdaf9467469a49da8d69d68"
+}

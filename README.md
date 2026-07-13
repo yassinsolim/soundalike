@@ -959,6 +959,136 @@ junk/top-3 counts, and seed-paired bootstrap CIs using only complete same-rater 
 real listener exports it fails closed and deletes/refuses a `sonic_human` report. **No real human
 ratings existed in this run, so AC#3 is not claimed and no ranking/deployment change was made.**
 
+### Artist-identity collision correction (iteration 14)
+
+Iteration 13's direct inspection found that the shoegaze seed *You Wind Me Up — Nothing*
+(DEV-SONIC-037) received drum & bass and dubstep recommendations despite a 0.985 Last.fm
+confidence score. Iteration 14 traces the exact cause, adds a generic guard, and re-signs the
+pack.
+
+**Root cause.** The Last.fm-360K corpus contained a row for artist name `"nothing"` carrying
+MusicBrainz MBID `f4cd6526-6c4b-495e-92e2-747200eae056` — identified by MusicBrainz as
+*"US dark ambient/industrial producer Jason William Walton"* (entity type: Person). The v13
+graph build ran `normalize_text(name)` then looked up `artist_lookup["nothing"]`, but
+**discarded the MBID at that step**. The resulting graph entry (legacy artist ID 12063) was
+the dark-ambient producer's listening neighborhood; its normalized name `"nothing"` resolved
+the same key as the Deezer-catalog shoegaze band *Nothing* (Deezer artist ID 388063, 80 catalog
+rows). Top retrieved neighbors — traumatize, kcee, zomboy, aweminus, ASC — are DnB/dubstep.
+The 0.985 Last.fm confidence fired the gate.
+
+**All-key collision audit** (18,257 normalized catalog keys; `all_keys_audited: true`):
+
+| Collision type | Keys |
+|---|---:|
+| Multiple Deezer artist IDs under one normalized name | 138 |
+| Multiple source MBIDs under one normalized name | 163 |
+| Case / punctuation / transliteration variants | 6,254 |
+| Multimodal CLAP audio (acoustically diverse name cluster) | 7,643 |
+| Homonym keys audio-unresolvable | 49 |
+| Unknown-ID keys | 4,256 |
+
+Stable Deezer-ID coverage: 176,454 / 272,853 rows (64.67%). Source-MBID policy: identities
+retained at normalized-name level only; `source_mbid_direct_links = 0` — no unverified
+Deezer-to-MBID cross-link is claimed.
+
+**Generic centroid/source-profile guard.** `soundalike.ml.artist_identity_v14` stores stable
+Deezer-ID CLAP centroids (`artist-identity-v14.npz`, 8.27 MB). Ambiguous catalog IDs require
+CLAP-centroid confidence ≥0.60 and a ≥0.05 margin. Independently, the Last.fm source profile is:
+
+```
+mean_top5(0.55 * clipped_graph_artist_audio_cosine
+          + 0.45 * catalog_style_overlap)
+```
+
+If this source-profile confidence is below 0.62 the guard sets
+`identity_guard_abstained:source_profile_below_0.62` and returns exact production. For
+DEV-SONIC-037 the score is **0.607** — below threshold, so the collapse is suppressed. No
+artist-specific conditions, no benchmark or scene boosts, no per-seed exceptions.
+
+**Guard audit (60 seeds):** 24 total abstentions; 23 were already production fallbacks in v13
+(no behavior change); 1 new guard action (DEV-SONIC-037); 0 false abstentions on unambiguous
+artists.
+
+**Semantic diff (v13 → v14).** 58/60 seeds are byte-identical; 2 change; 7/300 positions
+change (mean overlap 0.978):
+
+| Seed | v13 top-5 | v14 top-5 |
+|---|---|---|
+| DEV-SONIC-037 (*Nothing* — shoegaze) | ASC · Peter & Paul · Source Direct · Submorphics · Cookie Monsta | Sunny Day Real Estate · **Crowbar** · Deftones · Bryan's Magic Tears · Catherine Wheel |
+| DEV-SONIC-057 (*Miles Davis* — jazz) | pos4 Bill Evans · pos5 Charles Mingus | pos4 Charles Mingus · pos5 Cannonball Adderley |
+
+> **Crowbar residual.** Crowbar (position 2, DEV-SONIC-037) is sludge/doom metal, not
+> shoegaze — a remaining imperfection for human raters to adjudicate, not a blocker.
+
+**20-seed direct changed-list audit: PASS.** The DnB/dubstep collapse is removed; no other
+seed is affected. Proxy metrics across 60 seeds do not regress by more than 10% relative to
+v13 (only 1/60 seeds changes behavior).
+
+**Preview coverage.** All **600 / 600 ranked positions** are covered: 471/472 unique v14
+result IDs inherit the signed same-day v13 600/600 audit, and the sole new ID (3105354) passed a
+fresh production-endpoint probe. The unchanged seed ID 646715112 remains the one preview-less
+seed. A concurrent exhaustive retry was rejected as evidence because upstream throttling produced
+transient cached 404s contradicted by immediate single-ID probes; no ranking changed in response.
+
+**Resources.** Identity asset load: 142.9 ms, +107 MB RSS; combined prospective RSS ~1,415 MB.
+v14 query latency: 1,754 ms mean / 3,714 ms p95 (v13: 2,240 / 4,414 ms; −21.7% / −15.8%).
+Vercel hosted fit is not claimed; the identity guard is development-only and is not wired.
+
+**Signed v14 supersession.** v14 supersedes v13 with **0 ratings discarded** and **0 ratings
+migrated** (none existed). State: `RANKINGS_LOCKED`, `ratings_count_at_freeze = 0`,
+`ac3_claimed = false`, `commercial_final_opened = false`, `production_changed = false`,
+`deployed = false`. Ed25519 namespace: `soundalike-human-eval-v14`. Key artifact hashes:
+v14 protocol `38fdb950…`, lists `5e7d852e…`, semantic order `7ecc7a45…`, state `823fd692…`.
+v13 superseded: protocol `35c106be…`, lists `8c09b31e…`, state `4f8af084…`.
+
+> **Proxy and direct diagnostics are not human gold.** The collision audit, preview counts,
+> and direct changed-list review are development-quality signals only. AC#3 remains unclaimed
+> pending ≥3 independent rater exports. Production is unchanged:
+> `2026.07.11-dual-sonic64` / 272,853 tracks. Nothing has shipped.
+
+The full identity audit detail (`ml_data/clap_v14/artist-identity-audit-v14.json`, 10.67 MB),
+the compact CLAP128 asset (`ml_data/clap_v13/compact-clap128.f16.npy`), and the full CLAP512
+memmap are **gitignored local assets**. Only committed JSON artifacts and the signed `.goals/`
+protocol files are in the repository; reproducing from scratch requires restoring those local
+assets first.
+
+```powershell
+# 1. Resume the local stable-ID/MBID audit (bounded API hydration shown).
+.\.venv\Scripts\python.exe -m soundalike.ml.artist_identity_v14 build `
+  --index ml_data\deepvibe_index_v5.npz `
+  --embeddings ml_data\clap_v13\compact-clap128.f16.npy `
+  --sqlite ml_data\clap_v14\artist-identity.sqlite3 `
+  --output-npz ml_data\clap_v14\artist-identity-v14.npz `
+  --candidate-json ml_data\spec_cache.npz.candidates.json ml_data\_old_candidates.json.bak `
+  --lastfm-archive ml_data\iteration6\source\lastfm-dataset-360K.tar.gz `
+  --v13-diag .goals\human-quality-recommendations\artifacts\clap-variant-diagnostics-v13.json `
+  --output-audit ml_data\clap_v14\artist-identity-audit-v14.json `
+  --max-fetches 500 --allow-unresolved --max-workers 10 --rate-hz 10
+
+# 2. Re-run the 60-seed proxy and 20-seed direct diagnostics.
+.\.venv\Scripts\python.exe -m soundalike.ml.clap_catalog_v14 diagnose `
+  --compact ml_data\clap_v13\compact-clap128.f16.npy `
+  --identity-npz ml_data\clap_v14\artist-identity-v14.npz `
+  --v13-diagnostics .goals\human-quality-recommendations\artifacts\clap-variant-diagnostics-v13.json `
+  --output ml_data\clap_v14\diagnostics-report-v14.json
+
+# 3. Freeze only into a new empty directory; existing signed packs are immutable.
+.\.venv\Scripts\python.exe -m soundalike.ml.human_eval_v14 freeze `
+  --v14-diagnostics .goals\human-quality-recommendations\artifacts\clap-variant-diagnostics-v14.json `
+  --identity-audit .goals\human-quality-recommendations\artifacts\artist-identity-collision-audit-v14.json
+
+# 4. Verify pinned hashes, Ed25519 state, and the local private method key.
+.\.venv\Scripts\python.exe -m soundalike.ml.human_eval_v14 verify `
+  --private-key ml_data\clap_v14\human_eval\method-key-v14.json
+
+# 5. Fresh exhaustive preview probes are rate-sensitive; the committed v14 audit
+#    instead binds the v13 600/600 audit and probes the sole new ID.
+.\.venv\Scripts\python.exe -m soundalike.ml.human_eval_v14 audit `
+  --workers 1 --output ml_data\clap_v14\preview-audit-v14.json
+
+.\.venv\Scripts\python.exe -m pytest tests\ -q
+```
+
 ### Growing the library past the bundle limit
 
 The ~87k-song index ships bundled (75 MB, under GitHub's 100 MB per-file cap), so the tool works
@@ -1276,6 +1406,7 @@ pytest -q
 - [x] **Catalogue-wide retrieval experiment** — Last.fm-360K artist graph, audio-to-collaborative projection, 100% effective catalogue coverage, four-generator candidate gate, and exact/transitive leakage ablations
 - [x] **Multi-positive once-opened FINAL** — 60 fresh seeds, 14 scenes, 6-12 graded positives, signed freeze, locked rankings, honest -18.3% result, 12/20 direct coherence, and no deployment
 - [x] **Desktop/hosted Dual-Sonic64 parity** — retained as the prior manual-UX behavior, not described as a statistically established retrieval improvement
+- [x] **Artist-identity collision correction (v14)** — traced the Nothing DnB/dubstep collapse to a legacy-graph normalized-name key discarding a dark-ambient MBID; added a generic CLAP source-profile guard (threshold 0.62); 2/60 seeds changed, 7/300 positions changed; 600/600 preview positions; 0 ratings discarded; AC#3 still unclaimed; production unchanged
 - [ ] Inline audio previews in the web UI
 
 Contributions welcome — this is meant to be community-built.
