@@ -1,0 +1,79 @@
+{
+  "schema_version": 14,
+  "artifact_kind": "v14_preview_coverage_supersession_audit",
+  "checked_at": "2026-07-13T19:35:48.221888+00:00",
+  "served_lists_sha256": "5e7d852ea7ea5d1e9fe04f1b77c156f1c9a0894cd2d913f16e08d6ec304358b2",
+  "method": "set-difference against same-day signed v13 600/600 audit plus fresh production-endpoint probe for every new Deezer ID",
+  "predecessor": {
+    "served_lists_sha256": "8c09b31e55efdbc7399a4e26f8291e0b408d07395b61cda6c873e6eb46eaa370",
+    "preview_audit_content_sha256": "e240a05388b1e07b3edd217732b4804397da0f3abc90f81a70a491567488c177",
+    "preview_audit_file_sha256": "16374879689a7e50032e86157b95137b85e226e9b0bad2d4d7ad33aa487ba88a",
+    "ranked_positions_available": 600,
+    "ranked_positions_total": 600
+  },
+  "id_diff": {
+    "v13_unique_result_ids": 477,
+    "v14_unique_result_ids": 472,
+    "inherited_v14_result_ids": 471,
+    "new_v14_result_ids": [
+      3105354
+    ],
+    "removed_v13_result_ids": [
+      108478786,
+      548631112,
+      2204525197,
+      2338133835,
+      2942262191,
+      3274249131
+    ]
+  },
+  "new_id_probes": [
+    {
+      "deezer_track_id": 3105354,
+      "status": "available",
+      "http_status": 200,
+      "endpoint": "https://soundalike.yassin.app/api/preview",
+      "cors": "*",
+      "cache_control": "public, max-age=600",
+      "signed_preview_url_persisted": false
+    }
+  ],
+  "unique_results": {
+    "total": 472,
+    "available": 472,
+    "no_preview": 0,
+    "errors": 0
+  },
+  "ranked_positions": {
+    "total": 600,
+    "available": 600,
+    "no_preview": 0,
+    "errors": 0,
+    "resolvable_fraction": 1.0
+  },
+  "seeds": {
+    "total": 60,
+    "available": 59,
+    "no_preview": 1,
+    "no_preview_deezer_ids": [
+      646715112
+    ]
+  },
+  "concurrent_full_probe_disposition": {
+    "accepted_as_coverage_evidence": false,
+    "reason": "provider/upstream throttling produced transient cached 404 no-preview responses contradicted by immediate direct and production-endpoint probes; no ranking changed in response",
+    "latest_local_report_sha256": "91393f7609c33c5d1cdeaa8568d7ab4866feaf60da54daaf1d53d3efb7dc8e9e",
+    "latest_reported_available_positions": 193
+  },
+  "external_request": {
+    "query_parameters": [
+      "id (numeric Deezer track ID only)"
+    ],
+    "ratings_rater_session_transmitted": false,
+    "signed_preview_urls_persisted": false
+  },
+  "human_ratings_used": 0,
+  "production_changed": false,
+  "deployed": false,
+  "content_sha256": "a02d984f5a87a14f2d93220db16bc28ef2eb696f5fe233561362ae53cf300d1b"
+}

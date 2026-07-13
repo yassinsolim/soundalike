@@ -1,0 +1,55 @@
+{
+  "schema_version": 14,
+  "artifact_kind": "artist_identity_guard_prospective_resources",
+  "created_at": "2026-07-13T19:36:02.752384+00:00",
+  "identity_asset": {
+    "path": "ml_data/clap_v14/artist-identity-v14.npz",
+    "bytes": 8270124,
+    "sha256": "d47078a70d79354e27052d731096918a3278a1530913c43a3eaeabfa9d9df8dc",
+    "load_ms": 142.88369999849238,
+    "incremental_load_rss_bytes": 107237376
+  },
+  "shared_compact_asset": {
+    "path": "ml_data\\clap_v13\\compact-clap128.f16.npy",
+    "bytes": 69850496,
+    "sha256": "0c204bddb0e038cee8251c21b954b2964c96f61783f87889cff2af1b59c20b40",
+    "release_uploaded": false,
+    "wired": false
+  },
+  "query_diagnostics_latency": {
+    "v13": {
+      "queries": 60,
+      "mean_ms": 2240.0366899989117,
+      "p50_ms": 2534.7474000009242,
+      "p95_ms": 4413.565875007769
+    },
+    "v14": {
+      "queries": 60,
+      "mean_ms": 1754.1926383307632,
+      "p50_ms": 1759.487099989201,
+      "p95_ms": 3714.1401149827266
+    },
+    "mean_relative_change": -0.2168911133631407,
+    "p95_relative_change": -0.1584718071130662
+  },
+  "prospective_memory": {
+    "v13_production_plus_touched_compact_rss_bytes": 1307287552,
+    "v14_plus_identity_estimated_rss_bytes": 1414524928,
+    "available_development_ram_bytes": 51539607552,
+    "development_fit": true,
+    "vercel_fit_claimed": false,
+    "reason": "identity guard remains development-only and is not wired into hosted production"
+  },
+  "production_index": {
+    "path": "ml_data\\deepvibe_index_v5.npz",
+    "bytes": 299288526,
+    "sha256": "f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9",
+    "unchanged": true
+  },
+  "production_changed": false,
+  "deployed": false,
+  "release_asset_uploaded": false,
+  "wired": false,
+  "commercial_human_ratings_used": 0,
+  "content_sha256": "989b38927d88398716f184d1f08bca647e9aafabb562002eb5ec802e7b351fb9"
+}

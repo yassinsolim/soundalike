@@ -1,0 +1,75 @@
+{
+  "schema_version": 14,
+  "phase": "RANKINGS_LOCKED",
+  "rankings_state": "RANKINGS_LOCKED",
+  "ratings_count_at_freeze": 0,
+  "human_rater_exports_ingested": 0,
+  "sonic_human_report_exists": false,
+  "production_deployment_blocked": true,
+  "served_lists_sha256": "5e7d852ea7ea5d1e9fe04f1b77c156f1c9a0894cd2d913f16e08d6ec304358b2",
+  "semantic_order_sha256": "7ecc7a456d0d243a12e93a973309e9f10c2ec1fae2b9ec58cb731f699597865e",
+  "protocol_sha256": "38fdb950fba1673de7d3990534e9a7801f6aa29df27e53f53fb698df8bebc2e2",
+  "private_method_key_sha256": "86ee82771a0b4384d3aad427879287b6739d609bcce2f17445f9aa6353337d31",
+  "collector_public_key_sha256": "514d96fd9262e5e5f24ebdf5cc0287573f9e85b2f101cbdf5f48c12b598550f8",
+  "collector_allowed_signers_sha256": "af787b33d44f2db435dd620fe1fe97c02473d7ff3cf7f33da1f896e979bd7101",
+  "evaluator_sha256": "b9cf6b127f0002b490c2a307d64324bd573d503b4c485d261ecc3c6517188689",
+  "diagnostics_content_sha256": "08a7b74e67d0852f8ca24797d0715278b22f5874f03aac1da5f875addf8af5e4",
+  "compact_asset_sha256": "0c204bddb0e038cee8251c21b954b2964c96f61783f87889cff2af1b59c20b40",
+  "identity_audit_sha256": "bbd9bc8b7b9c52ca30a7ddb9277d37a97b46dbaaa4f8d03bd84f5548deee3afe",
+  "supersedes_v13": {
+    "old_protocol_sha256": "35c106be3cb90ff5c5ec2be159007f68472b3c508315ebdf83cc77690ef93d3e",
+    "old_lists_sha256": "8c09b31e55efdbc7399a4e26f8291e0b408d07395b61cda6c873e6eb46eaa370",
+    "old_state_sha256": "4f8af084e9f708fef16ae9909e7687cf46b3ad5c7248df5171485813f2e69c8e",
+    "old_semantic_order_sha256": "405a56b63d294fe12394ee6a899836e3b73da3a21fee474fa57604bb34ebe166",
+    "ratings_discarded": 0,
+    "ratings_migrated": 0,
+    "reason": "artist-identity collision correction",
+    "v13_diagnostics_sha256": "2b76bf309611aaebf4c9c060cfd390f122433fe2d6b77c0e73008f666a30df9d",
+    "v14_diagnostics_sha256": "08a7b74e67d0852f8ca24797d0715278b22f5874f03aac1da5f875addf8af5e4",
+    "semantic_diff": {
+      "changed_seed_count": 2,
+      "changed_positions": [
+        {
+          "seed_id": "DEV-SONIC-037",
+          "v13_rows": [
+            25391,
+            193795,
+            70555,
+            44764,
+            24413
+          ],
+          "v14_rows": [
+            46785,
+            74954,
+            180637,
+            110858,
+            167641
+          ]
+        },
+        {
+          "seed_id": "DEV-SONIC-057",
+          "v13_rows": [
+            223182,
+            222224,
+            104401,
+            222732,
+            223303
+          ],
+          "v14_rows": [
+            223182,
+            222224,
+            104401,
+            223303,
+            2807
+          ]
+        }
+      ]
+    }
+  },
+  "locked_at": "2026-07-13T19:28:59.682303+00:00",
+  "production_changed": false,
+  "deployed": false,
+  "commercial_final_opened": false,
+  "ac3_claimed": false,
+  "content_sha256": "823fd692239803629bb262cc05b2d6bfaf5b2ef6b0fd28620cd223e2caf2d33f"
+}

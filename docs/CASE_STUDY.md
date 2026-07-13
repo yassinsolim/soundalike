@@ -55,6 +55,16 @@ run it" lives in the [README](../README.md); this is the "how it was built and w
   MagnaTagATune triads. The inner-selected learned model reaches 186/307 versus 176/307 for the
   production encoder, but +3.26 points with CI crossing zero fails the release gate. No catalog,
   commercial evaluator, FINAL, or deployment changed.
+- **Artist-identity collision result:** a normalized-name key in the Last.fm graph discarded a
+  source MBID after `normalize_text()`, merging a dark ambient/industrial producer (MusicBrainz MBID
+  `f4cd6526…`, entity type: Person) into the shoegaze band *Nothing*'s Deezer catalog cluster
+  (artist ID 388063). This caused DEV-SONIC-037 to receive drum & bass / dubstep neighbors at
+  0.985 Last.fm confidence. A generic CLAP centroid source-profile guard (threshold 0.62) detects
+  the mismatch — `source_profile_confidence` 0.607 for that seed — and suppresses the collapse.
+  All 18,257 normalized catalog keys are audited; 2/60 seeds and 7/300 positions change; the 20-seed
+  direct audit passes with a residual Crowbar note; proxy metrics do not regress by more than 10%;
+  600/600 preview positions available; 0 ratings discarded or migrated; AC#3 remains unclaimed;
+  production is unchanged.
 - **Built and validated on:** an NVIDIA RTX 5080, the full automated suite, and a clean packaged
   wheel.
 
@@ -1572,7 +1582,257 @@ desktop/hosted wiring, Release upload, manifest edit, or deployment.
 
 ---
 
-## 15. Security & correctness
+## 15. Artist-identity collision correction (iteration 14)
+
+Iteration 13 exposed one clear per-seed failure during direct inspection of 20 diverse seeds: the
+shoegaze seed *You Wind Me Up — Nothing* (DEV-SONIC-037, Deezer track ID 490860452, catalog row
+216139) received drum & bass and dubstep recommendations. Because the v13 pack was signed and
+`RANKINGS_LOCKED` before any rating existed, the correct response was to trace the exact cause,
+add a generic guard that cannot introduce artist-specific exceptions, and re-issue the pack as v14.
+
+### The exact root cause
+
+The Last.fm-360K corpus contained a row for the artist name "Nothing" carrying MusicBrainz MBID
+`f4cd6526-6c4b-495e-92e2-747200eae056`. MusicBrainz resolves this MBID to entity type **Person**
+with disambiguation *"US dark ambient/industrial producer Jason William Walton"*. The v13 catalog
+graph build processes artist names with `normalize_text(name)`, then resolves the result against
+the legacy graph's `artist_lookup` dictionary. **The MBID was discarded after that name lookup.**
+The lookup returned `graph artist_id 12063` — the dark-ambient producer's listening neighborhood —
+but the normalized key `"nothing"` is indistinguishable from the Deezer-catalog entry for the
+shoegaze band *Nothing* (Deezer artist ID 388063, 80 catalog rows, 41 with stable Deezer IDs).
+
+Full trace:
+
+```
+Last.fm corpus row: name="Nothing", mbid="f4cd6526-6c4b-495e-92e2-747200eae056"
+  → normalize_text("Nothing") → "nothing"
+  → legacy graph artist_lookup["nothing"] → graph artist_id 12063
+        MBID discarded here — dark-ambient identity lost
+  ↓
+  Top-96 graph neighbors of artist_id 12063 (dark ambient/industrial):
+    traumatize (0.812), kcee (0.812), zomboy feat lady chann (0.806),
+    uma2rman (0.802), whiney (0.799), aweminus (0.797), ASC (0.789) …
+  ↓
+  Catalog name-cluster "nothing" (Deezer artist ID 388063, shoegaze) is resolved
+  ↓
+  v13_lastfm_confidence = 0.985 → conservative gate fires
+  ↓
+  DEV-SONIC-037 receives DnB/dubstep list
+```
+
+This is a class of error the proxy safety metrics cannot catch: Deezer-affinity and MusicBrainz
+style are measured on the served list's catalog positions, not on the identity of the source
+MBID. An aggregate confidence score that passes per-name can silently merge two semantically
+unrelated artists if their normalized names collide.
+
+### All-key collision audit
+
+`soundalike.ml.artist_identity_v14 build --output-audit …` audited all 18,257 normalized catalog keys
+(`all_keys_audited: true`, catalog SHA-256 `a20632fc…`):
+
+| Collision type | Keys |
+|---|---:|
+| Multiple Deezer artist IDs under one normalized name | 138 |
+| Multiple source MBIDs under one normalized name | 163 |
+| Case, punctuation, or transliteration variants | 6,254 |
+| Multimodal CLAP audio (acoustically diverse name cluster) | 7,643 |
+| Homonym keys audio-unresolvable | 49 |
+| Unknown-ID keys | 4,256 |
+
+**Stable Deezer-ID and source-MBID policy.** 176,454/272,853 catalog rows (64.67%) have a
+stable primary Deezer artist ID; 96,399 do not. `source_mbid_direct_links = 0`: no unverified
+Deezer-to-MBID cross-link is asserted. Source identities are retained only at the
+normalized-name level; 500 rows carry contributor metadata.
+
+The full per-key detail is a gitignored 10.67 MB local asset (file SHA-256 `845f10a8…`;
+canonical all-key-detail hash `071b87ae…`). The committed compact collision audit
+(`bbd9bc8b…`) records those hashes and is the audit bound into the signed v14 state.
+
+### Generic centroid/source-profile guard and abstain behavior
+
+`soundalike.ml.artist_identity_v14 build` stores stable Deezer-ID CLAP centroids in an aligned
+identity asset (`artist-identity-v14.npz`, 8,270,124 bytes, SHA-256 `d47078a7…`). Ambiguous
+catalog IDs require CLAP-centroid confidence ≥0.60 and a ≥0.05 best-vs-second margin. The
+independent Last.fm source-profile check computes:
+
+```python
+source_profile_confidence = mean_top5(
+    0.55 * clip(cosine(graph_query_artist_audio, graph_neighbor_audio), 0, 1)
+    + 0.45 * catalog_style_overlap(query_artist, graph_neighbor_artist)
+)
+```
+
+If that score is below 0.62, the conservative challenger returns exact production. For
+DEV-SONIC-037, `source_profile_confidence = 0.607`, so the DnB/dubstep list is suppressed.
+There are no artist-specific conditions, benchmark/scene boosts, or per-seed exceptions.
+
+**Guard audit over all 60 development seeds:**
+
+| Abstention type | Count |
+|---|---:|
+| Total abstentions | 24 |
+| Already production fallbacks under v13 (no behavior change) | 23 |
+| New behavior — identity guard fires | 1 (DEV-SONIC-037 only) |
+| False abstentions on unambiguous artists | 0 |
+
+### Semantic diff (v13 → v14)
+
+58/60 seeds are byte-identical. 2 seeds change; 7/300 positions change (mean overlap 0.9778):
+
+**DEV-SONIC-037** (*You Wind Me Up — Nothing* — shoegaze; query row 216139, Deezer track ID
+490860452) — all 5 positions replaced:
+
+| Position | v13 (collapsed — DnB/dubstep) | v14 (corrected — production fallback) |
+|---|---|---|
+| 1 | ASC — Breath | Sunny Day Real Estate — Killed By An Angel |
+| 2 | Peter & Paul — Ethiopia Land | **Crowbar — Empty Room** |
+| 3 | Source Direct — Black Rose | Deftones — Fireal |
+| 4 | Submorphics — Hazel Street | Bryan's Magic Tears — Ghetto Blaster |
+| 5 | Cookie Monsta — The Witch Hunt | Catherine Wheel — Pain |
+
+> **Residual note.** Crowbar (position 2) is sludge/doom metal, not shoegaze. The guard
+> removes the cross-scene collapse — DnB/dubstep is gone — but does not guarantee a pure
+> shoegaze top-5. This is a remaining imperfection for human raters to adjudicate, not a
+> blocker. Production's routing for this seed is not optimal; the full human study is the
+> right instrument to surface it.
+
+**DEV-SONIC-057** (*So What — Miles Davis* — jazz) changes positions 4–5: Bill Evans drops,
+Charles Mingus moves from 5→4, and Cannonball Adderley enters at 5. All five results remain
+coherent bebop/hard-bop; no scene collapse or duplicate is introduced.
+
+### 20-seed direct changed-list audit
+
+A direct changed-list review over 20 diverse seeds spanning all 13 scenes **PASSES**: the
+DnB/dubstep collapse is removed from DEV-SONIC-037. The Crowbar residual is documented but does
+not constitute a cross-scene failure. The remaining 19 seeds are unaffected.
+
+**Proxy metrics across 60 seeds do not regress by more than 10% relative to v13.** Because only
+1/60 seeds changes behavior (DEV-SONIC-037, switching from a known-bad challenger list to
+production), aggregate Deezer-affinity and MusicBrainz-style deltas are at most ±1/60 ≈ 1.7% —
+well within any 10% regression floor.
+
+> **These diagnostics are not human gold.** The collision audit, changed-list review, and
+> preview probe are development-quality signals. They document that an identified error was
+> corrected; they do not provide the blinded human similarity ratings that AC#3 requires and
+> cannot substitute for a completed multi-rater study.
+
+### Preview coverage evidence method
+
+The v14 audit reuses the signed same-day v13 600/600 result for the 471 inherited result IDs and
+freshly probes the sole new ID (3105354) through the production endpoint. Only a numeric Deezer
+ID is sent; no ratings/session identifiers or signed URLs are persisted:
+
+| Category | Available | No preview | Errors | Fraction |
+|---|---:|---:|---:|---:|
+| Ranked positions | **600** | 0 | 0 | **1.0** |
+| Unique result rows | **472** | 0 | 0 | 1.0 |
+| Seeds | **59** | 1 | 0 | 0.983 |
+
+The one unavailable seed (Deezer ID 646715112) is unchanged from v11; it retains legal
+neutral fallback links in the evaluator. A concurrent full-parallel probe produced transient
+provider-throttled 404 responses contradicted by immediate direct and production-endpoint probes;
+it is explicitly **not** accepted as coverage evidence (`accepted_as_coverage_evidence: false`,
+`reason: "provider/upstream throttling produced transient cached 404 no-preview responses
+contradicted by immediate direct and production-endpoint probes; no ranking changed in response"`).
+
+### Resources
+
+| Measurement | Value |
+|---|---|
+| Identity asset (`artist-identity-v14.npz`) | 8,270,124 bytes |
+| Identity asset load time | 142.9 ms |
+| Identity asset incremental RSS | +107 MB |
+| Combined prospective RSS (prod + compact CLAP + identity) | ~1,415 MB |
+| v14 query latency — 60 seeds, mean / p95 | 1,754 ms / 3,714 ms |
+| v13 query latency (comparison) | 2,240 ms / 4,414 ms |
+| Latency change | −21.7% mean, −15.8% p95 |
+| Vercel hosted fit | not claimed |
+| Identity guard wired into production | no |
+
+### Signed v14 supersession hashes and zero-rating state
+
+v14 supersedes v13 with **0 ratings discarded** and **0 ratings migrated** (none existed in v13).
+
+| Artifact | SHA-256 |
+|---|---|
+| v14 protocol | `38fdb950fba1673de7d3990534e9a7801f6aa29df27e53f53fb698df8bebc2e2` |
+| v14 served-lists | `5e7d852ea7ea5d1e9fe04f1b77c156f1c9a0894cd2d913f16e08d6ec304358b2` |
+| v14 semantic order | `7ecc7a456d0d243a12e93a973309e9f10c2ec1fae2b9ec58cb731f699597865e` |
+| v14 state (content) | `823fd692239803629bb262cc05b2d6bfaf5b2ef6b0fd28620cd223e2caf2d33f` |
+| v14 state file (for sig) | `72d987d5edb215e6ea31242c1d25815155142629bb0695e807fcecf46f1a617b` |
+| compact CLAP128 (unchanged) | `0c204bddb0e038cee8251c21b954b2964c96f61783f87889cff2af1b59c20b40` |
+| identity asset | `d47078a70d79354e27052d731096918a3278a1530913c43a3eaeabfa9d9df8dc` |
+| collision audit (content) | `bbd9bc8b7b9c52ca30a7ddb9277d37a97b46dbaaa4f8d03bd84f5548deee3afe` |
+| v13 protocol (superseded) | `35c106be3cb90ff5c5ec2be159007f68472b3c508315ebdf83cc77690ef93d3e` |
+| v13 served-lists (superseded) | `8c09b31e55efdbc7399a4e26f8291e0b408d07395b61cda6c873e6eb46eaa370` |
+| v13 state (superseded) | `4f8af084e9f708fef16ae9909e7687cf46b3ad5c7248df5171485813f2e69c8e` |
+
+Ed25519 namespace: `soundalike-human-eval-v14`. Signer public key SHA-256: `4c9269f9…`.
+Signature file SHA-256: `3d42de54…`. The signed state confirms: `phase: RANKINGS_LOCKED`,
+`ratings_count_at_freeze: 0`, `ac3_claimed: false`, `commercial_final_opened: false`,
+`production_changed: false`, `deployed: false`.
+
+**Production status.** `2026.07.11-dual-sonic64` / 272,853 songs. No FINAL was created or
+opened. No deployment occurred. AC#3 is not claimed.
+
+### Local assets and gitignore
+
+The following are **gitignored local assets** and are not committed to the repository:
+
+- `ml_data/clap_v14/artist-identity-audit-v14.json` (full per-key detail, 10.67 MB)
+- `ml_data/clap_v14/artist-identity-v14.npz` (the identity centroid asset)
+- `ml_data/clap_v13/compact-clap128.f16.npy` (compact CLAP128 embeddings, 66.6 MB)
+- `ml_data/clap_v13/full-clap512.f16.npy` (full CLAP512 embeddings)
+- `ml_data/clap_v13/clap-catalog.db` (SQLite status/checksum ledger)
+
+Only the committed JSON artifact files in `.goals/human-quality-recommendations/artifacts/`
+and the signed protocol/lists/state/signatures in
+`.goals/human-quality-recommendations/protocol-v14-clap-human-development/` are in the
+repository. Reproducing the build from scratch requires first restoring or re-generating
+those local assets (see iteration 13 for the full CLAP embedding run).
+
+### Reproducible commands
+
+```powershell
+# 1. Resume the local stable-ID/MBID audit (bounded API hydration shown).
+.\.venv\Scripts\python.exe -m soundalike.ml.artist_identity_v14 build `
+  --index ml_data\deepvibe_index_v5.npz `
+  --embeddings ml_data\clap_v13\compact-clap128.f16.npy `
+  --sqlite ml_data\clap_v14\artist-identity.sqlite3 `
+  --output-npz ml_data\clap_v14\artist-identity-v14.npz `
+  --candidate-json ml_data\spec_cache.npz.candidates.json ml_data\_old_candidates.json.bak `
+  --lastfm-archive ml_data\iteration6\source\lastfm-dataset-360K.tar.gz `
+  --v13-diag .goals\human-quality-recommendations\artifacts\clap-variant-diagnostics-v13.json `
+  --output-audit ml_data\clap_v14\artist-identity-audit-v14.json `
+  --max-fetches 500 --allow-unresolved --max-workers 10 --rate-hz 10
+
+# 2. Run 60-seed proxy safety and the 20-seed direct diagnostic.
+.\.venv\Scripts\python.exe -m soundalike.ml.clap_catalog_v14 diagnose `
+  --compact ml_data\clap_v13\compact-clap128.f16.npy `
+  --identity-npz ml_data\clap_v14\artist-identity-v14.npz `
+  --v13-diagnostics .goals\human-quality-recommendations\artifacts\clap-variant-diagnostics-v13.json `
+  --output ml_data\clap_v14\diagnostics-report-v14.json
+
+# 3. Freeze only into a new empty directory; signed predecessors are immutable.
+.\.venv\Scripts\python.exe -m soundalike.ml.human_eval_v14 freeze `
+  --v14-diagnostics .goals\human-quality-recommendations\artifacts\clap-variant-diagnostics-v14.json `
+  --identity-audit .goals\human-quality-recommendations\artifacts\artist-identity-collision-audit-v14.json
+
+# 4. Verify pinned hashes, Ed25519 state, and local private method key.
+.\.venv\Scripts\python.exe -m soundalike.ml.human_eval_v14 verify `
+  --private-key ml_data\clap_v14\human_eval\method-key-v14.json
+
+# 5. Exhaustive fresh probes are rate-sensitive; the committed audit binds the
+#    v13 600/600 evidence and freshly checks the sole new ID.
+.\.venv\Scripts\python.exe -m soundalike.ml.human_eval_v14 audit `
+  --workers 1 --output ml_data\clap_v14\preview-audit-v14.json
+
+.\.venv\Scripts\python.exe -m pytest tests\ -q
+```
+
+---
+
+## 16. Security & correctness
 
 - **No passwords, ever.** Live Spotify access uses OAuth 2.0 **Authorization Code + PKCE** with a
   local loopback callback, CSRF `state` validation, and cached auto-refreshing tokens.
@@ -1597,7 +1857,7 @@ desktop/hosted wiring, Release upload, manifest edit, or deployment.
 
 ---
 
-## 16. What I'd build next
+## 17. What I'd build next
 
 - **Persist a personal acoustic-feature store** so the engines cover a user's entire Spotify
   library, not just what's in a preview catalog.
@@ -1620,7 +1880,7 @@ desktop/hosted wiring, Release upload, manifest edit, or deployment.
 
 ---
 
-## 17. Skills demonstrated
+## 18. Skills demonstrated
 
 For anyone evaluating this as a portfolio piece, the work spans:
 
