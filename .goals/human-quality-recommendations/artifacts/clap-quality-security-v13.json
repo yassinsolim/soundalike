@@ -1,0 +1,80 @@
+{
+  "schema_version": 13,
+  "artifact_kind": "clap_v13_quality_security_release_evidence",
+  "created_at": "2026-07-13T15:24:00+00:00",
+  "quality_gate": {
+    "command": ".\\.venv\\Scripts\\python.exe -m pytest tests\\ -q",
+    "passed": true,
+    "tests_passed": 534,
+    "tests_failed": 0,
+    "tests_skipped": 0,
+    "wall_seconds": 35.898
+  },
+  "build": {
+    "command": ".\\.venv\\Scripts\\python.exe -m build",
+    "passed": true,
+    "wheel": {
+      "bytes": 87831962,
+      "sha256": "b057dddccb7d519b72e55e207f6530ee34fb0d680c9af6b3fd3ee7235a0cb40c"
+    },
+    "sdist": {
+      "bytes": 87926604,
+      "sha256": "d74bb4a5ba14a36ff2e49fd570ae5a0aa429a240a4e0912f852a3035608baafd"
+    }
+  },
+  "dependency_audit": {
+    "command": ".\\.venv\\Scripts\\python.exe -m pip_audit",
+    "passed": true,
+    "known_vulnerabilities": 0,
+    "remediation": "Pillow 12.2.0 exposed five PYSEC-2026 advisories; the ML extra now requires and the environment uses Pillow >=12.3.0.",
+    "skipped_local_builds": [
+      "soundalike 0.1.0 (local project)",
+      "torch 2.13.0+cu130",
+      "torchaudio 2.11.0+cu130",
+      "torchvision 0.28.0+cu130"
+    ]
+  },
+  "secret_scan": {
+    "local_command": ".\\.venv\\Scripts\\detect-secrets.exe scan --all-files <staged files>",
+    "credential_or_private_key_findings": 0,
+    "reviewed_false_positives": "96 SHA-256/content hashes, public Ed25519 trust hashes, and private_key_sha256 field names",
+    "github_secret_scan": "unavailable: repository does not have GitHub Advanced Security enabled",
+    "collector_private_key_committed": false,
+    "method_role_key_committed": false,
+    "signed_preview_urls_committed": false
+  },
+  "protocol": {
+    "preregistration_revision": 3,
+    "preregistration_content_sha256": "2c1bb55c85dfa8d1d344bba02868563c459ac743604f525ecb678598f3ef4ee7",
+    "protocol_content_sha256": "35c106be3cb90ff5c5ec2be159007f68472b3c508315ebdf83cc77690ef93d3e",
+    "served_lists_content_sha256": "8c09b31e55efdbc7399a4e26f8291e0b408d07395b61cda6c873e6eb46eaa370",
+    "semantic_order_sha256": "405a56b63d294fe12394ee6a899836e3b73da3a21fee474fa57604bb34ebe166",
+    "phase": "RANKINGS_LOCKED",
+    "ratings_count_at_freeze": 0,
+    "state_signature_verified": true,
+    "trust_anchors_pinned_in_importer": true
+  },
+  "preview": {
+    "resolver": "provider-aware loopback fresh-on-demand Deezer ID resolver",
+    "unique_results_available": "478/478",
+    "seeds_available": "59/60",
+    "ranked_positions_available": "600/600",
+    "ranked_positions_fraction": 1.0,
+    "errors": 0,
+    "signed_preview_urls_persisted": false
+  },
+  "release": {
+    "real_human_rater_exports_available": false,
+    "sonic_human_report_created": false,
+    "ac3_claimed": false,
+    "fresh_commercial_final_opened": false,
+    "canonical_recommender_changed": false,
+    "hosted_recommender_changed": false,
+    "release_asset_uploaded": false,
+    "index_manifest_changed": false,
+    "deployed": false,
+    "production_version_retained": "2026.07.11-dual-sonic64"
+  },
+  "immutable_goal_modified": false,
+  "content_sha256": "7ef2a87862d58e6f2acf1d03e3c42a59cec94c1cd3f40b26dc9683f79ab4992e"
+}

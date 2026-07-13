@@ -333,9 +333,13 @@ def _fresh_deezer_preview(track_id: int) -> str | None:
 
 
 def evaluator_handler(
-    evaluator: Path, protocol: Path, lists: Path
+    evaluator: Path,
+    protocol: Path,
+    lists: Path,
+    resolver: Any = None,
 ) -> type[BaseHTTPRequestHandler]:
     """Build the loopback-only evaluator handler (also convenient for tests)."""
+    preview_resolver = resolver or _fresh_deezer_preview
     resources = {
         "/": ("text/html; charset=utf-8", evaluator.read_bytes()),
         "/benchmarks/human_eval_v11.html": (
@@ -382,7 +386,7 @@ def evaluator_handler(
             if parsed.path == "/api/preview":
                 try:
                     track_id = _strict_track_id(self.path)
-                    preview = _fresh_deezer_preview(track_id)
+                    preview = preview_resolver(track_id)
                     if preview is None:
                         return self._json(
                             HTTPStatus.NOT_FOUND,

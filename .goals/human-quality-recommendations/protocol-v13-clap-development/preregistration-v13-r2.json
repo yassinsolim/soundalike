@@ -1,0 +1,148 @@
+{
+  "schema_version": 13,
+  "protocol_revision": 2,
+  "protocol_kind": "frozen_clap_catalog_development_challenger",
+  "frozen_at": "2026-07-12T23:12:00+00:00",
+  "supersedes_preregistration_content_sha256": "30262e2403f7b097491c8a85772ba1acc5a030e5c8bab809b8042613d5d10e9c",
+  "preflight_disposition": "The revision-1 bounded throughput preflight produced no evaluation artifact; its cache is discarded and the full 272,853-row build starts from an empty cache only after revision 2 is signed.",
+  "ratings_count_at_freeze": 0,
+  "development_only": true,
+  "production_ranking_changed": false,
+  "commercial_final_opened": false,
+  "ac3_claimed": false,
+  "hypothesis": {
+    "motivation": "Frozen CLAP cosine was the strongest fixed development comparator in the MTAT v12 OOF artifact.",
+    "decision_use": "MTAT motivates this hypothesis only and cannot select or promote a commercial catalog ranker.",
+    "pretraining_caveat": "LAION-CLAP pretraining may overlap MagnaTagATune; the MTAT result may therefore reflect prior exposure and is not clean deciding evidence."
+  },
+  "catalog": {
+    "source_index": "ml_data/deepvibe_index_v5.npz",
+    "row_count": 272853,
+    "source_index_sha256": "f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9",
+    "track_ids_tobytes_sha256": "a20632fc8fb4beff406c1858714b14eb0303802a3c3829b085454d10900555f7",
+    "stable_id": "numeric Deezer track_ids",
+    "alignment": "output row i must retain source track_ids[i]; duplicate or reordered IDs fail closed"
+  },
+  "encoder": {
+    "package": "laion-clap",
+    "package_version": "1.1.7",
+    "model": "LAION-CLAP HTSAT-tiny 630k+AudioSet non-fusion",
+    "model_id": 1,
+    "checkpoint_filename": "630k-audioset-best.pt",
+    "checkpoint_bytes": 1863587645,
+    "checkpoint_sha256": "8053c9775516af2f4902e1e8281e356cc1bf7a85e8b761908170767b77c3f037",
+    "embedding_dimension": 512,
+    "frozen": true
+  },
+  "audio_preprocessing": {
+    "source": "fresh Deezer public 30-second previews resolved from each stable track ID",
+    "signed_url_policy": "resolve immediately before download; never persist a signed URL",
+    "download_workers": 32,
+    "maximum_api_requests_per_second": 20,
+    "attempts": 4,
+    "retry_backoff_seconds": [0.5, 1.0, 2.0, 4.0],
+    "decode": "mono float32 resampled to 48000 Hz with librosa",
+    "quantization": "LAION-CLAP int16_to_float32(float32_to_int16(waveform))",
+    "windows": "three deterministic 10-second windows: start, centered, and end; repeat-pad clips shorter than 10 seconds",
+    "pooling": "L2-normalize each 512-D window, arithmetic mean, then L2-normalize",
+    "batch_windows": 96,
+    "retention": "temporary audio is deleted after decode/embed; only embeddings, status, and checksums remain in gitignored ml_data",
+    "resumption": "SQLite row status plus aligned float16 memmap; available rows require a nonzero finite embedding checksum",
+    "terminal_statuses": ["available", "no_preview"],
+    "retryable_status": "error"
+  },
+  "compression": {
+    "algorithm": "frozen Gaussian orthogonal Johnson-Lindenstrauss projection",
+    "seed": 20260713,
+    "candidate_dimensions": [64, 96, 112, 128],
+    "fit_labels": "none",
+    "selection_sample": "independent deterministic unlabeled catalog sample: 256 queries and 20000 references, disjoint from no fitting sample because JL is data-independent",
+    "selection_rule": "choose the smallest dimension meeting every geometry gate; if none passes, fail closed",
+    "geometry_gates": {
+      "sampled_pair_cosine_spearman_min": 0.99,
+      "mean_top50_overlap_min": 0.75,
+      "mean_union_top50_rank_spearman_min": 0.6,
+      "p05_top50_overlap_min": 0.55
+    },
+    "storage_dtype": "float16",
+    "row_normalization": "L2 after projection and again after float16 reload",
+    "maximum_asset_bytes": 70000000
+  },
+  "shared_ranking_controls": {
+    "eligible_rows": "available CLAP rows only",
+    "quality_filter": "TitleQualityFilter query-aware eligibility and canonical-version preference",
+    "same_artist": "exclude every normalized credited seed artist; maximum one track per normalized candidate artist",
+    "mmr": "greedy 0.85 * relevance01 - 0.15 * maximum selected compact-CLAP cosine01",
+    "manual_artist_boosts": false,
+    "popularity_signal": false,
+    "tie_break": "catalog row ascending"
+  },
+  "variants": {
+    "pure_clap": {
+      "candidates": "catalog-wide compact CLAP cosine top 500 before shared controls",
+      "relevance": "compact CLAP cosine mapped to [0,1]"
+    },
+    "graph_clap_union": {
+      "candidates": "union of compact CLAP top 200 and tracks from Last.fm/Music4All top-96 artist neighborhoods",
+      "relevance": "0.70 * clap_cosine01 + 0.25 * normalized_Lastfm_weight + 0.05 * normalized_Music4All_weight"
+    },
+    "conservative_clap_fallback": {
+      "candidates": "Last.fm artist-neighborhood tracks",
+      "lastfm_confidence": "mean of the five strongest nonnegative Last.fm weights divided by query maximum",
+      "gate": "lastfm_confidence >= 0.55 and at least five controlled candidates have clap_cosine01 >= 0.65",
+      "relevance": "0.80 * normalized_Lastfm_weight + 0.20 * clap_cosine01",
+      "fallback": "exact current production top five if the gate does not fire"
+    }
+  },
+  "proxy_safety": {
+    "not_deciding_evidence": true,
+    "sources": [
+      "MusicBrainz community genre/style tags",
+      "fresh Deezer related-artist affinity",
+      "Last.fm-360K candidate graph",
+      "catalog metadata quality/version audit"
+    ],
+    "hard_rejection_gates": {
+      "complete_top5_for_all_60_seeds": true,
+      "junk_or_version_count": 0,
+      "same_artist_count": 0,
+      "maximum_track_slot_fraction": 0.03,
+      "maximum_artist_slot_fraction": 0.05,
+      "unique_artist_slot_fraction_min": 0.6,
+      "mean_style_overlap_vs_production_delta_min": -0.05,
+      "deezer_related_artist_hit_rate_vs_production_delta_min": -0.05
+    },
+    "diagnostics_only": [
+      "known category-A target candidate recall at 50 and 200",
+      "scene distributions over all 60 seeds",
+      "gate firing and exact-fallback rates"
+    ],
+    "selection_order": [
+      "conservative_clap_fallback",
+      "graph_clap_union",
+      "pure_clap"
+    ],
+    "selection_rule": "choose the first variant in selection_order that passes every hard gate; do not inspect commercial human labels"
+  },
+  "human_pack_gate": {
+    "create_only_after_embedding_compression_and_proxy_gates_pass": true,
+    "comparison": "current production baseline versus the proxy-safe selected CLAP challenger",
+    "seed_minimum": 60,
+    "scene_minimum": 13,
+    "results_per_method": 5,
+    "assignment": "per-session randomized seed, list, and display order",
+    "rating_scale": "MIREX three-class similarity plus optional integer 0-10, list coherence, unrelated top-3 count, and junk/version flag",
+    "preview": "stable Deezer IDs with fresh on-demand URL resolution; no signed URL persisted",
+    "preview_coverage_min": 0.9,
+    "rankings_state": "RANKINGS_LOCKED",
+    "ratings_count_at_freeze": 0,
+    "promotion": "blocked until actual signed human ratings independently satisfy immutable goal AC#3"
+  },
+  "resource_gates": {
+    "measure_compact_only_and_alongside_production_assets": true,
+    "record_load_seconds_rss_and_recommendation_latency": true,
+    "vercel_project_specific_limit": "unknown unless authenticated linked-project evidence becomes available",
+    "deployment": "prohibited in this iteration"
+  },
+  "content_sha256": "c34d76da6aec0ff5d61ce3c907006e0f276ffa66abedf93741a9c205db99e2c8"
+}
