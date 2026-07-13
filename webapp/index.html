@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>soundalike — find songs that feel the same</title>
 <meta name="description" content="Find songs that feel the same — a free, open-source recommender that matches music by how it actually sounds (timbre, dynamics, texture), not genre tags. Instant 30-second previews."/>
 <meta name="theme-color" content="#0a0d12"/>
@@ -20,34 +20,42 @@
 <meta name="twitter:description" content="Match music by how it actually sounds, not tags. Free & open source, with instant 30-second previews."/>
 <meta name="twitter:image" content="https://soundalike.yassin.app/og.png"/>
 <style>
-  :root{ --bg:#0a0d12; --card:#12161d; --card2:#171c24; --line:#232a34;
+  :root{ color-scheme:dark; --bg:#0a0d12; --card:#12161d; --card2:#171c24; --line:#232a34;
     --txt:#eef1f5; --mut:#8b93a1; --grn:#1db954; --vio:#8b6cff; }
-  *{box-sizing:border-box} html,body{margin:0;height:100%}
+  *{box-sizing:border-box} html,body{margin:0;min-height:100%;max-width:100%}
   body{background:radial-gradient(1200px 600px at 70% -10%,#15202c 0%,var(--bg) 55%);
-    color:var(--txt);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-  .wrap{max-width:900px;margin:0 auto;padding:28px 20px 90px}
+    color:var(--txt);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    overflow-wrap:anywhere}
+  button,input,a{font:inherit}
+  .wrap{width:100%;max-width:900px;margin:0 auto;
+    padding:max(28px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right))
+      max(90px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left))}
   .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
-  .brand{display:flex;align-items:center;gap:12px}
-  .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--grn),var(--vio));
+  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .logo{width:34px;height:34px;flex:none;border-radius:9px;background:linear-gradient(135deg,var(--grn),var(--vio));
     display:grid;place-items:center;font-weight:800;color:#0a0d12}
   h1{font-size:24px;margin:0;letter-spacing:-.02em}
   .sub{color:var(--mut);margin:4px 0 20px}
   .sp-btn{background:var(--grn);color:#06210f;border:0;border-radius:999px;padding:9px 16px;
-    font-weight:700;cursor:pointer;font-size:13px;white-space:nowrap}
+    min-height:44px;font-weight:700;cursor:pointer;font-size:13px;white-space:nowrap}
   .sp-btn.ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
   .search{position:relative}
   .search input{width:100%;background:var(--card);border:1px solid var(--line);color:var(--txt);
-    padding:14px 16px;border-radius:12px;font-size:15px;outline:none}
+    min-height:48px;padding:12px 16px;border-radius:12px;font-size:16px;outline:none}
   .search input:focus{border-color:var(--grn)}
-  .ac{position:absolute;left:0;right:0;top:54px;background:var(--card2);border:1px solid var(--line);
-    border-radius:12px;z-index:20;overflow:hidden;display:none}
-  .ac div{padding:10px 14px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ac{position:absolute;left:0;right:0;top:calc(100% + 6px);width:100%;
+    max-height:min(50vh,360px);background:var(--card2);border:1px solid var(--line);
+    border-radius:12px;z-index:20;overflow-x:hidden;overflow-y:auto;display:none;
+    box-shadow:0 14px 35px rgba(0,0,0,.35);overscroll-behavior:contain}
+  .ac div{display:flex;align-items:center;min-height:44px;padding:10px 14px;cursor:pointer;
+    overflow:hidden;text-overflow:ellipsis}
+  .ac div:not(:last-child){border-bottom:1px solid rgba(255,255,255,.04)}
   .ac div:hover,.ac div.sel{background:var(--card)}
-  .ac b{color:var(--mut);font-weight:500}
+  .ac b{color:var(--mut);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .hint{color:var(--mut);font-size:12.5px;margin:10px 2px 0}
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 6px}
   .chip{background:var(--card);border:1px solid var(--line);color:var(--txt);
-    padding:7px 12px;border-radius:999px;font-size:13px;cursor:pointer}
+    min-height:44px;padding:8px 13px;border-radius:999px;font-size:13px;cursor:pointer}
   .chip:hover{border-color:var(--vio)} .chip b{color:var(--mut);font-weight:500}
   .chip.surprise{background:linear-gradient(90deg,rgba(29,185,84,.18),rgba(139,108,255,.18));
     border-color:transparent;font-weight:600}
@@ -59,11 +67,11 @@
   .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
   .tag{background:#0e1319;border:1px solid var(--line);color:#c7cdd6;border-radius:8px;padding:4px 9px;font-size:12px}
   .save{background:transparent;border:1px solid var(--grn);color:var(--grn);border-radius:10px;
-    padding:9px 13px;font-weight:600;cursor:pointer;font-size:13px;white-space:nowrap}
+    min-height:44px;padding:9px 13px;font-weight:600;cursor:pointer;font-size:13px;white-space:nowrap}
   .save:disabled{opacity:.5;cursor:default}
   .actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
   .copy{background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;
-    padding:9px 13px;font-weight:600;cursor:pointer;font-size:13px;white-space:nowrap}
+    min-height:44px;padding:9px 13px;font-weight:600;cursor:pointer;font-size:13px;white-space:nowrap}
   .copy:hover{border-color:var(--vio)}
   ol{list-style:none;margin:0;padding:0}
   li.row{display:flex;align-items:center;gap:14px;padding:11px 12px;border-radius:12px}
@@ -73,10 +81,11 @@
   .meta .a{color:var(--mut);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .bar{width:92px;height:6px;background:#0e1319;border-radius:6px;overflow:hidden}
   .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--vio),var(--grn))}
-  .play{background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:9px;
+  .play{display:inline-flex;align-items:center;justify-content:center;min-height:44px;
+    background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:9px;
     padding:8px 12px;font-size:13px;cursor:pointer;text-decoration:none;white-space:nowrap}
   .play:hover{border-color:var(--grn)}
-  .pv{width:34px;height:34px;flex:none;border-radius:50%;border:1px solid var(--line);
+  .pv{width:44px;height:44px;flex:none;border-radius:50%;border:1px solid var(--line);
     background:var(--card2);color:var(--txt);cursor:pointer;font-size:13px;display:grid;place-items:center}
   .pv:hover{border-color:var(--grn);color:var(--grn)}
   .pv.playing{background:var(--grn);border-color:var(--grn);color:#06210f}
@@ -85,26 +94,59 @@
   .foot{color:var(--mut);font-size:12px;margin-top:28px;border-top:1px solid var(--line);padding-top:14px}
   .spin{display:inline-block;width:15px;height:15px;border:2px solid var(--line);
     border-top-color:var(--grn);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px}
+  :where(button,a,input):focus-visible{outline:3px solid var(--vio);outline-offset:3px}
   @keyframes sp{to{transform:rotate(360deg)}}
+  @media(max-width:640px){
+    .wrap{padding:max(18px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right))
+      max(60px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
+    .sub{margin-top:8px}
+    .seed{flex-direction:column;align-items:stretch;padding:15px;margin-top:18px}
+    .seed>div:first-child{min-width:0}.seed h2{overflow-wrap:anywhere}
+    .actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%}
+    .actions>*{min-width:0;padding-inline:8px;white-space:normal}
+    li.row{display:grid;grid-template-columns:44px 24px minmax(0,1fr);
+      align-items:center;column-gap:10px;row-gap:8px;margin:4px 0;padding:12px 10px;
+      background:rgba(18,22,29,.55);border:1px solid rgba(35,42,52,.75)}
+    .rank{width:24px}.meta{grid-column:3}.meta .t,.meta .a{white-space:normal;overflow-wrap:anywhere}
+    .bar{grid-column:3;width:100%}
+    .play{grid-column:1/-1;width:100%;white-space:normal}
+    .state{padding:22px 2px}
+  }
+  @media(max-width:480px){
+    h1{font-size:22px}
+    .actions{grid-template-columns:1fr 1fr}
+    .actions .save{grid-column:1/-1}
+    .ac div{align-items:flex-start;flex-direction:column;gap:1px}
+  }
+  @media(max-width:359px){
+    .top{align-items:stretch;flex-direction:column}
+    .sp-btn{width:100%}
+    .search input{padding-inline:12px}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *{scroll-behavior:auto!important;animation-duration:.01ms!important;
+      animation-iteration-count:1!important;transition-duration:.01ms!important}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="top">
     <div class="brand"><div class="logo">◈</div><h1>soundalike</h1></div>
-    <button class="sp-btn ghost" id="sp">Log in with Spotify</button>
+    <button class="sp-btn ghost" id="sp" type="button">Log in with Spotify</button>
   </div>
   <div class="sub">Find songs that <i>feel</i> the same — matched by how they actually sound, not tags.</div>
 
   <div class="search">
-    <input id="q" placeholder="Search a song…  (e.g. Plastic Love, or Redbone Childish Gambino)" autocomplete="off"/>
-    <div class="ac" id="ac"></div>
+    <input id="q" aria-label="Search for a song" role="combobox" aria-autocomplete="list"
+      aria-controls="ac" aria-expanded="false" placeholder="Search a song…  (e.g. Plastic Love, or Redbone Childish Gambino)" autocomplete="off"/>
+    <div class="ac" id="ac" role="listbox" aria-label="Song suggestions"></div>
   </div>
   <div class="hint" id="hint">Type a song and pick it from the list. This hosted demo covers a large, growing library.</div>
 
   <div class="chips" id="chips"></div>
-  <div id="out"></div>
-  <div class="foot" id="foot"></div>
+  <div id="out" aria-live="polite"></div>
+  <div class="foot" id="foot" aria-live="polite"></div>
 </div>
 <script>
 // ---- config: set to your Spotify app's Client ID to enable playlist saving.
@@ -175,11 +217,15 @@ async function onType(){
 function renderAc(){
   const ac=$("#ac");
   if(!acItems.length){ hideAc(); return; }
-  ac.innerHTML=acItems.map((s,i)=>`<div data-i="${i}" class="${i===acSel?'sel':''}">${esc(s.title)} <b>· ${esc(s.artist)}</b></div>`).join("");
+  ac.innerHTML=acItems.map((s,i)=>`<div id="ac-${i}" role="option" aria-selected="${i===acSel}" data-i="${i}" class="${i===acSel?'sel':''}">${esc(s.title)} <b>· ${esc(s.artist)}</b></div>`).join("");
   ac.style.display="block";
+  $("#q").setAttribute("aria-expanded","true");
+  if(acSel>=0) $("#q").setAttribute("aria-activedescendant",`ac-${acSel}`);
+  else $("#q").removeAttribute("aria-activedescendant");
   ac.querySelectorAll("div").forEach(el=>el.onclick=()=>pick(acItems[+el.dataset.i]));
 }
-function hideAc(){ $("#ac").style.display="none"; acItems=[]; }
+function hideAc(){ $("#ac").style.display="none"; acItems=[]; acSel=-1;
+  $("#q").setAttribute("aria-expanded","false"); $("#q").removeAttribute("aria-activedescendant"); }
 
 // ---------- recommend ----------
 async function pick(item){
@@ -200,12 +246,12 @@ function render(d){
       <h2>${esc(d.seed.title)}</h2><div class="art">${esc(d.seed.artist)}</div>
       <div class="tags"><span class="tag">${esc(v.low_end)}</span><span class="tag">${esc(v.dynamics)}</span><span class="tag">${esc(v.tone)}</span></div>
     </div><div class="actions">
-      <button class="copy" id="share">🔗 Share</button>
-      <button class="copy" id="copy">⧉ Copy list</button>
-      <button class="save" id="save">＋ Save to Spotify</button>
+      <button class="copy" id="share" type="button">🔗 Share</button>
+      <button class="copy" id="copy" type="button">⧉ Copy list</button>
+      <button class="save" id="save" type="button">＋ Save to Spotify</button>
     </div></div><ol>`;
   d.results.forEach((x,i)=>{ const w=Math.round(100*x.neural_sim/mx);
-    html+=`<li class="row" data-id="${x.deezer_id}"><button class="pv" title="Preview" data-id="${x.deezer_id}">▶</button><div class="rank">${i+1}</div>
+    html+=`<li class="row" data-id="${x.deezer_id}"><button class="pv" type="button" aria-label="Preview ${esc(x.title)} by ${esc(x.artist)}" title="Preview" data-id="${x.deezer_id}">▶</button><div class="rank">${i+1}</div>
       <div class="meta"><div class="t">${esc(x.title)}</div><div class="a">${esc(x.artist)}</div></div>
       <div class="bar"><i style="width:${w}%"></i></div>
       <a class="play" href="${x.spotify_url}" target="_blank" rel="noopener">Open in Spotify ▸</a></li>`;});
@@ -341,7 +387,8 @@ $("#q").addEventListener("keydown",e=>{
   if(!acItems.length) return;
   if(e.key==="ArrowDown"){acSel=Math.min(acSel+1,acItems.length-1);renderAc();e.preventDefault();}
   else if(e.key==="ArrowUp"){acSel=Math.max(acSel-1,0);renderAc();e.preventDefault();}
-  else if(e.key==="Enter"){ pick(acItems[acSel<0?0:acSel]); }
+  else if(e.key==="Enter"){ pick(acItems[acSel<0?0:acSel]); e.preventDefault(); }
+  else if(e.key==="Escape"){ hideAc(); }
 });
 document.addEventListener("click",e=>{ if(!e.target.closest(".search")) hideAc(); });
 window.addEventListener("hashchange",loadFromHash);
