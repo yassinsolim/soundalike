@@ -149,60 +149,250 @@
   <div class="foot" id="foot" aria-live="polite"></div>
 </div>
 <script>
+// ---- config: set to your Spotify app's Client ID to enable playlist saving.
+// A Spotify Client ID is NOT a secret (it's exposed in the OAuth URL anyway).
+// Leave empty to run recommendations only (no login needed for those).
 const SPOTIFY_CLIENT_ID = "6aae8635d21e471cabdeacd2f226640e";
 const SCOPES = "playlist-modify-private playlist-modify-public";
 const $=s=>document.querySelector(s);
 let token=sessionStorage.getItem("sa_token")||"", lastResults=[], lastSeed=null, acItems=[], acSel=-1;
 function esc(s){return(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+// ---------- Spotify OAuth 2.0 (Authorization Code + PKCE, 100% client-side) ----------
+// No password ever reaches us: the browser redirects to accounts.spotify.com,
+// the user approves there, and comes back with a code we exchange for a token.
+// The token lives only in this tab; playlist writes go browser→Spotify directly.
 const REDIRECT_URI = location.origin + location.pathname;
-function b64url(buf){return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/," ").trim();}
+function b64url(buf){return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,“”);}
 async function sha256(str){return await crypto.subtle.digest("SHA-256",new TextEncoder().encode(str));}
 function randStr(n){const a=new Uint8Array(n);crypto.getRandomValues(a);return b64url(a.buffer);}
+
 async function login(){
+  if(!SPOTIFY_CLIENT_ID){ alert("Set SPOTIFY_CLIENT_ID at the top of index.html to enable Spotify login. Recommendations work without it."); return; }
   const verifier=randStr(64); sessionStorage.setItem("sa_verifier",verifier);
   const state=randStr(8); sessionStorage.setItem("sa_state",state);
   const challenge=b64url(await sha256(verifier));
-  const p=new URLSearchParams({client_id:SPOTIFY_CLIENT_ID,response_type:"code",redirect_uri:REDIRECT_URI,code_challenge_method:"S256",code_challenge:challenge,scope:SCOPES,state:state});
+  const p=new URLSearchParams({client_id:SPOTIFY_CLIENT_ID,response_type:"code",
+    redirect_uri:REDIRECT_URI,code_challenge_method:"S256",code_challenge:challenge,
+    scope:SCOPES,state:state});
   location.href="https://accounts.spotify.com/authorize?"+p.toString();
 }
 async function handleRedirect(){
-  const q=new URLSearchParams(location.search); const code=q.get("code"); if(!code)return;
+  const q=new URLSearchParams(location.search); const code=q.get("code");
+  if(!code) return;
+  // CSRF: the returned state must match the one we stored before redirecting.
   const expected=sessionStorage.getItem("sa_state")||"";
-  if(!expected||q.get("state")!==expected){history.replaceState({},"",REDIRECT_URI);return;}
+  if(!expected || q.get("state")!==expected){ history.replaceState({},"",REDIRECT_URI); return; }
   sessionStorage.removeItem("sa_state");
-  try{const r=await fetch("https://accounts.spotify.com/api/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({grant_type:"authorization_code",code,redirect_uri:REDIRECT_URI,client_id:SPOTIFY_CLIENT_ID,code_verifier:sessionStorage.getItem("sa_verifier")||""})});const d=await r.json();if(d.access_token){token=d.access_token;sessionStorage.setItem("sa_token",token);}}catch(e){}
-  history.replaceState({},"",REDIRECT_URI);updateSpBtn();
+  const verifier=sessionStorage.getItem("sa_verifier")||"";
+  try{
+    const r=await fetch("https://accounts.spotify.com/api/token",{method:"POST",
+      headers:{"Content-Type":"application/x-www-form-urlencoded"},
+      body:new URLSearchParams({grant_type:"authorization_code",code,redirect_uri:REDIRECT_URI,
+        client_id:SPOTIFY_CLIENT_ID,code_verifier:verifier})});
+    const d=await r.json();
+    if(d.access_token){ token=d.access_token; sessionStorage.setItem("sa_token",token); }
+  }catch(e){}
+  history.replaceState({},"",REDIRECT_URI);   // clean ?code from the URL
+  updateSpBtn();
 }
-function logout(){token="";sessionStorage.removeItem("sa_token");updateSpBtn();}
-function updateSpBtn(){const b=$("#sp");if(token){b.textContent="✓ Spotify connected";b.classList.remove("ghost");b.onclick=logout;}else{b.textContent="Log in with Spotify";b.classList.add("ghost");b.onclick=login;}}
+function logout(){ token=""; sessionStorage.removeItem("sa_token"); updateSpBtn(); }
+function updateSpBtn(){
+  const b=$("#sp");
+  if(token){ b.textContent="✓ Spotify connected"; b.classList.remove("ghost"); b.onclick=logout; }
+  else{ b.textContent="Log in with Spotify"; b.classList.add("ghost"); b.onclick=login; }
+}
+
+// ---------- library search + autocomplete ----------
 let acTimer=null;
-async function onType(){const v=$("#q").value.trim();clearTimeout(acTimer);if(v.length<2){hideAc();return;}acTimer=setTimeout(async()=>{try{const r=await fetch("/api/search?q="+encodeURIComponent(v));const d=await r.json();acItems=d.results||[];acSel=-1;renderAc();}catch(e){hideAc();}},160);}
-function renderAc(){const ac=$("#ac");if(!acItems.length){hideAc();return;}ac.innerHTML=acItems.map((s,i)=>`<div id="ac-${i}" role="option" aria-selected="${i===acSel}" data-i="${i}" class="${i===acSel?'sel':''}">${esc(s.title)} <b>· ${esc(s.artist)}</b></div>`).join("");ac.style.display="block";$("#q").setAttribute("aria-expanded","true");if(acSel>=0)$("#q").setAttribute("aria-activedescendant",`ac-${acSel}`);else $("#q").removeAttribute("aria-activedescendant");ac.querySelectorAll("div").forEach(el=>el.onclick=()=>pick(acItems[+el.dataset.i]));}
-function hideAc(){$("#ac").style.display="none";acItems=[];acSel=-1;$("#q").setAttribute("aria-expanded","false");$("#q").removeAttribute("aria-activedescendant");}
-async function pick(item){hideAc();$("#q").value=`${item.title} — ${item.artist}`;$("#out").innerHTML='<div class="state"><span class="spin"></span> matching…</div>';try{const r=await fetch("/api/recommend",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(item.row!=null?{row:item.row,n:20,diversity:0.15}:{query:$("#q").value,n:20,diversity:0.15})});const d=await r.json();if(!d.ok){$("#out").innerHTML=`<div class="state err">${esc(d.error||"No match.")}</div>`;return;}render(d);}catch(e){$("#out").innerHTML='<div class="state err">Server error.</div>';}}
-function render(d){lastResults=d.results;lastSeed=d.seed;const v=d.vibe;const mx=Math.max(...d.results.map(x=>x.neural_sim),0.001);let html=`<div class="seed"><div><h2>${esc(d.seed.title)}</h2><div class="art">${esc(d.seed.artist)}</div><div class="tags"><span class="tag">${esc(v.low_end)}</span><span class="tag">${esc(v.dynamics)}</span><span class="tag">${esc(v.tone)}</span></div></div><div class="actions"><button class="copy" id="share" type="button">🔗 Share</button><button class="copy" id="copy" type="button">⧉ Copy list</button><button class="save" id="save" type="button">＋ Save to Spotify</button></div></div><ol>`;d.results.forEach((x,i)=>{const w=Math.round(100*x.neural_sim/mx);html+=`<li class="row" data-id="${x.deezer_id}"><button class="pv" type="button" aria-label="Preview ${esc(x.title)} by ${esc(x.artist)}" title="Preview" data-id="${x.deezer_id}">▶</button><div class="rank">${i+1}</div><div class="meta"><div class="t">${esc(x.title)}</div><div class="a">${esc(x.artist)}</div></div><div class="bar"><i style="width:${w}%"></i></div><a class="play" href="${x.spotify_url}" target="_blank" rel="noopener">Open in Spotify ▸</a></li>`;});html+="</ol>";$("#out").innerHTML=html;$("#save").onclick=savePlaylist;$("#copy").onclick=copyList;$("#share").onclick=shareLink;document.querySelectorAll(".pv").forEach(b=>b.onclick=()=>togglePreview(b.dataset.id,b));$("#foot").textContent=`Matched from a ${d.library_size.toLocaleString()}-track library. ▶ = 30-second preview.`;try{history.replaceState({},"","#s="+encodeURIComponent(`${d.seed.title} — ${d.seed.artist}`));}catch(e){}}
-async function shareLink(){const b=$("#share");try{await navigator.clipboard.writeText(location.href);b.textContent="✓ Link copied";}catch(e){b.textContent="✕ copy failed";}setTimeout(()=>{b.textContent="🔗 Share";},1600);}
-function splitSeed(q){for(const sep of [" — "," – "," - "," by "]){const i=q.indexOf(sep);if(i>0)return[q.slice(0,i).trim(),q.slice(i+sep.length).trim()];}return[q.trim(),""];}
-function loadFromHash(){const m=(location.hash||"").match(/^#s=(.+)$/);if(!m)return;const[t,a]=splitSeed(decodeURIComponent(m[1]));if(t)pick({title:t,artist:a,row:null});}
-const audio=new Audio();let playingId=null;audio.addEventListener("ended",resetPreviewUI);
-function resetPreviewUI(){document.querySelectorAll(".pv.playing").forEach(b=>{b.classList.remove("playing");b.textContent="▶";});document.querySelectorAll("li.row.playing").forEach(r=>r.classList.remove("playing"));playingId=null;}
-async function togglePreview(id,btn){if(playingId===id){audio.pause();resetPreviewUI();return;}resetPreviewUI();playingId=id;btn.textContent="…";try{const r=await fetch("/api/preview?id="+encodeURIComponent(id));const d=await r.json();if(!d.ok||!d.preview){btn.textContent="✕";setTimeout(()=>{btn.textContent="▶";},1500);playingId=null;return;}if(playingId!==id)return;audio.src=d.preview;await audio.play();btn.textContent="⏸";btn.classList.add("playing");const row=btn.closest("li.row");if(row)row.classList.add("playing");}catch(e){btn.textContent="▶";playingId=null;}}
-async function copyList(){const b=$("#copy");const text=lastResults.map(x=>`${x.title} — ${x.artist}`).join("\n");try{await navigator.clipboard.writeText(text);const old=b.textContent;b.textContent=`✓ Copied ${lastResults.length} songs`;setTimeout(()=>{b.textContent=old;},2200);}catch(e){window.prompt("Copy your soundalikes:",text);}}
-function saveNote(msg){let n=$("#savenote");if(!n){n=document.createElement("div");n.id="savenote";n.className="hint";n.style.marginTop="10px";n.style.color="#ffb4b4";const s=document.querySelector(".seed");if(s)s.after(n);}n.textContent=msg;}
-async function spSearch(t,a){const r=await fetch("https://api.spotify.com/v1/search?type=track&limit=1&q="+encodeURIComponent(`${t} ${a}`),{headers:{Authorization:"Bearer "+token}});const d=await r.json();return((((d.tracks||{}).items||[])[0]||{}).uri)||null;}
-function saveBlocked(b){b.disabled=false;b.textContent="⧉ Copy list instead";b.onclick=copyList;saveNote("Spotify limits new apps to 5 approved testers, so one-click save only works for allowlisted accounts. Everyone can use “Copy list” and paste into a new Spotify playlist, and every result has an Open-in-Spotify link.");}
-async function savePlaylist(){const b=$("#save");if(!token){login();return;}b.disabled=true;b.textContent="Resolving…";try{const meRes=await fetch("https://api.spotify.com/v1/me",{headers:{Authorization:"Bearer "+token}});if(meRes.status===401){logout();return saveBlocked(b);}if(meRes.status===403)return saveBlocked(b);const me=await meRes.json();const uris=[];for(const x of lastResults){const u=await spSearch(x.title,x.artist);if(u)uris.push(u);}if(!uris.length){b.textContent="✕ none resolved";b.disabled=false;return;}const plRes=await fetch(`https://api.spotify.com/v1/users/${me.id}/playlists`,{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({name:`soundalike · ${lastSeed.title}`,description:"Made with soundalike.",public:false})});if(plRes.status===403)return saveBlocked(b);const pl=await plRes.json();for(let i=0;i<uris.length;i+=100){await fetch(`https://api.spotify.com/v1/playlists/${pl.id}/tracks`,{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({uris:uris.slice(i,i+100)})});}b.textContent=`✓ Saved ${uris.length} songs`;if(pl.external_urls&&pl.external_urls.spotify)window.open(pl.external_urls.spotify,"_blank");}catch(e){b.textContent="✕ save failed";b.disabled=false;}}
-const DEMO=[["Plastic Love","Mariya Takeuchi"],["Redbone","Childish Gambino"],["Only Shallow","My Bloody Valentine"],["money machine","100 gecs"],["Chamber of Reflection","Mac DeMarco"],["Close Eyes","DVRST"]];
-const SURPRISE=[["Redbone","Childish Gambino"],["Plastic Love","Mariya Takeuchi"],["Only Shallow","My Bloody Valentine"],["money machine","100 gecs"],["Chamber of Reflection","Mac DeMarco"],["Close Eyes","DVRST"],["Mask Off","Future"],["Snooze","SZA"],["So What","Miles Davis"],["Master of Puppets","Metallica"],["Last Last","Burna Boy"],["Ditto","NewJeans"]];
+async function onType(){
+  const v=$("#q").value.trim(); clearTimeout(acTimer);
+  if(v.length<2){ hideAc(); return; }
+  acTimer=setTimeout(async()=>{
+    try{ const r=await fetch("/api/search?q="+encodeURIComponent(v)); const d=await r.json();
+      acItems=d.results||[]; acSel=-1; renderAc();
+    }catch(e){ hideAc(); }
+  },160);
+}
+function renderAc(){
+  const ac=$("#ac");
+  if(!acItems.length){ hideAc(); return; }
+  ac.innerHTML=acItems.map((s,i)=>`<div id="ac-${i}" role="option" aria-selected="${i===acSel}" data-i="${i}" class="${i===acSel?'sel':''}">${esc(s.title)} <b>· ${esc(s.artist)}</b></div>`).join("");
+  ac.style.display="block";
+  $("#q").setAttribute("aria-expanded","true");
+  if(acSel>=0) $("#q").setAttribute("aria-activedescendant",`ac-${acSel}`);
+  else $("#q").removeAttribute("aria-activedescendant");
+  ac.querySelectorAll("div").forEach(el=>el.onclick=()=>pick(acItems[+el.dataset.i]));
+}
+function hideAc(){ $("#ac").style.display="none"; acItems=[]; acSel=-1;
+  $("#q").setAttribute("aria-expanded","false"); $("#q").removeAttribute("aria-activedescendant"); }
+
+// ---------- recommend ----------
+async function pick(item){
+  hideAc(); $("#q").value=`${item.title} — ${item.artist}`;
+  $("#out").innerHTML='<div class="state"><span class="spin"></span> matching…</div>';
+  try{
+    const r=await fetch("/api/recommend",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(item.row!=null?{row:item.row,n:20,diversity:0.15}:{query:$("#q").value,n:20,diversity:0.15})});
+    const d=await r.json();
+    if(!d.ok){ $("#out").innerHTML=`<div class="state err">${esc(d.error||"No match.")}</div>`; return; }
+    render(d);
+  }catch(e){ $("#out").innerHTML=`<div class="state err">Server error.</div>`; }
+}
+function render(d){
+  lastResults=d.results; lastSeed=d.seed; const v=d.vibe;
+  const mx=Math.max(...d.results.map(x=>x.neural_sim),0.001);
+  let html=`<div class="seed"><div>
+      <h2>${esc(d.seed.title)}</h2><div class="art">${esc(d.seed.artist)}</div>
+      <div class="tags"><span class="tag">${esc(v.low_end)}</span><span class="tag">${esc(v.dynamics)}</span><span class="tag">${esc(v.tone)}</span></div>
+    </div><div class="actions">
+      <button class="copy" id="share" type="button">🔗 Share</button>
+      <button class="copy" id="copy" type="button">⧉ Copy list</button>
+      <button class="save" id="save" type="button">＋ Save to Spotify</button>
+    </div></div><ol>`;
+  d.results.forEach((x,i)=>{ const w=Math.round(100*x.neural_sim/mx);
+    html+=`<li class="row" data-id="${x.deezer_id}"><button class="pv" type="button" aria-label="Preview ${esc(x.title)} by ${esc(x.artist)}" title="Preview" data-id="${x.deezer_id}">▶</button><div class="rank">${i+1}</div>
+      <div class="meta"><div class="t">${esc(x.title)}</div><div class="a">${esc(x.artist)}</div></div>
+      <div class="bar"><i style="width:${w}%"></i></div>
+      <a class="play" href="${x.spotify_url}" target="_blank" rel="noopener">Open in Spotify ▸</a></li>`;});
+  html+="</ol>";
+  $("#out").innerHTML=html; $("#save").onclick=savePlaylist; $("#copy").onclick=copyList;
+  $("#share").onclick=shareLink;
+  document.querySelectorAll(".pv").forEach(b=>b.onclick=()=>togglePreview(b.dataset.id,b));
+  $("#foot").textContent=`Matched from a ${d.library_size.toLocaleString()}-track library. ▶ = 30-second preview.`;
+  // make this result shareable: reflect the seed in the URL (no history spam)
+  try{ history.replaceState({},"","#s="+encodeURIComponent(`${d.seed.title} — ${d.seed.artist}`)); }catch(e){}
+}
+
+// ---------- shareable deep links ----------
+async function shareLink(){
+  const b=$("#share");
+  try{ await navigator.clipboard.writeText(location.href); b.textContent="✓ Link copied"; }
+  catch(e){ b.textContent="✕ copy failed"; }
+  setTimeout(()=>{ b.textContent="🔗 Share"; },1600);
+}
+function splitSeed(q){
+  for(const sep of [" — "," – "," - "," by "]){ const i=q.indexOf(sep); if(i>0) return [q.slice(0,i).trim(),q.slice(i+sep.length).trim()]; }
+  return [q.trim(),""];
+}
+function loadFromHash(){
+  const m=(location.hash||"").match(/^#s=(.+)$/);
+  if(!m) return;
+  const [t,a]=splitSeed(decodeURIComponent(m[1]));
+  if(t) pick({title:t,artist:a,row:null});
+}
+
+// ---------- 30-second audio previews (fetched fresh from Deezer on demand) ----------
+const audio=new Audio(); let playingId=null;
+audio.addEventListener("ended",resetPreviewUI);
+audio.addEventListener("pause",()=>{ if(audio.ended) return; });
+function resetPreviewUI(){
+  document.querySelectorAll(".pv.playing").forEach(b=>{b.classList.remove("playing");b.textContent="▶";});
+  document.querySelectorAll("li.row.playing").forEach(r=>r.classList.remove("playing"));
+  playingId=null;
+}
+async function togglePreview(id,btn){
+  if(playingId===id){ audio.pause(); resetPreviewUI(); return; }
+  resetPreviewUI(); playingId=id; btn.textContent="…";
+  try{
+    const r=await fetch("/api/preview?id="+encodeURIComponent(id)); const d=await r.json();
+    if(!d.ok||!d.preview){ btn.textContent="✕"; setTimeout(()=>{btn.textContent="▶";},1500); playingId=null; return; }
+    if(playingId!==id) return;
+    audio.src=d.preview; await audio.play();
+    btn.textContent="⏸"; btn.classList.add("playing");
+    const row=btn.closest("li.row"); if(row) row.classList.add("playing");
+  }catch(e){ btn.textContent="▶"; playingId=null; }
+}
+
+// ---------- copy list (no login, works for EVERYONE) ----------
+async function copyList(){
+  const b=$("#copy"); const text=lastResults.map(x=>`${x.title} — ${x.artist}`).join("\n");
+  try{ await navigator.clipboard.writeText(text);
+    const old=b.textContent; b.textContent=`✓ Copied ${lastResults.length} songs`;
+    setTimeout(()=>{b.textContent=old;},2200);
+  }catch(e){ window.prompt("Copy your soundalikes:", text); }
+}
+function saveNote(msg){
+  let n=$("#savenote");
+  if(!n){ n=document.createElement("div"); n.id="savenote"; n.className="hint"; n.style.marginTop="10px"; n.style.color="#ffb4b4"; const s=document.querySelector(".seed"); if(s) s.after(n); }
+  n.textContent=msg;
+}
+// ---------- save playlist (browser → Spotify, no server, no credentials to us) ----------
+async function spSearch(t,a){
+  const r=await fetch("https://api.spotify.com/v1/search?type=track&limit=1&q="+encodeURIComponent(`${t} ${a}`),
+    {headers:{Authorization:"Bearer "+token}}); const d=await r.json();
+  return (((d.tracks||{}).items||[])[0]||{}).uri||null;
+}
+function saveBlocked(b){
+  b.disabled=false; b.textContent="⧉ Copy list instead"; b.onclick=copyList;
+  saveNote("Spotify limits new apps to 5 approved testers, so one-click save only works for allowlisted accounts. Everyone can use “Copy list” and paste into a new Spotify playlist, and every result has an Open-in-Spotify link.");
+}
+async function savePlaylist(){
+  const b=$("#save");
+  if(!SPOTIFY_CLIENT_ID){ saveNote("Spotify login isn't set up on this instance — use “Copy list”."); return; }
+  if(!token){ login(); return; }
+  b.disabled=true; b.textContent="Resolving…";
+  try{
+    const meRes=await fetch("https://api.spotify.com/v1/me",{headers:{Authorization:"Bearer "+token}});
+    if(meRes.status===401){ logout(); return saveBlocked(b); }
+    if(meRes.status===403) return saveBlocked(b);
+    const me=await meRes.json();
+    const uris=[]; for(const x of lastResults){ const u=await spSearch(x.title,x.artist); if(u)uris.push(u); }
+    if(!uris.length){ b.textContent="✕ none resolved"; b.disabled=false; return; }
+    const plRes=await fetch(`https://api.spotify.com/v1/users/${me.id}/playlists`,{method:"POST",
+      headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},
+      body:JSON.stringify({name:`soundalike · ${lastSeed.title}`,description:"Made with soundalike.",public:false})});
+    if(plRes.status===403) return saveBlocked(b);
+    const pl=await plRes.json();
+    for(let i=0;i<uris.length;i+=100){ await fetch(`https://api.spotify.com/v1/playlists/${pl.id}/tracks`,{method:"POST",
+      headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},
+      body:JSON.stringify({uris:uris.slice(i,i+100)})}); }
+    b.textContent=`✓ Saved ${uris.length} songs`;
+    if(pl.external_urls&&pl.external_urls.spotify) window.open(pl.external_urls.spotify,"_blank");
+  }catch(e){ b.textContent="✕ save failed"; b.disabled=false; }
+}
+
+// ---------- demo seed chips + surprise ----------
+const DEMO=[["Plastic Love","Mariya Takeuchi"],["Redbone","Childish Gambino"],["Only Shallow","My Bloody Valentine"],
+  ["money machine","100 gecs"],["Chamber of Reflection","Mac DeMarco"],["Close Eyes","DVRST"]];
+// curated, verified in-library seeds spanning many scenes — every one gives a strong result
+const SURPRISE=[["Redbone","Childish Gambino"],["Plastic Love","Mariya Takeuchi"],["Only Shallow","My Bloody Valentine"],
+  ["money machine","100 gecs"],["Chamber of Reflection","Mac DeMarco"],["Close Eyes","DVRST"],["Mask Off","Future"],
+  ["Snooze","SZA"],["So What","Miles Davis"],["Master of Puppets","Metallica"],["Last Last","Burna Boy"],["Ditto","NewJeans"],
+  ["Space Song","Beach House"],["Nights","Frank Ocean"],["Sweater Weather","The Neighbourhood"],["HUMBLE.","Kendrick Lamar"],
+  ["EARFQUAKE","Tyler, The Creator"],["Windowlicker","Aphex Twin"],["Reptilia","The Strokes"],["Tití Me Preguntó","Bad Bunny"],
+  ["Svefn-g-englar","Sigur Rós"],["Teardrop","Massive Attack"],["Sicko Mode","Travis Scott"],["Provenza","Karol G"],
+  ["Bangarang","Skrillex"],["Doomsday","MF DOOM"]];
 let lastSurprise=-1;
-function surpriseMe(){let i;do{i=Math.floor(Math.random()*SURPRISE.length);}while(i===lastSurprise&&SURPRISE.length>1);lastSurprise=i;const s=SURPRISE[i];pick({title:s[0],artist:s[1],row:null});window.scrollTo({top:0,behavior:"smooth"});}
-function loadChips(){const chips=$("#chips");chips.innerHTML=`<button class="chip surprise" id="surprise">🎲 Surprise me</button>`+DEMO.map((s,i)=>`<button class="chip" data-i="${i}">${esc(s[0])} <b>· ${esc(s[1])}</b></button>`).join("");$("#surprise").onclick=surpriseMe;chips.querySelectorAll("button[data-i]").forEach(el=>el.onclick=()=>{const s=DEMO[+el.dataset.i];pick({title:s[0],artist:s[1],row:null});});}
-async function loadStats(){try{const r=await fetch("/api/stats");const d=await r.json();if(d.ok&&d.library_size)$("#hint").textContent=`Type a song and pick it from the list. This hosted demo covers ${d.library_size.toLocaleString()} songs.`;}catch(e){}}
+function surpriseMe(){ let i; do{ i=Math.floor(Math.random()*SURPRISE.length); }while(i===lastSurprise&&SURPRISE.length>1);
+  lastSurprise=i; const s=SURPRISE[i]; pick({title:s[0],artist:s[1],row:null}); window.scrollTo({top:0,behavior:"smooth"}); }
+function loadChips(){
+  const chips=$("#chips");
+  chips.innerHTML=`<button class="chip surprise" id="surprise">🎲 Surprise me</button>`+
+    DEMO.map((s,i)=>`<button class="chip" data-i="${i}">${esc(s[0])} <b>· ${esc(s[1])}</b></button>`).join("");
+  $("#surprise").onclick=surpriseMe;
+  chips.querySelectorAll("button[data-i]").forEach(el=>el.onclick=()=>{const s=DEMO[+el.dataset.i];pick({title:s[0],artist:s[1],row:null});});
+}
+
+// ---------- init ----------
+async function loadStats(){
+  try{ const r=await fetch("/api/stats"); const d=await r.json();
+    if(d.ok&&d.library_size){
+      $("#hint").textContent=`Type a song and pick it from the list. This hosted demo covers ${d.library_size.toLocaleString()} songs.`;
+    }
+  }catch(e){}
+}
 $("#q").addEventListener("input",onType);
-$("#q").addEventListener("keydown",e=>{if(!acItems.length)return;if(e.key==="ArrowDown"){acSel=Math.min(acSel+1,acItems.length-1);renderAc();e.preventDefault();}else if(e.key==="ArrowUp"){acSel=Math.max(acSel-1,0);renderAc();e.preventDefault();}else if(e.key==="Enter"){pick(acItems[acSel<0?0:acSel]);e.preventDefault();}else if(e.key==="Escape"){hideAc();}});
-document.addEventListener("click",e=>{if(!e.target.closest(".search"))hideAc();});
+$("#q").addEventListener("keydown",e=>{
+  if(!acItems.length) return;
+  if(e.key==="ArrowDown"){acSel=Math.min(acSel+1,acItems.length-1);renderAc();e.preventDefault();}
+  else if(e.key==="ArrowUp"){acSel=Math.max(acSel-1,0);renderAc();e.preventDefault();}
+  else if(e.key==="Enter"){ pick(acItems[acSel<0?0:acSel]); e.preventDefault(); }
+  else if(e.key==="Escape"){ hideAc(); }
+});
+document.addEventListener("click",e=>{ if(!e.target.closest(".search")) hideAc(); });
 window.addEventListener("hashchange",loadFromHash);
-handleRedirect();updateSpBtn();loadChips();loadStats();loadFromHash();
+handleRedirect(); updateSpBtn(); loadChips(); loadStats(); loadFromHash();
 </script>
 </body>
 </html>
