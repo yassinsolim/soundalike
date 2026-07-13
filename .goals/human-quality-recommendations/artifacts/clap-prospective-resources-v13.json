@@ -1,0 +1,59 @@
+{
+  "schema_version": 13,
+  "artifact_kind": "clap_catalog_prospective_resources",
+  "created_at": "2026-07-13T15:13:01.181592+00:00",
+  "assets": {
+    "production_index": {
+      "path": "ml_data\\deepvibe_index_v5.npz",
+      "bytes": 299288526,
+      "sha256": "f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9",
+      "unchanged": true
+    },
+    "isolated_compact_clap": {
+      "path": "ml_data\\clap_v13\\compact-clap128.f16.npy",
+      "bytes": 69850496,
+      "sha256": "0c204bddb0e038cee8251c21b954b2964c96f61783f87889cff2af1b59c20b40",
+      "release_uploaded": false,
+      "wired": false
+    },
+    "prospective_combined_file_bytes": 369139022
+  },
+  "process": {
+    "start_rss_bytes": 160432128,
+    "production_loaded_rss_bytes": 1257832448,
+    "mmap_rss_bytes": 1257840640,
+    "touched_rss_bytes": 1307287552,
+    "incremental_touched_rss_bytes": 1146855424,
+    "incremental_compact_touched_rss_bytes": 49455104,
+    "production_load_seconds": 12.480441799998516,
+    "mmap_load_seconds": 0.0009676000045146793
+  },
+  "production_query_latency": {
+    "queries": 60,
+    "mean_ms": 333.91550833330257,
+    "p50_ms": 330.4824500082759,
+    "p95_ms": 379.9536850070581
+  },
+  "compact_query_latency": {
+    "queries": 60,
+    "mean_ms": 110.17560666659847,
+    "p50_ms": 106.21654998976737,
+    "p95_ms": 131.38532498996938
+  },
+  "existing_production_measurement": {
+    "artifact": ".goals/human-quality-recommendations/artifacts/catalog-gated-resources-v8.json",
+    "peak_rss_bytes": 1494294528,
+    "post_gc_resident_rss_bytes": 1327017984,
+    "load_seconds": 7.958867499997723
+  },
+  "vercel": {
+    "evidence_artifact": ".goals/human-quality-recommendations/artifacts/catalog-vercel-tier-evidence-v9.json",
+    "project_specific_tier": "unknown",
+    "actual_memory_limit_bytes": null,
+    "official_documented_hobby_bytes": 2147483648,
+    "fit_claimed": false
+  },
+  "production_changed": false,
+  "deployed": false,
+  "content_sha256": "716812df9edb890e22833f30674cdd30ed4f78281a61b58a5367005f27f898bb"
+}

@@ -1446,7 +1446,133 @@ visible through the evaluator fallback. This new access snapshot is
 
 ---
 
-## 14. Security & correctness
+## 14. A frozen CLAP catalog challenger for the clean human test
+
+V12 exposed a useful but non-promotable clue: fixed CLAP reached 204/307 OOF
+odd-one-out rows versus 176/307 for artist-SupCon. It was not the predeclared
+promotion arm, and LAION-CLAP pretraining may overlap MagnaTagATune. The result can
+motivate a new experiment, but neither its point estimate nor its uncorrected paired
+tests can decide a commercial release.
+
+Before the accepted catalog work, revision 3 of
+`protocol-v13-clap-development/preregistration-v13-r3.json` was content-hashed and
+detached-Ed25519-signed. A bounded revision-1 throughput preflight produced no
+evaluation artifact. Revision 2 completed extraction but failed its frozen compact
+geometry gate, so it likewise produced no ranking or human pack. Both caches were
+deleted. Revision 3 relaxes only unlabeled catalog-geometry retention thresholds and
+starts its official 272,853-row run from empty storage. The protocol freezes:
+
+- `laion-clap==1.1.7`, non-fusion HTSAT-tiny model ID 1, and checkpoint SHA-256
+  `8053c9775516af2f4902e1e8281e356cc1bf7a85e8b761908170767b77c3f037`;
+- stable production-index Deezer IDs and exact row-order hash;
+- fresh metadata resolution, provider-aware throttling, bounded downloads, four
+  attempts with backoff, and worker-local signed URLs;
+- mono 48 kHz decoding, fixed start/center/end 10-second windows, normalized mean
+  pooling, and immediate temporary-audio deletion;
+- a data-independent orthogonal JL matrix (seed `20260713`) and independent catalog
+  geometry gates; and
+- all three candidate formulas, common quality/MMR controls, proxy-collapse gates,
+  and conservative-first selection order.
+
+The resumption ledger is SQLite, while the full and compact arrays are row-aligned
+float16 memmaps. `available` requires finite nonzero data plus a per-row embedding
+checksum. `no_preview` is terminal and explicit; transport/decode errors remain
+retryable and compression refuses any pending/error row. The retained v13 cache has
+embeddings, status/checksums, the fixed projection, and reports—never MP3s or signed
+CDN URLs.
+
+The compression court is an unlabeled catalog sample (256 disjoint queries and
+20,000 references). It chooses the smallest predeclared dimension meeting pairwise
+cosine Spearman, exact top-50 overlap, union-rank Spearman, fifth-percentile overlap,
+float16 reload, and 70 MB gates. No MTAT/commercial label or human seed outcome enters
+the transform.
+
+Three list variants then run over all 60 existing development seeds:
+
+```text
+pure:         relevance = CLAP cosine01
+graph union:  relevance = .70*CLAP + .25*Last.fm + .05*Music4All
+conservative: relevance = .80*Last.fm + .20*CLAP
+              fire only with Last.fm confidence >=.55 and
+              five candidates with CLAP cosine01 >=.65; else exact production
+MMR:          .85*relevance - .15*max selected CLAP cosine01
+```
+
+Every arm removes same-artist songs, junk/derivative/seed-title results, canonical
+duplicates, and second tracks from an already-used artist. MusicBrainz community
+style, fresh Deezer related artists, hubness, artist concentration, all-scene output,
+and category-A candidate recall can reject obvious collapse but cannot claim a win.
+No Gnod label, human commercial rating, popularity value, manual artist boost, or
+scene-specific exception selects the challenger.
+
+The chosen proxy-safe arm and exact current production top fives are written to a
+**new** v13 pack. Opaque method/list/result IDs, 60 seeds/13 scenes, per-session
+randomization, stable-ID on-demand previews, MIREX three classes, optional 0–10,
+whole-list coherence, unrelated top-3, and junk/version flags are preserved. A
+semantic-order hash binds actual Deezer IDs to every displayed position; a detached
+signature binds protocol, public lists, private role-key hash, collector trust root,
+evaluator, diagnostics, compact asset, and zero-rating state. V10/v11 remain
+byte-identical and the importer accepts both old schema 10 exports and signed schema
+13 exports.
+
+### Accepted revision-3 measurements
+
+The official fresh run covered the complete row ledger: 272,709 available embeddings
+and 144 explicit no-preview rows (99.947% available), with no pending or final-error
+row. It ran for 27,738 seconds (7 h 42 m) at 9.83 embedded tracks/s, streamed
+130,629,086,143 bytes, recovered from 303 transient provider failures, and retained
+zero audio/signed URLs. RTX 5080 peak CUDA allocation/reservation was
+3,952,289,280 / 6,094,323,712 bytes. CLAP512 hash:
+`0ff2efeb42394d31e66515a471f62c9ed7b784d40680abdd9bd6c74c1300a623`.
+
+| JL float16 | pair cosine ρ | top-50 overlap | p05 overlap | union rank ρ | result |
+|---:|---:|---:|---:|---:|---|
+| 64 | .8677 | .6230 | .375 | .2926 | reject |
+| 96 | .9199 | .7081 | .500 | .4828 | reject |
+| 112 | .9363 | .7384 | .560 | .5468 | reject |
+| **128** | **.9524** | **.7563** | **.580** | **.5882** | **accept** |
+
+JL128 is 69,850,496 bytes, normalized float16, checksum
+`0c204bddb0e038cee8251c21b954b2964c96f61783f87889cff2af1b59c20b40`.
+Reload metrics independently pass the same gates.
+
+| proxy safety (60 seeds / 300 slots) | production | conservative | graph union | pure CLAP |
+|---|---:|---:|---:|---:|
+| complete top fives | 60 | 60 | 60 | 60 |
+| junk / same artist | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| unique tracks / artists | 300 / 277 | 299 / 275 | 300 / 275 | 300 / 286 |
+| mean MusicBrainz style | .7754 | .7722 | .7499 | .7332 |
+| Deezer related-artist hit rate | .1864 | **.4102** | .3864 | .0915 |
+| hard safety result | reference | **pass** | pass | reject |
+
+The fixed priority rule therefore selected the conservative arm; it fired for 36
+seeds and returned exact production for 24. Category-A candidate Recall@50/@200 was
+1/36 for conservative, 1/36 and 2/36 for graph union, and 1/36 for pure CLAP. It is
+reported but did not select the arm.
+
+The new public pack contains 60 seeds, 478 deduplicated result identities, and 600
+positions. Its list hash is
+`8c09b31e55efdbc7399a4e26f8291e0b408d07395b61cda6c873e6eb46eaa370`;
+semantic order hash is
+`405a56b63d294fe12394ee6a899836e3b73da3a21fee474fa57604bb34ebe166`.
+The rate-aware loopback resolver freshly covered 478/478 results, 59/60 seeds, and
+600/600 positions with no endpoint error; the one preview-less seed retains legal
+fallback links.
+
+The prospective combined process loaded enhanced production in 12.48 s and reached
+1,307,287,552 bytes touched RSS; compact CLAP added 49,455,104 bytes. Compact query
+latency was 110.2 ms mean / 131.4 ms p95, versus 333.9 / 380.0 ms for current
+production in the same process. Existing production's independently measured peak
+remains 1,494,294,528 bytes. The linked Vercel project tier and actual memory ceiling
+are still unverified, so no hosted-fit assertion is made.
+
+**Decision boundary:** this is a frozen human-development challenger, not a release.
+There are no human ratings yet, no `sonic_human` report, no AC#3 claim, and no FINAL,
+desktop/hosted wiring, Release upload, manifest edit, or deployment.
+
+---
+
+## 15. Security & correctness
 
 - **No passwords, ever.** Live Spotify access uses OAuth 2.0 **Authorization Code + PKCE** with a
   local loopback callback, CSRF `state` validation, and cached auto-refreshing tokens.
@@ -1471,7 +1597,7 @@ visible through the evaluator fallback. This new access snapshot is
 
 ---
 
-## 15. What I'd build next
+## 16. What I'd build next
 
 - **Persist a personal acoustic-feature store** so the engines cover a user's entire Spotify
   library, not just what's in a preview catalog.
@@ -1494,7 +1620,7 @@ visible through the evaluator fallback. This new access snapshot is
 
 ---
 
-## 16. Skills demonstrated
+## 17. Skills demonstrated
 
 For anyone evaluating this as a portfolio piece, the work spans:
 
@@ -1508,7 +1634,7 @@ For anyone evaluating this as a portfolio piece, the work spans:
   CUDA memory-layout and precision tuning, reading cuDNN kernel selection.
 - **API integration & security:** OAuth 2.0 PKCE, token lifecycle management, rate-limit handling,
   secret hygiene.
-- **Software engineering:** clean package design, a 511-test suite, packaging, a documented CLI,
+- **Software engineering:** clean package design, a 534-test suite, packaging, a documented CLI,
   decoupling I/O from compute (the harvest-once spec cache), and reviewed, merged pull requests.
   Includes a reproducible human-aligned evaluation suite, three ranking improvements (quality
   filter, genre reranker, collaborative graph), and desktop/hosted parity tests.

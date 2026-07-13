@@ -42,6 +42,7 @@ ml = [
     "psutil>=5.9",
     "networkx>=3.2",
     "laion-clap>=1.1.7",
+    "Pillow>=12.3.0",
 ]
 # Everything, for development.
 dev = [

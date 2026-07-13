@@ -1,0 +1,69 @@
+{
+  "schema_version": 13,
+  "artifact_kind": "clap_catalog_embedding_coverage",
+  "created_at": "2026-07-13T15:07:30.547859+00:00",
+  "preregistration_content_sha256": "2c1bb55c85dfa8d1d344bba02868563c459ac743604f525ecb678598f3ef4ee7",
+  "catalog": {
+    "rows": 272853,
+    "track_ids_tobytes_sha256": "a20632fc8fb4beff406c1858714b14eb0303802a3c3829b085454d10900555f7"
+  },
+  "encoder": {
+    "checkpoint_sha256": "8053c9775516af2f4902e1e8281e356cc1bf7a85e8b761908170767b77c3f037",
+    "gpu": "NVIDIA GeForce RTX 5080",
+    "dimension": 512
+  },
+  "coverage": {
+    "available": 272709,
+    "no_preview": 144,
+    "pending": 0,
+    "error": 0
+  },
+  "available_fraction": 0.9994722432958406,
+  "terminal_fraction": 1.0,
+  "retry_failures": [],
+  "retry_history": {
+    "failed_attempts": 303,
+    "rows_with_failed_attempts": 303,
+    "error_types": {
+      "OSError": 303
+    },
+    "detailed_failures_retained_in": "ml_data\\clap_v13\\status.sqlite3"
+  },
+  "run": {
+    "requested_rows": 272853,
+    "embedded_rows": 272709,
+    "wall_seconds": 27737.925986700022,
+    "embedded_tracks_per_second": 9.83162908902275,
+    "downloaded_bytes": 130629086143,
+    "download_workers": 32,
+    "metadata_workers": 64,
+    "api_rate_limit_per_second": 20.0,
+    "effective_api_requests_per_second": 10.0,
+    "temporary_files_remaining": 0,
+    "cumulative": {
+      "first_completed_at": "2026-07-13T07:26:07.014607+00:00",
+      "last_completed_at": "2026-07-13T15:07:25.500188+00:00",
+      "wall_span_seconds": 27678.485581,
+      "available_tracks_per_second": 9.852742817229933,
+      "downloaded_bytes": 130629086143,
+      "network_attempts": 273156
+    }
+  },
+  "gpu": {
+    "max_allocated_bytes": 3952289280,
+    "max_reserved_bytes": 6094323712
+  },
+  "cache": {
+    "embedding_path": "ml_data\\clap_v13\\full-clap512.f16.npy",
+    "embedding_bytes": 279401600,
+    "embedding_sha256": "0ff2efeb42394d31e66515a471f62c9ed7b784d40680abdd9bd6c74c1300a623",
+    "status_path": "ml_data\\clap_v13\\status.sqlite3",
+    "status_bytes": 62484480,
+    "retained_audio_files": 0,
+    "signed_preview_urls_persisted": false
+  },
+  "production_changed": false,
+  "commercial_final_opened": false,
+  "ac3_claimed": false,
+  "content_sha256": "8fae6dbbb4f1d75f9b0c9c9bafb18000f83b7de759ce7a3e9b794a77fb1be0d2"
+}

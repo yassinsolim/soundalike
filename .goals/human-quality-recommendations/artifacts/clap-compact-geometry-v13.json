@@ -1,0 +1,90 @@
+{
+  "schema_version": 13,
+  "artifact_kind": "clap_catalog_compact_geometry",
+  "created_at": "2026-07-13T15:07:56.804445+00:00",
+  "preregistration_content_sha256": "2c1bb55c85dfa8d1d344bba02868563c459ac743604f525ecb678598f3ef4ee7",
+  "algorithm": "Gaussian orthogonal Johnson-Lindenstrauss projection",
+  "seed": 20260713,
+  "selection_uses_labels": false,
+  "available_rows": 272709,
+  "unavailable_rows": 144,
+  "coverage_content_sha256": "8fae6dbbb4f1d75f9b0c9c9bafb18000f83b7de759ce7a3e9b794a77fb1be0d2",
+  "coverage": {
+    "available": 272709,
+    "no_preview": 144,
+    "pending": 0,
+    "error": 0
+  },
+  "sample": {
+    "queries": 256,
+    "references": 20000,
+    "query_reference_disjoint": true,
+    "row_selection_sha256": "f76488f5c0a02af33a60ac351fdd552d3402ccdc0f6eb68454502c2188db5111"
+  },
+  "gates": {
+    "sampled_pair_cosine_spearman_min": 0.94,
+    "mean_top50_overlap_min": 0.74,
+    "mean_union_top50_rank_spearman_min": 0.55,
+    "p05_top50_overlap_min": 0.55
+  },
+  "dimensions": {
+    "64": {
+      "sampled_pair_cosine_spearman": 0.8677076849586769,
+      "mean_top50_overlap": 0.6229687500000001,
+      "p05_top50_overlap": 0.375,
+      "mean_union_top50_rank_spearman": 0.2926232424385764,
+      "passes": false,
+      "asset_bytes": 34925312
+    },
+    "96": {
+      "sampled_pair_cosine_spearman": 0.919866887455955,
+      "mean_top50_overlap": 0.7081250000000001,
+      "p05_top50_overlap": 0.5,
+      "mean_union_top50_rank_spearman": 0.4828307898676903,
+      "passes": false,
+      "asset_bytes": 52387904
+    },
+    "112": {
+      "sampled_pair_cosine_spearman": 0.9363135560097454,
+      "mean_top50_overlap": 0.7383593749999999,
+      "p05_top50_overlap": 0.56,
+      "mean_union_top50_rank_spearman": 0.5468292602602428,
+      "passes": false,
+      "asset_bytes": 61119200
+    },
+    "128": {
+      "sampled_pair_cosine_spearman": 0.9523613251794467,
+      "mean_top50_overlap": 0.756328125,
+      "p05_top50_overlap": 0.58,
+      "mean_union_top50_rank_spearman": 0.58811931517713,
+      "passes": true,
+      "asset_bytes": 69850496
+    }
+  },
+  "selected_dimension": 128,
+  "float16_reload_metrics": {
+    "sampled_pair_cosine_spearman": 0.9523614651605745,
+    "mean_top50_overlap": 0.756328125,
+    "p05_top50_overlap": 0.58,
+    "mean_union_top50_rank_spearman": 0.588158588787788
+  },
+  "asset": {
+    "path": "ml_data\\clap_v13\\compact-clap128.f16.npy",
+    "bytes": 69850496,
+    "sha256": "0c204bddb0e038cee8251c21b954b2964c96f61783f87889cff2af1b59c20b40",
+    "dtype": "float16",
+    "shape": [
+      272853,
+      128
+    ],
+    "normalised": true
+  },
+  "projection": {
+    "path": "ml_data\\clap_v13\\compact-clap128-projection.npz",
+    "bytes": 243816,
+    "sha256": "2172fc73f0d863f86877029b9d0d13f0da0cd6802e2488a34fad521ee8cf31ff"
+  },
+  "production_changed": false,
+  "deployed": false,
+  "content_sha256": "0f67c9a9a906001bc244ecd7488f2c0b6c662eb790ea5d4b7f062b7d55f9273e"
+}

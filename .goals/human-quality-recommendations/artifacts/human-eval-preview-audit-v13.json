@@ -1,0 +1,54 @@
+{
+  "schema_version": 13,
+  "artifact_kind": "v13_live_preview_resolution_audit",
+  "served_lists_sha256": "8c09b31e55efdbc7399a4e26f8291e0b408d07395b61cda6c873e6eb46eaa370",
+  "checked_at": "2026-07-13T15:17:14.389462+00:00",
+  "endpoint": "http://127.0.0.1:8878/api/preview",
+  "external_request": {
+    "method": "GET",
+    "query_parameters": [
+      "id (numeric Deezer track ID only)"
+    ],
+    "body": null,
+    "credentials": "none",
+    "ratings_rater_session_transmitted": false,
+    "signed_preview_urls_persisted": false
+  },
+  "unique_deezer_ids_requested": 537,
+  "unique_results": {
+    "total": 478,
+    "id_covered": 478,
+    "available": 478,
+    "no_preview": 0,
+    "errors": 0
+  },
+  "seeds": {
+    "total": 60,
+    "id_covered": 60,
+    "available": 59,
+    "no_preview": 1,
+    "errors": 0
+  },
+  "ranked_positions": {
+    "total": 600,
+    "available": 600,
+    "no_preview": 0,
+    "errors": 0,
+    "resolvable_fraction": 1.0
+  },
+  "no_preview_result_deezer_ids": [],
+  "no_preview_seed_deezer_ids": [
+    646715112
+  ],
+  "errors": [],
+  "observed_cors": [],
+  "observed_cache_control": [
+    "no-store"
+  ],
+  "chrome_playback": {
+    "status": "pending manual verification"
+  },
+  "human_ratings_used": 0,
+  "production_changed": false,
+  "content_sha256": "e240a05388b1e07b3edd217732b4804397da0f3abc90f81a70a491567488c177"
+}

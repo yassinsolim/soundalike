@@ -36,6 +36,15 @@ from .human_eval_v11 import (
     TRUSTED_V11_PROTOCOL,
     ranking_order_hash,
 )
+from .human_eval_v13 import (
+    STATE_IDENTITY as V13_STATE_IDENTITY,
+    STATE_NAMESPACE as V13_STATE_NAMESPACE,
+    TRUSTED_V13_FILES,
+    TRUSTED_V13_LISTS,
+    TRUSTED_V13_PROTOCOL,
+    TRUSTED_V13_STATE,
+    semantic_order_hash as v13_semantic_order_hash,
+)
 
 CLASSES = {"not_similar": 0, "somewhat_similar": 1, "very_similar": 2}
 COHERENCE = {"not_coherent": 0, "somewhat_coherent": 1, "very_coherent": 2}
@@ -45,6 +54,83 @@ FORBIDDEN = ("last.fm", "lastfm", "deezer", "music4all", "gnod", "model",
 
 class AggregateError(ValueError):
     """Input is not valid actual interactive human-listener evidence."""
+
+
+def _verify_v13_state(
+    protocol_path: Path,
+    protocol: Mapping[str, Any],
+    lists: Mapping[str, Any],
+    key: Mapping[str, Any],
+) -> None:
+    """Verify the new study's signed state and semantic track-order binding."""
+    directory = protocol_path.parent
+    state_path = directory / "state.json"
+    signature = directory / "state.sig"
+    allowed = directory / "allowed_signers"
+    if not all(path.is_file() for path in (state_path, signature, allowed)):
+        raise AggregateError("signed v13 study state is incomplete")
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    semantic = v13_semantic_order_hash(lists)
+    if (
+        protocol.get("content_sha256") != TRUSTED_V13_PROTOCOL
+        or lists.get("content_sha256") != TRUSTED_V13_LISTS
+        or state.get("content_sha256") != TRUSTED_V13_STATE
+        or any(
+            not (directory / name).is_file()
+            or file_hash(directory / name) != digest
+            for name, digest in TRUSTED_V13_FILES.items()
+        )
+        or
+        state.get("schema_version") != 13
+        or content_hash(state) != state.get("content_sha256")
+        or state.get("rankings_state") != "RANKINGS_LOCKED"
+        or state.get("ratings_count_at_freeze") != 0
+        or protocol.get("ratings_count_at_freeze") != 0
+        or lists.get("ratings_count_at_freeze") != 0
+        or not (
+            protocol.get("served_lists_sha256")
+            == lists.get("content_sha256")
+            == state.get("served_lists_sha256")
+        )
+        or protocol.get("content_sha256") != state.get("protocol_sha256")
+        or not (
+            protocol.get("private_key_sha256")
+            == key.get("content_sha256")
+            == state.get("private_method_key_sha256")
+        )
+        or key.get("served_lists_sha256") != lists.get("content_sha256")
+        or not (
+            protocol.get("semantic_order_sha256")
+            == lists.get("semantic_order_sha256")
+            == key.get("semantic_order_sha256")
+            == state.get("semantic_order_sha256")
+            == semantic
+        )
+    ):
+        raise AggregateError("v13 signed state binding mismatch")
+    executable = shutil.which("ssh-keygen")
+    if executable is None:
+        raise AggregateError("ssh-keygen is required to verify v13 study state")
+    verified = subprocess.run(
+        [
+            executable,
+            "-Y",
+            "verify",
+            "-f",
+            str(allowed),
+            "-I",
+            V13_STATE_IDENTITY,
+            "-n",
+            V13_STATE_NAMESPACE,
+            "-s",
+            str(signature),
+        ],
+        input=state_path.read_bytes(),
+        capture_output=True,
+        check=False,
+    )
+    if verified.returncode:
+        raise AggregateError("v13 study state signature is invalid")
 
 
 def _verify_audio_access_erratum(
@@ -204,8 +290,16 @@ def _load_bound(protocol_path: Path, lists_path: Path, key_path: Path):
     protocol = json.loads(protocol_path.read_text(encoding="utf-8"))
     lists = json.loads(lists_path.read_text(encoding="utf-8"))
     key = json.loads(key_path.read_text(encoding="utf-8"))
+    schemas = {
+        protocol.get("schema_version"),
+        lists.get("schema_version"),
+        key.get("schema_version"),
+    }
+    if len(schemas) != 1 or next(iter(schemas)) not in {10, 13}:
+        raise AggregateError("protocol/list/key schema versions are incompatible")
+    schema = int(next(iter(schemas)))
     for name, doc in (("protocol", protocol), ("lists", lists), ("key", key)):
-        if doc.get("schema_version") != 10 or content_hash(doc) != doc.get("content_sha256"):
+        if content_hash(doc) != doc.get("content_sha256"):
             raise AggregateError(f"{name} schema/content hash mismatch")
         if doc.get("rankings_state") != "RANKINGS_LOCKED":
             raise AggregateError(f"{name} rankings are not locked")
@@ -213,7 +307,9 @@ def _load_bound(protocol_path: Path, lists_path: Path, key_path: Path):
         raise AggregateError("protocol/list hash mismatch")
     if protocol.get("private_key_sha256") != key["content_sha256"]:
         raise AggregateError("protocol/key hash mismatch")
-    if key.get("served_lists_sha256") != lists["content_sha256"]:
+    if schema == 13:
+        _verify_v13_state(protocol_path, protocol, lists, key)
+    elif key.get("served_lists_sha256") != lists["content_sha256"]:
         _verify_audio_access_erratum(protocol_path, protocol, lists, key)
     collector_allowed = protocol_path.parent / "collector_allowed_signers"
     if not collector_allowed.is_file():
@@ -255,8 +351,8 @@ def _validate_export(
     document: Mapping[str, Any], protocol: Mapping[str, Any],
     lists: Mapping[str, Any],
 ) -> Dict[str, Any]:
-    if document.get("schema_version") != 10:
-        raise AggregateError("export schema_version must be 10")
+    if document.get("schema_version") != protocol.get("schema_version"):
+        raise AggregateError("export schema_version must match the study protocol")
     source = str(document.get("source_kind", "")).casefold()
     provider = str(document.get("provider", "")).casefold()
     if source != "human_listener":
@@ -570,7 +666,7 @@ def aggregate(
         )
 
     return {
-        "schema_version": 10,
+        "schema_version": int(protocol["schema_version"]),
         "report_kind": "sonic_human",
         "source_kind": "human_listener",
         "protocol_sha256": protocol["content_sha256"],

@@ -776,6 +776,93 @@ it creates no ratings and does not supersede the signed v10/v11 order.
 .\.venv\Scripts\python.exe -m soundalike.ml.magnatagatune_v12 run-nested
 ```
 
+### Frozen full-catalog CLAP human challenger (iteration 13)
+
+CLAP's 204/307 fixed OOF result is now treated as a **development hypothesis**, not a
+winner. LAION-CLAP may have seen MagnaTagATune during pretraining, and choosing the
+strongest v12 comparator after reading all outer scores would be multiplicity-biased.
+The clean test is therefore a new commercial-list human A/B frozen before any rating.
+
+The detached-Ed25519-signed revision-3 preregistration fixes LAION-CLAP 1.1.7,
+HTSAT-tiny model ID 1, and checkpoint SHA-256
+`8053c9775516af2f4902e1e8281e356cc1bf7a85e8b761908170767b77c3f037`.
+For each of the production index's 272,853 stable Deezer IDs, the resumable builder
+resolves a fresh preview URL immediately before use, rate-limits and retries bounded
+parallel downloads, decodes three deterministic 10-second windows, pools normalized
+CLAP512 vectors, and deletes the temporary MP3. Only aligned float16 embeddings,
+SQLite status/checksums, and compact derived assets remain under gitignored
+`ml_data/clap_v13`; no preview or expiring signed URL is retained or re-hosted.
+
+Compression is a label-free Gaussian orthogonal/JL projection with seed `20260713`.
+The smallest of 64/96/112/128 dimensions is accepted only if an independent unlabeled
+catalog sample passes frozen cosine/rank/top-50 overlap gates and the float16 asset is
+at most 70 MB. It is not fit or selected on MTAT TEST, the commercial seed identities,
+or human ratings.
+
+Three frozen lists are audited before the human pack can exist:
+
+1. pure catalog-wide compact-CLAP nearest neighbors;
+2. a Last.fm/Music4All artist-candidate union ranked primarily by CLAP; and
+3. a conservative Last.fm-confidence + CLAP-consistency head with exact production
+   fallback.
+
+All share the generic version/junk filter, seed-title protection, cross-artist MIREX
+filter, one result per artist, and fixed CLAP MMR. There are no manual artist boosts,
+scene branches, or popularity features. MusicBrainz style tags, fresh Deezer
+related-artist affinity, hub/artist concentration, junk, all 13 scene distributions,
+and category-A candidate recall are **proxy safety only**. The first safe method in
+the preregistered conservative→graph→pure order is frozen for human listening; the
+old Gnod/Music-Map score is not a co-primary.
+
+The new v13 pack is separate from byte-identical v10/v11 artifacts. It preserves 60
+seeds and 13 scenes, compares actual current-production and chosen-CLAP top fives,
+uses fresh-on-demand stable-ID playback, randomizes display per session, and keeps the
+same MIREX three-class + optional 0–10/list/junk aggregation contract. Public files
+are hash-bound and state-signed as `RANKINGS_LOCKED`; the role key and collector
+private key remain gitignored. **Ratings at freeze are zero, AC#3 is not claimed,
+and no desktop, hosted, release, manifest, FINAL, or production ranking changed.**
+
+The accepted revision-3 run embedded **272,709/272,853 (99.947%)** rows; the remaining
+144 have an explicit `no_preview` status, with zero pending/final-error rows. It took
+27,738 s (7 h 42 m) at 9.83 tracks/s, downloaded/streamed 130.6 GB, recovered from
+303 transient failed attempts, and left zero audio files. RTX 5080 peak CUDA memory
+was 3.95 GB allocated / 6.09 GB reserved. Full CLAP512 SHA-256 is
+`0ff2efeb42394d31e66515a471f62c9ed7b784d40680abdd9bd6c74c1300a623`.
+
+JL128 was the first passing compact form: **69,850,496 bytes**, SHA-256
+`0c204bddb0e038cee8251c21b954b2964c96f61783f87889cff2af1b59c20b40`.
+After float16 reload it retained pair-cosine Spearman 0.9524, mean top-50 overlap
+0.7563 (5th percentile 0.58), and union-rank Spearman 0.5882. JL64/96/112 failed at
+least one frozen gate.
+
+Proxy safety selected `conservative_clap_fallback` in the fixed priority order. Its
+Last.fm/CLAP head fired for 36/60 seeds and used exact production for 24. Across 300
+slots it had 0 junk/version rows, 0 same-artist rows, 299 unique tracks, 275 unique
+artists, MusicBrainz style delta -0.0032, and fresh Deezer related-artist hit rate
+0.4102 versus production 0.1864. The graph union also passed; pure CLAP was rejected
+because Deezer supporting affinity regressed by 0.0949. These are safeguards, not
+human outcomes.
+
+The frozen list hash is
+`8c09b31e55efdbc7399a4e26f8291e0b408d07395b61cda6c873e6eb46eaa370`;
+semantic order hash is
+`405a56b63d294fe12394ee6a899836e3b73da3a21fee474fa57604bb34ebe166`.
+The provider-aware loopback audit resolved **478/478 unique results, 59/60 seeds,
+and 600/600 ranked positions** with no error and no persisted URL. Alongside the
+enhanced production loader, compact CLAP added 49.5 MB touched RSS; combined touched
+RSS was 1.307 GB. Compact query mean/p95 was 110/131 ms; production was 334/380 ms.
+The linked Vercel project-specific limit remains unknown, so hosted fit is not claimed.
+
+```powershell
+# The signed revision-3 protocol must exist before this fresh full-catalog run.
+.\.venv\Scripts\python.exe -m soundalike.ml.clap_catalog_v13 embed
+.\.venv\Scripts\python.exe -m soundalike.ml.clap_catalog_v13 compress
+
+# Diagnostics/resources use explicit output paths; freeze then binds their hashes.
+.\.venv\Scripts\python.exe -m soundalike.ml.human_eval_v13 verify
+.\.venv\Scripts\python.exe -m soundalike.ml.human_eval_v13 serve
+```
+
 Version handling is now generic and query-aware: explicit remixes/mixes, edits, instrumentals,
 covers, karaoke/tribute recordings, slowed/reverb/nightcore/sped-up versions, medleys/mashups, and
 seed-title variants are excluded for a canonical query; a derivative query may admit only the same
