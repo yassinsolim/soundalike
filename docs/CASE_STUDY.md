@@ -1775,6 +1775,16 @@ Signature file SHA-256: `3d42de54…`. The signed state confirms: `phase: RANKIN
 **Production status.** `2026.07.11-dual-sonic64` / 272,853 songs. No FINAL was created or
 opened. No deployment occurred. AC#3 is not claimed.
 
+**Evaluator-only v15 supersession.** Before ratings began, mobile layout and accessibility
+polish changed the evaluator bytes. The original v14 evaluator and signed pack were restored
+byte-exactly instead of being overwritten. A fresh signed v15 state binds
+`benchmarks/human_eval_v15.html` while retaining every v14 seed, candidate, opaque ID,
+ranking position, method assignment, blinding identifier, and collector public key. Both
+packs record zero ratings; v15 therefore discards and migrates zero human judgments. The
+served semantic/order hash remains `7ecc7a45…`; v15 protocol/lists/state hashes are
+`4ee45316…` / `5218bcec…` / `ac69cced…`, and evaluator SHA-256 is `7b549700…`.
+The inherited committed preview evidence remains 600/600 ranked positions.
+
 ### Local assets and gitignore
 
 The following are **gitignored local assets** and are not committed to the repository:
@@ -1826,6 +1836,12 @@ those local assets (see iteration 13 for the full CLAP embedding run).
 #    v13 600/600 evidence and freshly checks the sole new ID.
 .\.venv\Scripts\python.exe -m soundalike.ml.human_eval_v14 audit `
   --workers 1 --output ml_data\clap_v14\preview-audit-v14.json
+
+# 6. Verify and launch the latest evaluator-only successor.
+.\.venv\Scripts\python.exe -m soundalike.ml.human_eval_v15 verify `
+  --private-key ml_data\clap_v15\human_eval\method-key-v15.json
+.\.venv\Scripts\python.exe -m soundalike.ml.human_eval_v15 serve
+# Browse to http://127.0.0.1:8000/ and load the bundled locked study.
 
 .\.venv\Scripts\python.exe -m pytest tests\ -q
 ```

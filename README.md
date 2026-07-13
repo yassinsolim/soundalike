@@ -1041,6 +1041,14 @@ migrated** (none existed). State: `RANKINGS_LOCKED`, `ratings_count_at_freeze = 
 v14 protocol `38fdb950…`, lists `5e7d852e…`, semantic order `7ecc7a45…`, state `823fd692…`.
 v13 superseded: protocol `35c106be…`, lists `8c09b31e…`, state `4f8af084…`.
 
+The responsive evaluator polish is issued separately as the signed, zero-rating **v15**
+successor; v14 remains byte-exact and verifiable. v15 changes only evaluator layout and
+accessibility. Its 60 seeds, 600 ranked positions, opaque IDs, list content/order, method
+assignments, blinding salt, and collector trust root are identical to v14. The supersession
+records zero discarded/migrated ratings and binds the existing 600/600 preview audit. Key
+hashes: protocol `4ee45316…`, lists `5218bcec…`, semantic order `7ecc7a45…`, state
+`ac69cced…`, evaluator `7b549700…`.
+
 > **Proxy and direct diagnostics are not human gold.** The collision audit, preview counts,
 > and direct changed-list review are development-quality signals only. AC#3 remains unclaimed
 > pending ≥3 independent rater exports. Production is unchanged:
@@ -1085,6 +1093,12 @@ assets first.
 #    instead binds the v13 600/600 audit and probes the sole new ID.
 .\.venv\Scripts\python.exe -m soundalike.ml.human_eval_v14 audit `
   --workers 1 --output ml_data\clap_v14\preview-audit-v14.json
+
+# 6. Verify and launch the latest immutable evaluator-only successor.
+.\.venv\Scripts\python.exe -m soundalike.ml.human_eval_v15 verify `
+  --private-key ml_data\clap_v15\human_eval\method-key-v15.json
+.\.venv\Scripts\python.exe -m soundalike.ml.human_eval_v15 serve
+# Open http://127.0.0.1:8000/ and choose "Load bundled locked study".
 
 .\.venv\Scripts\python.exe -m pytest tests\ -q
 ```
