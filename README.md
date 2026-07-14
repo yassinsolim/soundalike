@@ -49,7 +49,9 @@ Spotify's own site, never hand over a password) to save results as a playlist. S
 **Help with the blind study:** open the public
 [listening evaluator](https://soundalike.yassin.app/evaluate). A complete session is
 usually 90–150 minutes, but partial progress can be resumed. Ratings stay in your
-browser; export the JSON and send it to the project owner yourself.
+browser until you explicitly consent and press **Submit ratings**. Accepted snapshots
+go to a private ratings inbox; JSON export remains available as a manual fallback.
+See the [deployment and privacy workflow](webapp/DEPLOY.md#private-ratings-inbox).
 
 ---
 

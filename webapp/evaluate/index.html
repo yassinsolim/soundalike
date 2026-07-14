@@ -6,7 +6,7 @@
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; frame-ancestors 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; media-src https://dzcdn.net https://*.dzcdn.net; connect-src 'self' https://soundalike.yassin.app">
-  <title>Soundalike v16 blind listening evaluation</title>
+  <title>Soundalike v17 blind listening evaluation</title>
   <style>
     :root{color-scheme:dark;--bg:#101215;--panel:#191d22;--panel-2:#20252b;--ink:#f3f5f7;--muted:#aab2bd;--line:#343b45;--accent:#72e3a6;--space:1rem}
     *{box-sizing:border-box}
@@ -21,7 +21,7 @@
     .muted,.shared{color:var(--muted)}
     button,.button,select,input[type=number]{font:inherit;color:var(--ink);background:#242a31;border:1px solid #56606d;border-radius:8px;padding:.55rem .8rem;min-height:44px}
     button,.button{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;text-align:center;overflow-wrap:anywhere}
-    button:disabled{cursor:wait;opacity:.65}
+    button:disabled{cursor:not-allowed;opacity:.65}
     .button{position:relative}.button input{position:absolute;opacity:0;width:1px;height:1px}
     button:hover,.button:hover{border-color:var(--accent)}
     :where(button,.button,select,input,a):focus-visible,.button:focus-within{outline:3px solid var(--accent);outline-offset:3px}
@@ -35,7 +35,9 @@
     .columns{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
     .status{border-left:4px solid var(--accent);padding-left:.7rem;overflow-wrap:anywhere}
     audio{display:block;width:100%;max-width:100%;min-height:44px;margin-top:.5rem}
-    .danger{color:#ffb4ab}.hidden{display:none!important}
+    .danger{color:#ffb4ab}.success{color:var(--accent)}.hidden{display:none!important}
+    .submit-panel{border-color:#4b6f5c}.submit-panel ul{padding-left:1.25rem}
+    .consent{align-items:flex-start;padding:.55rem 0}.consent input{margin-top:.15rem}
     .fallbacks{display:flex;gap:.4rem .8rem;flex-wrap:wrap}
     .fallbacks a{display:inline-flex;align-items:center;min-height:44px;color:var(--accent);padding:.35rem .1rem}
     @media(max-width:850px){
@@ -73,8 +75,8 @@
 <body>
 <main>
   <h1>Blind served-list listening study</h1>
-  <p class="muted">Ratings stay in this browser. There is no analytics or server submission. When you request audio, the preview API receives <strong>only the numeric Deezer track ID</strong>—never rating values, rater ID, session ID, or localStorage data. The fresh signed preview URL stays only in this page's memory.</p>
-  <p class="muted">A complete session is about 480 unique result ratings plus 120 list judgments over 60 seeds (usually 90–150 minutes). Stop anytime: progress autosaves only in this browser, and partial exports can be resumed. Export the ratings JSON and send it to the project owner yourself; this page never uploads it. Use at least 3 independent raters (ideally 5) for population evidence.</p>
+  <p class="muted">Ratings autosave in this browser. Nothing is submitted automatically. When you request audio, the preview API receives <strong>only the numeric Deezer track ID</strong>—never rating values, rater ID, session ID, or localStorage data. The fresh signed preview URL stays only in this page's memory.</p>
+  <p class="muted">A complete session is about 480 unique result ratings plus 120 list judgments over 60 seeds (usually 90–150 minutes). Stop anytime: partial progress can be resumed, submitted with explicit consent, or downloaded with Export JSON as a manual fallback. Use at least 3 independent raters (ideally 5) for population evidence.</p>
   <section class="panel" aria-labelledby="setup-title">
     <h2 id="setup-title">1. Load locked study</h2>
     <div class="tools">
@@ -89,17 +91,32 @@
   <section id="study" class="hidden">
     <div class="tools study-nav">
       <button id="prev" type="button">Previous seed</button><button id="next" type="button">Next seed</button>
-      <button id="export" type="button">Export partial/current ratings</button>
+      <button id="export" type="button">Export partial/current ratings JSON</button>
       <span id="progress" class="status" role="status"></span>
     </div>
+    <section class="panel submit-panel" aria-labelledby="submit-title">
+      <h2 id="submit-title">Submit ratings privately</h2>
+      <p>Submission is anonymous and manual. The upload contains random anonymous/session IDs, complete rating values, rating timestamps and interaction durations, locked protocol/list hashes, and the local HMAC key and HMAC used only to verify this snapshot.</p>
+      <p class="muted">The private stored record keeps the rating evidence but strips the local HMAC key and HMAC. It does not store an IP address, Origin, browser/user-agent, cookies, Spotify identity, email, raw headers, or a private Blob URL. Vercel may still process request metadata in operational infrastructure; the application does not copy it into the ratings record.</p>
+      <label class="consent"><input id="consent" type="checkbox">I consent to submit my current complete ratings to the project's private ratings inbox.</label>
+      <div class="tools">
+        <button id="submit" type="button" disabled>Submit current ratings</button>
+        <span id="submit-status" class="status" role="status" aria-atomic="true">Rate at least one result or list and check consent to enable submission.</span>
+      </div>
+    </section>
     <article id="seed"></article>
   </section>
 </main>
 <script>
 "use strict";
 const $=id=>document.getElementById(id), enc=new TextEncoder();
-let selected={}, protocol=null, pack=null, state=null, orderedSeeds=[];
+let selected={}, protocol=null, pack=null, state=null, orderedSeeds=[], submissionPayload=null;
 const PROD_PREVIEW_ORIGIN="https://soundalike.yassin.app";
+const V16_PROTOCOL_SHA256="c94ce615c68cde595b4e48ac5010297d76bedbed52948b10d315a39286117727";
+const V16_SERVED_LISTS_SHA256="809b98ae4314b396ffb33f7349fee72c94e1a80a33d84b1661ab83166a52b9e9";
+const V17_SERVED_LISTS_SHA256="2311a7f3dc3b84452060e7ba1c42ed33cd886d602caeb2511363dd8cb90e2eeb";
+const INTEGRITY_NOTICE="Local-key HMAC provides integrity, not identity or authenticity; the key is included in this export.";
+const MAX_DURATION_MS=366*24*60*60*1000;
 const previewCache=new Map(), previewRefreshes=new Map();
 const readFile=file=>file.text().then(JSON.parse);
 const canonical=value=>{
@@ -111,12 +128,16 @@ const hex=bytes=>[...new Uint8Array(bytes)].map(x=>x.toString(16).padStart(2,"0"
 const sha=async value=>hex(await crypto.subtle.digest("SHA-256",enc.encode(typeof value==="string"?value:canonical(value))));
 const docHash=async doc=>{const copy={...doc};delete copy.content_sha256;return sha(copy)};
 const randomHex=n=>{const a=new Uint8Array(n);crypto.getRandomValues(a);return hex(a)};
-const storageKey=()=>`soundalike-human-v16:${protocol.content_sha256}:${state.anonymous_rater_id}:${state.session_id}`;
-const pointerKey=()=>`soundalike-human-v16-current:${protocol.content_sha256}`;
+const storageKey=()=>`soundalike-human-v17:${protocol.content_sha256}:${state.anonymous_rater_id}:${state.session_id}`;
+const pointerKey=()=>`soundalike-human-v17-current:${protocol.content_sha256}`;
 const now=()=>new Date().toISOString();
+function invalidateSubmission(){
+  submissionPayload=null;
+  $("submit-status").classList.remove("success","danger");
+}
 function touch(rating){
   const t=Date.now();rating.rated_at=now();rating.interaction_ms=Math.max(1,t-state.lastInteractionAt);
-  state.lastInteractionAt=t;state.last_activity_at=rating.rated_at;save();
+  state.lastInteractionAt=t;state.last_activity_at=rating.rated_at;invalidateSubmission();save();updateSubmitAvailability();
 }
 function save(){
   if(state){
@@ -137,34 +158,118 @@ async function deterministicOrder(items,label){
 }
 function emptyState(){
   const token=randomHex(24), started=now();
-  return {schema_version:16,source_kind:"human_listener",provider:"hosted_client_only_evaluator",
+  return {schema_version:17,source_kind:"human_listener",provider:"hosted_private_submission_evaluator",
     anonymous_rater_id:"anon-"+token.slice(0,24),session_id:"session-"+randomHex(12),
     protocol_sha256:protocol.content_sha256,served_lists_sha256:pack.content_sha256,
     local_session_key:randomHex(32),started_at:started,last_activity_at:started,
-    current_seed:0,result_ratings:{},list_ratings:{},lastInteractionAt:Date.now()};
+    migration:null,current_seed:0,result_ratings:{},list_ratings:{},lastInteractionAt:Date.now()};
+}
+const isRecord=value=>value!==null&&typeof value==="object"&&!Array.isArray(value)&&
+  (Object.getPrototypeOf(value)===Object.prototype||Object.getPrototypeOf(value)===null);
+const exactKeys=(value,keys)=>isRecord(value)&&
+  JSON.stringify(Object.keys(value).sort())===JSON.stringify([...keys].sort());
+const iso=value=>typeof value==="string"&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)&&
+  Number.isFinite(Date.parse(value))&&new Date(Date.parse(value)).toISOString()===value;
+const AUTOSAVE_COMMON=["schema_version","source_kind","provider","anonymous_rater_id","session_id",
+  "protocol_sha256","served_lists_sha256","local_session_key","started_at","last_activity_at",
+  "current_seed","result_ratings","list_ratings","lastInteractionAt"];
+const EXPORT_COMMON=["schema_version","source_kind","provider","anonymous_rater_id","session_id",
+  "protocol_sha256","served_lists_sha256","local_session_key","started_at","last_activity_at",
+  "result_ratings","list_ratings","exported_at","duration_ms","integrity_notice","integrity_hmac_sha256"];
+const RESULT_RATING_KEYS=["similarity","score_0_10","junk_or_version","rated_at","interaction_ms"];
+const LIST_RATING_KEYS=["whole_list_coherence","unrelated_positions_1_to_3","rated_at","interaction_ms"];
+const MIGRATION_KEYS=["from_schema_version","from_provider","from_protocol_sha256","from_served_lists_sha256","migrated_at"];
+function validAutosaveIds(saved){
+  const validResults=new Set(pack.seeds.flatMap(s=>s.results.map(r=>r.result_id)));
+  const validLists=new Set(pack.seeds.flatMap(s=>s.lists.map(r=>r.list_id)));
+  return saved&&isRecord(saved.result_ratings)&&isRecord(saved.list_ratings)&&
+    !Object.keys(saved.result_ratings).some(id=>!/^T14-[a-f0-9]{24}$/.test(id)||!validResults.has(id))&&
+    !Object.keys(saved.list_ratings).some(id=>!/^L14-[a-f0-9]{24}$/.test(id)||!validLists.has(id));
+}
+function validMigration(value,startedAt,endedAt){
+  if(value===null)return true;
+  return exactKeys(value,MIGRATION_KEYS)&&value.from_schema_version===16&&
+    value.from_provider==="hosted_client_only_evaluator"&&value.from_protocol_sha256===V16_PROTOCOL_SHA256&&
+    value.from_served_lists_sha256===V16_SERVED_LISTS_SHA256&&iso(value.migrated_at)&&
+    Date.parse(value.migrated_at)>=startedAt&&Date.parse(value.migrated_at)<=endedAt;
+}
+function validRatingMaps(saved,completeOnly,startedAt,endedAt,duration){
+  if(!validAutosaveIds(saved))return false;
+  for(const rating of Object.values(saved.result_ratings)){
+    if(!exactKeys(rating,RESULT_RATING_KEYS)||!iso(rating.rated_at)||
+       Date.parse(rating.rated_at)<startedAt||Date.parse(rating.rated_at)>endedAt||
+       !Number.isInteger(rating.interaction_ms)||rating.interaction_ms<1||rating.interaction_ms>duration||
+       !["not_similar","somewhat_similar","very_similar",...(completeOnly?[]:[null])].includes(rating.similarity)||
+       !(rating.score_0_10===null||(Number.isInteger(rating.score_0_10)&&rating.score_0_10>=0&&rating.score_0_10<=10))||
+       typeof rating.junk_or_version!=="boolean")return false;
+  }
+  for(const rating of Object.values(saved.list_ratings)){
+    if(!exactKeys(rating,LIST_RATING_KEYS)||!iso(rating.rated_at)||
+       Date.parse(rating.rated_at)<startedAt||Date.parse(rating.rated_at)>endedAt||
+       !Number.isInteger(rating.interaction_ms)||rating.interaction_ms<1||rating.interaction_ms>duration||
+       !["not_coherent","somewhat_coherent","very_coherent",...(completeOnly?[]:[null])].includes(rating.whole_list_coherence)||
+       !(Number.isInteger(rating.unrelated_positions_1_to_3)&&rating.unrelated_positions_1_to_3>=0&&
+         rating.unrelated_positions_1_to_3<=3)&&completeOnly)return false;
+    if(!completeOnly&&!(rating.unrelated_positions_1_to_3===null||
+       (Number.isInteger(rating.unrelated_positions_1_to_3)&&rating.unrelated_positions_1_to_3>=0&&
+        rating.unrelated_positions_1_to_3<=3)))return false;
+  }
+  return true;
+}
+function validSessionShape(saved,version=saved?.schema_version){
+  const keys=version===17?[...AUTOSAVE_COMMON,"migration"]:AUTOSAVE_COMMON;
+  const provider=version===17?"hosted_private_submission_evaluator":"hosted_client_only_evaluator";
+  const protocolHash=version===17?protocol?.content_sha256:V16_PROTOCOL_SHA256;
+  const listsHash=version===17?V17_SERVED_LISTS_SHA256:V16_SERVED_LISTS_SHA256;
+  if(!exactKeys(saved,keys)||saved.schema_version!==version||![16,17].includes(version)||
+     saved.source_kind!=="human_listener"||saved.provider!==provider||
+     saved.protocol_sha256!==protocolHash||saved.served_lists_sha256!==listsHash||
+     !/^anon-[a-f0-9]{24}$/.test(saved.anonymous_rater_id)||!/^session-[a-f0-9]{24}$/.test(saved.session_id)||
+     !/^[a-f0-9]{64}$/.test(saved.local_session_key)||!iso(saved.started_at)||!iso(saved.last_activity_at)||
+     !Number.isInteger(saved.current_seed)||saved.current_seed<0||saved.current_seed>=pack.seeds.length||
+     !Number.isFinite(saved.lastInteractionAt))return false;
+  const startedAt=Date.parse(saved.started_at),endedAt=Date.parse(saved.last_activity_at),duration=endedAt-startedAt;
+  return duration>=0&&duration<=MAX_DURATION_MS&&
+    (version!==17||validMigration(saved.migration,startedAt,Date.now()))&&
+    validRatingMaps(saved,false,startedAt,endedAt,Math.max(1,duration+1000));
+}
+function validExportShape(value,version){
+  const keys=version===17?[...EXPORT_COMMON,"migration"]:EXPORT_COMMON;
+  const provider=version===17?"hosted_private_submission_evaluator":"hosted_client_only_evaluator";
+  const protocolHash=version===17?protocol?.content_sha256:V16_PROTOCOL_SHA256;
+  const listsHash=version===17?V17_SERVED_LISTS_SHA256:V16_SERVED_LISTS_SHA256;
+  if(!exactKeys(value,keys)||value.schema_version!==version||value.source_kind!=="human_listener"||
+     value.provider!==provider||value.protocol_sha256!==protocolHash||value.served_lists_sha256!==listsHash||
+     !/^anon-[a-f0-9]{24}$/.test(value.anonymous_rater_id)||!/^session-[a-f0-9]{24}$/.test(value.session_id)||
+     !/^[a-f0-9]{64}$/.test(value.local_session_key)||!/^[a-f0-9]{64}$/.test(value.integrity_hmac_sha256)||
+     value.integrity_notice!==INTEGRITY_NOTICE||!iso(value.started_at)||!iso(value.last_activity_at)||
+     !iso(value.exported_at)||!Number.isInteger(value.duration_ms)||value.duration_ms<1||
+     value.duration_ms>MAX_DURATION_MS)return false;
+  const startedAt=Date.parse(value.started_at),lastAt=Date.parse(value.last_activity_at),endedAt=Date.parse(value.exported_at);
+  return startedAt<=lastAt&&lastAt<=endedAt&&Math.abs(endedAt-startedAt-value.duration_ms)<=1000&&
+    (version!==17||validMigration(value.migration,startedAt,endedAt))&&
+    validRatingMaps(value,true,startedAt,endedAt,value.duration_ms);
+}
+function migrateV16(saved){
+  return {...saved,schema_version:17,provider:"hosted_private_submission_evaluator",
+    protocol_sha256:protocol.content_sha256,served_lists_sha256:pack.content_sha256,
+    migration:{from_schema_version:16,from_provider:"hosted_client_only_evaluator",
+      from_protocol_sha256:V16_PROTOCOL_SHA256,from_served_lists_sha256:V16_SERVED_LISTS_SHA256,migrated_at:now()},
+    lastInteractionAt:Date.now()};
 }
 function restoreAutosave(){
   try{
-    const key=localStorage.getItem(pointerKey());
-    if(!key)return null;
-    const saved=JSON.parse(localStorage.getItem(key)||"null");
-    const validResults=new Set(pack.seeds.flatMap(s=>s.results.map(r=>r.result_id)));
-    const validLists=new Set(pack.seeds.flatMap(s=>s.lists.map(r=>r.list_id)));
-    if(!saved||saved.schema_version!==16||saved.source_kind!=="human_listener"||
-       saved.provider!=="hosted_client_only_evaluator"||
-       saved.protocol_sha256!==protocol.content_sha256||
-       saved.served_lists_sha256!==pack.content_sha256||
-       typeof saved.anonymous_rater_id!=="string"||typeof saved.session_id!=="string"||
-       typeof saved.local_session_key!=="string"||saved.local_session_key.length<32||
-       !Number.isInteger(saved.current_seed)||
-       Object.keys(saved.result_ratings||{}).some(id=>!validResults.has(id))||
-       Object.keys(saved.list_ratings||{}).some(id=>!validLists.has(id)))return null;
-    return {...saved,lastInteractionAt:Date.now()};
+    const key=localStorage.getItem(pointerKey()),saved=key?JSON.parse(localStorage.getItem(key)||"null"):null;
+    if(validSessionShape(saved,17))return {...saved,lastInteractionAt:Date.now()};
+    const oldPointer=`soundalike-human-v16-current:${V16_PROTOCOL_SHA256}`;
+    const oldKey=localStorage.getItem(oldPointer),old=oldKey?JSON.parse(localStorage.getItem(oldKey)||"null"):null;
+    if(validSessionShape(old,16))return migrateV16(old);
+    return null;
   }catch{return null}
 }
 function previewOrigin(){
   if(["http:","https:"].includes(location.protocol)&&
-     ["127.0.0.1","localhost","::1","soundalike.yassin.app"].includes(location.hostname))return location.origin;
+     ["127.0.0.1","localhost","::1","[::1]","soundalike.yassin.app"].includes(location.hostname))return location.origin;
   return PROD_PREVIEW_ORIGIN;
 }
 function previewEndpoint(deezerId){
@@ -239,21 +344,42 @@ async function begin(){
   try{
     if(!selected.protocol||!selected.lists)throw Error("Select both JSON files.");
     protocol=selected.protocol;pack=selected.lists;
-    if(protocol.schema_version!==16||pack.schema_version!==16)throw Error("Expected schema version 16.");
+    if(protocol.schema_version!==17||pack.schema_version!==17)throw Error("Expected schema version 17.");
     if(await docHash(protocol)!==protocol.content_sha256||await docHash(pack)!==pack.content_sha256)throw Error("Content hash mismatch.");
-    if(protocol.served_lists_sha256!==pack.content_sha256)throw Error("Files are not hash-bound.");
+    if(pack.content_sha256!==V17_SERVED_LISTS_SHA256||protocol.served_lists_sha256!==V17_SERVED_LISTS_SHA256)
+      throw Error("Files do not match the signed v17 served-list commitment.");
     if(protocol.rankings_state!=="RANKINGS_LOCKED"||pack.rankings_state!=="RANKINGS_LOCKED")throw Error("Rankings are not locked.");
+    if(protocol.protocol_kind!=="blinded_served_list_human_listener_v17_private_submission_supersession"||
+       protocol.recommendation_behavior_changed!==false||protocol.ratings_submission?.automatic_submission!==false||
+       protocol.ratings_submission?.explicit_consent_required!==true||protocol.ratings_submission?.storage_access!=="private")
+      throw Error("Protocol is not the committed private-submission evaluator.");
+    if(pack.seed_count!==pack.seeds.length||pack.seed_count!==60)throw Error("Signed seed count mismatch.");
     if(pack.seeds.some(s=>s.lists.length!==2||s.lists.some(l=>l.ranking.length!==5)))throw Error("Every seed must have two five-result lists.");
     if(pack.seeds.some(s=>!Number.isSafeInteger(s.query.deezer_track_id)||s.query.deezer_track_id<=0||
        s.results.some(r=>!Number.isSafeInteger(r.deezer_track_id)||r.deezer_track_id<=0)))throw Error("Every seed/result needs a stable numeric Deezer ID.");
-    // v16 intentionally retains v14 opaque IDs so blinding and assignments
-    // remain byte/order-equivalent across this hosted-only supersession.
+    // v17 intentionally retains v14 opaque IDs so blinding and assignments
+    // remain byte/order-equivalent across this submission-only supersession.
     const opaque=/^[LT]14-[a-f0-9]{24}$/;
     if(pack.seeds.some(s=>s.results.some(r=>!opaque.test(r.result_id))||s.lists.some(l=>!opaque.test(l.list_id)||l.ranking.some((r,i)=>!opaque.test(r.result_id)||r.position!==i+1))))throw Error("Unsafe or malformed opaque IDs/positions.");
+    const allResults=new Set(),allLists=new Set();
+    for(const seed of pack.seeds){
+      const seedResults=new Set(seed.results.map(result=>result.result_id));
+      if(seedResults.size!==seed.results.length||[...seedResults].some(id=>allResults.has(id)))
+        throw Error("Result IDs are not unique in the signed pack.");
+      seedResults.forEach(id=>allResults.add(id));
+      for(const list of seed.lists){
+        if(allLists.has(list.list_id))throw Error("List IDs are not unique in the signed pack.");
+        allLists.add(list.list_id);
+        const ranked=new Set(list.ranking.map(row=>row.result_id));
+        if(ranked.size!==list.ranking.length||[...ranked].some(id=>!seedResults.has(id)))
+          throw Error("A blinded list contains an uncommitted candidate.");
+      }
+    }
+    invalidateSubmission();$("consent").checked=false;
     const restored=restoreAutosave();state=restored||emptyState();orderedSeeds=await deterministicOrder(pack.seeds,"seed-order");
     $("study").classList.remove("hidden");$("setup-status").textContent=
       restored?"Locked files validated. Autosaved session resumed.":"Locked files validated. Autosave is active.";
-    save();await render();
+    save();await render();updateSubmitAvailability();
   }catch(error){$("setup-status").textContent=error.message;$("setup-status").classList.add("danger")}
 }
 function ratingControls(result){
@@ -302,26 +428,94 @@ function bindInputs(){
     fs.querySelector("select").onchange=e=>{const r=ensure();r.unrelated_positions_1_to_3=e.target.value===""?null:Number(e.target.value);touch(r)};
   });
 }
-async function exportRatings(){
+function completeResultEntries(){
+  return Object.entries(state?.result_ratings||{}).filter(([,r])=>
+    ["not_similar","somewhat_similar","very_similar"].includes(r.similarity)&&
+    (r.score_0_10===null||(Number.isInteger(r.score_0_10)&&r.score_0_10>=0&&r.score_0_10<=10))&&
+    typeof r.junk_or_version==="boolean"&&typeof r.rated_at==="string"&&
+    Number.isInteger(r.interaction_ms)&&r.interaction_ms>=1);
+}
+function completeListEntries(){
+  return Object.entries(state?.list_ratings||{}).filter(([,r])=>
+    ["not_coherent","somewhat_coherent","very_coherent"].includes(r.whole_list_coherence)&&
+    Number.isInteger(r.unrelated_positions_1_to_3)&&r.unrelated_positions_1_to_3>=0&&
+    r.unrelated_positions_1_to_3<=3&&typeof r.rated_at==="string"&&
+    Number.isInteger(r.interaction_ms)&&r.interaction_ms>=1);
+}
+function updateSubmitAvailability(){
+  const complete=completeResultEntries().length+completeListEntries().length;
+  const enabled=Boolean(state)&&complete>0&&$("consent").checked;
+  $("submit").disabled=!enabled;
+  if(!enabled&&!$("submit-status").classList.contains("success")&&!$("submit-status").classList.contains("danger"))
+    $("submit-status").textContent=complete?
+      "Check the consent box to enable manual private submission.":
+      "Rate at least one result or list and check consent to enable submission.";
+}
+async function buildExport(){
   const payload={...state};delete payload.current_seed;delete payload.lastInteractionAt;
-  payload.result_ratings=Object.fromEntries(Object.entries(payload.result_ratings).filter(([,r])=>
-    ["not_similar","somewhat_similar","very_similar"].includes(r.similarity)&&typeof r.junk_or_version==="boolean"));
-  payload.list_ratings=Object.fromEntries(Object.entries(payload.list_ratings).filter(([,r])=>
-    ["not_coherent","somewhat_coherent","very_coherent"].includes(r.whole_list_coherence)&&Number.isInteger(r.unrelated_positions_1_to_3)));
+  payload.result_ratings=Object.fromEntries(completeResultEntries());
+  payload.list_ratings=Object.fromEntries(completeListEntries());
   payload.exported_at=now();payload.duration_ms=Math.max(1,Date.now()-Date.parse(payload.started_at));
-  payload.integrity_notice="Local-key HMAC provides integrity, not identity or authenticity; the key is included in this export.";
+  payload.integrity_notice=INTEGRITY_NOTICE;
   payload.integrity_hmac_sha256=await hmac(payload,payload.local_session_key);
+  return payload;
+}
+async function exportRatings(){
+  const payload=await buildExport();
   const blob=new Blob([JSON.stringify(payload,null,2)+"\n"],{type:"application/json"});
-  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`human-ratings-v16-${payload.session_id}.json`;a.click();URL.revokeObjectURL(a.href);
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`human-ratings-v17-${payload.session_id}.json`;a.click();URL.revokeObjectURL(a.href);
+}
+async function submitRatings(){
+  if($("submit").disabled)return;
+  $("submit").disabled=true;$("submit-status").classList.remove("success","danger");
+  $("submit-status").textContent="Submitting this signed snapshot to private storage…";
+  try{
+    submissionPayload=submissionPayload||await buildExport();
+    const response=await fetch("/api/ratings",{
+      method:"POST",credentials:"omit",cache:"no-store",referrerPolicy:"no-referrer",
+      headers:{"Accept":"application/json","Content-Type":"application/json"},
+      body:JSON.stringify({consent:true,ratings:submissionPayload})
+    });
+    const receipt=await response.json().catch(()=>({}));
+    if(!response.ok)throw Error(["invalid request","payload too large","storage unavailable"].includes(receipt.error)?
+      receipt.error:"request failed");
+    const sanitized={...submissionPayload};delete sanitized.local_session_key;
+    delete sanitized.integrity_hmac_sha256;delete sanitized.integrity_notice;
+    const expectedReceipt=await sha(sanitized),expectedResults=Object.keys(submissionPayload.result_ratings).length;
+    const expectedLists=Object.keys(submissionPayload.list_ratings).length;
+    if(receipt.receipt_sha256!==expectedReceipt||
+       !receipt.counts||!Number.isInteger(receipt.counts.complete_result_ratings)||
+       !Number.isInteger(receipt.counts.complete_list_ratings)||
+       receipt.counts.complete_result_ratings!==expectedResults||
+       receipt.counts.complete_list_ratings!==expectedLists||typeof receipt.duplicate!=="boolean")
+      throw Error("SUBMIT_FAILED");
+    $("submit-status").classList.add("success");
+    $("submit-status").textContent=`${receipt.duplicate?"Duplicate safely recognized":"Ratings accepted"}. Receipt ${receipt.receipt_sha256}; ${receipt.counts.complete_result_ratings} result and ${receipt.counts.complete_list_ratings} list ratings.`;
+  }catch(error){
+    $("submit-status").classList.add("danger");
+    const reason=error.message==="payload too large"?"The snapshot was too large":
+      error.message==="storage unavailable"?"Private storage was temporarily unavailable":
+      error.message==="invalid request"?"The server rejected the snapshot":
+      "The network request or receipt check failed";
+    $("submit-status").textContent=`${reason}. Your browser autosave is unchanged; retry or use Export JSON.`;
+  }finally{updateSubmitAvailability()}
 }
 async function resume(file){
   try{
     if(!protocol||!pack)throw Error("Load and validate the locked study files first.");
-    const imported=await readFile(file),sig=imported.integrity_hmac_sha256,payload={...imported};delete payload.integrity_hmac_sha256;
-    if(imported.protocol_sha256!==protocol.content_sha256||imported.served_lists_sha256!==pack.content_sha256)throw Error("Import belongs to another study pack.");
+    const imported=await readFile(file);
+    const current=imported?.schema_version===17&&validExportShape(imported,17);
+    const predecessor=imported?.schema_version===16&&validExportShape(imported,16);
+    if(!current&&!predecessor)throw Error("Import is not a strict v16/v17 export for this signed study.");
+    const sig=imported.integrity_hmac_sha256,payload={...imported};delete payload.integrity_hmac_sha256;
     if(await hmac(payload,imported.local_session_key)!==sig)throw Error("Import integrity HMAC mismatch.");
-    state={...imported,current_seed:0,lastInteractionAt:Date.now()};delete state.integrity_hmac_sha256;delete state.exported_at;delete state.duration_ms;delete state.integrity_notice;
-    orderedSeeds=await deterministicOrder(pack.seeds,"seed-order");save();await render();$("setup-status").textContent="Valid partial session resumed.";
+    state={...imported,current_seed:0,lastInteractionAt:Date.now()};
+    delete state.integrity_hmac_sha256;delete state.exported_at;delete state.duration_ms;delete state.integrity_notice;
+    if(predecessor)state=migrateV16(state);
+    if(!validSessionShape(state,17))throw Error("Import cannot be represented as a valid v17 session.");
+    invalidateSubmission();$("consent").checked=false;
+    orderedSeeds=await deterministicOrder(pack.seeds,"seed-order");save();await render();updateSubmitAvailability();
+    $("setup-status").textContent=predecessor?"Valid v16 export migrated with explicit provenance.":"Valid v17 partial session resumed.";
   }catch(error){$("setup-status").textContent=error.message;$("setup-status").classList.add("danger")}
 }
 async function loadBundled(){
@@ -340,6 +534,8 @@ function escapeAttr(v){return escapeHtml(v).replaceAll('"',"&quot;")}
 $("protocol-file").onchange=e=>readFile(e.target.files[0]).then(v=>selected.protocol=v);
 $("lists-file").onchange=e=>readFile(e.target.files[0]).then(v=>selected.lists=v);
 $("resume-file").onchange=e=>resume(e.target.files[0]);$("load").onclick=begin;$("export").onclick=exportRatings;
+$("consent").onchange=()=>{$("submit-status").classList.remove("success","danger");updateSubmitAvailability()};
+$("submit").onclick=submitRatings;
 $("load-bundled").onclick=loadBundled;
 $("prev").onclick=async()=>{state.current_seed--;await render()};$("next").onclick=async()=>{state.current_seed++;await render()};
 document.addEventListener("DOMContentLoaded",loadBundled,{once:true});
