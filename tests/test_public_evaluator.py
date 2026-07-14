@@ -369,7 +369,7 @@ def test_vercel_routes_and_security_headers_cover_evaluator():
         item["source"]: {header["key"]: header["value"] for header in item["headers"]}
         for item in config["headers"]
     }
-    global_headers = routes["/(.*)"] 
+    global_headers = routes["/(.*)"]
     assert global_headers == {
         "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
         "X-Content-Type-Options": "nosniff",
@@ -377,7 +377,7 @@ def test_vercel_routes_and_security_headers_cover_evaluator():
         "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
         "X-Frame-Options": "DENY",
     }
-    assert routes["/evaluate"] == routes["/evaluate/(.*)"] 
+    assert routes["/evaluate"] == routes["/evaluate/(.*)"]  
     evaluator_headers = routes["/evaluate"]
     assert evaluator_headers["Cache-Control"] == "no-store, max-age=0"
     csp = evaluator_headers["Content-Security-Policy"]
@@ -447,7 +447,7 @@ def test_preview_allows_only_production_and_loopback_origins(origin):
         "1.5",
         "abc",
         " 123",
-        "\uff11\uff12\uff13",
+        "１２３",
         "9007199254740992",
         "1" * 17,
     ],
