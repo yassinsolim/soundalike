@@ -35,3 +35,8 @@ ml_data/
 # OS
 .DS_Store
 Thumbs.db
+.vercel
+.env.local
+node_modules/
+private-ratings-inbox/
+ratings-aggregate*.json
