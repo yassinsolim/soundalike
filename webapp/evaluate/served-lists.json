@@ -80,7 +80,7 @@
           "result_id": "T14-0658c84c9544c6e08961f85f",
           "track_id": 1893213517,
           "deezer_track_id": 1893213517,
-          "title": "Seeing Stars (Jessie Veronica – The Solo Project)",
+          "title": "Seeing Stars (Jessie Veronica \u2013 The Solo Project)",
           "artist": "The Veronicas"
         },
         {
@@ -109,51 +109,21 @@
         {
           "list_id": "L14-1f5120bfe24fcd04e175e4e7",
           "ranking": [
-            {
-              "position": 1,
-              "result_id": "T14-048d9d4545c7af96623af084"
-            },
-            {
-              "position": 2,
-              "result_id": "T14-a946dc5896f1f9ef4a0537e6"
-            },
-            {
-              "position": 3,
-              "result_id": "T14-e138559945250e3772b84a5d"
-            },
-            {
-              "position": 4,
-              "result_id": "T14-4295b9b8a36c422ce1ccb257"
-            },
-            {
-              "position": 5,
-              "result_id": "T14-825fa426ca8827445fdb51a1"
-            }
+            { "position": 1, "result_id": "T14-048d9d4545c7af96623af084" },
+            { "position": 2, "result_id": "T14-a946dc5896f1f9ef4a0537e6" },
+            { "position": 3, "result_id": "T14-e138559945250e3772b84a5d" },
+            { "position": 4, "result_id": "T14-4295b9b8a36c422ce1ccb257" },
+            { "position": 5, "result_id": "T14-825fa426ca8827445fdb51a1" }
           ]
         },
         {
           "list_id": "L14-2bdbfa2041e924f624eb06b8",
           "ranking": [
-            {
-              "position": 1,
-              "result_id": "T14-cdb81981c9232919ce56191d"
-            },
-            {
-              "position": 2,
-              "result_id": "T14-0658c84c9544c6e08961f85f"
-            },
-            {
-              "position": 3,
-              "result_id": "T14-696c50b45756424879583260"
-            },
-            {
-              "position": 4,
-              "result_id": "T14-dd33e60d407e5e0728ba6c12"
-            },
-            {
-              "position": 5,
-              "result_id": "T14-8b1e2a37fbb285563041f395"
-            }
+            { "position": 1, "result_id": "T14-cdb81981c9232919ce56191d" },
+            { "position": 2, "result_id": "T14-0658c84c9544c6e08961f85f" },
+            { "position": 3, "result_id": "T14-696c50b45756424879583260" },
+            { "position": 4, "result_id": "T14-dd33e60d407e5e0728ba6c12" },
+            { "position": 5, "result_id": "T14-8b1e2a37fbb285563041f395" }
           ]
         }
       ]
