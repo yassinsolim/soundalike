@@ -148,7 +148,7 @@ async function submit(ratings = validExport(), storage = new MemoryStorage(), op
     options.wrapper === undefined
       ? { consent: true, ratings }
       : options.wrapper;
-  await createHandler(storage)(
+  await createHandler(storage, options.deploymentHost)(
     request(options.rawBody ?? wrapper, options),
     res,
   );
@@ -322,6 +322,34 @@ test("accepts production and loopback origins only", async () => {
     });
     assert.equal(res.statusCode, 200);
   }
+});
+
+test("accepts only the exact runtime-provided Vercel preview origin", async () => {
+  const deploymentHost =
+    "soundalike-git-feat-ratings-submit-example-team.vercel.app";
+  let result = await submit(validExport(), new MemoryStorage(), {
+    deploymentHost,
+    headers: { origin: `https://${deploymentHost}` },
+  });
+  assert.equal(result.res.statusCode, 200);
+
+  for (const origin of [
+    "https://soundalike-git-feat-ratings-submit-example-team.vercel.app.evil.example",
+    "http://soundalike-git-feat-ratings-submit-example-team.vercel.app",
+    "https://other-preview.vercel.app",
+  ]) {
+    result = await submit(validExport(), new MemoryStorage(), {
+      deploymentHost,
+      headers: { origin },
+    });
+    assert.equal(result.res.statusCode, 403);
+  }
+
+  result = await submit(validExport(), new MemoryStorage(), {
+    deploymentHost: "evil.example",
+    headers: { origin: "https://evil.example" },
+  });
+  assert.equal(result.res.statusCode, 403);
 });
 
 test("requires explicit consent and at least one complete rating", async () => {

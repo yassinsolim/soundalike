@@ -569,7 +569,30 @@ function header(request, name) {
   return found && typeof found[1] === "string" ? found[1] : undefined;
 }
 
-export function allowedRequestOrigin(request) {
+function previewDeploymentOrigin(value) {
+  if (
+    typeof value !== "string" ||
+    value.length > 200 ||
+    !/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+vercel\.app$/.test(
+      value,
+    )
+  ) {
+    return null;
+  }
+  try {
+    const url = new URL(`https://${value}`);
+    return url.host === value && url.hostname.endsWith(".vercel.app")
+      ? url.origin
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export function allowedRequestOrigin(
+  request,
+  deploymentHost = process.env.VERCEL_URL,
+) {
   const origin = parsedOrigin(header(request, "origin"));
   const host = header(request, "host");
   const forwardedProto = header(request, "x-forwarded-proto");
@@ -600,6 +623,7 @@ export function allowedRequestOrigin(request) {
   }
   return (
     origin.origin === PRODUCTION_ORIGIN ||
+    origin.origin === previewDeploymentOrigin(deploymentHost) ||
     LOOPBACK_HOSTS.has(origin.hostname)
   );
 }
@@ -722,13 +746,16 @@ async function persist(storage, pathname, body) {
   }
 }
 
-export function createHandler(storage = { head: blobHead, put: blobPut }) {
+export function createHandler(
+  storage = { head: blobHead, put: blobPut },
+  deploymentHost = process.env.VERCEL_URL,
+) {
   return async function ratingsHandler(request, response) {
     if (request.method !== "POST") {
       response.setHeader("Allow", "POST");
       return send(response, 405, { error: "method not allowed" });
     }
-    if (!allowedRequestOrigin(request)) {
+    if (!allowedRequestOrigin(request, deploymentHost)) {
       return send(response, 403, { error: "forbidden" });
     }
     const contentType = header(request, "content-type");
