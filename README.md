@@ -36,7 +36,7 @@ including the Microsoft-Store build.
 
 ![soundalike web app](docs/soundalike-results.png)
 
-Want the recommendations *inside* the Spotify app — a right-click **\u201cFind soundalikes\u201d** menu
+Want the recommendations *inside* the Spotify app — a right-click **"Find soundalikes"** menu
 item? That's the [**Spicetify extension**](integrations/spicetify/README.md) (needs the
 standalone Spotify client). Everything runs locally; nothing leaves your machine.
 
