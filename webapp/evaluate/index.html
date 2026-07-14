@@ -222,7 +222,7 @@ async function loadPreview(panel,force=false,autoplay=true){
     panel.querySelector("[data-audio]").replaceChildren(audio);
     status.textContent="Fresh preview loaded. The signed CDN URL is held only in page memory.";
     button.textContent="Reload session preview";button.disabled=false;
-    if(autoplay)await audio.play().catch(()=>{status.textContent="Fresh preview loaded; press play to listen.";});
+    if(autoplay)await audio.play().catch(()=>{status.textContent="Fresh preview loaded; press play to listen."});
   }catch(error){
     failPreview(panel,error.message==="NO_PREVIEW"?
       "No legal Deezer preview exists for this track. Use a fallback link or skip the sonic rating.":
@@ -264,7 +264,7 @@ function ratingControls(result){
   return `<fieldset data-result="${id}"><legend>How similar does this sound to the seed?</legend><div class="choices">
     ${labels.map(([v,t])=>`<label><input type="radio" name="sim-${id}" value="${v}" ${rating.similarity===v?"checked":""}>${t}</label>`).join("")}
     </div><div class="choices"><label>Optional score (0–10) <input type="number" min="0" max="10" step="1" value="${escapeAttr(score)}" data-score></label>
-    <label><input type="checkbox" data-junk ${rating.junk_or_version?"checked":""}}> Junk, duplicate, cover, remix, or wrong version</label></div></fieldset>`;
+    <label><input type="checkbox" data-junk ${rating.junk_or_version?"checked":""}> Junk, duplicate, cover, remix, or wrong version</label></div></fieldset>`;
 }
 function listControls(list){
   const r=state.list_ratings[list.list_id]||{}, opts=[0,1,2,3];
