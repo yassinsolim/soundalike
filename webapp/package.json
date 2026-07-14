@@ -1,0 +1,12 @@
+{
+  "name": "soundalike-webapp",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "ratings:inbox": "node tools/ratings-inbox.js"
+  },
+  "dependencies": {
+    "@vercel/blob": "2.6.1"
+  }
+}
