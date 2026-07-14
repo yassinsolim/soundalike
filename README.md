@@ -1,54 +1,54 @@
 # soundalike
 
-**Find songs similar to the ones you like \u2014 an open-source music recommender.**
+**Find songs similar to the ones you like — an open-source music recommender.**
 
 `soundalike` started life as a first-year university project (`spotify_program.py`): a
 terminal script that read a static CSV of top songs and printed min/max/mean stats. This
 repo evolves it into a real, working recommendation engine that finds songs matching your
-taste \u2014 built to work *around* Spotify's 2024 API lockdown rather than depending on it.
+taste — built to work *around* Spotify's 2024 API lockdown rather than depending on it.
 
-It combines several engines \u2014 offline audio-feature similarity, an acoustic DSP engine that
+It combines several engines — offline audio-feature similarity, an acoustic DSP engine that
 measures features straight from the waveform, a **vibe engine** that matches a song's bass
 profile and dynamics (the drops), a **deep-vibe engine** that fuses the neural embedding with
 that vibe signal, live Spotify (OAuth PKCE), and a **self-supervised neural network trained on
-106,000 songs** whose genre-probe accuracy climbs from 0.25 \u2192 0.641 as the training set scales
+106,000 songs** whose genre-probe accuracy climbs from 0.25 → 0.641 as the training set scales
 from 475 to 106k tracks.
 
-> **\ud83d\udcd6 Want the engineering story?** The [**Case Study**](docs/CASE_STUDY.md) walks through the
+> **📖 Want the engineering story?** The [**Case Study**](docs/CASE_STUDY.md) walks through the
 > design decisions, the machine-learning scaling experiment, and the GPU/systems challenges I
 > solved (data-loading bottlenecks, VRAM-aware training, 11x download speedups, cuDNN kernel
 > inspection). It's written as a portfolio-style deep dive.
 
 ---
 
-## Try it in 10 seconds \u2014 the web app \ud83c\udfa7
+## Try it in 10 seconds — the web app 🎧
 
 ```bash
 pip install -e ".[ml]"
 soundalike serve            # opens http://127.0.0.1:8787
 ```
 
-Type a song (`Title \u2014 Artist`), pick one of your own Spotify top tracks, or \u2014 the
-frictionless way \u2014 **right-click a song in Spotify \u2192 Share \u2192 Copy Song Link** and paste it.
+Type a song (`Title — Artist`), pick one of your own Spotify top tracks, or — the
+frictionless way — **right-click a song in Spotify → Share → Copy Song Link** and paste it.
 You instantly get songs that *sound* like it, with the seed's detected vibe (tempo, dynamics,
 bass, tone) and an **Open in Spotify** button on every result. It works with **any** Spotify,
 including the Microsoft-Store build.
 
 ![soundalike web app](docs/soundalike-results.png)
 
-Want the recommendations *inside* the Spotify app \u2014 a right-click **\u201cFind soundalikes\u201d** menu
+Want the recommendations *inside* the Spotify app — a right-click **"Find soundalikes"** menu
 item? That's the [**Spicetify extension**](integrations/spicetify/README.md) (needs the
 standalone Spotify client). Everything runs locally; nothing leaves your machine.
 
 **Prefer a hosted, no-install demo?** The ~273k-song library runs as a **numpy-only Vercel app**
-(no PyTorch needed for library songs) \u2014 deploy it to a subdomain and let anyone try it in the
-browser, with an optional client-side "Log in with Spotify" (OAuth PKCE \u2014 users authorize on
+(no PyTorch needed for library songs) — deploy it to a subdomain and let anyone try it in the
+browser, with an optional client-side "Log in with Spotify" (OAuth PKCE — users authorize on
 Spotify's own site, never hand over a password) to save results as a playlist. See
 [`webapp/DEPLOY.md`](webapp/DEPLOY.md).
 
 **Help with the blind study:** open the public
 [listening evaluator](https://soundalike.yassin.app/evaluate). A complete session is
-usually 90\u2013150 minutes, but partial progress can be resumed. Ratings stay in your
+usually 90–150 minutes, but partial progress can be resumed. Ratings stay in your
 browser; export the JSON and send it to the project owner yourself.
 
 ---
@@ -59,17 +59,17 @@ On **2024-11-27, Spotify removed** several Web API endpoints for all *new* apps
 ([announcement](https://developer.spotify.com/blog/2024-11-27-changes-to-the-web-api)),
 including the two you'd normally reach for here:
 
-- **Recommendations** \u2014 the endpoint behind "Song Radio" / similar-song discovery.
-- **Audio Features** \u2014 danceability, energy, valence, etc. (the entire basis of the old project).
+- **Recommendations** — the endpoint behind "Song Radio" / similar-song discovery.
+- **Audio Features** — danceability, energy, valence, etc. (the entire basis of the old project).
 
 So a modern tool **cannot** just ask Spotify for similar songs or audio features. `soundalike`
 solves discovery with its own engines instead:
 
 | Engine | Signal | Needs credentials? | Coverage |
 |--------|--------|--------------------|----------|
-| **Deep-vibe** \u2b50\u2b50\u2b50 | **Fusion** of the learned neural embedding + bass/dynamics, vs a ~1,600-song library | No | Real, listenable songs |
-| **Vibe** \u2b50\u2b50 | Frequency-band balance (sub\u2192air) + **dynamics** (the drops), vs a ~1,500-song library | No | Real, listenable songs |
-| **Acoustic DSP** \u2b50 | Features measured from the **actual audio waveform** (tempo, energy, timbre\u2026) | No | Any track with a preview |
+| **Deep-vibe** ⭐⭐⭐ | **Fusion** of the learned neural embedding + bass/dynamics, vs a ~1,600-song library | No | Real, listenable songs |
+| **Vibe** ⭐⭐ | Frequency-band balance (sub→air) + **dynamics** (the drops), vs a ~1,500-song library | No | Real, listenable songs |
+| **Acoustic DSP** ⭐ | Features measured from the **actual audio waveform** (tempo, energy, timbre…) | No | Any track with a preview |
 | **Content-based** | Audio-feature similarity on a bundled dataset | No | Songs in the dataset (~855) |
 | **Learned model** | A CNN trained on your GPU to embed audio (research track) | No | What you train it on |
 | **Live Spotify taste** | Your liked / top / recent tracks as seeds | Free Spotify app (OAuth) | Your library |
@@ -77,13 +77,13 @@ solves discovery with its own engines instead:
 
 The **acoustic engines are the heart of the project**: instead of trusting anyone's precomputed
 numbers, they download a 30-second preview and *measure* the sound itself with digital signal
-processing, then rank by those measurements. Similarity by the physics of the audio \u2014 not by
+processing, then rank by those measurements. Similarity by the physics of the audio — not by
 "people who listened to X also listened to Y" (which is all Spotify radio and Last.fm do). The
 **vibe engine** goes furthest, explicitly modelling a track's bass profile and its dynamics (the
 drops) so recommendations match the *feel*, not just the timbre.
 
 What Spotify *still* allows (and we use): your library/top/recent tracks, artist genres,
-search, and **playlist creation** \u2014 so results can be saved straight back to your account.
+search, and **playlist creation** — so results can be saved straight back to your account.
 
 We never ask for your password. Live access uses OAuth 2.0 with PKCE.
 
@@ -96,7 +96,7 @@ git clone https://github.com/yassinsolim/soundalike.git
 cd soundalike
 python -m venv .venv
 # Windows:
-.\\.venv\\Scripts\\Activate.ps1
+.\.venv\Scripts\Activate.ps1
 # macOS/Linux:
 # source .venv/bin/activate
 pip install -e ".[dev]"
@@ -106,7 +106,7 @@ This installs the `soundalike` command.
 
 ---
 
-## Quickstart \u2014 offline, no credentials
+## Quickstart — offline, no credentials
 
 Find songs similar to a single track:
 
@@ -134,7 +134,7 @@ soundalike stats
 
 ---
 
-## Live mode \u2014 your real Spotify taste
+## Live mode — your real Spotify taste
 
 One-time setup (~2 minutes) is documented in **[SETUP.md](SETUP.md)**: create a free
 Spotify app, copy `.env.example` to `.env`, and add your Client ID (plus a free Last.fm key
@@ -160,7 +160,7 @@ soundalike profile --file liked.csv -n 30
 
 ---
 
-## Acoustic engine \u2014 similarity by science \u2b50
+## Acoustic engine — similarity by science ⭐
 
 The flagship engine measures the sound itself and compares those measurements. It needs no
 credentials (uses free Deezer previews) and works for any track with a preview.
@@ -180,24 +180,24 @@ soundalike audio-similar --source top --seed-limit 5 -n 20
 tempo (BPM), RMS energy, spectral centroid/rolloff/bandwidth, zero-crossing rate, spectral
 contrast, and 13 MFCCs (a timbre fingerprint). Features are standardized (so BPM and the
 spectral features are comparable), optionally weighted, and ranked by distance to your seed.
-A catalog (Deezer) is used *only* to enumerate candidate songs and fetch audio \u2014 the ranking
+A catalog (Deezer) is used *only* to enumerate candidate songs and fetch audio — the ranking
 is 100% your measured acoustics, never a crowd "also-liked" signal.
 
-Example: seed *Babydoll \u2014 Dominic Fike* \u2192 Omar Apollo, Malcolm Todd, more Dominic Fike. A
+Example: seed *Babydoll — Dominic Fike* → Omar Apollo, Malcolm Todd, more Dominic Fike. A
 tight bedroom-pop/indie cluster chosen purely from waveform features.
 
 ---
 
-## Vibe engine \u2014 match the *feel* of a track \u2b50\u2b50
+## Vibe engine — match the *feel* of a track ⭐⭐
 
 The acoustic engine above averages each feature over the whole clip, which works for
 consistent songs but washes out **dynamics**: a track with quiet verses and a heavy drop ends
 up looking "medium" everywhere. The **vibe engine** fixes that by measuring the two things that
 actually define a song's feel:
 
-- **Frequency-band balance** \u2014 how energy splits across **sub / bass / low-mid / mid / high-mid
+- **Frequency-band balance** — how energy splits across **sub / bass / low-mid / mid / high-mid
   / presence / air**. This is the literal "how much sub-bass, how much highs" of a track.
-- **Dynamics** \u2014 how much the loudness *moves* (standard deviation, dynamic range, and crest =
+- **Dynamics** — how much the loudness *moves* (standard deviation, dynamic range, and crest =
   peak / average). This is what separates a steady mellow song from one with a big drop.
 
 It ranks against a **bundled library of ~1,500 real songs** across hip-hop, EDM, electro, pop
@@ -205,7 +205,7 @@ and hyperpop (built from Deezer previews), with the low-end and dynamics **weigh
 bass-heavy drop tracks match other bass-heavy drop tracks.
 
 ```bash
-# Find songs with a similar vibe (works out of the box \u2014 library ships with the package):
+# Find songs with a similar vibe (works out of the box — library ships with the package):
 soundalike vibe-similar --title "Wasting Time" --artist "eric404"
 
 # Emphasize a specific quality, e.g. sub-bass, even more:
@@ -218,24 +218,24 @@ soundalike vibe-build --per-genre 150
 It also prints a plain-English read of the seed's vibe, e.g.:
 
 ```
-Seed: Wasting Time \u2014 eric404
+Seed: Wasting Time — eric404
   vibe: 123 BPM, very dynamic (big drops), bass-heavy, warm
 ```
 
 **Why this matters (a worked example).** *Wasting Time* by eric404 is 73% sub-bass with a big
 dubstep drop (crest 2.2). The plain acoustic engine, averaging that away, returned soft
 bedroom-pop. The vibe engine reads the drops and the sub-bass correctly and returns
-hyperpop/electronic tracks that actually match \u2014 **aldn**, **Flume**, **Slow Magic** \u2014 the right
+hyperpop/electronic tracks that actually match — **aldn**, **Flume**, **Slow Magic** — the right
 scene, chosen by the shape of the sound.
 
 ---
 
-## Deep-vibe engine \u2014 the best matcher \u2b50\u2b50\u2b50
+## Deep-vibe engine — the best matcher ⭐⭐⭐
 
 The deep-vibe engine embeds a song with an **artist-aware neural encoder** and blends that with the
 song's **vibe vector** (bass profile + dynamics), then ranks a **bundled library of ~87,000 real
-songs spanning every genre** by a tunable mix of the two. Everything ships with the package \u2014 the
-encoder *and* the library \u2014 so it works with **zero setup and no local training**.
+songs spanning every genre** by a tunable mix of the two. Everything ships with the package — the
+encoder *and* the library — so it works with **zero setup and no local training**.
 
 ```bash
 # Fused recommendation (works out of the box):
@@ -245,49 +245,49 @@ soundalike deep-vibe-similar --title "Lovers Rock" --artist "TV Girl"
 soundalike deep-vibe-similar --title "Bangarang" --artist "Skrillex" --alpha 0.6
 
 # Blend several songs into one "taste" (find what sits in the middle of them):
-soundalike deep-vibe-similar --title "Lovers Rock" --artist "TV Girl" \\
+soundalike deep-vibe-similar --title "Lovers Rock" --artist "TV Girl" \
     --seed "Bags :: Clairo" --seed "Show Me How :: Men I Trust"
 
 # Add variety so you don't get five near-identical songs (MMR re-ranking),
 # and cap how many songs any one artist can contribute:
-soundalike deep-vibe-similar --title "HUMBLE." --artist "Kendrick Lamar" \\
+soundalike deep-vibe-similar --title "HUMBLE." --artist "Kendrick Lamar" \
     --diversity 0.3 --max-per-artist 1
 ```
 
 Each result shows its breakdown so you can see *why* it matched:
 
 ```
-Seed: Lovers Rock \u2014 TV Girl
+Seed: Lovers Rock — TV Girl
   vibe: 103 BPM, steady/flat, bass-heavy, bright
   blend: 80% learned-texture + 20% bass/dynamics
 
-   1. Relax \u2014 Vacations           [blend +4.59 | texture 0.34 | vibe 0.17]
-   2. Recto Verso \u2014 Paradis        [blend +4.35 | texture 0.34 | vibe 0.12]
-   3. A Knife in the Ocean \u2014 Foals  [blend +4.29 | texture 0.30 | vibe 0.20]
-   4. Love Forever \u2014 Chapterhouse   [blend +3.92 | texture 0.26 | vibe 0.22]  (shoegaze)
+   1. Relax — Vacations           [blend +4.59 | texture 0.34 | vibe 0.17]
+   2. Recto Verso — Paradis        [blend +4.35 | texture 0.34 | vibe 0.12]
+   3. A Knife in the Ocean — Foals  [blend +4.29 | texture 0.30 | vibe 0.20]
+   4. Love Forever — Chapterhouse   [blend +3.92 | texture 0.26 | vibe 0.22]  (shoegaze)
 ```
 
 Four things make this work at scale, and each was driven by a concrete failure (see the
 [case study](docs/CASE_STUDY.md)):
 
-- **Coverage** \u2014 the library was grown to ~87,000 real songs across every scene via a 2-hop
+- **Coverage** — the library was grown to ~87,000 real songs across every scene via a 2-hop
   related-artist crawl seeded from ~400 curated artists spanning world/regional (K-pop, city-pop,
   Afrobeats, French/Latin, reggae), electronic subgenres (techno, house, DnB, phonk, synthwave,
   ambient), rock/metal/punk (post-rock, shoegaze, black/death metal, emo), jazz, classical, blues
-  and gospel \u2014 deduplicated to one row per song \u2014 so a niche seed actually has close neighbours.
-- **An artist-aware encoder** \u2014 the FMA-trained encoder confused scenes on real vocal music, so it
+  and gospel — deduplicated to one row per song — so a niche seed actually has close neighbours.
+- **An artist-aware encoder** — the FMA-trained encoder confused scenes on real vocal music, so it
   was fine-tuned on the harvested songs with a *supervised-contrastive* objective (same artist =
   similar), which taught it "sounds like the same kind of thing" on the real domain. (A later
   ArcFace+GeM variant scored higher on same-artist mAP but *regressed* real cross-artist
-  recommendation in external validation, so it was reverted \u2014 see `docs/CASE_STUDY.md`.)
-- **A higher-dimensional embedding** \u2014 as the library grew past ~50k, songs crowded together and
+  recommendation in external validation, so it was reverted — see `docs/CASE_STUDY.md`.)
+- **A higher-dimensional embedding** — as the library grew past ~50k, songs crowded together and
   precision softened; widening the embedding from 256 to 384 dimensions gives the space more room to
   separate ~87k songs, which recovered precision without hurting coverage.
-- **Whitening** \u2014 the embeddings piled into a tight cone (every pair ~0.9 cosine); ZCA-whitening
+- **Whitening** — the embeddings piled into a tight cone (every pair ~0.9 cosine); ZCA-whitening
   the space makes similarity key on what's *distinctive* about a track, which sharply improves
   ranking on a big, diverse library.
 
-Matching the *feel* of a track is genuinely hard \u2014 some corners are still an honest frontier \u2014 but
+Matching the *feel* of a track is genuinely hard — some corners are still an honest frontier — but
 across jazz, post-rock, metal, hip-hop, R&B, electronic, indie and bedroom-pop it now returns
 genuinely scene-coherent picks. For example, *So What* by Miles Davis returns Brad Mehldau, Lee
 Morgan and Ahmad Jamal; *Your Hand in Mine* by Explosions in the Sky returns If These Trees Could
@@ -308,13 +308,13 @@ The raw local encoder remains honestly weak. On the real 272,853-song index it s
 | Recall@20 | 0.0500 | 0.0500 |
 | Recall@50 | 0.0500 | **0.1000** |
 | MRR | 0.0063 | 0.0059 |
-| Primary (`0.5 \u00d7 R@50 + 0.5 \u00d7 MRR`) | 0.0281 | **0.0529** |
+| Primary (`0.5 × R@50 + 0.5 × MRR`) | 0.0281 | **0.0529** |
 
 That is an **+88.3% relative primary gain** with no manual-judgment blend. One existing hit moves
 from rank 8 to 11 while a new hit enters at rank 37, so Recall@50 doubles. No scene contribution
 regresses by more than 3.1%. The pair bootstrap is wide (absolute-delta 95% interval
-\u22120.0026..0.0770; 63.9% positive), and the suite was reused to compare sequential challengers, so
-this is evidence that clears the frozen +20% engineering threshold\u2014not a population-significance
+−0.0026..0.0770; 63.9% positive), and the suite was reused to compare sequential challengers, so
+this is evidence that clears the frozen +20% engineering threshold—not a population-significance
 claim.
 
 Dual-Sonic64 combines compressed EfficientNet and calibrated LAION-CLAP spectrogram embeddings
@@ -328,7 +328,7 @@ hard-negative metric learning, and pageview-heavy learned reranking all failed t
 final deciding score and are recorded rather than hidden.
 
 Independent validation remains disjoint and is never a ranking feature. ListenBrainz agreement
-moves 0.1389\u21920.1611 (delta CI \u22120.0333..0.0722) and Deezer 0.0667\u21920.0833
+moves 0.1389→0.1611 (delta CI −0.0333..0.0722) and Deezer 0.0667→0.0833
 (0.0000..0.0333): improved point estimates, statistically equivalent within uncertainty.
 The production deployment at <https://soundalike.yassin.app> reports
 `dual_sonic64_guardrail` / `2026.07.11-dual-sonic64`; 12 diverse live searches,
@@ -339,7 +339,7 @@ commands are in `.goals/human-quality-recommendations/artifacts/` and the case s
 ### Growing the library past the bundle limit
 
 The ~87k-song index ships bundled (75 MB, under GitHub's 100 MB per-file cap), so the tool works
-offline out of the box. But a bigger or higher-dimensional library won't fit in the repo \u2014 so the
+offline out of the box. But a bigger or higher-dimensional library won't fit in the repo — so the
 pack (encoder + index) can also live on a **GitHub Release**, which allows up to 2 GB per file and
 doesn't bloat the repo or every clone. A tiny `data/index_manifest.json` names the canonical pack,
 and the package resolves it in order: an explicit `--index`/`--model-dir`, then a matching copy in
@@ -369,20 +369,20 @@ Blackwell, CUDA 13, using channels-last + mixed precision for Tensor-Core speed)
 
 Trained with a self-supervised contrastive objective (no genre labels), a ResNet encoder
 learns an embedding space where acoustically similar songs cluster. Evaluated with a kNN
-genre probe (chance \u2248 0.28 for 16 genres):
+genre probe (chance ≈ 0.28 for 16 genres):
 
 | Model | Training data | kNN genre acc | vs baseline |
 |-------|---------------|---------------|-------------|
-| Chance (majority class) | \u2014 | 0.284 | \u2014 |
+| Chance (majority class) | — | 0.284 | — |
 | Our neural embedding | Deezer 475 | 0.25 | **loses** to baseline |
-| Pooled-mel baseline (no ML) | FMA 25k | 0.521 | \u2014 |
+| Pooled-mel baseline (no ML) | FMA 25k | 0.521 | — |
 | Our neural embedding | **FMA-medium 25k** | **0.601** | **+8 pts** |
-| Pooled-mel baseline (no ML) | FMA 106k | 0.507 | \u2014 |
+| Pooled-mel baseline (no ML) | FMA 106k | 0.507 | — |
 | Our neural embedding | **FMA-large 106k** | **0.641** | **+13 pts** |
 
 The story is the scaling curve. On **475 tracks the neural net *lost*** to a trivial pooled-mel
 baseline (0.25). At **25k tracks it beats the baseline by +8** (0.601). At **106k tracks it wins
-by +13** (0.641) \u2014 the more data, the wider the margin, exactly as contrastive deep learning
+by +13** (0.641) — the more data, the wider the margin, exactly as contrastive deep learning
 predicts. On FMA-large, **57%** of tracks have a same-genre nearest neighbor in the learned
 space (from a model that never saw a label), and it trains on the ~57k *unlabeled* FMA tracks
 too (self-supervised needs no labels) while being evaluated only on the ~49.6k labeled ones.
@@ -410,16 +410,16 @@ task forces the embedding to encode *how a song sounds and moves*, not just its 
 The vibe target is computed from the packed FMA spectrograms with **no re-downloading**, so the
 whole vibe-aware model trains on all 106k songs in ~131 min on the 5080.
 
-**Does it actually encode more vibe?** Yes \u2014 measurably. On 1,738 held-out real songs, a *linear*
-probe decoding the vibe target from each encoder's embeddings improves from **R\u00b2 0.82 \u2192 0.94**,
-and the biggest gains are exactly on the vibe-defining dimensions: bass (0.73 \u2192 0.96), loudness
-dynamics (0.70 \u2192 0.89) and drop size (0.70 \u2192 0.85). In other words, nearest neighbours in the
+**Does it actually encode more vibe?** Yes — measurably. On 1,738 held-out real songs, a *linear*
+probe decoding the vibe target from each encoder's embeddings improves from **R² 0.82 → 0.94**,
+and the biggest gains are exactly on the vibe-defining dimensions: bass (0.73 → 0.96), loudness
+dynamics (0.70 → 0.89) and drop size (0.70 → 0.85). In other words, nearest neighbours in the
 vibe-aware space are far more likely to share the seed's bass profile and energy.
 
 ![Vibe-aware encoder results](docs/vibe_aware_results.png)
 
-*Left: multi-task training \u2014 val genre-probe accuracy rises as the vibe-target loss falls.
-Right: per-dimension linear-probe R\u00b2 of decoding vibe from the embedding; the vibe-aware encoder
+*Left: multi-task training — val genre-probe accuracy rises as the vibe-target loss falls.
+Right: per-dimension linear-probe R² of decoding vibe from the embedding; the vibe-aware encoder
 (blue) beats the plain contrastive one (grey) on every band and every dynamics measure.*
 
 This vibe-aware encoder is the one bundled with the package and used by `deep-vibe-similar`.
@@ -437,45 +437,45 @@ python -m soundalike.ml.spec_cache build --cache ml_data/spec_cache.npz --model-
 
 Growing the recommendation library (ultimately to ~87,000 songs) exposed the encoder as the real
 ceiling: trained on FMA (mostly instrumental, Creative-Commons music), it confused *scenes* on
-real vocal music \u2014 a dream-pop seed pulled in random pop, a hyperpop track pulled in smooth R&B.
+real vocal music — a dream-pop seed pulled in random pop, a hyperpop track pulled in smooth R&B.
 More data made it *worse*, because the bigger pool contained more texture-similar-but-vibe-wrong
 songs.
 
-The fix uses the strongest free style signal on the harvested library \u2014 **the artist**. Two songs
+The fix uses the strongest free style signal on the harvested library — **the artist**. Two songs
 by the same artist share a sonic identity, so the encoder is fine-tuned with a **supervised
 contrastive** objective (PK-sampled batches; same-artist songs are positives) plus the
 vibe-target auxiliary, all on the cached real-song mel-spectrograms (no re-downloading, ~40 min on
 the 5080). That teaches "sounds like the same kind of thing" directly on the domain users query,
-and \u2014 because the library was crawled through the related-artist graph \u2014 it generalizes to
+and — because the library was crawled through the related-artist graph — it generalizes to
 *neighbouring* artists, not just the same one.
 
-Two more fixes mattered as the library grew. **A higher-dimensional embedding** (256 \u2192 384) gives
+Two more fixes mattered as the library grew. **A higher-dimensional embedding** (256 → 384) gives
 the space more room to separate ~87k songs, which recovered the precision that had softened at 55k.
-And a cheap inference-time trick \u2014 **ZCA-whitening** the embedding at load time (the raw embeddings
-pile into a tight ~0.9-cosine cone) \u2014 makes similarity key on what's *distinctive*. Together,
+And a cheap inference-time trick — **ZCA-whitening** the embedding at load time (the raw embeddings
+pile into a tight ~0.9-cosine cone) — makes similarity key on what's *distinctive*. Together,
 retrieval goes from incoherent to scene-coherent:
 
 | Seed | Before (FMA encoder, raw cosine) | After (artist-aware 384-d + whitening) |
 |------|-----------------------------------|-----------------------------------------|
-| *So What* \u2014 Miles Davis | (mixed) | Brad Mehldau, Lee Morgan, Ahmad Jamal |
-| *Your Hand in Mine* \u2014 Explosions in the Sky | (mixed) | If These Trees Could Talk, This Will Destroy You, Mono |
-| *Ditto* \u2014 NewJeans | (mixed) | CHUU, LOONA (K-pop) |
-| *HUMBLE.* \u2014 Kendrick | (mixed) | Kodak Black, JID, $uicideboy$ |
+| *So What* — Miles Davis | (mixed) | Brad Mehldau, Lee Morgan, Ahmad Jamal |
+| *Your Hand in Mine* — Explosions in the Sky | (mixed) | If These Trees Could Talk, This Will Destroy You, Mono |
+| *Ditto* — NewJeans | (mixed) | CHUU, LOONA (K-pop) |
+| *HUMBLE.* — Kendrick | (mixed) | Kodak Black, JID, $uicideboy$ |
 
-**Trying to upgrade the objective \u2014 and why validation matters.** Supervised-contrastive
-was a big step, and the *objective* (not network size) is clearly the lever \u2014 a 512-d encoder
+**Trying to upgrade the objective — and why validation matters.** Supervised-contrastive
+was a big step, and the *objective* (not network size) is clearly the lever — a 512-d encoder
 and encoder ensembles both failed to beat 384-d. So I tried replacing the contrastive loss
 with **ArcFace** (additive angular margin) plus **GeM pooling**, and on same-artist **mean
 average precision** it looked like a clear win: **mAP 0.0486 vs 0.0396, +23%** over
 supervised-contrastive, averaged over 5 seeds.
 
-But that's an *internal* metric, so I validated it against **independent human behavior** \u2014
+But that's an *internal* metric, so I validated it against **independent human behavior** —
 ListenBrainz co-listening ("people who listen to X also listen to Y") and Deezer
-related-artists \u2014 over a diverse set of mainstream *and* niche seeds. The result reversed the
+related-artists — over a diverse set of mainstream *and* niche seeds. The result reversed the
 verdict: the ArcFace encoder agreed **less** with real listeners (ListenBrainz agreement 0.117
 vs 0.161; Deezer 0.058 vs 0.100), and qualitatively it botched niche genres the old encoder
-nailed \u2014 city pop (Mariya Takeuchi \u2192 Hiroshi Sato/T-Square/Anri became Dream Theater/Clapton),
-hyperpop (100 gecs \u2192 SOPHIE/Dorian Electra became EDM DJs). **Same-artist mAP had rewarded
+nailed — city pop (Mariya Takeuchi → Hiroshi Sato/T-Square/Anri became Dream Theater/Clapton),
+hyperpop (100 gecs → SOPHIE/Dorian Electra became EDM DJs). **Same-artist mAP had rewarded
 packing each artist into a tight ball (separability), which is *not* the inter-artist geometry
 recommendation actually needs.** So I **reverted to the supervised-contrastive encoder** and
 added a `cross_artist_agreement` metric (nearest *other*-artist overlap vs a human related-artist
@@ -487,34 +487,34 @@ a measured negative result; the full story lives in `CASE_STUDY.md`.
 # fine-tune the artist encoder (supervised-contrastive), and bundle:
 python -m soundalike.ml.grow_broad --cache ml_data/spec_cache.npz --workers 10 --target 90000
 python -m soundalike.ml.train_vibe --packed packed.npz --out-dir ml_data/model_vibe384 --width 64 --embedding-dim 384
-python -m soundalike.ml.train_artist --cache ml_data/spec_cache_dedup.npz --init-model ml_data/model_vibe384 \\
+python -m soundalike.ml.train_artist --cache ml_data/spec_cache_dedup.npz --init-model ml_data/model_vibe384 \
     --embedding-dim 384 --out-dir ml_data/model_artist384
 python -m soundalike.ml.spec_cache build --cache ml_data/spec_cache_dedup.npz --model-dir ml_data/model_artist384 --out src/soundalike/data/deepvibe_index.npz --half
 ```
 
 ### How big should the library be? (measured, not guessed)
 
-"Just add more songs" sounds like a free win, but it isn't \u2014 and rather than guess, I measured it.
+"Just add more songs" sounds like a free win, but it isn't — and rather than guess, I measured it.
 `soundalike.ml.benchmark` scores the library with two label-free metrics as its size grows:
 
-* **fixed-pair recall@10** (precision) \u2014 hold a song and one same-artist sibling fixed, then only
+* **fixed-pair recall@10** (precision) — hold a song and one same-artist sibling fixed, then only
   add *distractors*; how often does the sibling stay in the top-10? This falls as the pool grows.
-* **held-out nearest-neighbour cosine** (coverage) \u2014 for songs held out of the library, how close
+* **held-out nearest-neighbour cosine** (coverage) — for songs held out of the library, how close
   is their nearest match? This rises as the pool grows.
 
 ![Library size vs quality](docs/library_size_sweep.png)
 
 The curves cross around 20k and both flatten past ~40k: a bigger library **buries a specific song's
-sibling under distractors (precision \u2193) but makes it more likely *something* close exists
-(coverage \u2191)**. An equal-weight F1 of the two peaks near ~20k; pure coverage saturates near the top.
+sibling under distractors (precision ↓) but makes it more likely *something* close exists
+(coverage ↑)**. An equal-weight F1 of the two peaks near ~20k; pure coverage saturates near the top.
 
-So why ship ~87k? Because the failures users actually notice are **coverage** failures \u2014 a jazz or
-K-pop seed returning nothing in-scene \u2014 and those are exactly what a big, broad library fixes. The
+So why ship ~87k? Because the failures users actually notice are **coverage** failures — a jazz or
+K-pop seed returning nothing in-scene — and those are exactly what a big, broad library fixes. The
 precision cost (a specific sibling slipping out of the top-10) is real but subtler, and it's better
 addressed by **smarter ranking than by discarding whole scenes**: the `--diversity` (MMR) and
 `--max-per-artist` flags keep the top-10 varied and useful without shrinking coverage. The bundle is
 also capped near ~100 MB by GitHub, so ~87k is close to the practical ceiling anyway. It's a
-deliberate, measured choice \u2014 coverage-first, with ranking to recover precision.
+deliberate, measured choice — coverage-first, with ranking to recover precision.
 
 ```bash
 # Reproduce the sweep on the bundled library (or your own --index):
@@ -524,7 +524,7 @@ python -m soundalike.ml.benchmark --k 10 --sizes 5000,10000,20000,40000,60000,86
 ### Reproduce it
 
 ```bash
-# 1. Get FMA (audio + metadata) \u2014 see https://github.com/mdeff/fma
+# 1. Get FMA (audio + metadata) — see https://github.com/mdeff/fma
 #    fma_medium.zip (~22GB) or fma_large.zip (~93GB), plus fma_metadata.zip.
 #    Unzip with 7-Zip (the archives use the deflate64 format).
 # 2. Build a manifest, pack spectrograms, train, evaluate, visualize:
@@ -542,7 +542,7 @@ soundalike learned-similar --title "Blinding Lights" --artist "The Weeknd" --mod
 `train_fast` auto-detects whether the dataset fits in VRAM: it stays GPU-resident when it fits
 (FMA-medium) and streams from pinned CPU RAM when it doesn't (FMA-large). Smaller quick-start
 commands (`soundalike.ml.collect` / `train` / `map`) run the same pipeline on a few hundred
-Deezer previews with no external download \u2014 handy for a fast sanity check.
+Deezer previews with no external download — handy for a fast sanity check.
 
 The low-level GPU tooling is its own learning artifact:
 
@@ -562,7 +562,7 @@ rec = ContentBasedRecommender(
 ).fit(load_bundled_dataset())
 
 for r in rec.similar_to("Blinding Lights", n=5):
-    print(r.title, "\u2014", r.artist, round(r.score, 3))
+    print(r.title, "—", r.artist, round(r.score, 3))
 ```
 
 ---
@@ -571,8 +571,8 @@ for r in rec.similar_to("Blinding Lights", n=5):
 
 1. Each song becomes a vector of audio features: `bpm, danceability, valence, energy,
    acousticness, instrumentalness, liveness, speechiness`.
-2. Features are **standardized** (z-score) so `bpm` (~40\u2013220) and the 0\u2013100 percentages are
-   comparable \u2014 the step the original project skipped.
+2. Features are **standardized** (z-score) so `bpm` (~40–220) and the 0–100 percentages are
+   comparable — the step the original project skipped.
 3. Optional per-feature **weights** emphasize what you care about.
 4. Similarity is computed with Euclidean distance (default) or cosine. A taste profile is the
    centroid of your seed songs; recommendations are the nearest songs, excluding what you fed in.
@@ -602,7 +602,7 @@ src/soundalike/
   config.py         # .env-based config (never commits secrets)
   spotify/          # OAuth PKCE + Web API client (no deprecated endpoints)
   lastfm/           # similar-tracks client + cross-catalog recommender (optional)
-  audio/            # \u2b50 acoustic DSP engine: previews (Deezer), librosa features,
+  audio/            # ⭐ acoustic DSP engine: previews (Deezer), librosa features,
                     #    feature cache, acoustic-similarity recommender;
                     #    vibe engine (bands + dynamics) + a bundled ~1,500-song library
   ml/               # GPU research track: gpu (cuDNN inspector), collect, spectrogram,
@@ -631,27 +631,27 @@ pytest -q
 - [x] Content-based recommender (offline, tested)
 - [x] Spotify OAuth (PKCE) + library/top/recent fetch + playlist export
 - [x] Last.fm cross-catalog similarity (optional)
-- [x] **Acoustic DSP engine** \u2014 measure features from real audio, rank by science
-- [x] **GPU training pipeline** \u2014 dataset harvest, CNN/ResNet encoder, contrastive + supervised, cuDNN inspector
-- [x] **Scaled to FMA-medium (25k)** \u2014 kNN 0.601; beats the no-ML baseline by +8 pts
-- [x] **Scaled to FMA-large (106k)** \u2014 kNN 0.641; beats the baseline by +13 pts (CPU-resident training)
-- [x] **Vibe-aware encoder** \u2014 multi-task (contrastive + vibe-target); linear-probe vibe R\u00b2 0.82 \u2192 0.94
-- [x] **Grown the library to ~273k songs** \u2014 2-hop related-artist crawl + full-discography deep pass from ~480 multi-genre seeds, deduplicated (hosted; the git-bundled fallback index is ~87k)
-- [x] **Higher-dim embedding (384-d)** \u2014 recovers precision at scale so coverage and precision both improve
-- [x] **Artist-aware encoder + whitening** \u2014 domain-matched fine-tune (same-artist supervised contrastive) fixes scene precision at scale
-- [x] **ArcFace + GeM objective (tried, reverted)** \u2014 won +23% same-artist mAP but external validation (ListenBrainz + Deezer) showed it *regressed* real cross-artist recommendation, so it was reverted; drove a new `cross_artist_agreement` metric
-- [x] **External behavioral validation** \u2014 cross-checked recs against ListenBrainz co-listening + Deezer related-artists over mainstream *and* niche seeds (both ~26\u2013135\u00d7 above random)
-- [x] **Hybrid ranking** \u2014 deep-vibe fuses learned texture with measured bass/dynamics (ships out of the box)
-- [x] **Recommendation benchmark** \u2014 label-free precision/coverage metrics + measured library-size trade-off
-- [x] **Diversity + multi-seed** \u2014 MMR re-ranking, per-artist caps, and blend several songs into one taste
-- [x] **Web app + right-click integration** \u2014 `soundalike serve` (paste a song / Spotify "Copy Song Link" \u2192 instant soundalikes) and a Spicetify extension for an in-app right-click menu
-- [x] **Categorized real-world benchmark** \u2014 93 sourced pairs separate pure-sonic and diagnostic relationships, with a 20-pair final artist-disjoint split, transitive graph audit, frozen 272,853-song outputs, and pair bootstrap uncertainty
-- [x] **Pretrained sonic retrieval** \u2014 dual PCA64 EfficientNet/CLAP retrieval lifts final pure-sonic primary 0.0281\u21920.0529 (+88.3%) while the guarded top five retains 17/20 direct passes
-- [x] **Desktop/hosted Dual-Sonic64 parity** \u2014 the 299 MB checksum-pinned release index carries both 64-d matrices and source-independent priors; numpy serving paths expose the active method/version and have exact parity tests
+- [x] **Acoustic DSP engine** — measure features from real audio, rank by science
+- [x] **GPU training pipeline** — dataset harvest, CNN/ResNet encoder, contrastive + supervised, cuDNN inspector
+- [x] **Scaled to FMA-medium (25k)** — kNN 0.601; beats the no-ML baseline by +8 pts
+- [x] **Scaled to FMA-large (106k)** — kNN 0.641; beats the baseline by +13 pts (CPU-resident training)
+- [x] **Vibe-aware encoder** — multi-task (contrastive + vibe-target); linear-probe vibe R² 0.82 → 0.94
+- [x] **Grown the library to ~273k songs** — 2-hop related-artist crawl + full-discography deep pass from ~480 multi-genre seeds, deduplicated (hosted; the git-bundled fallback index is ~87k)
+- [x] **Higher-dim embedding (384-d)** — recovers precision at scale so coverage and precision both improve
+- [x] **Artist-aware encoder + whitening** — domain-matched fine-tune (same-artist supervised contrastive) fixes scene precision at scale
+- [x] **ArcFace + GeM objective (tried, reverted)** — won +23% same-artist mAP but external validation (ListenBrainz + Deezer) showed it *regressed* real cross-artist recommendation, so it was reverted; drove a new `cross_artist_agreement` metric
+- [x] **External behavioral validation** — cross-checked recs against ListenBrainz co-listening + Deezer related-artists over mainstream *and* niche seeds (both ~26–135× above random)
+- [x] **Hybrid ranking** — deep-vibe fuses learned texture with measured bass/dynamics (ships out of the box)
+- [x] **Recommendation benchmark** — label-free precision/coverage metrics + measured library-size trade-off
+- [x] **Diversity + multi-seed** — MMR re-ranking, per-artist caps, and blend several songs into one taste
+- [x] **Web app + right-click integration** — `soundalike serve` (paste a song / Spotify "Copy Song Link" → instant soundalikes) and a Spicetify extension for an in-app right-click menu
+- [x] **Categorized real-world benchmark** — 93 sourced pairs separate pure-sonic and diagnostic relationships, with a 20-pair final artist-disjoint split, transitive graph audit, frozen 272,853-song outputs, and pair bootstrap uncertainty
+- [x] **Pretrained sonic retrieval** — dual PCA64 EfficientNet/CLAP retrieval lifts final pure-sonic primary 0.0281→0.0529 (+88.3%) while the guarded top five retains 17/20 direct passes
+- [x] **Desktop/hosted Dual-Sonic64 parity** — the 299 MB checksum-pinned release index carries both 64-d matrices and source-independent priors; numpy serving paths expose the active method/version and have exact parity tests
 - [ ] Inline audio previews in the web UI
 
-Contributions welcome \u2014 this is meant to be community-built.
+Contributions welcome — this is meant to be community-built.
 
 ## License
 
-MIT \u2014 see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
