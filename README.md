@@ -36,7 +36,7 @@ including the Microsoft-Store build.
 
 ![soundalike web app](docs/soundalike-results.png)
 
-Want the recommendations *inside* the Spotify app — a right-click **“Find soundalikes”** menu
+Want the recommendations *inside* the Spotify app — a right-click **"Find soundalikes"** menu
 item? That's the [**Spicetify extension**](integrations/spicetify/README.md) (needs the
 standalone Spotify client). Everything runs locally; nothing leaves your machine.
 
@@ -45,6 +45,11 @@ standalone Spotify client). Everything runs locally; nothing leaves your machine
 browser, with an optional client-side "Log in with Spotify" (OAuth PKCE — users authorize on
 Spotify's own site, never hand over a password) to save results as a playlist. See
 [`webapp/DEPLOY.md`](webapp/DEPLOY.md).
+
+**Help with the blind study:** open the public
+[listening evaluator](https://soundalike.yassin.app/evaluate). A complete session is
+usually 90–150 minutes, but partial progress can be resumed. Ratings stay in your
+browser; export the JSON and send it to the project owner yourself.
 
 ---
 
