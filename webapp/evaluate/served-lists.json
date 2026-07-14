@@ -1,0 +1,164 @@
+{
+  "schema_version": 16,
+  "pack_kind": "blinded_actual_served_lists_v16_hosted_supersession",
+  "rankings_state": "RANKINGS_LOCKED",
+  "ratings_count_at_freeze": 0,
+  "seed_count": 60,
+  "scene_count": 13,
+  "results_per_method": 5,
+  "same_artist_filtered": true,
+  "shared_results_rated_once": true,
+  "stable_id_field": "deezer_track_id",
+  "preview_urls_resolved_at_freeze": false,
+  "audio_access": {
+    "provider": "Deezer public 30-second previews",
+    "resolution": "fresh on demand through /api/preview?id=<numeric_deezer_id>",
+    "signed_preview_urls_persisted": false,
+    "browser_cache_scope": "memory only; current page session",
+    "refresh_on_playback_failure": true,
+    "external_request_disclosure": "Only the numeric Deezer track ID is requested; no rating value, anonymous rater ID, session ID, or localStorage data is transmitted.",
+    "fallbacks": [
+      "Deezer track page",
+      "Spotify title/artist search"
+    ]
+  },
+  "seeds": [
+    {
+      "seed_id": "S14-388530b3a6bbacd19ff15d99",
+      "source_seed_id": "DEV-SONIC-001",
+      "scene": "pop",
+      "query": {
+        "track_id": 71645431,
+        "deezer_track_id": 71645431,
+        "title": "Roar",
+        "artist": "Katy Perry"
+      },
+      "results": [
+        {
+          "result_id": "T14-048d9d4545c7af96623af084",
+          "track_id": 376193441,
+          "deezer_track_id": 376193441,
+          "title": "Más Buena",
+          "artist": "Gloria Trevi"
+        },
+        {
+          "result_id": "T14-a946dc5896f1f9ef4a0537e6",
+          "track_id": 1738831217,
+          "deezer_track_id": 1738831217,
+          "title": "Hold My Hand",
+          "artist": "Lady Gaga"
+        },
+        {
+          "result_id": "T14-e138559945250e3772b84a5d",
+          "track_id": 1818665237,
+          "deezer_track_id": 1818665237,
+          "title": "I Love You Bitch",
+          "artist": "Lizzo"
+        },
+        {
+          "result_id": "T14-4295b9b8a36c422ce1ccb257",
+          "track_id": 3369572661,
+          "deezer_track_id": 3369572661,
+          "title": "Everest",
+          "artist": "Halestorm"
+        },
+        {
+          "result_id": "T14-825fa426ca8827445fdb51a1",
+          "track_id": 86182335,
+          "deezer_track_id": 86182335,
+          "title": "Never Been In Love",
+          "artist": "Elliphant"
+        },
+        {
+          "result_id": "T14-cdb81981c9232919ce56191d",
+          "track_id": 1414907322,
+          "deezer_track_id": 1414907322,
+          "title": "Judas",
+          "artist": "Lady Gaga"
+        },
+        {
+          "result_id": "T14-0658c84c9544c6e08961f85f",
+          "track_id": 1893213517,
+          "deezer_track_id": 1893213517,
+          "title": "Seeing Stars (Jessie Veronica – The Solo Project)",
+          "artist": "The Veronicas"
+        },
+        {
+          "result_id": "T14-696c50b45756424879583260",
+          "track_id": 71137172,
+          "deezer_track_id": 71137172,
+          "title": "Do My Thang",
+          "artist": "Miley Cyrus"
+        },
+        {
+          "result_id": "T14-dd33e60d407e5e0728ba6c12",
+          "track_id": 24151541,
+          "deezer_track_id": 24151541,
+          "title": "Buttons",
+          "artist": "The Pussycat Dolls"
+        },
+        {
+          "result_id": "T14-8b1e2a37fbb285563041f395",
+          "track_id": 14519031,
+          "deezer_track_id": 14519031,
+          "title": "Drunk On Love (Album Version)",
+          "artist": "Rihanna"
+        }
+      ],
+      "lists": [
+        {
+          "list_id": "L14-1f5120bfe24fcd04e175e4e7",
+          "ranking": [
+            {
+              "position": 1,
+              "result_id": "T14-048d9d4545c7af96623af084"
+            },
+            {
+              "position": 2,
+              "result_id": "T14-a946dc5896f1f9ef4a0537e6"
+            },
+            {
+              "position": 3,
+              "result_id": "T14-e138559945250e3772b84a5d"
+            },
+            {
+              "position": 4,
+              "result_id": "T14-4295b9b8a36c422ce1ccb257"
+            },
+            {
+              "position": 5,
+              "result_id": "T14-825fa426ca8827445fdb51a1"
+            }
+          ]
+        },
+        {
+          "list_id": "L14-2bdbfa2041e924f624eb06b8",
+          "ranking": [
+            {
+              "position": 1,
+              "result_id": "T14-cdb81981c9232919ce56191d"
+            },
+            {
+              "position": 2,
+              "result_id": "T14-0658c84c9544c6e08961f85f"
+            },
+            {
+              "position": 3,
+              "result_id": "T14-696c50b45756424879583260"
+            },
+            {
+              "position": 4,
+              "result_id": "T14-dd33e60d407e5e0728ba6c12"
+            },
+            {
+              "position": 5,
+              "result_id": "T14-8b1e2a37fbb285563041f395"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "semantic_order_sha256": "7ecc7a456d0d243a12e93a973309e9f10c2ec1fae2b9ec58cb731f699597865e",
+  "content_sha256": "809b98ae4314b396ffb33f7349fee72c94e1a80a33d84b1661ab83166a52b9e9"
+}
