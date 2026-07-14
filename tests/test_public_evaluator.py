@@ -377,7 +377,7 @@ def test_vercel_routes_and_security_headers_cover_evaluator():
         "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
         "X-Frame-Options": "DENY",
     }
-    assert routes["/evaluate"] == routes["/evaluate/(.*)"]  
+    assert routes["/evaluate"] == routes["/evaluate/(.*)"]
     evaluator_headers = routes["/evaluate"]
     assert evaluator_headers["Cache-Control"] == "no-store, max-age=0"
     csp = evaluator_headers["Content-Security-Policy"]
