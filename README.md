@@ -46,6 +46,11 @@ browser, with an optional client-side "Log in with Spotify" (OAuth PKCE — user
 Spotify's own site, never hand over a password) to save results as a playlist. See
 [`webapp/DEPLOY.md`](webapp/DEPLOY.md).
 
+**Help with the blind study:** open the public
+[listening evaluator](https://soundalike.yassin.app/evaluate). A complete session is
+usually 90–150 minutes, but partial progress can be resumed. Ratings stay in your
+browser; export the JSON and send it to the project owner yourself.
+
 ---
 
 ## Why this exists (and why it's built the way it is)
