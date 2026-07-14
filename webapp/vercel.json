@@ -4,7 +4,8 @@
     "api/recommend.py": { "maxDuration": 60 },
     "api/search.py": { "maxDuration": 30 },
     "api/stats.py": { "maxDuration": 30 },
-    "api/preview.py": { "maxDuration": 15 }
+    "api/preview.py": { "maxDuration": 15 },
+    "api/ratings.js": { "maxDuration": 15 }
   },
   "rewrites": [
     { "source": "/evaluate", "destination": "/evaluate/index.html" },

@@ -1,4 +1,4 @@
-"""Security and integrity tests for the hosted blind v16 evaluator."""
+"""Security tests for the byte-locked v16 audit and its hosted successor."""
 
 from __future__ import annotations
 
@@ -136,7 +136,7 @@ def _preview_module():
     return module
 
 
-def test_v16_hashes_bind_zero_rating_state_and_evaluator():
+def test_v16_hashes_bind_zero_rating_state_and_historical_evaluator():
     protocol = _load(AUDIT / "protocol-v16.json")
     lists = _load(AUDIT / "served-lists-v16.json")
     state = _load(AUDIT / "state.json")
@@ -155,7 +155,6 @@ def test_v16_hashes_bind_zero_rating_state_and_evaluator():
     assert state["served_lists_sha256"] == lists["content_sha256"]
     assert state["protocol_sha256"] == protocol["content_sha256"]
     assert protocol["evaluator_sha256"] == state["evaluator_sha256"] == EVALUATOR_SHA
-    assert _file_hash(EVALUATOR) == EVALUATOR_SHA
     assert (
         protocol["ratings_count_at_freeze"]
         == lists["ratings_count_at_freeze"]
@@ -206,15 +205,9 @@ def test_v15_to_v16_semantic_parity_and_supersession_commitments():
     assert "recommendation rankings and behavior are unchanged" in supersession["reason"]
 
 
-def test_v16_files_are_byte_locked_and_deployed_copies_match():
+def test_v16_files_remain_byte_locked():
     assert set(V16_FILES) == {path.name for path in AUDIT.iterdir() if path.is_file()}
     assert all(_file_hash(AUDIT / name) == digest for name, digest in V16_FILES.items())
-    assert (DEPLOY / "protocol.json").read_bytes() == (
-        AUDIT / "protocol-v16.json"
-    ).read_bytes()
-    assert (DEPLOY / "served-lists.json").read_bytes() == (
-        AUDIT / "served-lists-v16.json"
-    ).read_bytes()
     metadata = _load(AUDIT / "signature-metadata.json")
     assert metadata["state_sha256"] == V16_FILES["state.json"]
     assert metadata["state_content_sha256"] == V16_CONTENT["state.json"]
@@ -335,12 +328,12 @@ def test_no_unblinding_or_private_key_material_is_public():
             assert b"PRIVATE KEY" not in path.read_bytes()
 
 
-def test_evaluator_auto_load_relative_urls_and_client_only_privacy():
+def test_evaluator_auto_load_export_and_explicit_private_submission():
     html = EVALUATOR.read_text(encoding="utf-8")
-    assert "schema_version:16" in html
-    assert "schema_version!==16" in html
-    assert "soundalike-human-v16" in html
-    assert "human-ratings-v16-" in html
+    assert "schema_version:17" in html
+    assert "schema_version!==17" in html
+    assert "soundalike-human-v17" in html
+    assert "human-ratings-v17-" in html
     assert '["./protocol.json","./served-lists.json"]' in html
     assert 'credentials:"omit"' in html
     assert 'cache:"no-store"' in html
@@ -350,13 +343,14 @@ def test_evaluator_auto_load_relative_urls_and_client_only_privacy():
     assert '"soundalike.yassin.app"].includes(location.hostname))return location.origin' in html
     assert 'type="file"' in html
     assert "Resume/import export" in html
-    assert "Ratings stay in this browser" in html
-    assert "send it to the project owner yourself" in html
-    assert "this page never uploads it" in html
+    assert "Nothing is submitted automatically" in html
+    assert "private ratings inbox" in html
+    assert "Export JSON as a manual fallback" in html
     assert "sendBeacon" not in html
     assert "XMLHttpRequest" not in html
-    assert 'method:"POST"' not in html
-    assert "fetch(" in html  # bundled JSON and preview GETs only
+    assert 'method:"POST"' in html
+    assert 'credentials:"omit"' in html
+    assert 'body:JSON.stringify({consent:true,ratings:submissionPayload})' in html
 
 
 def test_vercel_routes_and_security_headers_cover_evaluator():

@@ -1,8 +1,9 @@
 # Deploying soundalike as a hosted web app (Vercel)
 
-This directory is a **self-contained Vercel deployment**: a static frontend + two
-tiny Python serverless functions that recommend from the 272,853-song library using
-**numpy only** (no PyTorch). You can host it on a subdomain like
+This directory is a **self-contained Vercel deployment**: a static frontend,
+small Python recommendation functions, and one Node ratings-ingest function. The
+recommender serves the 272,853-song library using **numpy only** (no PyTorch). You
+can host it on a subdomain like
 `soundalike.yassin.app` and let anyone try it in the browser.
 
 > **Release status (2026-07-11):** Dual-Sonic64 uses the versioned
@@ -45,6 +46,9 @@ webapp/
     _reco.py          # numpy recommender (fetches the index from the GitHub Release)
     recommend.py      # POST /api/recommend
     search.py         # GET  /api/search?q=
+    ratings.js        # POST-only private ratings ingestion
+  evaluate/           # signed v17 blind evaluator public payload
+  package.json        # official @vercel/blob SDK
   requirements.txt    # numpy   (that's the entire backend dependency)
   vercel.json
   dev_server.py       # local-only: mimics Vercel routing for testing
@@ -73,6 +77,70 @@ may override `SOUNDALIKE_INDEX_URL`, `SOUNDALIKE_INDEX_SHA256`, or
 
 That's the whole recommendation app. **No Spotify setup is needed** for search +
 recommendations — only for the optional "Save as playlist".
+
+## Private ratings inbox
+
+The v17 evaluator submits only after the listener checks the consent box and presses
+**Submit ratings**. It never submits on autosave, page unload, preview playback, or
+export. The JSON download remains a manual fallback.
+
+### Blob setup
+
+1. Create a **private Vercel Blob store** and connect it only to this Vercel project.
+   Do not use a public store.
+2. Prefer Vercel OIDC credentials: enable project OIDC, set `BLOB_STORE_ID` to the
+   private store ID, and let the runtime supply `VERCEL_OIDC_TOKEN`.
+3. If OIDC is unavailable, set the store's `BLOB_READ_WRITE_TOKEN` as a sensitive
+   server-side environment variable. `@vercel/blob` uses this official fallback
+   automatically. Never expose either credential to browser code.
+4. Deploy from `webapp`; `npm ci` installs the pinned official Blob SDK.
+5. Add a Vercel Firewall rate-limit rule for `POST /api/ratings`. Origin checks and
+   the browser's local-key HMAC provide abuse resistance and integrity; they are
+   not authentication, so application validation is not a replacement for rate
+   limiting.
+
+Accepted records use immutable, deduplicated private paths:
+`human-ratings/v17/<session-id>/<canonical-payload-sha>.json`. A retry of the exact
+snapshot returns the same receipt without overwriting. A later snapshot with added
+ratings gets a different digest and may coexist.
+
+The stored record contains random anonymous/session IDs, ratings, rating timestamps
+and durations, locked protocol/list hashes, server receipt time, canonical digest,
+and server-derived counts. It strips the local HMAC key and HMAC. Application code
+does not store IP addresses, Origin, user-agent, cookies, raw headers, Spotify
+identity, email, or a Blob URL. Vercel may process request metadata in operational
+infrastructure; review project log settings separately. There is no public GET,
+listing, admin, or unblinding endpoint.
+
+### Authorized analyst and retention workflow
+
+Private downloads are deliberately local-only. From an authorized workstation:
+
+```bash
+cd webapp
+npm ci
+npm run ratings:inbox -- ../private-ratings-inbox --acknowledge-private-data
+python ../tools/aggregate_ratings.py ../private-ratings-inbox \
+  --output ../ratings-aggregate.local.json
+```
+
+The inbox command uses the same official SDK credential resolution (OIDC first,
+static token fallback), validates every private object path, and never prints Blob
+URLs or rating contents. The aggregator also accepts already-downloaded v16 signed
+client exports and v17 sanitized server records. It deduplicates snapshots by digest
+and session, merges additions, and stops on conflicting values rather than silently
+choosing one. Neither private inputs nor local aggregates should be committed.
+
+Choose and document a retention period before collection. On review dates, an
+authorized analyst should download and verify the private inbox, keep only the
+approved encrypted analysis copy, and delete expired Blob objects with the official
+Vercel Blob SDK/CLI. Record deletion totals without recording listener identifiers.
+Do not retain credentials in shell history or analysis output.
+
+For an end-to-end local function test use `vercel dev` with a dedicated test-only
+private store. `python webapp/dev_server.py` remains useful for recommendation and
+preview UI work, but intentionally does not emulate or weaken private ratings
+validation.
 
 ---
 
