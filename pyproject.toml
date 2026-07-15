@@ -44,6 +44,15 @@ ml = [
     "laion-clap>=1.1.7",
     "Pillow>=12.3.0",
 ]
+# Full-track MTG-Jamendo research extraction. PyAV is exact-pinned because
+# decoder behavior and bundled FFmpeg capabilities are part of the artifact
+# configuration. CLAP/torch use hardware-specific installs and their exact
+# package/checkpoint versions are runtime-gated rather than resolver-managed.
+fulltrack = [
+    "av==18.0.0",
+    "numpy>=1.23.5,<2",
+    "psutil>=5.9",
+]
 # Everything, for development.
 dev = [
     "matplotlib>=3.6",
