@@ -590,6 +590,32 @@ acousticness, instrumentalness, liveness, speechiness`
 
 Any CSV with the audio-feature columns works via `--dataset path.csv` or `Dataset.from_csv`.
 
+### MTG-Jamendo full-track research pipeline
+
+The isolated full-track pipeline validates the official 55,701-track
+MTG-Jamendo `raw_30s/audio` collection, extracts frozen CLAP window/global/section
+embeddings without writing WAV files, stores resumable checksummed artifacts, and
+evaluates official artist-disjoint folds. In the
+[official dataset documentation](https://github.com/MTG/mtg-jamendo-dataset),
+`raw_30s.tsv` means **tracks with duration greater than 30 seconds** and
+`raw_30s/audio` supplies those full tracks in full quality (320-kbps MP3); the name
+is not evidence of 30-second excerpts. Production extraction fails closed until the
+external downloader's `state/collection.complete.json` binds all 100 archives and
+all 55,701 track hashes.
+
+The trusted SHA-verified `batch64` pilot measured 128 full tracks / 5,780 windows:
+mean decoded duration 228.11 s (min 49.44, median 218.15, max 749.24), CLI extraction
+84.840 s, 68.13 windows/s, and 1.509 tracks/s. Observed peaks were approximately
+2.90 GiB worker RSS / 9.26 GiB worker private memory and 7,495 MiB GPU memory, with
+GPU maxima of 55 C and 93.25 W. No decoded audio was persisted. Any corpus-duration
+number derived from this pilot is a **planning projection**, not a measured full-run
+completion.
+
+This is **Jamendo non-commercial research tooling only**. It is not Spotify audio
+acquisition, does not authorize ripping or redistribution, and makes no commercial
+deployment claim. See [docs/FULLTRACK_AUDIO.md](docs/FULLTRACK_AUDIO.md) for exact
+setup, extraction, evaluation, integrity, and resource-bound commands.
+
 ---
 
 ## Project structure
@@ -614,7 +640,8 @@ src/soundalike/
                     #    grow_broad (2-hop related-artist crawl), spec_cache (harvest-once),
                     #    train_artist (artist-aware fine-tune), deepvibe (fusion + whitening + MMR),
                     #    benchmark (recommendation-quality + library-size sweep),
-                    #    index_store (fetch the pack from a GitHub Release past the bundle limit)
+                    #    index_store (fetch the pack from a GitHub Release past the bundle limit),
+                    #    jamendo_fulltrack/fulltrack_{store,extract,eval} (research-only full tracks)
   data/             # bundled artifacts: artist-aware 384-d encoder + ~87k-song deep-vibe library
 tests/              # pytest suite (offline + network-free live/audio/ml logic)
 spotify_program.py  # the original first-year project, kept for posterity
