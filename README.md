@@ -603,6 +603,14 @@ is not evidence of 30-second excerpts. Production extraction fails closed until 
 external downloader's `state/collection.complete.json` binds all 100 archives and
 all 55,701 track hashes.
 
+For new fusion-training runs, `--pairwise-cosine-mode linear-v2` computes the
+same mean pairwise-cosine diversity diagnostic with a sum-vector identity instead
+of materializing a quadratic similarity matrix. A 6,000 x 512 benchmark reduced
+that diagnostic from 11.82 s to 0.0048 s (about 2,460x), while a real 4,096-view
+canary agreed within floating-point rounding. This accelerates one training
+diagnostic, not the entire training job; see the
+[algorithm and no-loss evidence](docs/FULLTRACK_AUDIO.md#linear-time-pairwise-cosine-diagnostic).
+
 The trusted SHA-verified `batch64` pilot measured 128 full tracks / 5,780 windows:
 mean decoded duration 228.11 s (min 49.44, median 218.15, max 749.24), CLI extraction
 84.840 s, 68.13 windows/s, and 1.509 tracks/s. Observed peaks were approximately
@@ -614,7 +622,8 @@ completion.
 This is **Jamendo non-commercial research tooling only**. It is not Spotify audio
 acquisition, does not authorize ripping or redistribution, and makes no commercial
 deployment claim. See [docs/FULLTRACK_AUDIO.md](docs/FULLTRACK_AUDIO.md) for exact
-setup, extraction, evaluation, integrity, and resource-bound commands.
+setup, extraction, training, evaluation, human-gated selection, integrity, and
+resource-bound commands.
 
 ---
 
@@ -641,7 +650,8 @@ src/soundalike/
                     #    train_artist (artist-aware fine-tune), deepvibe (fusion + whitening + MMR),
                     #    benchmark (recommendation-quality + library-size sweep),
                     #    index_store (fetch the pack from a GitHub Release past the bundle limit),
-                    #    jamendo_fulltrack/fulltrack_{store,extract,eval} (research-only full tracks)
+                    #    jamendo_fulltrack/fulltrack_{store,extract,eval,fusion,train,selection}
+                    #    (research-only full tracks and human-gated model selection)
   data/             # bundled artifacts: artist-aware 384-d encoder + ~87k-song deep-vibe library
 tests/              # pytest suite (offline + network-free live/audio/ml logic)
 spotify_program.py  # the original first-year project, kept for posterity

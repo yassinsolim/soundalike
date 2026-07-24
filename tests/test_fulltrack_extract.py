@@ -285,7 +285,7 @@ def test_model_environment_forces_offline_and_restores(monkeypatch):
     assert "TRANSFORMERS_OFFLINE" not in os.environ
 
 
-def test_pinned_pyav_decodes_synthetic_mp3_without_wav(tmp_path):
+def test_pinned_pyav_decodes_synthetic_mp3_without_wav(tmp_path, monkeypatch):
     av = pytest.importorskip("av")
     path = tmp_path / "tone.mp3"
     container = av.open(str(path), mode="w")
@@ -303,9 +303,18 @@ def test_pinned_pyav_decodes_synthetic_mp3_without_wav(tmp_path):
         container.mux(packet)
     container.close()
 
+    real_open = av.open
+    open_calls = []
+
+    def metadata_tolerant_open(*args, **kwargs):
+        open_calls.append(dict(kwargs))
+        return real_open(*args, **kwargs)
+
+    monkeypatch.setattr(av, "open", metadata_tolerant_open)
     chunks = list(
         PyAVAudioDecoder().decode(path, sample_rate=48_000, chunk_samples=4_000)
     )
+    assert open_calls[0]["metadata_errors"] == "replace"
     assert sum(map(len, chunks)) > 0
     assert max(map(len, chunks)) <= 4_000
     assert not list(tmp_path.glob("*.wav"))

@@ -40,3 +40,7 @@ Thumbs.db
 node_modules/
 private-ratings-inbox/
 ratings-aggregate*.json
+
+# Local editor/analysis state
+.serena/
+*.bak

@@ -222,6 +222,121 @@ bytes. Recall is explicitly Recall@K, MRR searches the complete ranked list rath
 than the Recall@K prefix, and NDCG@K uses graded Jaccard relevance. Per-category and
 per-tag results are descriptive and uncorrected for multiple comparisons.
 
+## Self-supervised fusion training and selection
+
+The trainer compares three bounded fusion families: non-negative linear pair
+features, a monotonic network, and a channel-gated embedding. Training supervision
+comes only from disjoint temporal views of the same stored track plus mined
+negatives. It never reads fold tags, Jamendo tags, tag Jaccard, ratings, external
+graphs, audio files, or same-artist positives.
+
+Inspect the fixed five-fold x three-candidate x three-seed plan, then train or
+strictly resume all 45 jobs:
+
+```powershell
+$trainingRoot = 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\fusion-v1'
+
+& $python -m soundalike.ml.fulltrack_train train-all --plan
+
+& $python -m soundalike.ml.fulltrack_train train-all `
+  --metadata 'C:\soundalike-data\mtg-jamendo-dataset' `
+  --audio 'C:\soundalike-data\mtg-jamendo-raw-full\audio' `
+  --state 'C:\soundalike-data\mtg-jamendo-raw-full\state' `
+  --store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\clap-v1' `
+  --output $trainingRoot `
+  --candidate-workers 3 `
+  --pairwise-cosine-mode linear-v2 `
+  --device cuda
+```
+
+Each job writes a checksummed report, checkpoint, and NumPy inference artifact.
+Resume recomputes the training-config, dataset, ranking, store, source, and job
+bindings, verifies the checkpoint, re-hashes the model files, and compares loaded
+fusion metadata with the report before reuse.
+
+### Linear-time pairwise-cosine diagnostic
+
+Training reports include the mean pairwise cosine between the $n$ normalized
+global view vectors. The direct `legacy-v1` implementation forms the complete
+$n \times n$ similarity matrix and averages its upper triangle. For vectors
+$x_1, \ldots, x_n$, `linear-v2` uses the identity
+
+$$
+\frac{2}{n(n-1)}\sum_{i<j}x_i^\mathsf{T}x_j
+=
+\frac{\left\|\sum_i x_i\right\|^2-\sum_i\left\|x_i\right\|^2}
+{n(n-1)}.
+$$
+
+This changes the diagnostic from $O(n^2d)$ time and $O(n^2)$ additional
+similarity-matrix memory to $O(nd)$ time and $O(d)$ reduction workspace for
+embedding width $d$. It does not approximate or sample pairs. Floating-point
+operation order can cause rounding-level differences, so the two modes should
+not be described as bit-identical.
+
+Measured verification:
+
+- A 6,000 x 512 synthetic benchmark took 11.82 s with `legacy-v1` and
+  0.0048 s with `linear-v2`, about 2,460x faster for this diagnostic; the
+  absolute result difference was $1.19 \times 10^{-19}$.
+- A production-shaped fold canary with 2,048 tracks and 4,096 views differed by
+  $6.11 \times 10^{-16}$ absolute and $1.56 \times 10^{-15}$ relative.
+- Adversarial identical, orthogonal, antipodal, cancellation-heavy, and random
+  vector tests passed. The production canary preserved pair hashes, view counts,
+  overlap checks, and every non-diagnostic statistic.
+
+The 2,460x figure applies only to pairwise-cosine summarization. View formation,
+negative mining, feature extraction, and model fitting still determine much of
+end-to-end training time. `linear-v2` also labels the report algorithm as
+`sum-vector-v2` and binds the dataset hash to structural objective data, keeping
+diagnostic rounding out of negative-mining seeds. Use it for new training
+matrices. Keep `legacy-v1` only when strictly reproducing or resuming artifacts
+created with the legacy hash semantics; strict resume treats the modes as
+different configurations.
+
+Evaluate all trained candidates on the same frozen global top-200 pools:
+
+```powershell
+$trainedEval = 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\fusion-v1-eval'
+
+& $python -m soundalike.ml.fulltrack_eval benchmark-all `
+  --metadata-root 'C:\soundalike-data\mtg-jamendo-dataset' `
+  --audio-root 'C:\soundalike-data\mtg-jamendo-raw-full\audio' `
+  --state-root 'C:\soundalike-data\mtg-jamendo-raw-full\state' `
+  --store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\clap-v1' `
+  --trained-root $trainingRoot `
+  --output-dir $trainedEval `
+  --selection-budget 8 `
+  --selection-primary-metric recall_at_k `
+  --selection-list-id fulltrack-trained-candidates-v1 `
+  --bootstrap-iterations 2000 `
+  --bootstrap-seed 20260714
+```
+
+The trained run keeps separate cache files, binds every cache entry to the exact
+ordered model/report/config hashes and active ablations, and verifies trained
+paired deltas from per-query records before reuse. The selected budget and primary
+metric are preregistered in `selection/candidate-list.json`. The run also writes
+one non-ablation selector report per candidate/fold/seed plus
+`selection/selection-inputs.json`; with the default matrix that is 45 reports.
+
+Build the model-selection report directly from that manifest:
+
+```powershell
+& $python -m soundalike.ml.fulltrack_selection report-from-manifest `
+  --training-root $trainingRoot `
+  --manifest "$trainedEval\selection\selection-inputs.json" `
+  --output "$trainedEval\selection-report.json"
+```
+
+The manifest path verifies every listed raw file hash, semantic content hash,
+candidate/fold/seed tuple, candidate-list binding, deciding budget, primary metric,
+and derived training-report path. **Automated Jamendo metrics never authorize
+promotion.** Without a separately supplied, correctly bound `--trusted-ratings`
+artifact from at least three independent human raters, `promotion_allowed` remains
+`false`. This research workflow does not deploy a model or establish commercial
+use rights.
+
 To inspect an already-exported commercial v6 replay without opening signed state:
 
 ```powershell
@@ -263,8 +378,8 @@ audio.
 ## Offline tests
 
 ```powershell
-$env:PYTHONPATH = 'C:\Users\solim\soundalike-fulltrack\src;C:\Users\solim\soundalike-fulltrack\webapp\api'
-& $python -m pytest -q tests\test_jamendo_fulltrack.py tests\test_fulltrack_store.py tests\test_fulltrack_extract.py tests\test_fulltrack_eval.py
+$env:PYTHONPATH = 'C:\Users\solim\soundalike-fulltrack-trainer\src;C:\Users\solim\soundalike-fulltrack-trainer\webapp\api'
+& $python -m pytest -q tests\test_jamendo_fulltrack.py tests\test_fulltrack_store.py tests\test_fulltrack_extract.py tests\test_fulltrack_eval.py tests\test_fulltrack_fusion.py tests\test_fulltrack_train.py tests\test_fulltrack_selection.py
 & $python -m pytest -q
 git diff --check
 ```
