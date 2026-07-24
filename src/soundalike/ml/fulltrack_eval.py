@@ -364,7 +364,8 @@ def _scene_for_tag(tag: str) -> str:
 
 
 def _grouped_metrics(
-    query_records: Sequence[Mapping[str, object]], group: str
+    query_records: Sequence[Mapping[str, object]], group: str,
+    *, methods: Sequence[str] = METHODS,
 ) -> Dict[str, object]:
     if group not in {"scene", "tag"}:
         raise FullTrackEvaluationError("unknown grouped-metric dimension")
@@ -397,7 +398,7 @@ def _grouped_metrics(
                         for record in records
                     ]
                 )
-                for method in METHODS
+                for method in methods
             },
         }
     return output
@@ -692,12 +693,338 @@ def _method_ranking(
     return np.concatenate((reranked, np.asarray(tail, dtype=np.int64)))
 
 
+
+# ---------------------------------------------------------------------------
+# Trained model loading and validation for evaluator
+# ---------------------------------------------------------------------------
+
+
+def _trained_method_id(candidate_kind: str, seed: int, ablation: str) -> str:
+    """Deterministically encode candidate/seed/ablation into a method ID."""
+    if ablation == "none":
+        return f"trained_{candidate_kind}_s{seed}"
+    return f"trained_{candidate_kind}_s{seed}_{ablation}"
+
+
+def _validate_sha256_hex(value: object, label: str) -> str:
+    if (
+        not isinstance(value, str)
+        or len(value) != 64
+        or any(ch not in "0123456789abcdef" for ch in value)
+    ):
+        raise FullTrackEvaluationError(f"{label} must be a 64-char lowercase hex string")
+    return value
+
+
+@dataclass(frozen=True)
+class _TrainedModelBinding:
+    """Validated per-fold/candidate/seed model loaded for evaluation."""
+    candidate_kind: str
+    seed: int
+    fold_index: int
+    model: object  # FusionModel
+    report_sha256: str
+    model_artifact_sha256: str
+    model_json_sha256: str
+    weights_npz_sha256: str
+    source_fingerprint: str
+    store_binding_sha256: str
+    training_config_sha256: str
+    job_config_sha256: str
+    fusion_metadata: Mapping[str, object]
+    maxsim_budget: int
+    embedding_dim: int
+
+
+_TRAINED_CACHE_MODEL_FIELDS = frozenset(
+    {
+        "candidate_kind",
+        "seed",
+        "fold_index",
+        "report_sha256",
+        "model_artifact_sha256",
+        "model_json_sha256",
+        "weights_npz_sha256",
+        "source_fingerprint",
+        "store_binding_sha256",
+        "training_config_sha256",
+        "job_config_sha256",
+        "maxsim_budget",
+        "embedding_dim",
+    }
+)
+_TRAINED_RESULT_MODEL_FIELDS = frozenset(
+    {
+        "candidate_kind",
+        "seed",
+        "fold_index",
+        "ablation",
+        "model_artifact_sha256",
+        "model_json_sha256",
+        "weights_npz_sha256",
+        "report_sha256",
+        "source_fingerprint",
+        "store_binding_sha256",
+        "training_config_sha256",
+        "job_config_sha256",
+        "maxsim_budget",
+        "embedding_dim",
+        "promoted",
+    }
+)
+
+
+def _trained_cache_model_identity(
+    binding: _TrainedModelBinding,
+) -> Dict[str, object]:
+    return {
+        "candidate_kind": binding.candidate_kind,
+        "seed": binding.seed,
+        "fold_index": binding.fold_index,
+        "report_sha256": binding.report_sha256,
+        "model_artifact_sha256": binding.model_artifact_sha256,
+        "model_json_sha256": binding.model_json_sha256,
+        "weights_npz_sha256": binding.weights_npz_sha256,
+        "source_fingerprint": binding.source_fingerprint,
+        "store_binding_sha256": binding.store_binding_sha256,
+        "training_config_sha256": binding.training_config_sha256,
+        "job_config_sha256": binding.job_config_sha256,
+        "maxsim_budget": binding.maxsim_budget,
+        "embedding_dim": binding.embedding_dim,
+    }
+
+
+def _trained_result_model_binding(
+    identity: Mapping[str, object], ablation: str
+) -> Dict[str, object]:
+    return {
+        "candidate_kind": identity["candidate_kind"],
+        "seed": identity["seed"],
+        "fold_index": identity["fold_index"],
+        "ablation": ablation,
+        "model_artifact_sha256": identity["model_artifact_sha256"],
+        "model_json_sha256": identity["model_json_sha256"],
+        "weights_npz_sha256": identity["weights_npz_sha256"],
+        "report_sha256": identity["report_sha256"],
+        "source_fingerprint": identity["source_fingerprint"],
+        "store_binding_sha256": identity["store_binding_sha256"],
+        "training_config_sha256": identity["training_config_sha256"],
+        "job_config_sha256": identity["job_config_sha256"],
+        "maxsim_budget": identity["maxsim_budget"],
+        "embedding_dim": identity["embedding_dim"],
+        "promoted": False,
+    }
+
+
+def load_trained_model_for_fold(
+    trained_root: Path,
+    *,
+    fold_index: int,
+    candidate_kind: str,
+    seed: int,
+    expected_source_fingerprint: str,
+    expected_store_binding_sha256: str,
+    store_embedding_dim: int,
+    store_repetition_sections: int,
+    store_salient_sections: int,
+) -> _TrainedModelBinding:
+    """Safely load ONE fold training report + model artifacts.
+
+    Opens ONLY fold-{fold_index}/{candidate_kind}/seed-{seed}/
+    Never opens any other fold directory.
+    """
+    from .fulltrack_fusion import CANDIDATE_KINDS as FUSION_CANDIDATE_KINDS
+    from .fulltrack_train import (
+        FullTrackTrainingError,
+        TrainJobSpec,
+        _model_artifact_hashes,
+        load_training_report as _ltr,
+        validate_training_report_bindings,
+    )
+    from .fulltrack_fusion import FusionError, load_fusion_artifact as _lfa
+
+    if fold_index not in OFFICIAL_FOLDS:
+        raise FullTrackEvaluationError(
+            f"trained fold must be one of {OFFICIAL_FOLDS}, found {fold_index}"
+        )
+    if candidate_kind not in FUSION_CANDIDATE_KINDS:
+        raise FullTrackEvaluationError(
+            f"unknown trained candidate kind: {candidate_kind!r}"
+        )
+    if isinstance(seed, bool) or not isinstance(seed, int) or seed < 0:
+        raise FullTrackEvaluationError("trained seed must be a non-negative integer")
+    try:
+        resolved_root = Path(trained_root).resolve(strict=True)
+        fold_dir = (
+            resolved_root
+            / f"fold-{fold_index}"
+            / candidate_kind
+            / f"seed-{seed}"
+        ).resolve(strict=True)
+    except OSError as exc:
+        raise FullTrackEvaluationError(
+            "trained model directory is missing or cannot be resolved"
+        ) from exc
+    if resolved_root != fold_dir and resolved_root not in fold_dir.parents:
+        raise FullTrackEvaluationError(
+            "trained model directory escapes the configured trained root"
+        )
+    try:
+        report = _ltr(fold_dir / "report.json")
+    except FullTrackTrainingError as exc:
+        raise FullTrackEvaluationError(f"training report invalid: {exc}") from exc
+    if report.get("fold") != fold_index:
+        raise FullTrackEvaluationError(f"training report fold mismatch: {report.get('fold')} != {fold_index}")
+    if report.get("candidate_kind") != candidate_kind:
+        raise FullTrackEvaluationError(f"training report candidate_kind mismatch")
+    if report.get("seed") != seed:
+        raise FullTrackEvaluationError(f"training report seed mismatch: {report.get('seed')} != {seed}")
+    rp_src = _validate_sha256_hex(report.get("source_fingerprint"), "report source_fingerprint")
+    if rp_src != expected_source_fingerprint:
+        raise FullTrackEvaluationError("training report source_fingerprint mismatch")
+    rp_store = _validate_sha256_hex(report.get("store_binding_sha256"), "report store_binding_sha256")
+    if rp_store != expected_store_binding_sha256:
+        raise FullTrackEvaluationError("training report store_binding_sha256 mismatch")
+    sb = report.get("store_binding")
+    if not isinstance(sb, dict) or stable_json_sha256(sb) != rp_store:
+        raise FullTrackEvaluationError("training report store_binding content hash mismatch")
+    store_manifest_sha256 = _validate_sha256_hex(
+        sb.get("sealed_manifest_sha256"), "store sealed_manifest_sha256"
+    )
+    spec = TrainJobSpec(
+        fold_index=fold_index,
+        candidate_kind=candidate_kind,
+        seed=seed,
+        job_id=f"fold-{fold_index}__{candidate_kind}__seed-{seed}",
+        relative_dir=f"fold-{fold_index}/{candidate_kind}/seed-{seed}",
+    )
+    try:
+        validate_training_report_bindings(
+            report,
+            spec=spec,
+            source_fingerprint=rp_src,
+            store_binding_hash=rp_store,
+            store_manifest_sha256=store_manifest_sha256,
+        )
+    except FullTrackTrainingError as exc:
+        raise FullTrackEvaluationError(f"training report binding invalid: {exc}") from exc
+    model_dir = fold_dir / "model"
+    try:
+        model = _lfa(model_dir)
+    except FusionError as exc:
+        raise FullTrackEvaluationError(f"trained model artifact invalid: {exc}") from exc
+    ms = report.get("model")
+    if not isinstance(ms, dict):
+        raise FullTrackEvaluationError("training report model section invalid")
+    mj_sha = _validate_sha256_hex(ms.get("model_json_sha256"), "model_json_sha256")
+    wn_sha = _validate_sha256_hex(ms.get("weights_npz_sha256"), "weights_npz_sha256")
+    art_sha = _validate_sha256_hex(ms.get("artifact_sha256"), "artifact_sha256")
+    try:
+        ah = _model_artifact_hashes(model_dir)
+    except FullTrackTrainingError as exc:
+        raise FullTrackEvaluationError(f"trained model hashes invalid: {exc}") from exc
+    if ah["model_json_sha256"] != mj_sha:
+        raise FullTrackEvaluationError("model.json hash mismatch with training report")
+    if ah["weights_npz_sha256"] != wn_sha:
+        raise FullTrackEvaluationError("weights.npz hash mismatch with training report")
+    if ah["artifact_sha256"] != art_sha:
+        raise FullTrackEvaluationError("artifact hash mismatch with training report")
+    if model.config.kind != candidate_kind or int(model.config.seed) != seed or int(model.config.fold_index) != fold_index:
+        raise FullTrackEvaluationError("loaded model config does not match expected")
+    if model.config.store_id != rp_store:
+        raise FullTrackEvaluationError("loaded model store_id mismatch")
+    if model.config.config_sha256 != report.get("job_config_sha256"):
+        raise FullTrackEvaluationError("loaded model config_sha256 mismatch")
+    mb = int(model.config.maxsim_budget)
+    md = int(model.config.embedding_dim)
+    if md != store_embedding_dim:
+        raise FullTrackEvaluationError(f"model embedding_dim {md} != store {store_embedding_dim}")
+    if mb > store_repetition_sections:
+        raise FullTrackEvaluationError(f"model maxsim_budget {mb} exceeds store repetition_sections")
+    if mb > store_salient_sections:
+        raise FullTrackEvaluationError(f"model maxsim_budget {mb} exceeds store salient_sections")
+    fm = ms.get("fusion_metadata", {})
+    if not isinstance(fm, dict):
+        raise FullTrackEvaluationError("fusion_metadata invalid")
+    if model.metadata is None or model.metadata.as_dict() != fm:
+        raise FullTrackEvaluationError(
+            "loaded model fusion metadata does not match training report"
+        )
+    r_sha = _validate_sha256_hex(report.get("report_sha256"), "report_sha256")
+    tc_sha = _validate_sha256_hex(report.get("training_config_sha256"), "training_config_sha256")
+    jc_sha = _validate_sha256_hex(report.get("job_config_sha256"), "job_config_sha256")
+    return _TrainedModelBinding(
+        candidate_kind=candidate_kind, seed=seed, fold_index=fold_index,
+        model=model, report_sha256=r_sha, model_artifact_sha256=art_sha,
+        model_json_sha256=mj_sha, weights_npz_sha256=wn_sha,
+        source_fingerprint=rp_src, store_binding_sha256=rp_store,
+        training_config_sha256=tc_sha, job_config_sha256=jc_sha,
+        fusion_metadata=fm, maxsim_budget=mb, embedding_dim=md,
+    )
+
+
+def _score_trained_candidate_pool(
+    query: object,
+    candidates: Sequence[object],
+    trained_bindings: Mapping[
+        str, Tuple["_TrainedModelBinding", str]
+    ],
+) -> Tuple[Dict[str, np.ndarray], Dict[str, float]]:
+    feature_groups: Dict[Tuple[int, int, int, float], List[str]] = {}
+    channel_methods: List[str] = []
+    for method_id, (binding, _) in trained_bindings.items():
+        config = binding.model.config
+        if config.kind == "channel_gated_embedding":
+            channel_methods.append(method_id)
+            continue
+        feature_key = (
+            int(config.embedding_dim),
+            int(config.maxsim_budget),
+            int(config.top_k),
+            float(config.coverage_threshold),
+        )
+        feature_groups.setdefault(feature_key, []).append(method_id)
+
+    scores: Dict[str, np.ndarray] = {}
+    latencies: Dict[str, float] = {}
+    for method_ids in feature_groups.values():
+        representative = trained_bindings[method_ids[0]][0].model
+        feature_started = time.perf_counter()
+        feature_vectors = np.stack(
+            [
+                representative.extract_pair_features(query, candidate).to_vector()
+                for candidate in candidates
+            ]
+        )
+        feature_seconds = time.perf_counter() - feature_started
+        for method_id in method_ids:
+            binding, ablation = trained_bindings[method_id]
+            scoring_started = time.perf_counter()
+            scores[method_id] = binding.model.score_feature_vectors(
+                feature_vectors, ablation=ablation
+            )
+            latencies[method_id] = (
+                feature_seconds + time.perf_counter() - scoring_started
+            )
+
+    for method_id in channel_methods:
+        binding, ablation = trained_bindings[method_id]
+        scoring_started = time.perf_counter()
+        scores[method_id] = binding.model.score_candidates(
+            query, candidates, ablation=ablation
+        )
+        latencies[method_id] = time.perf_counter() - scoring_started
+    return scores, latencies
+
+
 def evaluate_jamendo(
     context: JamendoContext,
     reader: FullTrackStoreReader,
     *,
     config: EvaluationConfig = EvaluationConfig(),
     expected_query_descriptor_hash: Optional[str] = None,
+    trained_bindings: Optional[Sequence["_TrainedModelBinding"]] = None,
+    include_ablations: bool = True,
 ) -> Mapping[str, object]:
     """Evaluate one official artist-disjoint fold partition without audio access."""
     config.validate()
@@ -737,6 +1064,25 @@ def evaluate_jamendo(
     if not set(selected_ids).issubset(reader_ids):
         raise FullTrackEvaluationError("store does not cover the evaluation partition")
 
+    # --- Build trained method list ---
+    from .fulltrack_fusion import ABLATIONS as FUSION_ABLATIONS
+    trained_methods: List[str] = []
+    trained_bindings_map: Dict[str, Tuple["_TrainedModelBinding", str]] = {}
+    if trained_bindings:
+        for tb in trained_bindings:
+            if tb.fold_index != config.fold_index:
+                raise FullTrackEvaluationError(
+                    f"trained binding fold {tb.fold_index} != eval fold {config.fold_index}"
+                )
+            ablations_to_use = list(FUSION_ABLATIONS) if include_ablations else ["none"]
+            for abl in ablations_to_use:
+                mid = _trained_method_id(tb.candidate_kind, tb.seed, abl)
+                if mid in trained_bindings_map:
+                    raise FullTrackEvaluationError(f"duplicate trained method ID: {mid}")
+                trained_methods.append(mid)
+                trained_bindings_map[mid] = (tb, abl)
+    all_methods = list(METHODS) + trained_methods
+
     started = time.perf_counter()
     rss_before = _rss_bytes()
     rss_peak = rss_before
@@ -756,8 +1102,15 @@ def evaluate_jamendo(
     )
     globals_matrix = normalize_rows(globals_matrix)
     track_by_id = {track.track_id: track for track in selected}
-    method_metrics: Dict[str, List[QueryMetrics]] = {method: [] for method in METHODS}
-    method_latencies: Dict[str, List[float]] = {method: [] for method in METHODS}
+    # --- Preload stored tracks for trained models ---
+    stored_tracks: Dict[int, object] = {}
+    if trained_bindings:
+        for track_id in selected_ids:
+            stored_tracks[int(track_id)] = reader.read_track(track_id)
+    stored_track_list = [stored_tracks.get(tid) for tid in selected_ids] if trained_bindings else []
+
+    method_metrics: Dict[str, List[QueryMetrics]] = {method: [] for method in all_methods}
+    method_latencies: Dict[str, List[float]] = {method: [] for method in all_methods}
     query_records = []
     skipped_no_relevant = 0
 
@@ -841,6 +1194,22 @@ def evaluate_jamendo(
             "section_maxsim": section_order,
             "hybrid": hybrid_order,
         }
+        # --- Trained methods rerank the SAME frozen-global candidate pool ---
+        if trained_bindings:
+            query_stored = stored_tracks[query.track_id]
+            candidate_tracks = [stored_track_list[int(idx)] for idx in pool]
+            trained_scores, trained_latencies = _score_trained_candidate_pool(
+                query_stored,
+                candidate_tracks,
+                trained_bindings_map,
+            )
+            for mid in trained_methods:
+                t_scores = np.asarray(trained_scores[mid], dtype=np.float64)
+                if not np.all(np.isfinite(t_scores)) or np.any(t_scores < 0.0) or np.any(t_scores > 1.0):
+                    raise FullTrackEvaluationError(f"trained model scores not finite/bounded for {mid}")
+                orders[mid] = _method_ranking(t_scores, pool, global_order)
+                method_latencies[mid].append(trained_latencies[mid])
+
         record_metrics = {}
         for method, order in orders.items():
             ranked_ids = [selected[int(index)].track_id for index in order]
@@ -886,7 +1255,7 @@ def evaluate_jamendo(
         )
 
     aggregate = {}
-    for method in METHODS:
+    for method in all_methods:
         values = method_metrics[method]
         metrics = _mean_metrics(values)
         cis = {
@@ -929,8 +1298,8 @@ def evaluate_jamendo(
         "skipped_no_relevant": skipped_no_relevant,
         "query_records": query_records,
         "aggregate": aggregate,
-        "per_scene": _grouped_metrics(query_records, "scene"),
-        "per_tag": _grouped_metrics(query_records, "tag"),
+        "per_scene": _grouped_metrics(query_records, "scene", methods=all_methods),
+        "per_tag": _grouped_metrics(query_records, "tag", methods=all_methods),
         "grouped_metrics_notice": GROUPED_METRICS_NOTICE,
         "resources": {
             "wall_seconds": time.perf_counter() - started,
@@ -950,10 +1319,37 @@ def evaluate_jamendo(
                     "p50": _percentile(method_latencies[method], 50),
                     "p95": _percentile(method_latencies[method], 95),
                 }
-                for method in METHODS
+                for method in all_methods
             },
         },
     }
+
+    # --- Add trained_methods section only when opt-in ---
+    if trained_methods:
+        tmb = {}
+        for mid in trained_methods:
+            tb, abl = trained_bindings_map[mid]
+            tmb[mid] = _trained_result_model_binding(
+                _trained_cache_model_identity(tb), abl
+            )
+        tpd = {}
+        for mid in trained_methods:
+            hvs = {}
+            for metric in METRICS:
+                hvs[metric] = _paired_bootstrap_delta(
+                    [getattr(v, metric) for v in method_metrics["hybrid"]],
+                    [getattr(v, metric) for v in method_metrics[mid]],
+                    iterations=config.bootstrap_iterations,
+                    seed=config.bootstrap_seed,
+                )
+            tpd[mid] = {
+                "paired_candidate_minus_global": aggregate[mid]["comparison_to_global"],
+                "paired_candidate_minus_frozen_hybrid": hvs,
+            }
+        report["trained_methods"] = trained_methods
+        report["trained_model_bindings"] = tmb
+        report["trained_paired_deltas"] = tpd
+
     return report
 
 
@@ -961,9 +1357,12 @@ def _benchmark_result_binding(
     context: JamendoContext,
     reader: FullTrackStoreReader,
     config: EvaluationConfig,
+    *,
+    trained_bindings: Optional[Sequence[_TrainedModelBinding]] = None,
+    include_ablations: bool = True,
 ) -> Dict[str, object]:
     """Return the exact source/store/protocol identity for one result artifact."""
-    return {
+    binding: Dict[str, object] = {
         "schema_version": BENCHMARK_SCHEMA_VERSION,
         "evidence_scope": EVIDENCE_SCOPE,
         "source_fingerprint": context.source_fingerprint,
@@ -971,6 +1370,15 @@ def _benchmark_result_binding(
         "evaluation_config": asdict(config),
         "metric_fields": list(METRICS),
     }
+    if trained_bindings:
+        from .fulltrack_fusion import ABLATIONS as FUSION_ABLATIONS
+
+        binding["trained_evaluation"] = {
+            "schema_version": 1,
+            "ablations": list(FUSION_ABLATIONS) if include_ablations else ["none"],
+            "models": [_trained_cache_model_identity(item) for item in trained_bindings],
+        }
+    return binding
 
 
 def _benchmark_result_path(output_dir: Path, fold: int, budget: int) -> Path:
@@ -1069,6 +1477,7 @@ def _load_valid_benchmark_result(
             ),
             bootstrap_seed=int(expected_metadata["protocol"]["bootstrap_seed"]),
             expected_metadata=expected_metadata,
+            expected_binding=expected_binding,
             require_uncertainty=True,
         )
     except (
@@ -1116,7 +1525,8 @@ def _validated_report_key(report: Mapping[str, object]) -> Tuple[int, int]:
 
 
 def _query_metric_maps(
-    report: Mapping[str, object], fold: int
+    report: Mapping[str, object], fold: int,
+    *, methods: Sequence[str] = METHODS,
 ) -> Dict[int, Dict[str, Dict[str, float]]]:
     records = report.get("query_records")
     if not isinstance(records, list) or not records:
@@ -1150,12 +1560,12 @@ def _query_metric_maps(
                     f"query record has an invalid {field}"
                 )
         raw_metrics = record.get("metrics")
-        if not isinstance(raw_metrics, dict) or set(raw_metrics) != set(METHODS):
+        if not isinstance(raw_metrics, dict) or set(raw_metrics) != set(methods):
             raise FullTrackEvaluationError(
                 f"query alignment is incomplete for fold={fold}, track={track_id}"
             )
         method_values: Dict[str, Dict[str, float]] = {}
-        for method in METHODS:
+        for method in methods:
             raw_values = raw_metrics.get(method)
             if not isinstance(raw_values, dict) or set(raw_values) != set(METRICS):
                 raise FullTrackEvaluationError(
@@ -1185,10 +1595,11 @@ def _validate_fold_result_consistency(
     report: Mapping[str, object],
     *,
     require_uncertainty: bool = False,
+    methods: Sequence[str] = METHODS,
 ) -> Dict[int, Dict[str, Dict[str, float]]]:
     """Validate one cached fold result and recompute its aggregate means."""
     fold, budget = _validated_report_key(report)
-    query_map = _query_metric_maps(report, fold)
+    query_map = _query_metric_maps(report, fold, methods=methods)
     queries = report.get("queries")
     if isinstance(queries, bool) or not isinstance(queries, int):
         raise FullTrackEvaluationError("fold result has an invalid query count")
@@ -1197,11 +1608,11 @@ def _validate_fold_result_consistency(
             f"fold {fold}, budget {budget} query count disagrees with query records"
         )
     aggregate = report.get("aggregate")
-    if not isinstance(aggregate, dict) or set(aggregate) != set(METHODS):
+    if not isinstance(aggregate, dict) or set(aggregate) != set(methods):
         raise FullTrackEvaluationError(
             f"fold {fold}, budget {budget} has incomplete aggregate methods"
         )
-    for method in METHODS:
+    for method in methods:
         method_result = aggregate.get(method)
         if not isinstance(method_result, dict):
             raise FullTrackEvaluationError("method aggregate must be an object")
@@ -1250,7 +1661,7 @@ def _validate_fold_result_consistency(
             ]
             for metric in METRICS
         }
-        for method in METHODS:
+        for method in methods:
             method_result = aggregate[method]
             expected_cis = {
                 metric: list(
@@ -1402,7 +1813,9 @@ def _validate_effective_section_metadata(
     return output
 
 
-def _validate_resource_metadata(value: object) -> None:
+def _validate_resource_metadata(
+    value: object, *, methods: Sequence[str] = METHODS
+) -> None:
     fields = {
         "wall_seconds",
         "rss_before_bytes",
@@ -1427,7 +1840,7 @@ def _validate_resource_metadata(value: object) -> None:
                 f"fold result resource metadata has invalid {field}"
             )
     latencies = value["latency_seconds"]
-    if not isinstance(latencies, dict) or set(latencies) != set(METHODS):
+    if not isinstance(latencies, dict) or set(latencies) != set(methods):
         raise FullTrackEvaluationError("fold result latency metadata is incomplete")
     for method, stats in latencies.items():
         if not isinstance(stats, dict) or set(stats) != {"mean", "p50", "p95"}:
@@ -1446,6 +1859,230 @@ def _validate_resource_metadata(value: object) -> None:
             )
 
 
+def _expected_trained_result_metadata(
+    value: object, *, fold: int
+) -> Tuple[Tuple[str, ...], Dict[str, Dict[str, object]]]:
+    from .fulltrack_fusion import ABLATIONS as FUSION_ABLATIONS
+    from .fulltrack_fusion import CANDIDATE_KINDS as FUSION_CANDIDATE_KINDS
+
+    fields = {"schema_version", "ablations", "models"}
+    if not isinstance(value, dict) or set(value) != fields:
+        raise FullTrackEvaluationError("trained cache binding schema is incomplete")
+    if value.get("schema_version") != 1:
+        raise FullTrackEvaluationError("trained cache binding schema version drift")
+    ablations = value.get("ablations")
+    if (
+        not isinstance(ablations, list)
+        or not ablations
+        or len(ablations) != len(set(ablations))
+        or any(item not in FUSION_ABLATIONS for item in ablations)
+    ):
+        raise FullTrackEvaluationError("trained cache ablations are invalid")
+    models = value.get("models")
+    if not isinstance(models, list) or not models:
+        raise FullTrackEvaluationError("trained cache models are incomplete")
+
+    method_ids: List[str] = []
+    result_bindings: Dict[str, Dict[str, object]] = {}
+    for index, model in enumerate(models):
+        if not isinstance(model, dict) or set(model) != set(_TRAINED_CACHE_MODEL_FIELDS):
+            raise FullTrackEvaluationError(
+                f"trained cache model {index} schema is incomplete"
+            )
+        candidate_kind = model.get("candidate_kind")
+        seed = model.get("seed")
+        fold_index = model.get("fold_index")
+        if candidate_kind not in FUSION_CANDIDATE_KINDS:
+            raise FullTrackEvaluationError("trained cache candidate kind is invalid")
+        if isinstance(seed, bool) or not isinstance(seed, int) or seed < 0:
+            raise FullTrackEvaluationError("trained cache seed is invalid")
+        if fold_index != fold:
+            raise FullTrackEvaluationError("trained cache fold identity drift")
+        for field in (
+            "report_sha256",
+            "model_artifact_sha256",
+            "model_json_sha256",
+            "weights_npz_sha256",
+            "source_fingerprint",
+            "store_binding_sha256",
+            "training_config_sha256",
+            "job_config_sha256",
+        ):
+            _validate_sha256_hex(model.get(field), f"trained cache {field}")
+        for field in ("maxsim_budget", "embedding_dim"):
+            item = model.get(field)
+            if isinstance(item, bool) or not isinstance(item, int) or item <= 0:
+                raise FullTrackEvaluationError(
+                    f"trained cache {field} must be a positive integer"
+                )
+        for ablation in ablations:
+            method_id = _trained_method_id(candidate_kind, seed, ablation)
+            if method_id in result_bindings:
+                raise FullTrackEvaluationError(
+                    f"duplicate trained cache method ID: {method_id}"
+                )
+            method_ids.append(method_id)
+            result_bindings[method_id] = _trained_result_model_binding(
+                model, ablation
+            )
+    return tuple(method_ids), result_bindings
+
+
+def _validate_trained_result_metadata(
+    report: Mapping[str, object],
+    *,
+    fold: int,
+    expected_binding: Optional[Mapping[str, object]],
+) -> Tuple[str, ...]:
+    optional_fields = {
+        "trained_methods",
+        "trained_model_bindings",
+        "trained_paired_deltas",
+    }
+    present = set(report).intersection(optional_fields)
+    if present and present != optional_fields:
+        raise FullTrackEvaluationError("fold result has partial trained fields")
+
+    expected_trained = None
+    if expected_binding is not None:
+        expected_trained = expected_binding.get("trained_evaluation")
+        if (expected_trained is None) != (not present):
+            raise FullTrackEvaluationError(
+                "trained result does not match benchmark cache binding"
+            )
+    if not present:
+        return ()
+
+    raw_methods = report.get("trained_methods")
+    if (
+        not isinstance(raw_methods, list)
+        or not raw_methods
+        or any(not isinstance(method, str) or not method for method in raw_methods)
+        or len(raw_methods) != len(set(raw_methods))
+        or set(raw_methods).intersection(METHODS)
+    ):
+        raise FullTrackEvaluationError("trained_methods are invalid")
+    model_bindings = report.get("trained_model_bindings")
+    paired_deltas = report.get("trained_paired_deltas")
+    if (
+        not isinstance(model_bindings, dict)
+        or set(model_bindings) != set(raw_methods)
+        or not isinstance(paired_deltas, dict)
+        or set(paired_deltas) != set(raw_methods)
+    ):
+        raise FullTrackEvaluationError("trained result method alignment is incomplete")
+
+    store = report.get("store")
+    if not isinstance(store, dict):
+        raise FullTrackEvaluationError("trained result store binding is invalid")
+    store_binding_sha256 = stable_json_sha256(store)
+    for method in raw_methods:
+        details = model_bindings.get(method)
+        if (
+            not isinstance(details, dict)
+            or set(details) != set(_TRAINED_RESULT_MODEL_FIELDS)
+        ):
+            raise FullTrackEvaluationError(
+                f"trained result binding schema is incomplete for {method}"
+            )
+        candidate_kind = details.get("candidate_kind")
+        seed = details.get("seed")
+        ablation = details.get("ablation")
+        if (
+            isinstance(seed, bool)
+            or not isinstance(seed, int)
+            or seed < 0
+            or not isinstance(candidate_kind, str)
+            or not isinstance(ablation, str)
+            or method != _trained_method_id(candidate_kind, seed, ablation)
+        ):
+            raise FullTrackEvaluationError(
+                f"trained result method identity drift for {method}"
+            )
+        if details.get("fold_index") != fold or details.get("promoted") is not False:
+            raise FullTrackEvaluationError(
+                f"trained result fold/promotion identity drift for {method}"
+            )
+        for field in (
+            "model_artifact_sha256",
+            "model_json_sha256",
+            "weights_npz_sha256",
+            "report_sha256",
+            "source_fingerprint",
+            "store_binding_sha256",
+            "training_config_sha256",
+            "job_config_sha256",
+        ):
+            _validate_sha256_hex(details.get(field), f"trained result {field}")
+        if (
+            details.get("source_fingerprint") != report.get("source_fingerprint")
+            or details.get("store_binding_sha256") != store_binding_sha256
+        ):
+            raise FullTrackEvaluationError(
+                f"trained result source/store identity drift for {method}"
+            )
+        for field in ("maxsim_budget", "embedding_dim"):
+            item = details.get(field)
+            if isinstance(item, bool) or not isinstance(item, int) or item <= 0:
+                raise FullTrackEvaluationError(
+                    f"trained result {field} is invalid for {method}"
+                )
+        if (
+            details["embedding_dim"] != store.get("embedding_dim")
+            or details["maxsim_budget"] > store.get("repetition_sections", 0)
+            or details["maxsim_budget"] > store.get("salient_sections", 0)
+        ):
+            raise FullTrackEvaluationError(
+                f"trained result model/store dimensions drift for {method}"
+            )
+
+    if expected_trained is not None:
+        expected_methods, expected_model_bindings = _expected_trained_result_metadata(
+            expected_trained, fold=fold
+        )
+        if tuple(raw_methods) != expected_methods or model_bindings != expected_model_bindings:
+            raise FullTrackEvaluationError(
+                "trained result model identity differs from benchmark cache binding"
+            )
+    return tuple(raw_methods)
+
+
+def _validate_trained_paired_deltas(
+    report: Mapping[str, object],
+    query_map: Mapping[int, Mapping[str, Mapping[str, float]]],
+    *,
+    methods: Sequence[str],
+    bootstrap_iterations: int,
+    bootstrap_seed: int,
+) -> None:
+    if not methods:
+        return
+    expected: Dict[str, object] = {}
+    for method in methods:
+        expected[method] = {
+            "paired_candidate_minus_global": {
+                metric: _paired_bootstrap_delta(
+                    [query_map[key]["global_cosine"][metric] for key in query_map],
+                    [query_map[key][method][metric] for key in query_map],
+                    iterations=bootstrap_iterations,
+                    seed=bootstrap_seed,
+                )
+                for metric in METRICS
+            },
+            "paired_candidate_minus_frozen_hybrid": {
+                metric: _paired_bootstrap_delta(
+                    [query_map[key]["hybrid"][metric] for key in query_map],
+                    [query_map[key][method][metric] for key in query_map],
+                    iterations=bootstrap_iterations,
+                    seed=bootstrap_seed,
+                )
+                for metric in METRICS
+            },
+        }
+    if report.get("trained_paired_deltas") != expected:
+        raise FullTrackEvaluationError("trained paired comparisons are invalid")
+
+
 def _validate_aggregation_envelope(
     report: Mapping[str, object],
     *,
@@ -1453,6 +2090,7 @@ def _validate_aggregation_envelope(
     bootstrap_iterations: int,
     bootstrap_seed: int,
     expected_metadata: Optional[Mapping[str, object]] = None,
+    expected_binding: Optional[Mapping[str, object]] = None,
     require_uncertainty: bool = False,
 ) -> Dict[int, Dict[str, Dict[str, float]]]:
     result_fields = {
@@ -1473,9 +2111,21 @@ def _validate_aggregation_envelope(
         "grouped_metrics_notice",
         "resources",
     }
-    if not isinstance(report, Mapping) or set(report) != result_fields:
+    if not isinstance(report, Mapping):
+        raise FullTrackEvaluationError("fold result schema is incomplete")
+    report_keys = set(report)
+    trained_optional = {
+        "trained_methods",
+        "trained_model_bindings",
+        "trained_paired_deltas",
+    }
+    if report_keys - trained_optional != result_fields:
         raise FullTrackEvaluationError("fold result schema is incomplete")
     fold, budget = _validated_report_key(report)
+    trained_methods = _validate_trained_result_metadata(
+        report, fold=fold, expected_binding=expected_binding
+    )
+    active_methods_list = list(METHODS) + list(trained_methods)
     if (fold, budget) != expected_slot:
         raise FullTrackEvaluationError(
             "fold/budget identifiers do not match benchmark matrix slot "
@@ -1566,7 +2216,15 @@ def _validate_aggregation_envelope(
             f"fold {fold}, budget {budget} differs from current input metadata"
         )
     query_map = _validate_fold_result_consistency(
-        report, require_uncertainty=require_uncertainty
+        report, require_uncertainty=require_uncertainty,
+        methods=active_methods_list,
+    )
+    _validate_trained_paired_deltas(
+        report,
+        query_map,
+        methods=trained_methods,
+        bootstrap_iterations=bootstrap_iterations,
+        bootstrap_seed=bootstrap_seed,
     )
     records = report["query_records"]
     descriptors = [
@@ -1589,14 +2247,14 @@ def _validate_aggregation_envelope(
             f"fold {fold}, budget {budget} query descriptor binding drift"
         )
     if (
-        report.get("per_scene") != _grouped_metrics(records, "scene")
-        or report.get("per_tag") != _grouped_metrics(records, "tag")
+        report.get("per_scene") != _grouped_metrics(records, "scene", methods=active_methods_list)
+        or report.get("per_tag") != _grouped_metrics(records, "tag", methods=active_methods_list)
         or report.get("grouped_metrics_notice") != GROUPED_METRICS_NOTICE
     ):
         raise FullTrackEvaluationError(
             f"fold {fold}, budget {budget} grouped result metadata drift"
         )
-    _validate_resource_metadata(report.get("resources"))
+    _validate_resource_metadata(report.get("resources"), methods=active_methods_list)
     return query_map
 
 
@@ -1675,6 +2333,13 @@ def aggregate_all_fold_results(
         keyed[expected_slot] = report
         query_maps[expected_slot] = query_map
 
+    reference_trained_methods = keyed[expected_slots[0]].get("trained_methods", [])
+    for slot in expected_slots[1:]:
+        if keyed[slot].get("trained_methods", []) != reference_trained_methods:
+            raise FullTrackEvaluationError(
+                "trained method identity drift across benchmark runs"
+            )
+
     for fold in OFFICIAL_FOLDS:
         reference = set(query_maps[(fold, OFFICIAL_BUDGETS[0])])
         reference_candidate_tracks = keyed[(fold, OFFICIAL_BUDGETS[0])][
@@ -1683,6 +2348,9 @@ def aggregate_all_fold_results(
         reference_query_descriptor_hash = keyed[
             (fold, OFFICIAL_BUDGETS[0])
         ]["protocol"]["query_descriptor_sha256"]
+        reference_trained_bindings = keyed[(fold, OFFICIAL_BUDGETS[0])].get(
+            "trained_model_bindings"
+        )
         reference_diversity: Dict[str, object] = {}
         previous_repeating = {"repeated_sections": -1, "salient_sections": -1}
         for budget in OFFICIAL_BUDGETS[1:]:
@@ -1700,6 +2368,13 @@ def aggregate_all_fold_results(
             ):
                 raise FullTrackEvaluationError(
                     f"query descriptor drift across budgets for fold {fold}"
+                )
+            if (
+                keyed[(fold, budget)].get("trained_model_bindings")
+                != reference_trained_bindings
+            ):
+                raise FullTrackEvaluationError(
+                    f"trained model identity drift across budgets for fold {fold}"
                 )
         for budget in OFFICIAL_BUDGETS:
             effective = keyed[(fold, budget)]["protocol"][
@@ -1734,22 +2409,26 @@ def aggregate_all_fold_results(
     by_budget: Dict[str, object] = {}
     for budget in OFFICIAL_BUDGETS:
         per_fold: Dict[str, object] = {}
+        active_agg = list(METHODS)
+        first = keyed[(OFFICIAL_FOLDS[0], budget)]
+        if "trained_methods" in first:
+            active_agg = list(METHODS) + list(first["trained_methods"])
         pooled: Dict[str, Dict[str, List[float]]] = {
-            method: {metric: [] for metric in METRICS} for method in METHODS
+            method: {metric: [] for metric in METRICS} for method in active_agg
         }
         fold_metric_values: Dict[str, Dict[str, List[float]]] = {
-            method: {metric: [] for metric in METRICS} for method in METHODS
+            method: {metric: [] for metric in METRICS} for method in active_agg
         }
         pooled_query_keys: List[str] = []
         for fold in OFFICIAL_FOLDS:
             report = keyed[(fold, budget)]
             aggregate = report.get("aggregate")
-            if not isinstance(aggregate, dict) or set(aggregate) != set(METHODS):
+            if not isinstance(aggregate, dict) or set(aggregate) != set(active_agg):
                 raise FullTrackEvaluationError(
                     f"fold {fold}, budget {budget} has incomplete aggregate methods"
                 )
             fold_methods: Dict[str, Dict[str, float]] = {}
-            for method in METHODS:
+            for method in active_agg:
                 method_result = aggregate.get(method)
                 if not isinstance(method_result, dict):
                     raise FullTrackEvaluationError("method aggregate must be an object")
@@ -1766,7 +2445,7 @@ def aggregate_all_fold_results(
             records = query_maps[(fold, budget)]
             for track_id in sorted(records):
                 pooled_query_keys.append(f"{fold}:{track_id}")
-                for method in METHODS:
+                for method in active_agg:
                     for metric in METRICS:
                         pooled[method][metric].append(
                             records[track_id][method][metric]
@@ -1785,10 +2464,10 @@ def aggregate_all_fold_results(
                 metric: float(np.mean(fold_metric_values[method][metric]))
                 for metric in METRICS
             }
-            for method in METHODS
+            for method in active_agg
         }
         query_weighted: Dict[str, object] = {}
-        for method_index, method in enumerate(METHODS):
+        for method_index, method in enumerate(active_agg):
             metrics = {
                 metric: float(np.mean(pooled[method][metric])) for metric in METRICS
             }
@@ -1864,6 +2543,15 @@ def run_all_folds_benchmark(
     *,
     output_dir: Path,
     base_config: EvaluationConfig = EvaluationConfig(),
+    trained_root: Optional[Path] = None,
+    trained_candidates: Optional[Sequence[str]] = None,
+    trained_seeds: Optional[Sequence[int]] = None,
+    include_ablations: bool = True,
+    worker_fold: Optional[int] = None,
+    selection_budget: int = 8,
+    selection_primary_metric: str = "recall_at_k",
+    selection_list_id: str = "fulltrack-trained-candidates-v1",
+    selection_stability_threshold: float = 0.05,
 ) -> Tuple[Mapping[str, object], Mapping[str, int]]:
     """Run/resume the fixed five-fold by three-budget official benchmark matrix."""
     base_config.validate()
@@ -1879,6 +2567,17 @@ def run_all_folds_benchmark(
         )
     if base_config.query_limit is not None:
         raise FullTrackEvaluationError("official all-fold benchmark forbids query limits")
+    if worker_fold is not None and (
+        isinstance(worker_fold, bool)
+        or not isinstance(worker_fold, int)
+        or worker_fold not in OFFICIAL_FOLDS
+    ):
+        raise FullTrackEvaluationError(
+            f"worker fold must be one of {OFFICIAL_FOLDS}"
+        )
+    benchmark_folds = (
+        OFFICIAL_FOLDS if worker_fold is None else (worker_fold,)
+    )
     required_budget = max(OFFICIAL_BUDGETS)
     if (
         reader.binding.repetition_sections < required_budget
@@ -1971,17 +2670,74 @@ def run_all_folds_benchmark(
                 query_descriptor_sha256=query_descriptor_hash,
             )
 
+    # --- Load trained models if --trained-root supplied ---
+    trained_bindings_by_fold: Dict[int, List[_TrainedModelBinding]] = {}
+    if trained_root is not None:
+        from .fulltrack_train import DEFAULT_SEEDS
+        from .fulltrack_fusion import CANDIDATE_KINDS as FUSION_CANDIDATE_KINDS
+        actual_candidates = list(trained_candidates or FUSION_CANDIDATE_KINDS)
+        actual_seeds = list(trained_seeds or DEFAULT_SEEDS)
+        if (
+            not actual_candidates
+            or len(actual_candidates) != len(set(actual_candidates))
+            or any(item not in FUSION_CANDIDATE_KINDS for item in actual_candidates)
+        ):
+            raise FullTrackEvaluationError(
+                "trained candidates must be distinct supported fusion kinds"
+            )
+        if (
+            not actual_seeds
+            or len(actual_seeds) != len(set(actual_seeds))
+            or any(
+                isinstance(item, bool) or not isinstance(item, int) or item < 0
+                for item in actual_seeds
+            )
+        ):
+            raise FullTrackEvaluationError(
+                "trained seeds must be distinct non-negative integers"
+            )
+        src_fp = context.source_fingerprint
+        sb_sha = stable_json_sha256(_evaluation_store_binding(reader))
+        store_edim = int(reader.binding.embedding_dim)
+        store_rep = int(reader.binding.repetition_sections)
+        store_sal = int(reader.binding.salient_sections)
+        for fold in benchmark_folds:
+            bindings: List[_TrainedModelBinding] = []
+            for ck in actual_candidates:
+                for sd in actual_seeds:
+                    tb = load_trained_model_for_fold(
+                        Path(trained_root),
+                        fold_index=fold, candidate_kind=ck, seed=sd,
+                        expected_source_fingerprint=src_fp,
+                        expected_store_binding_sha256=sb_sha,
+                        store_embedding_dim=store_edim,
+                        store_repetition_sections=store_rep,
+                        store_salient_sections=store_sal,
+                    )
+                    bindings.append(tb)
+            trained_bindings_by_fold[fold] = bindings
+
     reports: List[Mapping[str, object]] = []
     artifacts: List[Mapping[str, object]] = []
     computed = 0
     reused = 0
-    for fold in OFFICIAL_FOLDS:
+    for fold in benchmark_folds:
         for budget in OFFICIAL_BUDGETS:
             config = replace(
                 base_config, fold_index=fold, maxsim_budget=budget, query_limit=None
             )
-            binding = _benchmark_result_binding(context, reader, config)
-            path = _benchmark_result_path(output_dir, fold, budget)
+            tb_fold = trained_bindings_by_fold.get(fold)
+            binding = _benchmark_result_binding(
+                context,
+                reader,
+                config,
+                trained_bindings=tb_fold,
+                include_ablations=include_ablations,
+            )
+            if trained_root is not None:
+                path = _safe_output_path(output_dir / f"fold-{fold}_budget-{budget}_trained.json")
+            else:
+                path = _benchmark_result_path(output_dir, fold, budget)
             expected_metadata = expected_metadata_by_slot[(fold, budget)]
             result = _load_valid_benchmark_result(
                 path, binding, expected_metadata
@@ -1994,6 +2750,8 @@ def run_all_folds_benchmark(
                     expected_query_descriptor_hash=expected_metadata["protocol"][
                         "query_descriptor_sha256"
                     ],
+                    trained_bindings=tb_fold if tb_fold else None,
+                    include_ablations=include_ablations,
                 )
                 _write_benchmark_result(path, binding, result)
                 computed += 1
@@ -2010,6 +2768,19 @@ def run_all_folds_benchmark(
                 }
             )
 
+    if worker_fold is not None:
+        worker_result: Dict[str, object] = {
+            "schema_version": 1,
+            "artifact_kind": "fulltrack_fold_benchmark_worker",
+            "source_fingerprint": context.source_fingerprint,
+            "fold": worker_fold,
+            "result_artifacts": artifacts,
+        }
+        worker_result["worker_payload_sha256"] = stable_json_sha256(
+            worker_result
+        )
+        return worker_result, {"computed": computed, "reused": reused}
+
     aggregate = aggregate_all_fold_results(
         reports,
         bootstrap_iterations=base_config.bootstrap_iterations,
@@ -2024,6 +2795,13 @@ def run_all_folds_benchmark(
             "query_limit": None,
         }
     )
+    if trained_root is not None:
+        benchmark_config["selection"] = {
+            "deciding_budget": selection_budget,
+            "primary_metric": selection_primary_metric,
+            "list_id": selection_list_id,
+            "cross_seed_stability_threshold": selection_stability_threshold,
+        }
     summary: Dict[str, object] = {
         "schema_version": BENCHMARK_SCHEMA_VERSION,
         "evidence_scope": EVIDENCE_SCOPE,
@@ -2034,8 +2812,58 @@ def run_all_folds_benchmark(
         "result_artifacts": artifacts,
         "aggregate": aggregate,
     }
+    if trained_root is not None:
+        trained_summary_entries: List[Dict[str, object]] = []
+        for fold in OFFICIAL_FOLDS:
+            for tb in trained_bindings_by_fold.get(fold, []):
+                trained_summary_entries.append({
+                    "schema_version": 1,
+                    "artifact_kind": "fulltrack_trained_candidate_identity",
+                    "candidate_kind": tb.candidate_kind,
+                    "fold": tb.fold_index,
+                    "seed": tb.seed,
+                    "model_artifact_sha256": tb.model_artifact_sha256,
+                    "evaluation_identity": {
+                        "source_fingerprint": tb.source_fingerprint,
+                        "store_binding_sha256": tb.store_binding_sha256,
+                    },
+                    "evaluation_identity_sha256": stable_json_sha256({
+                        "source_fingerprint": tb.source_fingerprint,
+                        "store_binding_sha256": tb.store_binding_sha256,
+                    }),
+                    "promoted": False,
+                })
+        summary["trained_cross_seed_entries"] = trained_summary_entries
+        from .fulltrack_selection import (
+            FullTrackSelectionError,
+            build_selection_inputs,
+            write_selection_inputs,
+        )
+
+        try:
+            candidate_list, candidate_evaluations = build_selection_inputs(
+                reports,
+                deciding_budget=selection_budget,
+                primary_metric=selection_primary_metric,
+                list_id=selection_list_id,
+                stability_threshold=selection_stability_threshold,
+            )
+            selection_manifest = write_selection_inputs(
+                output_dir / "selection", candidate_list, candidate_evaluations
+            )
+        except (FullTrackSelectionError, OSError) as exc:
+            raise FullTrackEvaluationError(
+                f"selector export failed: {exc}"
+            ) from exc
+        summary["selection_inputs"] = {
+            "directory": "selection",
+            **selection_manifest,
+        }
+        summary_path = output_dir / "benchmark-summary-trained.json"
+    else:
+        summary_path = output_dir / "benchmark-summary.json"
     summary["summary_payload_sha256"] = stable_json_sha256(summary)
-    write_evaluation_report(output_dir / "benchmark-summary.json", summary)
+    write_evaluation_report(summary_path, summary)
     return summary, {"computed": computed, "reused": reused}
 
 
@@ -2201,16 +3029,44 @@ def _all_folds_command(args: argparse.Namespace) -> int:
         Path(args.store),
         expected_source_fingerprint=context.source_fingerprint,
     ) as reader:
+        trained_root = Path(args.trained_root) if args.trained_root else None
         summary, resume = run_all_folds_benchmark(
             context,
             reader,
             output_dir=Path(args.output_dir),
             base_config=config,
+            trained_root=trained_root,
+            trained_candidates=args.trained_candidate,
+            trained_seeds=args.trained_seed,
+            include_ablations=not args.no_ablations,
+            worker_fold=args.worker_fold,
+            selection_budget=args.selection_budget,
+            selection_primary_metric=args.selection_primary_metric,
+            selection_list_id=args.selection_list_id,
+            selection_stability_threshold=args.selection_stability_threshold,
         )
+    if args.worker_fold is not None:
+        print(
+            json.dumps(
+                {
+                    "output_dir": str(Path(args.output_dir)),
+                    "worker_fold": args.worker_fold,
+                    "worker_payload_sha256": summary["worker_payload_sha256"],
+                    **resume,
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
+    summary_name = (
+        "benchmark-summary-trained.json" if trained_root is not None
+        else "benchmark-summary.json"
+    )
     print(
         json.dumps(
             {
-                "output": str(Path(args.output_dir) / "benchmark-summary.json"),
+                "output": str(Path(args.output_dir) / summary_name),
                 "summary_payload_sha256": summary["summary_payload_sha256"],
                 **resume,
             },
@@ -2276,6 +3132,60 @@ def build_parser() -> argparse.ArgumentParser:
     )
     all_folds.add_argument("--min-shared-tags", type=int, default=2)
     all_folds.add_argument("--min-tag-jaccard", type=float, default=0.25)
+    all_folds.add_argument(
+        "--trained-root", type=str, default=None,
+        help="training matrix root with fold-N/candidate/seed-S/ layout",
+    )
+    all_folds.add_argument(
+        "--trained-candidate",
+        action="append",
+        choices=(
+            "nonnegative_linear",
+            "monotonic_network",
+            "channel_gated_embedding",
+        ),
+        default=None,
+        help="repeatable: candidate kinds to evaluate (default: all three)",
+    )
+    all_folds.add_argument(
+        "--trained-seed", action="append", type=int, default=None,
+        help="repeatable: seeds to evaluate (default: trainer default seeds)",
+    )
+    all_folds.add_argument(
+        "--no-ablations", action="store_true", default=False,
+        help="disable ablation variants (global_only, no_sections)",
+    )
+    all_folds.add_argument(
+        "--worker-fold",
+        type=int,
+        choices=OFFICIAL_FOLDS,
+        default=None,
+        help="compute one fold's reusable artifacts without aggregate finalization",
+    )
+    all_folds.add_argument(
+        "--selection-budget",
+        type=int,
+        choices=OFFICIAL_BUDGETS,
+        default=8,
+        help="preregister the benchmark budget exported to model selection",
+    )
+    all_folds.add_argument(
+        "--selection-primary-metric",
+        choices=METRICS,
+        default="recall_at_k",
+        help="preregister the primary automated metric for model selection",
+    )
+    all_folds.add_argument(
+        "--selection-list-id",
+        default="fulltrack-trained-candidates-v1",
+        help="stable identifier bound into the candidate list",
+    )
+    all_folds.add_argument(
+        "--selection-stability-threshold",
+        type=float,
+        default=0.05,
+        help="maximum cross-seed standard deviation (cannot exceed 0.05)",
+    )
     all_folds.set_defaults(handler=_all_folds_command)
 
     commercial = subparsers.add_parser("commercial-v6-replay")
