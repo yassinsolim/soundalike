@@ -337,6 +337,49 @@ artifact from at least three independent human raters, `promotion_allowed` remai
 `false`. This research workflow does not deploy a model or establish commercial
 use rights.
 
+## Full-track blind pilot pack
+
+The v2 pack builder is a post-training, read-only step. It opens the sealed
+55,701-track store and exactly one official test fold, verifies the seed and every
+ranked result against the source/license records, loads one exact seed-17 artifact
+from each candidate family, and verifies every first-party Jamendo stream with a
+bounded HTTPS `HEAD` request. It never writes audio or changes the production
+recommender.
+
+Keep the blinding key, tempo cache, and private unblinding document outside Git.
+Create the key only on the first run; subsequent runs must reuse it so identical
+inputs produce byte-identical public and private documents:
+
+```powershell
+$pilotRoot = 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\fulltrack-v2-pilot'
+
+& $python -m soundalike.ml.fulltrack_pilot build `
+  --metadata-root 'C:\soundalike-data\mtg-jamendo-dataset' `
+  --audio-root 'C:\soundalike-data\mtg-jamendo-raw-full\audio' `
+  --state-root 'C:\soundalike-data\mtg-jamendo-raw-full\state' `
+  --store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\clap-v1-full-55701' `
+  --trained-root 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\fusion-v1' `
+  --public-output "$pilotRoot\public-pack.json" `
+  --private-output "$pilotRoot\private-unblinding.private.json" `
+  --tempo-cache "$pilotRoot\tempo-cache.private.json" `
+  --blinding-key "$pilotRoot\blinding-key.private" `
+  --fold 0 --model-seed 17 --candidate-pool 200 `
+  --shortlist-per-scene 8 --verify-public-audio --audio-workers 8
+```
+
+Use `--create-blinding-key` only if the key does not yet exist. The builder fails
+closed instead of replacing it. Validate any retained pair before use:
+
+```powershell
+& $python -m soundalike.ml.fulltrack_pilot validate `
+  --public "$pilotRoot\public-pack.json" `
+  --private "$pilotRoot\private-unblinding.private.json"
+```
+
+Only the public pack may be copied into a tracked/deployed location. It contains
+opaque per-seed list IDs and keyed commitments, but no model names, key, private
+method map, ratings, or audio. The private document is analyst-only.
+
 To inspect an already-exported commercial v6 replay without opening signed state:
 
 ```powershell
