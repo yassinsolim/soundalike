@@ -48,6 +48,10 @@ fulltrack = [
     "numpy>=1.23.5,<2",
     "psutil>=5.9",
 ]
+# MusicFM itself is loaded from a separately pinned source checkout and checkpoint.
+musicfm = [
+    "einops>=0.6,<1",
+]
 # Everything, for development.
 dev = [
     "matplotlib>=3.6",

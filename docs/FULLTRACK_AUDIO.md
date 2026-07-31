@@ -40,6 +40,49 @@ instead of downloading. A generic music-model protocol exists,
 but no second concrete model is enabled because no second package/checkpoint/
 license/CUDA combination has been verified.
 
+## V3 MusicFM-FMA representation canary
+
+The v3 experiment is isolated in `fulltrack_musicfm.py`; it does not modify the
+CLAP store or authorize promotion. It accepts only:
+
+- MusicFM source commit `b83ebedb401bcef639b26b05c0c8bee1dc2dfe71`;
+- Hugging Face model revision `4513b38bc25ad1d227b1980819b9691ba97f4d87`;
+- the FMA checkpoint SHA-256 `68392eee13d34c2941b3761934abb6b1e67b2e9df498695bda2ea5c1087d4b96`;
+- the FMA normalization stats and pinned Wav2Vec2 conformer config; and
+- CUDA plus concrete local files. The adapter never downloads during extraction.
+
+The model card declares MIT, the source is MIT/Apache-2.0, and the authors state
+that the FMA checkpoint was released to avoid the licensing complications of
+the separate MSD checkpoint. This is still a non-commercial Jamendo research
+experiment; the MSD checkpoint is not accepted.
+
+Install the small adapter dependency and verify assets before model allocation:
+
+```powershell
+$python = 'C:\Users\solim\Spotify-Statistics\.venv\Scripts\python.exe'
+& $python -m pip install -e '.[ml,fulltrack,musicfm]'
+& $python -m soundalike.ml.fulltrack_musicfm capability `
+  --assets 'C:\soundalike-data\model-assets\musicfm-fma'
+```
+
+Run a one-track smoke extraction into a new, disposable store:
+
+```powershell
+& $python -m soundalike.ml.fulltrack_musicfm extract `
+  --metadata-root 'C:\soundalike-data\mtg-jamendo-dataset' `
+  --audio-root 'C:\soundalike-data\mtg-jamendo-raw-full\audio' `
+  --state-root 'C:\soundalike-data\mtg-jamendo-raw-full\state' `
+  --assets 'C:\soundalike-data\model-assets\musicfm-fma' `
+  --output 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\musicfm-fma-smoke' `
+  --max-tracks 1
+```
+
+MusicFM uses 30-second, 24-kHz windows with a 15-second hop and layer-7
+representations. Frame embeddings are time-mean-pooled and L2-normalized into
+1024 dimensions. The store binding includes every asset hash, package version,
+layer, and extraction parameter. A full run must use a separate
+`musicfm-fma-v1` output, then replay the existing five-fold evaluator unchanged.
+
 ## Required local dataset
 
 Default paths:
