@@ -2,6 +2,7 @@
   "schema_version": 1,
   "iteration": 3,
   "prepared_at": "2026-07-31T00:51:08.617-06:00",
+  "recorded_at": "2026-07-31T07:01:33.6264669Z",
   "branch": "feat/fulltrack-fusion-training",
   "initial_sha": "f5531266c39e71813578fd7fe01130f687ee786f",
   "pre_push": {
@@ -17,16 +18,66 @@
     }
   },
   "external_release": {
-    "status": "pending",
-    "pull_request": null,
-    "merge_sha": null,
-    "production_deployment": null
+    "status": "completed",
+    "pull_request": {
+      "number": 36,
+      "url": "https://github.com/yassinsolim/soundalike/pull/36",
+      "head_sha": "b714aefa4fc613a3f1896b5476667f0826b8a752",
+      "checks": {
+        "Vercel": "success",
+        "Vercel Preview Comments": "success"
+      }
+    },
+    "merge_sha": "3195d991a166eff64e687e9b3de44e7a5589d815",
+    "merged_at": "2026-07-31T06:55:35Z",
+    "production_deployment": {
+      "id": "dpl_3wz1Ui8844hYamDBfjGgrCtsLuTx",
+      "status": "ready",
+      "github_status": "success",
+      "deployment_url": "https://soundalike-a1b75a2t3-yassins-projects-11732a5e.vercel.app",
+      "custom_url": "https://soundalike.yassin.app"
+    }
   },
   "live_verification": {
-    "status": "pending"
+    "status": "passed",
+    "routes": {
+      "/evaluate": "HTTP 200; full-track v2; 20 seeds; locked protocol and pack loaded",
+      "/evaluate-v1": "HTTP 200; byte-retained v17; protocol and served lists loaded",
+      "/api/ratings-v2 GET": "HTTP 405",
+      "/api/ratings-v2 invalid POST": "HTTP 400 with redacted error"
+    },
+    "security_headers": "CSP, HSTS, no-store, DENY, and nosniff present",
+    "desktop": "1440x900; both routes loaded without horizontal overflow",
+    "mobile": "390x844 at 3x; both routes had no horizontal overflow and 44px minimum buttons",
+    "jamendo_playback": {
+      "technical_check_only": true,
+      "listening_judgment_made": false,
+      "host": "prod-1.storage.jamendo.com",
+      "http_status": 206,
+      "ready_state": 4,
+      "muted": true,
+      "playback_time_advanced": true
+    },
+    "resume": "synthetic local test state survived reload in separate v17 and v2 namespaces",
+    "blinding": "no method-family identity in visible UI or public JSON; attribution links absent before rating",
+    "console_network": "v2 had no errors; v1 only showed its inherited meta-CSP warning; expected assets and API calls completed",
+    "local_test_state_cleared": true
   },
   "private_inbox_lifecycle": {
-    "status": "pending",
+    "status": "completed",
+    "explicit_test_snapshot": true,
+    "test_was_synthetic": true,
+    "listening_judgment_made": false,
+    "v17_prefix_count_before_test": 0,
+    "v2_prefix_count_before_test": 0,
+    "test_receipt_sha256": "c12ace6567b6eeaabfa3c4a944e05d1cb2be849db3d2d8f14e3e6259940a7ea6",
+    "v2_analyst_workflow": "1 downloaded, 0 already present; strict validation passed",
+    "v1_analyst_workflow": "0 downloaded, 0 already present",
+    "v1_isolation_proved": true,
+    "exact_object_deleted": true,
+    "v17_prefix_count_after_delete": 0,
+    "v2_prefix_count_after_delete": 0,
+    "local_private_inboxes_removed": true,
     "contains_private_ratings": false,
     "contains_credentials": false
   }
