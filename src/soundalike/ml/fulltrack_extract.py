@@ -204,8 +204,8 @@ class PyAVAudioDecoder:
             raise FullTrackExtractionError("PyAV import failed") from exc
         pending = np.empty(0, dtype=np.float32)
         try:
-            container = av.open(str(path), mode="r")
-        except (av.error.FFmpegError, OSError) as exc:
+            container = av.open(str(path), mode="r", metadata_errors="replace")
+        except (av.error.FFmpegError, OSError, UnicodeError) as exc:
             raise FullTrackExtractionError(f"cannot open audio {path}: {exc}") from exc
         with container:
             audio_streams = list(container.streams.audio)

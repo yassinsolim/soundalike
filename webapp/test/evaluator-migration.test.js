@@ -5,15 +5,15 @@ import test from "node:test";
 import vm from "node:vm";
 
 const html = readFileSync(
-  new URL("../evaluate/index.html", import.meta.url),
+  new URL("../evaluate-v1/index.html", import.meta.url),
   "utf8",
 );
 const script = html.match(/<script>\s*([\s\S]*?)\s*<\/script>/)?.[1];
 const protocol = JSON.parse(
-  readFileSync(new URL("../evaluate/protocol.json", import.meta.url), "utf8"),
+  readFileSync(new URL("../evaluate-v1/protocol.json", import.meta.url), "utf8"),
 );
 const lists = JSON.parse(
-  readFileSync(new URL("../evaluate/served-lists.json", import.meta.url), "utf8"),
+  readFileSync(new URL("../evaluate-v1/served-lists.json", import.meta.url), "utf8"),
 );
 const V16_PROTOCOL =
   "c94ce615c68cde595b4e48ac5010297d76bedbed52948b10d315a39286117727";
@@ -81,9 +81,9 @@ function evaluatorContext() {
     location: {
       hash: "",
       hostname: "localhost",
-      href: "http://localhost:8788/evaluate/",
+      href: "http://localhost:8788/evaluate-v1/",
       origin: "http://localhost:8788",
-      pathname: "/evaluate/",
+      pathname: "/evaluate-v1/",
       protocol: "http:",
       search: "",
     },

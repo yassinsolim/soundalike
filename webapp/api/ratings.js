@@ -101,10 +101,10 @@ const INTEGRITY_NOTICE =
   "Local-key HMAC provides integrity, not identity or authenticity; the key is included in this export.";
 
 const servedLists = strictJsonParse(
-  readFileSync(new URL("../evaluate/served-lists.json", import.meta.url), "utf8"),
+  readFileSync(new URL("../evaluate-v1/served-lists.json", import.meta.url), "utf8"),
 );
 const protocol = strictJsonParse(
-  readFileSync(new URL("../evaluate/protocol.json", import.meta.url), "utf8"),
+  readFileSync(new URL("../evaluate-v1/protocol.json", import.meta.url), "utf8"),
 );
 
 export function canonical(value) {

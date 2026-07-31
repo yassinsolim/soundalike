@@ -1,9 +1,9 @@
 import copy
 import hashlib
 import json
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
-from types import MappingProxyType
+from types import MappingProxyType, SimpleNamespace
 
 import numpy as np
 import pytest
@@ -19,14 +19,19 @@ from soundalike.ml.fulltrack_eval import (
     FullTrackEvaluationError,
     METHODS,
     METRICS,
+    _benchmark_result_binding,
     _evaluation_protocol,
     _evaluation_store_binding,
     _grouped_metrics,
     _load_valid_benchmark_result,
     _method_ranking,
+    _paired_bootstrap_delta,
     _query_metrics,
     _query_descriptor_sha256,
     _scene_for_tag,
+    _score_trained_candidate_pool,
+    _trained_method_id,
+    _TrainedModelBinding,
     _write_benchmark_result,
     aggregate_all_fold_results,
     build_parser,
@@ -35,8 +40,20 @@ from soundalike.ml.fulltrack_eval import (
     freeze_ranked_section_budget,
     hybrid_score,
     load_commercial_v6_replay,
+    load_trained_model_for_fold,
     run_all_folds_benchmark,
     write_evaluation_report,
+)
+from soundalike.ml.fulltrack_fusion import (
+    FEATURE_DIM,
+    FusionConfig,
+    FusionModel,
+    build_nonneg_linear,
+)
+from soundalike.ml.fulltrack_selection import (
+    FullTrackSelectionError,
+    build_selection_inputs,
+    write_selection_inputs,
 )
 from soundalike.ml.fulltrack_store import (
     FullTrackStore,
@@ -54,6 +71,62 @@ from soundalike.ml.jamendo_fulltrack import (
 
 
 HASH = hashlib.sha256(b"fixture").hexdigest()
+
+
+def test_trained_pool_shares_pair_features_without_changing_scores(monkeypatch):
+    def track(offset):
+        windows = np.asarray(
+            [[1.0, offset], [offset, 1.0]], dtype=np.float32
+        )
+        windows /= np.linalg.norm(windows, axis=1, keepdims=True)
+        return SimpleNamespace(
+            global_embedding=windows.mean(axis=0),
+            window_embeddings=windows,
+            repeated_sections=windows,
+            salient_sections=windows[::-1],
+            repeated_indices=np.asarray([0, 1], dtype=np.int64),
+            salient_indices=np.asarray([1, 0], dtype=np.int64),
+        )
+
+    config = FusionConfig(
+        kind="nonnegative_linear",
+        embedding_dim=2,
+        maxsim_budget=2,
+        model_id="shared-feature-test",
+        store_id="test-store",
+        config_sha256=HASH,
+    )
+    first = build_nonneg_linear(np.ones(FEATURE_DIM), config)
+    second = build_nonneg_linear(
+        np.arange(1, FEATURE_DIM + 1, dtype=np.float64), config
+    )
+    query = track(0.1)
+    candidates = [track(0.2), track(0.3), track(0.4)]
+    expected = {
+        "first": first.score_candidates(query, candidates),
+        "second": second.score_candidates(query, candidates),
+    }
+    calls = 0
+    original = FusionModel.extract_pair_features
+
+    def counted_extract(model, query_track, candidate_track):
+        nonlocal calls
+        calls += 1
+        return original(model, query_track, candidate_track)
+
+    monkeypatch.setattr(FusionModel, "extract_pair_features", counted_extract)
+    bindings = {
+        "first": (SimpleNamespace(model=first), "none"),
+        "second": (SimpleNamespace(model=second), "none"),
+    }
+    actual, latencies = _score_trained_candidate_pool(
+        query, candidates, bindings
+    )
+
+    assert calls == len(candidates)
+    assert set(latencies) == set(bindings)
+    for method_id in bindings:
+        np.testing.assert_array_equal(actual[method_id], expected[method_id])
 
 
 def test_fixed_budget_maxsim_prevents_candidate_length_advantage():
@@ -177,7 +250,7 @@ def _unit(index: int) -> np.ndarray:
     return value
 
 
-def test_artist_disjoint_evaluation_reports_metrics_labels_and_resources(tmp_path):
+def test_artist_disjoint_evaluation_reports_baseline_and_trained_metrics(tmp_path):
     tracks = (
         _track(0, "genre---rock"),
         _track(1, "genre---rock"),
@@ -257,6 +330,71 @@ def test_artist_disjoint_evaluation_reports_metrics_labels_and_resources(tmp_pat
                     ),
                 )
             )
+        store_binding_sha256 = stable_json_sha256(_evaluation_store_binding(reader))
+        trained_model = build_nonneg_linear(
+            np.ones(FEATURE_DIM, dtype=np.float64),
+            FusionConfig(
+                kind="nonnegative_linear",
+                embedding_dim=4,
+                maxsim_budget=8,
+                seed=17,
+                model_id="fixture-trained",
+                store_id=store_binding_sha256,
+                config_sha256=HASH,
+                fold_index=0,
+            ),
+        )
+        trained_binding = _TrainedModelBinding(
+            candidate_kind="nonnegative_linear",
+            seed=17,
+            fold_index=0,
+            model=trained_model,
+            report_sha256=HASH,
+            model_artifact_sha256=HASH,
+            model_json_sha256=HASH,
+            weights_npz_sha256=HASH,
+            source_fingerprint=HASH,
+            store_binding_sha256=store_binding_sha256,
+            training_config_sha256=HASH,
+            job_config_sha256=HASH,
+            fusion_metadata={},
+            maxsim_budget=8,
+            embedding_dim=4,
+        )
+        trained_config = EvaluationConfig(
+            maxsim_budget=8,
+            candidate_pool=3,
+            bootstrap_iterations=50,
+            max_feature_cache_bytes=1024 * 1024,
+            min_shared_tags=1,
+            min_tag_jaccard=1.0,
+        )
+        trained_report = evaluate_jamendo(
+            context,
+            reader,
+            config=trained_config,
+            trained_bindings=[trained_binding],
+            include_ablations=False,
+        )
+        trained_cache_binding = _benchmark_result_binding(
+            context,
+            reader,
+            trained_config,
+            trained_bindings=[trained_binding],
+            include_ablations=False,
+        )
+        changed_cache_binding = _benchmark_result_binding(
+            context,
+            reader,
+            trained_config,
+            trained_bindings=[
+                replace(
+                    trained_binding,
+                    model_artifact_sha256=hashlib.sha256(b"other-model").hexdigest(),
+                )
+            ],
+            include_ablations=False,
+        )
     report = reports[-1]
     assert [item["protocol"]["maxsim_budget"] for item in reports] == [8, 16, 32]
     assert report["evidence_scope"] == EVIDENCE_SCOPE
@@ -286,6 +424,68 @@ def test_artist_disjoint_evaluation_reports_metrics_labels_and_resources(tmp_pat
         ]["paired_bootstrap_ci95"]
     ) == 2
     assert "multiple comparisons" in report["grouped_metrics_notice"]
+
+    trained_method = _trained_method_id("nonnegative_linear", 17, "none")
+    assert trained_report["trained_methods"] == [trained_method]
+    assert trained_method in trained_report["aggregate"]
+    assert trained_method in trained_report["query_records"][0]["metrics"]
+    assert trained_method in trained_report["per_scene"]["genre"]["methods"]
+    assert trained_method in trained_report["resources"]["latency_seconds"]
+    assert trained_report["trained_model_bindings"][trained_method]["promoted"] is False
+    assert set(trained_report["trained_paired_deltas"][trained_method]) == {
+        "paired_candidate_minus_global",
+        "paired_candidate_minus_frozen_hybrid",
+    }
+    assert trained_cache_binding["trained_evaluation"] != changed_cache_binding[
+        "trained_evaluation"
+    ]
+
+    expected_metadata = {
+        key: trained_report[key]
+        for key in (
+            "schema_version",
+            "evidence_scope",
+            "dataset",
+            "lawful_use",
+            "source_fingerprint",
+            "store",
+            "protocol",
+            "candidate_tracks",
+        )
+    }
+    cache_path = tmp_path / "trained-cache.json"
+    _write_benchmark_result(cache_path, trained_cache_binding, trained_report)
+    assert (
+        _load_valid_benchmark_result(
+            cache_path, trained_cache_binding, expected_metadata
+        )
+        == trained_report
+    )
+
+    artifact = json.loads(cache_path.read_text(encoding="utf-8"))
+    artifact["result"]["trained_model_bindings"][trained_method][
+        "model_artifact_sha256"
+    ] = hashlib.sha256(b"forged-model").hexdigest()
+    _rewrite_artifact(cache_path, artifact)
+    assert (
+        _load_valid_benchmark_result(
+            cache_path, trained_cache_binding, expected_metadata
+        )
+        is None
+    )
+
+    _write_benchmark_result(cache_path, trained_cache_binding, trained_report)
+    artifact = json.loads(cache_path.read_text(encoding="utf-8"))
+    artifact["result"]["trained_paired_deltas"][trained_method][
+        "paired_candidate_minus_frozen_hybrid"
+    ]["mrr"]["mean_delta"] += 0.01
+    _rewrite_artifact(cache_path, artifact)
+    assert (
+        _load_valid_benchmark_result(
+            cache_path, trained_cache_binding, expected_metadata
+        )
+        is None
+    )
 
 
 def test_evaluation_rejects_store_declaring_too_few_sections(tmp_path):
@@ -357,6 +557,39 @@ def test_evaluation_rejects_store_declaring_too_few_sections(tmp_path):
                     min_tag_jaccard=1.0,
                 ),
             )
+
+
+def test_trained_model_loader_rejects_unsafe_identity_before_read(tmp_path):
+    root = tmp_path / "trained"
+    root.mkdir()
+    common = {
+        "trained_root": root,
+        "fold_index": 0,
+        "candidate_kind": "nonnegative_linear",
+        "seed": 17,
+        "expected_source_fingerprint": HASH,
+        "expected_store_binding_sha256": HASH,
+        "store_embedding_dim": 4,
+        "store_repetition_sections": 32,
+        "store_salient_sections": 32,
+    }
+    with pytest.raises(FullTrackEvaluationError, match="unknown trained candidate"):
+        load_trained_model_for_fold(
+            **{**common, "candidate_kind": "../outside"}
+        )
+    with pytest.raises(FullTrackEvaluationError, match="non-negative"):
+        load_trained_model_for_fold(**{**common, "seed": -1})
+
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    linked_job = root / "fold-0" / "nonnegative_linear" / "seed-17"
+    linked_job.parent.mkdir(parents=True)
+    try:
+        linked_job.symlink_to(outside, target_is_directory=True)
+    except OSError:
+        return
+    with pytest.raises(FullTrackEvaluationError, match="escapes"):
+        load_trained_model_for_fold(**common)
 
 
 def _all_fold_fixture(
@@ -558,6 +791,107 @@ def _synthetic_all_fold_reports():
     return reports
 
 
+def _with_synthetic_trained_method(reports):
+    methods = [
+        _trained_method_id("nonnegative_linear", seed, "none")
+        for seed in (17, 29, 43)
+    ]
+    for report in reports:
+        fold = report["protocol"]["fold_index"]
+        for record in report["query_records"]:
+            for method in methods:
+                record["metrics"][method] = dict(record["metrics"]["hybrid"])
+        for method in methods:
+            report["aggregate"][method] = {
+                "metrics": {
+                    metric: float(
+                        np.mean(
+                            [
+                                record["metrics"][method][metric]
+                                for record in report["query_records"]
+                            ]
+                        )
+                    )
+                    for metric in METRICS
+                }
+            }
+        report["trained_methods"] = methods
+        report["trained_model_bindings"] = {}
+        report["trained_paired_deltas"] = {}
+        for seed, method in zip((17, 29, 43), methods):
+            report["trained_model_bindings"][method] = {
+                "candidate_kind": "nonnegative_linear",
+                "seed": seed,
+                "fold_index": fold,
+                "ablation": "none",
+                "model_artifact_sha256": hashlib.sha256(
+                    f"model-fold-{fold}-seed-{seed}".encode()
+                ).hexdigest(),
+                "model_json_sha256": hashlib.sha256(
+                    f"model-json-fold-{fold}-seed-{seed}".encode()
+                ).hexdigest(),
+                "weights_npz_sha256": hashlib.sha256(
+                    f"weights-fold-{fold}-seed-{seed}".encode()
+                ).hexdigest(),
+                "report_sha256": hashlib.sha256(
+                    f"report-fold-{fold}-seed-{seed}".encode()
+                ).hexdigest(),
+                "source_fingerprint": HASH,
+                "store_binding_sha256": stable_json_sha256(report["store"]),
+                "training_config_sha256": HASH,
+                "job_config_sha256": HASH,
+                "maxsim_budget": 8,
+                "embedding_dim": 4,
+                "promoted": False,
+            }
+            report["trained_paired_deltas"][method] = {
+                "paired_candidate_minus_global": {
+                    metric: _paired_bootstrap_delta(
+                        [
+                            record["metrics"]["global_cosine"][metric]
+                            for record in report["query_records"]
+                        ],
+                        [
+                            record["metrics"][method][metric]
+                            for record in report["query_records"]
+                        ],
+                        iterations=report["protocol"]["bootstrap_iterations"],
+                        seed=report["protocol"]["bootstrap_seed"],
+                    )
+                    for metric in METRICS
+                },
+                "paired_candidate_minus_frozen_hybrid": {
+                    metric: _paired_bootstrap_delta(
+                        [
+                            record["metrics"]["hybrid"][metric]
+                            for record in report["query_records"]
+                        ],
+                        [
+                            record["metrics"][method][metric]
+                            for record in report["query_records"]
+                        ],
+                        iterations=report["protocol"]["bootstrap_iterations"],
+                        seed=report["protocol"]["bootstrap_seed"],
+                    )
+                    for metric in METRICS
+                },
+            }
+        active_methods = list(METHODS) + methods
+        report["per_scene"] = _grouped_metrics(
+            report["query_records"], "scene", methods=active_methods
+        )
+        report["per_tag"] = _grouped_metrics(
+            report["query_records"], "tag", methods=active_methods
+        )
+        for method in methods:
+            report["resources"]["latency_seconds"][method] = {
+                "mean": 0.0,
+                "p50": 0.0,
+                "p95": 0.0,
+            }
+    return reports
+
+
 def test_all_fold_aggregation_is_aligned_weighted_and_deterministic():
     reports = _synthetic_all_fold_reports()
     first = aggregate_all_fold_results(
@@ -581,6 +915,87 @@ def test_all_fold_aggregation_is_aligned_weighted_and_deterministic():
     assert comparison["mean_delta"] == pytest.approx(0.03)
     assert comparison["improved_queries"] == 15
     assert "descriptive" in first["multiple_comparisons_notice"]
+
+
+def test_all_fold_aggregation_rejects_trained_artifact_drift_across_budgets():
+    reports = _with_synthetic_trained_method(_synthetic_all_fold_reports())
+    aggregate_all_fold_results(
+        reports, bootstrap_iterations=100, bootstrap_seed=1234
+    )
+
+    method = _trained_method_id("nonnegative_linear", 17, "none")
+    target = next(
+        report
+        for report in reports
+        if report["protocol"]["fold_index"] == 0
+        and report["protocol"]["maxsim_budget"] == 16
+    )
+    target["trained_model_bindings"][method]["model_artifact_sha256"] = (
+        hashlib.sha256(b"different-model-same-method").hexdigest()
+    )
+    with pytest.raises(FullTrackEvaluationError, match="trained model identity drift"):
+        aggregate_all_fold_results(
+            reports, bootstrap_iterations=100, bootstrap_seed=1234
+        )
+
+
+def test_trained_matrix_exports_selector_inputs_at_explicit_budget(tmp_path):
+    reports = _with_synthetic_trained_method(_synthetic_all_fold_reports())
+    candidate_list, evaluations = build_selection_inputs(
+        reports,
+        deciding_budget=8,
+        primary_metric="recall_at_k",
+        list_id="synthetic-trained-matrix",
+    )
+
+    assert candidate_list["deciding_budget"] == 8
+    assert candidate_list["primary_metric"] == "recall_at_k"
+    assert candidate_list["evaluation_identity"] == {
+        "source_fingerprint": HASH,
+        "store_binding_sha256": stable_json_sha256(_store_binding()),
+    }
+    assert candidate_list["candidates"] == [
+        {
+            "candidate_kind": "nonnegative_linear",
+            "model_bundle_sha256": candidate_list["candidates"][0][
+                "model_bundle_sha256"
+            ],
+        }
+    ]
+    assert len(evaluations) == 15
+    assert {
+        (item["candidate_kind"], item["fold"], item["seed"])
+        for item in evaluations
+    } == {
+        ("nonnegative_linear", fold, seed)
+        for fold in range(5)
+        for seed in (17, 29, 43)
+    }
+    assert all(item["benchmark_budget"] == 8 for item in evaluations)
+    assert all(item["primary_metric"] == "recall_at_k" for item in evaluations)
+    assert all(
+        item["candidate_list_sha256"] == candidate_list["content_sha256"]
+        for item in evaluations
+    )
+    assert all(
+        item["metrics"]["candidate"] == item["metrics"]["frozen_hybrid"]
+        for item in evaluations
+    )
+    assert all(
+        item["paired_candidate_minus_frozen_hybrid"]["mean_delta"] == 0.0
+        for item in evaluations
+    )
+    manifest = write_selection_inputs(
+        tmp_path / "selection-inputs", candidate_list, evaluations
+    )
+    output_dir = tmp_path / "selection-inputs"
+    assert manifest["candidate_list"]["file"] == "candidate-list.json"
+    assert (output_dir / "candidate-list.json").is_file()
+    assert len(manifest["evaluation_reports"]) == 15
+    assert all(
+        (output_dir / item["file"]).is_file()
+        for item in manifest["evaluation_reports"]
+    )
 
 
 def test_all_fold_aggregation_rejects_query_and_method_misalignment():
@@ -848,6 +1263,142 @@ def test_benchmark_all_recomputes_one_rehashed_stale_protocol_artifact(tmp_path)
     assert repaired["result"]["protocol"]["metric_labels"]["recall_at_k"] == "Recall@10"
 
 
+def test_trained_benchmark_all_writes_and_reuses_selector_inputs(tmp_path, monkeypatch):
+    context, store_root = _all_fold_fixture(tmp_path)
+    output_dir = tmp_path / "trained-all-fold-results"
+    config = EvaluationConfig(
+        candidate_pool=3,
+        bootstrap_iterations=2,
+        bootstrap_seed=11,
+        max_feature_cache_bytes=1024 * 1024,
+        min_shared_tags=1,
+        min_tag_jaccard=1.0,
+    )
+
+    def fake_load_trained_model(
+        trained_root,
+        *,
+        fold_index,
+        candidate_kind,
+        seed,
+        expected_source_fingerprint,
+        expected_store_binding_sha256,
+        store_embedding_dim,
+        store_repetition_sections,
+        store_salient_sections,
+    ):
+        del (
+            trained_root,
+            store_repetition_sections,
+            store_salient_sections,
+        )
+        model = build_nonneg_linear(
+            np.ones(FEATURE_DIM, dtype=np.float64),
+            FusionConfig(
+                kind=candidate_kind,
+                embedding_dim=store_embedding_dim,
+                maxsim_budget=8,
+                seed=seed,
+                model_id=f"fixture-fold-{fold_index}-seed-{seed}",
+                store_id=expected_store_binding_sha256,
+                config_sha256=HASH,
+                fold_index=fold_index,
+            ),
+        )
+        identity = f"fold-{fold_index}-seed-{seed}".encode()
+        return _TrainedModelBinding(
+            candidate_kind=candidate_kind,
+            seed=seed,
+            fold_index=fold_index,
+            model=model,
+            report_sha256=hashlib.sha256(b"report-" + identity).hexdigest(),
+            model_artifact_sha256=hashlib.sha256(b"artifact-" + identity).hexdigest(),
+            model_json_sha256=hashlib.sha256(b"json-" + identity).hexdigest(),
+            weights_npz_sha256=hashlib.sha256(b"weights-" + identity).hexdigest(),
+            source_fingerprint=expected_source_fingerprint,
+            store_binding_sha256=expected_store_binding_sha256,
+            training_config_sha256=HASH,
+            job_config_sha256=HASH,
+            fusion_metadata={},
+            maxsim_budget=8,
+            embedding_dim=store_embedding_dim,
+        )
+
+    monkeypatch.setattr(
+        "soundalike.ml.fulltrack_eval.load_trained_model_for_fold",
+        fake_load_trained_model,
+    )
+    kwargs = {
+        "output_dir": output_dir,
+        "base_config": config,
+        "trained_root": tmp_path / "trained-models",
+        "trained_candidates": ["nonnegative_linear"],
+        "trained_seeds": [17, 29, 43],
+        "include_ablations": False,
+    }
+    with FullTrackStoreReader(store_root) as reader:
+        first, first_resume = run_all_folds_benchmark(context, reader, **kwargs)
+        second, second_resume = run_all_folds_benchmark(context, reader, **kwargs)
+
+    assert first_resume == {"computed": 15, "reused": 0}
+    assert second_resume == {"computed": 0, "reused": 15}
+    assert first["selection_inputs"] == second["selection_inputs"]
+    assert len(first["selection_inputs"]["evaluation_reports"]) == 15
+    assert (output_dir / "benchmark-summary-trained.json").is_file()
+    assert (output_dir / "selection" / "candidate-list.json").is_file()
+    assert (output_dir / "selection" / "selection-inputs.json").is_file()
+
+    worker_output = tmp_path / "trained-fold-worker-results"
+    worker_kwargs = {
+        **kwargs,
+        "output_dir": worker_output,
+        "worker_fold": 3,
+    }
+    with FullTrackStoreReader(store_root) as reader:
+        worker_result, worker_resume = run_all_folds_benchmark(
+            context, reader, **worker_kwargs
+        )
+    assert worker_resume == {"computed": 3, "reused": 0}
+    assert worker_result["fold"] == 3
+    assert [
+        item["budget"] for item in worker_result["result_artifacts"]
+    ] == [8, 16, 32]
+    assert sorted(path.name for path in worker_output.glob("*.json")) == [
+        "fold-3_budget-16_trained.json",
+        "fold-3_budget-32_trained.json",
+        "fold-3_budget-8_trained.json",
+    ]
+    assert not (worker_output / "benchmark-summary-trained.json").exists()
+    assert not (worker_output / "selection").exists()
+
+    def blocked_selector(*args, **kwargs):
+        raise FullTrackSelectionError("synthetic selector failure")
+
+    monkeypatch.setattr(
+        "soundalike.ml.fulltrack_selection.build_selection_inputs",
+        blocked_selector,
+    )
+    with FullTrackStoreReader(store_root) as reader:
+        with pytest.raises(FullTrackEvaluationError, match="selector export failed"):
+            run_all_folds_benchmark(context, reader, **kwargs)
+
+    monkeypatch.setattr(
+        "soundalike.ml.fulltrack_selection.build_selection_inputs",
+        build_selection_inputs,
+    )
+
+    def blocked_write(*args, **kwargs):
+        raise PermissionError("synthetic selector write denial")
+
+    monkeypatch.setattr(
+        "soundalike.ml.fulltrack_selection.write_selection_inputs",
+        blocked_write,
+    )
+    with FullTrackStoreReader(store_root) as reader:
+        with pytest.raises(FullTrackEvaluationError, match="selector export failed"):
+            run_all_folds_benchmark(context, reader, **kwargs)
+
+
 def test_store_binding_includes_sealed_embedding_content_identity(tmp_path):
     _, first_root = _all_fold_fixture(
         tmp_path, store_name="first-store", vector_shift=0
@@ -956,10 +1507,13 @@ def test_benchmark_all_cli_fixes_official_fold_budget_matrix():
             "store",
             "--output-dir",
             "results",
+            "--worker-fold",
+            "3",
         ]
     )
     assert args.bootstrap_seed == 20260714
     assert args.recall_cutoff == 10
     assert args.ndcg_cutoff == 10
+    assert args.worker_fold == 3
     assert not hasattr(args, "fold")
     assert not hasattr(args, "maxsim_budget")
