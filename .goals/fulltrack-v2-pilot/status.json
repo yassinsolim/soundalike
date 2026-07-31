@@ -1,7 +1,7 @@
 {
   "goal_id": "fulltrack-v2-pilot",
   "status": "building",
-  "iteration": 2,
+  "iteration": 3,
   "builder_model": "OpenAI:GPT-5.6-Sol",
   "inspector_model": "OpenAI:GPT-5.6-Terra",
   "initial_sha": "f5531266c39e71813578fd7fe01130f687ee786f",

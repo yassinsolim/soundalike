@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "iteration": 3,
+  "prepared_at": "2026-07-31T00:51:08.617-06:00",
+  "branch": "feat/fulltrack-fusion-training",
+  "initial_sha": "f5531266c39e71813578fd7fe01130f687ee786f",
+  "pre_push": {
+    "python_gate": "778 passed, 9 skipped",
+    "node_gate": "28 passed",
+    "git_diff_check": "passed",
+    "protected_production_files_match_initial_sha": true,
+    "protected_git_object_ids": {
+      "src/soundalike/data/index_manifest.json": "5d4a491171384d34df8f2fa624a48d520b48e366",
+      "webapp/api/_reco.py": "bfcc4d9f16f92748f6bb02cf06745a28c1990d3e",
+      "webapp/api/recommend.py": "1bf35e75c0471972fe73c6eec1351bb211e845ce",
+      "webapp/index.html": "85ec5d85a49c9a5fbe4c9968c79c99a5b595b2a8"
+    }
+  },
+  "external_release": {
+    "status": "pending",
+    "pull_request": null,
+    "merge_sha": null,
+    "production_deployment": null
+  },
+  "live_verification": {
+    "status": "pending"
+  },
+  "private_inbox_lifecycle": {
+    "status": "pending",
+    "contains_private_ratings": false,
+    "contains_credentials": false
+  }
+}
