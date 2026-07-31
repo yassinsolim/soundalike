@@ -38,8 +38,11 @@ run it" lives in the [README](../README.md); this is the "how it was built and w
 - **Human-quality retrieval result:** a categorized final 20-pair pure-sonic benchmark exposes the
   encoder's weakness; dual EfficientNet/CLAP retrieval raises frozen production primary
   **0.0281→0.0529 (+88.3%)** while preserving a reviewed 17/20 top-five UX result.
-- **Built and validated on:** an NVIDIA RTX 5080 (Blackwell), 308 automated tests, a clean
-  packaged wheel.
+- **Full-track v2 result:** 45 self-supervised fusion jobs and 45 bound evaluations passed
+  integrity/stability gates, but no candidate beat the frozen hybrid overall. The closest model
+  was **-1.56% Recall@10**, so I launched a lawful 20-seed blind test instead of promoting it.
+- **Built and validated on:** an NVIDIA RTX 5080 (Blackwell), 778 Python tests, 28 Node tests,
+  and a clean packaged wheel.
 
 ---
 
@@ -510,6 +513,38 @@ Independent validation stays disjoint:
 
 The point estimates improve and remain statistically equivalent within uncertainty.
 
+### Full-track v2: a stronger experiment, not a claimed model win
+
+The Dual-Sonic64 result above concerns the shipped 272,853-row preview index. The separate
+full-track v2 research lane asks a narrower question on the official 55,701-track MTG-Jamendo
+collection: can a self-supervised fusion model improve a frozen CLAP hybrid without using tags,
+ratings, graphs, source audio, or same-artist positives during training?
+
+I trained three bounded families across all five official artist-disjoint folds and seeds 17,
+29, and 43: non-negative linear pair features, a monotonic network, and a channel-gated
+embedding. The resulting **45 training reports and 45 evaluation reports** bind exact store,
+source, fold, seed, model, and ranking identities. Selection used budget 8 and preregistered
+Recall@10 on the frozen global top-200 pool.
+
+| Five-fold / three-seed mean | Recall@10 | Relative vs hybrid | MRR | nDCG@10 | Recall wins |
+|---|---:|---:|---:|---:|---:|
+| Frozen hybrid | **0.007776** | baseline | 0.286313 | **0.100587** | - |
+| Channel-gated embedding | 0.007655 | -1.56% | **0.286528** | 0.099426 | 6/15 |
+| Monotonic network | 0.007614 | -2.09% | 0.281173 | 0.098848 | 3/15 |
+| Non-negative linear | 0.007588 | -2.42% | 0.279942 | 0.098411 | 3/15 |
+
+This is an important negative result. The channel-gated model slightly raised MRR
+(+0.000215) but reduced Recall@10 (-0.000121) and nDCG@10 (-0.001161); the other
+families regressed all three aggregate metrics. All candidates passed structural and
+cross-seed stability gates, but automated metrics alone cannot authorize promotion.
+
+V2 is therefore "better" in **experimental validity**, not demonstrated recommendation
+quality. It replaces an unbound model-choice claim with a deterministic 20-seed blind pilot:
+four opaque methods, five results each, first-party Jamendo playback, exact artifact/license
+provenance, resumable version-isolated browser state, and private version-isolated ingestion.
+Until genuine listeners submit ratings, the human-quality delta is unknown and production
+remains unchanged.
+
 ### Resources and reproduction
 
 The checksum-pinned release index is **299,288,526 bytes**. It contains the unchanged neural/vibe
@@ -550,9 +585,10 @@ $env:PYTHONPATH = "src;."
   Diagnostic categories cannot decide the score, and the contaminated static graph stays retired.
 - **Release integrity.** Desktop and hosted downloads pin SHA-256; hosted download is atomic and
   fails before loading on a mismatch, and numpy object pickles are disabled.
-- **308 automated tests** cover the recommenders, OAuth/PKCE, DSP, vibe and vibe-aware engines,
-  the spec cache, recommendation benchmarks, diversity/MMR, GeM pooling, ML split logic, the
-  categorized production benchmark, Dual-Sonic64 guardrails, derivative false positives,
+- **778 Python tests and 28 Node tests** cover the recommenders, OAuth/PKCE, DSP, vibe and
+  vibe-aware engines, the spec cache, recommendation benchmarks, diversity/MMR, GeM pooling,
+  ML split logic, the categorized production benchmark, Dual-Sonic64 guardrails, full-track
+  store/training/selection integrity, v1/v2 evaluator isolation, private submission parsing,
   checksum handling, and exact desktop/hosted parity.
 
 

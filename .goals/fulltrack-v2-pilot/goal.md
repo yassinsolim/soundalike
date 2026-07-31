@@ -100,11 +100,9 @@ separate promotion decision.
 - `git diff --check`
 
 **Commit convention:**
-- Conventional commits with required `[B]`/`[I]` role markers.
-- Builder trailer: `Assisted-by: OpenAI:GPT-5.6-Sol`
-- Inspector trailer: `Assisted-by: OpenAI:GPT-5.6-Terra`
-- Also include the repository-required
-  `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>` trailer.
+- Conventional commits with the required `[B]`/`[I]` role markers for this completed
+  workflow.
+- Do not add automated-tool attribution or automated co-author trailers.
 
 **Guidelines:**
 - No `AGENTS.md`, `CONSTITUTION.md`, `.agents/guidelines`, or

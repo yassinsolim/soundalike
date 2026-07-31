@@ -48,10 +48,19 @@ Spotify's own site, never hand over a password) to save results as a playlist. S
 
 **Help with the blind study:** open the public
 [listening evaluator](https://soundalike.yassin.app/evaluate). A complete session is
-usually 90–150 minutes, but partial progress can be resumed. Ratings stay in your
-browser until you explicitly consent and press **Submit ratings**. Accepted snapshots
-go to a private ratings inbox; JSON export remains available as a manual fallback.
-See the [deployment and privacy workflow](webapp/DEPLOY.md#private-ratings-inbox).
+usually 90–150 minutes, but partial progress can be resumed. V2 compares four blinded
+full-track methods on 20 held-out Jamendo seeds with exact store, fold, model-artifact,
+source, and license bindings. The prior v17 study remains available at
+[`/evaluate-v1`](https://soundalike.yassin.app/evaluate-v1). Ratings stay in your browser
+until you explicitly consent and press **Submit ratings**. Accepted snapshots go to a
+private, version-isolated ratings inbox; JSON export remains available as a manual
+fallback. See the
+[deployment and privacy workflow](webapp/DEPLOY.md#private-ratings-inbox).
+
+V2 is a **better-controlled evaluation protocol**, not a claim that a new model is
+already better. The frozen automated benchmark did not select any trained fusion
+candidate overall, and no human improvement can be reported until genuine listening
+ratings are collected.
 
 ---
 
@@ -618,6 +627,27 @@ mean decoded duration 228.11 s (min 49.44, median 218.15, max 749.24), CLI extra
 GPU maxima of 55 C and 93.25 W. No decoded audio was persisted. Any corpus-duration
 number derived from this pilot is a **planning projection**, not a measured full-run
 completion.
+
+#### Full-track v2 benchmark result
+
+The completed matrix contains **45 training jobs and 45 bound evaluation reports**
+(five official artist-disjoint folds x three seeds x three fusion families). The
+preregistered automated comparison uses budget 8, a frozen global top-200 candidate
+pool, and Recall@10 as its primary tag-retrieval proxy:
+
+| Method | Recall@10 | Relative vs hybrid | MRR | MRR delta | nDCG@10 | nDCG delta | Recall wins |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Frozen hybrid | **0.007776** | baseline | 0.286313 | baseline | **0.100587** | baseline | - |
+| Channel-gated embedding | 0.007655 | -1.56% | **0.286528** | +0.000215 | 0.099426 | -0.001161 | 6/15 |
+| Monotonic network | 0.007614 | -2.09% | 0.281173 | -0.005140 | 0.098848 | -0.001739 | 3/15 |
+| Non-negative linear | 0.007588 | -2.42% | 0.279942 | -0.006370 | 0.098411 | -0.002176 | 3/15 |
+
+All candidates passed provenance, fold/seed alignment, finite-resource, and cross-seed
+stability gates. None beat the frozen hybrid overall: the channel-gated model was
+closest and slightly improved MRR, but reduced both Recall@10 and nDCG@10. These labels
+measure shared-tag retrieval, not direct perceptual similarity. The 20-seed blind v2
+pilot exists to collect that missing human evidence; before those ratings, the measured
+human-quality improvement is **unknown**, and model promotion remains blocked.
 
 This is **Jamendo non-commercial research tooling only**. It is not Spotify audio
 acquisition, does not authorize ripping or redistribution, and makes no commercial
