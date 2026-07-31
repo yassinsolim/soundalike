@@ -6,5 +6,11 @@
   "inspector_model": "OpenAI:GPT-5.6-Terra",
   "initial_sha": "f5531266c39e71813578fd7fe01130f687ee786f",
   "created_at": "2026-07-26T19:29:47Z",
-  "history": []
+  "history": [
+    {
+      "iteration": 1,
+      "verdict": "FAIL",
+      "summary": "The deterministic, rights-bound pilot pack validates against the external private unblinding evidence, but no v2 evaluator, isolated ingestion, or deployment exists. The live /evaluate route remains v17, /evaluate-v1 is 404, and the prescribed Python quality gate fails because its interpreter imports a different worktree."
+    }
+  ]
 }
