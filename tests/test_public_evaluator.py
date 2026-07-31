@@ -20,7 +20,7 @@ AUDIT = (
     / "human-quality-recommendations"
     / "protocol-v16-hosted-human-development"
 )
-DEPLOY = ROOT / "webapp" / "evaluate"
+DEPLOY = ROOT / "webapp" / "evaluate-v1"
 EVALUATOR = DEPLOY / "index.html"
 
 V15 = {
@@ -358,6 +358,8 @@ def test_vercel_routes_and_security_headers_cover_evaluator():
     assert {item["source"]: item["destination"] for item in config["rewrites"]} == {
         "/evaluate": "/evaluate/index.html",
         "/evaluate/": "/evaluate/index.html",
+        "/evaluate-v1": "/evaluate-v1/index.html",
+        "/evaluate-v1/": "/evaluate-v1/index.html",
     }
     routes = {
         item["source"]: {header["key"]: header["value"] for header in item["headers"]}
@@ -371,8 +373,8 @@ def test_vercel_routes_and_security_headers_cover_evaluator():
         "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
         "X-Frame-Options": "DENY",
     }
-    assert routes["/evaluate"] == routes["/evaluate/(.*)"]
-    evaluator_headers = routes["/evaluate"]
+    assert routes["/evaluate-v1"] == routes["/evaluate-v1/(.*)"]
+    evaluator_headers = routes["/evaluate-v1"]
     assert evaluator_headers["Cache-Control"] == "no-store, max-age=0"
     csp = evaluator_headers["Content-Security-Policy"]
     assert "default-src 'none'" in csp

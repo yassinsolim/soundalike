@@ -7,6 +7,7 @@ import functools
 import hashlib
 import hmac
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -194,6 +195,15 @@ def _verify_signature(directory: Path, version: int, metadata: dict[str, Any]) -
     ):
         raise ValueError("study signature provenance is inconsistent")
     executable = shutil.which("ssh-keygen")
+    if executable is None and os.name == "nt":
+        system_keygen = (
+            Path(os.environ.get("SystemRoot", r"C:\Windows"))
+            / "System32"
+            / "OpenSSH"
+            / "ssh-keygen.exe"
+        )
+        if system_keygen.is_file():
+            executable = str(system_keygen)
     if executable is None:
         raise ValueError("ssh-keygen is required to verify ratings study integrity")
     result = subprocess.run(
