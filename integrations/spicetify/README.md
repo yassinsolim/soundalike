@@ -46,13 +46,37 @@ PowerShell (Windows):
 iwr -useb https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 | iex
 ```
 
-(macOS/Linux and details: <https://spicetify.app/docs/getting-started>.)
+Terminal (macOS):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/spicetify/cli/main/install.sh | sh
+
+# Only needed if Spicetify does not detect Spotify automatically:
+spicetify config spotify_path "/Applications/Spotify.app/Contents/Resources"
+```
+
+The installer supports both Apple silicon and Intel Macs. Restart Terminal if
+`spicetify` is not immediately available. Linux users can follow the
+[platform-specific setup](https://spicetify.app/docs/getting-started#linux).
 
 ### 2. Install this extension
+
+PowerShell (Windows):
 
 ```powershell
 # copy the extension into Spicetify's Extensions folder
 copy integrations\spicetify\soundalike.js "$(spicetify config-dir)\Extensions\"
+
+spicetify config extensions soundalike.js
+spicetify apply
+```
+
+Terminal (macOS):
+
+```bash
+# Run from the soundalike repository root.
+mkdir -p "$(spicetify config-dir)/Extensions"
+cp integrations/spicetify/soundalike.js "$(spicetify config-dir)/Extensions/"
 
 spicetify config extensions soundalike.js
 spicetify apply
