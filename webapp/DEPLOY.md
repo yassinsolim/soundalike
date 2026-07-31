@@ -46,8 +46,10 @@ webapp/
     _reco.py          # numpy recommender (fetches the index from the GitHub Release)
     recommend.py      # POST /api/recommend
     search.py         # GET  /api/search?q=
-    ratings.js        # POST-only private ratings ingestion
-  evaluate/           # signed v17 blind evaluator public payload
+    ratings.js        # POST-only private v17 ratings ingestion
+    ratings-v2.js     # POST-only private full-track v2 ingestion
+  evaluate/           # canonical full-track v2 evaluator + public locked pack
+  evaluate-v1/        # byte-preserved v17 evaluator public payload
   package.json        # official @vercel/blob SDK
   requirements.txt    # numpy   (that's the entire backend dependency)
   vercel.json
@@ -78,11 +80,19 @@ may override `SOUNDALIKE_INDEX_URL`, `SOUNDALIKE_INDEX_SHA256`, or
 That's the whole recommendation app. **No Spotify setup is needed** for search +
 recommendations — only for the optional "Save as playlist".
 
-## Private ratings inbox
+## Private ratings inboxes
 
-The v17 evaluator submits only after the listener checks the consent box and presses
-**Submit ratings**. It never submits on autosave, page unload, preview playback, or
-export. The JSON download remains a manual fallback.
+`/evaluate` is the research-only 20-seed full-track v2 pilot. `/evaluate-v1`
+retains the exact v17 browser application and files so existing
+`soundalike-human-v17` autosaves remain resumable. The v2 page instead uses the
+`soundalike-fulltrack-v2` namespace and never scans, migrates, or deletes v17
+state.
+
+Both evaluators submit only after the listener checks the consent box and presses
+the explicit submit button. Neither submits on autosave, page unload, playback,
+or export. JSON export/import remains a manual fallback. V2 attribution and
+license links appear only after the corresponding list judgment; the public pack
+contains no model identity or private unblinding document.
 
 ### Blob setup
 
@@ -94,7 +104,8 @@ export. The JSON download remains a manual fallback.
    server-side environment variable. `@vercel/blob` uses this official fallback
    automatically. Never expose either credential to browser code.
 4. Deploy from `webapp`; `npm ci` installs the pinned official Blob SDK.
-5. Add a Vercel Firewall rate-limit rule for `POST /api/ratings`. Origin checks and
+5. Add Vercel Firewall rate-limit rules for `POST /api/ratings` and
+   `POST /api/ratings-v2`. Origin checks and
    the browser's local-key HMAC provide abuse resistance and integrity; they are
    not authentication, so application validation is not a replacement for rate
    limiting.
@@ -104,13 +115,17 @@ Accepted records use immutable, deduplicated private paths:
 snapshot returns the same receipt without overwriting. A later snapshot with added
 ratings gets a different digest and may coexist.
 
+V2 uses its own immutable prefix and schema:
+`human-ratings/fulltrack-v2/<fulltrack-session-id>/<canonical-payload-sha>.json`.
+A v1 payload cannot validate against the v2 endpoint, and a v2 payload cannot
+validate against the v1 endpoint.
+
 The stored record contains random anonymous/session IDs, ratings, rating timestamps
 and durations, locked protocol/list hashes, server receipt time, canonical digest,
 and server-derived counts. It strips the local HMAC key and HMAC. Application code
 does not store IP addresses, Origin, user-agent, cookies, raw headers, Spotify
 identity, email, or a Blob URL. Vercel may process request metadata in operational
-infrastructure; review project log settings separately. There is no public GET,
-listing, admin, or unblinding endpoint.
+infrastructure; review project log settings separately. There is no public GET, listing, admin, or unblinding endpoint for either inbox.
 
 ### Authorized analyst and retention workflow
 
@@ -120,6 +135,7 @@ Private downloads are deliberately local-only. From an authorized workstation:
 cd webapp
 npm ci
 npm run ratings:inbox -- ../private-ratings-inbox --acknowledge-private-data
+npm run ratings:v2-inbox -- ../private-ratings-v2-inbox --acknowledge-private-data
 python ../tools/aggregate_ratings.py ../private-ratings-inbox \
   --output ../ratings-aggregate.local.json
 ```
@@ -130,6 +146,13 @@ URLs or rating contents. The aggregator also accepts already-downloaded v16 sign
 client exports and v17 sanitized server records. It deduplicates snapshots by digest
 and session, merges additions, and stops on conflicting values rather than silently
 choosing one. Neither private inputs nor local aggregates should be committed.
+
+Before opening the pilot, an authorized analyst must use private Blob
+credentials to record the v17 prefix count, submit one fresh v2 test snapshot,
+download and validate that receipt only through `ratings:v2-inbox`, confirm it
+does not appear under the v17 prefix, and delete the exact test object with the
+official private Blob SDK/CLI. Record only counts and the deletion result, never
+listener identifiers, credentials, private URLs, or rating contents.
 
 Choose and document a retention period before collection. On review dates, an
 authorized analyst should download and verify the private inbox, keep only the

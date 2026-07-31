@@ -11,7 +11,7 @@ import {
 } from "../api/ratings.js";
 
 const lists = JSON.parse(
-  readFileSync(new URL("../evaluate/served-lists.json", import.meta.url), "utf8"),
+  readFileSync(new URL("../evaluate-v1/served-lists.json", import.meta.url), "utf8"),
 );
 const resultIds = lists.seeds.flatMap((seed) =>
   seed.results.map((result) => result.result_id),
@@ -429,9 +429,9 @@ test("is POST/JSON only and exposes no method-key material", async () => {
 
   const publicText = [
     readFileSync(new URL("../api/ratings.js", import.meta.url), "utf8"),
-    readFileSync(new URL("../evaluate/index.html", import.meta.url), "utf8"),
-    readFileSync(new URL("../evaluate/protocol.json", import.meta.url), "utf8"),
-    readFileSync(new URL("../evaluate/served-lists.json", import.meta.url), "utf8"),
+    readFileSync(new URL("../evaluate-v1/index.html", import.meta.url), "utf8"),
+    readFileSync(new URL("../evaluate-v1/protocol.json", import.meta.url), "utf8"),
+    readFileSync(new URL("../evaluate-v1/served-lists.json", import.meta.url), "utf8"),
   ].join("\n");
   for (const marker of [
     "BEGIN OPENSSH PRIVATE KEY",

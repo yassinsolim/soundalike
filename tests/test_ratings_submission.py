@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 GOAL = ROOT / ".goals" / "human-quality-recommendations"
 V16 = GOAL / "protocol-v16-hosted-human-development"
 V17 = GOAL / "protocol-v17-submission-human-development"
-DEPLOY = ROOT / "webapp" / "evaluate"
+DEPLOY = ROOT / "webapp" / "evaluate-v1"
 EVALUATOR = DEPLOY / "index.html"
 
 

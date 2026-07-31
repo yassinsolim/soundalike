@@ -72,3 +72,4 @@ soundalike = ["data/*.csv", "data/*.json", "data/*.npz", "data/*.pt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
