@@ -132,6 +132,26 @@ The smoke path processed one track in 3.08 seconds and resumed at 1/8,192.
 metric may be computed until the semantic head and its development-selected
 hyperparameters are frozen.
 
+After the store seals, train and evaluate the preregistered scaled head:
+
+```powershell
+& $python -m soundalike.ml.fulltrack_v3_semantic `
+  --metadata-root 'C:\soundalike-data\mtg-jamendo-dataset' `
+  --protocol 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-semantic-head-scale-protocol.json' `
+  --clap-store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\clap-v1-full-55701' `
+  --musicfm-store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\musicfm-fma-v3-semantic-head-8192' `
+  --model-output 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-semantic-head-model.npz' `
+  --metadata-output 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-semantic-head-model.json' `
+  --report-output 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-semantic-head-development.json'
+```
+
+The trainer loads labels only for train and development IDs, derives its
+183-label vocabulary from train alone, uses LSQR ridge, writes outputs
+exclusively, and binds the model and report to the protocol and both sealed
+stores. Shadow remains closed unless development reaches +15% Recall@10 with a
+positive paired interval, four positive reporting folds, no worse than -5% on
+any Recall fold, and at most 1% MRR/NDCG regression.
+
 ## Required local dataset
 
 Default paths:

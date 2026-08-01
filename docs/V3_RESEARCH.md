@@ -101,6 +101,18 @@ Artist overlap is zero. Protocol payload SHA-256 is
 Shadow labels remain unopened. The 8,192-track MusicFM extraction is resumable,
 stores no copied audio, and binds this protocol hash into the sealed store.
 
-The next allowed sequence is: complete extraction, fit only on train, select
-ridge/blend on development, hash-freeze the model and query protocol, then open
-shadow once. A weak development result ends the branch without shadow access.
+`fulltrack_v3_semantic.py` now implements the scaled run before any shadow
+evaluation. Its streaming label filter retained exactly 5,864 train plus 1,134
+development labels, produced the expected 183-tag vocabulary, and retained zero
+shadow labels. The trainer compares frozen CLAP, MusicFM, and concatenated global
+representations with ridge values 1/10/100 and semantic residual weights
+5/10/20/30%. Ridge uses the scalable LSQR primal path rather than a
+5,864-by-5,864 kernel eigendecomposition.
+
+The development-to-shadow gate was fixed before results: at least +15% Recall@10,
+a paired 95% interval above zero, at least four of five artist-hashed reporting
+folds positive, no fold worse than -5% Recall, and no MRR/NDCG regression beyond
+1%. The next allowed sequence is: complete extraction, run the trainer on train
+and development only, hash-freeze the winning model, and open shadow once only if
+that gate passes. A weak development result ends this branch without shadow
+access.
