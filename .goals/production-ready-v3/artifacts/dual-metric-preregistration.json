@@ -1,0 +1,51 @@
+{
+  "artifact_kind": "v3_dual_metric_candidate_preregistration",
+  "candidate": {
+    "gate": {
+      "direction": "ge",
+      "feature": "maximum_weighted_neighbor_tag_probability",
+      "knn_blend": 0.4,
+      "metric_fallback_blend": 0.2,
+      "quantile": 0.4
+    },
+    "input": "standardized_clap_musicfm_global_concatenation",
+    "knn": {
+      "neighbors": 16,
+      "profile": "idf_weighted_train_tag_probability",
+      "temperature": 0.05
+    },
+    "metric_profile": {
+      "latent_share": 0.75,
+      "predicted_tag_share": 0.25
+    },
+    "training": {
+      "epochs": 200,
+      "hard_negative_source": "clap_global_neighborhood",
+      "hidden_dimension": 384,
+      "latent_dimension": 128,
+      "learning_rate": 0.001,
+      "negatives_per_query": 2,
+      "positives_per_query": 2,
+      "seed": 20260807,
+      "triplet_margin": 0.1,
+      "triplet_weight": 0.25,
+      "weight_decay": 0.0001
+    }
+  },
+  "development_gate": {
+    "max_fold_recall_regression": 0.05,
+    "max_safety_metric_regression": 0.01,
+    "min_positive_recall_folds": 4,
+    "min_recall_relative_gain": 0.15,
+    "paired_recall_ci_must_exclude_zero": true
+  },
+  "development_result_seen": false,
+  "implementation": "soundalike.ml.fulltrack_v3_metric",
+  "musicfm_store_sealed": false,
+  "promotion_allowed": false,
+  "protocol_payload_sha256": "d697240384003ba1a7d9e00d281462b005a3e02abac49964cd3ba4e128292738",
+  "protocol_selection_sha256": "8097b84f87c9f662157fe19bd93c00f51ea6703e0db964b864ecb188ae5481fe",
+  "shadow_labels_accessed": false,
+  "source_fingerprint": "060f43ed0fa12e5a583e26a7728be14a5334c7daffebe2289f08875e9ec0c709",
+  "payload_sha256": "19ea3a7e9e5fad231db46f25e8e002c49475d806d697f2a23a7977a2db7bf3b2"
+}

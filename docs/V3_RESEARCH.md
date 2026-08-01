@@ -143,3 +143,26 @@ Development has now been used for method selection. It is not independent test
 evidence. The only remaining planned scaled branch is the already-preregistered
 dual representation after the immutable MusicFM store seals. No result above
 authorizes shadow access, listening evaluation, or promotion.
+
+### Frozen dual nonlinear branch
+
+Before the 8,192-track MusicFM store sealed, `fulltrack_v3_metric.py` fixed the
+final dual development candidate:
+
+- standardized concatenated CLAP/MusicFM global inputs;
+- CLAP-neighborhood triplets with two nearest cross-artist tag positives and two
+  nearest zero-shared-tag negatives per eligible train query;
+- a 384-hidden/128-latent metric/tag head trained for 200 epochs at seed
+  `20260807`, triplet weight 0.25, and margin 0.10;
+- 25% predicted-tag plus 75% latent semantic profiles;
+- 16-neighbor, temperature-0.05 dual label propagation;
+- a 20% metric-head fallback and 40% neighbor residual; and
+- neighbor activation above the development 40th percentile of maximum weighted
+  tag probability, the gate form selected in four of five CLAP nested folds.
+
+The implementation writes a pickle-free NPZ containing neural parameters,
+normalization, vocabulary/IDF, the train-only neighbor reference matrix and
+labels, and the frozen gate threshold. The report and model sidecar bind the
+protocol and both sealed manifests. There is no dual hyperparameter grid after
+the MusicFM result becomes available: this exact candidate either clears the
+existing development gate or is rejected without shadow access.

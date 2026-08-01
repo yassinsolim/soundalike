@@ -161,6 +161,24 @@ Raw neighbor propagation, a learned gate, and a pair cross-scorer were rejected
 for safety, instability, or overfit. Development is consumed for selection;
 shadow is still unopened.
 
+The final dual nonlinear candidate was frozen before the MusicFM store sealed.
+Run it once after the plain ridge report:
+
+```powershell
+& $python -m soundalike.ml.fulltrack_v3_metric `
+  --metadata-root 'C:\soundalike-data\mtg-jamendo-dataset' `
+  --protocol 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-semantic-head-scale-protocol.json' `
+  --clap-store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\clap-v1-full-55701' `
+  --musicfm-store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\musicfm-fma-v3-semantic-head-8192' `
+  --model-output 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-dual-metric-model.npz' `
+  --metadata-output 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-dual-metric-model.json' `
+  --report-output 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-dual-metric-development.json'
+```
+
+This is not a new post-result grid. Architecture, loss, neighbor propagation,
+blends, and gate quantile are fixed in
+`.goals/production-ready-v3/artifacts/dual-metric-preregistration.json`.
+
 ## Required local dataset
 
 Default paths:
