@@ -116,3 +116,30 @@ folds positive, no fold worse than -5% Recall, and no MRR/NDCG regression beyond
 and development only, hash-freeze the winning model, and open shadow once only if
 that gate passes. A weak development result ends this branch without shadow
 access.
+
+### Scaled CLAP-only development frontier
+
+The CLAP arm was run while MusicFM extraction continued. These are development
+results over 938 evaluable queries; shadow labels remain unopened.
+
+| Method | Recall delta | MRR delta | NDCG delta | Recall-positive folds | Decision |
+|---|---:|---:|---:|---:|---|
+| scaled ridge tag head | +4.06% | +0.63% | +1.62% | 4/5 | below gate |
+| raw 16-neighbor tag propagation | +9.79% | -2.48% | +1.38% | 4/5 | reject; unsafe, -9.74% worst Recall fold |
+| calibrated safe neighbor profile | +3.63% | -0.35% | +1.09% | 5/5 | below gate |
+| nested confidence-gated neighbors | +10.11% | +0.35% | +3.51% | 4/5 | below gate |
+| learned confidence gate | +1.01% | -1.62% | -0.51% | 4/5 | reject; -15.52% worst Recall fold |
+| nonlinear metric/tag head | +5.19% | +2.78% | +2.77% | 5/5 | stable, below gate |
+| metric head plus nested neighbor gate | +11.28% | +0.84% | +4.89% | 5/5 | best eligible CLAP-only development result; below gate |
+| symmetric cross-pair scorer | +0.04% | -0.20% | -0.27% | 2/5 | reject; train-pair overfit |
+
+The best CLAP-only nested result has a positive Recall paired interval
+(`+0.00250..+0.01146` absolute), no negative Recall fold, and positive aggregate
+safety metrics, but it still fails the preregistered +15% threshold. The
+label-using method-selection oracle reached +28.84% Recall and is reported only
+as an ineligible upper bound; it is not a deployable gate.
+
+Development has now been used for method selection. It is not independent test
+evidence. The only remaining planned scaled branch is the already-preregistered
+dual representation after the immutable MusicFM store seals. No result above
+authorizes shadow access, listening evaluation, or promotion.

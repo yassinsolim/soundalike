@@ -152,6 +152,15 @@ stores. Shadow remains closed unless development reaches +15% Recall@10 with a
 positive paired interval, four positive reporting folds, no worse than -5% on
 any Recall fold, and at most 1% MRR/NDCG regression.
 
+The early CLAP-only scaled arm did not open shadow. Its best plain ridge result
+was +4.06% Recall@10. A train-only nonlinear metric head was positive on all five
+folds for Recall/MRR/NDCG (+5.19%/+2.78%/+2.77%), and a nested metric/k-neighbor
+combination reached +11.28% Recall, +0.84% MRR, and +4.89% NDCG with all five
+Recall folds positive. That remains below the fixed +15% development gate.
+Raw neighbor propagation, a learned gate, and a pair cross-scorer were rejected
+for safety, instability, or overfit. Development is consumed for selection;
+shadow is still unopened.
+
 ## Required local dataset
 
 Default paths:
