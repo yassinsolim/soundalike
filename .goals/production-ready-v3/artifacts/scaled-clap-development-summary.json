@@ -32,6 +32,18 @@
       "recall_worst_fold_relative_delta": 0.01933931103274822,
       "status": "stable_below_gate"
     },
+    "metric_text": {
+      "mrr_relative_delta": 0.02377807967283263,
+      "ndcg_relative_delta": 0.02945366465870336,
+      "recall_paired_ci95_absolute": [
+        0.00184200947009201,
+        0.005056288449379935
+      ],
+      "recall_positive_folds": 5,
+      "recall_relative_delta": 0.05559969365060846,
+      "recall_worst_fold_relative_delta": 0.037875152709638815,
+      "status": "stable_below_gate"
+    },
     "metric_knn_nested": {
       "mrr_relative_delta": 0.008442144268809404,
       "ndcg_relative_delta": 0.048917790504310554,
@@ -89,5 +101,5 @@
   "promotion_allowed": false,
   "protocol_payload_sha256": "d697240384003ba1a7d9e00d281462b005a3e02abac49964cd3ba4e128292738",
   "shadow_labels_accessed": false,
-  "payload_sha256": "1e6154e1c8a61dd7a3077c91b8448677b04f38fb279627af73920aa1c8d42cb7"
+  "payload_sha256": "db146add0eefd0236a55bf1c91841a0ba1373cc363bfd0dd0f5636d472e8825b"
 }

@@ -130,6 +130,7 @@ results over 938 evaluable queries; shadow labels remain unopened.
 | nested confidence-gated neighbors | +10.11% | +0.35% | +3.51% | 4/5 | below gate |
 | learned confidence gate | +1.01% | -1.62% | -0.51% | 4/5 | reject; -15.52% worst Recall fold |
 | nonlinear metric/tag head | +5.19% | +2.78% | +2.77% | 5/5 | stable, below gate |
+| metric head plus frozen CLAP text tags | +5.56% | +2.38% | +2.95% | 5/5 | stable, below gate |
 | metric head plus nested neighbor gate | +11.28% | +0.84% | +4.89% | 5/5 | best eligible CLAP-only development result; below gate |
 | symmetric cross-pair scorer | +0.04% | -0.20% | -0.27% | 2/5 | reject; train-pair overfit |
 
@@ -155,14 +156,20 @@ final dual development candidate:
 - a 384-hidden/128-latent metric/tag head trained for 200 epochs at seed
   `20260807`, triplet weight 0.25, and margin 0.10;
 - 25% predicted-tag plus 75% latent semantic profiles;
+- a fixed 75% learned-metric plus 25% zero-shot CLAP text-tag profile; the
+  text-only probe was weak (+0.94% Recall), but improved the stable metric head
+  to +5.56% Recall with all five folds positive; model construction is seeded
+  at 20260807 because the local transformers loader initializes checkpoint-
+  absent Roberta pooler parameters;
 - 16-neighbor, temperature-0.05 dual label propagation;
 - a 20% metric-head fallback and 40% neighbor residual; and
 - neighbor activation above the development 40th percentile of maximum weighted
   tag probability, the gate form selected in four of five CLAP nested folds.
 
 The implementation writes a pickle-free NPZ containing neural parameters,
-normalization, vocabulary/IDF, the train-only neighbor reference matrix and
-labels, and the frozen gate threshold. The report and model sidecar bind the
-protocol and both sealed manifests. There is no dual hyperparameter grid after
-the MusicFM result becomes available: this exact candidate either clears the
-existing development gate or is rejected without shadow access.
+normalization, vocabulary/IDF, frozen text vectors/prompts, the train-only
+neighbor reference matrix and labels, and the frozen gate threshold. The report
+and model sidecar bind the protocol, text-vector content, and both sealed
+manifests. There is no dual hyperparameter grid after the MusicFM result becomes
+available: this exact candidate either clears the existing development gate or
+is rejected without shadow access.
