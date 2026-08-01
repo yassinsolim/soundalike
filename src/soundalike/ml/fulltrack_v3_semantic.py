@@ -508,7 +508,14 @@ def evaluate_profiles(
     profiles: np.ndarray,
     *,
     blend: float,
+    bootstrap_iterations: int = BOOTSTRAP_ITERATIONS,
 ) -> Mapping[str, object]:
+    if (
+        isinstance(bootstrap_iterations, bool)
+        or not isinstance(bootstrap_iterations, int)
+        or bootstrap_iterations < 0
+    ):
+        raise V3SemanticError("development profile evaluation inputs are invalid")
     data.validate()
     values = np.asarray(profiles, dtype=np.float64)
     if (
@@ -595,7 +602,7 @@ def evaluate_profiles(
             "candidate": fold_candidate,
             "relative_delta": fold_delta,
         }
-    return {
+    result = {
         "queries": len(query_folds),
         "baseline": baseline_means,
         "candidate": candidate_means,
@@ -606,19 +613,21 @@ def evaluate_profiles(
             )
             for metric in METRICS
         },
-        "paired_delta": {
-            metric: _paired_bootstrap_delta(
-                baseline_values[metric],
-                candidate_values[metric],
-                iterations=BOOTSTRAP_ITERATIONS,
-                seed=BOOTSTRAP_SEED,
-            )
-            for metric in METRICS
-        },
         "positive_folds": positive_folds,
         "worst_fold_relative_delta": worst_fold_relative_delta,
         "folds": fold_results,
     }
+    if bootstrap_iterations:
+        result["paired_delta"] = {
+            metric: _paired_bootstrap_delta(
+                baseline_values[metric],
+                candidate_values[metric],
+                iterations=bootstrap_iterations,
+                seed=BOOTSTRAP_SEED,
+            )
+            for metric in METRICS
+        }
+    return result
 
 
 def _selection_key(result: Mapping[str, object]) -> Tuple[object, ...]:
@@ -818,12 +827,23 @@ def train_scaled_semantic_head(
                                 development_data,
                                 profiles,
                                 blend=blend,
+                                bootstrap_iterations=0,
                             ),
                         }
                     )
         results.sort(key=_selection_key, reverse=True)
         best = results[0]
         best_head = heads[(str(best["representation"]), float(best["ridge"]))]
+        best_inputs = _representation_inputs(
+            best_head.representation,
+            clap_development,
+            music_development,
+        )
+        best["evaluation"] = evaluate_profiles(
+            development_data,
+            best_head.predict(best_inputs),
+            blend=float(best["blend"]),
+        )
         _write_npz_exclusive(Path(model_output), _model_arrays(best_head))
         report: Dict[str, object] = {
             "schema_version": REPORT_SCHEMA_VERSION,

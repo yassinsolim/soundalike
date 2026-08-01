@@ -9,6 +9,7 @@ import pytest
 from soundalike.ml.fulltrack_store import stable_json_sha256
 from soundalike.ml.fulltrack_v3_semantic import (
     BLEND_VALUES,
+    DevelopmentData,
     MIN_DEVELOPMENT_PRIMARY_RELATIVE_GAIN,
     SemanticHead,
     V3SemanticError,
@@ -16,6 +17,7 @@ from soundalike.ml.fulltrack_v3_semantic import (
     _normalized_inputs,
     _representation_inputs,
     development_gate,
+    evaluate_profiles,
     fit_semantic_head,
 )
 
@@ -164,3 +166,22 @@ def test_model_arrays_are_pickle_free_and_hashable(tmp_path: Path):
         ),
     }
     json.loads(json.dumps(document))
+
+
+def test_profile_evaluation_rejects_negative_bootstrap_count():
+    with pytest.raises(V3SemanticError, match="evaluation inputs"):
+        evaluate_profiles(
+            DevelopmentData(
+                track_ids=np.asarray([], dtype=np.int64),
+                artist_ids=np.asarray([], dtype=np.int64),
+                query_folds=np.asarray([], dtype=np.int8),
+                global_orders=np.empty((0, 0), dtype=np.int32),
+                global_lengths=np.asarray([], dtype=np.int32),
+                pools=np.empty((0, 0), dtype=np.int32),
+                baseline_scores=np.empty((0, 0), dtype=np.float32),
+                relevance=np.empty((0, 0), dtype=np.float32),
+            ),
+            np.empty((0, 1)),
+            blend=BLEND_VALUES[0],
+            bootstrap_iterations=-1,
+        )
