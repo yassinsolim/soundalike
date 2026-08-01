@@ -1,0 +1,38 @@
+{
+  "artifact_kind": "musicfm_frozen_test_audit_summary",
+  "automated_passed": false,
+  "evidence_scope": "full_track_jamendo_research",
+  "file_sha256": "aac1e050007393da897a11d077012f2621d6dcad17079a836d0e5aec57bd63b7",
+  "fold_recall_relative_delta": [
+    -0.06805592056380338,
+    0.029889743600509666,
+    0.04535349580681469,
+    0.06748872856352595,
+    -0.02093834885484136
+  ],
+  "payload_sha256": "e201582e1425b61a38e9b7af4ba111f65cd1f3e8778c2470616466416aff8868",
+  "policy_file_sha256": "3a90f0a7b5f4776ae8f450473b2ebb1504b3439ed9c0010baf3c47151d5eda64",
+  "pooled": {
+    "graded_ndcg_at_k": {
+      "baseline": 0.13598586429178883,
+      "candidate": 0.1358694773990809,
+      "relative_delta": -0.0008558749346049277
+    },
+    "mrr": {
+      "baseline": 0.2877359090678549,
+      "candidate": 0.29003069172036433,
+      "relative_delta": 0.007975308538804127
+    },
+    "recall_at_k": {
+      "baseline": 0.11112639067317268,
+      "candidate": 0.11217449300605538,
+      "paired_ci95": [
+        -0.0036155562647047982,
+        0.0061801967168688375
+      ],
+      "relative_delta": 0.009431623996186689
+    }
+  },
+  "promotion_allowed": false,
+  "queries": 539
+}

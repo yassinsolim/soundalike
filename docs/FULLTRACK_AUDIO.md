@@ -36,9 +36,8 @@ needed. The frozen adapter requires `laion-clap==1.1.7`, CUDA, and the already-l
 The capability command validates these conditions before model use. Model
 initialization forces Hugging Face/Transformers offline mode and uses only the pinned
 local CLAP checkpoint plus already-local package assets; a missing cache fails closed
-instead of downloading. A generic music-model protocol exists,
-but no second concrete model is enabled because no second package/checkpoint/
-license/CUDA combination has been verified.
+instead of downloading. MusicFM-FMA is the only second concrete encoder enabled,
+and it remains an experimental non-production capability.
 
 ## V3 MusicFM-FMA representation canary
 
@@ -80,8 +79,58 @@ Run a one-track smoke extraction into a new, disposable store:
 MusicFM uses 30-second, 24-kHz windows with a 15-second hop and layer-7
 representations. Frame embeddings are time-mean-pooled and L2-normalized into
 1024 dimensions. The store binding includes every asset hash, package version,
-layer, and extraction parameter. A full run must use a separate
-`musicfm-fma-v1` output, then replay the existing five-fold evaluator unchanged.
+layer, extraction parameter, and optional frozen track-protocol hash.
+
+### V3 audit outcome and scale protocol
+
+MusicFM layer 7 did not replace CLAP, and fixed fusion did not generalize. The final
+score-only validation policy was frozen at SHA-256
+`3a90f0a7b5f4776ae8f450473b2ebb1504b3439ed9c0010baf3c47151d5eda64`.
+`fulltrack_v3.py` then verified the exact CLAP/MusicFM manifests and opened the
+1,702-track test union once. The result is rejected: Recall@10 +0.94% relative
+(`-0.00362..0.00618` paired 95% interval), MRR +0.80%, NDCG -0.09%, three
+positive Recall folds, and a -6.81% worst-fold Recall regression. Automated and
+human promotion remain false.
+
+Verify the sealed report without reopening labels:
+
+```powershell
+& $python -m soundalike.ml.fulltrack_v3 verify-audit `
+  --report 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\musicfm-fma-v3-frozen-test-audit.json'
+```
+
+The next experiment changes representation rather than increasing a failed blend.
+Freeze the artist-disjoint train/development/shadow plan:
+
+```powershell
+& $python -m soundalike.ml.fulltrack_v3_protocol `
+  --metadata-root 'C:\soundalike-data\mtg-jamendo-dataset' `
+  --audio-root 'C:\soundalike-data\mtg-jamendo-raw-full\audio' `
+  --state-root 'C:\soundalike-data\mtg-jamendo-raw-full\state' `
+  --output 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-semantic-head-scale-protocol.json'
+```
+
+The protocol payload SHA-256 is
+`d697240384003ba1a7d9e00d281462b005a3e02abac49964cd3ba4e128292738`.
+It selects 8,192 fold-0 train tracks before splitting by artist: 5,864 train,
+1,134 development, and 1,194 unopened shadow tracks. Extract only that immutable
+plan with resumable storage:
+
+```powershell
+& $python -m soundalike.ml.fulltrack_musicfm extract `
+  --metadata-root 'C:\soundalike-data\mtg-jamendo-dataset' `
+  --audio-root 'C:\soundalike-data\mtg-jamendo-raw-full\audio' `
+  --state-root 'C:\soundalike-data\mtg-jamendo-raw-full\state' `
+  --assets 'C:\soundalike-data\model-assets\musicfm-fma' `
+  --output 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\musicfm-fma-v3-semantic-head-8192' `
+  --track-plan 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-semantic-head-scale-protocol.json' `
+  --batch-size 2 --shard-tracks 64
+```
+
+The smoke path processed one track in 3.08 seconds and resumed at 1/8,192.
+`progress.json` beside the store is written by the detached watcher. No shadow
+metric may be computed until the semantic head and its development-selected
+hyperparameters are frozen.
 
 ## Required local dataset
 

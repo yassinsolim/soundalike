@@ -1,0 +1,25 @@
+{
+  "artifact_kind": "v3_artist_disjoint_semantic_head_scale_protocol_summary",
+  "artist_overlap": 0,
+  "payload_sha256": "d697240384003ba1a7d9e00d281462b005a3e02abac49964cd3ba4e128292738",
+  "promotion_allowed": false,
+  "selection_sha256": "8097b84f87c9f662157fe19bd93c00f51ea6703e0db964b864ecb188ae5481fe",
+  "shadow_labels_accessed": false,
+  "splits": {
+    "development": {
+      "artists": 229,
+      "track_ids_sha256": "94dcd748a1b5d758029f486b5bf2a76c1c15a3e4a26015ab12b2c9b4fcfdd2f5",
+      "tracks": 1134
+    },
+    "shadow": {
+      "artists": 229,
+      "track_ids_sha256": "a029fa7b3d66df281f1d76fdf7dfabf6e2af043bda5591188a7f02b498196424",
+      "tracks": 1194
+    },
+    "train": {
+      "artists": 1119,
+      "track_ids_sha256": "357639db357de2ec464e01f683bbd401503b195b6c927db87dce610ba169a7f6",
+      "tracks": 5864
+    }
+  }
+}

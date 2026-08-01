@@ -485,6 +485,40 @@ benchmark artist. Wikipedia contributes only generic song-article existence/nota
 benchmark URLs, pair edges, and labels are not indexed. ListenBrainz and Deezer remain validation-
 only and are not features.
 
+### V3 full-track MusicFM experiments
+
+The next research cycle kept production V2 untouched and used full licensed MTG-Jamendo audio.
+MusicFM-FMA was the only bounded music-native checkpoint accepted for a canary: its model metadata
+is MIT, the source is MIT/Apache-2.0, and the FMA release avoids the separate MSD checkpoint's
+licensing problem. MERT, music2vec, and MuQ checkpoints are CC-BY-NC and remain ineligible for a
+commercial candidate.
+
+MusicFM layer 7 was weaker than CLAP alone. Fixed fusion also failed to generalize. A nested
+validation gate found complementary local-window signal, so the exact policy was frozen before
+one final test audit: CLAP global top-200 retrieval, CLAP hybrid reranking, per-query score
+normalization, and a 25% MusicFM uniform-window residual only when MusicFM score standard deviation
+was at most `0.05948563385754824`.
+
+| One-time five-fold test audit | CLAP hybrid | Selective MusicFM | Delta |
+|---|---:|---:|---:|
+| Recall@10 | 0.11113 | 0.11217 | +0.00105 (+0.94%) |
+| MRR | 0.28774 | 0.29003 | +0.00229 (+0.80%) |
+| graded NDCG@10 | 0.13599 | 0.13587 | -0.00012 (-0.09%) |
+
+The Recall delta 95% paired interval is **-0.00362..0.00618**. Recall improves on only 3/5
+folds; fold 0 regresses 6.81%. It fails the +20% primary gain, positive-confidence, four-fold,
+and per-fold safety gates. Payload SHA-256 is
+`e201582e1425b61a38e9b7af4ba111f65cd1f3e8778c2470616466416aff8868`; the full external report
+file SHA-256 is `aac1e050007393da897a11d077012f2621d6dcad17079a836d0e5aec57bd63b7`.
+No official-test retuning follows.
+
+The first train-only semantic-head probe is more consistent. It fits artist-excluded multi-label
+ridge heads over frozen CLAP+MusicFM globals and reranks by predicted 183-tag profiles. On consumed
+validation data, the best development configuration (ridge 10, 30% bounded semantic residual)
+improves Recall on 5/5 folds (+2.98% macro), NDCG on 5/5 (+2.49%), and MRR by 1.24%. It is not a
+promotion result. A new 8,192-track protocol was frozen before scaling: 5,864 train, 1,134
+development, and 1,194 shadow tracks across disjoint artist sets. The shadow labels remain unopened.
+
 ### Selected production policy
 
 The final candidate union has three explicit stages:

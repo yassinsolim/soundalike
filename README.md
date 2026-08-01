@@ -338,6 +338,34 @@ recommendations, and fresh preview lookups passed.
 Full ranked outputs, negative results, source categories, resource measurements, and reproduce
 commands are in `.goals/human-quality-recommendations/artifacts/` and the case study.
 
+### V3 full-track research (experimental)
+
+V2 remains the production and rollback path. V3 research uses the lawful MTG-Jamendo
+full-track corpus and does not change the hosted recommender yet. The first music-native
+candidate, the MIT-licensed MusicFM-FMA layer-7 representation, was tested as a standalone
+encoder, fixed fusion, and score-only selective reranker. The hash-frozen selective policy
+was then audited once on 539 evaluable queries from five official test folds:
+
+| Frozen test metric | CLAP hybrid | MusicFM selective | Relative change |
+|---|---:|---:|---:|
+| Recall@10 | 0.11113 | 0.11217 | +0.94% |
+| MRR | 0.28774 | 0.29003 | +0.80% |
+| graded NDCG@10 | 0.13599 | 0.13587 | -0.09% |
+
+The Recall delta 95% paired interval is `-0.00362..0.00618`; only three of five folds
+improve and fold 0 regresses 6.81%. The candidate is rejected, the official test is
+consumed, and those results will not be used to retune another claim.
+
+A stronger development-only direction predicts 183 genre/mood/instrument tags from frozen
+CLAP+MusicFM embeddings, then uses the predicted semantic profile as a bounded reranker.
+On the already-consumed validation canaries its first ridge probe improves Recall on 5/5
+folds (+2.98% macro), NDCG on 5/5 (+2.49%), and MRR by 1.24%. That is promising but still
+far below the +20% gate. An independently hash-frozen 8,192-track scale protocol now holds
+5,864 train, 1,134 development, and 1,194 unopened shadow tracks with zero artist overlap.
+V3 remains **experimental** until it clears the automated gate and a blind human pilot.
+See [the V3 research log](docs/V3_RESEARCH.md) for sources, hashes, rejected approaches,
+resource use, and reproduce commands.
+
 ### Growing the library past the bundle limit
 
 The ~87k-song index ships bundled (75 MB, under GitHub's 100 MB per-file cap), so the tool works

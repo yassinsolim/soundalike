@@ -1,0 +1,24 @@
+{
+  "artifact_kind": "v3_semantic_head_development_summary",
+  "best": {
+    "blend": 0.3,
+    "positive_folds": {
+      "graded_ndcg_at_k": 5,
+      "mrr": 3,
+      "recall_at_k": 5
+    },
+    "relative_delta": {
+      "graded_ndcg_at_k": 0.02494684221897092,
+      "mrr": 0.012439909700983964,
+      "recall_at_k": 0.029779454510611814
+    },
+    "representation": "clap_musicfm_tag_profile",
+    "ridge": 10.0
+  },
+  "evidence_scope": "full_track_jamendo_research",
+  "evidence_status": "development_only_consumed_validation_folds",
+  "feature_cache_npz_sha256": "38bcd3fec2b2272503b9961ce01f104d8b72e849f51bc8b303181a84233d3321",
+  "held_out_test_accessed": false,
+  "promotion_allowed": false,
+  "tag_count": 183
+}
