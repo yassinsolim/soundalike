@@ -53,6 +53,7 @@ from .fulltrack_v3_semantic import (
     development_gate,
     load_train_development_tags,
 )
+from .fulltrack_v3_text import clap_text_profiles, load_text_artifact
 from .jamendo_fulltrack import EVIDENCE_SCOPE
 
 
@@ -76,6 +77,7 @@ NEGATIVES_PER_QUERY = 2
 K_NEIGHBORS = 16
 KNN_TEMPERATURE = 0.05
 METRIC_TAG_SHARE = 0.25
+LEARNED_METRIC_SHARE = 0.75
 METRIC_BLEND = 0.20
 KNN_BLEND = 0.40
 GATE_QUANTILE = 0.40
@@ -560,6 +562,7 @@ def train_dual_metric_candidate(
     protocol_path: Path,
     clap_store: Path,
     musicfm_store: Path,
+    clap_text_embeddings: Path,
     model_output: Path,
     metadata_output: Path,
     report_output: Path,
@@ -578,6 +581,10 @@ def train_dual_metric_candidate(
     development_entries = _protocol_entries(protocol, "development")
     labels = load_train_development_tags(Path(metadata_root), protocol)
     vocabulary, targets = build_label_targets(train_entries, labels)
+    text_embeddings, text_prompts, text_evidence = load_text_artifact(
+        Path(clap_text_embeddings),
+        expected_vocabulary=vocabulary,
+    )
     clap_reader = _open_bound_store(
         Path(clap_store),
         expected_manifest_file_sha256=CLAP_MANIFEST_FILE_SHA256,
@@ -633,12 +640,20 @@ def train_dual_metric_candidate(
             )
             + 1.0
         )
-        metric_profile, model_state, history = _train_metric_head(
+        learned_metric_profile, model_state, history = _train_metric_head(
             transformed_train,
             transformed_development,
             targets,
             (query, positive, negative),
             idf,
+        )
+        text_profile = clap_text_profiles(clap_development, text_embeddings)
+        metric_profile = np.concatenate(
+            (
+                np.sqrt(LEARNED_METRIC_SHARE) * learned_metric_profile,
+                np.sqrt(1.0 - LEARNED_METRIC_SHARE) * text_profile,
+            ),
+            axis=1,
         )
         knn_profile, confidence, knn_evidence = weighted_knn_profiles(
             transformed_train,
@@ -679,6 +694,8 @@ def train_dual_metric_candidate(
             "knn_train_inputs": transformed_train.astype(np.float32),
             "knn_train_targets": targets.astype(np.uint8),
             "knn_train_track_ids": np.asarray(train_ids, dtype=np.int64),
+            "clap_text_embeddings": text_embeddings.astype(np.float32),
+            "clap_text_prompts": np.asarray(text_prompts, dtype=np.str_),
         }
         arrays.update(
             {
@@ -714,6 +731,8 @@ def train_dual_metric_candidate(
                 "triplet_margin": TRIPLET_MARGIN,
                 "triplet_weight": TRIPLET_WEIGHT,
                 "metric_tag_share": METRIC_TAG_SHARE,
+                "learned_metric_share": LEARNED_METRIC_SHARE,
+                "clap_text_share": 1.0 - LEARNED_METRIC_SHARE,
                 "metric_blend": METRIC_BLEND,
                 "knn_blend": KNN_BLEND,
                 "gate_feature": "maximum_weighted_neighbor_tag_probability",
@@ -723,6 +742,7 @@ def train_dual_metric_candidate(
             },
             "triplet_mining": dict(mining),
             "knn": dict(knn_evidence),
+            "clap_text": dict(text_evidence),
             "training_history": list(history),
             "gate_applied_queries": int(np.count_nonzero(applied & evaluable)),
             "gate_evaluable_queries": int(np.count_nonzero(evaluable)),
@@ -768,6 +788,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--protocol", required=True)
     parser.add_argument("--clap-store", required=True)
     parser.add_argument("--musicfm-store", required=True)
+    parser.add_argument("--clap-text-embeddings", required=True)
     parser.add_argument("--model-output", required=True)
     parser.add_argument("--metadata-output", required=True)
     parser.add_argument("--report-output", required=True)
@@ -782,6 +803,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             protocol_path=Path(args.protocol),
             clap_store=Path(args.clap_store),
             musicfm_store=Path(args.musicfm_store),
+            clap_text_embeddings=Path(args.clap_text_embeddings),
             model_output=Path(args.model_output),
             metadata_output=Path(args.metadata_output),
             report_output=Path(args.report_output),

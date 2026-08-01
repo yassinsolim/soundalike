@@ -625,6 +625,28 @@ class FrozenClapAdapter:
             embeddings = self._model.model.get_audio_embedding(features)
         return normalize_rows(embeddings.float().cpu().numpy())
 
+    def embed_texts(self, texts: Sequence[str]) -> np.ndarray:
+        if (
+            isinstance(texts, (str, bytes))
+            or not texts
+            or len(texts) > 1_024
+            or any(
+                not isinstance(text, str)
+                or not text.strip()
+                or len(text) > 512
+                for text in texts
+            )
+        ):
+            raise FullTrackExtractionError("CLAP text batch is invalid")
+        with _offline_model_environment():
+            embeddings = np.asarray(
+                self._model.get_text_embedding(list(texts)),
+                dtype=np.float32,
+            )
+        if embeddings.shape != (len(texts), self.embedding_dim):
+            raise FullTrackExtractionError("CLAP text embedding shape drift")
+        return normalize_rows(embeddings)
+
 
 def extract_track(
     track: JamendoTrack,
