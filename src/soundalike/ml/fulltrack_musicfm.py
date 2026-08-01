@@ -8,9 +8,9 @@ import json
 import subprocess
 import sys
 from contextlib import contextmanager
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
-from typing import Dict, Iterator, Optional, Sequence, Tuple
+from typing import Dict, Iterator, Mapping, Optional, Sequence, Tuple
 from unittest.mock import patch
 
 import numpy as np
@@ -24,6 +24,7 @@ from .fulltrack_extract import (
     normalize_rows,
 )
 from .fulltrack_store import FullTrackStore, stable_json_sha256
+from .fulltrack_v3_protocol import V3ProtocolError, load_protocol
 from .jamendo_fulltrack import (
     JamendoValidationError,
     load_jamendo_context,
@@ -332,15 +333,26 @@ class FrozenMusicFMAdapter:
 
 
 def _extraction_binding(
-    config: ExtractionConfig, capability: MusicFMCapability
+    config: ExtractionConfig,
+    capability: MusicFMCapability,
+    *,
+    track_protocol: Optional[Mapping[str, object]] = None,
 ) -> Dict[str, object]:
-    return {
+    binding = {
         "schema_version": 1,
         "experiment": "musicfm_fma_frozen_representation_canary",
         "extraction": config.as_dict(),
         "model": capability.binding(),
         "promotion_allowed": False,
     }
+    if track_protocol is not None:
+        binding["track_protocol"] = {
+            "artifact_kind": track_protocol["artifact_kind"],
+            "payload_sha256": track_protocol["payload_sha256"],
+            "selection_sha256": track_protocol["selection_sha256"],
+            "track_limit": track_protocol["track_limit"],
+        }
+    return binding
 
 
 def _capability_command(args: argparse.Namespace) -> int:
@@ -373,12 +385,23 @@ def _extract_command(args: argparse.Namespace) -> int:
         shard_tracks=args.shard_tracks,
     )
     config.validate()
+    protocol = None
+    tracks = context.tracks
+    if args.track_plan:
+        protocol = load_protocol(Path(args.track_plan), context=context)
+        tracks_by_id = context.by_track_id
+        tracks = tuple(
+            tracks_by_id[int(entry["track_id"])] for entry in protocol["tracks"]
+        )
+        context = replace(context, tracks=tracks)
     encoder = FrozenMusicFMAdapter(Path(args.assets))
-    binding = _extraction_binding(config, encoder.capability)
+    binding = _extraction_binding(
+        config, encoder.capability, track_protocol=protocol
+    )
     with FullTrackStore(
         Path(args.output),
-        track_ids=[track.track_id for track in context.tracks],
-        source_hashes=[track.expected_audio_sha256 for track in context.tracks],
+        track_ids=[track.track_id for track in tracks],
+        source_hashes=[track.expected_audio_sha256 for track in tracks],
         source_fingerprint=context.source_fingerprint,
         config_sha256=stable_json_sha256(binding),
         model_sha256=encoder.checkpoint_sha256,
@@ -427,6 +450,10 @@ def build_parser() -> argparse.ArgumentParser:
     extract.add_argument("--salient-sections", type=int, default=32)
     extract.add_argument("--shard-tracks", type=int, default=64)
     extract.add_argument("--max-tracks", type=int)
+    extract.add_argument(
+        "--track-plan",
+        help="optional hash-frozen V3 protocol limiting the immutable store plan",
+    )
     extract.set_defaults(handler=_extract_command)
     return parser
 
@@ -435,7 +462,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         return int(args.handler(args))
-    except (FullTrackExtractionError, JamendoValidationError) as exc:
+    except (
+        FullTrackExtractionError,
+        JamendoValidationError,
+        V3ProtocolError,
+    ) as exc:
         raise SystemExit(f"MusicFM canary blocked: {exc}") from exc
 
 

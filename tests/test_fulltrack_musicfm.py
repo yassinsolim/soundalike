@@ -99,6 +99,7 @@ def test_musicfm_cli_uses_approved_window_and_bounded_batch():
     assert SAMPLE_RATE == 24_000
     assert WINDOW_SECONDS == 30.0
     assert HOP_SECONDS == 15.0
+    assert args.track_plan is None
 
 
 def test_musicfm_source_cleanup_does_not_mask_model_error(tmp_path):
@@ -164,6 +165,25 @@ def test_musicfm_binding_covers_every_model_asset_and_blocks_promotion():
     assert binding["model"]["stats_sha256"] == STATS_SHA256
     assert binding["model"]["conformer_config_sha256"] == CONFORMER_CONFIG_SHA256
     assert binding["model"]["source_license_sha256"] == SOURCE_LICENSE_SHA256
+
+
+def test_musicfm_binding_includes_frozen_track_protocol():
+    config = ExtractionConfig(
+        sample_rate=SAMPLE_RATE,
+        window_seconds=WINDOW_SECONDS,
+        hop_seconds=HOP_SECONDS,
+    )
+    protocol = {
+        "artifact_kind": "v3_artist_disjoint_semantic_head_scale_protocol",
+        "payload_sha256": "1" * 64,
+        "selection_sha256": "2" * 64,
+        "track_limit": 8192,
+    }
+    binding = _extraction_binding(
+        config, _capability(), track_protocol=protocol
+    )
+    assert binding["track_protocol"] == protocol
+    assert binding["promotion_allowed"] is False
 
 
 def test_capability_fails_closed_without_assets(tmp_path):
