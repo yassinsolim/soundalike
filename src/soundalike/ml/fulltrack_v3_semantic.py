@@ -59,7 +59,10 @@ SCALE_PROTOCOL_PAYLOAD_SHA256 = (
     "d697240384003ba1a7d9e00d281462b005a3e02abac49964cd3ba4e128292738"
 )
 SCALE_MUSICFM_CONFIG_SHA256 = (
-    "3ecc220a1652a01e2d0032bf12087a587a585d4c9ced2f6a0f261cbb6825e5f1"
+    "c2b0c316a36226abd26b85912c136967ca7df5ebfcb59c5bff0b9f42ed169ea3"
+)
+SCALE_MUSICFM_TRACK_PLAN_SHA256 = (
+    "43d93666e0c25708f7b7b1c25f3c504c80bc5f7b2edd553b284d7fda0de4a74b"
 )
 REPRESENTATIONS = ("clap", "musicfm", "dual")
 RIDGE_VALUES = (1.0, 10.0, 100.0)
@@ -706,7 +709,7 @@ def _validate_musicfm_store(
         "shard_tracks": 64,
         "repetition_sections": 32,
         "salient_sections": 32,
-        "track_plan_sha256": SCALE_PROTOCOL_PAYLOAD_SHA256,
+        "track_plan_sha256": SCALE_MUSICFM_TRACK_PLAN_SHA256,
     }
     actual = reader.binding.as_dict()
     actual["source_fingerprint"] = reader.binding.source_fingerprint

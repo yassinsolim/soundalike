@@ -53,11 +53,23 @@
   },
   "development_result_seen": false,
   "implementation": "soundalike.ml.fulltrack_v3_metric",
-  "musicfm_store_sealed": false,
+  "musicfm_store_binding": {
+    "config_sha256": "c2b0c316a36226abd26b85912c136967ca7df5ebfcb59c5bff0b9f42ed169ea3",
+    "manifest_sha256": "119bea2878a29c753643a159ad0d1ff3252b221c3742758318867b9a5dbb6ad7",
+    "model_id": "musicfm_fma_b83ebed_layer7",
+    "model_sha256": "68392eee13d34c2941b3761934abb6b1e67b2e9df498695bda2ea5c1087d4b96",
+    "track_plan_sha256": "43d93666e0c25708f7b7b1c25f3c504c80bc5f7b2edd553b284d7fda0de4a74b"
+  },
+  "musicfm_store_sealed": true,
   "promotion_allowed": false,
   "protocol_payload_sha256": "d697240384003ba1a7d9e00d281462b005a3e02abac49964cd3ba4e128292738",
   "protocol_selection_sha256": "8097b84f87c9f662157fe19bd93c00f51ea6703e0db964b864ecb188ae5481fe",
   "shadow_labels_accessed": false,
   "source_fingerprint": "060f43ed0fa12e5a583e26a7728be14a5334c7daffebe2289f08875e9ec0c709",
-  "payload_sha256": "c1b330b39fd851352c5379b41acfd0744c1a98f1d609939022af1e2bb249d615"
+  "store_binding_amendment": {
+    "development_result_seen": false,
+    "reason": "Replace stale predicted config and protocol-payload aliases with independently recomputed sealed-store identities before evaluation.",
+    "superseded_config_sha256": "3ecc220a1652a01e2d0032bf12087a587a585d4c9ced2f6a0f261cbb6825e5f1"
+  },
+  "payload_sha256": "0eb0f2cc3e547f0a5ea35c043b417fb63180f43c3054ffa3c2f73be94533b692"
 }

@@ -173,3 +173,12 @@ and model sidecar bind the protocol, text-vector content, and both sealed
 manifests. There is no dual hyperparameter grid after the MusicFM result becomes
 available: this exact candidate either clears the existing development gate or
 is rejected without shadow access.
+
+The 8,192-track MusicFM store sealed before development evaluation. A pre-result
+integrity check found that the trainer contained a stale predicted config hash
+and incorrectly used the protocol payload hash as the store track-plan hash.
+The exact intended binding was independently recomputed from the extraction
+configuration, pinned capability, and frozen protocol and matched the sealed
+store (`c2b0c316...` config; `43d93666...` track plan). Both constants and the
+preregistration were corrected before any candidate report was produced; model,
+method, blends, gates, labels, and partitions were unchanged.
