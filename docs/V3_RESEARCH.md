@@ -182,3 +182,20 @@ configuration, pinned capability, and frozen protocol and matched the sealed
 store (`c2b0c316...` config; `43d93666...` track plan). Both constants and the
 preregistration were corrected before any candidate report was produced; model,
 method, blends, gates, labels, and partitions were unchanged.
+
+### Scaled MusicFM development result
+
+The sealed scaled runs completed without opening shadow:
+
+| Method | Recall | MRR | NDCG | Positive Recall folds | Outcome |
+|---|---:|---:|---:|---:|---|
+| selected MusicFM ridge | +8.08% | +3.19% | +3.32% | 4/5 | stable, below +15% gate |
+| frozen nonlinear/text dual candidate | +2.71% | +0.47% | -0.01% | 3/5 | unstable, rejected |
+
+The selected MusicFM ridge has a positive absolute Recall interval
+(`+0.00207..+0.00815`) and a -1.47% worst Recall fold, but it does not meet the
+fixed primary-gain threshold. The nonlinear candidate's interval crosses zero
+and its worst Recall fold is -8.78%. Neither result authorizes shadow access.
+The exact LSQR targets were executed in parallel after a production-size
+benchmark proved byte-identical coefficients and a 12.9x speedup; this changed
+only execution scheduling, not model definition or results.

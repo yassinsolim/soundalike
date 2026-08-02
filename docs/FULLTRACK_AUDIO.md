@@ -186,6 +186,12 @@ This is not a new post-result grid. Text prompts/content hashes, architecture,
 loss, neighbor propagation, blends, and gate quantile are fixed in
 `.goals/production-ready-v3/artifacts/dual-metric-preregistration.json`.
 
+Both scaled runs failed the development gate. The selected MusicFM ridge reached
++8.08% Recall, +3.19% MRR, and +3.32% NDCG with 4/5 positive Recall folds. The
+frozen nonlinear/text candidate reached +2.71% Recall, +0.47% MRR, and -0.01%
+NDCG with only 3/5 positive Recall folds and a Recall interval crossing zero.
+Shadow remains unopened.
+
 ## Required local dataset
 
 Default paths:

@@ -1,0 +1,39 @@
+{
+  "artifact_kind": "v3_scaled_musicfm_development_summary",
+  "development_consumed_for_selection": true,
+  "dual_metric": {
+    "development_gate_passed": false,
+    "model_file_sha256": "1f6d75cd019cc0db1e7c3f8f8e02b87187eced6c39a610dc92e6c02f74a81bce",
+    "mrr_relative_delta": 0.00472974744338206,
+    "ndcg_relative_delta": -0.00013278858242182778,
+    "recall_paired_ci95_absolute": [
+      -0.0013224972973643152,
+      0.005064290585032802
+    ],
+    "recall_positive_folds": 3,
+    "recall_relative_delta": 0.02706913121404897,
+    "recall_worst_fold_relative_delta": -0.08775843811333639,
+    "report_file_sha256": "070d7b2a0c8e79b2fcf74c3373194b13f245ac1ef9c4abc8c8aa275c8b0a5c5a"
+  },
+  "musicfm_ridge": {
+    "blend": 0.3,
+    "development_gate_passed": false,
+    "model_file_sha256": "88ac87b9fcecd6f0ddf071ff687891d176a360e7f8ea62ca29996b16d873b4d7",
+    "mrr_relative_delta": 0.03188193290633512,
+    "ndcg_relative_delta": 0.03323713853197896,
+    "recall_paired_ci95_absolute": [
+      0.00207291635004708,
+      0.008150897572998422
+    ],
+    "recall_positive_folds": 4,
+    "recall_relative_delta": 0.0807564993791745,
+    "recall_worst_fold_relative_delta": -0.014681534084755143,
+    "report_file_sha256": "7aeedfc9a7059cdd2f82b86860df7f25dcb904935d9a2a4cf6a94ca783f1ea66",
+    "representation": "musicfm",
+    "ridge": 10.0
+  },
+  "musicfm_store_manifest_sha256": "119bea2878a29c753643a159ad0d1ff3252b221c3742758318867b9a5dbb6ad7",
+  "protocol_payload_sha256": "d697240384003ba1a7d9e00d281462b005a3e02abac49964cd3ba4e128292738",
+  "shadow_labels_accessed": false,
+  "payload_sha256": "74fb19a0b29dcdfaa75cbf9175769c904a5c3e4edbc73bcb574fc7151f02c9f1"
+}
