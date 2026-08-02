@@ -190,7 +190,53 @@ Both scaled runs failed the development gate. The selected MusicFM ridge reached
 +8.08% Recall, +3.19% MRR, and +3.32% NDCG with 4/5 positive Recall folds. The
 frozen nonlinear/text candidate reached +2.71% Recall, +0.47% MRR, and -0.01%
 NDCG with only 3/5 positive Recall folds and a Recall interval crossing zero.
-Shadow remains unopened.
+Shadow remained unopened while a complementary development-only composition was
+tested. Its exact 50% train-only CLAP neighbor-tag / 50% MusicFM ridge profile,
+with a 50% baseline residual, reached +15.06% Recall, +1.18% MRR, and +4.98%
+NDCG. Its positive Recall interval, 4/5 positive Recall folds, and -4.67% worst
+fold clear every development check.
+
+Build the reproducible candidate and seal it before shadow:
+
+```powershell
+& $python -m soundalike.ml.fulltrack_v3_complement build-development `
+  --metadata-root 'C:\soundalike-data\mtg-jamendo-dataset' `
+  --protocol 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-semantic-head-scale-protocol.json' `
+  --clap-store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\clap-v1-full-55701' `
+  --musicfm-store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\musicfm-fma-v3-semantic-head-8192' `
+  --musicfm-head 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-semantic-head-model.npz' `
+  --model-output 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-complement-model.npz' `
+  --metadata-output 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-complement-model.json' `
+  --report-output 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-complement-development.json'
+
+& $python -m soundalike.ml.fulltrack_v3_complement freeze-shadow `
+  --protocol 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-semantic-head-scale-protocol.json' `
+  --clap-store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\clap-v1-full-55701' `
+  --musicfm-store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\musicfm-fma-v3-semantic-head-8192' `
+  --model 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-complement-model.npz' `
+  --metadata 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-complement-model.json' `
+  --development-report 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-complement-development.json' `
+  --output 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-complement-shadow-freeze.json'
+```
+
+The freeze payload is `765b4041...`. It binds the exact model and development
+report while declaring shadow unopened. The audit command refuses to run if its
+state file exists, writes an irreversible opened marker before reading shadow
+labels, and never authorizes promotion without a separate human pilot:
+
+```powershell
+& $python -m soundalike.ml.fulltrack_v3_complement audit-shadow `
+  --metadata-root 'C:\soundalike-data\mtg-jamendo-dataset' `
+  --protocol 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-semantic-head-scale-protocol.json' `
+  --clap-store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\clap-v1-full-55701' `
+  --musicfm-store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\musicfm-fma-v3-semantic-head-8192' `
+  --model 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-complement-model.npz' `
+  --metadata 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-complement-model.json' `
+  --development-report 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-complement-development.json' `
+  --freeze '.goals\production-ready-v3\artifacts\complementary-shadow-freeze.json' `
+  --output 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-complement-shadow-audit.json' `
+  --audit-state 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-complement-shadow-state.json'
+```
 
 ## Required local dataset
 

@@ -1,0 +1,56 @@
+{
+  "artifact_kind": "v3_complementary_shadow_freeze",
+  "candidate_metadata_file_sha256": "fbd3d2d3c68bf8cb331bc745d124ae0da282bbdc69f42a8c074a106ee4eb104e",
+  "candidate_metadata_payload_sha256": "a05594a862221243d786905c9867710963988786abc91bb0785f2be2eb5bd95e",
+  "candidate_model_file_sha256": "338f8a0e1a6c24dd7d633b39b7efd1885ccce55eb83de5ae0d2513530de25915",
+  "clap_manifest_file_sha256": "82f593136408a893a71d350af8e3356356e8ea5c041f3c1293abe65183388409",
+  "development_evaluation": {
+    "paired_recall_ci95": [
+      0.0048508389701348055,
+      0.013786034784975705
+    ],
+    "positive_folds": {
+      "graded_ndcg_at_k": 3,
+      "mrr": 3,
+      "recall_at_k": 4
+    },
+    "relative_delta": {
+      "graded_ndcg_at_k": 0.049755280225821874,
+      "mrr": 0.011778451599638418,
+      "recall_at_k": 0.15056579301514383
+    },
+    "worst_fold_relative_delta": {
+      "graded_ndcg_at_k": -0.024352383316797677,
+      "mrr": -0.07549079693052563,
+      "recall_at_k": -0.0467056106715632
+    }
+  },
+  "development_report_file_sha256": "6c253dd4fe8ff9596d4fa495ac27dcbc9d1cdcc22d412c507aad5c157ef8dc80",
+  "development_report_payload_sha256": "4fc97f3019848bd92b5c2beda37464121c37d42ee148b8b4f3daf22d82a77f8c",
+  "development_result_seen": true,
+  "frozen_method": {
+    "baseline_blend": 0.5,
+    "clap_profile": "train_only_idf_weighted_16_neighbor_tags",
+    "clap_profile_share": 0.5,
+    "musicfm_profile": "selected_layer7_ridge_10_tag_head",
+    "musicfm_profile_share": 0.5,
+    "profile_mode": "concatenated_weighted_channels",
+    "semantic_blend": 0.5
+  },
+  "musicfm_manifest_file_sha256": "597aecf395ed049b3e540e06c3e46f11052542bb0bc84c21072bdee4ad1d8fdd",
+  "payload_sha256": "765b4041ede790ec379dba829d14906c43318c80d0bba147acf0b4476f2c6975",
+  "promotion_allowed": false,
+  "protocol_payload_sha256": "d697240384003ba1a7d9e00d281462b005a3e02abac49964cd3ba4e128292738",
+  "protocol_selection_sha256": "8097b84f87c9f662157fe19bd93c00f51ea6703e0db964b864ecb188ae5481fe",
+  "schema_version": 1,
+  "shadow_fold_seed": 20260808,
+  "shadow_gate": {
+    "maximum_fold_recall_regression": 0.05,
+    "maximum_mrr_ndcg_regression": 0.01,
+    "minimum_positive_recall_folds": 4,
+    "minimum_recall_relative_gain": 0.2,
+    "paired_recall_ci_must_exclude_zero": true
+  },
+  "shadow_labels_accessed": false,
+  "source_fingerprint": "060f43ed0fa12e5a583e26a7728be14a5334c7daffebe2289f08875e9ec0c709"
+}

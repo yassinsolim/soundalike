@@ -307,18 +307,31 @@ def _protocol_entries(
     return selected
 
 
-def load_train_development_tags(
+def load_protocol_tags(
     metadata_root: Path,
     protocol: Mapping[str, object],
+    splits: Sequence[str],
 ) -> Mapping[int, Tuple[str, ...]]:
-    allowed_entries = _protocol_entries(protocol, "train") + _protocol_entries(
-        protocol, "development"
+    selected_splits = tuple(splits)
+    if (
+        not selected_splits
+        or len(set(selected_splits)) != len(selected_splits)
+        or any(split not in EXPECTED_SPLITS for split in selected_splits)
+    ):
+        raise V3SemanticError("label split selection is invalid")
+    allowed_entries = tuple(
+        entry
+        for split in selected_splits
+        for entry in _protocol_entries(protocol, split)
     )
     expected_artists = {
         int(entry["track_id"]): int(entry["artist_id"]) for entry in allowed_entries
     }
-    shadow_ids = {
-        int(entry["track_id"]) for entry in _protocol_entries(protocol, "shadow")
+    excluded_ids = {
+        int(entry["track_id"])
+        for split in EXPECTED_SPLITS
+        if split not in selected_splits
+        for entry in _protocol_entries(protocol, split)
     }
     path = (
         Path(metadata_root).absolute()
@@ -361,10 +374,21 @@ def load_train_development_tags(
                 )
             labels[track_id] = tags
     if set(labels) != set(expected_artists):
-        raise V3SemanticError("train/development labels are incomplete")
-    if set(labels).intersection(shadow_ids):
-        raise V3SemanticError("shadow labels were loaded")
+        raise V3SemanticError("selected protocol labels are incomplete")
+    if set(labels).intersection(excluded_ids):
+        raise V3SemanticError("labels outside the selected splits were loaded")
     return labels
+
+
+def load_train_development_tags(
+    metadata_root: Path,
+    protocol: Mapping[str, object],
+) -> Mapping[int, Tuple[str, ...]]:
+    return load_protocol_tags(
+        metadata_root,
+        protocol,
+        ("train", "development"),
+    )
 
 
 def build_label_targets(

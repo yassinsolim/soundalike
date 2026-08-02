@@ -199,3 +199,31 @@ and its worst Recall fold is -8.78%. Neither result authorizes shadow access.
 The exact LSQR targets were executed in parallel after a production-size
 benchmark proved byte-identical coefficients and a 12.9x speedup; this changed
 only execution scheduling, not model definition or results.
+
+### Complementary profile freeze
+
+A final development-only composition probe tested whether the strongest
+train-only CLAP neighbor tags and the selected MusicFM ridge profile carry
+complementary signal. It evaluated 150 quarter-step profile/score compositions
+and baseline residuals without accessing shadow. The selected candidate is
+deliberately simpler than the rejected nonlinear branch:
+
+- 50% IDF-weighted, temperature-0.05, 16-neighbor CLAP tag profile;
+- 50% selected MusicFM layer-7 ridge-10 tag profile;
+- profile-level concatenation, so channel cosine similarities receive equal
+  weight; and
+- a 50% CLAP MaxSim baseline / 50% semantic-profile score residual.
+
+The repository implementation reproduced the probe exactly over 938 evaluable
+development queries:
+
+| Recall | MRR | NDCG | Recall interval | Positive Recall folds | Worst Recall fold |
+|---:|---:|---:|---:|---:|---:|
+| +15.06% | +1.18% | +4.98% | `+0.00485..+0.01379` absolute | 4/5 | -4.67% |
+
+This is the first scaled candidate to clear every fixed development-to-shadow
+check. The self-contained model, development report, sealed stores, exact
+method, and final +20% shadow gate are bound in
+`.goals/production-ready-v3/artifacts/complementary-shadow-freeze.json`
+(`765b4041...`). At this freeze point shadow labels and metrics remain unopened;
+the candidate may now receive exactly one independent shadow audit.
