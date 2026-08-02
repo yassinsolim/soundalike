@@ -238,6 +238,12 @@ labels, and never authorizes promotion without a separate human pilot:
   --audit-state 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-complement-shadow-state.json'
 ```
 
+The one-time audit is complete. It reached +4.32% Recall, +4.92% MRR, and
++7.54% NDCG over 978 evaluable shadow queries. Recall had a
+`-0.00160..+0.00600` absolute interval, only 3/5 positive folds, and a -13.23%
+worst fold. The automated gate failed, so the listening pack and promotion
+remain blocked. The audit state is sealed and must not be deleted or reopened.
+
 ## Required local dataset
 
 Default paths:

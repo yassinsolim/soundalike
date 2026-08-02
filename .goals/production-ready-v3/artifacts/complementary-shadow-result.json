@@ -1,0 +1,146 @@
+{
+  "artifact_kind": "v3_complementary_shadow_audit",
+  "candidate_model_file_sha256": "338f8a0e1a6c24dd7d633b39b7efd1885ccce55eb83de5ae0d2513530de25915",
+  "evaluation": {
+    "baseline": {
+      "graded_ndcg_at_k": 0.11261040848282687,
+      "mrr": 0.28036855843026554,
+      "recall_at_k": 0.05163084864961163
+    },
+    "candidate": {
+      "graded_ndcg_at_k": 0.12109675412726455,
+      "mrr": 0.29416238436786746,
+      "recall_at_k": 0.05386115268523039
+    },
+    "folds": {
+      "0": {
+        "queries": 260,
+        "relative_delta": {
+          "graded_ndcg_at_k": 0.06639494506984978,
+          "mrr": 0.07775121202594004,
+          "recall_at_k": 0.05535554378093299
+        }
+      },
+      "1": {
+        "queries": 160,
+        "relative_delta": {
+          "graded_ndcg_at_k": 0.04238931822494285,
+          "mrr": -0.04015056939223394,
+          "recall_at_k": 0.07936951683431914
+        }
+      },
+      "2": {
+        "queries": 128,
+        "relative_delta": {
+          "graded_ndcg_at_k": 0.035604521191792804,
+          "mrr": 0.04671557660518166,
+          "recall_at_k": -0.13229723317947983
+        }
+      },
+      "3": {
+        "queries": 143,
+        "relative_delta": {
+          "graded_ndcg_at_k": 0.07423035581451765,
+          "mrr": 0.062073415129306975,
+          "recall_at_k": -0.008593951559814572
+        }
+      },
+      "4": {
+        "queries": 287,
+        "relative_delta": {
+          "graded_ndcg_at_k": 0.13205374980930995,
+          "mrr": 0.07954170799339222,
+          "recall_at_k": 0.11682767729068799
+        }
+      }
+    },
+    "paired_delta": {
+      "graded_ndcg_at_k": {
+        "bootstrap_probability_delta_gt_zero": 1.0,
+        "improved_queries": 331,
+        "mean_delta": 0.008486345644437687,
+        "paired_bootstrap_ci95": [
+          0.004333103960782169,
+          0.012640355794980978
+        ],
+        "regressed_queries": 239,
+        "unchanged_queries": 408
+      },
+      "mrr": {
+        "bootstrap_probability_delta_gt_zero": 0.988,
+        "improved_queries": 417,
+        "mean_delta": 0.013793825937601884,
+        "paired_bootstrap_ci95": [
+          0.0017062489547512445,
+          0.026452033516340113
+        ],
+        "regressed_queries": 303,
+        "unchanged_queries": 258
+      },
+      "recall_at_k": {
+        "bootstrap_probability_delta_gt_zero": 0.876,
+        "improved_queries": 199,
+        "mean_delta": 0.002230304035618753,
+        "paired_bootstrap_ci95": [
+          -0.0015981040894812652,
+          0.0059975718989342865
+        ],
+        "regressed_queries": 127,
+        "unchanged_queries": 652
+      }
+    },
+    "positive_folds": {
+      "graded_ndcg_at_k": 5,
+      "mrr": 4,
+      "recall_at_k": 3
+    },
+    "queries": 978,
+    "relative_delta": {
+      "graded_ndcg_at_k": 0.07536022432359668,
+      "mrr": 0.04919890452349995,
+      "recall_at_k": 0.04319712137126652
+    },
+    "worst_fold_relative_delta": {
+      "graded_ndcg_at_k": 0.035604521191792804,
+      "mrr": -0.04015056939223394,
+      "recall_at_k": -0.13229723317947983
+    }
+  },
+  "evidence_scope": "full_track_jamendo_research",
+  "evidence_status": "independent_shadow_audit",
+  "freeze_file_sha256": "c9e107005273ebaf0901e421e0cf2cf88e65248ec194d84cef1d610c3f927219",
+  "freeze_payload_sha256": "765b4041ede790ec379dba829d14906c43318c80d0bba147acf0b4476f2c6975",
+  "human_pilot_required": true,
+  "knn": {
+    "mean_effective_neighbors": 14.684582742884439,
+    "mean_top1_similarity": 0.8819780802249331,
+    "neighbors": 16,
+    "temperature": 0.05
+  },
+  "listening_pack_allowed": false,
+  "opened_label_splits": [
+    "shadow"
+  ],
+  "payload_sha256": "17d0a1ecc9c997c2b44d8bd40f2fda777d73fa916fe54870b1d59fc16e498c76",
+  "promotion_allowed": false,
+  "protocol_payload_sha256": "d697240384003ba1a7d9e00d281462b005a3e02abac49964cd3ba4e128292738",
+  "protocol_selection_sha256": "8097b84f87c9f662157fe19bd93c00f51ea6703e0db964b864ecb188ae5481fe",
+  "schema_version": 1,
+  "shadow_evaluation_accessed": true,
+  "shadow_fold_seed": 20260808,
+  "shadow_gate": {
+    "automated_passed": false,
+    "checks": {
+      "primary_paired_ci_above_zero": false,
+      "primary_positive_folds": false,
+      "primary_relative_gain": false,
+      "primary_worst_fold": false,
+      "safety_metrics": true
+    },
+    "human_pilot_required": true,
+    "promotion_allowed": false
+  },
+  "shadow_labels_accessed": true,
+  "shadow_tracks": 1194,
+  "source_fingerprint": "060f43ed0fa12e5a583e26a7728be14a5334c7daffebe2289f08875e9ec0c709"
+}

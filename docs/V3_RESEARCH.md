@@ -225,5 +225,21 @@ This is the first scaled candidate to clear every fixed development-to-shadow
 check. The self-contained model, development report, sealed stores, exact
 method, and final +20% shadow gate are bound in
 `.goals/production-ready-v3/artifacts/complementary-shadow-freeze.json`
-(`765b4041...`). At this freeze point shadow labels and metrics remain unopened;
-the candidate may now receive exactly one independent shadow audit.
+(`765b4041...`).
+
+### Complementary shadow audit
+
+Commit `237b71e` froze the code and evidence before the one-time shadow audit.
+The audit then opened 1,194 shadow tracks exactly once and sealed payload
+`17d0a1ec...`:
+
+| Recall | MRR | NDCG | Recall interval | Positive Recall folds | Worst Recall fold |
+|---:|---:|---:|---:|---:|---:|
+| +4.32% | +4.92% | +7.54% | `-0.00160..+0.00600` absolute | 3/5 | -13.23% |
+
+All pooled metrics improved, and MRR/NDCG intervals were positive, but the
+primary Recall result failed four final checks: +20% gain, positive interval,
+4/5 positive folds, and no fold below -5%. The fixed gate therefore blocks
+listening-pack generation and promotion. The complete immutable result is in
+`.goals/production-ready-v3/artifacts/complementary-shadow-result.json`.
+This shadow is consumed and must not be used for tuning or a second claim.
