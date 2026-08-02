@@ -243,3 +243,22 @@ primary Recall result failed four final checks: +20% gain, positive interval,
 listening-pack generation and promotion. The complete immutable result is in
 `.goals/production-ready-v3/artifacts/complementary-shadow-result.json`.
 This shadow is consumed and must not be used for tuning or a second claim.
+
+### Fresh post-audit protocol
+
+Continued model work uses a new protocol rather than retuning on the failed
+shadow. The protocol takes all 32,859 tracks in official fold-0 train and uses
+artist identity to enforce the following lineage:
+
+- all 1,577 artists seen anywhere in the consumed 8,192-track protocol become
+  training-only, expanding supervision to 31,473 tracks;
+- the 562 artists never present in that protocol are deterministically divided
+  into 742-track development and 644-track shadow partitions; and
+- train/development/shadow artist overlap remains zero.
+
+The 5.92 MB protocol is sealed at payload `8d43ca80...`, selection
+`788354f4...`, and file hash `c5c1fc5b...`. Its compact freeze is
+`.goals/production-ready-v3/artifacts/fresh-protocol-freeze.json`. Fresh shadow
+labels remain unopened. The immediate development work is a larger
+CLAP-supervised tag/metric model; no new MusicFM extraction is authorized until
+that inexpensive branch demonstrates generalizable value.

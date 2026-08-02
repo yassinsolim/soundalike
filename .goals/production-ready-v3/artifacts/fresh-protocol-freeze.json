@@ -1,0 +1,29 @@
+{
+  "artifact_kind": "v3_fresh_protocol_freeze_summary",
+  "artist_overlap": 0,
+  "consumed_protocol_payload_sha256": "d697240384003ba1a7d9e00d281462b005a3e02abac49964cd3ba4e128292738",
+  "consumed_shadow_result_payload_sha256": "17d0a1ecc9c997c2b44d8bd40f2fda777d73fa916fe54870b1d59fc16e498c76",
+  "payload_sha256": "99fce98098131412c637b0e3d37d62c60bf37c436599dbc70adff0dad3428ff2",
+  "promotion_allowed": false,
+  "protocol_file_sha256": "c5c1fc5bf23f088e51262f2c811659ea0c30e01e43a3ac102c9f86112b4d9af4",
+  "protocol_payload_sha256": "8d43ca8099ffc604555eef5b180ee1aee38520ddb9e7e269a672533767e566a3",
+  "protocol_selection_sha256": "788354f41e6588cd3c41a59167d9ade0274cefb0907033819595db9609823ae6",
+  "shadow_labels_accessed": false,
+  "split_summary": {
+    "development": {
+      "artists": 297,
+      "track_ids_sha256": "cb3573f18648733f1b2292f2dddf037996e6a4d9c2d3bde0723350a77c6a2ffb",
+      "tracks": 742
+    },
+    "shadow": {
+      "artists": 265,
+      "track_ids_sha256": "d6908d7de0604031017dd2d74c731b6770be3d0d9cc630cd94b303f3beffedfb",
+      "tracks": 644
+    },
+    "train": {
+      "artists": 1577,
+      "track_ids_sha256": "9a3d988433a8dacd915d27248bbfa56ce3f70eee14d5ce22970e80f357e274d2",
+      "tracks": 31473
+    }
+  }
+}

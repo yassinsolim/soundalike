@@ -244,6 +244,23 @@ The one-time audit is complete. It reached +4.32% Recall, +4.92% MRR, and
 worst fold. The automated gate failed, so the listening pack and promotion
 remain blocked. The audit state is sealed and must not be deleted or reopened.
 
+Further work must use the fresh artist universe frozen by
+`fulltrack_v3_fresh_protocol.py`. It assigns all artists from the consumed
+protocol to 31,473-track training and splits 562 never-used artists into
+742-track development and 644-track unopened shadow partitions:
+
+```powershell
+& $python -m soundalike.ml.fulltrack_v3_fresh_protocol `
+  --metadata-root 'C:\soundalike-data\mtg-jamendo-dataset' `
+  --audio-root 'C:\soundalike-data\mtg-jamendo-raw-full\audio' `
+  --state-root 'C:\soundalike-data\mtg-jamendo-raw-full\state' `
+  --consumed-protocol 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-semantic-head-scale-protocol.json' `
+  --consumed-result '.goals\production-ready-v3\artifacts\complementary-shadow-result.json' `
+  --output 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-fresh-scaled-protocol.json'
+```
+
+The new protocol payload is `8d43ca80...`; fresh shadow remains unopened.
+
 ## Required local dataset
 
 Default paths:
