@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from sklearn.linear_model import Ridge
 
 from soundalike.ml.fulltrack_store import stable_json_sha256
 from soundalike.ml.fulltrack_v3_semantic import (
@@ -58,6 +59,16 @@ def test_semantic_head_fit_is_deterministic_and_predicts_unit_profiles():
         ridge=1.0,
     )
     np.testing.assert_allclose(first.coefficients, second.coefficients)
+    normalized = (inputs - first.input_mean) / first.input_scale
+    normalized /= np.linalg.norm(normalized, axis=1, keepdims=True)
+    reference = Ridge(
+        alpha=1.0,
+        fit_intercept=False,
+        solver="lsqr",
+        tol=1e-6,
+        max_iter=2_000,
+    ).fit(normalized, targets - np.mean(targets, axis=0))
+    np.testing.assert_array_equal(first.coefficients, reference.coef_.T)
     profiles = first.predict(inputs)
     np.testing.assert_allclose(np.linalg.norm(profiles, axis=1), 1.0)
     assert np.mean(np.argmax(profiles, axis=1) == classes) > 0.80

@@ -4,12 +4,13 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
-from sklearn.linear_model import Ridge
+from scipy.sparse.linalg import lsqr
 
 from .fulltrack_eval import (
     METRICS,
@@ -76,6 +77,7 @@ MAX_FOLD_PRIMARY_RELATIVE_REGRESSION = 0.05
 PRIMARY_METRIC = "recall_at_k"
 INPUT_SCALE_EPSILON = 1e-6
 PROFILE_NORM_EPSILON = 1e-12
+LSQR_TARGET_WORKERS = 16
 LABEL_HEADER = ("TRACK_ID", "ARTIST_ID", "ALBUM_ID", "PATH", "DURATION", "TAGS")
 
 
@@ -244,15 +246,28 @@ def fit_semantic_head(
     ):
         raise V3SemanticError("semantic-head targets are invalid")
     prior = np.mean(targets, axis=0)
-    model = Ridge(
-        alpha=ridge,
-        fit_intercept=False,
-        solver="lsqr",
-        tol=1e-6,
-        max_iter=2_000,
-    )
-    model.fit(inputs, targets - prior)
-    coefficients = np.asarray(model.coef_, dtype=np.float64).T
+    centered_targets = targets - prior
+
+    def solve_target(index: int) -> np.ndarray:
+        return np.asarray(
+            lsqr(
+                inputs,
+                centered_targets[:, index],
+                damp=np.sqrt(ridge),
+                atol=1e-6,
+                btol=1e-6,
+                iter_lim=2_000,
+            )[0],
+            dtype=np.float64,
+        )
+
+    with ThreadPoolExecutor(
+        max_workers=min(LSQR_TARGET_WORKERS, len(vocabulary_tuple))
+    ) as executor:
+        coefficients = np.stack(
+            tuple(executor.map(solve_target, range(len(vocabulary_tuple)))),
+            axis=1,
+        )
     idf = np.log(
         (len(targets) + 1.0) / (np.sum(targets, axis=0) + 1.0)
     ) + 1.0
