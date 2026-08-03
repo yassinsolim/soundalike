@@ -1,0 +1,40 @@
+{
+  "artifact_kind": "v3_final_reserve_protocol_freeze",
+  "development_labels_accessed": false,
+  "evidence_scope": "full_track_jamendo_research",
+  "historical_selection": {
+    "artist_ids_sha256": "a4171afc82fd3edeaa128bbdaeea5e45650badc11b6d19d7b60071f9869aaaf6",
+    "artists": 1098,
+    "test_track_ids_sha256": "c43dea0e8032c2e900786d3b7c5898a74317b8c4b12867889196402440718bc5",
+    "test_tracks": 1702,
+    "validation_track_ids_sha256": "31b4320186b55f5300260c77f62281323ddf737d6cc01b03c24489d8164123f6",
+    "validation_tracks": 1710
+  },
+  "payload_sha256": "05abc813a77528498782b310595df790d4fa93407af16521eb3eaf8bd1a2aaa3",
+  "promotion_allowed": false,
+  "protocol_file_sha256": "e04e65a44dc102423595e76d67b962b9b4822e61871716cbe3900414ca954018",
+  "protocol_payload_sha256": "ac8c649a4cfd2672015f587bfb204105d63dcdffe0f1d8a6d1142737127e89be",
+  "schema_version": 1,
+  "selection_sha256": "aed5188cd0fc3839181f10385318ad9964164dd54bb4629ad3bcd771ecf9ef5a",
+  "shadow_labels_accessed": false,
+  "split_summary": {
+    "development": {
+      "artist_ids_sha256": "65a5dd45c658ba7a930bd38c71c4c6cbbe093ef934dbf4ff158fa2a39d9e6453",
+      "artists": 471,
+      "track_ids_sha256": "aed55cbb65cd461281f61c22abaf7bb6d9c00348157f7d2403992e2c572ed16d",
+      "tracks": 3074
+    },
+    "shadow": {
+      "artist_ids_sha256": "543b9542a32ec9bdfa8f0a44cd35da06a69e41347aeb3eb6d663b7c628d6d96c",
+      "artists": 466,
+      "track_ids_sha256": "39986abcea529ce6b606b9151b2b7406ca8ebaf8e250b86e5a33b13bf539d698",
+      "tracks": 3023
+    },
+    "train": {
+      "artist_ids_sha256": "dbb9dc0853a29fe1d34636999907f164b455541aae77f8173ca700ec6378ae02",
+      "artists": 2139,
+      "track_ids_sha256": "8da179c6a59b26a7b430ac9717b86d491bf2490a967573202b40fd7eff6b8658",
+      "tracks": 32859
+    }
+  }
+}

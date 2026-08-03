@@ -313,3 +313,23 @@ official validation/test selections leaves 945 artists and 6,135 tracks:
 from 466 artists, plus 38 unassigned tracks that will be excluded. The next
 protocol must freeze the natural validation partition for development and the
 natural test partition for one final shadow before any new method sees labels.
+
+### Final untouched reserve protocol
+
+`fulltrack_v3_reserve_protocol.py` now reconstructs both historical official
+512-track selections, excludes every artist they touched, and freezes the
+remaining natural fold-0 partitions:
+
+| Split | Tracks | Artists | Track-ID hash |
+|---|---:|---:|---|
+| train | 32,859 | 2,139 | `8da179c6...` |
+| development | 3,074 | 471 | `aed55cbb...` |
+| shadow | 3,023 | 466 | `39986abc...` |
+
+Artist overlap is zero. The protocol is sealed at payload `ac8c649a...`,
+selection `aed5188c...`, and file hash `e04e65a4...`; its compact repository
+freeze is
+`.goals/production-ready-v3/artifacts/final-reserve-protocol-freeze.json`
+(`05abc813...`). Neither reserve development nor reserve shadow labels were
+accessed at freeze time. Development may now be used for method selection;
+shadow remains a one-time final audit only.

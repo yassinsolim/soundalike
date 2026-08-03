@@ -298,6 +298,23 @@ present in the historical official validation/test selections. This leaves
 3,074 fold-0 validation tracks from 471 artists for development and 3,023
 fold-0 test tracks from 466 artists for one final shadow.
 
+Freeze that reserve before accessing either label partition:
+
+```powershell
+& $python -m soundalike.ml.fulltrack_v3_reserve_protocol `
+  --metadata-root 'C:\soundalike-data\mtg-jamendo-dataset' `
+  --audio-root 'C:\soundalike-data\mtg-jamendo-raw-full\audio' `
+  --state-root 'C:\soundalike-data\mtg-jamendo-raw-full\state' `
+  --fresh-result '.goals\production-ready-v3\artifacts\fresh-clap-shadow-result.json' `
+  --official-audit 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\musicfm-fma-v3-frozen-test-audit.json' `
+  --output 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-final-reserve-protocol.json'
+```
+
+The sealed protocol payload is `ac8c649a...`, selection is `aed5188c...`, and
+file hash is `e04e65a4...`. Its compact freeze is committed at
+`.goals\production-ready-v3/artifacts/final-reserve-protocol-freeze.json`.
+Reserve development and shadow labels are unopened at this point.
+
 ## Required local dataset
 
 Default paths:
