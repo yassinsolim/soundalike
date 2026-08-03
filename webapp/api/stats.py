@@ -11,7 +11,7 @@ import sys
 from http.server import BaseHTTPRequestHandler
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from _reco import get_recommender, _INDEX_VERSION
+from _search import _INDEX_VERSION, get_library_size
 
 
 class handler(BaseHTTPRequestHandler):
@@ -27,8 +27,13 @@ class handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         try:
-            reco = get_recommender()
-            self._send(200, {"ok": True, "library_size": len(reco),
-                             "version": _INDEX_VERSION})
+            self._send(
+                200,
+                {
+                    "ok": True,
+                    "library_size": get_library_size(),
+                    "version": _INDEX_VERSION,
+                },
+            )
         except Exception as e:
             self._send(500, {"ok": False, "error": f"{type(e).__name__}: {e}"})

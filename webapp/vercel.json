@@ -2,7 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "api/recommend.py": { "maxDuration": 60 },
-    "api/search.py": { "maxDuration": 30 },
+    "api/search.py": {
+      "maxDuration": 30,
+      "includeFiles": "api/search_catalog.json.gz"
+    },
     "api/stats.py": { "maxDuration": 30 },
     "api/preview.py": { "maxDuration": 15 },
     "api/ratings.js": { "maxDuration": 15 },

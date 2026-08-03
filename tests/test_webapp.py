@@ -246,6 +246,106 @@ def test_web_recommender_search_and_findrow(tmp_path):
     assert hits and all("title" in h and "row" in h for h in hits)
 
 
+def test_lightweight_search_matches_recommender_without_model_init(tmp_path):
+    from _reco import WebRecommender
+    from _search import SearchCatalog
+
+    path, _ = _synthetic_index(tmp_path)
+    catalog = SearchCatalog.from_npz(str(path))
+    recommender = WebRecommender(str(path))
+
+    for query in ("song 1", "artist 7", "song 12 artist 2"):
+        assert catalog.search(query, 8) == recommender.search(query, 8)
+    assert catalog.find_row("song 7") == recommender.find_row("song 7")
+
+
+def test_lightweight_search_reuses_normalized_query_cache(tmp_path):
+    from _search import SearchCatalog
+
+    path, _ = _synthetic_index(tmp_path)
+    catalog = SearchCatalog.from_npz(str(path))
+    first = catalog.search("Song 1", 8)
+    before = catalog.cache_info()
+    second = catalog.search("  song   1  ", 8)
+    after = catalog.cache_info()
+
+    assert second == first
+    assert after.hits == before.hits + 1
+
+
+def test_search_catalog_writer_is_deterministic_and_loadable(tmp_path):
+    from _search import SearchCatalog, _sha256, write_search_catalog
+
+    path, _ = _synthetic_index(tmp_path)
+    first = tmp_path / "first.json.gz"
+    second = tmp_path / "second.json.gz"
+    first_result = write_search_catalog(path, first)
+    second_result = write_search_catalog(path, second)
+
+    assert first.read_bytes() == second.read_bytes()
+    assert first_result == second_result
+    catalog = SearchCatalog.from_gzip_json(first, _sha256(first))
+    assert len(catalog) == 300
+    assert catalog.search("artist 4", 3)
+
+
+def test_packaged_search_catalog_is_bound_to_production_index():
+    import json
+
+    from _search import (
+        _PACKAGED_CATALOG_PATH,
+        _PACKAGED_CATALOG_SHA256,
+        _PRODUCTION_LIBRARY_SIZE,
+        _sha256,
+    )
+
+    assert _PACKAGED_CATALOG_PATH.stat().st_size == 3_961_198
+    assert _sha256(_PACKAGED_CATALOG_PATH) == _PACKAGED_CATALOG_SHA256
+    assert _PRODUCTION_LIBRARY_SIZE == 272_853
+    config = json.loads(
+        (_PACKAGED_CATALOG_PATH.parents[1] / "vercel.json").read_text()
+    )
+    assert (
+        config["functions"]["api/search.py"]["includeFiles"]
+        == "api/search_catalog.json.gz"
+    )
+
+
+def test_search_endpoint_uses_lightweight_catalog_and_clamps_limit(monkeypatch):
+    import search
+
+    calls = []
+
+    class FakeCatalog:
+        def search(self, query, limit):
+            calls.append((query, limit))
+            return [{"row": 1, "title": "Song", "artist": "Artist"}]
+
+    request = search.handler.__new__(search.handler)
+    request.path = "/api/search?q=Song&limit=999"
+    sent = []
+    request._send = lambda code, body: sent.append((code, body))
+    monkeypatch.setattr(search, "get_search_catalog", lambda: FakeCatalog())
+    request.do_GET()
+
+    assert not hasattr(search, "get_recommender")
+    assert calls == [("Song", 20)]
+    assert sent[0][0] == 200
+    assert sent[0][1]["results"][0]["row"] == 1
+
+
+def test_autocomplete_client_aborts_stale_requests_and_reuses_cache():
+    root = Path(__file__).resolve().parents[1] / "webapp"
+    html = (root / "index.html").read_text(encoding="utf-8")
+    script = (root / "search.js").read_text(encoding="utf-8")
+
+    assert '<script src="/search.js"></script>' in html
+    assert "AbortController" in script
+    assert "requestSequence" in script
+    assert "cachedPrefix" in script
+    assert "requestIdleCallback" in script
+
+
 def test_results_include_deezer_id_for_previews(tmp_path):
     # The preview feature needs each result to carry its Deezer track id so the
     # frontend can fetch a 30s preview by id.
@@ -299,6 +399,21 @@ def test_search_ranks_and_finds_titles_with_with(tmp_path):
     # a query that is an exact title ranks that title first.
     hits2 = rec.search("money machine", 3)
     assert hits2[0]["title"] == "Money Machine"
+
+
+def test_search_prioritizes_an_exact_artist_over_title_mentions():
+    from _search import SearchCatalog
+
+    catalog = SearchCatalog(
+        ["The Weeknd's Dark Secret", "Gone", "Blinding Lights"],
+        ["American Dad! Cast", "The Weeknd", "The Weeknd"],
+    )
+    hits = catalog.search("The Weeknd", 3)
+
+    assert hits[0]["artist"] == "The Weeknd"
+    assert hits[1]["artist"] == "The Weeknd"
+    assert hits[2]["artist"] == "American Dad! Cast"
+    assert catalog.search("weeknd", 1)[0]["artist"] == "The Weeknd"
 
 
 def test_find_row_prefers_original_over_remix(tmp_path):

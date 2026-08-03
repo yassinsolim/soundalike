@@ -20,8 +20,10 @@ os.environ.setdefault(
     str(Path(__file__).resolve().parents[1] / "src" / "soundalike" / "data" / "deepvibe_index.npz"),
 )
 from _reco import get_recommender  # noqa: E402
+from _search import get_library_size, get_search_catalog  # noqa: E402
 
 HTML = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
+SEARCH_JS = (Path(__file__).parent / "search.js").read_bytes()
 
 
 def _split(q):
@@ -53,13 +55,20 @@ class H(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(b)))
             self.end_headers()
             self.wfile.write(b)
+        elif u.path == "/search.js":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/javascript; charset=utf-8")
+            self.send_header("Content-Length", str(len(SEARCH_JS)))
+            self.end_headers()
+            self.wfile.write(SEARCH_JS)
         elif u.path == "/api/search":
             q = parse_qs(u.query).get("q", [""])[0]
-            self._json(200, {"ok": True, "results": get_recommender().search(q, 8) if q else []})
+            results = get_search_catalog().search(q, 8) if q else []
+            self._json(200, {"ok": True, "results": results})
         elif u.path == "/api/stats":
             from _reco import _INDEX_VERSION
-            reco = get_recommender()
-            self._json(200, {"ok": True, "library_size": len(reco), "version": _INDEX_VERSION})
+            self._json(200, {"ok": True, "library_size": get_library_size(),
+                             "version": _INDEX_VERSION})
         elif u.path == "/api/preview":
             import urllib.request
             tid = parse_qs(u.query).get("id", [""])[0]
@@ -93,8 +102,8 @@ class H(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    print("Loading index…")
-    get_recommender()
+    print("Loading search catalog...")
+    get_search_catalog()
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8788
-    print(f"webapp dev server → http://127.0.0.1:{port}/")
+    print(f"webapp dev server at http://127.0.0.1:{port}/")
     ThreadingHTTPServer(("127.0.0.1", port), H).serve_forever()
