@@ -27,10 +27,11 @@ function response(status, body) {
 
 function loadExtension(fetchImpl, options = {}) {
   let handler;
-  let modal;
+  let currentPage;
   const notifications = [];
   const history = [];
   const played = [];
+  const historyListeners = [];
   const rows = (options.results || []).map((_, index) => ({
     dataset: { index: String(index) },
     querySelector() {
@@ -83,6 +84,13 @@ function loadExtension(fetchImpl, options = {}) {
       },
     },
   };
+  const pageContainer = {
+    parentElement: null,
+    replaceChildren(value) {
+      currentPage = value;
+    },
+    ...(options.nativeMenus ? nativeHost : {}),
+  };
   const RightClickMenu = function RightClickMenu() {};
   const TrackMenu = function TrackMenu() {};
   const PlatformProvider = function PlatformProvider() {};
@@ -110,6 +118,12 @@ function loadExtension(fetchImpl, options = {}) {
         return tag === "div" ? wrap : {};
       },
       querySelector(selector) {
+        if (
+          selector === "main" ||
+          selector === '[data-testid="main-view-container"]'
+        ) {
+          return pageContainer;
+        }
         return options.nativeMenus && selector === '[data-testid="now-playing-bar"]'
           ? nativeHost
           : null;
@@ -164,8 +178,18 @@ function loadExtension(fetchImpl, options = {}) {
     },
     Platform: {
       History: {
+        location: { pathname: "/" },
+        listen(callback) {
+          historyListeners.push(callback);
+        },
         push(value) {
-          history.push(value);
+          const path = typeof value === "string" ? value : value.pathname;
+          history.push(path);
+          this.location.pathname = path;
+          if (path !== "/soundalike") currentPage = undefined;
+          for (const listener of historyListeners) {
+            listener({ pathname: path });
+          }
         },
       },
       Registry: registry,
@@ -175,12 +199,6 @@ function loadExtension(fetchImpl, options = {}) {
         played.push(uri);
       },
     },
-    PopupModal: {
-      display(value) {
-        modal = value;
-      },
-      hide() {},
-    },
     React,
     ReactComponent: { PlatformProvider, RightClickMenu, TrackMenu },
     ReactDOM: {
@@ -188,6 +206,9 @@ function loadExtension(fetchImpl, options = {}) {
         return {
           render(tree) {
             row.tree = tree;
+          },
+          unmount() {
+            delete row.tree;
           },
         };
       },
@@ -216,10 +237,16 @@ function loadExtension(fetchImpl, options = {}) {
     notifications,
     played,
     rows,
+    get currentPage() {
+      return currentPage;
+    },
+    navigate(path) {
+      context.Spicetify.Platform.History.push(path);
+    },
     async run() {
       await handler(["spotify:track:test"]);
       await new Promise((resolve) => setTimeout(resolve, 0));
-      return modal;
+      return currentPage;
     },
   };
 }
@@ -246,13 +273,14 @@ test("uses the hosted library when the local companion is unavailable", async ()
     return response(200, recommendation);
   });
 
-  const modal = await app.run();
+  const page = await app.run();
 
   assert.deepEqual(urls, [
     "http://127.0.0.1:8787/health",
     "https://soundalike.yassin.app/api/recommend",
   ]);
-  assert.match(modal.content.innerHTML, /HOSTED LIBRARY/);
+  assert.match(page.innerHTML, /HOSTED LIBRARY/);
+  assert.deepEqual(app.history, ["/soundalike"]);
   assert.equal(
     app.notifications.some(([message]) => message.includes("first request after idle")),
     true,
@@ -270,13 +298,13 @@ test("prefers a healthy local companion over the hosted library", async () => {
     return response(200, recommendation);
   });
 
-  const modal = await app.run();
+  const page = await app.run();
 
   assert.deepEqual(urls, [
     "http://127.0.0.1:8787/health",
     "http://127.0.0.1:8787/api/recommend",
   ]);
-  assert.match(modal.content.innerHTML, /LOCAL ENGINE/);
+  assert.match(page.innerHTML, /LOCAL ENGINE/);
   assert.equal(
     app.notifications.some(([message]) => message.includes("first request after idle")),
     false,
@@ -296,17 +324,17 @@ test("falls back to hosted results when a healthy local companion later fails", 
     return response(200, recommendation);
   });
 
-  const modal = await app.run();
+  const page = await app.run();
 
   assert.deepEqual(urls, [
     "http://127.0.0.1:8787/health",
     "http://127.0.0.1:8787/api/recommend",
     "https://soundalike.yassin.app/api/recommend",
   ]);
-  assert.match(modal.content.innerHTML, /HOSTED LIBRARY/);
+  assert.match(page.innerHTML, /HOSTED LIBRARY/);
 });
 
-test("shows the hosted library miss without opening an empty modal", async () => {
+test("shows the hosted library miss without opening an empty page", async () => {
   const app = loadExtension(async (url) => {
     if (url.endsWith("/health")) {
       throw new TypeError("connection refused");
@@ -317,9 +345,9 @@ test("shows the hosted library miss without opening an empty modal", async () =>
     });
   });
 
-  const modal = await app.run();
+  const page = await app.run();
 
-  assert.equal(modal, undefined);
+  assert.equal(page, undefined);
   assert.equal(
     app.notifications.some(([message, isError]) =>
       message.includes("not in the hosted library") && isError === true),
@@ -374,13 +402,17 @@ test("plays verified Spotify tracks and exposes their native track menu", async 
   await app.run();
 
   const rowTree = app.rows[0].tree;
-  assert.equal(rowTree.type, app.components.RightClickMenu);
+  const rightClickMenu = findElement(
+    rowTree,
+    (node) => node.type === app.components.RightClickMenu,
+  );
+  assert.ok(rightClickMenu);
   assert.ok(findElement(
-    rowTree.props.menu,
+    rowTree,
     (node) => node.type === app.components.StoreProvider,
   ));
   const trackMenu = findElement(
-    rowTree.props.menu,
+    rightClickMenu.props.menu,
     (node) => node.type === app.components.TrackMenu,
   );
   assert.equal(trackMenu.props.uri, spotifyTrack.uri);
@@ -391,13 +423,20 @@ test("plays verified Spotify tracks and exposes their native track menu", async 
     uri: "spotify:artist:verified",
   }]);
 
-  const trigger = findElement(
+  const playButton = findElement(
     rowTree,
-    (node) => node.props?.className === "sa-row-content",
+    (node) => node.props?.className === "sa-play",
   );
-  await trigger.props.onClick();
+  let propagationStopped = false;
+  await playButton.props.onClick({
+    stopPropagation() {
+      propagationStopped = true;
+    },
+  });
+  assert.equal(propagationStopped, true);
   assert.deepEqual(app.played, [spotifyTrack.uri]);
-  assert.deepEqual(app.history, []);
+  assert.deepEqual(app.history, ["/soundalike"]);
+  assert.ok(app.currentPage);
 });
 
 test("keeps Spotify search as the fallback for unresolved result rows", async () => {
@@ -423,5 +462,38 @@ test("keeps Spotify search as the fallback for unresolved result rows", async ()
   );
   await trigger.props.onClick();
   assert.deepEqual(app.played, []);
-  assert.deepEqual(app.history, ["/search/Catalog%20Miss%20Unknown%20Artist"]);
+  assert.deepEqual(app.history, [
+    "/soundalike",
+    "/search/Catalog%20Miss%20Unknown%20Artist",
+  ]);
+});
+
+test("restores cached results when navigating back to the Soundalike page", async () => {
+  const result = { title: "Take My Breath", artist: "The Weeknd" };
+  const spotifyTrack = {
+    __typename: "Track",
+    name: result.title,
+    uri: "spotify:track:verified",
+    albumOfTrack: { coverArt: { sources: [] } },
+    artists: { items: [{ profile: { name: result.artist } }] },
+  };
+  const app = loadExtension(async (url) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    return response(200, { ...recommendation, results: [result] });
+  }, {
+    nativeMenus: true,
+    results: [result],
+    spotifyTrack,
+  });
+
+  const firstPage = await app.run();
+  app.navigate("/home");
+  assert.equal(app.currentPage, undefined);
+
+  app.navigate("/soundalike");
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.ok(app.currentPage);
+  assert.equal(firstPage.innerHTML, app.currentPage.innerHTML);
+  assert.equal(app.rows[0].dataset.uri, spotifyTrack.uri);
 });

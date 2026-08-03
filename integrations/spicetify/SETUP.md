@@ -242,10 +242,11 @@ curl --fail http://127.0.0.1:8787/health
 ```
 
 With or without the local engine, right-click any song in Spotify →
-**Find soundalikes**. The panel opens with the seed artwork and recommendation
+**Find soundalikes**. A normal Spotify page opens with the seed artwork and recommendation
 titles. Spotify album covers and verified artist names fill in progressively;
-click a verified row to play that exact Spotify track without leaving the
-panel. Right-click the row for Spotify's normal track menu, including **Add to
+use its play button to play that exact Spotify track without leaving the
+page. Spotify's Back and Forward buttons preserve the result list while you
+navigate elsewhere. Right-click a row for Spotify's normal track menu, including **Add to
 playlist**, **Add to queue**, **Go to song radio**, artist/album navigation,
 credits, and sharing. If Spotify cannot confidently resolve a recommendation,
 the row keeps the safe Spotify-search fallback instead. The header identifies
@@ -404,7 +405,7 @@ Spotify login is required.
 - **Titles appear but covers stay blank:** Spotify's catalog lookup is still
   loading or did not find a confident title-and-artist match. Recommendations
   remain usable through Spotify search; confirm Spotify is online, then reopen
-  the panel. Direct playback and the native right-click menu activate only
+  the page. Direct playback and the native right-click menu activate only
   after the cover and verified artist metadata appear.
 - **A result plays but has no native right-click actions:** update Spicetify,
   run `spicetify backup apply`, and fully restart Spotify. Soundalike preserves

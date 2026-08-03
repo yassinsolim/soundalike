@@ -37,8 +37,9 @@ including the Microsoft-Store build.
 ![soundalike web app](docs/soundalike-results.png)
 
 Want the recommendations *inside* Spotify — a right-click **“Find soundalikes”**
-menu with album artwork, verified artist names, click-to-play rows, and
-Spotify's native track actions on right-click? Use the
+menu that opens a navigable results page with album artwork, verified artist
+names, persistent click-to-play rows, and Spotify's native track actions on
+right-click? Use the
 [**Spicetify extension**](integrations/spicetify/README.md). A Marketplace
 install works immediately with the hosted 272,853-track library. The separate
 [advanced setup guide](integrations/spicetify/SETUP.md) covers manual installs,
@@ -752,7 +753,7 @@ pytest -q
 - [x] **Hybrid ranking** — deep-vibe fuses learned texture with measured bass/dynamics (ships out of the box)
 - [x] **Recommendation benchmark** — label-free precision/coverage metrics + measured library-size trade-off
 - [x] **Diversity + multi-seed** — MMR re-ranking, per-artist caps, and blend several songs into one taste
-- [x] **Web app + right-click integration** — `soundalike serve` (paste a song / Spotify "Copy Song Link" → instant soundalikes) and a Spicetify extension for an in-app right-click menu
+- [x] **Web app + right-click integration** — `soundalike serve` (paste a song / Spotify "Copy Song Link" → instant soundalikes) and a Spicetify extension with a Back/Forward-aware results page, in-place playback, and native track menus
 - [x] **Categorized real-world benchmark** — 93 sourced pairs separate pure-sonic and diagnostic relationships, with a 20-pair final artist-disjoint split, transitive graph audit, frozen 272,853-song outputs, and pair bootstrap uncertainty
 - [x] **Pretrained sonic retrieval** — dual PCA64 EfficientNet/CLAP retrieval lifts final pure-sonic primary 0.0281→0.0529 (+88.3%) while the guarded top five retains 17/20 direct passes
 - [x] **Desktop/hosted Dual-Sonic64 parity** — the 299 MB checksum-pinned release index carries both 64-d matrices and source-independent priors; numpy serving paths expose the active method/version and have exact parity tests

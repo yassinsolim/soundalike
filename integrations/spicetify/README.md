@@ -11,8 +11,8 @@ using genres, popularity, or listening-history recommendations.
 1. Install **Soundalike** from Marketplace.
 2. Right-click any track in Spotify.
 3. Select **Find soundalikes**.
-4. Select a result to play it, or right-click it for Spotify's normal track
-   actions.
+4. Use the play button on a result, or right-click it for Spotify's normal
+   track actions.
 
 That is all normal use requires. There is no Soundalike account, Python
 installation, terminal command, or local server to configure. The extension
@@ -20,8 +20,11 @@ automatically uses the hosted 272,853-track recommendation library.
 
 ## Spotify-native results
 
-- Album artwork and verified artist names load inside the results panel.
-- Selecting a verified result plays that exact Spotify track immediately.
+- Results open on a normal Spotify page, so the Back and Forward buttons work
+  and the list stays visible while music plays.
+- Album artwork and verified artist names load progressively on that page.
+- The play button on a verified result plays that exact Spotify track
+  immediately without closing or leaving the page.
 - Right-clicking a result opens Spotify's native menu for playlists, queueing,
   song radio, artist and album navigation, credits, and sharing.
 - If Spotify cannot confidently match a recommendation, Soundalike safely

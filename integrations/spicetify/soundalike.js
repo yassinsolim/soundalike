@@ -1,7 +1,7 @@
 // soundalike — Spicetify extension
 // Adds a right-click "Find soundalikes" item to any track in the Spotify
 // desktop client. It prefers the optional local soundalike server and otherwise
-// uses the hosted library, then shows the results in a Spotify-style modal.
+// uses the hosted library, then shows the results on a navigable Spotify page.
 //
 // Install (requires a patchable desktop Spotify app): follow this directory's
 // README for Marketplace or manual setup.
@@ -12,9 +12,13 @@
   const LOCAL_PROBE_TIMEOUT_MS = 800;
   const HOSTED_TIMEOUT_MS = 65000;
   const LOCAL_STATUS_TTL_MS = 30000;
+  const RESULTS_PATH = "/soundalike";
   let localStatus = { available: false, checkedAt: 0 };
   let nativeContextChain;
   let warnedAboutNativeMenus = false;
+  let resultsState = null;
+  let activePage = null;
+  let routeMountTimer;
 
   // Wait until the Spicetify APIs we need are ready.
   if (!(
@@ -22,7 +26,9 @@
     Spicetify.ContextMenu &&
     Spicetify.GraphQL?.Definitions?.getTrack &&
     Spicetify.GraphQL?.Request &&
-    Spicetify.Platform &&
+    Spicetify.Platform?.History?.listen &&
+    Spicetify.React?.createElement &&
+    Spicetify.ReactDOM?.createRoot &&
     Spicetify.ReactJSX?.jsx &&
     Spicetify.URI
   )) {
@@ -151,10 +157,7 @@
       Spicetify.showNotification((data && data.error) || "No match found.", true);
       return;
     }
-    const modal = showModal(data, seedTrack);
-    hydrateSpotifyRows(data.results, modal).catch((error) => {
-      console.error("[soundalike] Spotify result enrichment failed", error);
-    });
+    showResultsPage(data, seedTrack);
   }
 
   async function findSpotifyTrack(result) {
@@ -260,51 +263,42 @@
     );
   }
 
-  function findNativeContextChain() {
+  function findNativeContextChain(container = activePage?.container) {
     if (nativeContextChain) return nativeContextChain;
-    const registry = Spicetify.Platform?.Registry;
-    if (!registry || typeof document.querySelector !== "function") return null;
+    const candidates = [];
+    for (let element = container; element; element = element.parentElement) {
+      candidates.push(element);
+    }
+    if (typeof document.querySelector === "function") {
+      for (const selector of [
+        '[data-testid="now-playing-bar"]',
+        '[data-testid="topbar-content"]',
+        "main",
+        "[data-testid]",
+      ]) {
+        const element = document.querySelector(selector);
+        if (element) candidates.push(element);
+      }
+    }
 
-    const selectors = [
-      '[data-testid="now-playing-bar"]',
-      '[data-testid="topbar-content"]',
-      "main",
-      "[data-testid]",
-    ];
-    for (const selector of selectors) {
-      const element = document.querySelector(selector);
+    for (const element of candidates) {
       const fiberKey = element && Object.keys(element).find(
         (key) => key.startsWith("__reactFiber$") || key.startsWith("__reactInternalInstance$")
       );
       let fiber = fiberKey ? element[fiberKey] : null;
-      let collecting = false;
       const contextChain = [];
+      const providers = new Set();
       while (fiber) {
-        if (fiber.tag === 10) {
-          const value = fiber.memoizedProps?.value;
-          if (
-            !collecting &&
-            typeof value?.isDesktop === "boolean" &&
-            typeof value?.isWeb === "boolean" &&
-            value?.ui
-          ) {
-            collecting = true;
-          }
-          if (collecting && fiber.elementType) {
-            contextChain.push({ Provider: fiber.elementType, value });
-          }
+        if (fiber.tag === 10 && fiber.elementType && !providers.has(fiber.elementType)) {
+          providers.add(fiber.elementType);
+          contextChain.push({
+            Provider: fiber.elementType,
+            value: fiber.memoizedProps?.value,
+          });
         }
         fiber = fiber.return;
       }
-      if (
-        contextChain.some(({ value }) => value === registry) &&
-        contextChain.some(({ value }) => value === Spicetify._platform) &&
-        contextChain.some(({ value }) => (
-          value?.store &&
-          value?.subscription &&
-          typeof value.store.getState === "function"
-        ))
-      ) {
+      if (contextChain.length) {
         nativeContextChain = contextChain;
         return nativeContextChain;
       }
@@ -316,13 +310,11 @@
     if (!track?.uri) return null;
     const React = Spicetify.React;
     const components = Spicetify.ReactComponent;
-    const contextChain = findNativeContextChain();
     if (!(
       React?.createElement &&
       React?.Suspense &&
       components?.RightClickMenu &&
-      components?.TrackMenu &&
-      contextChain
+      components?.TrackMenu
     )) {
       if (!warnedAboutNativeMenus) {
         warnedAboutNativeMenus = true;
@@ -347,10 +339,6 @@
     if (track.albumOfTrack?.uri) menuProps.albumUri = track.albumOfTrack.uri;
     if (artists.length) menuProps.artists = artists;
 
-    let menu = React.createElement(components.TrackMenu, menuProps);
-    for (const { Provider, value } of contextChain) {
-      menu = React.createElement(Provider, { value }, menu);
-    }
     return React.createElement(
       React.Suspense,
       {
@@ -360,8 +348,25 @@
           "Loading track actions..."
         ),
       },
-      menu
+      React.createElement(components.TrackMenu, menuProps)
     );
+  }
+
+  function withNativeContext(element) {
+    const contextChain = findNativeContextChain();
+    if (!contextChain) {
+      if (!warnedAboutNativeMenus) {
+        warnedAboutNativeMenus = true;
+        console.warn(
+          "[soundalike] Native Spotify track menus are unavailable; direct playback remains enabled."
+        );
+      }
+      return null;
+    }
+    for (const { Provider, value } of contextChain) {
+      element = Spicetify.React.createElement(Provider, { value }, element);
+    }
+    return element;
   }
 
   function spotifyArtists(track, fallback) {
@@ -384,7 +389,6 @@
     Spicetify.Platform.History.push(
       `/search/${encodeURIComponent(`${result.title} ${result.artist}`)}`
     );
-    Spicetify.PopupModal.hide();
   }
 
   function renderResultRow(row, result, index, track = null) {
@@ -447,20 +451,32 @@
         React.createElement("div", { className: "sa-artist" }, artist)
       ),
       React.createElement(
-        "div",
-        { className: "sa-open", "aria-hidden": "true" },
+        "button",
+        {
+          className: "sa-play",
+          type: "button",
+          title: track?.uri
+            ? `Play ${result.title}`
+            : `Search Spotify for ${result.title}`,
+          "aria-label": track?.uri
+            ? `Play ${result.title}`
+            : `Search Spotify for ${result.title}`,
+          onClick: (event) => {
+            event.stopPropagation();
+            activate();
+          },
+        },
         track?.uri ? "\u25B6" : "\u203A"
       )
     );
     const menu = nativeTrackMenu(track);
-    row.__soundalikeRoot.render(
-      menu
-        ? React.createElement(Spicetify.ReactComponent.RightClickMenu, { menu }, child)
-        : child
-    );
+    const interactiveRow = menu
+      ? React.createElement(Spicetify.ReactComponent.RightClickMenu, { menu }, child)
+      : child;
+    row.__soundalikeRoot.render(menu ? withNativeContext(interactiveRow) || child : child);
   }
 
-  async function hydrateSpotifyRows(results, modal) {
+  async function hydrateSpotifyRows(results, page, tracks) {
     if (!Spicetify.GraphQL.Definitions.searchModalResults) {
       console.warn("[soundalike] Spotify artwork lookup is unavailable in this client.");
       return;
@@ -470,10 +486,16 @@
     async function worker() {
       while (cursor < results.length) {
         const index = cursor++;
+        if (index in tracks) {
+          const cachedRow = page.querySelector(`.sa-row[data-index="${index}"]`);
+          if (cachedRow) renderResultRow(cachedRow, results[index], index, tracks[index]);
+          continue;
+        }
         try {
           const track = await findSpotifyTrack(results[index]);
-          const row = modal.querySelector(`.sa-row[data-index="${index}"]`);
-          if (!track || !row) continue;
+          tracks[index] = track;
+          const row = page.querySelector(`.sa-row[data-index="${index}"]`);
+          if (!track || !row || page !== activePage?.view) continue;
           renderResultRow(row, results[index], index, track);
           enriched++;
         } catch (error) {
@@ -491,7 +513,7 @@
     );
   }
 
-  function showModal(data, seedTrack) {
+  function buildResultsPage(data, seedTrack, tracks) {
     const s = data.seed, v = data.vibe;
     const wrap = document.createElement("div");
     const seedImage = artworkUrl(seedTrack);
@@ -520,16 +542,16 @@
 
     wrap.innerHTML = `
       <style>
-        .sa-results{font:14px var(--encore-body-font-stack,system-ui,sans-serif);color:var(--spice-text,#fff)}
-        .sa-seed{display:flex;align-items:center;gap:12px;margin:0 0 10px}
-        .sa-seed img,.sa-seed-fallback{width:56px;height:56px;border-radius:4px;object-fit:cover;background:#282828}
+        .sa-results{box-sizing:border-box;min-height:100%;padding:32px clamp(24px,5vw,64px) 56px;font:14px var(--encore-body-font-stack,system-ui,sans-serif);color:var(--spice-text,#fff)}
+        .sa-seed{display:flex;align-items:center;gap:18px;margin:0 0 18px}
+        .sa-seed img,.sa-seed-fallback{width:96px;height:96px;border-radius:6px;object-fit:cover;background:#282828;box-shadow:0 8px 24px rgba(0,0,0,.35)}
         .sa-seed-fallback{display:grid;place-items:center;color:#b3b3b3;font-size:22px}
         .sa-kicker{color:var(--spice-subtext,#b3b3b3);font-size:12px;margin-bottom:2px}
-        .sa-seed-title{font-size:18px;font-weight:700;line-height:1.25}
+        .sa-seed-title{font-size:clamp(24px,4vw,40px);font-weight:800;line-height:1.1}
         .sa-seed-artist{color:var(--spice-subtext,#b3b3b3);margin-top:2px}
         .sa-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
         .sa-tag{background:rgba(255,255,255,.08);border-radius:999px;padding:4px 9px;color:var(--spice-subtext,#b3b3b3);font-size:12px}
-        .sa-list{max-height:52vh;overflow:auto;padding-right:4px}
+        .sa-list{padding-right:4px}
         .sa-list-head,.sa-row-content{display:grid;grid-template-columns:28px 44px minmax(0,1fr) 28px;align-items:center;column-gap:12px}
         .sa-list-head{height:28px;color:var(--spice-subtext,#b3b3b3);font-size:12px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:4px}
         .sa-row{border-radius:6px}
@@ -541,8 +563,9 @@
         .sa-meta{min-width:0}
         .sa-title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .sa-artist{color:var(--spice-subtext,#b3b3b3);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
-        .sa-open{color:var(--spice-subtext,#b3b3b3);font-size:24px;text-align:center}
-        .sa-row-content:hover .sa-title,.sa-row-content:hover .sa-open,.sa-row-content:focus-visible .sa-title,.sa-row-content:focus-visible .sa-open{color:var(--spice-text,#fff)}
+        .sa-play{width:30px;height:30px;border:0;border-radius:50%;background:transparent;color:var(--spice-subtext,#b3b3b3);font-size:15px;cursor:pointer}
+        .sa-play:hover,.sa-play:focus-visible{background:var(--spice-button,#1ed760);color:#000;outline:none}
+        .sa-row-content:hover .sa-title,.sa-row-content:focus-visible .sa-title{color:var(--spice-text,#fff)}
         .sa-menu-loading{padding:8px 12px;color:var(--spice-subtext,#b3b3b3);white-space:nowrap}
       </style>
       <div class="sa-seed">
@@ -560,21 +583,82 @@
       <div class="sa-list">${rows}</div>`;
 
     wrap.querySelectorAll(".sa-row").forEach((row, index) => {
-      renderResultRow(row, data.results[index], index);
-    });
-
-    Spicetify.PopupModal.display({
-      title: "\u25C8 soundalike",
-      content: wrap,
-      isLarge: true,
+      renderResultRow(row, data.results[index], index, tracks[index] || null);
     });
     return wrap;
+  }
+
+  function teardownResultsPage() {
+    if (!activePage) return;
+    activePage.view?.querySelectorAll(".sa-row").forEach((row) => {
+      row.__soundalikeRoot?.unmount?.();
+    });
+    activePage.view?.remove?.();
+    activePage = null;
+    nativeContextChain = undefined;
+  }
+
+  function renderResultsPage(container) {
+    if (!resultsState || !container) return;
+    teardownResultsPage();
+    const view = buildResultsPage(
+      resultsState.data,
+      resultsState.seedTrack,
+      resultsState.tracks
+    );
+    container.replaceChildren(view);
+    activePage = { container, view };
+    nativeContextChain = undefined;
+    hydrateSpotifyRows(
+      resultsState.data.results,
+      view,
+      resultsState.tracks
+    ).catch((error) => {
+      console.error("[soundalike] Spotify result enrichment failed", error);
+    });
+  }
+
+  function mountResultsRoute() {
+    if (Spicetify.Platform.History.location?.pathname !== RESULTS_PATH) return;
+    const container = document.querySelector(
+      '[data-testid="main-view-container"]'
+    ) || document.querySelector("main");
+    if (!container) {
+      setTimeout(mountResultsRoute, 100);
+      return;
+    }
+    renderResultsPage(container);
+  }
+
+  function scheduleResultsRoute() {
+    clearTimeout(routeMountTimer);
+    routeMountTimer = setTimeout(mountResultsRoute, 0);
+  }
+
+  function onHistoryChange(location) {
+    const path = location?.pathname || Spicetify.Platform.History.location?.pathname;
+    if (path !== RESULTS_PATH) {
+      teardownResultsPage();
+      return;
+    }
+    scheduleResultsRoute();
+  }
+
+  function showResultsPage(data, seedTrack) {
+    resultsState = { data, seedTrack, tracks: [] };
+    Spicetify.Platform.History.push({
+      pathname: RESULTS_PATH,
+      state: { soundalike: true },
+    });
+    scheduleResultsRoute();
   }
 
   function esc(str) {
     return String(str || "").replace(/[&<>"]/g, (c) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   }
+
+  Spicetify.Platform.History.listen(onHistoryChange);
 
   window.__soundalikeContextMenuItem = new Spicetify.ContextMenu.Item(
     "Find soundalikes",
