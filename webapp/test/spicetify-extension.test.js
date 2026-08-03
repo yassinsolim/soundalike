@@ -25,10 +25,79 @@ function response(status, body) {
   };
 }
 
-function loadExtension(fetchImpl) {
+function loadExtension(fetchImpl, options = {}) {
   let handler;
   let modal;
   const notifications = [];
+  const history = [];
+  const played = [];
+  const rows = (options.results || []).map((_, index) => ({
+    dataset: { index: String(index) },
+    querySelector() {
+      return null;
+    },
+  }));
+  const wrap = {
+    className: "",
+    innerHTML: "",
+    querySelector(selector) {
+      const match = selector.match(/data-index="(\d+)"/);
+      return match ? rows[Number(match[1])] : null;
+    },
+    querySelectorAll(selector) {
+      return selector === ".sa-row" ? rows : [];
+    },
+  };
+  const registry = {};
+  const platform = {};
+  const AppProvider = function AppProvider() {};
+  const PlatformContextProvider = function PlatformContextProvider() {};
+  const RegistryProvider = function RegistryProvider() {};
+  const StoreProvider = function StoreProvider() {};
+  const storeValue = {
+    store: { getState() {} },
+    subscription: {},
+  };
+  const nativeHost = {
+    "__reactFiber$test": {
+      tag: 10,
+      memoizedProps: {
+        value: { isDesktop: true, isWeb: false, ui: {} },
+      },
+      elementType: AppProvider,
+      return: {
+        tag: 10,
+        memoizedProps: { value: platform },
+        elementType: PlatformContextProvider,
+        return: {
+          tag: 10,
+          memoizedProps: { value: registry },
+          elementType: RegistryProvider,
+          return: {
+            tag: 10,
+            memoizedProps: { value: storeValue },
+            elementType: StoreProvider,
+            return: null,
+          },
+        },
+      },
+    },
+  };
+  const RightClickMenu = function RightClickMenu() {};
+  const TrackMenu = function TrackMenu() {};
+  const PlatformProvider = function PlatformProvider() {};
+  const React = {
+    Suspense: Symbol("Suspense"),
+    createElement(type, props, ...children) {
+      return {
+        type,
+        props: {
+          ...(props || {}),
+          children: children.length <= 1 ? children[0] : children,
+        },
+      };
+    },
+  };
   const context = {
     AbortController,
     Date,
@@ -37,18 +106,18 @@ function loadExtension(fetchImpl) {
     setTimeout,
     console: { error() {}, log() {}, warn() {} },
     document: {
-      createElement() {
-        return {
-          className: "",
-          innerHTML: "",
-          querySelectorAll() {
-            return [];
-          },
-        };
+      createElement(tag) {
+        return tag === "div" ? wrap : {};
+      },
+      querySelector(selector) {
+        return options.nativeMenus && selector === '[data-testid="now-playing-bar"]'
+          ? nativeHost
+          : null;
       },
     },
   };
   const getTrack = {};
+  const searchModalResults = {};
   context.Spicetify = {
     ContextMenu: {
       Item: class {
@@ -59,28 +128,73 @@ function loadExtension(fetchImpl) {
       },
     },
     GraphQL: {
-      Definitions: { getTrack },
-      async Request(definition) {
-        assert.equal(definition, getTrack);
+      Definitions: { getTrack, searchModalResults },
+      async Request(definition, variables) {
+        if (definition === getTrack) {
+          if (
+            options.spotifyTrackDetails &&
+            variables?.uri === options.spotifyTrackDetails.uri
+          ) {
+            return {
+              data: { trackUnion: options.spotifyTrackDetails },
+            };
+          }
+          return {
+            data: {
+              trackUnion: {
+                name: "Blinding Lights",
+                firstArtist: { items: [{ profile: { name: "The Weeknd" } }] },
+              },
+            },
+          };
+        }
+        assert.equal(definition, searchModalResults);
         return {
           data: {
-            trackUnion: {
-              name: "Blinding Lights",
-              firstArtist: { items: [{ profile: { name: "The Weeknd" } }] },
+            searchV2: {
+              topResultsV2: {
+                itemsV2: options.spotifyTrack
+                  ? [{ item: { data: options.spotifyTrack } }]
+                  : [],
+              },
             },
           },
         };
       },
     },
-    Platform: { History: { push() {} } },
+    Platform: {
+      History: {
+        push(value) {
+          history.push(value);
+        },
+      },
+      Registry: registry,
+    },
+    Player: {
+      async playUri(uri) {
+        played.push(uri);
+      },
+    },
     PopupModal: {
       display(value) {
         modal = value;
       },
       hide() {},
     },
+    React,
+    ReactComponent: { PlatformProvider, RightClickMenu, TrackMenu },
+    ReactDOM: {
+      createRoot(row) {
+        return {
+          render(tree) {
+            row.tree = tree;
+          },
+        };
+      },
+    },
     ReactJSX: { jsx() {} },
     URI: {},
+    _platform: platform,
     showNotification(...args) {
       notifications.push(args);
     },
@@ -89,12 +203,36 @@ function loadExtension(fetchImpl) {
   vm.createContext(context);
   vm.runInContext(extensionSource, context);
   return {
+    components: {
+      AppProvider,
+      PlatformProvider,
+      PlatformContextProvider,
+      RegistryProvider,
+      RightClickMenu,
+      StoreProvider,
+      TrackMenu,
+    },
+    history,
     notifications,
+    played,
+    rows,
     async run() {
       await handler(["spotify:track:test"]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
       return modal;
     },
   };
+}
+
+function findElement(node, predicate) {
+  if (!node || typeof node !== "object") return null;
+  if (predicate(node)) return node;
+  const children = node.props?.children;
+  for (const child of Array.isArray(children) ? children : [children]) {
+    const match = findElement(child, predicate);
+    if (match) return match;
+  }
+  return null;
 }
 
 test("uses the hosted library when the local companion is unavailable", async () => {
@@ -187,4 +325,103 @@ test("shows the hosted library miss without opening an empty modal", async () =>
       message.includes("not in the hosted library") && isError === true),
     true,
   );
+});
+
+test("plays verified Spotify tracks and exposes their native track menu", async () => {
+  const result = { title: "Take My Breath", artist: "The Weeknd" };
+  const spotifyTrack = {
+    __typename: "Track",
+    name: result.title,
+    uri: "spotify:track:verified",
+    albumOfTrack: {
+      coverArt: { sources: [] },
+    },
+    artists: {
+      items: [{
+        profile: { name: result.artist },
+      }],
+    },
+  };
+  const spotifyTrackDetails = {
+    __typename: "Track",
+    name: result.title,
+    uri: spotifyTrack.uri,
+    albumOfTrack: {
+      uri: "spotify:album:verified",
+      coverArt: { sources: [] },
+    },
+    firstArtist: {
+      items: [{
+        uri: "spotify:artist:verified",
+        profile: { name: result.artist },
+      }],
+    },
+    otherArtists: { items: [] },
+  };
+  const app = loadExtension(async (url) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    return response(200, {
+      ...recommendation,
+      results: [result],
+    });
+  }, {
+    nativeMenus: true,
+    results: [result],
+    spotifyTrack,
+    spotifyTrackDetails,
+  });
+
+  await app.run();
+
+  const rowTree = app.rows[0].tree;
+  assert.equal(rowTree.type, app.components.RightClickMenu);
+  assert.ok(findElement(
+    rowTree.props.menu,
+    (node) => node.type === app.components.StoreProvider,
+  ));
+  const trackMenu = findElement(
+    rowTree.props.menu,
+    (node) => node.type === app.components.TrackMenu,
+  );
+  assert.equal(trackMenu.props.uri, spotifyTrack.uri);
+  assert.equal(trackMenu.props.albumUri, spotifyTrackDetails.albumOfTrack.uri);
+  assert.deepEqual(JSON.parse(JSON.stringify(trackMenu.props.artists)), [{
+    type: "artist",
+    name: result.artist,
+    uri: "spotify:artist:verified",
+  }]);
+
+  const trigger = findElement(
+    rowTree,
+    (node) => node.props?.className === "sa-row-content",
+  );
+  await trigger.props.onClick();
+  assert.deepEqual(app.played, [spotifyTrack.uri]);
+  assert.deepEqual(app.history, []);
+});
+
+test("keeps Spotify search as the fallback for unresolved result rows", async () => {
+  const result = { title: "Catalog Miss", artist: "Unknown Artist" };
+  const app = loadExtension(async (url) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    return response(200, {
+      ...recommendation,
+      results: [result],
+    });
+  }, {
+    nativeMenus: true,
+    results: [result],
+  });
+
+  await app.run();
+
+  const rowTree = app.rows[0].tree;
+  assert.notEqual(rowTree.type, app.components.RightClickMenu);
+  const trigger = findElement(
+    rowTree,
+    (node) => node.props?.className === "sa-row-content",
+  );
+  await trigger.props.onClick();
+  assert.deepEqual(app.played, []);
+  assert.deepEqual(app.history, ["/search/Catalog%20Miss%20Unknown%20Artist"]);
 });

@@ -3,6 +3,8 @@
 Add a **“Find soundalikes”** item to the right-click menu of any track in the
 Spotify desktop app. Click it and a panel shows songs that genuinely *sound*
 like the one you clicked — powered by precomputed audio embeddings, not tags.
+Click a verified result to play it immediately, or right-click it for Spotify's
+native playlist, queue, radio, artist, album, credits, and sharing actions.
 
 ![Soundalike results inside Spotify](../../docs/spicetify-results.png)
 
@@ -237,8 +239,12 @@ curl --fail http://127.0.0.1:8787/health
 With or without the local engine, right-click any song in Spotify →
 **Find soundalikes**. The panel opens with the seed artwork and recommendation
 titles. Spotify album covers and verified artist names fill in progressively;
-click a row to open that track's Spotify search. The header identifies whether
-the result came from the **HOSTED LIBRARY** or **LOCAL ENGINE**.
+click a verified row to play that exact Spotify track without leaving the
+panel. Right-click the row for Spotify's normal track menu, including **Add to
+playlist**, **Add to queue**, **Go to song radio**, artist/album navigation,
+credits, and sharing. If Spotify cannot confidently resolve a recommendation,
+the row keeps the safe Spotify-search fallback instead. The header identifies
+whether the result came from the **HOSTED LIBRARY** or **LOCAL ENGINE**.
 
 The extension installation is persistent: Spicetify remembers `soundalike.js`
 and loads it whenever patched Spotify starts. The hosted library requires no
@@ -392,7 +398,13 @@ Spotify login is required.
   fail during Spotify startup with a `ReactJSX` error.
 - **Titles appear but covers stay blank:** Spotify's catalog lookup is still
   loading or did not find a confident title-and-artist match. Recommendations
-  remain usable; confirm Spotify is online, then reopen the panel.
+  remain usable through Spotify search; confirm Spotify is online, then reopen
+  the panel. Direct playback and the native right-click menu activate only
+  after the cover and verified artist metadata appear.
+- **A result plays but has no native right-click actions:** update Spicetify,
+  run `spicetify backup apply`, and fully restart Spotify. Soundalike preserves
+  direct playback if the client's internal native-menu components are
+  unavailable.
 - **A track is not in the hosted library:** the one-click path covers 272,853
   tracks. Use the optional local companion for on-the-fly analysis of other
   songs.
@@ -416,7 +428,9 @@ right-click track ─▶ Spotify title + artist
                          │ no
                          └─────────────▶ hosted 272,853-track library
                                                │
-                     rank audio+vibe similarity ─▶ Spotify artwork + verified artist
+                     rank audio+vibe similarity ─▶ verified Spotify track URI
+                                               │
+                          left-click ─▶ play now │ right-click ─▶ native track menu
 ```
 
 The first hosted request after an idle period can take about 30 seconds while

@@ -37,7 +37,8 @@ including the Microsoft-Store build.
 ![soundalike web app](docs/soundalike-results.png)
 
 Want the recommendations *inside* Spotify — a right-click **“Find soundalikes”**
-menu with album artwork and verified artist names? Use the
+menu with album artwork, verified artist names, click-to-play rows, and
+Spotify's native track actions on right-click? Use the
 [**Spicetify extension**](integrations/spicetify/README.md). Its complete
 Windows, macOS, and Linux guide covers patchable desktop Spotify installs,
 the optional local companion, and troubleshooting. A Marketplace install works
