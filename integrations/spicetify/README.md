@@ -46,13 +46,45 @@ PowerShell (Windows):
 iwr -useb https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 | iex
 ```
 
-(macOS/Linux and details: <https://spicetify.app/docs/getting-started>.)
+Terminal (macOS):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/spicetify/cli/main/install.sh | sh
+
+# Only needed if Spicetify does not detect Spotify automatically:
+spicetify config spotify_path "/Applications/Spotify.app/Contents/Resources"
+```
+
+The installer supports both Apple silicon and Intel Macs. Restart Terminal if
+`spicetify` is not immediately available. Linux users can follow the
+[platform-specific setup](https://spicetify.app/docs/getting-started#linux).
 
 ### 2. Install this extension
 
+PowerShell (Windows):
+
 ```powershell
-# copy the extension into Spicetify's Extensions folder
-copy integrations\spicetify\soundalike.js "$(spicetify config-dir)\Extensions\"
+# Run from the soundalike repository root.
+$extensions = Join-Path $env:APPDATA "spicetify\Extensions"
+New-Item -ItemType Directory -Path $extensions -Force | Out-Null
+Copy-Item integrations\spicetify\soundalike.js -Destination $extensions -Force
+
+spicetify config extensions soundalike.js
+spicetify apply
+```
+
+Do not use `$(spicetify config-dir)` as a path. That command opens the config
+directory in Explorer but does not print its location, so PowerShell receives
+an empty destination. The documented Windows extension directory is
+`%APPDATA%\spicetify\Extensions`.
+
+Terminal (macOS):
+
+```bash
+# Run from the soundalike repository root.
+extensions="$HOME/.config/spicetify/Extensions"
+mkdir -p "$extensions"
+cp integrations/spicetify/soundalike.js "$extensions/"
 
 spicetify config extensions soundalike.js
 spicetify apply
