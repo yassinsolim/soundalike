@@ -3,9 +3,9 @@
 // desktop client. It asks the local soundalike server (run `soundalike serve`)
 // for songs that *sound* like the one you clicked, and shows them in a modal.
 //
-// Install (requires the standalone Spotify from spotify.com — the Microsoft
-// Store build cannot be patched by Spicetify): follow this directory's README
-// for the correct platform path, then optionally enable local-server auto-start.
+// Install (requires a patchable desktop Spotify app): follow this directory's
+// README for the correct platform path, then optionally enable local-server
+// auto-start.
 
 (function soundalike() {
   const SERVER = "http://127.0.0.1:8787";
@@ -32,21 +32,22 @@
     const id = uris[0].split(":track:")[1];
     Spicetify.showNotification("Finding soundalikes…");
     let data;
+    let seedTrack;
     try {
       const metadata = await Spicetify.GraphQL.Request(
         Spicetify.GraphQL.Definitions.getTrack,
         { uri: `spotify:track:${id}` }
       );
-      const track = metadata?.data?.trackUnion;
-      const artist = track?.firstArtist?.items?.[0]?.profile?.name;
-      if (!track?.name || !artist) {
+      seedTrack = metadata?.data?.trackUnion;
+      const artist = seedTrack?.firstArtist?.items?.[0]?.profile?.name;
+      if (!seedTrack?.name || !artist) {
         throw new Error("Spotify did not return track metadata.");
       }
       const res = await fetch(`${SERVER}/api/recommend`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: `${track.name} — ${artist}`,
+          query: `${seedTrack.name} — ${artist}`,
           n: 20,
           diversity: 0.15,
         }),
@@ -61,40 +62,189 @@
       Spicetify.showNotification((data && data.error) || "No match found.", true);
       return;
     }
-    showModal(data);
+    const modal = showModal(data, seedTrack);
+    hydrateSpotifyRows(data.results, modal).catch((error) => {
+      console.error("[soundalike] Spotify result enrichment failed", error);
+    });
   }
 
-  function showModal(data) {
+  async function findSpotifyTrack(result) {
+    const response = await Spicetify.GraphQL.Request(
+      Spicetify.GraphQL.Definitions.searchModalResults,
+      {
+        searchTerm: `${result.title} ${result.artist}`,
+        offset: 0,
+        limit: 5,
+        numberOfTopResults: 5,
+        includeAudiobooks: false,
+        includeAuthors: false,
+      }
+    );
+    const hits = response?.data?.searchV2?.topResultsV2?.itemsV2 || [];
+    const ranked = hits
+      .map((hit) => hit?.item?.data)
+      .filter((track) => track?.__typename === "Track")
+      .map((track) => ({ track, score: spotifyMatchScore(track, result) }))
+      .sort((a, b) => b.score - a.score);
+    return ranked[0]?.score >= 6 ? ranked[0].track : null;
+  }
+
+  function spotifyMatchScore(track, result) {
+    const expectedTitle = normalizeLabel(result.title);
+    const actualTitle = normalizeLabel(track.name);
+    const expectedArtist = normalizeLabel(result.artist);
+    const actualArtists = (track.artists?.items || [])
+      .map((item) => normalizeLabel(item?.profile?.name))
+      .filter(Boolean);
+    if (!expectedTitle || !expectedArtist) return 0;
+    let score = 0;
+    if (actualTitle === expectedTitle) {
+      score += 4;
+    } else if (actualTitle.includes(expectedTitle) || expectedTitle.includes(actualTitle)) {
+      score += 2;
+    }
+    if (actualArtists.some((artist) => artist === expectedArtist)) {
+      score += 4;
+    } else if (actualArtists.some(
+      (artist) => artist.includes(expectedArtist) || expectedArtist.includes(artist)
+    )) {
+      score += 2;
+    }
+    return score;
+  }
+
+  function normalizeLabel(value) {
+    return String(value || "")
+      .normalize("NFKD")
+      .replace(/\p{M}/gu, "")
+      .toLocaleLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .trim();
+  }
+
+  function artworkUrl(track) {
+    const sources = track?.albumOfTrack?.coverArt?.sources || [];
+    const url = (
+      sources.find((source) => source.width === 64)?.url ||
+      sources.find((source) => source.width === 300)?.url ||
+      sources[0]?.url ||
+      ""
+    );
+    return url.replace(
+      "https://i.scdn.co/image/",
+      "https://image-cdn-fa.spotifycdn.com/image/"
+    );
+  }
+
+  async function hydrateSpotifyRows(results, modal) {
+    if (!Spicetify.GraphQL.Definitions.searchModalResults) {
+      console.warn("[soundalike] Spotify artwork lookup is unavailable in this client.");
+      return;
+    }
+    let cursor = 0;
+    let enriched = 0;
+    async function worker() {
+      while (cursor < results.length) {
+        const index = cursor++;
+        try {
+          const track = await findSpotifyTrack(results[index]);
+          const row = modal.querySelector(`.sa-row[data-index="${index}"]`);
+          if (!track || !row) continue;
+          const artists = (track.artists?.items || [])
+            .map((item) => item?.profile?.name)
+            .filter(Boolean);
+          const image = artworkUrl(track);
+          row.dataset.uri = track.uri;
+          if (artists.length) {
+            row.querySelector(".sa-artist").textContent = artists.join(", ");
+          }
+          if (image) {
+            const img = document.createElement("img");
+            img.src = image;
+            img.alt = "";
+            img.loading = "lazy";
+            row.querySelector(".sa-cover").replaceChildren(img);
+          }
+          enriched++;
+        } catch (error) {
+          console.warn(
+            `[soundalike] Spotify metadata lookup failed for ${results[index].title}`,
+            error
+          );
+        }
+      }
+    }
+    const workerCount = Math.min(4, results.length);
+    await Promise.all(Array.from({ length: workerCount }, worker));
+    console.log(
+      `[soundalike] added Spotify metadata to ${enriched}/${results.length} rows.`
+    );
+  }
+
+  function showModal(data, seedTrack) {
     const s = data.seed, v = data.vibe;
     const wrap = document.createElement("div");
-    wrap.style.cssText = "font:14px system-ui,sans-serif;color:#e8eaed";
+    const seedImage = artworkUrl(seedTrack);
+    wrap.className = "sa-results";
 
     const tags = [v.tempo, v.dynamics, v.low_end, v.tone]
-      .map((t) => `<span style="background:#1a1f27;border:1px solid #2a313c;border-radius:8px;padding:3px 8px;margin-right:6px;font-size:12px">${esc(t)}</span>`)
+      .map((t) => `<span class="sa-tag">${esc(t)}</span>`)
       .join("");
     const rows = data.results
       .map(
         (x, i) => `
-      <div class="sa-row" data-q="${esc(x.title + " " + x.artist)}"
-        style="display:flex;align-items:center;gap:12px;padding:8px 6px;border-radius:8px;cursor:pointer">
-        <div style="width:20px;color:#8b93a1;text-align:right">${i + 1}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.title)}</div>
-          <div style="color:#8b93a1;font-size:12.5px">${esc(x.artist)}</div>
+      <div class="sa-row" data-index="${i}" data-q="${esc(x.title + " " + x.artist)}">
+        <div class="sa-rank">${i + 1}</div>
+        <div class="sa-cover" aria-hidden="true"><span>♫</span></div>
+        <div class="sa-meta">
+          <div class="sa-title">${esc(x.title)}</div>
+          <div class="sa-artist">${esc(x.artist)}</div>
         </div>
-        <div style="color:#1db954;font-size:12px">&#9656; play</div>
+        <div class="sa-open">›</div>
       </div>`
       )
       .join("");
 
     wrap.innerHTML = `
-      <div style="margin-bottom:6px;color:#8b93a1">Sounds like <b style="color:#e8eaed">${esc(s.title)}</b> &mdash; ${esc(s.artist)}</div>
-      <div style="margin-bottom:12px">${tags}</div>
-      <div style="max-height:52vh;overflow:auto">${rows}</div>`;
+      <style>
+        .sa-results{font:14px var(--encore-body-font-stack,system-ui,sans-serif);color:var(--spice-text,#fff)}
+        .sa-seed{display:flex;align-items:center;gap:12px;margin:0 0 10px}
+        .sa-seed img,.sa-seed-fallback{width:56px;height:56px;border-radius:4px;object-fit:cover;background:#282828}
+        .sa-seed-fallback{display:grid;place-items:center;color:#b3b3b3;font-size:22px}
+        .sa-kicker{color:var(--spice-subtext,#b3b3b3);font-size:12px;margin-bottom:2px}
+        .sa-seed-title{font-size:18px;font-weight:700;line-height:1.25}
+        .sa-seed-artist{color:var(--spice-subtext,#b3b3b3);margin-top:2px}
+        .sa-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+        .sa-tag{background:rgba(255,255,255,.08);border-radius:999px;padding:4px 9px;color:var(--spice-subtext,#b3b3b3);font-size:12px}
+        .sa-list{max-height:52vh;overflow:auto;padding-right:4px}
+        .sa-list-head,.sa-row{display:grid;grid-template-columns:28px 44px minmax(0,1fr) 28px;align-items:center;column-gap:12px}
+        .sa-list-head{height:28px;color:var(--spice-subtext,#b3b3b3);font-size:12px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:4px}
+        .sa-row{min-height:56px;padding:4px 6px;border-radius:6px;cursor:pointer}
+        .sa-row:hover{background:rgba(255,255,255,.1)}
+        .sa-rank{text-align:right;color:var(--spice-subtext,#b3b3b3);font-variant-numeric:tabular-nums}
+        .sa-cover{width:44px;height:44px;border-radius:4px;background:#282828;display:grid;place-items:center;color:#727272;overflow:hidden}
+        .sa-cover img{width:100%;height:100%;object-fit:cover}
+        .sa-meta{min-width:0}
+        .sa-title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .sa-artist{color:var(--spice-subtext,#b3b3b3);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+        .sa-open{color:var(--spice-subtext,#b3b3b3);font-size:24px;text-align:center}
+        .sa-row:hover .sa-title,.sa-row:hover .sa-open{color:var(--spice-text,#fff)}
+      </style>
+      <div class="sa-seed">
+        ${seedImage
+          ? `<img src="${esc(seedImage)}" alt="">`
+          : `<div class="sa-seed-fallback" aria-hidden="true">♫</div>`}
+        <div>
+          <div class="sa-kicker">SOUNDS LIKE</div>
+          <div class="sa-seed-title">${esc(s.title)}</div>
+          <div class="sa-seed-artist">${esc(s.artist)}</div>
+        </div>
+      </div>
+      <div class="sa-tags">${tags}</div>
+      <div class="sa-list-head"><div>#</div><div></div><div>Title</div><div></div></div>
+      <div class="sa-list">${rows}</div>`;
 
     wrap.querySelectorAll(".sa-row").forEach((el) => {
-      el.onmouseenter = () => (el.style.background = "#171c24");
-      el.onmouseleave = () => (el.style.background = "transparent");
       el.onclick = () => {
         Spicetify.Platform.History.push(`/search/${encodeURIComponent(el.dataset.q)}`);
         Spicetify.PopupModal.hide();
@@ -106,6 +256,7 @@
       content: wrap,
       isLarge: true,
     });
+    return wrap;
   }
 
   function esc(str) {

@@ -36,9 +36,12 @@ including the Microsoft-Store build.
 
 ![soundalike web app](docs/soundalike-results.png)
 
-Want the recommendations *inside* the Spotify app — a right-click **“Find soundalikes”** menu
-item? That's the [**Spicetify extension**](integrations/spicetify/README.md) (needs the
-standalone Spotify client). Everything runs locally; nothing leaves your machine.
+Want the recommendations *inside* Spotify — a right-click **“Find soundalikes”**
+menu with album artwork and verified artist names? Use the
+[**Spicetify extension**](integrations/spicetify/README.md). Its complete
+Windows, macOS, and Linux guide covers patchable desktop Spotify installs,
+automatic local-server startup, and troubleshooting. Everything runs locally;
+Windows Store and Linux Snap Spotify builds are not patchable.
 
 **Prefer a hosted, no-install demo?** The ~273k-song library runs as a **numpy-only Vercel app**
 (no PyTorch needed for library songs) — deploy it to a subdomain and let anyone try it in the
