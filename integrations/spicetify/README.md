@@ -38,12 +38,30 @@ the **Microsoft-Store version cannot be patched** (this is a Spicetify
 limitation, not ours). If you have the Store version, either use Option A or
 reinstall Spotify from spotify.com first.
 
+Before installing Spicetify, open the standalone Spotify app once, sign in, and
+then close it. This creates the `Spotify` and `prefs` paths that Spicetify needs.
+
 ### 1. Install Spicetify
 
 PowerShell (Windows):
 
 ```powershell
 iwr -useb https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 | iex
+
+# Confirm this shell can find Spicetify and its standalone Spotify paths.
+spicetify --version
+spicetify config spotify_path
+spicetify config prefs_path
+```
+
+If `spicetify` is not recognized after installation, open a new PowerShell
+window. The official installer normally places the executable at
+`$env:LOCALAPPDATA\spicetify\spicetify.exe`. If the new window still cannot
+find it, add that directory to the current session and retry:
+
+```powershell
+$env:Path = "$env:LOCALAPPDATA\spicetify;$env:Path"
+spicetify --version
 ```
 
 Terminal (macOS):
@@ -53,6 +71,10 @@ curl -fsSL https://raw.githubusercontent.com/spicetify/cli/main/install.sh | sh
 
 # Only needed if Spicetify does not detect Spotify automatically:
 spicetify config spotify_path "/Applications/Spotify.app/Contents/Resources"
+
+spicetify --version
+spicetify config spotify_path
+spicetify config prefs_path
 ```
 
 The installer supports both Apple silicon and Intel Macs. Restart Terminal if
@@ -78,6 +100,10 @@ directory in Explorer but does not print its location, so PowerShell receives
 an empty destination. The documented Windows extension directory is
 `%APPDATA%\spicetify\Extensions`.
 
+The warning `Config "extensions" unchanged` is harmless: it means
+`soundalike.js` was already enabled. `spicetify apply` must still finish with
+`success Refreshed extensions`.
+
 Terminal (macOS):
 
 ```bash
@@ -92,8 +118,26 @@ spicetify apply
 
 ### 3. Run the local engine and use it
 
-```bash
+PowerShell (Windows):
+
+```powershell
+# Run from the soundalike repository root, with your virtual environment active.
+python -m pip install -e ".[ml]"  # first time only
 soundalike serve --no-browser
+
+# In a second PowerShell window, verify the server is ready:
+Invoke-RestMethod http://127.0.0.1:8787/health
+```
+
+Terminal (macOS):
+
+```bash
+# Run from the soundalike repository root, with your virtual environment active.
+python -m pip install -e ".[ml]"  # first time only
+soundalike serve --no-browser
+
+# In a second Terminal window:
+curl --fail http://127.0.0.1:8787/health
 ```
 
 Now right-click any song in Spotify → **Find soundalikes**. A panel opens with
@@ -101,6 +145,20 @@ vibe-matched tracks; click one to jump to it in Spotify.
 
 The extension only talks to `http://127.0.0.1:8787` on your own machine — no
 data leaves your computer, and nothing runs unless you started `soundalike serve`.
+
+### Troubleshooting and updates
+
+- **No “Find soundalikes” menu item:** confirm the file exists at
+  `%APPDATA%\spicetify\Extensions\soundalike.js` on Windows or
+  `~/.config/spicetify/Extensions/soundalike.js` on macOS, then run
+  `spicetify config extensions soundalike.js`, `spicetify apply`, and restart
+  Spotify.
+- **“Server not reachable”:** keep `soundalike serve --no-browser` running and
+  verify `/health` with the command above.
+- **After a Spotify update:** run `spicetify backup apply`. If Spicetify itself
+  reports an available update, run `spicetify update` first.
+- **After updating soundalike:** copy `soundalike.js` again using step 2, then
+  run `spicetify apply`.
 
 ---
 
@@ -112,9 +170,10 @@ right-click track ─▶ Spotify track id ─▶ local server /api/recommend
                      already in the library?  ├─ yes ─▶ cached embedding (instant)
                                               └─ no  ─▶ 30s Deezer preview ─▶ neural encoder
                                                                                     │
-                        rank 87k-track index by audio+vibe similarity ◀────────────┘
+                       rank 272,853-track index by audio+vibe similarity ◀──────────┘
 ```
 
-Everything heavy (the 87k-track index + the neural encoder) is loaded **once**
-when the server starts, so each right-click returns in well under a second for
-library tracks.
+On first use, the manifest may download the checksum-pinned 299 MB production
+index; the bundled ~87k index remains the offline fallback. The selected
+272,853-track index and neural encoder are loaded **once** when the server
+starts, so subsequent right-clicks avoid model cold-start work.

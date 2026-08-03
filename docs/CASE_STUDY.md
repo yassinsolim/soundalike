@@ -41,7 +41,11 @@ run it" lives in the [README](../README.md); this is the "how it was built and w
 - **Full-track v2 result:** 45 self-supervised fusion jobs and 45 bound evaluations passed
   integrity/stability gates, but no candidate beat the frozen hybrid overall. The closest model
   was **-1.56% Recall@10**, so I launched a lawful 20-seed blind test instead of promoting it.
-- **Built and validated on:** an NVIDIA RTX 5080 (Blackwell), 778 Python tests, 28 Node tests,
+- **V3 result:** a checksum-frozen CLAP/MusicFM candidate reached **+20.005% Recall@10** on
+  development, but only **+0.286%** on the final independent shadow, with its confidence interval
+  crossing zero and a **-11.23%** worst fold. I rejected it and kept V2 live rather than presenting
+  a development win as production progress.
+- **Built and validated on:** an NVIDIA RTX 5080 (Blackwell), more than 800 Python tests, 28 Node tests,
   and a clean packaged wheel.
 
 ---
@@ -545,6 +549,46 @@ provenance, resumable version-isolated browser state, and private version-isolat
 Until genuine listeners submit ratings, the human-quality delta is unknown and production
 remains unchanged.
 
+### V3 full-track research: a large development win that did not generalize
+
+V3 was designed to answer the failure mode left by V2: perhaps the representation, not the
+fusion head, was the bottleneck. I screened music-native encoders for licensing first.
+MusicFM-FMA was eligible (MIT model metadata; MIT/Apache-2.0 source), while the available MERT,
+music2vec, and MuQ checkpoints declared non-commercial licenses and were excluded from production
+consideration.
+
+The research then progressed through increasingly strict, artist-disjoint protocols:
+
+1. A frozen selective MusicFM reranker improved official-test Recall by only **+0.94%** and
+   regressed NDCG by 0.09%; its Recall interval crossed zero, so it was rejected after one audit.
+2. A complementary CLAP/MusicFM profile reached **+15.06% development Recall**, but only
+   **+4.32%** on its one-time shadow, with a -13.23% worst fold.
+3. A larger train-only CLAP semantic model reached **+25.27% development Recall**, but only
+   **+5.27%** on a new shadow; that interval also crossed zero.
+4. One final untouched reserve froze 32,859 train, 3,074 development, and 3,023 shadow tracks
+   with no shared artists. Its bounded search ended before shadow access.
+
+The final candidate combined four CLAP semantic ridge heads, one MusicFM ridge head, and direct
+CLAP window-max audio pooling. The exact candidate was serialized without pickle, rebuilt
+independently from sealed stores, and frozen before the label-free MusicFM shadow extraction.
+
+| Final reserve | Recall@10 | MRR | graded NDCG@10 | Recall interval | Positive Recall folds | Worst Recall fold |
+|---|---:|---:|---:|---:|---:|---:|
+| Development (2,574 queries) | **+20.005%** | +8.696% | +11.296% | `+0.00308..+0.00705` | 5/5 | +11.44% |
+| Shadow (2,573 queries) | **+0.286%** | +1.09% | +3.96% | `-0.00181..+0.00191` | 3/5 | **-11.23%** |
+
+The independent result failed the predeclared +20% gain, positive-interval, four-fold, and
+worst-fold checks. That ended the branch: no listening pack, no promotion, and no retuning on the
+consumed shadow. V2 remains at `/evaluate`; the hosted recommender remains
+`dual_sonic64_guardrail`.
+
+This negative result is the strongest demonstration of the project’s evaluation discipline.
+Development selection had produced a clean, stable-looking 20% gain, but the independent split
+showed that it was not a production-quality improvement. The right engineering decision was to
+preserve the rollback path and record the failed generalization instead of weakening the gate.
+Any future V3 effort needs new lawful supervision and a newly frozen independent population.
+The complete chronological evidence is in [V3_RESEARCH.md](V3_RESEARCH.md).
+
 ### Resources and reproduction
 
 The checksum-pinned release index is **299,288,526 bytes**. It contains the unchanged neural/vibe
@@ -585,7 +629,7 @@ $env:PYTHONPATH = "src;."
   Diagnostic categories cannot decide the score, and the contaminated static graph stays retired.
 - **Release integrity.** Desktop and hosted downloads pin SHA-256; hosted download is atomic and
   fails before loading on a mismatch, and numpy object pickles are disabled.
-- **778 Python tests and 28 Node tests** cover the recommenders, OAuth/PKCE, DSP, vibe and
+- **More than 800 Python tests and 28 Node tests** cover the recommenders, OAuth/PKCE, DSP, vibe and
   vibe-aware engines, the spec cache, recommendation benchmarks, diversity/MMR, GeM pooling,
   ML split logic, the categorized production benchmark, Dual-Sonic64 guardrails, full-track
   store/training/selection integrity, v1/v2 evaluator isolation, private submission parsing,
@@ -608,8 +652,8 @@ $env:PYTHONPATH = "src;."
 - **Fix the niche weak spot** — external validation showed ultra-niche breakcore seeds (*Sewerslvt*)
   leak into trance. Now that `cross_artist_agreement` can score it against ListenBrainz/Deezer, it's a
   measurable target for the next fine-tune (e.g. harder negatives from a development-only graph).
-- **Rotate a new unopened held-out split** after any training on the current development pairs, and
-  improve catalogue coverage before claiming known-pair Recall@20 is solved.
+- **Collect new lawful supervision and freeze a new independent population** before another V3
+  claim. Every preregistered V3 shadow is now consumed and cannot support retuning.
 - **Contrastive-on-vibe** — mine positive pairs by vibe similarity, not just augmented crops or
   same-artist labels, so the objective pulls same-*vibe* songs together directly (the natural next
   step after ArcFace, since the artist signal is a proxy for vibe, not vibe itself).

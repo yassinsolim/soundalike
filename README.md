@@ -62,6 +62,13 @@ already better. The frozen automated benchmark did not select any trained fusion
 candidate overall, and no human improvement can be reported until genuine listening
 ratings are collected.
 
+**V3 research is complete but not shipped.** Its strongest final-reserve candidate
+reached the preregistered +20% development target, then improved independent shadow
+Recall@10 by only **+0.286%** with an interval crossing zero and a **-11.23%** worst
+fold. The gate correctly rejected it: no V3 listening pack was opened, no production
+model changed, and `/evaluate` remains V2. See
+[V3 full-track research](#v3-full-track-research-closed-without-promotion) for the complete outcome.
+
 ---
 
 ## Why this exists (and why it's built the way it is)
@@ -346,6 +353,33 @@ The production deployment at <https://soundalike.yassin.app> reports
 recommendations, and fresh preview lookups passed.
 Full ranked outputs, negative results, source categories, resource measurements, and reproduce
 commands are in `.goals/human-quality-recommendations/artifacts/` and the case study.
+
+### V3 full-track research (closed without promotion)
+
+V3 tested whether lawful full-track audio and a music-native representation could
+produce a large, stable improvement over the frozen CLAP hybrid. The research used
+MTG-Jamendo audio, MIT-licensed MusicFM-FMA, artist-disjoint train/development/shadow
+partitions, one-time shadow audits, checksum-bound artifacts, and a fixed final gate:
+at least +20% Recall@10, a paired interval above zero, 4/5 positive folds, no fold
+below -5%, and no material MRR/NDCG regression.
+
+The final reserve contained 32,859 train, 3,074 development, and 3,023 shadow tracks
+with zero artist overlap. A calibrated CLAP/MusicFM semantic candidate combined
+train-only tag prediction with direct CLAP window-max audio pooling:
+
+| Final-reserve result | Recall@10 | MRR | graded NDCG@10 | Positive Recall folds | Worst Recall fold |
+|---|---:|---:|---:|---:|---:|
+| Development (2,574 queries) | **+20.005%** | +8.696% | +11.296% | 5/5 | +11.44% |
+| Independent shadow (2,573 queries) | **+0.286%** | +1.09% | +3.96% | 3/5 | **-11.23%** |
+
+The shadow Recall interval was `-0.00181..+0.00191`, so the apparent development
+jump did not generalize. V3 therefore failed four primary checks and was rejected.
+The shadow is consumed, listening and promotion remain blocked, and
+`dual_sonic64_guardrail` remains production. This is the intended behavior of the
+evaluation protocol—not a hidden failure. See the
+[V3 research log](docs/V3_RESEARCH.md) and the
+[case study](docs/CASE_STUDY.md#v3-full-track-research-a-large-development-win-that-did-not-generalize)
+for the full sequence, negative results, and evidence boundaries.
 
 ### Growing the library past the bundle limit
 
