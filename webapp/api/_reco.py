@@ -24,6 +24,16 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
+from _search import (
+    SearchCatalog,
+    _INDEX_PATH,
+    _INDEX_SHA256,
+    _INDEX_VERSION,
+    _DASH_SUFFIX,
+    _PAREN,
+    _norm,
+)
+
 # Where to get the index. A local path wins (dev); otherwise download the bundled
 # pack asset from the public Release into the function's ephemeral /tmp.
 _INDEX_URL = os.environ.get(
@@ -31,47 +41,9 @@ _INDEX_URL = os.environ.get(
     "https://github.com/yassinsolim/soundalike/releases/download/"
     "index-2026.07.11-dual-sonic64/deepvibe_index.npz",
 )
-# Bump this when the index changes so warm instances with an old /tmp copy
-# re-download instead of serving stale data.
-_INDEX_VERSION = "2026.07.11-dual-sonic64"
-_INDEX_SHA256 = os.environ.get(
-    "SOUNDALIKE_INDEX_SHA256",
-    "f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9",
-)
-_INDEX_PATH = os.environ.get("SOUNDALIKE_INDEX_PATH", "")
 
 _LOCK = threading.Lock()
 _RECO: Optional["WebRecommender"] = None
-
-
-_PAREN = re.compile(r"[\(\[][^\)\]]*[\)\]]")   # (feat...)/(Remaster)/[Explicit]
-_DASH_SUFFIX = re.compile(r"\s+-\s+.*$")        # "- 2011 Remaster" style suffix
-
-
-def _norm(s: str) -> str:
-    """Title/artist match key. Strips accents, parenthetical credits/versions, and
-    trailing '- Remaster' suffixes — but KEEPS ordinary words like 'with' (so
-    'Stay With Me' stays 'stay with me' instead of collapsing to 'stay')."""
-    s = unicodedata.normalize("NFKD", str(s)).encode("ascii", "ignore").decode()
-    s = s.casefold()
-    s = _PAREN.sub(" ", s)
-    s = _DASH_SUFFIX.sub("", s)
-    for sep in (" feat. ", " feat ", " ft. ", " ft ", " featuring "):
-        i = s.find(sep)
-        if i > 0:
-            s = s[:i]
-    return " ".join(s.split())
-
-
-def _version_penalty(title: str) -> Tuple[int, int]:
-    """Prefer an original-looking catalogue row over remix/live derivatives."""
-    derivative = int(bool(re.search(
-        r"\b(?:karaoke|tribute|slowed|reverb|nightcore|instrumental|"
-        r"remix|cover|live|acoustic)\b",
-        str(title),
-        re.IGNORECASE,
-    )))
-    return derivative, len(str(title))
 
 
 # Vibe feature weights — must match soundalike.audio.vibe.DEFAULT_WEIGHTS exactly
@@ -259,20 +231,8 @@ class WebRecommender:
         self._w = np.sqrt(np.clip(w, 0.0, None))
         self._vscaled = ((vibe - self._vmean) / self._vstd) * self._w
 
-        # Fast library-hit lookups + precomputed normalized strings for search.
-        self._nt = [_norm(t) for t in self.titles]     # normalized titles
-        self._na = [_norm(a) for a in self.artists]     # normalized artists
-        self._naprim = [a.split(",")[0].split(" & ")[0].strip() for a in self._na]
-        self._by_pair: Dict[Tuple[str, str], int] = {}
-        self._by_title: Dict[str, List[int]] = {}
-        for i in range(len(self.titles)):
-            t, a = self._nt[i], self._naprim[i]
-            previous = self._by_pair.get((t, a))
-            if previous is None or _version_penalty(self.titles[i]) < _version_penalty(
-                self.titles[previous]
-            ):
-                self._by_pair[(t, a)] = i
-            self._by_title.setdefault(t, []).append(i)
+        # Search metadata is shared with the lightweight autocomplete path.
+        self._catalog = SearchCatalog(self.titles, self.artists)
 
         # ── Enhancement modules (loaded only when enhance=True) ──────────────
         self._qfilter = None
@@ -303,62 +263,10 @@ class WebRecommender:
 
     # -------------------------------------------------------------- search/seed
     def find_row(self, title: str, artist: str = "") -> Optional[int]:
-        t = _norm(title)
-        a = _norm(artist)
-        aprim = a.split(",")[0].split(" & ")[0].strip()
-        if aprim and (t, aprim) in self._by_pair:
-            return self._by_pair[(t, aprim)]
-        if not a and len(self._by_title.get(t, [])) >= 1:
-            return min(self._by_title[t], key=lambda row: _version_penalty(self.titles[row]))
-        # loose: title substring, optionally constrained to the artist
-        best = None
-        for i in range(len(self._nt)):
-            if t and t in self._nt[i]:
-                if not a or a in self._na[i]:
-                    # prefer an exact title match over a mere substring
-                    if self._nt[i] == t:
-                        return i
-                    if best is None:
-                        best = i
-        return best
+        return self._catalog.find_row(title, artist)
 
     def search(self, q: str, limit: int = 8) -> List[Dict]:
-        """Ranked search over the library for the seed picker / autocomplete.
-
-        Ranks exact-title matches first, then title prefix, then title substring,
-        then artist-substring, then an all-tokens-present fallback (so 'miki stay'
-        finds 'Mayonaka no Door / Stay With Me' by Miki Matsubara). Fixes the old
-        behaviour where a query like 'Stay With Me' collapsed to 'stay' and matched
-        unrelated songs.
-        """
-        nq = _norm(q)
-        if not nq:
-            return []
-        toks = nq.split()
-        scored: List[Tuple[int, int, int]] = []
-        for i in range(len(self._nt)):
-            nt = self._nt[i]
-            if nq in nt:
-                s = 0 if nt == nq else (1 if nt.startswith(nq) else 2)
-            elif nq in nt + " " + self._na[i]:
-                s = 3
-            elif len(toks) > 1 and all(tok in (nt + " " + self._na[i]) for tok in toks):
-                s = 4
-            else:
-                continue
-            scored.append((s, len(nt), i))
-        scored.sort()
-        hits, seen = [], set()
-        for _, __, i in scored:
-            key = (self._nt[i], self._naprim[i])
-            if key in seen:
-                continue
-            seen.add(key)
-            hits.append({"row": i, "title": str(self.titles[i]),
-                         "artist": str(self.artists[i])})
-            if len(hits) >= limit:
-                break
-        return hits
+        return self._catalog.search(q, limit)
 
     # -------------------------------------------------------------- recommend
     @staticmethod

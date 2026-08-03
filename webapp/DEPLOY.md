@@ -42,7 +42,11 @@ The release catalogue contains 272,853 songs; misses are reported honestly.
 ```
 webapp/
   index.html          # the whole UI (static) — search, results, Spotify login, save
+  search.js           # abortable autocomplete, prefix reuse, and idle prewarming
+  build_search_catalog.py
   api/
+    _search.py        # stdlib-only title/artist catalog and bounded query cache
+    search_catalog.json.gz
     _reco.py          # numpy recommender (fetches the index from the GitHub Release)
     recommend.py      # POST /api/recommend
     search.py         # GET  /api/search?q=
@@ -62,6 +66,24 @@ The index is **not** committed here. On first request the function downloads
 instance. A mismatch fails closed before numpy loads the file. Custom deployments
 may override `SOUNDALIKE_INDEX_URL`, `SOUNDALIKE_INDEX_SHA256`, or
 `SOUNDALIKE_INDEX_PATH`.
+
+Autocomplete does not download or initialize that model. The row-aligned
+`search_catalog.json.gz` is 3,961,198 bytes, contains only title/artist metadata,
+and is pinned to SHA-256 `c9ce8b8f…adbdf`. `/api/search` loads this catalog with
+the standard library, caches up to 256 normalized queries per warm instance, and
+returns the original production row so `/api/recommend` can use it directly. The
+full model remains lazy until a user selects a song.
+
+When the production index changes, rebuild and commit the catalog from the exact
+release index:
+
+```bash
+python webapp/build_search_catalog.py deepvibe_index.npz
+```
+
+Update the index version, index checksum, catalog checksum, and production row
+count together in `api/_search.py`. Custom catalogs may instead set both
+`SOUNDALIKE_SEARCH_CATALOG_PATH` and `SOUNDALIKE_SEARCH_CATALOG_SHA256`.
 
 ---
 
