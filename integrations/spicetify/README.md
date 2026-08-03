@@ -157,6 +157,18 @@ also cover NixOS and uncommon package layouts.
 
 ### 2. Install this extension
 
+Marketplace (Windows/macOS/Linux):
+
+1. Open **Marketplace** in Spotify.
+2. Select **Extensions** and search for **Soundalike**.
+3. Select **Install**, then restart Spotify if the menu item does not appear.
+
+Marketplace installs and updates `soundalike.js`; it cannot install the separate
+Python recommendation engine. Complete step 3 once, or enable step 4, so the
+extension has a local server to contact.
+
+Manual install:
+
 PowerShell (Windows):
 
 ```powershell
@@ -369,7 +381,8 @@ login and no remote Soundalike server are required.
 - **After a Spotify update:** run `spicetify backup apply`. If Spicetify itself
   reports an available update, run `spicetify update` first.
 - **After updating soundalike:** copy `soundalike.js` again using step 2, then
-  run `spicetify apply`.
+  run `spicetify apply`. Marketplace installations update the extension from
+  the repository automatically.
 
 ---
 

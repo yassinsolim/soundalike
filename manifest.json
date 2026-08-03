@@ -1,0 +1,19 @@
+{
+  "name": "Soundalike",
+  "description": "Find genuinely similar tracks from Spotify's right-click menu using a local audio model.",
+  "preview": "docs/spicetify-results.png",
+  "main": "integrations/spicetify/soundalike.js",
+  "readme": "integrations/spicetify/README.md",
+  "branch": "main",
+  "authors": [
+    {
+      "name": "Yassin Soliman",
+      "url": "https://github.com/yassinsolim"
+    }
+  ],
+  "tags": [
+    "music",
+    "recommendations",
+    "discovery"
+  ]
+}
