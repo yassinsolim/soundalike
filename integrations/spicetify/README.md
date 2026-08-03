@@ -163,6 +163,10 @@ Marketplace (Windows/macOS/Linux):
 2. Select **Extensions** and search for **Soundalike**.
 3. Select **Install**, then restart Spotify if the menu item does not appear.
 
+Marketplace paginates extension cards. If a new session does not show
+Soundalike in filtered results, clear the search, select **Load more** once,
+and scroll to the newly listed extensions.
+
 Marketplace installs and updates `soundalike.js`; it cannot install the separate
 Python recommendation engine. Complete step 3 once, or enable step 4, so the
 extension has a local server to contact.
