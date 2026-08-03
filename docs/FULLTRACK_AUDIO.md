@@ -315,6 +315,81 @@ file hash is `e04e65a4...`. Its compact freeze is committed at
 `.goals\production-ready-v3/artifacts/final-reserve-protocol-freeze.json`.
 Reserve development and shadow labels are unopened at this point.
 
+Build and freeze the exact candidate selected on reserve development:
+
+```powershell
+$candidate = 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-final-reserve-candidate'
+
+& $python -m soundalike.ml.fulltrack_v3_reserve_candidate build-development `
+  --metadata-root 'C:\soundalike-data\mtg-jamendo-dataset' `
+  --protocol 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-final-reserve-protocol.json' `
+  --refinement-report '.goals\production-ready-v3\artifacts\final-reserve-development-result.json' `
+  --clap-store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\clap-v1-full-55701' `
+  --musicfm-train-store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\musicfm-fma-v3-semantic-head-8192' `
+  --musicfm-development-store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\musicfm-fma-v3-final-reserve-development-sparse4' `
+  --model-output "$candidate\candidate.npz" `
+  --metadata-output "$candidate\candidate.metadata.json" `
+  --report-output "$candidate\development-report.json"
+
+& $python -m soundalike.ml.fulltrack_v3_reserve_candidate freeze-shadow `
+  --protocol 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-final-reserve-protocol.json' `
+  --refinement-report '.goals\production-ready-v3\artifacts\final-reserve-development-result.json' `
+  --clap-store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\clap-v1-full-55701' `
+  --musicfm-train-store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\musicfm-fma-v3-semantic-head-8192' `
+  --musicfm-development-store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\musicfm-fma-v3-final-reserve-development-sparse4' `
+  --model "$candidate\candidate.npz" `
+  --metadata "$candidate\candidate.metadata.json" `
+  --development-report "$candidate\development-report.json" `
+  --shadow-extraction-plan '.goals\production-ready-v3\artifacts\final-reserve-shadow-extraction-plan.json' `
+  --output '.goals\production-ready-v3\artifacts\final-reserve-shadow-freeze.json'
+```
+
+The production rebuild must print exactly +20.004991% Recall, +8.695669% MRR,
+and +11.295961% NDCG. It refuses to write model evidence if any delta differs.
+The candidate NPZ uses `allow_pickle=False`; the freeze also binds the scoring
+implementation and the split-specific shadow extraction config.
+
+After committing the freeze, extract shadow audio without reading shadow labels:
+
+```powershell
+$shadowStore = 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\musicfm-fma-v3-final-reserve-shadow-sparse4'
+
+& $python -m soundalike.ml.fulltrack_v3_reserve_musicfm extract `
+  --metadata-root 'C:\soundalike-data\mtg-jamendo-dataset' `
+  --audio-root 'C:\soundalike-data\mtg-jamendo-raw-full\audio' `
+  --state-root 'C:\soundalike-data\mtg-jamendo-raw-full\state' `
+  --protocol 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-final-reserve-protocol.json' `
+  --plan '.goals\production-ready-v3\artifacts\final-reserve-shadow-extraction-plan.json' `
+  --asset-root 'C:\soundalike-data\model-assets\musicfm-fma' `
+  --output $shadowStore
+```
+
+Extraction is deterministic and resumable. Re-run the same command after an
+interruption; completed shards are retained and the store seals only after all
+3,023 tracks are present.
+
+Open final shadow exactly once:
+
+```powershell
+& $python -m soundalike.ml.fulltrack_v3_reserve_candidate audit-shadow `
+  --metadata-root 'C:\soundalike-data\mtg-jamendo-dataset' `
+  --protocol 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-final-reserve-protocol.json' `
+  --clap-store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\clap-v1-full-55701' `
+  --musicfm-shadow-store $shadowStore `
+  --model "$candidate\candidate.npz" `
+  --metadata "$candidate\candidate.metadata.json" `
+  --development-report "$candidate\development-report.json" `
+  --shadow-extraction-plan '.goals\production-ready-v3\artifacts\final-reserve-shadow-extraction-plan.json' `
+  --freeze '.goals\production-ready-v3\artifacts\final-reserve-shadow-freeze.json' `
+  --output "$candidate\shadow-report.json" `
+  --audit-state "$candidate\shadow-audit-state.json"
+```
+
+The audit writes the exclusive state file before reading a shadow label.
+An interrupted audit therefore consumes the one-time access and cannot be
+silently retried. Automated gates may permit a blind listening pack, but never
+permit production promotion; independent human ratings remain required.
+
 ## Required local dataset
 
 Default paths:
@@ -698,6 +773,7 @@ audio.
 ```powershell
 $env:PYTHONPATH = 'C:\Users\solim\soundalike-fulltrack-trainer\src;C:\Users\solim\soundalike-fulltrack-trainer\webapp\api'
 & $python -m pytest -q tests\test_jamendo_fulltrack.py tests\test_fulltrack_store.py tests\test_fulltrack_extract.py tests\test_fulltrack_eval.py tests\test_fulltrack_fusion.py tests\test_fulltrack_train.py tests\test_fulltrack_selection.py
+& $python -m pytest -q tests\test_fulltrack_v3_reserve_candidate.py
 & $python -m pytest -q
 git diff --check
 ```

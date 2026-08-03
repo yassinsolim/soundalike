@@ -1,0 +1,74 @@
+{
+  "artifact_kind": "v3_final_reserve_shadow_freeze",
+  "candidate_metadata_file_sha256": "9013ea4ff2bfa31ef0d5b7cf9d2431f0f919eb1b84d4e0c0a078e7b0d46f3882",
+  "candidate_metadata_payload_sha256": "58b615faa205af2b2edd39ab076bd75de04eaae9a49af575db6438ff2d5742e5",
+  "candidate_model_file_sha256": "4a5dc9a5990dba3c902d23d3bb701b3b36fbff112aa9fe9cf3c61b06042f88e6",
+  "clap_manifest_file_sha256": "82f593136408a893a71d350af8e3356356e8ea5c041f3c1293abe65183388409",
+  "development_evaluation": {
+    "paired_recall_ci95": [
+      0.003081304712853983,
+      0.007050519737065961
+    ],
+    "positive_folds": {
+      "graded_ndcg_at_k": 5,
+      "mrr": 4,
+      "recall_at_k": 5
+    },
+    "relative_delta": {
+      "graded_ndcg_at_k": 0.11295960528352023,
+      "mrr": 0.08695668584973792,
+      "recall_at_k": 0.20004991370059355
+    },
+    "worst_fold_relative_delta": {
+      "graded_ndcg_at_k": 0.06435288499984271,
+      "mrr": -0.0008710844262898032,
+      "recall_at_k": 0.11438200911103547
+    }
+  },
+  "development_report_file_sha256": "47c516918b86ad81aa3a8ba36013687cce55e4ea4f5637177c6e3e561928f174",
+  "development_report_payload_sha256": "23713b51a82dde059f7d1c2973620160e19afc3bbe1c67bccbe3ee59c2eae4fc",
+  "development_result_seen": true,
+  "frozen_method": {
+    "clap_heads": [
+      "global",
+      "salient",
+      "repeated",
+      "window_max"
+    ],
+    "clap_window_max_audio_share": 0.3,
+    "four_view_semantic_share": 0.5,
+    "global_salient_prediction_share": 0.5,
+    "musicfm_audio_share": 0.075,
+    "musicfm_semantic_share": 0.1,
+    "ridge": 10.0,
+    "score_calibration": "per_query_channel_zscore",
+    "semantic_weight": 0.4,
+    "top_idf_power": 1.5,
+    "top_share": 0.25,
+    "top_tags": 5
+  },
+  "implementation_sha256": "d6601b7b41d4a9d7e9bcde9d1fcb1e6be3a240980597814f837509984a3ab911",
+  "musicfm_development_manifest_file_sha256": "bd09fff8af8317fc430a7eba028c780943cd73c7166be78da5a37ec54901677c",
+  "musicfm_train_manifest_file_sha256": "597aecf395ed049b3e540e06c3e46f11052542bb0bc84c21072bdee4ad1d8fdd",
+  "payload_sha256": "880cff4d9007a68f330e4b0dedf166263583ca62671359d08921ed1efe755803",
+  "promotion_allowed": false,
+  "protocol_file_sha256": "e04e65a44dc102423595e76d67b962b9b4822e61871716cbe3900414ca954018",
+  "protocol_payload_sha256": "ac8c649a4cfd2672015f587bfb204105d63dcdffe0f1d8a6d1142737127e89be",
+  "protocol_selection_sha256": "aed5188cd0fc3839181f10385318ad9964164dd54bb4629ad3bcd771ecf9ef5a",
+  "refinement_file_sha256": "4c8a679604dae22c6ef24666b49ec9ced7195ecba88c3cad92122211b07f49f2",
+  "refinement_payload_sha256": "e18b598aa432e5b6fd7ad340747a804641445a17366cca8480bf2ed7f3c50102",
+  "schema_version": 1,
+  "scoring_method_sha256": "f7910c43fdb7347378ca48b97c6a926d187aa14e94894807df34e5529f4deb16",
+  "shadow_extraction_plan_payload_sha256": "80aa6bede83c5ecbd3dfa05de279831f6d09d0b8d967e30e7015e0e353a2bb14",
+  "shadow_gate": {
+    "maximum_fold_recall_regression": 0.05,
+    "maximum_mrr_ndcg_regression": 0.01,
+    "minimum_positive_recall_folds": 4,
+    "minimum_recall_relative_gain": 0.2,
+    "paired_recall_ci_must_exclude_zero": true
+  },
+  "shadow_labels_accessed": false,
+  "shadow_musicfm_config_sha256": "5da74f73cd1ae8616a2c85e9ee9a5d80ec8ab3c6b33d08f52cfd6b5fd432f2bb",
+  "shadow_track_ids_sha256": "39986abcea529ce6b606b9151b2b7406ca8ebaf8e250b86e5a33b13bf539d698",
+  "source_fingerprint": "060f43ed0fa12e5a583e26a7728be14a5334c7daffebe2289f08875e9ec0c709"
+}

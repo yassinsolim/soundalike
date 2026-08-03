@@ -1,0 +1,244 @@
+{
+  "artifact_kind": "v3_reserve_clap_window_max_audio_boundary",
+  "best": {
+    "parameters": {
+      "clap_audio_view": "window_max",
+      "clap_section_share": 0.3,
+      "musicfm_audio_share": 0.075,
+      "musicfm_share": 0.1,
+      "semantic_weight": 0.4
+    },
+    "positive_folds": {
+      "graded_ndcg_at_k": 5,
+      "mrr": 4,
+      "recall_at_k": 5
+    },
+    "relative_delta": {
+      "graded_ndcg_at_k": 0.11295960528352023,
+      "mrr": 0.08695668584973792,
+      "recall_at_k": 0.20004991370059355
+    },
+    "worst_fold_relative_delta": {
+      "graded_ndcg_at_k": 0.06435288499984271,
+      "mrr": -0.0008710844262898032,
+      "recall_at_k": 0.11438200911103547
+    }
+  },
+  "best_full_evaluation": {
+    "folds": {
+      "0": {
+        "queries": 434,
+        "relative_delta": {
+          "graded_ndcg_at_k": 0.11140684395925748,
+          "mrr": 0.03729820746036894,
+          "recall_at_k": 0.11438200911103547
+        }
+      },
+      "1": {
+        "queries": 627,
+        "relative_delta": {
+          "graded_ndcg_at_k": 0.06435288499984271,
+          "mrr": -0.0008710844262898032,
+          "recall_at_k": 0.1902291494703392
+        }
+      },
+      "2": {
+        "queries": 607,
+        "relative_delta": {
+          "graded_ndcg_at_k": 0.13345235294504199,
+          "mrr": 0.1614530899756379,
+          "recall_at_k": 0.1977694099591023
+        }
+      },
+      "3": {
+        "queries": 365,
+        "relative_delta": {
+          "graded_ndcg_at_k": 0.18795706710695348,
+          "mrr": 0.13390313390313402,
+          "recall_at_k": 0.34993964575614034
+        }
+      },
+      "4": {
+        "queries": 541,
+        "relative_delta": {
+          "graded_ndcg_at_k": 0.1093014518387756,
+          "mrr": 0.12763499470399742,
+          "recall_at_k": 0.1792410493629224
+        }
+      }
+    },
+    "paired_delta": {
+      "graded_ndcg_at_k": {
+        "bootstrap_probability_delta_gt_zero": 1.0,
+        "improved_queries": 890,
+        "mean_delta": 0.01111269596351972,
+        "paired_bootstrap_ci95": [
+          0.0075901659005683094,
+          0.014650878447912755
+        ],
+        "regressed_queries": 667,
+        "unchanged_queries": 1017
+      },
+      "mrr": {
+        "bootstrap_probability_delta_gt_zero": 1.0,
+        "improved_queries": 723,
+        "mean_delta": 0.021309862976529644,
+        "paired_bootstrap_ci95": [
+          0.010050038695872029,
+          0.03279473227389894
+        ],
+        "regressed_queries": 561,
+        "unchanged_queries": 1290
+      },
+      "recall_at_k": {
+        "bootstrap_probability_delta_gt_zero": 1.0,
+        "improved_queries": 679,
+        "mean_delta": 0.004977357756725564,
+        "paired_bootstrap_ci95": [
+          0.003081304712853983,
+          0.007050519737065961
+        ],
+        "regressed_queries": 479,
+        "unchanged_queries": 1416
+      }
+    },
+    "positive_folds": {
+      "graded_ndcg_at_k": 5,
+      "mrr": 4,
+      "recall_at_k": 5
+    },
+    "queries": 2574,
+    "relative_delta": {
+      "graded_ndcg_at_k": 0.11295960528352023,
+      "mrr": 0.08695668584973792,
+      "recall_at_k": 0.20004991370059355
+    },
+    "worst_fold_relative_delta": {
+      "graded_ndcg_at_k": 0.06435288499984271,
+      "mrr": -0.0008710844262898032,
+      "recall_at_k": 0.11438200911103547
+    }
+  },
+  "cache_sha256": "b92d150be398a9d6b0736118878df8bd9e017cbeca5744e17cad5d2fd8463648",
+  "candidate_count": 4,
+  "clap_prediction_cache_sha256": "5794eda02d1550dc35d56c6e686b8bf80269e6c9034ae2393f046aa1bb2bcaaf",
+  "development_gate": {
+    "at_least_four_positive_recall_folds": true,
+    "mrr_no_worse_than_negative_1_percent": true,
+    "ndcg_no_worse_than_negative_1_percent": true,
+    "passed": true,
+    "recall_paired_ci_strictly_above_zero": true,
+    "recall_relative_gain_at_least_20_percent": true,
+    "worst_recall_fold_at_least_negative_5_percent": true
+  },
+  "musicfm_prediction_cache_sha256": "debc0967d8c3a9ab712054a7ff8472e3dcbc4ec573142fee8087fdac973a2b4e",
+  "opened_label_splits": [
+    "development"
+  ],
+  "parent_report_sha256": "06f2406ef80df34a6d5ab3aa5549e93387fdfbbd4208b41a335b59bc7f6d2c10",
+  "payload_sha256": "e18b598aa432e5b6fd7ad340747a804641445a17366cca8480bf2ed7f3c50102",
+  "primary_gate": {
+    "metric": "recall_at_k",
+    "minimum_relative_gain": 0.2
+  },
+  "ranked_results": [
+    {
+      "parameters": {
+        "clap_audio_view": "window_max",
+        "clap_section_share": 0.3,
+        "musicfm_audio_share": 0.075,
+        "musicfm_share": 0.1,
+        "semantic_weight": 0.4
+      },
+      "positive_folds": {
+        "graded_ndcg_at_k": 5,
+        "mrr": 4,
+        "recall_at_k": 5
+      },
+      "relative_delta": {
+        "graded_ndcg_at_k": 0.11295960528352023,
+        "mrr": 0.08695668584973792,
+        "recall_at_k": 0.20004991370059355
+      },
+      "worst_fold_relative_delta": {
+        "graded_ndcg_at_k": 0.06435288499984271,
+        "mrr": -0.0008710844262898032,
+        "recall_at_k": 0.11438200911103547
+      }
+    },
+    {
+      "parameters": {
+        "clap_audio_view": "window_max",
+        "clap_section_share": 0.25,
+        "musicfm_audio_share": 0.075,
+        "musicfm_share": 0.1,
+        "semantic_weight": 0.4
+      },
+      "positive_folds": {
+        "graded_ndcg_at_k": 5,
+        "mrr": 4,
+        "recall_at_k": 5
+      },
+      "relative_delta": {
+        "graded_ndcg_at_k": 0.11029220757630442,
+        "mrr": 0.08755809652263857,
+        "recall_at_k": 0.19443368546029283
+      },
+      "worst_fold_relative_delta": {
+        "graded_ndcg_at_k": 0.061644388780838666,
+        "mrr": -0.006523290435295981,
+        "recall_at_k": 0.11477576367635423
+      }
+    },
+    {
+      "parameters": {
+        "clap_audio_view": "window_max",
+        "clap_section_share": 0.15,
+        "musicfm_audio_share": 0.075,
+        "musicfm_share": 0.1,
+        "semantic_weight": 0.4
+      },
+      "positive_folds": {
+        "graded_ndcg_at_k": 5,
+        "mrr": 4,
+        "recall_at_k": 5
+      },
+      "relative_delta": {
+        "graded_ndcg_at_k": 0.10708680891744904,
+        "mrr": 0.08298964013497767,
+        "recall_at_k": 0.19216029179060623
+      },
+      "worst_fold_relative_delta": {
+        "graded_ndcg_at_k": 0.055663821981787764,
+        "mrr": -0.010804891852653653,
+        "recall_at_k": 0.1047114450999318
+      }
+    },
+    {
+      "parameters": {
+        "clap_audio_view": "window_max",
+        "clap_section_share": 0.4,
+        "musicfm_audio_share": 0.075,
+        "musicfm_share": 0.1,
+        "semantic_weight": 0.4
+      },
+      "positive_folds": {
+        "graded_ndcg_at_k": 5,
+        "mrr": 4,
+        "recall_at_k": 5
+      },
+      "relative_delta": {
+        "graded_ndcg_at_k": 0.11144901330142098,
+        "mrr": 0.08959320481430488,
+        "recall_at_k": 0.18970143917525695
+      },
+      "worst_fold_relative_delta": {
+        "graded_ndcg_at_k": 0.05959373854329875,
+        "mrr": -0.0026723098501439946,
+        "recall_at_k": 0.09566358786169338
+      }
+    }
+  ],
+  "section_cache_sha256": "b9eb82d1d7b77f0530b59beb71733fe91f65812e6aefd9ff4e55d776f38f8d9d",
+  "shadow_labels_accessed": false
+}

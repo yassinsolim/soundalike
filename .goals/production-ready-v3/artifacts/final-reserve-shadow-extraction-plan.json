@@ -1,0 +1,65 @@
+{
+  "artifact_kind": "v3_final_reserve_musicfm_sparse_four_plan",
+  "binding": {
+    "anchors": 4,
+    "experiment": "musicfm_fma_reserve_sparse_four_anchor",
+    "extraction": {
+      "decoder_chunk_seconds": 2.0,
+      "hop_seconds": 15.0,
+      "max_windows_per_track": 2048,
+      "model_batch_size": 2,
+      "repetition_sections": 4,
+      "salient_sections": 4,
+      "sample_rate": 24000,
+      "section_min_gap_windows": 2,
+      "shard_tracks": 32,
+      "short_track_policy": "repeatpad",
+      "verify_source_sha256": true,
+      "window_seconds": 30.0
+    },
+    "model": {
+      "checkpoint_bytes": 1316802154,
+      "checkpoint_sha256": "68392eee13d34c2941b3761934abb6b1e67b2e9df498695bda2ea5c1087d4b96",
+      "conformer_config_sha256": "7a63cb5706c9a37483f1973a3c226d54eb504ce15cf62cb52637019540c8a75d",
+      "embedding_dim": 1024,
+      "layer_index": 7,
+      "license": "MIT model metadata; MusicFM source MIT/Apache-2.0",
+      "model_id": "musicfm_fma_b83ebed_layer7",
+      "model_revision": "4513b38bc25ad1d227b1980819b9691ba97f4d87",
+      "package_versions": {
+        "einops": "0.8.2",
+        "torch": "2.13.0+cu130",
+        "torchaudio": "2.11.0+cu130",
+        "transformers": "5.13.1"
+      },
+      "sample_rate": 24000,
+      "source_commit": "b83ebedb401bcef639b26b05c0c8bee1dc2dfe71",
+      "source_license_sha256": "0f0b1e4988266f51fbaa325e80979d37c8cf3f5723efb82fcfa19feef096176a",
+      "stats_sha256": "5416e468018bae68c6231d4cbb2b11f0d11c04e6437881505ae427a3f8344904"
+    },
+    "promotion_allowed": false,
+    "schema_version": 1,
+    "track_protocol": {
+      "artifact_kind": "v3_final_untouched_artist_reserve_protocol",
+      "payload_sha256": "ac8c649a4cfd2672015f587bfb204105d63dcdffe0f1d8a6d1142737127e89be",
+      "selection_sha256": "aed5188cd0fc3839181f10385318ad9964164dd54bb4629ad3bcd771ecf9ef5a",
+      "split": "shadow",
+      "track_ids_sha256": "39986abcea529ce6b606b9151b2b7406ca8ebaf8e250b86e5a33b13bf539d698"
+    }
+  },
+  "config_sha256": "5da74f73cd1ae8616a2c85e9ee9a5d80ec8ab3c6b33d08f52cfd6b5fd432f2bb",
+  "embedding_dim": 1024,
+  "model_id": "musicfm_fma_b83ebed_layer7",
+  "model_sha256": "68392eee13d34c2941b3761934abb6b1e67b2e9df498695bda2ea5c1087d4b96",
+  "opened_label_splits": [],
+  "payload_sha256": "80aa6bede83c5ecbd3dfa05de279831f6d09d0b8d967e30e7015e0e353a2bb14",
+  "promotion_allowed": false,
+  "protocol_payload_sha256": "ac8c649a4cfd2672015f587bfb204105d63dcdffe0f1d8a6d1142737127e89be",
+  "protocol_selection_sha256": "aed5188cd0fc3839181f10385318ad9964164dd54bb4629ad3bcd771ecf9ef5a",
+  "schema_version": 1,
+  "shadow_labels_accessed": false,
+  "source_fingerprint": "060f43ed0fa12e5a583e26a7728be14a5334c7daffebe2289f08875e9ec0c709",
+  "split": "shadow",
+  "track_ids_sha256": "39986abcea529ce6b606b9151b2b7406ca8ebaf8e250b86e5a33b13bf539d698",
+  "tracks": 3023
+}

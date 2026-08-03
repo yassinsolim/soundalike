@@ -333,3 +333,43 @@ freeze is
 (`05abc813...`). Neither reserve development nor reserve shadow labels were
 accessed at freeze time. Development may now be used for method selection;
 shadow remains a one-time final audit only.
+
+### Final-reserve CLAP/MusicFM candidate
+
+Reserve development was used for one bounded sequence of complementary
+representation probes. The strongest CLAP-only set-aware semantic model reached
++15.50% Recall@10. Adding MusicFM-FMA layer-7 sparse-four-anchor mean audio
+reached +18.21%; per-query channel calibration reached +19.46%. The following
+alternatives did not move the frontier and were rejected: separate MusicFM
+section heads, low-weight MaxSim residuals, rank fusion, a joint CLAP/MusicFM
+head, MusicFM anchor late interaction, an artist-disjoint pairwise ranker, and a
+set-aware MLP.
+
+The remaining useful signal was direct CLAP window-max audio pooling. A
+predeclared boundary extension was allowed because every tested point was still
+improving at the original boundary. The final 30% window-max share produced:
+
+| Recall | MRR | NDCG | Recall interval | Positive Recall folds | Worst Recall fold |
+|---:|---:|---:|---:|---:|---:|
+| +20.0050% | +8.6957% | +11.2960% | `+0.00308..+0.00705` absolute | 5/5 | +11.44% |
+
+The paired Recall delta is +0.004977. Of 2,574 evaluable queries, 679 improve,
+479 regress, and 1,416 are unchanged. The complete selection evidence is
+committed at
+`.goals/production-ready-v3/artifacts/final-reserve-development-result.json`
+(payload `e18b598a...`, file `4c8a6796...`).
+
+`fulltrack_v3_reserve_candidate.py` rebuilds the exact method from the raw,
+sealed stores. It serializes four CLAP ridge heads and one MusicFM ridge head in
+a pickle-free NPZ. The independent production rebuild reproduced all three
+development deltas exactly. Its model hash is `4a5dc9a5...` and development
+report payload is `23713b51...`.
+
+The label-free shadow extraction plan is committed at
+`.goals/production-ready-v3/artifacts/final-reserve-shadow-extraction-plan.json`
+(payload `80aa6bed...`, config `5da74f73...`). The pre-audit freeze binds the
+protocol, refinement, model, stores, scoring method, implementation, development
+report, and extraction plan at
+`.goals/production-ready-v3/artifacts/final-reserve-shadow-freeze.json`
+(payload `880cff4d...`, file `4752b435...`). Final-reserve shadow labels remain
+unopened at this freeze.
