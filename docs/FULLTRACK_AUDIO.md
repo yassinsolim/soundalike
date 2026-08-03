@@ -390,6 +390,12 @@ An interrupted audit therefore consumes the one-time access and cannot be
 silently retried. Automated gates may permit a blind listening pack, but never
 permit production promotion; independent human ratings remain required.
 
+The final audit completed once. Recall improved only +0.286%, MRR +1.09%, and
+NDCG +3.96%; the Recall interval crossed zero, only 3/5 Recall folds improved,
+and the worst fold regressed 11.23%. The automated gate failed, so the listening
+pack is not generated and `/evaluate` remains on V2. The consumed result is
+`.goals\production-ready-v3\artifacts\final-reserve-shadow-result.json`.
+
 ## Required local dataset
 
 Default paths:

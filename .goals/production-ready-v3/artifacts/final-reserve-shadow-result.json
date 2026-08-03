@@ -1,0 +1,141 @@
+{
+  "artifact_kind": "v3_final_reserve_shadow_audit",
+  "candidate_model_file_sha256": "4a5dc9a5990dba3c902d23d3bb701b3b36fbff112aa9fe9cf3c61b06042f88e6",
+  "evaluation": {
+    "baseline": {
+      "graded_ndcg_at_k": 0.11924935842811141,
+      "mrr": 0.28120469589571806,
+      "recall_at_k": 0.029556109840231094
+    },
+    "candidate": {
+      "graded_ndcg_at_k": 0.12397317562391462,
+      "mrr": 0.28425900221469597,
+      "recall_at_k": 0.02964076958527159
+    },
+    "folds": {
+      "0": {
+        "queries": 410,
+        "relative_delta": {
+          "graded_ndcg_at_k": 0.03242106329215666,
+          "mrr": 0.028089578013337224,
+          "recall_at_k": 0.10688981228895944
+        }
+      },
+      "1": {
+        "queries": 494,
+        "relative_delta": {
+          "graded_ndcg_at_k": 0.024992592915251244,
+          "mrr": -0.014174124896394358,
+          "recall_at_k": 0.016544524954839046
+        }
+      },
+      "2": {
+        "queries": 336,
+        "relative_delta": {
+          "graded_ndcg_at_k": 0.21146991078325272,
+          "mrr": 0.23019650608334952,
+          "recall_at_k": 0.24884608933895414
+        }
+      },
+      "3": {
+        "queries": 660,
+        "relative_delta": {
+          "graded_ndcg_at_k": 0.026197282464989424,
+          "mrr": -0.03571090442678171,
+          "recall_at_k": -0.0531741958100852
+        }
+      },
+      "4": {
+        "queries": 673,
+        "relative_delta": {
+          "graded_ndcg_at_k": -0.021718061299026092,
+          "mrr": -0.0483295005857598,
+          "recall_at_k": -0.11227566785029375
+        }
+      }
+    },
+    "paired_delta": {
+      "graded_ndcg_at_k": {
+        "bootstrap_probability_delta_gt_zero": 0.9918,
+        "improved_queries": 896,
+        "mean_delta": 0.004723817195803208,
+        "paired_bootstrap_ci95": [
+          0.0008774021985986876,
+          0.008548848986770346
+        ],
+        "regressed_queries": 777,
+        "unchanged_queries": 900
+      },
+      "mrr": {
+        "bootstrap_probability_delta_gt_zero": 0.6788,
+        "improved_queries": 701,
+        "mean_delta": 0.00305430631897791,
+        "paired_bootstrap_ci95": [
+          -0.009210424647900358,
+          0.015629973812299885
+        ],
+        "regressed_queries": 647,
+        "unchanged_queries": 1225
+      },
+      "recall_at_k": {
+        "bootstrap_probability_delta_gt_zero": 0.5436,
+        "improved_queries": 654,
+        "mean_delta": 8.46597450404963e-05,
+        "paired_bootstrap_ci95": [
+          -0.0018065334327928683,
+          0.0019117794777003749
+        ],
+        "regressed_queries": 567,
+        "unchanged_queries": 1352
+      }
+    },
+    "positive_folds": {
+      "graded_ndcg_at_k": 4,
+      "mrr": 2,
+      "recall_at_k": 3
+    },
+    "queries": 2573,
+    "relative_delta": {
+      "graded_ndcg_at_k": 0.039612935935843474,
+      "mrr": 0.01086150538577968,
+      "recall_at_k": 0.00286437374533155
+    },
+    "worst_fold_relative_delta": {
+      "graded_ndcg_at_k": -0.021718061299026092,
+      "mrr": -0.0483295005857598,
+      "recall_at_k": -0.11227566785029375
+    }
+  },
+  "evidence_scope": "full_track_jamendo_research",
+  "evidence_status": "independent_shadow_audit",
+  "freeze_file_sha256": "4752b435e73f185385569c570f6373bc10dd86c3d5350c5836eb3de86fbd9a81",
+  "freeze_payload_sha256": "880cff4d9007a68f330e4b0dedf166263583ca62671359d08921ed1efe755803",
+  "human_pilot_required": true,
+  "listening_pack_allowed": false,
+  "musicfm_shadow_manifest_file_sha256": "c56c26e792aba135989c4b24493e83f20260daaba183cea3d80bd64b134b92b8",
+  "opened_label_splits": [
+    "shadow"
+  ],
+  "payload_sha256": "9e60653fc69ef8a6b9d5163fbc97d4c014295856e3cda93c308993b824d913f5",
+  "promotion_allowed": false,
+  "protocol_payload_sha256": "ac8c649a4cfd2672015f587bfb204105d63dcdffe0f1d8a6d1142737127e89be",
+  "protocol_selection_sha256": "aed5188cd0fc3839181f10385318ad9964164dd54bb4629ad3bcd771ecf9ef5a",
+  "schema_version": 1,
+  "shadow_evaluation_accessed": true,
+  "shadow_fold_seed": 20260814,
+  "shadow_gate": {
+    "automated_passed": false,
+    "checks": {
+      "primary_paired_ci_above_zero": false,
+      "primary_positive_folds": false,
+      "primary_relative_gain": false,
+      "primary_worst_fold": false,
+      "safety_metrics": true
+    },
+    "human_pilot_required": true,
+    "promotion_allowed": false
+  },
+  "shadow_labels_accessed": true,
+  "shadow_tracks": 3023,
+  "source_fingerprint": "060f43ed0fa12e5a583e26a7728be14a5334c7daffebe2289f08875e9ec0c709"
+}

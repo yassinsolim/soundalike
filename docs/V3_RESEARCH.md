@@ -373,3 +373,28 @@ report, and extraction plan at
 `.goals/production-ready-v3/artifacts/final-reserve-shadow-freeze.json`
 (payload `880cff4d...`, file `4752b435...`). Final-reserve shadow labels remain
 unopened at this freeze.
+
+### Final-reserve shadow audit
+
+Commit `ec6b1d3` froze the implementation and all development evidence before
+the label-free 3,023-track MusicFM shadow extraction. The store sealed with
+manifest-file hash `c56c26e7...`; the exclusive audit state was then written
+before shadow labels were opened. Over 2,573 evaluable queries, the independent
+result is:
+
+| Recall | MRR | NDCG | Recall interval | Positive Recall folds | Worst Recall fold |
+|---:|---:|---:|---:|---:|---:|
+| +0.286% | +1.09% | +3.96% | `-0.00181..+0.00191` absolute | 3/5 | -11.23% |
+
+The candidate fails the fixed +20% Recall gate, the positive paired interval,
+the minimum positive-fold count, and the worst-fold stability check. The final
+reserve shadow is consumed. Listening-pack generation and promotion are
+blocked; `/evaluate` remains on V2. The immutable audit is committed at
+`.goals/production-ready-v3/artifacts/final-reserve-shadow-result.json`
+(payload `9e60653f...`). The external audit-state record also binds the
+original result file hash `c088aa43...`.
+
+This closes the available preregistered label partitions. The development gain
+did not generalize, so it must not be reported as a production-quality V3 gain
+or used to tune against the consumed shadow. Any future V3 effort needs new
+lawful data and a newly frozen independent evaluation population.
