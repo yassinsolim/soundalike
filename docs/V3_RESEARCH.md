@@ -287,4 +287,29 @@ evaluation. The full 416-candidate refinement evidence is committed at
 `.goals/production-ready-v3/artifacts/fresh-clap-refinement.json`. Model,
 development report, protocol, refinement, method, and final gates are sealed by
 `.goals/production-ready-v3/artifacts/fresh-clap-shadow-freeze.json`
-(`9236fd75...`). Fresh shadow remains unopened at this freeze point.
+(`9236fd75...`). Fresh shadow remained unopened at this freeze point.
+
+### Fresh scaled CLAP shadow audit
+
+Commit `3688af6` froze the implementation and evidence before the one-time audit.
+The 644-track shadow was then opened exactly once. Over 465 evaluable queries,
+the independent result is:
+
+| Recall | MRR | NDCG | Recall interval | Positive Recall folds | Worst Recall fold |
+|---:|---:|---:|---:|---:|---:|
+| +5.27% | +3.28% | +2.37% | `-0.00367..+0.01187` absolute | 4/5 | -1.21% |
+
+The candidate is directionally positive and passes the fold-stability and safety
+checks, but it fails the fixed +20% Recall requirement and positive paired
+interval. The automated gate therefore blocks listening and promotion. The
+immutable result is committed at
+`.goals/production-ready-v3/artifacts/fresh-clap-shadow-result.json`
+(`97ea4f67...`). This shadow is consumed and will not be used for tuning.
+
+An untouched reserve still exists outside fold-0 train. Excluding every artist
+used by fold-0 training and every artist present in the historical 512-track
+official validation/test selections leaves 945 artists and 6,135 tracks:
+3,074 fold-0 validation tracks from 471 artists and 3,023 fold-0 test tracks
+from 466 artists, plus 38 unassigned tracks that will be excluded. The next
+protocol must freeze the natural validation partition for development and the
+natural test partition for one final shadow before any new method sees labels.

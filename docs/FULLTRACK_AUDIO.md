@@ -285,8 +285,18 @@ Build the selected scaled CLAP kNN-MLP profile and freeze it:
 
 The reproducible candidate reaches +25.27% Recall, +12.77% MRR, and +14.18%
 NDCG, with a positive Recall interval and every fold positive for all metrics.
-Freeze payload `9236fd75...` binds the persistent refinement artifact and keeps
-fresh shadow closed until the committed one-time audit.
+Freeze payload `9236fd75...` binds the persistent refinement artifact. The
+subsequent one-time audit reached +5.27% Recall, +3.28% MRR, and +2.37% NDCG
+over 465 evaluable queries. Its Recall interval was
+`-0.00367..+0.01187`; 4/5 folds improved and the worst fold was -1.21%.
+The fixed +20% and interval gates failed, so listening and promotion remain
+blocked. The irreversible audit state must not be deleted or reopened.
+
+Further tuning must not use the consumed fresh shadow. A final untouched reserve
+can be built from artists outside fold-0 train after also excluding every artist
+present in the historical official validation/test selections. This leaves
+3,074 fold-0 validation tracks from 471 artists for development and 3,023
+fold-0 test tracks from 466 artists for one final shadow.
 
 ## Required local dataset
 

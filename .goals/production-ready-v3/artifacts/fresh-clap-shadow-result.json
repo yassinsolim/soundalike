@@ -1,0 +1,139 @@
+{
+  "artifact_kind": "v3_fresh_scaled_clap_shadow_audit",
+  "candidate_model_file_sha256": "058678e712147cc0a9869c2230b2f646bda35abd7e231a9cc4538d5ad29a4bd1",
+  "evaluation": {
+    "baseline": {
+      "graded_ndcg_at_k": 0.12751767281641216,
+      "mrr": 0.292975570866234,
+      "recall_at_k": 0.07799821259167826
+    },
+    "candidate": {
+      "graded_ndcg_at_k": 0.13053886078906743,
+      "mrr": 0.3025951301144699,
+      "recall_at_k": 0.08210501801031128
+    },
+    "folds": {
+      "0": {
+        "queries": 52,
+        "relative_delta": {
+          "graded_ndcg_at_k": 0.06456869661945674,
+          "mrr": 0.17859867041218913,
+          "recall_at_k": -0.012061480529927837
+        }
+      },
+      "1": {
+        "queries": 96,
+        "relative_delta": {
+          "graded_ndcg_at_k": 0.05643390474335508,
+          "mrr": 0.0558223042117878,
+          "recall_at_k": 0.022714295776534943
+        }
+      },
+      "2": {
+        "queries": 53,
+        "relative_delta": {
+          "graded_ndcg_at_k": -0.06457388338636616,
+          "mrr": -0.07871544375074357,
+          "recall_at_k": 0.163632653372076
+        }
+      },
+      "3": {
+        "queries": 112,
+        "relative_delta": {
+          "graded_ndcg_at_k": 0.08466842447931233,
+          "mrr": -0.03125194436708845,
+          "recall_at_k": 0.06956729109028448
+        }
+      },
+      "4": {
+        "queries": 152,
+        "relative_delta": {
+          "graded_ndcg_at_k": -0.024690146192482776,
+          "mrr": 0.04514523066157117,
+          "recall_at_k": 0.05374323343525367
+        }
+      }
+    },
+    "paired_delta": {
+      "graded_ndcg_at_k": {
+        "bootstrap_probability_delta_gt_zero": 0.763,
+        "improved_queries": 155,
+        "mean_delta": 0.003021187972655292,
+        "paired_bootstrap_ci95": [
+          -0.00567580726140511,
+          0.011828793411418424
+        ],
+        "regressed_queries": 143,
+        "unchanged_queries": 167
+      },
+      "mrr": {
+        "bootstrap_probability_delta_gt_zero": 0.7806,
+        "improved_queries": 199,
+        "mean_delta": 0.009619559248236,
+        "paired_bootstrap_ci95": [
+          -0.015549580164199222,
+          0.035256048305039624
+        ],
+        "regressed_queries": 176,
+        "unchanged_queries": 90
+      },
+      "recall_at_k": {
+        "bootstrap_probability_delta_gt_zero": 0.8494,
+        "improved_queries": 115,
+        "mean_delta": 0.00410680541863301,
+        "paired_bootstrap_ci95": [
+          -0.0036698035423259373,
+          0.011868679101638902
+        ],
+        "regressed_queries": 102,
+        "unchanged_queries": 248
+      }
+    },
+    "positive_folds": {
+      "graded_ndcg_at_k": 3,
+      "mrr": 3,
+      "recall_at_k": 4
+    },
+    "queries": 465,
+    "relative_delta": {
+      "graded_ndcg_at_k": 0.023692307943894875,
+      "mrr": 0.03283399779645113,
+      "recall_at_k": 0.052652558080173106
+    },
+    "worst_fold_relative_delta": {
+      "graded_ndcg_at_k": -0.06457388338636616,
+      "mrr": -0.07871544375074357,
+      "recall_at_k": -0.012061480529927837
+    }
+  },
+  "evidence_scope": "full_track_jamendo_research",
+  "evidence_status": "independent_fresh_shadow_audit",
+  "freeze_file_sha256": "952239c4ab2bbd522e3b32b86f03f7c4610507c294e4d6ef1bad1f7c9b12a871",
+  "freeze_payload_sha256": "9236fd756dd239e11b91a26d2fe73bf4ab804132755636f7f68a3f0181c9007f",
+  "human_pilot_required": true,
+  "listening_pack_allowed": false,
+  "opened_label_splits": [
+    "shadow"
+  ],
+  "payload_sha256": "97ea4f673f0d2edba417e83ece1187b7c2d34d3beda11040e6b040988bce3eaa",
+  "promotion_allowed": false,
+  "protocol_payload_sha256": "8d43ca8099ffc604555eef5b180ee1aee38520ddb9e7e269a672533767e566a3",
+  "protocol_selection_sha256": "788354f41e6588cd3c41a59167d9ade0274cefb0907033819595db9609823ae6",
+  "schema_version": 1,
+  "shadow_evaluation_accessed": true,
+  "shadow_gate": {
+    "automated_passed": false,
+    "checks": {
+      "primary_paired_ci_above_zero": false,
+      "primary_positive_folds": true,
+      "primary_relative_gain": false,
+      "primary_worst_fold": true,
+      "safety_metrics": true
+    },
+    "human_pilot_required": true,
+    "promotion_allowed": false
+  },
+  "shadow_labels_accessed": true,
+  "shadow_tracks": 644,
+  "source_fingerprint": "060f43ed0fa12e5a583e26a7728be14a5334c7daffebe2289f08875e9ec0c709"
+}
