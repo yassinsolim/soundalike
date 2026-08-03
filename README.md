@@ -42,8 +42,9 @@ menu with album artwork and verified artist names? Use the
 Windows, macOS, and Linux guide covers patchable desktop Spotify installs,
 automatic local-server startup, and troubleshooting. Everything runs locally;
 Windows Store and Linux Snap Spotify builds are not patchable. Install the
-extension from Spicetify Marketplace by searching for **Soundalike**, or use
-the documented manual setup.
+extension from Spicetify Marketplace by searching for **Soundalike**. If a
+fresh Marketplace session paginates the listing, use the **Load more** fallback
+in the linked guide, or follow its documented manual setup.
 
 **Prefer a hosted, no-install demo?** The ~273k-song library runs as a **numpy-only Vercel app**
 (no PyTorch needed for library songs) — deploy it to a subdomain and let anyone try it in the
