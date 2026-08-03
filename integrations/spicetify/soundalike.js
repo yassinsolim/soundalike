@@ -11,10 +11,19 @@
   const SERVER = "http://127.0.0.1:8787";
 
   // Wait until the Spicetify APIs we need are ready.
-  if (!(window.Spicetify && Spicetify.ContextMenu && Spicetify.Platform && Spicetify.URI)) {
+  if (!(
+    window.Spicetify &&
+    Spicetify.ContextMenu &&
+    Spicetify.GraphQL?.Definitions?.getTrack &&
+    Spicetify.GraphQL?.Request &&
+    Spicetify.Platform &&
+    Spicetify.ReactJSX?.jsx &&
+    Spicetify.URI
+  )) {
     setTimeout(soundalike, 400);
     return;
   }
+  if (window.__soundalikeContextMenuItem) return;
 
   const onlyTracks = (uris) =>
     Array.isArray(uris) && uris.length === 1 && uris[0].includes(":track:");
@@ -24,11 +33,20 @@
     Spicetify.showNotification("Finding soundalikes…");
     let data;
     try {
+      const metadata = await Spicetify.GraphQL.Request(
+        Spicetify.GraphQL.Definitions.getTrack,
+        { uri: `spotify:track:${id}` }
+      );
+      const track = metadata?.data?.trackUnion;
+      const artist = track?.firstArtist?.items?.[0]?.profile?.name;
+      if (!track?.name || !artist) {
+        throw new Error("Spotify did not return track metadata.");
+      }
       const res = await fetch(`${SERVER}/api/recommend`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: `https://open.spotify.com/track/${id}`,
+          query: `${track.name} — ${artist}`,
           n: 20,
           diversity: 0.15,
         }),
@@ -36,7 +54,7 @@
       data = await res.json();
     } catch (e) {
       Spicetify.showNotification(
-        "soundalike server not reachable — start it or reinstall auto-start.", true);
+        `soundalike failed: ${e?.message || "local server not reachable"}`, true);
       return;
     }
     if (!data || !data.ok) {
@@ -95,12 +113,13 @@
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   }
 
-  new Spicetify.ContextMenu.Item(
+  window.__soundalikeContextMenuItem = new Spicetify.ContextMenu.Item(
     "Find soundalikes",
     findSoundalikes,
     onlyTracks,
     "enhance" // Spicetify built-in icon
-  ).register();
+  );
+  window.__soundalikeContextMenuItem.register();
 
   console.log("[soundalike] extension loaded — right-click a track to try it.");
 })();

@@ -226,16 +226,20 @@ launchctl bootout "gui/$(id -u)" "$HOME/Library/LaunchAgents/app.soundalike.loca
 rm "$HOME/Library/LaunchAgents/app.soundalike.local-server.plist"
 ```
 
-In both modes the extension only talks to `http://127.0.0.1:8787` on your own
-machine. No request is sent to a remote Soundalike server.
+In both modes the extension reads the clicked track's title and artist through
+Spotify's already-authenticated internal GraphQL client, then sends that text
+only to `http://127.0.0.1:8787` on your own machine. No separate Soundalike
+Spotify login and no remote Soundalike server are required.
 
 ### Troubleshooting and updates
 
 - **No “Find soundalikes” menu item:** confirm the file exists at
   `%APPDATA%\spicetify\Extensions\soundalike.js` on Windows or
   `~/.config/spicetify/Extensions/soundalike.js` on macOS, then run
-  `spicetify config extensions soundalike.js`, `spicetify apply`, and restart
-  Spotify.
+  `spicetify config extensions soundalike.js`, `spicetify apply`, and fully
+  restart Spotify. The extension waits for both the context-menu and React JSX
+  APIs before registering; older copies that only waited for `ContextMenu` can
+  fail during Spotify startup with a `ReactJSX` error.
 - **“Server not reachable”:** verify `/health`. If you enabled auto-start,
   check its status and log using step 4; otherwise keep
   `soundalike serve --no-browser` running.
