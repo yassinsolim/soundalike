@@ -40,11 +40,11 @@ Want the recommendations *inside* Spotify — a right-click **“Find soundalike
 menu with album artwork and verified artist names? Use the
 [**Spicetify extension**](integrations/spicetify/README.md). Its complete
 Windows, macOS, and Linux guide covers patchable desktop Spotify installs,
-automatic local-server startup, and troubleshooting. Everything runs locally;
-Windows Store and Linux Snap Spotify builds are not patchable. Install the
-extension from Spicetify Marketplace by searching for **Soundalike**. If a
-fresh Marketplace session paginates the listing, use the **Load more** fallback
-in the linked guide, or follow its documented manual setup.
+the optional local companion, and troubleshooting. A Marketplace install works
+immediately with the hosted 272,853-track library; the companion keeps queries
+local and handles tracks outside that library. Windows Store and Linux Snap
+Spotify builds are not patchable. Search for **Soundalike** in Marketplace; if
+the listing is paginated, use the **Load more** fallback in the linked guide.
 
 **Prefer a hosted, no-install demo?** The ~273k-song library runs as a **numpy-only Vercel app**
 (no PyTorch needed for library songs) — deploy it to a subdomain and let anyone try it in the

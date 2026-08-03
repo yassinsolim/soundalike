@@ -1,14 +1,18 @@
 // soundalike — Spicetify extension
 // Adds a right-click "Find soundalikes" item to any track in the Spotify
-// desktop client. It asks the local soundalike server (run `soundalike serve`)
-// for songs that *sound* like the one you clicked, and shows them in a modal.
+// desktop client. It prefers the optional local soundalike server and otherwise
+// uses the hosted library, then shows the results in a Spotify-style modal.
 //
 // Install (requires a patchable desktop Spotify app): follow this directory's
-// README for the correct platform path, then optionally enable local-server
-// auto-start.
+// README for Marketplace or manual setup.
 
 (function soundalike() {
-  const SERVER = "http://127.0.0.1:8787";
+  const LOCAL_SERVER = "http://127.0.0.1:8787";
+  const HOSTED_SERVER = "https://soundalike.yassin.app";
+  const LOCAL_PROBE_TIMEOUT_MS = 800;
+  const HOSTED_TIMEOUT_MS = 65000;
+  const LOCAL_STATUS_TTL_MS = 30000;
+  let localStatus = { available: false, checkedAt: 0 };
 
   // Wait until the Spicetify APIs we need are ready.
   if (!(
@@ -28,6 +32,90 @@
   const onlyTracks = (uris) =>
     Array.isArray(uris) && uris.length === 1 && uris[0].includes(":track:");
 
+  async function fetchWithTimeout(url, options, timeoutMs) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  async function localServerReady() {
+    if (Date.now() - localStatus.checkedAt < LOCAL_STATUS_TTL_MS) {
+      return localStatus.available;
+    }
+    let available = false;
+    try {
+      const response = await fetchWithTimeout(
+        `${LOCAL_SERVER}/health`,
+        { cache: "no-store" },
+        LOCAL_PROBE_TIMEOUT_MS
+      );
+      const health = response.ok ? await response.json() : null;
+      available = health?.ok === true;
+    } catch {
+      available = false;
+    }
+    localStatus = { available, checkedAt: Date.now() };
+    return available;
+  }
+
+  async function postRecommendations(server, payload, timeoutMs, allowErrorResponse = false) {
+    const options = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    };
+    const response = timeoutMs
+      ? await fetchWithTimeout(`${server}/api/recommend`, options, timeoutMs)
+      : await fetch(`${server}/api/recommend`, options);
+    let result;
+    try {
+      result = await response.json();
+    } catch {
+      throw new Error(`Recommendation service returned HTTP ${response.status}.`);
+    }
+    if (!response.ok && !allowErrorResponse) {
+      throw new Error(
+        result?.error || `Recommendation service returned HTTP ${response.status}.`
+      );
+    }
+    if (!response.ok && !result?.error) {
+      throw new Error(`Recommendation service returned HTTP ${response.status}.`);
+    }
+    return result;
+  }
+
+  async function requestRecommendations(payload) {
+    if (await localServerReady()) {
+      try {
+        return {
+          data: await postRecommendations(LOCAL_SERVER, payload),
+          source: "local",
+        };
+      } catch (error) {
+        localStatus = { available: false, checkedAt: Date.now() };
+        console.warn("[soundalike] Local engine failed; using hosted library.", error);
+      }
+    }
+    Spicetify.showNotification(
+      "Using hosted Soundalike — the first request after idle can take about 30 seconds.",
+      false,
+      10000
+    );
+    return {
+      data: await postRecommendations(
+        HOSTED_SERVER,
+        payload,
+        HOSTED_TIMEOUT_MS,
+        true
+      ),
+      source: "hosted",
+    };
+  }
+
   async function findSoundalikes(uris) {
     const id = uris[0].split(":track:")[1];
     Spicetify.showNotification("Finding soundalikes…");
@@ -43,19 +131,18 @@
       if (!seedTrack?.name || !artist) {
         throw new Error("Spotify did not return track metadata.");
       }
-      const res = await fetch(`${SERVER}/api/recommend`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: `${seedTrack.name} — ${artist}`,
-          n: 20,
-          diversity: 0.15,
-        }),
+      const recommendation = await requestRecommendations({
+        query: `${seedTrack.name} — ${artist}`,
+        n: 20,
+        diversity: 0.15,
       });
-      data = await res.json();
+      data = recommendation.data;
+      if (data && typeof data === "object") {
+        data.__soundalikeSource = recommendation.source;
+      }
     } catch (e) {
       Spicetify.showNotification(
-        `soundalike failed: ${e?.message || "local server not reachable"}`, true);
+        `soundalike failed: ${e?.message || "recommendation service unavailable"}`, true);
       return;
     }
     if (!data || !data.ok) {
@@ -185,6 +272,9 @@
     const s = data.seed, v = data.vibe;
     const wrap = document.createElement("div");
     const seedImage = artworkUrl(seedTrack);
+    const source = data.__soundalikeSource === "local"
+      ? "LOCAL ENGINE"
+      : "HOSTED LIBRARY";
     wrap.className = "sa-results";
 
     const tags = [v.tempo, v.dynamics, v.low_end, v.tone]
@@ -235,7 +325,7 @@
           ? `<img src="${esc(seedImage)}" alt="">`
           : `<div class="sa-seed-fallback" aria-hidden="true">♫</div>`}
         <div>
-          <div class="sa-kicker">SOUNDS LIKE</div>
+          <div class="sa-kicker">SOUNDS LIKE · ${source}</div>
           <div class="sa-seed-title">${esc(s.title)}</div>
           <div class="sa-seed-artist">${esc(s.artist)}</div>
         </div>

@@ -2,19 +2,25 @@
 
 Add a **“Find soundalikes”** item to the right-click menu of any track in the
 Spotify desktop app. Click it and a panel shows songs that genuinely *sound*
-like the one you clicked — powered by the local neural audio model, not tags.
+like the one you clicked — powered by precomputed audio embeddings, not tags.
 
 ![Soundalike results inside Spotify](../../docs/spicetify-results.png)
 
 There are two ways to use soundalike. Pick based on your Spotify install:
 
-| | Web app (works with **any** Spotify) | Spicetify (in-app right-click) |
+| | Hosted web app | Spicetify (in-app right-click) |
 |---|---|---|
-| Setup | none beyond `soundalike serve` | patch Spotify once; optional automatic local server |
+| Setup | none | patch Spotify, then select **Install** in Marketplace |
+| Included library | 272,853 tracks | 272,853 tracks; optional local companion for any song |
 | Supported Spotify app | any app or browser | patchable desktop app; not Windows Store or Linux Snap |
-| Trigger | paste a song / **Copy Song Link** | right-click a track |
+| Trigger | type or paste a song | right-click a track |
 
-## Prepare Soundalike
+## Optional: prepare the local companion
+
+**Skip this section for the normal Marketplace installation.** The extension
+automatically uses the hosted 272,853-track library when no local engine is
+running. Install the companion only if you want queries to remain on your
+machine or want on-the-fly analysis for a track outside the hosted library.
 
 Install [Python 3.9 or newer](https://www.python.org/downloads/) and Git, then
 create an isolated environment from the repository root.
@@ -45,11 +51,11 @@ local server.
 
 ---
 
-## Option A — the web app (recommended, zero client patching)
+## Option A — the web app (zero client patching)
 
-```bash
-soundalike serve            # opens http://127.0.0.1:8787
-```
+Open <https://soundalike.yassin.app> for the no-install hosted app. If you
+prepared the optional local companion, `soundalike serve` instead opens the
+local app at <http://127.0.0.1:8787>.
 
 Then either type `Title — Artist`, or — the frictionless way — in Spotify
 **right-click a song → Share → Copy Song Link** and paste it. You get instant
@@ -167,9 +173,9 @@ Marketplace paginates extension cards. If a new session does not show
 Soundalike in filtered results, clear the search, select **Load more** once,
 and scroll to the newly listed extensions.
 
-Marketplace installs and updates `soundalike.js`; it cannot install the separate
-Python recommendation engine. Complete step 3 once, or enable step 4, so the
-extension has a local server to contact.
+That is enough for normal use: Marketplace installs and updates
+`soundalike.js`, and the extension automatically uses the public hosted library.
+Steps 3 and 4 are optional local-companion setup.
 
 Manual install:
 
@@ -206,7 +212,7 @@ spicetify config extensions soundalike.js
 spicetify apply
 ```
 
-### 3. Run the local engine and use it
+### 3. Run the local engine (optional)
 
 PowerShell (Windows):
 
@@ -228,15 +234,16 @@ soundalike serve --no-browser
 curl --fail http://127.0.0.1:8787/health
 ```
 
-Now right-click any song in Spotify → **Find soundalikes**. The panel opens
-immediately with the seed artwork and recommendation titles. Spotify album
-covers and verified artist names fill in progressively; click a row to open
-that track's Spotify search.
+With or without the local engine, right-click any song in Spotify →
+**Find soundalikes**. The panel opens with the seed artwork and recommendation
+titles. Spotify album covers and verified artist names fill in progressively;
+click a row to open that track's Spotify search. The header identifies whether
+the result came from the **HOSTED LIBRARY** or **LOCAL ENGINE**.
 
 The extension installation is persistent: Spicetify remembers `soundalike.js`
-and loads it whenever patched Spotify starts. The local recommendation engine
-is separate and does **not** start automatically unless you enable the next
-optional step.
+and loads it whenever patched Spotify starts. The hosted library requires no
+background process. The optional local engine does **not** start automatically
+unless you enable the next step.
 
 ### 4. Start the local engine automatically (optional)
 
@@ -363,12 +370,19 @@ systemctl --user daemon-reload
 
 On every supported platform, the extension reads the clicked track's title,
 artist, and artwork through Spotify's already-authenticated internal GraphQL
-client. Only the title and artist query are sent to
-`http://127.0.0.1:8787` on your own machine. No separate Soundalike Spotify
-login and no remote Soundalike server are required.
+client. It probes `http://127.0.0.1:8787` first. If the optional companion is
+healthy, the title and artist stay on your machine. Otherwise, only that title
+and artist are sent to `https://soundalike.yassin.app`; Spotify credentials,
+tokens, library data, and artwork are never sent. No separate Soundalike
+Spotify login is required.
 
 ### Troubleshooting and updates
 
+- **Marketplace shows “Something went wrong” after loading more cards:** the
+  generic page can come from a Spicetify navigation startup race before its
+  React runtime is ready; it is not a Soundalike installation error. Fully quit
+  and reopen Spotify, then retry. If it repeats, run `spicetify update` and
+  `spicetify backup apply` before reopening Spotify.
 - **No “Find soundalikes” menu item:** confirm the file exists at
   `%APPDATA%\spicetify\Extensions\soundalike.js` on Windows or
   `~/.config/spicetify/Extensions/soundalike.js` on macOS/Linux, then run
@@ -379,9 +393,12 @@ login and no remote Soundalike server are required.
 - **Titles appear but covers stay blank:** Spotify's catalog lookup is still
   loading or did not find a confident title-and-artist match. Recommendations
   remain usable; confirm Spotify is online, then reopen the panel.
-- **“Server not reachable”:** verify `/health`. If you enabled auto-start,
-  check its status and log using step 4; otherwise keep
-  `soundalike serve --no-browser` running.
+- **A track is not in the hosted library:** the one-click path covers 272,853
+  tracks. Use the optional local companion for on-the-fly analysis of other
+  songs.
+- **Hosted service unavailable:** reload Spotify and retry. If you installed
+  the local companion, verify `/health`; if auto-start is enabled, check its
+  status and log using step 4.
 - **After a Spotify update:** run `spicetify backup apply`. If Spicetify itself
   reports an available update, run `spicetify update` first.
 - **After updating soundalike:** copy `soundalike.js` again using step 2, then
@@ -393,17 +410,16 @@ login and no remote Soundalike server are required.
 ## How it works
 
 ```
-right-click track ─▶ Spotify title + artist ─▶ local server /api/recommend
-                                                    │
-                           already in the library?  ├─ yes ─▶ cached embedding (instant)
-                                                    └─ no  ─▶ 30s Deezer preview ─▶ neural encoder
-                                                                                          │
-                             rank 272,853-track index by audio+vibe similarity ◀──────────┘
-                                                    │
-                                                    └─▶ Spotify artwork + verified artist
+right-click track ─▶ Spotify title + artist
+                         │
+          local engine healthy? ─ yes ─▶ local cached/on-the-fly embedding
+                         │ no
+                         └─────────────▶ hosted 272,853-track library
+                                               │
+                     rank audio+vibe similarity ─▶ Spotify artwork + verified artist
 ```
 
-On first use, the manifest may download the checksum-pinned 299 MB production
-index; the bundled ~87k index remains the offline fallback. The selected
-272,853-track index and neural encoder are loaded **once** when the server
-starts, so subsequent right-clicks avoid model cold-start work.
+The first hosted request after an idle period can take about 30 seconds while
+the checksum-pinned 299 MB index warms; the extension shows a warm-up notice
+and later requests are fast. The optional local companion downloads and loads
+the same production index once and keeps it warm between right-clicks.

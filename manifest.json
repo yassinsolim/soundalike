@@ -1,6 +1,6 @@
 {
   "name": "Soundalike",
-  "description": "Find genuinely similar tracks from Spotify's right-click menu using a local audio model.",
+  "description": "Find genuinely similar tracks from Spotify's right-click menu using audio embeddings.",
   "preview": "docs/spicetify-results.png",
   "main": "integrations/spicetify/soundalike.js",
   "readme": "integrations/spicetify/README.md",
