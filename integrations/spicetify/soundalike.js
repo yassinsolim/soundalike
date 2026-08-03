@@ -4,12 +4,8 @@
 // for songs that *sound* like the one you clicked, and shows them in a modal.
 //
 // Install (requires the standalone Spotify from spotify.com — the Microsoft
-// Store build cannot be patched by Spicetify):
-//   1. spicetify config-dir            # find your config folder
-//   2. copy soundalike.js into  <config>/Extensions/
-//   3. spicetify config extensions soundalike.js
-//   4. spicetify apply
-//   5. run `soundalike serve` in a terminal, then right-click any song.
+// Store build cannot be patched by Spicetify): follow this directory's README
+// for the correct platform path, then optionally enable local-server auto-start.
 
 (function soundalike() {
   const SERVER = "http://127.0.0.1:8787";
@@ -40,7 +36,7 @@
       data = await res.json();
     } catch (e) {
       Spicetify.showNotification(
-        "soundalike server not reachable — run `soundalike serve`.", true);
+        "soundalike server not reachable — start it or reinstall auto-start.", true);
       return;
     }
     if (!data || !data.ok) {

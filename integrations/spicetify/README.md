@@ -10,7 +10,7 @@ There are two ways to use soundalike. Pick based on your Spotify install:
 
 | | Web app (works with **any** Spotify) | Spicetify (in-app right-click) |
 |---|---|---|
-| Setup | none beyond `soundalike serve` | patch the Spotify client |
+| Setup | none beyond `soundalike serve` | patch Spotify once; optional automatic local server |
 | Works with Microsoft-Store Spotify | ✅ | ❌ (needs the standalone app) |
 | Trigger | paste a song / **Copy Song Link** | right-click a track |
 
@@ -143,8 +143,91 @@ curl --fail http://127.0.0.1:8787/health
 Now right-click any song in Spotify → **Find soundalikes**. A panel opens with
 vibe-matched tracks; click one to jump to it in Spotify.
 
-The extension only talks to `http://127.0.0.1:8787` on your own machine — no
-data leaves your computer, and nothing runs unless you started `soundalike serve`.
+The extension installation is persistent: Spicetify remembers `soundalike.js`
+and loads it whenever patched Spotify starts. The local recommendation engine
+is separate and does **not** start automatically unless you enable the next
+optional step.
+
+### 4. Start the local engine automatically (optional)
+
+#### Windows
+
+Run this once from the repository root. Activate the same environment where
+you installed `.[ml]` first; the installer records its exact Python path.
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+powershell -ExecutionPolicy Bypass -File .\integrations\spicetify\install-autostart.ps1
+```
+
+This creates a user-level **Soundalike Local Server** scheduled task, starts it
+immediately, and starts it again at every Windows sign-in. It runs hidden and
+does not need administrator access. Verify it at any time:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\integrations\spicetify\install-autostart.ps1 -Action Status
+Invoke-RestMethod http://127.0.0.1:8787/health
+```
+
+The current server log is
+`$env:LOCALAPPDATA\Soundalike\server.log`. To remove auto-start and stop its
+server:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\integrations\spicetify\install-autostart.ps1 -Action Uninstall
+```
+
+Rerun the installer if you move the repository or replace its virtual
+environment. Normal source updates need no task change.
+
+#### macOS
+
+Use a per-user `launchd` agent. Run these commands from the repository root
+with the project virtual environment active:
+
+```bash
+python_bin="$(command -v python)"
+repo_root="$PWD"
+label="app.soundalike.local-server"
+plist="$HOME/Library/LaunchAgents/$label.plist"
+mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
+
+cat > "$plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>$label</string>
+  <key>ProgramArguments</key><array>
+    <string>$python_bin</string><string>-m</string><string>soundalike.cli</string>
+    <string>serve</string><string>--no-browser</string>
+  </array>
+  <key>WorkingDirectory</key><string>$repo_root</string>
+  <key>EnvironmentVariables</key><dict>
+    <key>PYTHONPATH</key><string>$repo_root/src</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>
+  <key>ThrottleInterval</key><integer>30</integer>
+  <key>StandardOutPath</key><string>$HOME/Library/Logs/soundalike.log</string>
+  <key>StandardErrorPath</key><string>$HOME/Library/Logs/soundalike.log</string>
+</dict></plist>
+EOF
+
+launchctl bootout "gui/$(id -u)" "$plist" 2>/dev/null || true
+launchctl bootstrap "gui/$(id -u)" "$plist"
+launchctl kickstart -k "gui/$(id -u)/$label"
+curl --fail http://127.0.0.1:8787/health
+```
+
+To remove the macOS agent:
+
+```bash
+launchctl bootout "gui/$(id -u)" "$HOME/Library/LaunchAgents/app.soundalike.local-server.plist"
+rm "$HOME/Library/LaunchAgents/app.soundalike.local-server.plist"
+```
+
+In both modes the extension only talks to `http://127.0.0.1:8787` on your own
+machine. No request is sent to a remote Soundalike server.
 
 ### Troubleshooting and updates
 
@@ -153,8 +236,9 @@ data leaves your computer, and nothing runs unless you started `soundalike serve
   `~/.config/spicetify/Extensions/soundalike.js` on macOS, then run
   `spicetify config extensions soundalike.js`, `spicetify apply`, and restart
   Spotify.
-- **“Server not reachable”:** keep `soundalike serve --no-browser` running and
-  verify `/health` with the command above.
+- **“Server not reachable”:** verify `/health`. If you enabled auto-start,
+  check its status and log using step 4; otherwise keep
+  `soundalike serve --no-browser` running.
 - **After a Spotify update:** run `spicetify backup apply`. If Spicetify itself
   reports an available update, run `spicetify update` first.
 - **After updating soundalike:** copy `soundalike.js` again using step 2, then
