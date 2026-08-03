@@ -261,6 +261,33 @@ protocol to 31,473-track training and splits 562 never-used artists into
 
 The new protocol payload is `8d43ca80...`; fresh shadow remains unopened.
 
+Build the selected scaled CLAP kNN-MLP profile and freeze it:
+
+```powershell
+& $python -m soundalike.ml.fulltrack_v3_fresh_candidate build-development `
+  --metadata-root 'C:\soundalike-data\mtg-jamendo-dataset' `
+  --protocol 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-fresh-scaled-protocol.json' `
+  --refinement-report '.goals\production-ready-v3\artifacts\fresh-clap-refinement.json' `
+  --clap-store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\clap-v1-full-55701' `
+  --model-output 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-fresh-clap-model.npz' `
+  --metadata-output 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-fresh-clap-model.json' `
+  --report-output 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-fresh-clap-development.json'
+
+& $python -m soundalike.ml.fulltrack_v3_fresh_candidate freeze-shadow `
+  --protocol 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-fresh-scaled-protocol.json' `
+  --refinement-report '.goals\production-ready-v3\artifacts\fresh-clap-refinement.json' `
+  --clap-store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\clap-v1-full-55701' `
+  --model 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-fresh-clap-model.npz' `
+  --metadata 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-fresh-clap-model.json' `
+  --development-report 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-fresh-clap-development.json' `
+  --output 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\v3-fresh-clap-shadow-freeze-v2.json'
+```
+
+The reproducible candidate reaches +25.27% Recall, +12.77% MRR, and +14.18%
+NDCG, with a positive Recall interval and every fold positive for all metrics.
+Freeze payload `9236fd75...` binds the persistent refinement artifact and keeps
+fresh shadow closed until the committed one-time audit.
+
 ## Required local dataset
 
 Default paths:

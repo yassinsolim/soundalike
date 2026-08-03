@@ -262,3 +262,29 @@ The 5.92 MB protocol is sealed at payload `8d43ca80...`, selection
 labels remain unopened. The immediate development work is a larger
 CLAP-supervised tag/metric model; no new MusicFM extraction is authorized until
 that inexpensive branch demonstrates generalizable value.
+
+### Fresh scaled CLAP candidate
+
+The larger training partition changed the result materially. A 162-candidate
+screen found that eight train-only CLAP neighbors at temperature 0.05 reached
++16.21% Recall, +10.35% MRR, and +10.01% NDCG. A focused refinement then
+combined two complementary train-supervised tag estimates:
+
+- 50% eight-neighbor tag propagation, with prediction power 0.75 and IDF;
+- 50% tag probabilities from a 768-hidden/256-latent MLP trained for 150
+  full-batch epochs at seed `20260812`; and
+- a 30% frozen CLAP MaxSim baseline / 70% semantic-profile residual.
+
+The production implementation reproduced the selected result exactly over 582
+evaluable development queries:
+
+| Recall | MRR | NDCG | Recall interval | Positive folds (all metrics) | Worst Recall fold |
+|---:|---:|---:|---:|---:|---:|
+| +25.27% | +12.77% | +14.18% | `+0.00859..+0.02986` absolute | 5/5 | +0.70% |
+
+This is the first candidate above the final +20% target before independent
+evaluation. The full 416-candidate refinement evidence is committed at
+`.goals/production-ready-v3/artifacts/fresh-clap-refinement.json`. Model,
+development report, protocol, refinement, method, and final gates are sealed by
+`.goals/production-ready-v3/artifacts/fresh-clap-shadow-freeze.json`
+(`9236fd75...`). Fresh shadow remains unopened at this freeze point.

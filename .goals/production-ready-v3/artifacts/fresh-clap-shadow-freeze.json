@@ -1,0 +1,63 @@
+{
+  "artifact_kind": "v3_fresh_scaled_clap_shadow_freeze",
+  "candidate_metadata_file_sha256": "6f3c4588268310d67b7185d28b66d5ad9506ac00ec67d090f3d771019073462c",
+  "candidate_metadata_payload_sha256": "b702433876ec5bb86c2141103b5535668ea4786c4558e324acb51779e7b276da",
+  "candidate_model_file_sha256": "058678e712147cc0a9869c2230b2f646bda35abd7e231a9cc4538d5ad29a4bd1",
+  "clap_manifest_file_sha256": "82f593136408a893a71d350af8e3356356e8ea5c041f3c1293abe65183388409",
+  "development_evaluation": {
+    "paired_recall_ci95": [
+      0.008589991249939973,
+      0.029864208136594284
+    ],
+    "positive_folds": {
+      "graded_ndcg_at_k": 5,
+      "mrr": 5,
+      "recall_at_k": 5
+    },
+    "relative_delta": {
+      "graded_ndcg_at_k": 0.14176583176612456,
+      "mrr": 0.12765247292025128,
+      "recall_at_k": 0.25266108522218267
+    },
+    "worst_fold_relative_delta": {
+      "graded_ndcg_at_k": 0.00016082054861654704,
+      "mrr": 0.008624963094320037,
+      "recall_at_k": 0.006957768832776434
+    }
+  },
+  "development_report_file_sha256": "67a0045803ad36b63731975674337497cbef2b9fa03f7d545dad1502f0bf1228",
+  "development_report_payload_sha256": "3ee17900a16834ca889de1810f30d665ce8ffeef07115b3a7a66d3cb06527e56",
+  "frozen_method": {
+    "baseline_blend": 0.30000000000000004,
+    "epochs": 150,
+    "hidden_dimension": 768,
+    "knn_idf_power": 1.0,
+    "knn_prediction_power": 0.75,
+    "knn_profile_share": 0.5,
+    "latent_dimension": 256,
+    "learning_rate": 0.002,
+    "mlp_tag_profile_share": 0.5,
+    "neighbor_temperature": 0.05,
+    "neighbors": 8,
+    "seed": 20260812,
+    "semantic_blend": 0.7,
+    "weight_decay": 0.0001
+  },
+  "payload_sha256": "9236fd756dd239e11b91a26d2fe73bf4ab804132755636f7f68a3f0181c9007f",
+  "promotion_allowed": false,
+  "protocol_file_sha256": "c5c1fc5bf23f088e51262f2c811659ea0c30e01e43a3ac102c9f86112b4d9af4",
+  "protocol_payload_sha256": "8d43ca8099ffc604555eef5b180ee1aee38520ddb9e7e269a672533767e566a3",
+  "protocol_selection_sha256": "788354f41e6588cd3c41a59167d9ade0274cefb0907033819595db9609823ae6",
+  "refinement_file_sha256": "eb7eda39a923f5c5f633f0a331cb7d95f1f6f67b5dd17b9c3740e61333700684",
+  "refinement_payload_sha256": "7535071cdceb44db9fcceab30ef2700adc0834bb537b160bd5a1b64257da0e87",
+  "schema_version": 1,
+  "shadow_gate": {
+    "maximum_fold_recall_regression": 0.05,
+    "maximum_mrr_ndcg_regression": 0.01,
+    "minimum_positive_recall_folds": 4,
+    "minimum_recall_relative_gain": 0.2,
+    "paired_recall_ci_must_exclude_zero": true
+  },
+  "shadow_labels_accessed": false,
+  "source_fingerprint": "060f43ed0fa12e5a583e26a7728be14a5334c7daffebe2289f08875e9ec0c709"
+}
