@@ -40,6 +40,14 @@ def _enrich_result_tempos(recommender, result):
     return result
 
 
+def _needs_canonical_redirect(params, query, count, diversity):
+    return (
+        params["query"][0] != query
+        or params.get("n", ["20"])[0] != str(count)
+        or params.get("diversity", ["0.15"])[0] != format(diversity, "g")
+    )
+
+
 class handler(BaseHTTPRequestHandler):
     def _send(self, code, obj):
         body = json.dumps(obj).encode("utf-8")
@@ -92,7 +100,7 @@ class handler(BaseHTTPRequestHandler):
             "n": str(count),
             "diversity": format(diversity, "g"),
         })
-        if request.query != canonical_query:
+        if _needs_canonical_redirect(params, query, count, diversity):
             return self._redirect(f"{request.path}?{canonical_query}")
         try:
             recommender = get_recommender()

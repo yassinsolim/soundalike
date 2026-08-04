@@ -147,6 +147,24 @@ def test_spicetify_bpm_uses_track_id_for_duplicate_titles():
     assert _enrich_result_tempos(Recommender(), payload)["results"][0]["bpm"] == 130
 
 
+def test_spicetify_query_canonicalization_uses_decoded_values():
+    from spicetify_recommend import _needs_canonical_redirect
+
+    params = {
+        "query": ["Blinding Lights — The Weeknd"],
+        "n": ["20"],
+        "diversity": ["0.15"],
+    }
+
+    assert not _needs_canonical_redirect(
+        params, "Blinding Lights — The Weeknd", 20, 0.15
+    )
+    params["n"] = ["020"]
+    assert _needs_canonical_redirect(
+        params, "Blinding Lights — The Weeknd", 20, 0.15
+    )
+
+
 def test_enhanced_recommender_differs_from_baseline(tmp_path):
     """Enhanced mode must produce different (scene-improved) results from baseline."""
     from _reco import WebRecommender
