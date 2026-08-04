@@ -12,6 +12,10 @@
   const LOCAL_PROBE_TIMEOUT_MS = 800;
   const HOSTED_TIMEOUT_MS = 65000;
   const LOCAL_STATUS_TTL_MS = 30000;
+  const CACHE_KEY = "soundalike:spicetify-cache:v2";
+  const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+  const MAX_RECOMMENDATION_CACHE_SIZE = 50;
+  const MAX_SPOTIFY_CACHE_SIZE = 500;
   const RESULTS_PATH = "/soundalike";
   let localStatus = { available: false, checkedAt: 0 };
   let nativeContextChain;
@@ -19,6 +23,10 @@
   let resultsState = null;
   let activePage = null;
   let routeMountTimer;
+  let cacheSaveTimer;
+  const pendingRecommendations = new Map();
+  const pendingSpotifyTracks = new Map();
+  const persistentCache = loadPersistentCache();
 
   // Wait until the Spicetify APIs we need are ready.
   if (!(
@@ -96,7 +104,85 @@
     return result;
   }
 
-  async function requestRecommendations(payload) {
+  async function getHostedRecommendations(payload) {
+    const params = new URLSearchParams({
+      query: payload.query,
+      n: String(payload.n),
+      diversity: String(payload.diversity),
+    });
+    let response;
+    try {
+      response = await fetchWithTimeout(
+        `${HOSTED_SERVER}/api/spicetify_recommend?${params}`,
+        { cache: "default" },
+        HOSTED_TIMEOUT_MS
+      );
+    } catch (error) {
+      console.warn(
+        "[soundalike] Cacheable hosted endpoint failed; using legacy endpoint.",
+        error
+      );
+      return getLegacyHostedRecommendations(payload);
+    }
+    let result;
+    try {
+      result = await response.json();
+    } catch {
+      if (
+        response.status === 404 ||
+        response.status === 405 ||
+        response.status >= 500
+      ) {
+        return getLegacyHostedRecommendations(payload);
+      }
+      throw new Error(`Recommendation service returned HTTP ${response.status}.`);
+    }
+    if (
+      response.status === 404 ||
+      response.status === 405 ||
+      response.status >= 500
+    ) {
+      return getLegacyHostedRecommendations(payload);
+    }
+    if (!response.ok && !result?.error) {
+      throw new Error(`Recommendation service returned HTTP ${response.status}.`);
+    }
+    return { data: result, cacheable: true };
+  }
+
+  async function getLegacyHostedRecommendations(payload) {
+    return {
+      data: await postRecommendations(
+        HOSTED_SERVER,
+        payload,
+        HOSTED_TIMEOUT_MS,
+        true
+      ),
+      cacheable: false,
+    };
+  }
+
+  async function requestRecommendations(payload, cacheId) {
+    const cached = readCacheEntry("recommendations", cacheId);
+    if (cached) {
+      return { data: cached.data, source: cached.source, cached: true };
+    }
+    if (pendingRecommendations.has(cacheId)) {
+      return pendingRecommendations.get(cacheId);
+    }
+    const request = requestRecommendationsUncached(payload)
+      .then((recommendation) => {
+        if (recommendation.data?.ok && recommendation.cacheable !== false) {
+          writeCacheEntry("recommendations", cacheId, recommendation);
+        }
+        return recommendation;
+      })
+      .finally(() => pendingRecommendations.delete(cacheId));
+    pendingRecommendations.set(cacheId, request);
+    return request;
+  }
+
+  async function requestRecommendationsUncached(payload) {
     if (await localServerReady()) {
       try {
         return {
@@ -113,15 +199,8 @@
       false,
       10000
     );
-    return {
-      data: await postRecommendations(
-        HOSTED_SERVER,
-        payload,
-        HOSTED_TIMEOUT_MS,
-        true
-      ),
-      source: "hosted",
-    };
+    const hosted = await getHostedRecommendations(payload);
+    return { data: hosted.data, source: "hosted", cacheable: hosted.cacheable };
   }
 
   async function findSoundalikes(uris) {
@@ -130,11 +209,16 @@
     let data;
     let seedTrack;
     try {
-      const metadata = await Spicetify.GraphQL.Request(
-        Spicetify.GraphQL.Definitions.getTrack,
-        { uri: `spotify:track:${id}` }
-      );
-      seedTrack = metadata?.data?.trackUnion;
+      const seedUri = `spotify:track:${id}`;
+      seedTrack = readCacheEntry("spotifyTracks", seedUri);
+      if (!seedTrack) {
+        const metadata = await Spicetify.GraphQL.Request(
+          Spicetify.GraphQL.Definitions.getTrack,
+          { uri: seedUri }
+        );
+        seedTrack = metadata?.data?.trackUnion;
+        if (seedTrack) writeCacheEntry("spotifyTracks", seedUri, compactSpotifyTrack(seedTrack));
+      }
       const artist = seedTrack?.firstArtist?.items?.[0]?.profile?.name;
       if (!seedTrack?.name || !artist) {
         throw new Error("Spotify did not return track metadata.");
@@ -143,7 +227,7 @@
         query: `${seedTrack.name} — ${artist}`,
         n: 20,
         diversity: 0.15,
-      });
+      }, seedUri);
       data = recommendation.data;
       if (data && typeof data === "object") {
         data.__soundalikeSource = recommendation.source;
@@ -161,6 +245,25 @@
   }
 
   async function findSpotifyTrack(result) {
+    const cacheId = `result:${normalizeLabel(result.title)}::${normalizeLabel(result.artist)}`;
+    const cached = readCacheEntry("spotifyTracks", cacheId, true);
+    if (cached.hit) return cached.value;
+    if (pendingSpotifyTracks.has(cacheId)) return pendingSpotifyTracks.get(cacheId);
+    const request = findSpotifyTrackUncached(result)
+      .then((track) => {
+        writeCacheEntry(
+          "spotifyTracks",
+          cacheId,
+          track ? compactSpotifyTrack(track) : null
+        );
+        return track;
+      })
+      .finally(() => pendingSpotifyTracks.delete(cacheId));
+    pendingSpotifyTracks.set(cacheId, request);
+    return request;
+  }
+
+  async function findSpotifyTrackUncached(result) {
     const response = await Spicetify.GraphQL.Request(
       Spicetify.GraphQL.Definitions.searchModalResults,
       {
@@ -193,6 +296,81 @@
       );
       return match;
     }
+  }
+
+  function loadPersistentCache() {
+    try {
+      const raw = Spicetify.LocalStorage?.get?.(CACHE_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (parsed?.recommendations && parsed?.spotifyTracks) return parsed;
+    } catch (error) {
+      console.warn("[soundalike] Could not load the local result cache.", error);
+    }
+    return { recommendations: {}, spotifyTracks: {} };
+  }
+
+  function readCacheEntry(bucket, key, includeMiss = false) {
+    const entry = persistentCache[bucket]?.[key];
+    if (!entry) return includeMiss ? { hit: false, value: null } : null;
+    if (Date.now() - entry.cachedAt > CACHE_TTL_MS) {
+      delete persistentCache[bucket][key];
+      scheduleCacheSave();
+      return includeMiss ? { hit: false, value: null } : null;
+    }
+    entry.lastUsedAt = Date.now();
+    return includeMiss ? { hit: true, value: entry.value } : entry.value;
+  }
+
+  function writeCacheEntry(bucket, key, value) {
+    persistentCache[bucket][key] = {
+      value,
+      cachedAt: Date.now(),
+      lastUsedAt: Date.now(),
+    };
+    const limit = bucket === "recommendations"
+      ? MAX_RECOMMENDATION_CACHE_SIZE
+      : MAX_SPOTIFY_CACHE_SIZE;
+    const entries = Object.entries(persistentCache[bucket]);
+    if (entries.length > limit) {
+      entries
+        .sort(([, left], [, right]) => left.lastUsedAt - right.lastUsedAt)
+        .slice(0, entries.length - limit)
+        .forEach(([staleKey]) => delete persistentCache[bucket][staleKey]);
+    }
+    scheduleCacheSave();
+  }
+
+  function scheduleCacheSave() {
+    if (!Spicetify.LocalStorage?.set) return;
+    clearTimeout(cacheSaveTimer);
+    cacheSaveTimer = setTimeout(() => {
+      try {
+        Spicetify.LocalStorage.set(CACHE_KEY, JSON.stringify(persistentCache));
+      } catch (error) {
+        console.warn("[soundalike] Could not save the local result cache.", error);
+      }
+    }, 100);
+  }
+
+  function compactSpotifyTrack(track) {
+    const firstArtist = track.firstArtist?.items || [];
+    const otherArtists = track.otherArtists?.items || [];
+    const artists = track.artists?.items || [];
+    return {
+      __typename: track.__typename,
+      name: track.name,
+      uri: track.uri,
+      albumOfTrack: {
+        name: track.albumOfTrack?.name,
+        uri: track.albumOfTrack?.uri,
+        coverArt: {
+          sources: track.albumOfTrack?.coverArt?.sources || [],
+        },
+      },
+      firstArtist: { items: firstArtist },
+      otherArtists: { items: otherArtists },
+      artists: { items: artists.length ? artists : [...firstArtist, ...otherArtists] },
+    };
   }
 
   function mergeSpotifyTrackDetails(searchTrack, details) {
@@ -376,6 +554,15 @@
     return artists.length ? artists.join(", ") : fallback;
   }
 
+  function spotifyAlbum(track) {
+    return track?.albumOfTrack?.name || "\u2014";
+  }
+
+  function formatBpm(value) {
+    const bpm = Number.parseFloat(String(value ?? ""));
+    return Number.isFinite(bpm) && bpm > 0 ? String(Math.round(bpm)) : "\u2014";
+  }
+
   async function activateResult(result, track) {
     if (track?.uri && typeof Spicetify.Player?.playUri === "function") {
       try {
@@ -408,7 +595,7 @@
         img.loading = "lazy";
         row.querySelector(".sa-cover")?.replaceChildren(img);
       }
-      row.onclick = () => activateResult(result, track);
+      row.ondblclick = () => activateResult(result, track);
       return;
     }
 
@@ -423,12 +610,12 @@
         role: "button",
         tabIndex: 0,
         title: track?.uri
-          ? `Play ${result.title} by ${artist}`
-          : `Search Spotify for ${result.title} by ${result.artist}`,
+          ? `Double-click to play ${result.title} by ${artist}`
+          : `Double-click to search Spotify for ${result.title} by ${result.artist}`,
         "aria-label": track?.uri
           ? `Play ${result.title} by ${artist}`
           : `Search Spotify for ${result.title} by ${result.artist}`,
-        onClick: activate,
+        onDoubleClick: activate,
         onKeyDown: (event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
@@ -436,7 +623,29 @@
           }
         },
       },
-      React.createElement("div", { className: "sa-rank" }, index + 1),
+      React.createElement(
+        "div",
+        { className: "sa-leading" },
+        React.createElement("span", { className: "sa-rank" }, index + 1),
+        React.createElement(
+          "button",
+          {
+            className: "sa-play",
+            type: "button",
+            title: track?.uri
+              ? `Play ${result.title}`
+              : `Search Spotify for ${result.title}`,
+            "aria-label": track?.uri
+              ? `Play ${result.title}`
+              : `Search Spotify for ${result.title}`,
+            onClick: (event) => {
+              event.stopPropagation();
+              activate();
+            },
+          },
+          track?.uri ? "\u25B6" : "\u203A"
+        )
+      ),
       React.createElement(
         "div",
         { className: "sa-cover", "aria-hidden": "true" },
@@ -450,24 +659,8 @@
         React.createElement("div", { className: "sa-title" }, result.title),
         React.createElement("div", { className: "sa-artist" }, artist)
       ),
-      React.createElement(
-        "button",
-        {
-          className: "sa-play",
-          type: "button",
-          title: track?.uri
-            ? `Play ${result.title}`
-            : `Search Spotify for ${result.title}`,
-          "aria-label": track?.uri
-            ? `Play ${result.title}`
-            : `Search Spotify for ${result.title}`,
-          onClick: (event) => {
-            event.stopPropagation();
-            activate();
-          },
-        },
-        track?.uri ? "\u25B6" : "\u203A"
-      )
+      React.createElement("div", { className: "sa-album" }, spotifyAlbum(track)),
+      React.createElement("div", { className: "sa-bpm" }, formatBpm(result.bpm))
     );
     const menu = nativeTrackMenu(track);
     const interactiveRow = menu
@@ -552,21 +745,30 @@
         .sa-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
         .sa-tag{background:rgba(255,255,255,.08);border-radius:999px;padding:4px 9px;color:var(--spice-subtext,#b3b3b3);font-size:12px}
         .sa-list{padding-right:4px}
-        .sa-list-head,.sa-row-content{display:grid;grid-template-columns:28px 44px minmax(0,1fr) 28px;align-items:center;column-gap:12px}
+        .sa-list-head,.sa-row-content{display:grid;grid-template-columns:32px 44px minmax(180px,1.6fr) minmax(120px,1fr) 64px;align-items:center;column-gap:12px}
         .sa-list-head{height:28px;color:var(--spice-subtext,#b3b3b3);font-size:12px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:4px}
         .sa-row{border-radius:6px}
         .sa-row-content{min-height:56px;padding:4px 6px;border-radius:6px;cursor:pointer;outline:none}
         .sa-row-content:hover,.sa-row-content:focus-visible{background:rgba(255,255,255,.1)}
-        .sa-rank{text-align:right;color:var(--spice-subtext,#b3b3b3);font-variant-numeric:tabular-nums}
+        .sa-leading{width:32px;height:32px;display:grid;place-items:center}
+        .sa-rank{grid-area:1/1;text-align:center;color:var(--spice-subtext,#b3b3b3);font-variant-numeric:tabular-nums}
         .sa-cover{width:44px;height:44px;border-radius:4px;background:#282828;display:grid;place-items:center;color:#727272;overflow:hidden}
         .sa-cover img{width:100%;height:100%;object-fit:cover}
         .sa-meta{min-width:0}
         .sa-title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .sa-artist{color:var(--spice-subtext,#b3b3b3);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
-        .sa-play{width:30px;height:30px;border:0;border-radius:50%;background:transparent;color:var(--spice-subtext,#b3b3b3);font-size:15px;cursor:pointer}
+        .sa-album{min-width:0;color:var(--spice-subtext,#b3b3b3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .sa-bpm{color:var(--spice-subtext,#b3b3b3);font-variant-numeric:tabular-nums;text-align:right}
+        .sa-play{grid-area:1/1;display:none;width:30px;height:30px;border:0;border-radius:50%;background:transparent;color:var(--spice-text,#fff);font-size:15px;cursor:pointer}
+        .sa-row-content:hover .sa-rank,.sa-row-content:focus-within .sa-rank{display:none}
+        .sa-row-content:hover .sa-play,.sa-play:focus-visible{display:grid;place-items:center}
         .sa-play:hover,.sa-play:focus-visible{background:var(--spice-button,#1ed760);color:#000;outline:none}
         .sa-row-content:hover .sa-title,.sa-row-content:focus-visible .sa-title{color:var(--spice-text,#fff)}
         .sa-menu-loading{padding:8px 12px;color:var(--spice-subtext,#b3b3b3);white-space:nowrap}
+        @media(max-width:760px){
+          .sa-list-head,.sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 56px}
+          .sa-album,.sa-list-head .sa-album-head{display:none}
+        }
       </style>
       <div class="sa-seed">
         ${seedImage
@@ -579,7 +781,7 @@
         </div>
       </div>
       <div class="sa-tags">${tags}</div>
-      <div class="sa-list-head"><div>#</div><div></div><div>Title</div><div></div></div>
+      <div class="sa-list-head"><div>#</div><div></div><div>Title</div><div class="sa-album-head">Album</div><div class="sa-bpm">BPM</div></div>
       <div class="sa-list">${rows}</div>`;
 
     wrap.querySelectorAll(".sa-row").forEach((row, index) => {

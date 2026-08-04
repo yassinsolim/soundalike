@@ -78,6 +78,13 @@ def _split_text_query(q: str) -> Tuple[str, str]:
             return a.strip(), b.strip()
     return q, ""
 
+def _bpm_for_row(index, row: Optional[int]) -> Optional[int]:
+    if row is None:
+        return None
+    bpm = float(index.vibe[row][0])
+    return round(bpm) if np.isfinite(bpm) and bpm > 0 else None
+
+
 class SoundalikeEngine:
     """Warm-loaded recommender: models stay in memory across requests."""
 
@@ -111,8 +118,10 @@ class SoundalikeEngine:
         # the Deezer download entirely and reuses its cached embedding.
         self._by_pair: Dict[Tuple[str, str], int] = {}
         self._by_title: Dict[str, List[int]] = {}
+        self._by_track_id: Dict[int, int] = {}
         for i in range(len(self.index)):
             t, a = _norm(self.index.titles[i]), _norm(self.index.artists[i])
+            self._by_track_id[int(self.index.track_ids[i])] = i
             previous = self._by_pair.get((t, a))
             if previous is None or _version_penalty(self.index.titles[i]) < _version_penalty(
                 self.index.titles[previous]
@@ -243,8 +252,10 @@ class SoundalikeEngine:
         vibe = seed_vibe.describe()
         out = []
         for r in results:
+            result_row = self._by_track_id.get(int(r.track_id))
             out.append({
                 "title": r.title, "artist": r.artist,
+                "bpm": _bpm_for_row(self.index, result_row),
                 "neural_sim": round(float(r.neural_sim), 4),
                 "vibe_sim": round(float(r.vibe_sim), 4),
                 "score": round(float(r.score), 4),

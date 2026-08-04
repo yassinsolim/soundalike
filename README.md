@@ -37,9 +37,9 @@ including the Microsoft-Store build.
 ![soundalike web app](docs/soundalike-results.png)
 
 Want the recommendations *inside* Spotify — a right-click **“Find soundalikes”**
-menu that opens a navigable results page with album artwork, verified artist
-names, persistent click-to-play rows, and Spotify's native track actions on
-right-click? Use the
+menu that opens a navigable, playlist-style results page with artwork, artists,
+albums, measured BPM, cached results, double-click playback, and Spotify's
+native track actions on right-click? Use the
 [**Spicetify extension**](integrations/spicetify/README.md). A Marketplace
 install works immediately with the hosted 272,853-track library. The separate
 [advanced setup guide](integrations/spicetify/SETUP.md) covers manual installs,

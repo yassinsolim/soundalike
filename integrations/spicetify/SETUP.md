@@ -6,10 +6,11 @@ If you installed Soundalike from Marketplace, start with the
 [extension guide](README.md); normal use requires none of the setup below.
 
 Add a **“Find soundalikes”** item to the right-click menu of any track in the
-Spotify desktop app. Click it and a panel shows songs that genuinely *sound*
-like the one you clicked — powered by precomputed audio embeddings, not tags.
-Click a verified result to play it immediately, or right-click it for Spotify's
-native playlist, queue, radio, artist, album, credits, and sharing actions.
+Spotify desktop app. Select it and a page shows songs that genuinely *sound*
+like the selected track — powered by precomputed audio embeddings, not tags.
+Double-click a verified result or use its left-side play button to play it
+immediately. Right-click it for Spotify's native playlist, queue, radio,
+artist, album, credits, and sharing actions.
 
 ![Soundalike results inside Spotify](../../docs/spicetify-results.png)
 
@@ -243,10 +244,11 @@ curl --fail http://127.0.0.1:8787/health
 
 With or without the local engine, right-click any song in Spotify →
 **Find soundalikes**. A normal Spotify page opens with the seed artwork and recommendation
-titles. Spotify album covers and verified artist names fill in progressively;
-use its play button to play that exact Spotify track without leaving the
-page. Spotify's Back and Forward buttons preserve the result list while you
-navigate elsewhere. Right-click a row for Spotify's normal track menu, including **Add to
+titles. Spotify album covers, verified artist names, album names, and measured
+BPM fill in progressively. Double-click a row or use its left-side play button
+to play that exact Spotify track without leaving the page; a single click does
+not start playback. Spotify's Back and Forward buttons preserve the result
+list while you navigate elsewhere. Right-click a row for Spotify's normal track menu, including **Add to
 playlist**, **Add to queue**, **Go to song radio**, artist/album navigation,
 credits, and sharing. If Spotify cannot confidently resolve a recommendation,
 the row keeps the safe Spotify-search fallback instead. The header identifies
@@ -436,10 +438,13 @@ right-click track ─▶ Spotify title + artist
                                                │
                      rank audio+vibe similarity ─▶ verified Spotify track URI
                                                │
-                          left-click ─▶ play now │ right-click ─▶ native track menu
+                 play / double-click ─▶ play now │ right-click ─▶ native track menu
 ```
 
-The first hosted request after an idle period can take about 30 seconds while
-the checksum-pinned 299 MB index warms; the extension shows a warm-up notice
-and later requests are fast. The optional local companion downloads and loads
-the same production index once and keeps it warm between right-clicks.
+The first uncached hosted request after an idle period can take about 30 seconds
+while the checksum-pinned 299 MB index warms; the extension shows a warm-up
+notice. Successful recommendations and resolved Spotify metadata remain in a
+bounded local cache for seven days, and the cacheable hosted endpoint lets
+repeated requests avoid recomputing the same seed. The optional local companion
+downloads and loads the same production index once and keeps it warm between
+right-clicks.

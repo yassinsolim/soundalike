@@ -31,7 +31,9 @@ def _synthetic_index(
     for a in range(n_artists):
         for j in range(per):
             neural.append(centers[a] + 0.2 * rng.standard_normal(dim))
-            vibe.append(rng.standard_normal(29))
+            vibe_row = rng.standard_normal(29)
+            vibe_row[0] = 80 + (k % 80)
+            vibe.append(vibe_row)
             titles.append(f"song {k}")
             artists.append(f"artist {a}")
             tids.append(1000 + k)
@@ -102,6 +104,47 @@ def test_web_recommender_matches_canonical(tmp_path):
             quality_filter=False, genre_rerank=False, related_boost=False)
         assert [(x["title"], x["artist"]) for x in w["results"]] == \
                [(r.title, r.artist) for r in c], f"mismatch at row {row}"
+
+
+def test_spicetify_results_include_measured_bpm(tmp_path):
+    from _reco import WebRecommender
+    from spicetify_recommend import _enrich_result_tempos, _tempo_bpm
+
+    path, index = _synthetic_index(tmp_path)
+    recommender = WebRecommender(str(path), enhance=False)
+    output = _enrich_result_tempos(recommender, recommender.recommend(0, n=5))
+
+    assert _tempo_bpm(recommender, 0) == round(float(index.vibe[0][0]))
+    assert all(item["bpm"] is not None for item in output["results"])
+    for item in output["results"]:
+        row = int(np.flatnonzero(recommender.track_ids == item["deezer_id"])[0])
+        assert item["bpm"] == round(float(index.vibe[row][0]))
+
+
+def test_spicetify_bpm_uses_track_id_for_duplicate_titles():
+    from spicetify_recommend import _enrich_result_tempos
+
+    class Recommender:
+        feature_names = ["tempo"]
+        track_ids = np.asarray([101, 202])
+        _vscaled = np.asarray([[90.0], [130.0]])
+        _w = np.asarray([1.0])
+        _vstd = np.asarray([1.0])
+        _vmean = np.asarray([0.0])
+
+        @staticmethod
+        def find_row(_title, _artist):
+            return 0
+
+    payload = {
+        "results": [{
+            "deezer_id": 202,
+            "title": "Same Song",
+            "artist": "Same Artist",
+        }]
+    }
+
+    assert _enrich_result_tempos(Recommender(), payload)["results"][0]["bpm"] == 130
 
 
 def test_enhanced_recommender_differs_from_baseline(tmp_path):

@@ -11,8 +11,8 @@ using genres, popularity, or listening-history recommendations.
 1. Install **Soundalike** from Marketplace.
 2. Right-click any track in Spotify.
 3. Select **Find soundalikes**.
-4. Use the play button on a result, or right-click it for Spotify's normal
-   track actions.
+4. Double-click a result or use its left-side play button. Right-click it for
+   Spotify's normal track actions.
 
 That is all normal use requires. There is no Soundalike account, Python
 installation, terminal command, or local server to configure. The extension
@@ -22,13 +22,18 @@ automatically uses the hosted 272,853-track recommendation library.
 
 - Results open on a normal Spotify page, so the Back and Forward buttons work
   and the list stays visible while music plays.
-- Album artwork and verified artist names load progressively on that page.
+- Results use a playlist-style layout with album artwork, verified artist
+  names, album names, and measured BPM.
 - The play button on a verified result plays that exact Spotify track
-  immediately without closing or leaving the page.
+  immediately without closing or leaving the page. Double-clicking anywhere
+  on the row does the same; a single click does not interrupt playback.
 - Right-clicking a result opens Spotify's native menu for playlists, queueing,
   song radio, artist and album navigation, credits, and sharing.
 - If Spotify cannot confidently match a recommendation, Soundalike safely
   opens a Spotify search instead of playing the wrong track.
+- Successful recommendations and resolved Spotify metadata are cached locally
+  for seven days, so reopening the same track avoids repeating the expensive
+  recommendation and catalog lookups.
 
 ## Privacy
 
@@ -39,8 +44,9 @@ No separate Spotify login is required.
 
 ## Good to know
 
-- The first request after the hosted service has been idle can take about 30
-  seconds while the recommendation index warms. Later requests are fast.
+- The first uncached request after the hosted service has been idle can take
+  about 30 seconds while the recommendation index warms. Repeated tracks use
+  the local cache, and hosted responses can be reused by the CDN.
 - The hosted library currently covers 272,853 tracks.
 - If **Find soundalikes** does not appear immediately after installation,
   fully quit and reopen Spotify.

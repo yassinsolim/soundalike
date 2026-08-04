@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import numpy as np
+
 from soundalike.server import (
     DEMO_SEEDS,
     _DEEZER_RE,
     _SPOTIFY_RE,
     _SPOTIFY_URI_RE,
+    _bpm_for_row,
     _norm,
     _seed_suggestions,
     _split_text_query,
@@ -51,3 +54,13 @@ def test_seed_suggestions_fall_back_to_demo_without_engine():
     seeds = _seed_suggestions()
     assert seeds == DEMO_SEEDS
     assert all("title" in s and "artist" in s for s in seeds)
+
+
+def test_bpm_for_row_uses_measured_vibe_tempo():
+    class Index:
+        vibe = np.array([[121.6], [np.nan], [0.0]], dtype=np.float32)
+
+    assert _bpm_for_row(Index(), 0) == 122
+    assert _bpm_for_row(Index(), 1) is None
+    assert _bpm_for_row(Index(), 2) is None
+    assert _bpm_for_row(Index(), None) is None

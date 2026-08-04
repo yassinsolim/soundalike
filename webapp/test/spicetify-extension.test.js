@@ -31,7 +31,9 @@ function loadExtension(fetchImpl, options = {}) {
   const notifications = [];
   const history = [];
   const played = [];
+  const graphqlRequests = [];
   const historyListeners = [];
+  const storage = options.storage || new Map();
   const rows = (options.results || []).map((_, index) => ({
     dataset: { index: String(index) },
     querySelector() {
@@ -109,6 +111,7 @@ function loadExtension(fetchImpl, options = {}) {
   const context = {
     AbortController,
     Date,
+    URLSearchParams,
     clearTimeout,
     fetch: fetchImpl,
     setTimeout,
@@ -144,6 +147,7 @@ function loadExtension(fetchImpl, options = {}) {
     GraphQL: {
       Definitions: { getTrack, searchModalResults },
       async Request(definition, variables) {
+        graphqlRequests.push({ definition, variables });
         if (definition === getTrack) {
           if (
             options.spotifyTrackDetails &&
@@ -199,6 +203,14 @@ function loadExtension(fetchImpl, options = {}) {
         played.push(uri);
       },
     },
+    LocalStorage: {
+      get(key) {
+        return storage.get(key) ?? null;
+      },
+      set(key, value) {
+        storage.set(key, value);
+      },
+    },
     React,
     ReactComponent: { PlatformProvider, RightClickMenu, TrackMenu },
     ReactDOM: {
@@ -236,6 +248,7 @@ function loadExtension(fetchImpl, options = {}) {
     history,
     notifications,
     played,
+    graphqlRequests,
     rows,
     get currentPage() {
       return currentPage;
@@ -243,8 +256,8 @@ function loadExtension(fetchImpl, options = {}) {
     navigate(path) {
       context.Spicetify.Platform.History.push(path);
     },
-    async run() {
-      await handler(["spotify:track:test"]);
+    async run(uri = "spotify:track:test") {
+      await handler([uri]);
       await new Promise((resolve) => setTimeout(resolve, 0));
       return currentPage;
     },
@@ -269,16 +282,21 @@ test("uses the hosted library when the local companion is unavailable", async ()
     if (url === "http://127.0.0.1:8787/health") {
       throw new TypeError("connection refused");
     }
-    assert.equal(url, "https://soundalike.yassin.app/api/recommend");
+    assert.match(
+      url,
+      /^https:\/\/soundalike\.yassin\.app\/api\/spicetify_recommend\?/,
+    );
     return response(200, recommendation);
   });
 
   const page = await app.run();
 
-  assert.deepEqual(urls, [
-    "http://127.0.0.1:8787/health",
-    "https://soundalike.yassin.app/api/recommend",
-  ]);
+  assert.equal(urls[0], "http://127.0.0.1:8787/health");
+  assert.equal(urls.length, 2);
+  assert.match(
+    urls[1],
+    /^https:\/\/soundalike\.yassin\.app\/api\/spicetify_recommend\?/,
+  );
   assert.match(page.innerHTML, /HOSTED LIBRARY/);
   assert.deepEqual(app.history, ["/soundalike"]);
   assert.equal(
@@ -326,11 +344,35 @@ test("falls back to hosted results when a healthy local companion later fails", 
 
   const page = await app.run();
 
-  assert.deepEqual(urls, [
+  assert.deepEqual(urls.slice(0, 2), [
     "http://127.0.0.1:8787/health",
     "http://127.0.0.1:8787/api/recommend",
-    "https://soundalike.yassin.app/api/recommend",
   ]);
+  assert.equal(urls.length, 3);
+  assert.match(
+    urls[2],
+    /^https:\/\/soundalike\.yassin\.app\/api\/spicetify_recommend\?/,
+  );
+  assert.match(page.innerHTML, /HOSTED LIBRARY/);
+});
+
+test("uses the legacy hosted POST during a deployment race", async () => {
+  const urls = [];
+  const app = loadExtension(async (url, options) => {
+    urls.push(url);
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    if (url.includes("/api/spicetify_recommend")) {
+      return response(404, { error: "not found" });
+    }
+    assert.equal(url, "https://soundalike.yassin.app/api/recommend");
+    assert.equal(options.method, "POST");
+    return response(200, recommendation);
+  });
+
+  const page = await app.run();
+  await app.run();
+
+  assert.equal(urls.length, 5);
   assert.match(page.innerHTML, /HOSTED LIBRARY/);
 });
 
@@ -355,13 +397,14 @@ test("shows the hosted library miss without opening an empty page", async () => 
   );
 });
 
-test("plays verified Spotify tracks and exposes their native track menu", async () => {
-  const result = { title: "Take My Breath", artist: "The Weeknd" };
+test("renders playlist metadata, plays on double-click, and exposes the native menu", async () => {
+  const result = { title: "Take My Breath", artist: "The Weeknd", bpm: 121.7 };
   const spotifyTrack = {
     __typename: "Track",
     name: result.title,
     uri: "spotify:track:verified",
     albumOfTrack: {
+      name: "Dawn FM",
       coverArt: { sources: [] },
     },
     artists: {
@@ -375,6 +418,7 @@ test("plays verified Spotify tracks and exposes their native track menu", async 
     name: result.title,
     uri: spotifyTrack.uri,
     albumOfTrack: {
+      name: "Dawn FM",
       uri: "spotify:album:verified",
       coverArt: { sources: [] },
     },
@@ -427,6 +471,27 @@ test("plays verified Spotify tracks and exposes their native track menu", async 
     rowTree,
     (node) => node.props?.className === "sa-play",
   );
+  const leadingCell = findElement(
+    rowTree,
+    (node) => node.props?.className === "sa-leading",
+  );
+  assert.equal(findElement(leadingCell, (node) => node === playButton), playButton);
+  assert.equal(
+    findElement(rowTree, (node) => node.props?.className === "sa-album").props.children,
+    "Dawn FM",
+  );
+  assert.equal(
+    findElement(rowTree, (node) => node.props?.className === "sa-bpm").props.children,
+    "122",
+  );
+  const rowContent = findElement(
+    rowTree,
+    (node) => node.props?.className === "sa-row-content",
+  );
+  assert.equal(rowContent.props.onClick, undefined);
+  await rowContent.props.onDoubleClick();
+  assert.deepEqual(app.played, [spotifyTrack.uri]);
+
   let propagationStopped = false;
   await playButton.props.onClick({
     stopPropagation() {
@@ -434,7 +499,7 @@ test("plays verified Spotify tracks and exposes their native track menu", async 
     },
   });
   assert.equal(propagationStopped, true);
-  assert.deepEqual(app.played, [spotifyTrack.uri]);
+  assert.deepEqual(app.played, [spotifyTrack.uri, spotifyTrack.uri]);
   assert.deepEqual(app.history, ["/soundalike"]);
   assert.ok(app.currentPage);
 });
@@ -460,7 +525,8 @@ test("keeps Spotify search as the fallback for unresolved result rows", async ()
     rowTree,
     (node) => node.props?.className === "sa-row-content",
   );
-  await trigger.props.onClick();
+  assert.equal(trigger.props.onClick, undefined);
+  await trigger.props.onDoubleClick();
   assert.deepEqual(app.played, []);
   assert.deepEqual(app.history, [
     "/soundalike",
@@ -496,4 +562,54 @@ test("restores cached results when navigating back to the Soundalike page", asyn
   assert.ok(app.currentPage);
   assert.equal(firstPage.innerHTML, app.currentPage.innerHTML);
   assert.equal(app.rows[0].dataset.uri, spotifyTrack.uri);
+});
+
+test("reuses persisted recommendations and Spotify metadata on repeated tracks", async () => {
+  const storage = new Map();
+  const result = { title: "Take My Breath", artist: "The Weeknd", bpm: 122 };
+  const spotifyTrack = {
+    __typename: "Track",
+    name: result.title,
+    uri: "spotify:track:verified",
+    albumOfTrack: {
+      name: "Dawn FM",
+      uri: "spotify:album:verified",
+      coverArt: { sources: [] },
+    },
+    artists: { items: [{ profile: { name: result.artist } }] },
+  };
+  const urls = [];
+  const first = loadExtension(async (url) => {
+    urls.push(url);
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    return response(200, { ...recommendation, results: [result] });
+  }, {
+    nativeMenus: true,
+    results: [result],
+    spotifyTrack,
+    storage,
+  });
+
+  await first.run();
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  assert.equal(
+    urls.filter((url) => url.includes("/api/spicetify_recommend")).length,
+    1,
+  );
+  const persisted = JSON.parse(storage.get("soundalike:spicetify-cache:v2"));
+  assert.ok(persisted.spotifyTracks["spotify:track:test"]);
+
+  const second = loadExtension(async (url) => {
+    throw new Error(`unexpected network request: ${url}`);
+  }, {
+    nativeMenus: true,
+    results: [result],
+    spotifyTrack,
+    storage,
+  });
+  await second.run();
+
+  assert.deepEqual(second.graphqlRequests, []);
+  assert.equal(second.rows[0].dataset.uri, spotifyTrack.uri);
+  assert.equal(second.currentPage !== undefined, true);
 });
