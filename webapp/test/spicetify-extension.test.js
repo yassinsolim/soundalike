@@ -297,6 +297,7 @@ test("uses the hosted library when the local companion is unavailable", async ()
     urls[1],
     /^https:\/\/soundalike\.yassin\.app\/api\/spicetify_recommend\?/,
   );
+  assert.equal(new URL(urls[1]).searchParams.get("v"), "2");
   assert.match(page.innerHTML, /HOSTED LIBRARY/);
   assert.deepEqual(app.history, ["/soundalike"]);
   assert.equal(
