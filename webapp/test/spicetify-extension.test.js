@@ -692,6 +692,7 @@ test("filters confident cross-language results and keeps unknown lyrics as fallb
 test("reuses persisted recommendations and Spotify metadata on repeated tracks", async () => {
   const storage = new Map();
   storage.set("soundalike:spicetify-cache:v2", "{\"stale\":true}");
+  storage.set("soundalike:spicetify-cache:v3", "{\"oversized\":true}");
   const result = { title: "Take My Breath", artist: "The Weeknd", bpm: 122 };
   const spotifyTrack = {
     __typename: "Track",
@@ -702,7 +703,12 @@ test("reuses persisted recommendations and Spotify metadata on repeated tracks",
       uri: "spotify:album:verified",
       coverArt: { sources: [] },
     },
-    artists: { items: [{ profile: { name: result.artist } }] },
+    artists: {
+      items: [{
+        profile: { name: result.artist },
+        debugPayload: "x".repeat(50000),
+      }],
+    },
   };
   const urls = [];
   const first = loadExtension(async (url) => {
@@ -716,6 +722,7 @@ test("reuses persisted recommendations and Spotify metadata on repeated tracks",
     storage,
   });
   assert.equal(storage.has("soundalike:spicetify-cache:v2"), false);
+  assert.equal(storage.has("soundalike:spicetify-cache:v3"), false);
 
   await first.run();
   await new Promise((resolve) => setTimeout(resolve, 250));
@@ -723,7 +730,8 @@ test("reuses persisted recommendations and Spotify metadata on repeated tracks",
     urls.filter((url) => url.includes("/api/spicetify_recommend")).length,
     1,
   );
-  const persisted = JSON.parse(storage.get("soundalike:spicetify-cache:v3"));
+  const persisted = JSON.parse(storage.get("soundalike:spicetify-cache:v4"));
+  assert.ok(storage.get("soundalike:spicetify-cache:v4").length < 10000);
   assert.ok(persisted.spotifyTracks["spotify:track:test"]);
 
   const second = loadExtension(async (url) => {

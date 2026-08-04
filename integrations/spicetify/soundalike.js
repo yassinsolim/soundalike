@@ -12,8 +12,11 @@
   const LOCAL_PROBE_TIMEOUT_MS = 250;
   const HOSTED_TIMEOUT_MS = 65000;
   const LOCAL_STATUS_TTL_MS = 30000;
-  const CACHE_KEY = "soundalike:spicetify-cache:v3";
-  const LEGACY_CACHE_KEYS = ["soundalike:spicetify-cache:v2"];
+  const CACHE_KEY = "soundalike:spicetify-cache:v4";
+  const LEGACY_CACHE_KEYS = [
+    "soundalike:spicetify-cache:v2",
+    "soundalike:spicetify-cache:v3",
+  ];
   const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
   const MAX_RECOMMENDATION_CACHE_SIZE = 50;
   const MAX_SPOTIFY_CACHE_SIZE = 500;
@@ -412,9 +415,22 @@
   }
 
   function compactSpotifyTrack(track) {
-    const firstArtist = track.firstArtist?.items || [];
-    const otherArtists = track.otherArtists?.items || [];
-    const artists = track.artists?.items || [];
+    const compactArtists = (items) => (items || [])
+      .map((artist) => ({
+        uri: artist?.uri,
+        profile: { name: artist?.profile?.name },
+      }))
+      .filter((artist) => artist.uri || artist.profile.name);
+    const firstArtist = compactArtists(track.firstArtist?.items);
+    const otherArtists = compactArtists(track.otherArtists?.items);
+    const artists = compactArtists(track.artists?.items);
+    const coverSources = (track.albumOfTrack?.coverArt?.sources || [])
+      .map((source) => ({
+        url: source?.url,
+        width: source?.width,
+        height: source?.height,
+      }))
+      .filter((source) => source.url);
     return {
       __typename: track.__typename,
       name: track.name,
@@ -423,7 +439,7 @@
         name: track.albumOfTrack?.name,
         uri: track.albumOfTrack?.uri,
         coverArt: {
-          sources: track.albumOfTrack?.coverArt?.sources || [],
+          sources: coverSources,
         },
       },
       firstArtist: { items: firstArtist },
