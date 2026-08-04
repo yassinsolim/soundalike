@@ -9,13 +9,17 @@
 (function soundalike() {
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const HOSTED_SERVER = "https://soundalike.yassin.app";
-  const LOCAL_PROBE_TIMEOUT_MS = 800;
+  const LOCAL_PROBE_TIMEOUT_MS = 250;
   const HOSTED_TIMEOUT_MS = 65000;
   const LOCAL_STATUS_TTL_MS = 30000;
-  const CACHE_KEY = "soundalike:spicetify-cache:v2";
+  const CACHE_KEY = "soundalike:spicetify-cache:v3";
   const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
   const MAX_RECOMMENDATION_CACHE_SIZE = 50;
   const MAX_SPOTIFY_CACHE_SIZE = 500;
+  const HOSTED_API_VERSION = "3";
+  const LANGUAGE_POLICY = "spotify-lyrics-v1";
+  const RECOMMENDATION_POOL_SIZE = 40;
+  const DISPLAY_RESULT_COUNT = 20;
   const RESULTS_PATH = "/soundalike";
   let localStatus = { available: false, checkedAt: 0 };
   let nativeContextChain;
@@ -109,7 +113,8 @@
       query: payload.query,
       n: String(payload.n),
       diversity: String(payload.diversity),
-      v: "2",
+      v: HOSTED_API_VERSION,
+      language_policy: LANGUAGE_POLICY,
     });
     let response;
     try {
@@ -224,11 +229,24 @@
       if (!seedTrack?.name || !artist) {
         throw new Error("Spotify did not return track metadata.");
       }
-      const recommendation = await requestRecommendations({
+      const languagePromise = Object.hasOwn(seedTrack, "soundalikeLanguage")
+        ? Promise.resolve(seedTrack.soundalikeLanguage)
+        : getSpotifyTrackLanguage(seedUri);
+      const recommendationPromise = requestRecommendations({
         query: `${seedTrack.name} — ${artist}`,
-        n: 20,
+        n: RECOMMENDATION_POOL_SIZE,
         diversity: 0.15,
-      }, seedUri);
+      }, `${LANGUAGE_POLICY}:${seedUri}`);
+      const [recommendation, seedLanguage] = await Promise.all([
+        recommendationPromise,
+        languagePromise,
+      ]);
+      seedTrack = {
+        ...seedTrack,
+        uri: seedTrack.uri || seedUri,
+        soundalikeLanguage: seedLanguage,
+      };
+      writeCacheEntry("spotifyTracks", seedUri, compactSpotifyTrack(seedTrack));
       data = recommendation.data;
       if (data && typeof data === "object") {
         data.__soundalikeSource = recommendation.source;
@@ -284,18 +302,45 @@
       .sort((a, b) => b.score - a.score);
     const match = ranked[0]?.score >= 6 ? ranked[0].track : null;
     if (!match) return null;
+    const languagePromise = getSpotifyTrackLanguage(match.uri);
+    let resolvedTrack = match;
     try {
       const details = await Spicetify.GraphQL.Request(
         Spicetify.GraphQL.Definitions.getTrack,
         { uri: match.uri }
       );
-      return mergeSpotifyTrackDetails(match, details?.data?.trackUnion);
+      resolvedTrack = mergeSpotifyTrackDetails(match, details?.data?.trackUnion);
     } catch (error) {
       console.warn(
         `[soundalike] Spotify action metadata lookup failed for ${match.uri}`,
         error
       );
-      return match;
+    }
+    return {
+      ...resolvedTrack,
+      soundalikeLanguage: await languagePromise,
+    };
+  }
+
+  async function getSpotifyTrackLanguage(uri) {
+    const trackId = uri?.split(":track:")[1];
+    if (!trackId || !Spicetify.CosmosAsync?.get) return null;
+    try {
+      const response = await Spicetify.CosmosAsync.get(
+        `https://spclient.wg.spotify.com/color-lyrics/v2/track/${trackId}` +
+        "?format=json&vocalRemoval=false&market=from_token"
+      );
+      const language = String(response?.lyrics?.language || "")
+        .trim()
+        .toLowerCase()
+        .split("-")[0];
+      return /^[a-z]{2,3}$/.test(language) ? language : null;
+    } catch (error) {
+      console.debug?.(
+        `[soundalike] Lyrics language is unavailable for ${uri}.`,
+        error
+      );
+      return null;
     }
   }
 
@@ -371,6 +416,7 @@
       firstArtist: { items: firstArtist },
       otherArtists: { items: otherArtists },
       artists: { items: artists.length ? artists : [...firstArtist, ...otherArtists] },
+      soundalikeLanguage: track.soundalikeLanguage ?? null,
     };
   }
 
@@ -579,7 +625,7 @@
     );
   }
 
-  function renderResultRow(row, result, index, track = null) {
+  function renderResultRow(row, result, index, track = null, rank = index + 1) {
     const artist = spotifyArtists(track, result.artist);
     const image = track ? artworkUrl(track) : "";
     row.dataset.q = `${result.title} ${result.artist}`;
@@ -627,7 +673,7 @@
       React.createElement(
         "div",
         { className: "sa-leading" },
-        React.createElement("span", { className: "sa-rank" }, index + 1),
+        React.createElement("span", { className: "sa-rank" }, rank),
         React.createElement(
           "button",
           {
@@ -670,7 +716,56 @@
     row.__soundalikeRoot.render(menu ? withNativeContext(interactiveRow) || child : child);
   }
 
-  async function hydrateSpotifyRows(results, page, tracks) {
+  function languageName(code) {
+    const names = {
+      ar: "Arabic", de: "German", en: "English", es: "Spanish", fr: "French",
+      hi: "Hindi", it: "Italian", ja: "Japanese", ko: "Korean", nl: "Dutch",
+      pl: "Polish", pt: "Portuguese", ru: "Russian", sv: "Swedish",
+      tr: "Turkish", uk: "Ukrainian", zh: "Chinese",
+    };
+    return names[code] || code?.toUpperCase() || "Unknown";
+  }
+
+  function applyLanguageGate(page, results, tracks, seedLanguage) {
+    const eligible = [];
+    let sameLanguage = 0;
+    let unknown = 0;
+    for (let index = 0; index < results.length; index++) {
+      const language = tracks[index]?.soundalikeLanguage || null;
+      if (!seedLanguage || language === seedLanguage || !language) {
+        eligible.push(index);
+        if (language === seedLanguage) sameLanguage++;
+        else if (!language) unknown++;
+      }
+      if (eligible.length >= DISPLAY_RESULT_COUNT) break;
+    }
+    const visible = new Set(eligible);
+    page.querySelectorAll(".sa-row").forEach((row) => {
+      row.hidden = !visible.has(Number(row.dataset.index));
+    });
+    eligible.forEach((index, displayIndex) => {
+      const row = page.querySelector(`.sa-row[data-index="${index}"]`);
+      if (row) {
+        renderResultRow(
+          row,
+          results[index],
+          index,
+          tracks[index] || null,
+          displayIndex + 1
+        );
+      }
+    });
+    const status = page.querySelector(".sa-language-status");
+    if (!status) return;
+    if (!seedLanguage) {
+      status.textContent = "Language gate unavailable - preserving normal ranking";
+      return;
+    }
+    status.textContent = `${languageName(seedLanguage)} lyrics · ` +
+      `${sameLanguage} matched${unknown ? ` · ${unknown} unknown fallback` : ""}`;
+  }
+
+  async function hydrateSpotifyRows(results, page, tracks, seedLanguage) {
     if (!Spicetify.GraphQL.Definitions.searchModalResults) {
       console.warn("[soundalike] Spotify artwork lookup is unavailable in this client.");
       return;
@@ -700,14 +795,17 @@
         }
       }
     }
-    const workerCount = Math.min(4, results.length);
+    const workerCount = Math.min(8, results.length);
     await Promise.all(Array.from({ length: workerCount }, worker));
+    if (page === activePage?.view) {
+      applyLanguageGate(page, results, tracks, seedLanguage);
+    }
     console.log(
       `[soundalike] added Spotify metadata to ${enriched}/${results.length} rows.`
     );
   }
 
-  function buildResultsPage(data, seedTrack, tracks) {
+  function buildResultsPage(data, seedTrack, tracks, seedLanguage) {
     const s = data.seed, v = data.vibe;
     const wrap = document.createElement("div");
     const seedImage = artworkUrl(seedTrack);
@@ -716,13 +814,17 @@
       : "HOSTED LIBRARY";
     wrap.className = "sa-results";
 
+    const languageStatus = seedLanguage
+      ? `${languageName(seedLanguage)} lyrics · checking recommendations`
+      : "Language gate unavailable - preserving normal ranking";
     const tags = [v.tempo, v.dynamics, v.low_end, v.tone]
       .map((t) => `<span class="sa-tag">${esc(t)}</span>`)
-      .join("");
+      .join("") +
+      `<span class="sa-tag sa-language-status">${esc(languageStatus)}</span>`;
     const rows = data.results
       .map(
         (x, i) => `
-      <div class="sa-row" data-index="${i}" data-q="${esc(x.title + " " + x.artist)}">
+      <div class="sa-row" data-index="${i}" data-q="${esc(x.title + " " + x.artist)}"${i >= DISPLAY_RESULT_COUNT ? " hidden" : ""}>
         <div class="sa-rank">${i + 1}</div>
         <div class="sa-cover" aria-hidden="true"><span>♫</span></div>
         <div class="sa-meta">
@@ -792,30 +894,66 @@
   }
 
   function teardownResultsPage() {
+    clearTimeout(routeMountTimer);
+    routeMountTimer = undefined;
     if (!activePage) return;
     activePage.view?.querySelectorAll(".sa-row").forEach((row) => {
       row.__soundalikeRoot?.unmount?.();
     });
-    activePage.view?.remove?.();
+    activePage.resizeObserver?.disconnect?.();
+    if (activePage.syncHost) {
+      window.removeEventListener?.("resize", activePage.syncHost);
+    }
+    activePage.host?.remove?.();
     activePage = null;
     nativeContextChain = undefined;
   }
 
+  function createResultsHost(container, view) {
+    const host = document.createElement("div");
+    host.className = "sa-results-host";
+    Object.assign(host.style, {
+      position: "fixed",
+      zIndex: "10",
+      overflow: "auto",
+      background: "var(--spice-main, #121212)",
+    });
+    const syncHost = () => {
+      const bounds = container.getBoundingClientRect?.();
+      if (!bounds) return;
+      host.style.left = `${bounds.left}px`;
+      host.style.top = `${bounds.top}px`;
+      host.style.width = `${bounds.width}px`;
+      host.style.height = `${bounds.height}px`;
+    };
+    syncHost();
+    host.appendChild(view);
+    document.body.appendChild(host);
+    window.addEventListener?.("resize", syncHost);
+    const resizeObserver = typeof ResizeObserver === "function"
+      ? new ResizeObserver(syncHost)
+      : null;
+    resizeObserver?.observe?.(container);
+    return { host, syncHost, resizeObserver };
+  }
+
   function renderResultsPage(container) {
-    if (!resultsState || !container) return;
+    if (!resultsState || !container || !document.body) return;
     teardownResultsPage();
     const view = buildResultsPage(
       resultsState.data,
       resultsState.seedTrack,
-      resultsState.tracks
+      resultsState.tracks,
+      resultsState.seedLanguage
     );
-    container.replaceChildren(view);
-    activePage = { container, view };
+    const mounted = createResultsHost(container, view);
+    activePage = { container, view, ...mounted };
     nativeContextChain = undefined;
     hydrateSpotifyRows(
       resultsState.data.results,
       view,
-      resultsState.tracks
+      resultsState.tracks,
+      resultsState.seedLanguage
     ).catch((error) => {
       console.error("[soundalike] Spotify result enrichment failed", error);
     });
@@ -827,7 +965,8 @@
       '[data-testid="main-view-container"]'
     ) || document.querySelector("main");
     if (!container) {
-      setTimeout(mountResultsRoute, 100);
+      clearTimeout(routeMountTimer);
+      routeMountTimer = setTimeout(mountResultsRoute, 100);
       return;
     }
     renderResultsPage(container);
@@ -848,7 +987,12 @@
   }
 
   function showResultsPage(data, seedTrack) {
-    resultsState = { data, seedTrack, tracks: [] };
+    resultsState = {
+      data,
+      seedTrack,
+      seedLanguage: seedTrack?.soundalikeLanguage || null,
+      tracks: [],
+    };
     Spicetify.Platform.History.push({
       pathname: RESULTS_PATH,
       state: { soundalike: true },
@@ -870,6 +1014,31 @@
     "enhance" // Spicetify built-in icon
   );
   window.__soundalikeContextMenuItem.register();
+
+  function prewarmHostedRecommender() {
+    if (!window.requestIdleCallback) return;
+    window.requestIdleCallback(async () => {
+      const params = new URLSearchParams({
+        query: "Blinding Lights — The Weeknd",
+        n: "1",
+        diversity: "0",
+        v: HOSTED_API_VERSION,
+        language_policy: LANGUAGE_POLICY,
+        warm: "1",
+      });
+      try {
+        await fetchWithTimeout(
+          `${HOSTED_SERVER}/api/spicetify_recommend?${params}`,
+          { cache: "no-store" },
+          HOSTED_TIMEOUT_MS
+        );
+      } catch (error) {
+        console.debug?.("[soundalike] Hosted prewarm was unavailable.", error);
+      }
+    }, { timeout: 5000 });
+  }
+
+  prewarmHostedRecommender();
 
   console.log("[soundalike] extension loaded — right-click a track to try it.");
 })();

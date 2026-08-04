@@ -38,8 +38,9 @@ including the Microsoft-Store build.
 
 Want the recommendations *inside* Spotify — a right-click **“Find soundalikes”**
 menu that opens a navigable, playlist-style results page with artwork, artists,
-albums, measured BPM, cached results, double-click playback, and Spotify's
-native track actions on right-click? Use the
+albums, measured BPM, same-language gating from Spotify lyrics metadata, cached
+results, double-click playback, and Spotify's native track actions on
+right-click? Use the
 [**Spicetify extension**](integrations/spicetify/README.md). A Marketplace
 install works immediately with the hosted 272,853-track library. The separate
 [advanced setup guide](integrations/spicetify/SETUP.md) covers manual installs,
@@ -753,7 +754,7 @@ pytest -q
 - [x] **Hybrid ranking** — deep-vibe fuses learned texture with measured bass/dynamics (ships out of the box)
 - [x] **Recommendation benchmark** — label-free precision/coverage metrics + measured library-size trade-off
 - [x] **Diversity + multi-seed** — MMR re-ranking, per-artist caps, and blend several songs into one taste
-- [x] **Web app + right-click integration** — `soundalike serve` (paste a song / Spotify "Copy Song Link" → instant soundalikes) and a Spicetify extension with a Back/Forward-aware results page, in-place playback, and native track menus
+- [x] **Web app + right-click integration** — `soundalike serve` (paste a song / Spotify "Copy Song Link" → instant soundalikes) and a Spicetify extension with a Back/Forward-aware results page, in-place playback, native track menus, and Spotify-metadata language gating
 - [x] **Categorized real-world benchmark** — 93 sourced pairs separate pure-sonic and diagnostic relationships, with a 20-pair final artist-disjoint split, transitive graph audit, frozen 272,853-song outputs, and pair bootstrap uncertainty
 - [x] **Pretrained sonic retrieval** — dual PCA64 EfficientNet/CLAP retrieval lifts final pure-sonic primary 0.0281→0.0529 (+88.3%) while the guarded top five retains 17/20 direct passes
 - [x] **Desktop/hosted Dual-Sonic64 parity** — the 299 MB checksum-pinned release index carries both 64-d matrices and source-independent priors; numpy serving paths expose the active method/version and have exact parity tests

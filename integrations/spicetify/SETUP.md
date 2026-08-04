@@ -248,7 +248,10 @@ titles. Spotify album covers, verified artist names, album names, and measured
 BPM fill in progressively. Double-click a row or use its left-side play button
 to play that exact Spotify track without leaving the page; a single click does
 not start playback. Spotify's Back and Forward buttons preserve the result
-list while you navigate elsewhere. Right-click a row for Spotify's normal track menu, including **Add to
+list while you navigate elsewhere. Confident Spotify lyrics-language labels
+gate English to English, French to French, and so on. Results with no language
+label remain as fallbacks for instrumentals and incomplete lyrics catalogs.
+Right-click a row for Spotify's normal track menu, including **Add to
 playlist**, **Add to queue**, **Go to song radio**, artist/album navigation,
 credits, and sharing. If Spotify cannot confidently resolve a recommendation,
 the row keeps the safe Spotify-search fallback instead. The header identifies
@@ -388,7 +391,9 @@ client. It probes `http://127.0.0.1:8787` first. If the optional companion is
 healthy, the title and artist stay on your machine. Otherwise, only that title
 and artist are sent to `https://soundalike.yassin.app`; Spotify credentials,
 tokens, library data, and artwork are never sent. No separate Soundalike
-Spotify login is required.
+Spotify login is required. Language labels are read from Spotify's
+already-authenticated lyrics service inside the desktop client and are not
+sent to Soundalike.
 
 ### Troubleshooting and updates
 
@@ -397,6 +402,9 @@ Spotify login is required.
   React runtime is ready; it is not a Soundalike installation error. Fully quit
   and reopen Spotify, then retry. If it repeats, run `spicetify update` and
   `spicetify backup apply` before reopening Spotify.
+- **Spotify shows an error after leaving Soundalike:** update Soundalike in
+  Marketplace and fully restart Spotify. Current releases render in an
+  extension-owned overlay and never remove Spotify's React-owned page nodes.
 - **No “Find soundalikes” menu item:** confirm the file exists at
   `%APPDATA%\spicetify\Extensions\soundalike.js` on Windows or
   `~/.config/spicetify/Extensions/soundalike.js` on macOS/Linux, then run
@@ -441,9 +449,11 @@ right-click track ─▶ Spotify title + artist
                  play / double-click ─▶ play now │ right-click ─▶ native track menu
 ```
 
-The first uncached hosted request after an idle period can take about 30 seconds
-while the checksum-pinned 299 MB index warms; the extension shows a warm-up
-notice. Successful recommendations and resolved Spotify metadata remain in a
+The extension quietly asks the hosted recommendation function to warm after
+Spotify becomes idle. If a user opens Soundalike before that work finishes, the
+first uncached request can still take up to about 30 seconds while the
+checksum-pinned 299 MB index initializes; the extension shows a warm-up notice.
+Successful recommendations, Spotify metadata, and language labels remain in a
 bounded local cache for seven days, and the cacheable hosted endpoint lets
 repeated requests avoid recomputing the same seed. The optional local companion
 downloads and loads the same production index once and keeps it warm between

@@ -40,23 +40,34 @@ def _enrich_result_tempos(recommender, result):
     return result
 
 
-def _needs_canonical_redirect(params, query, count, diversity):
+_LANGUAGE_POLICY = "spotify-lyrics-v1"
+
+
+def _needs_canonical_redirect(
+    params, query, count, diversity, version="2", language_policy=None, warm=False
+):
     return (
         params["query"][0] != query
         or params.get("n", ["20"])[0] != str(count)
         or params.get("diversity", ["0.15"])[0] != format(diversity, "g")
+        or params.get("v", ["2"])[0] != version
+        or (
+            language_policy is not None
+            and params.get("language_policy", [""])[0] != language_policy
+        )
+        or params.get("warm", ["0"])[0] != ("1" if warm else "0")
     )
 
 
 class handler(BaseHTTPRequestHandler):
-    def _send(self, code, obj):
+    def _send(self, code, obj, cacheable=True):
         body = json.dumps(obj).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        if code == 200:
+        if code == 200 and cacheable:
             self.send_header(
                 "Cache-Control",
                 "public, max-age=0, s-maxage=86400, stale-while-revalidate=604800",
@@ -77,12 +88,24 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         request = urlsplit(self.path)
         params = parse_qs(request.query, keep_blank_values=True)
-        if set(params) - {"query", "n", "diversity", "v"} or any(
+        if set(params) - {
+            "query", "n", "diversity", "v", "language_policy", "warm"
+        } or any(
             len(values) != 1 for values in params.values()
         ):
             return self._send(400, {"ok": False, "error": "invalid query parameters"})
-        if params.get("v", ["2"])[0] != "2":
+        version = params.get("v", ["2"])[0]
+        if version not in {"2", "3"}:
             return self._send(400, {"ok": False, "error": "unsupported API version"})
+        language_policy = params.get("language_policy", [None])[0]
+        if version == "3" and language_policy != _LANGUAGE_POLICY:
+            return self._send(400, {"ok": False, "error": "unsupported language policy"})
+        if version == "2" and language_policy is not None:
+            return self._send(400, {"ok": False, "error": "unsupported language policy"})
+        warm_value = params.get("warm", ["0"])[0]
+        if warm_value not in {"0", "1"}:
+            return self._send(400, {"ok": False, "error": "invalid warm parameter"})
+        warm = warm_value == "1"
         query = params.get("query", [""])[0].strip()
         if not query or len(query) > 300:
             return self._send(400, {"ok": False, "error": "empty query"})
@@ -97,13 +120,20 @@ class handler(BaseHTTPRequestHandler):
             return self._send(
                 400, {"ok": False, "error": "invalid recommendation parameters"}
             )
-        canonical_query = urlencode({
+        canonical_params = {
             "query": query,
             "n": str(count),
             "diversity": format(diversity, "g"),
-            "v": "2",
-        })
-        if _needs_canonical_redirect(params, query, count, diversity):
+            "v": version,
+        }
+        if language_policy is not None:
+            canonical_params["language_policy"] = language_policy
+        if warm:
+            canonical_params["warm"] = "1"
+        canonical_query = urlencode(canonical_params)
+        if _needs_canonical_redirect(
+            params, query, count, diversity, version, language_policy, warm
+        ):
             return self._redirect(f"{request.path}?{canonical_query}")
         try:
             recommender = get_recommender()
@@ -123,7 +153,13 @@ class handler(BaseHTTPRequestHandler):
             seed_bpm = _tempo_bpm(recommender, row)
             if seed_bpm:
                 result.setdefault("vibe", {})["tempo"] = f"{seed_bpm} BPM"
-            self._send(200, _enrich_result_tempos(recommender, result))
+            if language_policy is not None:
+                result["language_policy"] = language_policy
+            self._send(
+                200,
+                _enrich_result_tempos(recommender, result),
+                cacheable=not warm,
+            )
         except Exception as error:
             print(f"Spicetify recommendation failed: {error}", file=sys.stderr)
             self._send(500, {

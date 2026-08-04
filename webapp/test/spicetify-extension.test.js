@@ -32,25 +32,71 @@ function loadExtension(fetchImpl, options = {}) {
   const history = [];
   const played = [];
   const graphqlRequests = [];
+  const cosmosRequests = [];
   const historyListeners = [];
   const storage = options.storage || new Map();
   const rows = (options.results || []).map((_, index) => ({
     dataset: { index: String(index) },
+    hidden: index >= 20,
     querySelector() {
       return null;
     },
   }));
-  const wrap = {
-    className: "",
-    innerHTML: "",
+  const languageStatus = { textContent: "" };
+  function makeDiv() {
+    return {
+      className: "",
+      innerHTML: "",
+      style: {},
+      children: [],
+      parentElement: null,
+      appendChild(value) {
+        value.parentElement = this;
+        this.children.push(value);
+      },
+      remove() {
+        if (this.parentElement?.children) {
+          this.parentElement.children = this.parentElement.children.filter(
+            (child) => child !== this,
+          );
+        }
+        if (this.className === "sa-results-host") currentPage = undefined;
+      },
+      querySelector(selector) {
+        if (selector === ".sa-language-status") return languageStatus;
+        const match = selector.match(/data-index="(\d+)"/);
+        return match ? rows[Number(match[1])] : null;
+      },
+      querySelectorAll(selector) {
+        return selector === ".sa-row" ? rows : [];
+      },
+    };
+  }
+  const nativeChild = { id: "spotify-owned-content" };
+  let pageContainer;
+  const body = {
+    children: [],
+    appendChild(value) {
+      value.parentElement = this;
+      this.children.push(value);
+      if (value.className === "sa-results-host") {
+        currentPage = value.children.find(
+          (child) => child.className === "sa-results",
+        );
+      }
+    },
+  };
+  const wrap = makeDiv();
+  Object.assign(wrap, {
     querySelector(selector) {
+      if (selector === ".sa-language-status") return languageStatus;
       const match = selector.match(/data-index="(\d+)"/);
       return match ? rows[Number(match[1])] : null;
     },
     querySelectorAll(selector) {
       return selector === ".sa-row" ? rows : [];
     },
-  };
+  });
   const registry = {};
   const platform = {};
   const AppProvider = function AppProvider() {};
@@ -86,10 +132,14 @@ function loadExtension(fetchImpl, options = {}) {
       },
     },
   };
-  const pageContainer = {
+  pageContainer = {
     parentElement: null,
-    replaceChildren(value) {
-      currentPage = value;
+    children: [nativeChild],
+    getBoundingClientRect() {
+      return { left: 72, top: 64, width: 1200, height: 720 };
+    },
+    replaceChildren() {
+      throw new Error("Soundalike must not replace Spotify-owned children");
     },
     ...(options.nativeMenus ? nativeHost : {}),
   };
@@ -117,8 +167,11 @@ function loadExtension(fetchImpl, options = {}) {
     setTimeout,
     console: { error() {}, log() {}, warn() {} },
     document: {
+      body,
       createElement(tag) {
-        return tag === "div" ? wrap : {};
+        if (tag !== "div") return {};
+        if (!wrap.className && !wrap.innerHTML) return wrap;
+        return makeDiv();
       },
       querySelector(selector) {
         if (
@@ -171,8 +224,16 @@ function loadExtension(fetchImpl, options = {}) {
           data: {
             searchV2: {
               topResultsV2: {
-                itemsV2: options.spotifyTrack
-                  ? [{ item: { data: options.spotifyTrack } }]
+                itemsV2: (
+                  options.spotifyTracks?.[variables.searchTerm] ||
+                  options.spotifyTrack
+                )
+                  ? [{
+                    item: {
+                      data: options.spotifyTracks?.[variables.searchTerm] ||
+                        options.spotifyTrack,
+                    },
+                  }]
                   : [],
               },
             },
@@ -180,6 +241,18 @@ function loadExtension(fetchImpl, options = {}) {
         };
       },
     },
+    ...(options.languageByTrackId ? {
+      CosmosAsync: {
+        async get(url) {
+          cosmosRequests.push(url);
+          const trackId = url.match(/\/track\/([^?]+)/)?.[1];
+          const language = options.languageByTrackId[trackId];
+          return language
+            ? { lyrics: { language } }
+            : { code: 404, error: "lyrics unavailable" };
+        },
+      },
+    } : {}),
     Platform: {
       History: {
         location: { pathname: "/" },
@@ -249,6 +322,9 @@ function loadExtension(fetchImpl, options = {}) {
     notifications,
     played,
     graphqlRequests,
+    cosmosRequests,
+    nativeChildren: pageContainer.children,
+    languageStatus,
     rows,
     get currentPage() {
       return currentPage;
@@ -297,7 +373,12 @@ test("uses the hosted library when the local companion is unavailable", async ()
     urls[1],
     /^https:\/\/soundalike\.yassin\.app\/api\/spicetify_recommend\?/,
   );
-  assert.equal(new URL(urls[1]).searchParams.get("v"), "2");
+  assert.equal(new URL(urls[1]).searchParams.get("v"), "3");
+  assert.equal(
+    new URL(urls[1]).searchParams.get("language_policy"),
+    "spotify-lyrics-v1",
+  );
+  assert.equal(new URL(urls[1]).searchParams.get("n"), "40");
   assert.match(page.innerHTML, /HOSTED LIBRARY/);
   assert.deepEqual(app.history, ["/soundalike"]);
   assert.equal(
@@ -563,6 +644,46 @@ test("restores cached results when navigating back to the Soundalike page", asyn
   assert.ok(app.currentPage);
   assert.equal(firstPage.innerHTML, app.currentPage.innerHTML);
   assert.equal(app.rows[0].dataset.uri, spotifyTrack.uri);
+  assert.deepEqual(app.nativeChildren, [{ id: "spotify-owned-content" }]);
+});
+
+test("filters confident cross-language results and keeps unknown lyrics as fallback", async () => {
+  const results = [
+    { title: "Même amour", artist: "Artiste Français" },
+    { title: "English Song", artist: "English Artist" },
+    { title: "Sans paroles", artist: "Artiste Inconnu" },
+  ];
+  const spotifyTracks = Object.fromEntries(results.map((result, index) => [
+    `${result.title} ${result.artist}`,
+    {
+      __typename: "Track",
+      name: result.title,
+      uri: `spotify:track:result${index}`,
+      albumOfTrack: { coverArt: { sources: [] } },
+      artists: { items: [{ profile: { name: result.artist } }] },
+    },
+  ]));
+  const app = loadExtension(async (url) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    return response(200, { ...recommendation, results });
+  }, {
+    results,
+    spotifyTracks,
+    languageByTrackId: {
+      test: "fr",
+      result0: "fr",
+      result1: "en",
+    },
+  });
+
+  await app.run();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+
+  assert.match(app.languageStatus.textContent, /French lyrics/);
+  assert.equal(app.cosmosRequests.length, 4);
+  assert.equal(app.rows[0].hidden, false);
+  assert.equal(app.rows[1].hidden, true);
+  assert.equal(app.rows[2].hidden, false);
 });
 
 test("reuses persisted recommendations and Spotify metadata on repeated tracks", async () => {
@@ -597,7 +718,7 @@ test("reuses persisted recommendations and Spotify metadata on repeated tracks",
     urls.filter((url) => url.includes("/api/spicetify_recommend")).length,
     1,
   );
-  const persisted = JSON.parse(storage.get("soundalike:spicetify-cache:v2"));
+  const persisted = JSON.parse(storage.get("soundalike:spicetify-cache:v3"));
   assert.ok(persisted.spotifyTracks["spotify:track:test"]);
 
   const second = loadExtension(async (url) => {

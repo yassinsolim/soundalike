@@ -165,6 +165,32 @@ def test_spicetify_query_canonicalization_uses_decoded_values():
         params, "Blinding Lights — The Weeknd", 20, 0.15
     )
 
+    params = {
+        "query": ["Blinding Lights — The Weeknd"],
+        "n": ["40"],
+        "diversity": ["0.15"],
+        "v": ["3"],
+        "language_policy": ["spotify-lyrics-v1"],
+    }
+    assert not _needs_canonical_redirect(
+        params,
+        "Blinding Lights — The Weeknd",
+        40,
+        0.15,
+        "3",
+        "spotify-lyrics-v1",
+    )
+    params["warm"] = ["1"]
+    assert not _needs_canonical_redirect(
+        params,
+        "Blinding Lights — The Weeknd",
+        40,
+        0.15,
+        "3",
+        "spotify-lyrics-v1",
+        True,
+    )
+
 
 def test_enhanced_recommender_differs_from_baseline(tmp_path):
     """Enhanced mode must produce different (scene-improved) results from baseline."""
