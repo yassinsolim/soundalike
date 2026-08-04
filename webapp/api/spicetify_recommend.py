@@ -77,10 +77,12 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         request = urlsplit(self.path)
         params = parse_qs(request.query, keep_blank_values=True)
-        if set(params) - {"query", "n", "diversity"} or any(
+        if set(params) - {"query", "n", "diversity", "v"} or any(
             len(values) != 1 for values in params.values()
         ):
             return self._send(400, {"ok": False, "error": "invalid query parameters"})
+        if params.get("v", ["2"])[0] != "2":
+            return self._send(400, {"ok": False, "error": "unsupported API version"})
         query = params.get("query", [""])[0].strip()
         if not query or len(query) > 300:
             return self._send(400, {"ok": False, "error": "empty query"})
@@ -99,6 +101,7 @@ class handler(BaseHTTPRequestHandler):
             "query": query,
             "n": str(count),
             "diversity": format(diversity, "g"),
+            "v": "2",
         })
         if _needs_canonical_redirect(params, query, count, diversity):
             return self._redirect(f"{request.path}?{canonical_query}")

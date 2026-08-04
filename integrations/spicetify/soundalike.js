@@ -109,6 +109,7 @@
       query: payload.query,
       n: String(payload.n),
       diversity: String(payload.diversity),
+      v: "2",
     });
     let response;
     try {

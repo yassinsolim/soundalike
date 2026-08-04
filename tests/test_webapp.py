@@ -154,6 +154,7 @@ def test_spicetify_query_canonicalization_uses_decoded_values():
         "query": ["Blinding Lights — The Weeknd"],
         "n": ["20"],
         "diversity": ["0.15"],
+        "v": ["2"],
     }
 
     assert not _needs_canonical_redirect(
