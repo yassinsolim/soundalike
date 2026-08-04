@@ -1,10 +1,10 @@
 {
   "name": "Soundalike",
-  "description": "Find genuinely similar tracks from Spotify's right-click menu using audio embeddings.",
+  "description": "Find fast, same-language soundalikes from Spotify's right-click menu using audio embeddings.",
   "preview": "docs/spicetify-results.png",
   "main": "integrations/spicetify/soundalike.js",
   "readme": "integrations/spicetify/README.md",
-  "branch": "591b7b267899a39d4425e357d29a1bcec4cd564c",
+  "branch": "ad8ed66fcc1bd57786a9cb113d02276e6f43b95b",
   "authors": [
     {
       "name": "Yassin Soliman",
