@@ -4,7 +4,7 @@
   "preview": "docs/spicetify-results.png",
   "main": "integrations/spicetify/soundalike.js",
   "readme": "integrations/spicetify/README.md",
-  "branch": "ad8ed66fcc1bd57786a9cb113d02276e6f43b95b",
+  "branch": "554e3078e5cc624fc78a8c5ce6599532ffe8814f",
   "authors": [
     {
       "name": "Yassin Soliman",
