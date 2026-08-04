@@ -9,8 +9,8 @@ Add a **“Find soundalikes”** item to the right-click menu of any track in th
 Spotify desktop app. Select it and a page shows songs that genuinely *sound*
 like the selected track — powered by precomputed audio embeddings, not tags.
 Double-click a verified result or use its left-side play button to play it
-immediately. Right-click it for Spotify's native playlist, queue, radio,
-artist, album, credits, and sharing actions.
+immediately. Right-click it to find soundalikes again or use Spotify's native
+playlist, queue, radio, artist, album, credits, and sharing actions.
 
 ![Soundalike results inside Spotify](../../docs/spicetify-results.png)
 

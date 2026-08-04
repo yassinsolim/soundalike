@@ -544,6 +544,11 @@ test("renders playlist metadata, plays on double-click, and exposes the native m
     rightClickMenu.props.menu,
     (node) => node.type === app.components.TrackMenu,
   );
+  assert.equal(
+    rightClickMenu.props.menu.props.uri,
+    spotifyTrack.uri,
+    "registered context actions need the result track URI",
+  );
   assert.equal(trackMenu.props.uri, spotifyTrack.uri);
   assert.equal(trackMenu.props.albumUri, spotifyTrackDetails.albumOfTrack.uri);
   assert.deepEqual(JSON.parse(JSON.stringify(trackMenu.props.artists)), [{

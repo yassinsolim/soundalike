@@ -31,8 +31,9 @@ automatically uses the hosted 272,853-track recommendation library.
 - The play button on a verified result plays that exact Spotify track
   immediately without closing or leaving the page. Double-clicking anywhere
   on the row does the same; a single click does not interrupt playback.
-- Right-clicking a result opens Spotify's native menu for playlists, queueing,
-  song radio, artist and album navigation, credits, and sharing.
+- Right-clicking a result opens Spotify's native menu with **Find soundalikes**
+  again, plus playlists, queueing, song radio, artist and album navigation,
+  credits, and sharing.
 - If Spotify cannot confidently match a recommendation, Soundalike safely
   opens a Spotify search instead of playing the wrong track.
 - Successful recommendations and resolved Spotify metadata are cached locally

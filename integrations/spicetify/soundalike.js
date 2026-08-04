@@ -596,6 +596,8 @@
     return React.createElement(
       React.Suspense,
       {
+        // RightClickMenu uses the menu element's URI props to inject registered items.
+        uri: track.uri,
         fallback: React.createElement(
           "div",
           { className: "sa-menu-loading" },
