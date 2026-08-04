@@ -13,6 +13,7 @@
   const HOSTED_TIMEOUT_MS = 65000;
   const LOCAL_STATUS_TTL_MS = 30000;
   const CACHE_KEY = "soundalike:spicetify-cache:v3";
+  const LEGACY_CACHE_KEYS = ["soundalike:spicetify-cache:v2"];
   const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
   const MAX_RECOMMENDATION_CACHE_SIZE = 50;
   const MAX_SPOTIFY_CACHE_SIZE = 500;
@@ -30,7 +31,7 @@
   let cacheSaveTimer;
   const pendingRecommendations = new Map();
   const pendingSpotifyTracks = new Map();
-  const persistentCache = loadPersistentCache();
+  let persistentCache;
 
   // Wait until the Spicetify APIs we need are ready.
   if (!(
@@ -48,6 +49,8 @@
     return;
   }
   if (window.__soundalikeContextMenuItem) return;
+  removeLegacyCaches();
+  persistentCache = loadPersistentCache();
 
   const onlyTracks = (uris) =>
     Array.isArray(uris) && uris.length === 1 && uris[0].includes(":track:");
@@ -353,6 +356,16 @@
       console.warn("[soundalike] Could not load the local result cache.", error);
     }
     return { recommendations: {}, spotifyTracks: {} };
+  }
+
+  function removeLegacyCaches() {
+    for (const key of LEGACY_CACHE_KEYS) {
+      try {
+        Spicetify.LocalStorage?.remove?.(key);
+      } catch (error) {
+        console.warn(`[soundalike] Could not remove legacy cache ${key}.`, error);
+      }
+    }
   }
 
   function readCacheEntry(bucket, key, includeMiss = false) {

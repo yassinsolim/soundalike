@@ -283,6 +283,9 @@ function loadExtension(fetchImpl, options = {}) {
       set(key, value) {
         storage.set(key, value);
       },
+      remove(key) {
+        storage.delete(key);
+      },
     },
     React,
     ReactComponent: { PlatformProvider, RightClickMenu, TrackMenu },
@@ -688,6 +691,7 @@ test("filters confident cross-language results and keeps unknown lyrics as fallb
 
 test("reuses persisted recommendations and Spotify metadata on repeated tracks", async () => {
   const storage = new Map();
+  storage.set("soundalike:spicetify-cache:v2", "{\"stale\":true}");
   const result = { title: "Take My Breath", artist: "The Weeknd", bpm: 122 };
   const spotifyTrack = {
     __typename: "Track",
@@ -711,6 +715,7 @@ test("reuses persisted recommendations and Spotify metadata on repeated tracks",
     spotifyTrack,
     storage,
   });
+  assert.equal(storage.has("soundalike:spicetify-cache:v2"), false);
 
   await first.run();
   await new Promise((resolve) => setTimeout(resolve, 250));
