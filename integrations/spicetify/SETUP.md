@@ -449,12 +449,11 @@ right-click track ─▶ Spotify title + artist
                  play / double-click ─▶ play now │ right-click ─▶ native track menu
 ```
 
-The extension quietly asks the hosted recommendation function to warm after
-Spotify becomes idle. If a user opens Soundalike before that work finishes, the
-first uncached request can still take up to about 30 seconds while the
-checksum-pinned 299 MB index initializes; the extension shows a warm-up notice.
-Successful recommendations, Spotify metadata, and language labels remain in a
-bounded local cache for seven days, and the cacheable hosted endpoint lets
-repeated requests avoid recomputing the same seed. The optional local companion
-downloads and loads the same production index once and keeps it warm between
-right-clicks.
+The extension normally uses an always-on hosted recommendation service and
+falls back to the Vercel deployment if that service is unavailable. It quietly
+asks the Vercel function to warm after Spotify becomes idle. A fallback request
+can still take up to about 30 seconds while the checksum-pinned 299 MB index
+initializes. Successful recommendations, Spotify metadata, and language labels
+remain in a bounded local cache for seven days, and cacheable hosted responses
+avoid recomputing the same seed. The optional local companion downloads and
+loads the same production index once and keeps it warm between right-clicks.

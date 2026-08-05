@@ -43,18 +43,20 @@ automatically uses the hosted 272,853-track recommendation library.
 ## Privacy
 
 Soundalike sends the selected track's title and artist to
-`https://soundalike.yassin.app` to retrieve recommendations. It never sends
-your Spotify password, access token, library, listening history, or artwork.
-Language labels come directly from Spotify inside the already-authenticated
-desktop client and are not sent to Soundalike. No separate Spotify login is
-required.
+`https://soundalike-api.yassin.app` to retrieve recommendations. If that
+service is unavailable, it sends the same title and artist to
+`https://soundalike.yassin.app` as a fallback. It never sends your Spotify
+password, access token, library, listening history, or artwork. Language
+labels come directly from Spotify inside the already-authenticated desktop
+client and are not sent to Soundalike. No separate Spotify login is required.
 
 ## Good to know
 
-- Soundalike quietly prewarms the hosted recommender after Spotify starts.
-  Opening a result while that first warm-up is still running can take up to
-  about 30 seconds. Repeated tracks use the local cache, and hosted responses
-  can be reused by the CDN.
+- Soundalike normally uses an always-on recommendation service. It quietly
+  prewarms the Vercel fallback after Spotify starts; if the primary service is
+  unavailable, the first fallback request after idle can take up to about 30
+  seconds. Repeated tracks use the local cache, and hosted responses can be
+  reused by the CDN.
 - The hosted library currently covers 272,853 tracks.
 - If **Find soundalikes** does not appear immediately after installation,
   fully quit and reopen Spotify.

@@ -8,9 +8,11 @@
 
 (function soundalike() {
   const LOCAL_SERVER = "http://127.0.0.1:8787";
-  const HOSTED_SERVER = "https://soundalike.yassin.app";
+  const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
+  const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
   const LOCAL_PROBE_TIMEOUT_MS = 250;
-  const HOSTED_TIMEOUT_MS = 65000;
+  const PRIMARY_HOSTED_TIMEOUT_MS = 5000;
+  const FALLBACK_HOSTED_TIMEOUT_MS = 65000;
   const LOCAL_STATUS_TTL_MS = 30000;
   const CACHE_KEY = "soundalike:spicetify-cache:v4";
   const LEGACY_CACHE_KEYS = [
@@ -114,7 +116,7 @@
     return result;
   }
 
-  async function getHostedRecommendations(payload) {
+  async function getCacheableHostedRecommendations(server, payload, timeoutMs) {
     const params = new URLSearchParams({
       query: payload.query,
       n: String(payload.n),
@@ -122,39 +124,21 @@
       v: HOSTED_API_VERSION,
       language_policy: LANGUAGE_POLICY,
     });
-    let response;
-    try {
-      response = await fetchWithTimeout(
-        `${HOSTED_SERVER}/api/spicetify_recommend?${params}`,
-        { cache: "default" },
-        HOSTED_TIMEOUT_MS
-      );
-    } catch (error) {
-      console.warn(
-        "[soundalike] Cacheable hosted endpoint failed; using legacy endpoint.",
-        error
-      );
-      return getLegacyHostedRecommendations(payload);
-    }
+    const response = await fetchWithTimeout(
+      `${server}/api/spicetify_recommend?${params}`,
+      { cache: "default" },
+      timeoutMs
+    );
     let result;
     try {
       result = await response.json();
     } catch {
-      if (
-        response.status === 404 ||
-        response.status === 405 ||
-        response.status >= 500
-      ) {
-        return getLegacyHostedRecommendations(payload);
-      }
       throw new Error(`Recommendation service returned HTTP ${response.status}.`);
     }
-    if (
-      response.status === 404 ||
-      response.status === 405 ||
-      response.status >= 500
-    ) {
-      return getLegacyHostedRecommendations(payload);
+    if (!response.ok && response.status !== 400 && response.status !== 422) {
+      throw new Error(
+        result?.error || `Recommendation service returned HTTP ${response.status}.`
+      );
     }
     if (!response.ok && !result?.error) {
       throw new Error(`Recommendation service returned HTTP ${response.status}.`);
@@ -162,12 +146,40 @@
     return { data: result, cacheable: true };
   }
 
+  async function getHostedRecommendations(payload) {
+    try {
+      return await getCacheableHostedRecommendations(
+        PRIMARY_HOSTED_SERVER,
+        payload,
+        PRIMARY_HOSTED_TIMEOUT_MS
+      );
+    } catch (error) {
+      console.warn(
+        "[soundalike] Primary hosted endpoint failed; using Vercel fallback.",
+        error
+      );
+    }
+    try {
+      return await getCacheableHostedRecommendations(
+        FALLBACK_HOSTED_SERVER,
+        payload,
+        FALLBACK_HOSTED_TIMEOUT_MS
+      );
+    } catch (error) {
+      console.warn(
+        "[soundalike] Cacheable Vercel endpoint failed; using legacy endpoint.",
+        error
+      );
+      return getLegacyHostedRecommendations(payload);
+    }
+  }
+
   async function getLegacyHostedRecommendations(payload) {
     return {
       data: await postRecommendations(
-        HOSTED_SERVER,
+        FALLBACK_HOSTED_SERVER,
         payload,
-        HOSTED_TIMEOUT_MS,
+        FALLBACK_HOSTED_TIMEOUT_MS,
         true
       ),
       cacheable: false,
@@ -207,9 +219,9 @@
       }
     }
     Spicetify.showNotification(
-      "Using hosted Soundalike — the first request after idle can take about 30 seconds.",
+      "Using hosted Soundalike.",
       false,
-      10000
+      5000
     );
     const hosted = await getHostedRecommendations(payload);
     return { data: hosted.data, source: "hosted", cacheable: hosted.cacheable };
@@ -1046,7 +1058,7 @@
   );
   window.__soundalikeContextMenuItem.register();
 
-  function prewarmHostedRecommender() {
+  function prewarmFallbackRecommender() {
     if (!window.requestIdleCallback) return;
     window.requestIdleCallback(async () => {
       const params = new URLSearchParams({
@@ -1059,17 +1071,20 @@
       });
       try {
         await fetchWithTimeout(
-          `${HOSTED_SERVER}/api/spicetify_recommend?${params}`,
+          `${FALLBACK_HOSTED_SERVER}/api/spicetify_recommend?${params}`,
           { cache: "no-store" },
-          HOSTED_TIMEOUT_MS
+          FALLBACK_HOSTED_TIMEOUT_MS
         );
       } catch (error) {
-        console.debug?.("[soundalike] Hosted prewarm was unavailable.", error);
+        console.debug?.(
+          "[soundalike] Vercel fallback prewarm was unavailable.",
+          error
+        );
       }
     }, { timeout: 5000 });
   }
 
-  prewarmHostedRecommender();
+  prewarmFallbackRecommender();
 
   console.log("[soundalike] extension loaded — right-click a track to try it.");
 })();
