@@ -389,11 +389,12 @@ On every supported platform, the extension reads the clicked track's title,
 artist, and artwork through Spotify's already-authenticated internal GraphQL
 client. It probes `http://127.0.0.1:8787` first. If the optional companion is
 healthy, the title and artist stay on your machine. Otherwise, only that title
-and artist are sent to `https://soundalike.yassin.app`; Spotify credentials,
-tokens, library data, and artwork are never sent. No separate Soundalike
-Spotify login is required. Language labels are read from Spotify's
-already-authenticated lyrics service inside the desktop client and are not
-sent to Soundalike.
+and artist are sent to `https://soundalike-api.yassin.app`, or to
+`https://soundalike.yassin.app` if the primary service is unavailable. Spotify
+credentials, tokens, library data, and artwork are never sent. No separate
+Soundalike Spotify login is required. Language labels are read from Spotify's
+already-authenticated lyrics service inside the desktop client and are not sent
+to Soundalike.
 
 ### Troubleshooting and updates
 
