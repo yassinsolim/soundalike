@@ -432,6 +432,10 @@ def test_autocomplete_client_aborts_stale_requests_and_reuses_cache():
     assert "requestSequence" in script
     assert "cachedPrefix" in script
     assert "requestIdleCallback" in script
+    assert 'primaryRecommendationServer = "https://soundalike-api.yassin.app"' in script
+    assert 'fallbackRecommendationServer = "https://soundalike.yassin.app"' in script
+    assert "primaryRecommendationTimeoutMs = 5000" in script
+    assert "/api/spicetify_recommend?" in script
 
 
 def test_results_include_deezer_id_for_previews(tmp_path):

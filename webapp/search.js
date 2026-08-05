@@ -6,6 +6,10 @@
 
   const cache = new Map();
   const maxCacheEntries = 64;
+  const primaryRecommendationServer = "https://soundalike-api.yassin.app";
+  const fallbackRecommendationServer = "https://soundalike.yassin.app";
+  const primaryRecommendationTimeoutMs = 5000;
+  const fallbackRecommendationTimeoutMs = 65000;
   let timer = null;
   let controller = null;
   let requestSequence = 0;
@@ -97,6 +101,69 @@
   }
 
   input.addEventListener("input", onTypeCached);
+
+  async function fetchRecommendations(server, item, timeoutMs) {
+    const params = new URLSearchParams({
+      query: `${item.title} — ${item.artist}`,
+      n: "20",
+      diversity: "0.15",
+      v: "2",
+    });
+    const requestController = new AbortController();
+    const timeout = window.setTimeout(() => requestController.abort(), timeoutMs);
+    try {
+      const response = await fetch(
+        `${server}/api/spicetify_recommend?${params}`,
+        { cache: "default", signal: requestController.signal }
+      );
+      const body = await response.json();
+      if (!response.ok && response.status !== 400 && response.status !== 422) {
+        throw new Error(body.error || `recommendation returned ${response.status}`);
+      }
+      return body;
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
+  async function requestRecommendations(item) {
+    try {
+      return await fetchRecommendations(
+        primaryRecommendationServer,
+        item,
+        primaryRecommendationTimeoutMs
+      );
+    } catch (error) {
+      console.warn(
+        "[soundalike] Primary recommendation service failed; using Vercel.",
+        error
+      );
+      return fetchRecommendations(
+        fallbackRecommendationServer,
+        item,
+        fallbackRecommendationTimeoutMs
+      );
+    }
+  }
+
+  pick = async item => {
+    hideAc();
+    input.value = `${item.title} — ${item.artist}`;
+    document.querySelector("#out").innerHTML =
+      '<div class="state"><span class="spin"></span> matching…</div>';
+    try {
+      const body = await requestRecommendations(item);
+      if (!body.ok) {
+        document.querySelector("#out").innerHTML =
+          `<div class="state err">${esc(body.error || "No match.")}</div>`;
+        return;
+      }
+      render(body);
+    } catch {
+      document.querySelector("#out").innerHTML =
+        '<div class="state err">Server error.</div>';
+    }
+  };
 
   const prewarm = () => {
     fetch("/api/search?q=lo&limit=1", { cache: "force-cache" }).catch(() => {});
