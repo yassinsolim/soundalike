@@ -294,6 +294,102 @@ matrices. Keep `legacy-v1` only when strictly reproducing or resuming artifacts
 created with the legacy hash semantics; strict resume treats the modes as
 different configurations.
 
+## Calibrated semantic predictor
+
+`soundalike.ml.semantic_predictor` is a separate research-only path for the 183
+MTG-Jamendo genre, instrument, and mood/theme labels. It trains one fixed ridge
+head from fold-0 train artists, fits monotonic probability calibration on 70% of
+the fold-0 validation artists, and reports calibration on the remaining
+validation artists. Artist assignment is deterministic and disjoint.
+
+The module refuses to load the official test TSV. Its model and report always
+declare `test_labels_accessed: false`, `production_ranking_changed: false`, and
+`promotion_allowed: false`. The validation audit measures probability
+calibration plus fixed per-category tag recall, hit rate, and coverage. These
+are predictor diagnostics, not independent recommendation-quality evidence,
+because prior V3 work consumed the available Jamendo evaluation populations.
+
+```powershell
+$python = 'C:\Users\solim\Spotify-Statistics\.venv\Scripts\python.exe'
+$out = 'C:\soundalike-data\semantic-predictor-v1'
+
+& $python -m soundalike.ml.semantic_predictor train `
+  --metadata-root 'C:\soundalike-data\mtg-jamendo-dataset' `
+  --store 'C:\soundalike-data\mtg-jamendo-fulltrack-artifacts\clap-v1-full-55701' `
+  --model-output "$out\model.npz" `
+  --metadata-output "$out\model.json" `
+  --report-output "$out\calibration-report.json"
+```
+
+The export command first checks whether a catalogue CLAP matrix matches the
+training feature domain. The historical 272,853-row preview matrix currently
+fails that gate: its standardized coordinate mean drift is about 1.09 against a
+maximum of 0.25, and its mean relative coordinate scale is about 0.69 against an
+allowed range of 0.8-1.2. Forcing that matrix through the predictor collapses
+most tracks onto broad electronic/experimental tags, so that export is rejected.
+
+```powershell
+& $python -m soundalike.ml.semantic_predictor export `
+  --model "$out\model.npz" `
+  --metadata "$out\model.json" `
+  --embeddings 'C:\Users\solim\Spotify-Statistics\ml_data\research_clap512_cal.f16.npy' `
+  --embeddings-build 'C:\Users\solim\Spotify-Statistics\ml_data\research_clap512_cal.build.json' `
+  --index 'C:\Users\solim\Spotify-Statistics\ml_data\deepvibe_index_v5.npz' `
+  --output "$out\production-sparse.npz" `
+  --output-metadata "$out\production-sparse.json"
+```
+
+The command above is therefore expected to block until catalogue features are
+re-extracted with the exact frozen CLAP audio pipeline, reviewed, and explicitly
+repinned in the exporter. New feature and build files necessarily have new
+checksums; the old pins must never be bypassed automatically. After repinning,
+the new matrix must still pass the domain gate. An accepted export stores four
+genre, two instrument, and two mood/theme probabilities per track as `uint16`
+tag IDs plus `float16` probabilities. It is checksum-pinned to the feature file,
+its build record, the live V2 index, and track order; its JSON sidecar binds
+those sources to the predictor, sparse output, quotas, threshold, taxonomy, and
+domain diagnostics. It remains an experiment input only. Production V2 must not
+change without a newly frozen external population and blind listener
+evaluation.
+
+A bounded five-track Deezer-preview canary was downloaded, processed, and
+discarded without retaining audio. Exact waveform extraction produced coherent
+top genres for five deliberately different tracks: pop/electronic for Blinding
+Lights, rock/indie/punk for Smells Like Teen Spirit, dance/house/electronic for
+One More Time, rock/indie/alternative for Mr. Brightside, and hip-hop/rap for
+HUMBLE. This isolates the failure to the legacy cached feature construction.
+It does not authorize a catalogue-scale download or model promotion. Review
+provider terms, bandwidth, preview availability, and derived-artifact rights
+before any bulk extraction; provider audio must never become training data.
+
+Lawful MTG-Jamendo crop audits confirmed that the exact extractor remains in
+domain. A 384-track, four-position sample passed the feature gate and averaged
+0.894 cosine similarity to full-track embeddings. In a separate 96-track
+stability audit, averaging four section embeddings reached 0.987 mean cosine
+similarity to full-track embeddings. Crop position changes individual tags,
+but multi-section pooling closely reconstructs the full-track representation.
+
+An external diagnostic used the officially distributed FMA-small archive after
+verifying both archive hashes and all 8,000 per-file SHA-1 values. Tracks with
+missing, NoDerivatives, or Music-Sharing licenses were excluded. The frozen
+470-track FMA test cohort beat a smoothed-prior genre baseline: strict macro
+hit@1 was 0.424 versus 0.143 and strict macro hit@4 was 0.684 versus 0.286.
+However, standardized mean drift was 0.297, just above the 0.25 gate, and folk
+and generic instrumental transfer remained weak. FMA audio did not train or
+calibrate the predictor.
+
+A preregistered post-test experiment estimated a diagonal mean/scale transform
+from 1,023 successfully decoded, derivative-compatible FMA training tracks.
+Selection did not use genre labels and had zero overlap with the test cohort.
+The transform reduced measured test drift from 0.297 to 0.094, but lowered all
+four external genre diagnostics: strict hit@1 by 0.031, strict hit@4 by 0.035,
+family hit@1 by 0.027, and family hit@4 by 0.036. The transform is rejected.
+Passing a coarse feature-domain gate is not sufficient evidence of semantic
+quality, and these consumed external results cannot support promotion or a new
+normalization search. Do not retrain from this evidence alone; the remaining
+blocker is an authorized exact-pipeline catalogue source followed by a newly
+frozen blind listener evaluation.
+
 Evaluate all trained candidates on the same frozen global top-200 pools:
 
 ```powershell
