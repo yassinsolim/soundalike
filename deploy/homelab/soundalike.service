@@ -1,0 +1,29 @@
+[Unit]
+Description=Soundalike always-on recommendation API
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=soundalike
+Group=soundalike
+WorkingDirectory=/opt/soundalike
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+Environment=SOUNDALIKE_HOST=127.0.0.1
+Environment=SOUNDALIKE_PORT=8788
+Environment=SOUNDALIKE_INDEX_PATH=/var/lib/soundalike/deepvibe_index.npz
+ExecStart=/opt/soundalike/.venv/bin/python /opt/soundalike/deploy/homelab/server.py
+Restart=always
+RestartSec=5
+TimeoutStartSec=120
+MemoryMax=3500M
+TasksMax=64
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

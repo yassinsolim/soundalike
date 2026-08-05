@@ -37,6 +37,46 @@ The release catalogue contains 272,853 songs; misses are reported honestly.
 
 ---
 
+## Always-on recommendation origin
+
+Production recommendations use the same numpy endpoint on an Ubuntu VM so model
+initialization happens once at service startup instead of during a user request.
+The public hostname `soundalike-api.yassin.app` is a Cloudflare Tunnel route to
+`http://127.0.0.1:8788`; the VM has no public application port.
+
+The reproducible service files are in `deploy/homelab/`. On the VM:
+
+```bash
+sudo useradd --system --home /var/lib/soundalike --shell /usr/sbin/nologin soundalike
+sudo install -d -o root -g soundalike -m 0750 /opt/soundalike /var/lib/soundalike
+sudo git clone https://github.com/yassinsolim/soundalike.git /opt/soundalike
+sudo python3 -m venv /opt/soundalike/.venv
+sudo /opt/soundalike/.venv/bin/pip install -r /opt/soundalike/webapp/requirements.txt
+curl --fail --location --output /tmp/deepvibe_index.npz \
+  https://github.com/yassinsolim/soundalike/releases/download/index-2026.07.11-dual-sonic64/deepvibe_index.npz
+echo 'f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9  /tmp/deepvibe_index.npz' |
+  sha256sum --check
+sudo install -o root -g soundalike -m 0640 /tmp/deepvibe_index.npz \
+  /var/lib/soundalike/deepvibe_index.npz
+sudo install -o root -g root -m 0644 \
+  /opt/soundalike/deploy/homelab/soundalike.service \
+  /etc/systemd/system/soundalike.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now soundalike.service
+curl --fail http://127.0.0.1:8788/healthz
+```
+
+Keep the Cloudflare Tunnel token only in root-readable VM configuration. Never
+place it in this repository. Configure the tunnel ingress to send
+`soundalike-api.yassin.app` to `http://localhost:8788`, followed by a catch-all
+404 rule.
+
+The website and Spicetify extension try this always-on origin first and retain
+Vercel's cacheable GET endpoint as a fallback. The Vercel POST endpoint remains
+available for compatibility but is not the normal interactive path.
+
+---
+
 ## What runs where
 
 ```
