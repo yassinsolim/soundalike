@@ -14,10 +14,11 @@
   const PRIMARY_HOSTED_TIMEOUT_MS = 5000;
   const FALLBACK_HOSTED_TIMEOUT_MS = 65000;
   const LOCAL_STATUS_TTL_MS = 30000;
-  const CACHE_KEY = "soundalike:spicetify-cache:v4";
+  const CACHE_KEY = "soundalike:spicetify-cache:v5";
   const LEGACY_CACHE_KEYS = [
     "soundalike:spicetify-cache:v2",
     "soundalike:spicetify-cache:v3",
+    "soundalike:spicetify-cache:v4",
   ];
   const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
   const MAX_RECOMMENDATION_CACHE_SIZE = 50;
@@ -26,6 +27,9 @@
   const LANGUAGE_POLICY = "spotify-lyrics-v1";
   const RECOMMENDATION_POOL_SIZE = 40;
   const DISPLAY_RESULT_COUNT = 20;
+  const SPOTIFY_TRACK_SEARCH_LIMIT = 20;
+  const SPOTIFY_TRACK_SEARCH_HASH =
+    "59ee4a659c32e9ad894a71308207594a65ba67bb6b632b183abe97303a51fa55";
   const RESULTS_PATH = "/soundalike";
   let localStatus = { available: false, checkedAt: 0 };
   let nativeContextChain;
@@ -37,6 +41,7 @@
   const pendingRecommendations = new Map();
   const pendingSpotifyTracks = new Map();
   let persistentCache;
+  let fallbackTrackSearchDefinition;
 
   // Wait until the Spicetify APIs we need are ready.
   if (!(
@@ -283,16 +288,14 @@
 
   async function findSpotifyTrack(result) {
     const cacheId = `result:${normalizeLabel(result.title)}::${normalizeLabel(result.artist)}`;
-    const cached = readCacheEntry("spotifyTracks", cacheId, true);
-    if (cached.hit) return cached.value;
+    const cached = readCacheEntry("spotifyTracks", cacheId);
+    if (cached) return cached;
     if (pendingSpotifyTracks.has(cacheId)) return pendingSpotifyTracks.get(cacheId);
     const request = findSpotifyTrackUncached(result)
       .then((track) => {
-        writeCacheEntry(
-          "spotifyTracks",
-          cacheId,
-          track ? compactSpotifyTrack(track) : null
-        );
+        if (track) {
+          writeCacheEntry("spotifyTracks", cacheId, compactSpotifyTrack(track));
+        }
         return track;
       })
       .finally(() => pendingSpotifyTracks.delete(cacheId));
@@ -301,10 +304,11 @@
   }
 
   async function findSpotifyTrackUncached(result) {
+    const searchTerm = `${result.title} ${result.artist}`;
     const response = await Spicetify.GraphQL.Request(
       Spicetify.GraphQL.Definitions.searchModalResults,
       {
-        searchTerm: `${result.title} ${result.artist}`,
+        searchTerm,
         offset: 0,
         limit: 5,
         numberOfTopResults: 5,
@@ -312,13 +316,35 @@
         includeAuthors: false,
       }
     );
-    const hits = response?.data?.searchV2?.topResultsV2?.itemsV2 || [];
-    const ranked = hits
-      .map((hit) => hit?.item?.data)
-      .filter((track) => track?.__typename === "Track")
-      .map((track) => ({ track, score: spotifyMatchScore(track, result) }))
-      .sort((a, b) => b.score - a.score);
-    const match = ranked[0]?.score >= 6 ? ranked[0].track : null;
+    let match = bestSpotifyTrackMatch(
+      response?.data?.searchV2?.topResultsV2?.itemsV2,
+      result
+    );
+    const trackSearchDefinition = getSpotifyTrackSearchDefinition();
+    if (!match && trackSearchDefinition) {
+      try {
+        const trackResponse = await Spicetify.GraphQL.Request(
+          trackSearchDefinition,
+          {
+            searchTerm,
+            offset: 0,
+            limit: SPOTIFY_TRACK_SEARCH_LIMIT,
+            numberOfTopResults: 5,
+            includeAudiobooks: false,
+            includeAuthors: false,
+          }
+        );
+        match = bestSpotifyTrackMatch(
+          trackResponse?.data?.searchV2?.tracksV2?.items,
+          result
+        );
+      } catch (error) {
+        console.warn(
+          `[soundalike] Spotify song search failed for ${searchTerm}.`,
+          error
+        );
+      }
+    }
     if (!match) return null;
     const languagePromise = getSpotifyTrackLanguage(match.uri);
     let resolvedTrack = match;
@@ -338,6 +364,41 @@
       ...resolvedTrack,
       soundalikeLanguage: await languagePromise,
     };
+  }
+
+  function bestSpotifyTrackMatch(hits, result) {
+    const ranked = (hits || [])
+      .map((hit) => hit?.item?.data || hit?.data || hit)
+      .filter((track) => track?.__typename === "Track")
+      .filter((track) => spotifyArtistMatchesExactly(track, result))
+      .map((track) => ({ track, score: spotifyMatchScore(track, result) }))
+      .sort((a, b) => b.score - a.score);
+    return ranked[0]?.score >= 6 ? ranked[0].track : null;
+  }
+
+  function getSpotifyTrackSearchDefinition() {
+    if (Spicetify.GraphQL.Definitions.searchTracks) {
+      return Spicetify.GraphQL.Definitions.searchTracks;
+    }
+    if (fallbackTrackSearchDefinition) return fallbackTrackSearchDefinition;
+    const Definition =
+      Spicetify.GraphQL.Definitions.searchModalResults?.constructor;
+    if (typeof Definition !== "function" || Definition === Object) return null;
+    try {
+      fallbackTrackSearchDefinition = new Definition(
+        "searchTracks",
+        "query",
+        SPOTIFY_TRACK_SEARCH_HASH,
+        null
+      );
+      return fallbackTrackSearchDefinition;
+    } catch (error) {
+      console.warn(
+        "[soundalike] Spotify song search is unavailable in this client.",
+        error
+      );
+      return null;
+    }
   }
 
   async function getSpotifyTrackLanguage(uri) {
@@ -383,16 +444,16 @@
     }
   }
 
-  function readCacheEntry(bucket, key, includeMiss = false) {
+  function readCacheEntry(bucket, key) {
     const entry = persistentCache[bucket]?.[key];
-    if (!entry) return includeMiss ? { hit: false, value: null } : null;
+    if (!entry) return null;
     if (Date.now() - entry.cachedAt > CACHE_TTL_MS) {
       delete persistentCache[bucket][key];
       scheduleCacheSave();
-      return includeMiss ? { hit: false, value: null } : null;
+      return null;
     }
     entry.lastUsedAt = Date.now();
-    return includeMiss ? { hit: true, value: entry.value } : entry.value;
+    return entry.value;
   }
 
   function writeCacheEntry(bucket, key, value) {
@@ -486,9 +547,6 @@
     const expectedTitle = normalizeLabel(result.title);
     const actualTitle = normalizeLabel(track.name);
     const expectedArtist = normalizeLabel(result.artist);
-    const actualArtists = (track.artists?.items || [])
-      .map((item) => normalizeLabel(item?.profile?.name))
-      .filter(Boolean);
     if (!expectedTitle || !expectedArtist) return 0;
     let score = 0;
     if (actualTitle === expectedTitle) {
@@ -496,14 +554,42 @@
     } else if (actualTitle.includes(expectedTitle) || expectedTitle.includes(actualTitle)) {
       score += 2;
     }
-    if (actualArtists.some((artist) => artist === expectedArtist)) {
-      score += 4;
-    } else if (actualArtists.some(
-      (artist) => artist.includes(expectedArtist) || expectedArtist.includes(artist)
-    )) {
-      score += 2;
-    }
+    if (spotifyArtistMatchesExactly(track, result)) score += 4;
     return score;
+  }
+
+  function spotifyArtistMatchesExactly(track, result) {
+    const expectedArtist = normalizeLabel(result.artist);
+    const actualArtists = new Set(
+      (track.artists?.items || [])
+        .map((item) => normalizeLabel(item?.profile?.name))
+        .filter(Boolean)
+    );
+    if (!expectedArtist || !actualArtists.size) return false;
+    if (actualArtists.has(expectedArtist)) return true;
+    const hasCollaborationMarker =
+      /&|\b(?:and|feat\.?|featuring|versus|vs\.?|with|x)\b/i.test(
+        String(result.artist || "")
+      );
+    if (!hasCollaborationMarker) return false;
+    let remainder = ` ${expectedArtist} `;
+    let matchedArtists = 0;
+    const longestFirst = [...actualArtists].sort((left, right) =>
+      right.length - left.length
+    );
+    for (const artist of longestFirst) {
+      const exactName = ` ${artist} `;
+      if (!remainder.includes(exactName)) continue;
+      remainder = remainder.replace(exactName, " ");
+      matchedArtists++;
+    }
+    const collaborationWords = new Set([
+      "and", "feat", "featuring", "versus", "vs", "with", "x",
+    ]);
+    const unmatched = normalizeLabel(remainder)
+      .split(" ")
+      .filter((word) => word && !collaborationWords.has(word));
+    return matchedArtists > 1 && unmatched.length === 0;
   }
 
   function normalizeLabel(value) {
@@ -860,7 +946,10 @@
     const languageStatus = seedLanguage
       ? `${languageName(seedLanguage)} lyrics · checking recommendations`
       : "Language gate unavailable - preserving normal ranking";
-    const tags = [v.tempo, v.dynamics, v.low_end, v.tone]
+    const modelLabel = data.method === "dual_sonic64_guardrail"
+      ? "V2 model"
+      : "Production model";
+    const tags = [modelLabel, v.tempo, v.dynamics, v.low_end, v.tone]
       .map((t) => `<span class="sa-tag">${esc(t)}</span>`)
       .join("") +
       `<span class="sa-tag sa-language-status">${esc(languageStatus)}</span>`;

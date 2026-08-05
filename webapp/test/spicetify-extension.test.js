@@ -12,6 +12,7 @@ const recommendation = {
   ok: true,
   seed: { title: "Blinding Lights", artist: "The Weeknd" },
   vibe: { low_end: "balanced", dynamics: "moderate", tone: "neutral" },
+  method: "dual_sonic64_guardrail",
   results: [],
 };
 
@@ -186,8 +187,31 @@ function loadExtension(fetchImpl, options = {}) {
       },
     },
   };
-  const getTrack = {};
-  const searchModalResults = {};
+  class GraphQLDefinition {
+    constructor(name, operation, sha256Hash, value) {
+      this.name = name;
+      this.operation = operation;
+      this.sha256Hash = sha256Hash;
+      this.value = value;
+    }
+  }
+  const getTrack = new GraphQLDefinition("getTrack", "query", "get-track", null);
+  const searchModalResults = new GraphQLDefinition(
+    "searchModalResults",
+    "query",
+    "search-modal",
+    null,
+  );
+  const searchTracks = new GraphQLDefinition(
+    "searchTracks",
+    "query",
+    "search-tracks",
+    null,
+  );
+  const definitions = { getTrack, searchModalResults };
+  if (options.includeSearchTracksDefinition !== false) {
+    definitions.searchTracks = searchTracks;
+  }
   context.Spicetify = {
     ContextMenu: {
       Item: class {
@@ -198,7 +222,7 @@ function loadExtension(fetchImpl, options = {}) {
       },
     },
     GraphQL: {
-      Definitions: { getTrack, searchModalResults },
+      Definitions: definitions,
       async Request(definition, variables) {
         graphqlRequests.push({ definition, variables });
         if (definition === getTrack) {
@@ -215,6 +239,20 @@ function loadExtension(fetchImpl, options = {}) {
               trackUnion: {
                 name: "Blinding Lights",
                 firstArtist: { items: [{ profile: { name: "The Weeknd" } }] },
+              },
+            },
+          };
+        }
+        if (definition === searchTracks || definition?.name === "searchTracks") {
+          const tracks = options.spotifyTrackSearchResults?.[variables.searchTerm] || [];
+          return {
+            data: {
+              searchV2: {
+                tracksV2: {
+                  items: tracks.map((track) => ({
+                    item: { data: track },
+                  })),
+                },
               },
             },
           };
@@ -354,7 +392,7 @@ function findElement(node, predicate) {
   return null;
 }
 
-test("uses the hosted library when the local companion is unavailable", async () => {
+test("uses the always-on hosted library when the local companion is unavailable", async () => {
   const urls = [];
   const app = loadExtension(async (url) => {
     urls.push(url);
@@ -363,7 +401,7 @@ test("uses the hosted library when the local companion is unavailable", async ()
     }
     assert.match(
       url,
-      /^https:\/\/soundalike\.yassin\.app\/api\/spicetify_recommend\?/,
+      /^https:\/\/soundalike-api\.yassin\.app\/api\/spicetify_recommend\?/,
     );
     return response(200, recommendation);
   });
@@ -374,8 +412,9 @@ test("uses the hosted library when the local companion is unavailable", async ()
   assert.equal(urls.length, 2);
   assert.match(
     urls[1],
-    /^https:\/\/soundalike\.yassin\.app\/api\/spicetify_recommend\?/,
+    /^https:\/\/soundalike-api\.yassin\.app\/api\/spicetify_recommend\?/,
   );
+  assert.match(page.innerHTML, /V2 model/);
   assert.equal(new URL(urls[1]).searchParams.get("v"), "3");
   assert.equal(
     new URL(urls[1]).searchParams.get("language_policy"),
@@ -386,7 +425,7 @@ test("uses the hosted library when the local companion is unavailable", async ()
   assert.deepEqual(app.history, ["/soundalike"]);
   assert.equal(
     app.notifications.some(([message]) => message.includes("first request after idle")),
-    true,
+    false,
   );
 });
 
@@ -436,7 +475,7 @@ test("falls back to hosted results when a healthy local companion later fails", 
   assert.equal(urls.length, 3);
   assert.match(
     urls[2],
-    /^https:\/\/soundalike\.yassin\.app\/api\/spicetify_recommend\?/,
+    /^https:\/\/soundalike-api\.yassin\.app\/api\/spicetify_recommend\?/,
   );
   assert.match(page.innerHTML, /HOSTED LIBRARY/);
 });
@@ -457,7 +496,7 @@ test("uses the legacy hosted POST during a deployment race", async () => {
   const page = await app.run();
   await app.run();
 
-  assert.equal(urls.length, 5);
+  assert.equal(urls.length, 7);
   assert.match(page.innerHTML, /HOSTED LIBRARY/);
 });
 
@@ -596,6 +635,23 @@ test("renders playlist metadata, plays on double-click, and exposes the native m
 
 test("keeps Spotify search as the fallback for unresolved result rows", async () => {
   const result = { title: "Catalog Miss", artist: "Unknown Artist" };
+  const wrongTrack = {
+    __typename: "Track",
+    name: result.title,
+    uri: "spotify:track:wrong",
+    albumOfTrack: { coverArt: { sources: [] } },
+    artists: { items: [{ profile: { name: "Unknown Artist Tribute" } }] },
+  };
+  const splitNameTrack = {
+    ...wrongTrack,
+    uri: "spotify:track:split-name",
+    artists: {
+      items: [
+        { profile: { name: "Unknown" } },
+        { profile: { name: "Artist" } },
+      ],
+    },
+  };
   const app = loadExtension(async (url) => {
     if (url.endsWith("/health")) throw new TypeError("connection refused");
     return response(200, {
@@ -605,6 +661,12 @@ test("keeps Spotify search as the fallback for unresolved result rows", async ()
   }, {
     nativeMenus: true,
     results: [result],
+    spotifyTracks: {
+      [`${result.title} ${result.artist}`]: wrongTrack,
+    },
+    spotifyTrackSearchResults: {
+      [`${result.title} ${result.artist}`]: [wrongTrack, splitNameTrack],
+    },
   });
 
   await app.run();
@@ -622,6 +684,143 @@ test("keeps Spotify search as the fallback for unresolved result rows", async ()
     "/soundalike",
     "/search/Catalog%20Miss%20Unknown%20Artist",
   ]);
+});
+
+test("falls back to Spotify's song-only search when top results omit a track", async () => {
+  const result = { title: "Echo (feat. Richard Caddock)", artist: "WRLD" };
+  const spotifyTrack = {
+    __typename: "Track",
+    name: "Echo",
+    uri: "spotify:track:69b9S93kHT979Iw3rvev89",
+    albumOfTrack: { coverArt: { sources: [] } },
+    artists: {
+      items: [
+        { profile: { name: "WRLD" } },
+        { profile: { name: "Richard Caddock" } },
+      ],
+    },
+  };
+  const searchTerm = `${result.title} ${result.artist}`;
+  const app = loadExtension(async (url) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    return response(200, { ...recommendation, results: [result] });
+  }, {
+    includeSearchTracksDefinition: false,
+    results: [result],
+    spotifyTrackSearchResults: { [searchTerm]: [spotifyTrack] },
+  });
+
+  await app.run();
+
+  assert.equal(app.rows[0].dataset.uri, spotifyTrack.uri);
+  const searches = app.graphqlRequests.filter(
+    ({ variables }) => variables.searchTerm === searchTerm,
+  );
+  assert.deepEqual(searches.map(({ variables }) => variables.limit), [5, 20]);
+  assert.equal(searches[1].definition.name, "searchTracks");
+  assert.equal(
+    searches[1].definition.sha256Hash,
+    "59ee4a659c32e9ad894a71308207594a65ba67bb6b632b183abe97303a51fa55",
+  );
+});
+
+test("matches combined credits without splitting punctuation inside artist names", async () => {
+  const result = {
+    title: "Potato Salad",
+    artist: "Tyler, The Creator & A$AP Rocky",
+  };
+  const spotifyTrack = {
+    __typename: "Track",
+    name: result.title,
+    uri: "spotify:track:combined",
+    albumOfTrack: { coverArt: { sources: [] } },
+    artists: {
+      items: [
+        { profile: { name: "Tyler, The Creator" } },
+        { profile: { name: "A$AP Rocky" } },
+      ],
+    },
+  };
+  const app = loadExtension(async (url) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    return response(200, { ...recommendation, results: [result] });
+  }, {
+    results: [result],
+    spotifyTrackSearchResults: {
+      [`${result.title} ${result.artist}`]: [spotifyTrack],
+    },
+  });
+
+  await app.run();
+
+  assert.equal(app.rows[0].dataset.uri, spotifyTrack.uri);
+});
+
+test("does not persist unresolved Spotify searches", async () => {
+  const storage = new Map();
+  const result = { title: "Catalog Miss", artist: "Unknown Artist" };
+  const fetchImpl = async (url) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    return response(200, { ...recommendation, results: [result] });
+  };
+  const first = loadExtension(fetchImpl, { results: [result], storage });
+
+  await first.run();
+  await new Promise((resolve) => setTimeout(resolve, 150));
+
+  const persisted = JSON.parse(storage.get("soundalike:spicetify-cache:v5"));
+  const cacheId = "result:catalog miss::unknown artist";
+  assert.equal(Object.hasOwn(persisted.spotifyTracks, cacheId), false);
+
+  const second = loadExtension(async (url) => {
+    throw new Error(`unexpected network request: ${url}`);
+  }, { results: [result], storage });
+  await second.run();
+
+  assert.equal(
+    second.graphqlRequests.filter(({ variables }) => variables.searchTerm).length,
+    2,
+  );
+});
+
+test("invalidates legacy negative caches before resolving a later Spotify match", async () => {
+  const result = { title: "Recovered Song", artist: "Recovered Artist" };
+  const cacheId = "result:recovered song::recovered artist";
+  const storage = new Map([[
+    "soundalike:spicetify-cache:v4",
+    JSON.stringify({
+      recommendations: {},
+      spotifyTracks: {
+        [cacheId]: {
+          value: null,
+          cachedAt: Date.now(),
+          lastUsedAt: Date.now(),
+        },
+      },
+    }),
+  ]]);
+  const spotifyTrack = {
+    __typename: "Track",
+    name: result.title,
+    uri: "spotify:track:recovered",
+    albumOfTrack: { coverArt: { sources: [] } },
+    artists: { items: [{ profile: { name: result.artist } }] },
+  };
+  const app = loadExtension(async (url) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    return response(200, { ...recommendation, results: [result] });
+  }, {
+    results: [result],
+    spotifyTrackSearchResults: {
+      [`${result.title} ${result.artist}`]: [spotifyTrack],
+    },
+    storage,
+  });
+
+  await app.run();
+
+  assert.equal(storage.has("soundalike:spicetify-cache:v4"), false);
+  assert.equal(app.rows[0].dataset.uri, spotifyTrack.uri);
 });
 
 test("restores cached results when navigating back to the Soundalike page", async () => {
@@ -698,6 +897,7 @@ test("reuses persisted recommendations and Spotify metadata on repeated tracks",
   const storage = new Map();
   storage.set("soundalike:spicetify-cache:v2", "{\"stale\":true}");
   storage.set("soundalike:spicetify-cache:v3", "{\"oversized\":true}");
+  storage.set("soundalike:spicetify-cache:v4", "{\"negative\":true}");
   const result = { title: "Take My Breath", artist: "The Weeknd", bpm: 122 };
   const spotifyTrack = {
     __typename: "Track",
@@ -728,6 +928,7 @@ test("reuses persisted recommendations and Spotify metadata on repeated tracks",
   });
   assert.equal(storage.has("soundalike:spicetify-cache:v2"), false);
   assert.equal(storage.has("soundalike:spicetify-cache:v3"), false);
+  assert.equal(storage.has("soundalike:spicetify-cache:v4"), false);
 
   await first.run();
   await new Promise((resolve) => setTimeout(resolve, 250));
@@ -735,8 +936,8 @@ test("reuses persisted recommendations and Spotify metadata on repeated tracks",
     urls.filter((url) => url.includes("/api/spicetify_recommend")).length,
     1,
   );
-  const persisted = JSON.parse(storage.get("soundalike:spicetify-cache:v4"));
-  assert.ok(storage.get("soundalike:spicetify-cache:v4").length < 10000);
+  const persisted = JSON.parse(storage.get("soundalike:spicetify-cache:v5"));
+  assert.ok(storage.get("soundalike:spicetify-cache:v5").length < 10000);
   assert.ok(persisted.spotifyTracks["spotify:track:test"]);
 
   const second = loadExtension(async (url) => {

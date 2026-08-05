@@ -35,10 +35,12 @@ automatically uses the hosted 272,853-track recommendation library.
   again, plus playlists, queueing, song radio, artist and album navigation,
   credits, and sharing.
 - If Spotify cannot confidently match a recommendation, Soundalike safely
-  opens a Spotify search instead of playing the wrong track.
+  searches Spotify's full Songs results before falling back to a Spotify search
+  page. It never plays a low-confidence match.
 - Successful recommendations and resolved Spotify metadata are cached locally
   for seven days, so reopening the same track avoids repeating the expensive
-  recommendation and catalog lookups.
+  recommendation and catalog lookups. Unresolved Spotify searches are not
+  cached, so a temporary catalog miss can recover on the next attempt.
 
 ## Privacy
 
@@ -58,6 +60,15 @@ client and are not sent to Soundalike. No separate Spotify login is required.
   seconds. Repeated tracks use the local cache, and hosted responses can be
   reused by the CDN.
 - The hosted library currently covers 272,853 tracks.
+- Production uses the V2 `dual_sonic64_guardrail` model. The `v=3` value in an
+  extension network request is the language-policy API contract, not a V3
+  recommendation model. The public `/evaluate` page is the locked V2 blind
+  pilot; no public V3 evaluator exists because the research candidate failed
+  its independent promotion gate.
+- Spotify availability and Soundalike library coverage are different. The
+  extension can now resolve recommendations through Spotify's full Songs
+  search, but a Spotify seed that is absent from the 272,853-track embedding
+  index still cannot be analyzed by the hosted model.
 - If **Find soundalikes** does not appear immediately after installation,
   fully quit and reopen Spotify.
 - If a Spotify update breaks Spicetify features, update Spicetify and run
