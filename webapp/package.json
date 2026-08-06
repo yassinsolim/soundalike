@@ -6,7 +6,8 @@
     "test": "node --test",
     "ratings:inbox": "node tools/ratings-inbox.js",
     "ratings:v2-inbox": "node tools/ratings-v2-inbox.js",
-    "ratings:semantic-inbox": "node tools/ratings-semantic-v1-inbox.js"
+    "ratings:semantic-inbox": "node tools/ratings-semantic-v1-inbox.js",
+    "ratings:semantic-v2-inbox": "node tools/ratings-semantic-v2-inbox.js"
   },
   "dependencies": {
     "@vercel/blob": "2.6.1"
