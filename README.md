@@ -58,11 +58,15 @@ Spotify's own site, never hand over a password) to save results as a playlist. S
 study compares a matched full-track audio control with one fixed challenger that adds
 calibrated genre, mood/theme, and instrument evidence. Both use the same candidate pool,
 whole-track pooled embeddings, 32-section late interaction, and one-result-per-artist
-policy, so semantics are the only ranking difference. It uses 20 Jamendo seeds and two
-anonymous five-result lists per seed. Previously published V2 result tracks are
+policy, so semantics are the only ranking difference. Playback is limited to a 20-second
+excerpt centered on each track's strongest repeated section; this is a recurrence-based
+listening aid, not a verified chorus label, and it does not change whole-track ranking.
+Core scenes and lower-overlap comparisons are presented first without using prior ratings.
+It uses 20 Jamendo seeds and two anonymous five-result lists per seed. Previously published V2 result tracks are
 excluded from both methods so the V2 archive cannot reveal either list's identity.
 The locked four-list V2 study remains
-available at [`/evaluate-v2`](https://soundalike.yassin.app/evaluate-v2), and the prior
+available at [`/evaluate-v2`](https://soundalike.yassin.app/evaluate-v2), semantic v1 at
+[`/evaluate-semantic-v1`](https://soundalike.yassin.app/evaluate-semantic-v1), and the prior
 v17 study remains at [`/evaluate-v1`](https://soundalike.yassin.app/evaluate-v1).
 Ratings stay in the study's own browser namespace until you explicitly consent and
 press **Submit ratings**. Accepted snapshots go to a private, version-isolated ratings

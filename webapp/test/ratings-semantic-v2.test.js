@@ -15,14 +15,11 @@ import {
   SEMANTIC_PROTOCOL_SHA256,
   createSemanticHandler,
   parseSemanticStoredRecordBytes,
-} from "../api/ratings-semantic-v1.js";
-import { downloadSemantic } from "../tools/ratings-semantic-v1-inbox.js";
+} from "../api/ratings-semantic-v2.js";
+import { downloadSemantic } from "../tools/ratings-semantic-v2-inbox.js";
 
 const pack = JSON.parse(
-  readFileSync(
-    new URL("../evaluate-semantic-v1/semantic-pack.json", import.meta.url),
-    "utf8",
-  ),
+  readFileSync(new URL("../evaluate/semantic-pack.json", import.meta.url), "utf8"),
 );
 const listId = pack.seeds[0].lists[0].list_id;
 const KEY = "a".repeat(64);
@@ -38,10 +35,10 @@ function sign(ratings) {
 
 function validExport() {
   return sign({
-    schema_version: 1,
-    submission_schema: "fulltrack_semantic_listener_submission_v1",
+    schema_version: 2,
+    submission_schema: "repeated_excerpt_semantic_listener_submission_v2",
     source_kind: "human_listener",
-    provider: "hosted_private_semantic_v1_evaluator",
+    provider: "hosted_private_semantic_v2_evaluator",
     anonymous_rater_id: `anon-semantic-${"1".repeat(24)}`,
     session_id: `semantic-session-${"2".repeat(24)}`,
     protocol_sha256: SEMANTIC_PROTOCOL_SHA256,
@@ -130,7 +127,7 @@ async function submit(
   const res = response();
   const wrapper =
     options.wrapper === undefined
-      ? { consent: true, study: "semantic-fulltrack-v1", ratings }
+      ? { consent: true, study: "semantic-repeated-excerpt-v2", ratings }
       : options.wrapper;
   await createSemanticHandler(storage, options.deploymentHost)(
     request(options.rawBody ?? wrapper, options),
@@ -214,11 +211,15 @@ test("rejects hash, schema, ID, rating and HMAC tampering", async () => {
 
 test("requires exact wrapper consent, study and at least one rating", async () => {
   for (const wrapper of [
-    { consent: false, study: "semantic-fulltrack-v1", ratings: validExport() },
+    {
+      consent: false,
+      study: "semantic-repeated-excerpt-v2",
+      ratings: validExport(),
+    },
     { consent: true, study: "v17", ratings: validExport() },
     {
       consent: true,
-      study: "semantic-fulltrack-v1",
+      study: "semantic-repeated-excerpt-v2",
       ratings: validExport(),
       extra: true,
     },
@@ -255,7 +256,7 @@ test("enforces bounded strict JSON and POST-only private ingestion", async () =>
   assert.equal(result.res.headers.Allow, "POST");
 
   const rawBody =
-    `{"consent":true,"consent":true,"study":"semantic-fulltrack-v1",` +
+    `{"consent":true,"consent":true,"study":"semantic-repeated-excerpt-v2",` +
     `"ratings":${JSON.stringify(validExport())}}`;
   result = await submit(validExport(), new MemoryStorage(), { rawBody });
   assert.equal(result.res.statusCode, 400);
@@ -272,7 +273,7 @@ test("rejects untrusted origins and never exposes list or read behavior", async 
   assert.equal(storage.puts.length, 0);
 
   const source = readFileSync(
-    new URL("../api/ratings-semantic-v1.js", import.meta.url),
+    new URL("../api/ratings-semantic-v2.js", import.meta.url),
     "utf8",
   );
   assert.equal(source.includes("blobList"), false);

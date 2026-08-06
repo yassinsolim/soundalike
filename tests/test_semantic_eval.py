@@ -21,6 +21,9 @@ from soundalike.ml.semantic_eval import (
     EXPECTED_V2_PACK_SHA256,
     MAX_RESULTS_PER_ARTIST,
     METHODS,
+    PACK_ID,
+    PACK_KIND,
+    PLAYBACK_EXCERPT_SECONDS,
     SECTION_BUDGET,
     SEMANTIC_WEIGHT,
     SemanticEvalConfig,
@@ -28,7 +31,9 @@ from soundalike.ml.semantic_eval import (
     artist_diverse_top,
     build_blinded_documents,
     percentile_scores,
+    prioritize_source_seeds,
     rank_study_methods,
+    repeated_section_excerpt,
     semantic_blend_scores,
     validate_blinded_documents,
 )
@@ -37,10 +42,10 @@ from soundalike.ml.semantic_eval import (
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_PACK = ROOT / "webapp" / "evaluate" / "semantic-pack.json"
 PUBLIC_PACK_CONTENT_SHA256 = (
-    "4f3c34250d5c5fca35dcc671dae1c256f0d56d8ce404d7a758bbbf62a2e5b48a"
+    "939b639abb6d6c6b2c7ba20ae570ff7ae9d06ee67254c219d6e5f61975403347"
 )
 PUBLIC_PACK_FILE_SHA256 = (
-    "7b05b1ecd74534c75148f1e5855a33b911e2f9337c26ace26ebb1e2448791acc"
+    "f07bf814eab2a363aa9fbec5acd946e57cfad3d3c3eef6dea4027a190d0e13b3"
 )
 
 
@@ -109,6 +114,13 @@ def _documents():
                     "fold": 0,
                     "fold_part": "test",
                 },
+                "playback_excerpt": {
+                    "kind": "strongest_nonlocal_recurrence",
+                    "start_seconds": 5.0,
+                    "end_seconds": 25.0,
+                    "source_window_start_seconds": 10.0,
+                    "source_window_seconds": 10.0,
+                },
             }
     shared = {
         "store_binding_sha256": EXPECTED_STORE_BINDING_SHA256,
@@ -151,7 +163,7 @@ def _documents():
     }
     store_binding = json.loads(PUBLIC_PACK.read_text(encoding="utf-8"))["store_binding"]
     return build_blinded_documents(
-        source_seeds=source_seeds,
+        source_seeds=prioritize_source_seeds(source_seeds, baseline, semantic),
         track_records=track_records,
         audio_control_rankings=baseline,
         semantic_rankings=semantic,
@@ -170,6 +182,51 @@ def test_blinded_documents_bind_methods_without_public_identity():
     text = str(public)
     assert not any(method in text for method in METHODS)
     assert private["methods"] == list(METHODS)
+
+
+def test_priority_places_uncertain_core_scenes_before_edge_scenes():
+    seeds = [
+        {"seed_track_id": 1, "scene": "soundtrack"},
+        {"seed_track_id": 2, "scene": "rock"},
+        {"seed_track_id": 3, "scene": "pop"},
+    ]
+    control = {1: (10, 11, 12, 13, 14), 2: (20, 21, 22, 23, 24), 3: (30, 31, 32, 33, 34)}
+    challenger = {
+        1: (15, 16, 17, 18, 19),
+        2: (25, 26, 27, 28, 29),
+        3: (30, 31, 32, 35, 36),
+    }
+    fillers = []
+    for track_id in range(4, 21):
+        fillers.append({"seed_track_id": track_id, "scene": f"edge-{track_id}"})
+        control[track_id] = tuple(range(track_id * 10, track_id * 10 + 5))
+        challenger[track_id] = control[track_id]
+    ordered = prioritize_source_seeds([*seeds, *fillers], control, challenger)
+    assert [seed["seed_track_id"] for seed in ordered[:3]] == [2, 3, 1]
+
+
+def test_repeated_excerpt_centers_and_clamps_the_strongest_window():
+    class Reader:
+        def read_track(self, track_id):
+            assert track_id == 7
+            return type(
+                "Track",
+                (),
+                {
+                    "repeated_indices": np.asarray([2]),
+                    "window_starts": np.asarray([0, 240_000, 480_000]),
+                    "decoded_samples": 48_000 * 25,
+                },
+            )()
+
+    excerpt = repeated_section_excerpt(Reader(), 7)
+    assert excerpt == {
+        "kind": "strongest_nonlocal_recurrence",
+        "start_seconds": 5.0,
+        "end_seconds": PLAYBACK_EXCERPT_SECONDS + 5.0,
+        "source_window_start_seconds": 10.0,
+        "source_window_seconds": 10.0,
+    }
 
 
 def test_blinded_documents_reject_rehashed_ranking_tampering():
@@ -278,8 +335,9 @@ def test_committed_public_pack_is_frozen_and_schema_valid():
 
     assert hashlib.sha256(payload).hexdigest() == PUBLIC_PACK_FILE_SHA256
     assert document["content_sha256"] == content_sha == PUBLIC_PACK_CONTENT_SHA256
-    assert document["schema_version"] == 1
-    assert document["pack_kind"] == "fulltrack_semantic_blind_pilot_v1"
+    assert document["schema_version"] == 2
+    assert document["pack_kind"] == PACK_KIND
+    assert document["pack_id"] == PACK_ID
     assert document["method_count"] == 2
     assert document["seed_count"] == 20
     assert sum(len(seed["lists"]) for seed in document["seeds"]) == 40
