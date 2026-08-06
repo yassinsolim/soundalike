@@ -92,7 +92,9 @@ webapp/
     search.py         # GET  /api/search?q=
     ratings.js        # POST-only private v17 ratings ingestion
     ratings-v2.js     # POST-only private full-track v2 ingestion
-  evaluate/           # canonical full-track v2 evaluator + public locked pack
+    ratings-pacing-v3.js # POST-only private pacing V3 ingestion
+  evaluate/           # active blinded pacing V3 evaluator + locked pack
+  evaluate-semantic-v2/ # byte-preserved semantic v2 evaluator
   evaluate-v1/        # byte-preserved v17 evaluator public payload
   package.json        # official @vercel/blob SDK
   requirements.txt    # numpy   (that's the entire backend dependency)
@@ -144,24 +146,26 @@ recommendations — only for the optional "Save as playlist".
 
 ## Private ratings inboxes
 
-`/evaluate` is the research-only 20-seed semantic comparison. It uses the
-`soundalike-semantic-v2` browser namespace and a locked two-list pack. Playback is
-limited to committed 20-second strongest-recurrence excerpts, while ranking remains
-whole-track. Seeds use a fixed core-scene-first, lower-overlap-first order that does
-not use submitted ratings. The prior semantic study is byte-preserved at
-`/evaluate-semantic-v1` with its `soundalike-semantic-v1` state. The prior
+`/evaluate` is the research-only 20-seed pacing V3 comparison. It uses the
+`soundalike-pacing-v3` browser namespace and a locked two-list pack. Playback is
+limited to committed approximately 20-second strongest-recurrence excerpts, while
+ranking remains whole-track. The excerpt is a recurrence heuristic, not a verified
+chorus classifier. Seeds prioritize method disagreement without submitted ratings;
+anonymous list labels are randomized per seed and session. The semantic v2 study is
+byte-preserved at `/evaluate-semantic-v2` with its `soundalike-semantic-v2` state,
+and semantic v1 remains at `/evaluate-semantic-v1`. The prior
 full-track V2 application is byte-preserved at `/evaluate-v2` so existing
 `soundalike-fulltrack-v2` autosaves remain resumable. `/evaluate-v1` retains the
 exact v17 browser application and its `soundalike-human-v17` state. None of the
-four pages scans, migrates, or deletes another study's state.
+five pages scans, migrates, or deletes another study's state.
 
 Both evaluators submit only after the listener checks the consent box and presses
 the explicit submit button. Neither submits on autosave, page unload, playback,
-or export. JSON export/import remains a manual fallback. Attribution and license links appear
-only after the corresponding list judgment; public packs contain no method identity
-or private unblinding document. The semantic study evaluates genre, mood/theme, and
-instrument reranking, not language. Spotify lyrics-language filtering remains a
-separate production layer because Jamendo has no trustworthy language field.
+or export. JSON export/import remains a manual fallback. For pacing V3, attribution and license links appear only after the list's overall
+0–10 score and all five required result scores are complete. Optional mismatch reasons
+use a closed enum and no free text. Public packs contain no method identity or private
+unblinding document. Language is not evaluated. Spotify lyrics-language filtering
+remains separate because Jamendo has no trustworthy language field.
 
 ### Blob setup
 
@@ -175,7 +179,7 @@ separate production layer because Jamendo has no trustworthy language field.
 4. Deploy from `webapp`; `npm ci` installs the pinned official Blob SDK.
 5. Add Vercel Firewall rate-limit rules for `POST /api/ratings`,
    `POST /api/ratings-v2`, `POST /api/ratings-semantic-v1`, and
-   `POST /api/ratings-semantic-v2`. Origin checks and
+   `POST /api/ratings-semantic-v2`, and `POST /api/ratings-pacing-v3`. Origin checks and
    the browser's local-key HMAC provide abuse resistance and integrity; they are
    not authentication, so application validation is not a replacement for rate
    limiting.
@@ -193,8 +197,10 @@ validate against the v1 endpoint.
 The archived semantic v1 study remains isolated at:
 `human-ratings/semantic-v1/<semantic-session-id>/<canonical-payload-sha>.json`.
 Its schema, hashes, IDs, endpoint, and committed list set reject v1 and V2 payloads.
-The active repeated-section study writes only to:
+The archived semantic v2 study writes only to:
 `human-ratings/semantic-v2/<semantic-session-id>/<canonical-payload-sha>.json`.
+The active study writes only to:
+`human-ratings/pacing-v3/<pacing-session-id>/<canonical-payload-sha>.json`.
 
 The stored record contains random anonymous/session IDs, ratings, rating timestamps
 and durations, locked protocol/list hashes, server receipt time, canonical digest,
@@ -214,6 +220,7 @@ npm run ratings:inbox -- ../private-ratings-inbox --acknowledge-private-data
 npm run ratings:v2-inbox -- ../private-ratings-v2-inbox --acknowledge-private-data
 npm run ratings:semantic-inbox -- ../private-ratings-semantic-inbox --acknowledge-private-data
 npm run ratings:semantic-v2-inbox -- ../private-ratings-semantic-v2-inbox --acknowledge-private-data
+npm run ratings:pacing-v3-inbox -- ../private-ratings-pacing-v3-inbox --acknowledge-private-data
 python ../tools/aggregate_ratings.py ../private-ratings-inbox \
   --output ../ratings-aggregate.local.json
 ```

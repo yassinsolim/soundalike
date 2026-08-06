@@ -19,7 +19,7 @@ import {
 import { downloadV2 } from "../tools/ratings-v2-inbox.js";
 
 const pack = JSON.parse(
-  readFileSync(new URL("../evaluate/pilot-pack.json", import.meta.url), "utf8"),
+  readFileSync(new URL("../evaluate-v2/pilot-pack.json", import.meta.url), "utf8"),
 );
 const listId = pack.seeds[0].lists[0].list_id;
 const KEY = "a".repeat(64);

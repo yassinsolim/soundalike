@@ -1,0 +1,33 @@
+{
+  "schema_version": 3,
+  "protocol_kind": "repeated_excerpt_blind_listener_v3_private_submission",
+  "submission_schema": "pacing_v3_listener_submission_v1",
+  "pilot_pack_sha256": "6d6dd1c03412b057e14d52d29ee775e5a4c62eea63c76f7d19c46f60f1942a5c",
+  "seed_count": 20,
+  "list_count": 40,
+  "results_per_list": 5,
+  "assignment": "fixed disagreement-prioritized seed order; opaque deterministic per-seed per-session list order",
+  "playback": "approximately 20-second strongest-recurrence excerpt; no full-track seeking; recurrence heuristic, not a verified chorus classifier",
+  "rating_scale": "required integer 0-10 for each complete list or result rating; optional closed-enum result mismatch reasons",
+  "mismatch_reasons": [
+    "tempo_pacing",
+    "tone_timbre",
+    "instrumentation",
+    "vocals",
+    "mood_feeling",
+    "genre"
+  ],
+  "local_storage_namespace": "soundalike-pacing-v3",
+  "submission_endpoint": "/api/ratings-pacing-v3",
+  "private_blob_prefix": "human-ratings/pacing-v3/",
+  "explicit_consent_required": true,
+  "automatic_submission": false,
+  "partial_submission_allowed": true,
+  "attribution_release": "a list overall score and all five result ratings must be complete before seed or list attribution is shown",
+  "research_only": true,
+  "promotion_allowed": false,
+  "production_recommendation_changed": false,
+  "language_evaluated": false,
+  "feature_hypothesis": "prior ratings motivated the feature hypothesis but were not used to fit weights",
+  "content_sha256": "69aaba1238ec7fdc567f384001812cdbedc3423710ae13ca8139c2cac6d7d387"
+}

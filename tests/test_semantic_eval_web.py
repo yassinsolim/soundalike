@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "webapp"
-SEMANTIC = WEB / "evaluate"
+SEMANTIC = WEB / "evaluate-semantic-v2"
 SEMANTIC_V1 = WEB / "evaluate-semantic-v1"
 V2 = WEB / "evaluate-v2"
 PACK_SHA = "939b639abb6d6c6b2c7ba20ae570ff7ae9d06ee67254c219d6e5f61975403347"
@@ -117,6 +117,10 @@ def test_routes_state_and_private_inboxes_are_version_isolated():
     config = _load(WEB / "vercel.json")
     rewrites = {item["source"]: item["destination"] for item in config["rewrites"]}
     assert rewrites["/evaluate"] == "/evaluate/index.html"
+    assert (
+        rewrites["/evaluate-semantic-v2"]
+        == "/evaluate-semantic-v2/index.html"
+    )
     assert (
         rewrites["/evaluate-semantic-v1"]
         == "/evaluate-semantic-v1/index.html"

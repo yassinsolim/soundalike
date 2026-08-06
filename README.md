@@ -54,18 +54,21 @@ Spotify's own site, never hand over a password) to save results as a playlist. S
 [`webapp/DEPLOY.md`](webapp/DEPLOY.md).
 
 **Help with the blind study:** open the public
-[listening evaluator](https://soundalike.yassin.app/evaluate). The current, shorter
-study compares a matched full-track audio control with one fixed challenger that adds
-calibrated genre, mood/theme, and instrument evidence. Both use the same candidate pool,
-whole-track pooled embeddings, 32-section late interaction, and one-result-per-artist
-policy, so semantics are the only ranking difference. Playback is limited to a 20-second
-excerpt centered on each track's strongest repeated section; this is a recurrence-based
-listening aid, not a verified chorus label, and it does not change whole-track ranking.
-Core scenes and lower-overlap comparisons are presented first without using prior ratings.
-It uses 20 Jamendo seeds and two anonymous five-result lists per seed. Previously published V2 result tracks are
-excluded from both methods so the V2 archive cannot reveal either list's identity.
-The locked four-list V2 study remains
-available at [`/evaluate-v2`](https://soundalike.yassin.app/evaluate-v2), semantic v1 at
+[listening evaluator](https://soundalike.yassin.app/evaluate). The active research-only
+study is an isolated blinded comparison of the frozen full-track audio ranking and a
+pacing/tone reranker. Both use the same global-embedding top-200 candidate pool,
+32-section evidence, and one-result-per-artist policy. Seeds prioritize anonymous
+method disagreement without using ratings, and list labels are randomized per seed and
+browser session. Playback uses an approximately 20-second strongest-recurrence excerpt;
+this is a recurrence heuristic, not a verified chorus classifier, and ranking remains
+whole-track.
+
+Each list and result uses an integer 0–10 score. Result mismatch reasons are optional
+closed categories; there is no free text. Shared result IDs synchronize across lists,
+and attribution remains hidden until a list score plus all five result scores are
+complete. The frozen semantic v2 study remains available at
+[`/evaluate-semantic-v2`](https://soundalike.yassin.app/evaluate-semantic-v2), the locked
+four-list V2 study at [`/evaluate-v2`](https://soundalike.yassin.app/evaluate-v2), semantic v1 at
 [`/evaluate-semantic-v1`](https://soundalike.yassin.app/evaluate-semantic-v1), and the prior
 v17 study remains at [`/evaluate-v1`](https://soundalike.yassin.app/evaluate-v1).
 Ratings stay in the study's own browser namespace until you explicitly consent and
@@ -73,18 +76,17 @@ press **Submit ratings**. Accepted snapshots go to a private, version-isolated r
 inbox; JSON export remains available as a manual fallback. See the
 [deployment and privacy workflow](webapp/DEPLOY.md#private-ratings-inbox).
 
-The semantic study is exploratory, not a shipped V3 model or a claim that
-recommendations are already better. Jamendo has no trustworthy track-language field,
-so language is not evaluated here; Spotify lyrics-language filtering remains a
-separate unchanged production layer. No human improvement can be reported until
-genuine listening ratings are collected.
+The pacing V3 study is exploratory, not a shipped model or evidence that recommendations
+are already better. Prior ratings motivated the feature hypothesis but did not fit its
+weights. Jamendo has no trustworthy track-language field, so language is not evaluated;
+Spotify lyrics-language filtering remains a separate unchanged production layer.
 
 **V3 research is complete but not shipped.** Its strongest final-reserve candidate
 reached the preregistered +20% development target, then improved independent shadow
 Recall@10 by only **+0.286%** with an interval crossing zero and a **-11.23%** worst
-fold. The gate correctly rejected it: no V3 listening pack was opened, no production
-model changed. V2 remains preserved at `/evaluate-v2`; `/evaluate` now hosts the
-separate exploratory semantic study. See
+fold. The gate correctly rejected it: no MusicFM V3 listening pack was opened and no
+production model changed. That rejected MusicFM candidate is distinct from the new
+research-only pacing V3 evaluator. See
 [V3 full-track research](#v3-full-track-research-closed-without-promotion) for the complete outcome.
 
 ---

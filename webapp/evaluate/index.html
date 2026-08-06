@@ -6,66 +6,54 @@
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; media-src https://prod-1.storage.jamendo.com; connect-src 'self'">
-  <title>Soundalike repeated-section blind study</title>
+  <title>Soundalike blinded repeated-section study</title>
   <style>
-    :root{color-scheme:dark;--bg:#0e1214;--panel:#182025;--panel2:#202a30;--ink:#f4f7f8;--muted:#aab8be;--line:#35444b;--accent:#6ee7ad;--danger:#ffb4ab}
-    *{box-sizing:border-box}html,body{margin:0;min-height:100%}
-    body{background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;overflow-wrap:anywhere}
-    main{max-width:1100px;margin:auto;padding:max(1rem,env(safe-area-inset-top)) max(1rem,env(safe-area-inset-right)) max(2rem,env(safe-area-inset-bottom)) max(1rem,env(safe-area-inset-left))}
-    h1,h2,h3{line-height:1.2}h1{margin-top:0}.muted{color:var(--muted)}
-    .panel,.list,.track{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:1rem;margin:1rem 0;min-width:0}
-    .track{background:var(--panel2)}.lists{display:grid;grid-template-columns:1fr 1fr;gap:1rem}.lists>.list{margin:0}
-    .tools{display:flex;flex-wrap:wrap;gap:.65rem;align-items:center}
-    button,.button,input[type=number]{font:inherit;color:var(--ink);background:#253138;border:1px solid #5b6e77;border-radius:8px;padding:.55rem .8rem;min-height:44px}
-    button,.button{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;text-align:center}
-    button:disabled{opacity:.6;cursor:not-allowed}.button{position:relative}.button input{position:absolute;opacity:0;width:1px;height:1px}
-    :where(button,.button,input,a):focus-visible,.button:focus-within{outline:3px solid var(--accent);outline-offset:3px}
-    label{display:inline-flex;gap:.5rem;align-items:center;min-height:44px}
-    input[type=radio],input[type=checkbox]{width:1.2rem;height:1.2rem;min-width:1.2rem;accent-color:var(--accent)}
-    input[type=number]{width:5rem}.choices{display:flex;flex-wrap:wrap;gap:.5rem .9rem}
-    fieldset{border:0;padding:.4rem 0;margin:0}legend{font-weight:650;margin-bottom:.35rem}
-    audio{display:block;width:100%;min-height:44px;margin:.5rem 0}.status{border-left:4px solid var(--accent);padding-left:.7rem}
-    .attribution{border-top:1px solid var(--line);margin-top:.8rem;padding-top:.7rem}.attribution a{color:var(--accent)}
-    .hidden{display:none!important}.danger{color:var(--danger)}.success{color:var(--accent)}
-    .consent{align-items:flex-start}.consent input{margin-top:.25rem}.research{border-left:4px solid #8ea4ff;padding-left:.8rem}
-    @media(max-width:800px){.lists{grid-template-columns:1fr}.nav{position:sticky;top:0;z-index:5;background:rgba(14,18,20,.96);padding:.7rem;border:1px solid var(--line);border-radius:10px}}
-    @media(max-width:560px){main{padding-inline:.75rem}.panel,.list,.track{padding:.8rem}.tools{display:grid;grid-template-columns:1fr}.tools>*{width:100%}.nav{grid-template-columns:1fr 1fr}.nav #progress,.nav #export{grid-column:1/-1}.choices{display:grid}.choices label{padding:.45rem;background:#141a1e;border:1px solid var(--line);border-radius:7px}}
+    :root{color-scheme:dark;--bg:#0d1114;--panel:#172026;--panel2:#202b32;--ink:#f4f7f8;--muted:#adbbc1;--line:#3a4a52;--accent:#70e5ad;--danger:#ffb4ab}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%}body{background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;overflow-wrap:anywhere}
+    main{max-width:1120px;margin:auto;padding:max(1rem,env(safe-area-inset-top)) max(1rem,env(safe-area-inset-right)) max(2rem,env(safe-area-inset-bottom)) max(1rem,env(safe-area-inset-left))}
+    h1,h2,h3{line-height:1.2}h1{margin-top:0}.muted{color:var(--muted)}.research{border-left:4px solid #91a7ff;padding-left:.8rem}
+    .panel,.list,.track{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:1rem;margin:1rem 0;min-width:0}.track{background:var(--panel2)}
+    .lists{display:grid;grid-template-columns:1fr 1fr;gap:1rem}.lists>.list{margin:0}.tools,.choices{display:flex;flex-wrap:wrap;gap:.65rem;align-items:center}
+    button,.button,input[type=number]{font:inherit;color:var(--ink);background:#26343c;border:1px solid #647883;border-radius:8px;padding:.55rem .8rem;min-height:44px}
+    button,.button{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;text-align:center}button:disabled{opacity:.6;cursor:not-allowed}
+    .button{position:relative}.button input{position:absolute;opacity:0;width:1px;height:1px}:where(button,.button,input,a):focus-visible,.button:focus-within{outline:3px solid var(--accent);outline-offset:3px}
+    label{display:inline-flex;gap:.5rem;align-items:center;min-height:44px}input[type=checkbox]{width:1.2rem;height:1.2rem;min-width:1.2rem;accent-color:var(--accent)}
+    input[type=number]{width:5rem}.rating{border:0;padding:.45rem 0;margin:0}.rating legend{font-weight:650}.reasons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.3rem .7rem}
+    audio{display:block;width:100%;min-height:44px;margin:.5rem 0}.status{border-left:4px solid var(--accent);padding-left:.7rem}.hidden{display:none!important}.danger{color:var(--danger)}.success{color:var(--accent)}
+    .attribution{border-top:1px solid var(--line);margin-top:.8rem;padding-top:.7rem}.attribution a{color:var(--accent)}.consent{align-items:flex-start}.consent input{margin-top:.25rem}
+    @media(max-width:820px){.lists{grid-template-columns:1fr}.nav{position:sticky;top:0;z-index:5;background:rgba(13,17,20,.96);padding:.7rem;border:1px solid var(--line);border-radius:10px}}
+    @media(max-width:560px){main{padding-inline:.75rem}.panel,.list,.track{padding:.8rem}.tools{display:grid;grid-template-columns:1fr}.tools>*{width:100%}.nav{grid-template-columns:1fr 1fr}.nav #progress,.nav #export{grid-column:1/-1}.reasons{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
 <main>
-  <h1>Repeated-section genre &amp; feeling study</h1>
-  <p class="research">This 20-seed Jamendo study compares a matched full-track audio control with one fixed genre, mood/theme, and instrument challenger. The recommender still ranks whole tracks; the player now presents one 20-second excerpt centered on the strongest repeated section so long intros and outros do not dominate your judgment. These excerpts are recurrence-based and are not verified chorus labels.</p>
-  <p>Seeds are fixed in an uncertainty-prioritized order: familiar core scenes come first, and lower agreement between the two anonymous top-five lists comes first within each group. Existing ratings never influence this order. Lists stay anonymously randomized per session.</p>
-  <p class="research"><strong>Language is not tested on this page.</strong> Jamendo has no trustworthy track-language field. Spotify lyrics-language filtering remains a separate, unchanged production layer.</p>
-  <p class="muted">This exploratory study cannot promote a model or change production recommendations. No rating is submitted automatically. The UI shows attribution and licenses only after judgment; public license records remain inspectable. Method identities are absent from this page and public pack.</p>
+  <h1>Blinded pacing &amp; tone study</h1>
+  <p class="research">This research-only study compares two anonymous whole-track ranking methods using approximately 20-second excerpts centered on each track's strongest repeated section. Repetition is a recurrence heuristic, not a verified chorus classifier.</p>
+  <p>Seeds prioritize anonymous method disagreement without using listener ratings. The two list labels are randomized independently for each seed and browser session. Prior ratings motivated the feature hypothesis but did not fit the frozen weights.</p>
+  <p class="research"><strong>Language is not evaluated.</strong> Jamendo has no trustworthy track-language field. Spotify lyrics-language filtering remains a separate, unchanged production layer.</p>
+  <p class="muted">This study cannot promote a model and does not change production recommendations. Method identities are absent from public files, browser state, and submissions. Attribution remains hidden until a list score and all five result scores are complete.</p>
   <section class="panel" aria-labelledby="setup-title">
-    <h2 id="setup-title">1. Load locked pilot</h2>
+    <h2 id="setup-title">1. Load locked study</h2>
     <div class="tools">
-      <button id="load-bundled" type="button">Load bundled semantic study</button>
+      <button id="load-bundled" type="button">Load bundled study</button>
       <label class="button">Protocol JSON<input id="protocol-file" type="file" accept=".json,application/json"></label>
       <label class="button">Study pack JSON<input id="pack-file" type="file" accept=".json,application/json"></label>
       <button id="load" type="button">Validate manual files</button>
       <label class="button">Resume/import export<input id="resume-file" type="file" accept=".json,application/json"></label>
     </div>
-    <p id="setup-status" class="status" role="status">Loading the bundled semantic study…</p>
+    <p id="setup-status" class="status" role="status">Loading the bundled study…</p>
   </section>
   <section id="study" class="hidden">
     <div class="tools nav">
-      <button id="prev" type="button">Previous seed</button>
-      <button id="next" type="button">Next seed</button>
-      <button id="export" type="button">Export partial ratings JSON</button>
-      <span id="progress" class="status" role="status"></span>
+      <button id="prev" type="button">Previous seed</button><button id="next" type="button">Next seed</button>
+      <button id="export" type="button">Export partial ratings JSON</button><span id="progress" class="status" role="status"></span>
     </div>
     <section class="panel" aria-labelledby="submit-title">
       <h2 id="submit-title">2. Submit a private snapshot</h2>
-      <p>Progress autosaves only in this browser. Export/import is available for transfer or backup. Submission happens only after you check consent and press the button.</p>
-      <p class="muted">The application stores random session identifiers, list ratings, timestamps, durations, and locked hashes. It strips the local integrity key before storage and does not copy IP address, Origin, user-agent, cookies, identity, email, raw headers, or a private Blob URL into the record.</p>
-      <label class="consent"><input id="consent" type="checkbox">I consent to submit my current ratings to the project's private semantic v2 inbox.</label>
-      <div class="tools">
-        <button id="submit" type="button" disabled>Submit current semantic ratings</button>
-        <span id="submit-status" class="status" role="status" aria-atomic="true">Complete at least one list rating and check consent.</span>
-      </div>
+      <p>Progress autosaves only in this browser. Submission occurs only after explicit consent and a button press. Complete list ratings, complete result ratings, or both may be submitted.</p>
+      <p class="muted">Stored evidence contains random identifiers, ratings, closed-enum mismatch reasons, timestamps, durations, and locked hashes. The server strips the local integrity key and does not retain identity fields or a private Blob URL.</p>
+      <label class="consent"><input id="consent" type="checkbox">I consent to submit my current ratings to the private pacing V3 research inbox.</label>
+      <div class="tools"><button id="submit" type="button" disabled>Submit current ratings</button><span id="submit-status" class="status" role="status" aria-atomic="true">Complete at least one rating and check consent.</span></div>
     </section>
     <article id="seed"></article>
   </section>
@@ -73,390 +61,159 @@
 <script>
 "use strict";
 const $=id=>document.getElementById(id),enc=new TextEncoder();
-const PROTOCOL_SHA256="177941569960d3cb0abb0fbbac645a22ed691aed8271f71842be186f9b7ea838";
-const PACK_SHA256="939b639abb6d6c6b2c7ba20ae570ff7ae9d06ee67254c219d6e5f61975403347";
-const STORAGE_NAMESPACE="soundalike-semantic-v2";
-const SUBMISSION_SCHEMA="repeated_excerpt_semantic_listener_submission_v2";
-const PROVIDER="hosted_private_semantic_v2_evaluator";
+const PROTOCOL_SHA256="69aaba1238ec7fdc567f384001812cdbedc3423710ae13ca8139c2cac6d7d387";
+const PACK_SHA256="6d6dd1c03412b057e14d52d29ee775e5a4c62eea63c76f7d19c46f60f1942a5c";
+const STORAGE_NAMESPACE="soundalike-pacing-v3",SUBMISSION_SCHEMA="pacing_v3_listener_submission_v1",PROVIDER="hosted_private_pacing_v3_evaluator";
 const INTEGRITY_NOTICE="Local-key HMAC provides integrity, not identity or authenticity; the key is included in this export.";
 const MAX_DURATION_MS=366*24*60*60*1000;
-const PROTOCOL_KEYS=["schema_version","protocol_kind","submission_schema","pilot_pack_sha256","seed_count","list_count","results_per_list","assignment","playback","seed_order","rating_scale","local_storage_namespace","submission_endpoint","private_blob_prefix","explicit_consent_required","automatic_submission","partial_submission_allowed","attribution_release","research_only","promotion_allowed","production_recommendation_changed","content_sha256"];
-const PACK_KEYS=["audio_delivery","blinding","content_sha256","language_policy","method_count","notice","pack_id","pack_kind","playback_policy","production_recommendation_changed","promotion_allowed","rankings_state","ratings_count_at_freeze","research_only","results_per_method","schema_version","section_coverage","seed_count","seed_order_policy","seeds","source_fingerprint","source_v2_pack_sha256","store_binding","store_binding_sha256","tracks"];
-const STATE_KEYS=["schema_version","submission_schema","source_kind","provider","anonymous_rater_id","session_id","protocol_sha256","pilot_pack_sha256","local_session_key","started_at","last_activity_at","current_seed","list_ratings","lastInteractionAt"];
-const EXPORT_KEYS=["schema_version","submission_schema","source_kind","provider","anonymous_rater_id","session_id","protocol_sha256","pilot_pack_sha256","local_session_key","started_at","last_activity_at","list_ratings","exported_at","duration_ms","integrity_notice","integrity_hmac_sha256"];
-const RATING_KEYS=["similarity","score_0_10","unrelated_positions_1_to_5","rated_at","interaction_ms"];
+const REASONS=["genre","instrumentation","mood_feeling","tempo_pacing","tone_timbre","vocals"];
+const STATE_KEYS=["schema_version","submission_schema","source_kind","provider","anonymous_rater_id","session_id","protocol_sha256","pilot_pack_sha256","local_session_key","started_at","last_activity_at","current_seed","list_ratings","result_ratings","lastInteractionAt"];
+const EXPORT_KEYS=["schema_version","submission_schema","source_kind","provider","anonymous_rater_id","session_id","protocol_sha256","pilot_pack_sha256","local_session_key","started_at","last_activity_at","list_ratings","result_ratings","exported_at","duration_ms","integrity_notice","integrity_hmac_sha256"];
+const LIST_RATING_KEYS=["score_0_10","rated_at","interaction_ms"],RESULT_RATING_KEYS=["score_0_10","mismatch_reasons","rated_at","interaction_ms"];
 let selected={},protocol=null,pack=null,state=null,orderedSeeds=[],submissionPayload=null;
 const readFile=file=>file.text().then(JSON.parse);
-const isRecord=value=>value!==null&&typeof value==="object"&&!Array.isArray(value)&&
-  (Object.getPrototypeOf(value)===Object.prototype||Object.getPrototypeOf(value)===null);
-const exactKeys=(value,keys)=>isRecord(value)&&
-  JSON.stringify(Object.keys(value).sort())===JSON.stringify([...keys].sort());
-const canonical=value=>{
-  if(Array.isArray(value))return"["+value.map(canonical).join(",")+"]";
-  if(value&&typeof value==="object")return"{"+Object.keys(value).sort().map(key=>JSON.stringify(key)+":"+canonical(value[key])).join(",")+"}";
-  return JSON.stringify(value);
-};
+const isRecord=value=>value!==null&&typeof value==="object"&&!Array.isArray(value)&&(Object.getPrototypeOf(value)===Object.prototype||Object.getPrototypeOf(value)===null);
+const exactKeys=(value,keys)=>isRecord(value)&&JSON.stringify(Object.keys(value).sort())===JSON.stringify([...keys].sort());
+const canonical=value=>Array.isArray(value)?"["+value.map(canonical).join(",")+"]":value&&typeof value==="object"?"{"+Object.keys(value).sort().map(key=>JSON.stringify(key)+":"+canonical(value[key])).join(",")+"}":JSON.stringify(value);
 const hex=bytes=>[...new Uint8Array(bytes)].map(value=>value.toString(16).padStart(2,"0")).join("");
 const sha=async value=>hex(await crypto.subtle.digest("SHA-256",enc.encode(typeof value==="string"?value:canonical(value))));
 const docHash=async document=>{const copy={...document};delete copy.content_sha256;return sha(copy)};
 const randomHex=count=>{const value=new Uint8Array(count);crypto.getRandomValues(value);return hex(value)};
 const now=()=>new Date().toISOString();
-const iso=value=>typeof value==="string"&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)&&
-  Number.isFinite(Date.parse(value))&&new Date(Date.parse(value)).toISOString()===value;
+const iso=value=>typeof value==="string"&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)&&Number.isFinite(Date.parse(value))&&new Date(Date.parse(value)).toISOString()===value;
 const escapeHtml=value=>{const node=document.createElement("div");node.textContent=String(value??"");return node.innerHTML};
 const escapeAttr=value=>escapeHtml(value).replaceAll('"',"&quot;");
 const storagePointer=()=>`${STORAGE_NAMESPACE}-current:${PROTOCOL_SHA256}:${PACK_SHA256}`;
 const storageKey=()=>`${STORAGE_NAMESPACE}:${PROTOCOL_SHA256}:${PACK_SHA256}:${state.session_id}`;
-function emptyState(){
-  const started=now();
-  return {schema_version:2,submission_schema:SUBMISSION_SCHEMA,source_kind:"human_listener",provider:PROVIDER,
-    anonymous_rater_id:"anon-semantic-"+randomHex(12),session_id:"semantic-session-"+randomHex(12),
-    protocol_sha256:PROTOCOL_SHA256,pilot_pack_sha256:PACK_SHA256,local_session_key:randomHex(32),
-    started_at:started,last_activity_at:started,current_seed:0,list_ratings:{},lastInteractionAt:Date.now()};
-}
-function ratingComplete(value){
-  return exactKeys(value,RATING_KEYS)&&["not_similar","somewhat_similar","very_similar"].includes(value.similarity)&&
-    (value.score_0_10===null||(Number.isInteger(value.score_0_10)&&value.score_0_10>=0&&value.score_0_10<=10))&&
-    Array.isArray(value.unrelated_positions_1_to_5)&&
-    value.unrelated_positions_1_to_5.every((item,index,array)=>Number.isInteger(item)&&item>=1&&item<=5&&(index===0||array[index-1]<item))&&
-    iso(value.rated_at)&&Number.isInteger(value.interaction_ms)&&value.interaction_ms>=1;
-}
-function validRating(value,completeOnly,startedAt,endedAt,duration){
-  if(!exactKeys(value,RATING_KEYS)||!(value.similarity===null||["not_similar","somewhat_similar","very_similar"].includes(value.similarity))||
-     !(value.score_0_10===null||(Number.isInteger(value.score_0_10)&&value.score_0_10>=0&&value.score_0_10<=10))||
-     !Array.isArray(value.unrelated_positions_1_to_5)||value.unrelated_positions_1_to_5.length>5||
-     !value.unrelated_positions_1_to_5.every((item,index,array)=>Number.isInteger(item)&&item>=1&&item<=5&&(index===0||array[index-1]<item))||
-     !iso(value.rated_at)||Date.parse(value.rated_at)<startedAt||Date.parse(value.rated_at)>endedAt||
+function emptyState(){const started=now();return{schema_version:3,submission_schema:SUBMISSION_SCHEMA,source_kind:"human_listener",provider:PROVIDER,
+  anonymous_rater_id:"anon-pacing-"+randomHex(12),session_id:"pacing-session-"+randomHex(12),protocol_sha256:PROTOCOL_SHA256,pilot_pack_sha256:PACK_SHA256,
+  local_session_key:randomHex(32),started_at:started,last_activity_at:started,current_seed:0,list_ratings:{},result_ratings:{},lastInteractionAt:Date.now()}}
+const score=value=>Number.isInteger(value)&&value>=0&&value<=10;
+const listComplete=value=>exactKeys(value,LIST_RATING_KEYS)&&score(value.score_0_10)&&iso(value.rated_at)&&Number.isInteger(value.interaction_ms)&&value.interaction_ms>=1;
+const resultComplete=value=>exactKeys(value,RESULT_RATING_KEYS)&&score(value.score_0_10)&&Array.isArray(value.mismatch_reasons)&&value.mismatch_reasons.length<=6&&
+  value.mismatch_reasons.every((item,index,array)=>REASONS.includes(item)&&(index===0||array[index-1]<item))&&iso(value.rated_at)&&Number.isInteger(value.interaction_ms)&&value.interaction_ms>=1;
+function validRating(value,kind,completeOnly,started,ended,duration){
+  const keys=kind==="list"?LIST_RATING_KEYS:RESULT_RATING_KEYS,complete=kind==="list"?listComplete:resultComplete;
+  if(!exactKeys(value,keys)||!(value.score_0_10===null||score(value.score_0_10))||!iso(value.rated_at)||Date.parse(value.rated_at)<started||Date.parse(value.rated_at)>ended||
      !Number.isInteger(value.interaction_ms)||value.interaction_ms<1||value.interaction_ms>duration)return false;
-  return !completeOnly||ratingComplete(value);
+  if(kind==="result"&&(!Array.isArray(value.mismatch_reasons)||value.mismatch_reasons.length>6||!value.mismatch_reasons.every((item,index,array)=>REASONS.includes(item)&&(index===0||array[index-1]<item))))return false;
+  return !completeOnly||complete(value);
 }
-function committedListIds(){
-  return new Set((pack?.seeds||[]).flatMap(seed=>seed.lists.map(list=>list.list_id)));
-}
-function validRatingsMap(value,completeOnly,startedAt,endedAt,duration){
-  if(!isRecord(value)||Object.keys(value).length>40)return false;
-  const validIds=committedListIds();
-  return Object.entries(value).every(([id,rating])=>validIds.has(id)&&/^semantic-list-[a-f0-9]{24}$/.test(id)&&
-    validRating(rating,completeOnly,startedAt,endedAt,duration));
+const committedListIds=()=>new Set((pack?.seeds||[]).flatMap(seed=>seed.lists.map(list=>list.list_id)));
+const committedResultIds=()=>new Set((pack?.seeds||[]).flatMap(seed=>seed.result_ids.map(row=>row.result_id)));
+function validRatingsMap(value,kind,completeOnly,started,ended,duration){
+  const ids=kind==="list"?committedListIds():committedResultIds(),pattern=kind==="list"?/^pacing-list-[a-f0-9]{24}$/:/^pacing-result-[a-f0-9]{24}$/;
+  return isRecord(value)&&Object.keys(value).length<=(kind==="list"?40:200)&&Object.entries(value).every(([id,rating])=>ids.has(id)&&pattern.test(id)&&validRating(rating,kind,completeOnly,started,ended,duration));
 }
 function validState(value){
-  if(!exactKeys(value,STATE_KEYS)||value.schema_version!==2||value.submission_schema!==SUBMISSION_SCHEMA||
-     value.source_kind!=="human_listener"||value.provider!==PROVIDER||
-     !/^anon-semantic-[a-f0-9]{24}$/.test(value.anonymous_rater_id)||
-     !/^semantic-session-[a-f0-9]{24}$/.test(value.session_id)||
-     value.protocol_sha256!==PROTOCOL_SHA256||value.pilot_pack_sha256!==PACK_SHA256||
-     !/^[a-f0-9]{64}$/.test(value.local_session_key)||!iso(value.started_at)||!iso(value.last_activity_at)||
-     !Number.isInteger(value.current_seed)||value.current_seed<0||value.current_seed>=20||
-     !Number.isFinite(value.lastInteractionAt))return false;
-  const started=Date.parse(value.started_at),ended=Date.parse(value.last_activity_at),duration=ended-started;
-  return duration>=0&&duration<=MAX_DURATION_MS&&
-    validRatingsMap(value.list_ratings,false,started,ended,Math.max(1,duration+1000));
+  if(!exactKeys(value,STATE_KEYS)||value.schema_version!==3||value.submission_schema!==SUBMISSION_SCHEMA||value.source_kind!=="human_listener"||value.provider!==PROVIDER||
+     !/^anon-pacing-[a-f0-9]{24}$/.test(value.anonymous_rater_id)||!/^pacing-session-[a-f0-9]{24}$/.test(value.session_id)||value.protocol_sha256!==PROTOCOL_SHA256||
+     value.pilot_pack_sha256!==PACK_SHA256||!/^[a-f0-9]{64}$/.test(value.local_session_key)||!iso(value.started_at)||!iso(value.last_activity_at)||
+     !Number.isInteger(value.current_seed)||value.current_seed<0||value.current_seed>=20||!Number.isFinite(value.lastInteractionAt))return false;
+  const started=Date.parse(value.started_at),ended=Date.parse(value.last_activity_at),duration=Math.max(1,ended-started+1000);
+  return ended>=started&&ended-started<=MAX_DURATION_MS&&validRatingsMap(value.list_ratings,"list",false,started,ended,duration)&&validRatingsMap(value.result_ratings,"result",false,started,ended,duration);
 }
 function validExport(value){
-  if(!exactKeys(value,EXPORT_KEYS)||value.schema_version!==2||value.submission_schema!==SUBMISSION_SCHEMA||
-     value.source_kind!=="human_listener"||value.provider!==PROVIDER||
-     !/^anon-semantic-[a-f0-9]{24}$/.test(value.anonymous_rater_id)||
-     !/^semantic-session-[a-f0-9]{24}$/.test(value.session_id)||
-     value.protocol_sha256!==PROTOCOL_SHA256||value.pilot_pack_sha256!==PACK_SHA256||
-     !/^[a-f0-9]{64}$/.test(value.local_session_key)||!/^[a-f0-9]{64}$/.test(value.integrity_hmac_sha256)||
-     value.integrity_notice!==INTEGRITY_NOTICE||!iso(value.started_at)||!iso(value.last_activity_at)||!iso(value.exported_at)||
-     !Number.isInteger(value.duration_ms)||value.duration_ms<1||value.duration_ms>MAX_DURATION_MS)return false;
+  if(!exactKeys(value,EXPORT_KEYS)||value.schema_version!==3||value.submission_schema!==SUBMISSION_SCHEMA||value.source_kind!=="human_listener"||value.provider!==PROVIDER||
+     !/^anon-pacing-[a-f0-9]{24}$/.test(value.anonymous_rater_id)||!/^pacing-session-[a-f0-9]{24}$/.test(value.session_id)||value.protocol_sha256!==PROTOCOL_SHA256||
+     value.pilot_pack_sha256!==PACK_SHA256||!/^[a-f0-9]{64}$/.test(value.local_session_key)||!/^[a-f0-9]{64}$/.test(value.integrity_hmac_sha256)||
+     value.integrity_notice!==INTEGRITY_NOTICE||!iso(value.started_at)||!iso(value.last_activity_at)||!iso(value.exported_at)||!Number.isInteger(value.duration_ms)||
+     value.duration_ms<1||value.duration_ms>MAX_DURATION_MS)return false;
   const started=Date.parse(value.started_at),last=Date.parse(value.last_activity_at),ended=Date.parse(value.exported_at);
-  return started<=last&&last<=ended&&Math.abs(ended-started-value.duration_ms)<=1000&&
-    validRatingsMap(value.list_ratings,true,started,ended,value.duration_ms);
+  return started<=last&&last<=ended&&Math.abs(ended-started-value.duration_ms)<=1000&&validRatingsMap(value.list_ratings,"list",true,started,ended,value.duration_ms)&&
+    validRatingsMap(value.result_ratings,"result",true,started,ended,value.duration_ms)&&(Object.keys(value.list_ratings).length+Object.keys(value.result_ratings).length>0);
 }
 function validateTrack(key,track){
-  if(!/^[1-9]\d*$/.test(key)||!exactKeys(track,["track_id","source_identity","title","artist","album","jamendo_url","audio","license","playback_excerpt"])||
-     track.track_id!==Number(key)||![track.title,track.artist,track.album].every(value=>typeof value==="string"&&value.trim()))throw Error("Pilot track identity is invalid.");
-  if(!exactKeys(track.source_identity,["artist_id","album_id","relative_path","source_audio_sha256","source_audio_bytes","store_row","fold","fold_part"])||
-     track.source_identity.fold!==0||track.source_identity.fold_part!=="test"||
-     !/^[a-f0-9]{64}$/.test(track.source_identity.source_audio_sha256))throw Error("Pilot fold binding is invalid.");
-  const expected=`https://prod-1.storage.jamendo.com/?trackid=${key}&format=mp31`;
-  if(!exactKeys(track.audio,["url","delivery","verification"])||track.audio.url!==expected||
-     track.audio.delivery!=="Jamendo first-party full-track MP3"||
-     !exactKeys(track.audio.verification,["status","content_type","content_length","accept_ranges","final_host"])||
-     track.audio.verification.status!==200||track.audio.verification.content_type!=="audio/mpeg"||
-     !Number.isInteger(track.audio.verification.content_length)||track.audio.verification.content_length<100000||
-     track.audio.verification.accept_ranges!=="bytes"||track.audio.verification.final_host!=="prod-1.storage.jamendo.com")throw Error("Pilot audio evidence is invalid.");
-  const excerpt=track.playback_excerpt;
-  if(!exactKeys(excerpt,["kind","start_seconds","end_seconds","source_window_start_seconds","source_window_seconds"])||
-     excerpt.kind!=="strongest_nonlocal_recurrence"||
-     ![excerpt.start_seconds,excerpt.end_seconds,excerpt.source_window_start_seconds,excerpt.source_window_seconds].every(Number.isFinite)||
-     excerpt.start_seconds<0||excerpt.end_seconds<=excerpt.start_seconds||excerpt.end_seconds-excerpt.start_seconds>20||
-     excerpt.source_window_start_seconds<excerpt.start_seconds||excerpt.source_window_start_seconds>=excerpt.end_seconds||
-     excerpt.source_window_seconds!==10)throw Error("Pilot playback excerpt is invalid.");
-  if(track.jamendo_url!==`https://www.jamendo.com/track/${key}`||
-     !exactKeys(track.license,["name","url","attribution","permits_commercial_use","permits_derivatives","pilot_use"])||
-     !track.license.attribution||typeof track.license.permits_commercial_use!=="boolean"||
-     typeof track.license.permits_derivatives!=="boolean"||
-     !/^https:\/\/(?:creativecommons\.org\/licenses\/|artlibre\.org\/licence\/lal)/.test(track.license.url))throw Error("Pilot attribution evidence is invalid.");
+  const excerpt=track?.playback_excerpt,expected=`https://prod-1.storage.jamendo.com/?trackid=${key}&format=mp31`;
+  if(!/^[1-9]\d*$/.test(key)||track?.track_id!==Number(key)||track?.source_identity?.fold!==0||track?.source_identity?.fold_part!=="test"||
+     track?.audio?.url!==expected||track?.audio?.delivery!=="Jamendo first-party full-track MP3"||track?.audio?.verification?.status!==200||
+     excerpt?.kind!=="strongest_nonlocal_recurrence"||![excerpt.start_seconds,excerpt.end_seconds,excerpt.source_window_start_seconds].every(Number.isFinite)||
+     excerpt.start_seconds<0||excerpt.end_seconds<=excerpt.start_seconds||excerpt.end_seconds-excerpt.start_seconds>20||excerpt.source_window_seconds!==10||
+     typeof track.title!=="string"||typeof track.artist!=="string"||typeof track.license?.attribution!=="string")throw Error("Study track evidence is invalid.");
 }
 async function validateStudy(candidateProtocol,candidatePack){
-  if(!exactKeys(candidateProtocol,PROTOCOL_KEYS)||await docHash(candidateProtocol)!==candidateProtocol.content_sha256||
-     candidateProtocol.content_sha256!==PROTOCOL_SHA256||candidateProtocol.schema_version!==2||
-     candidateProtocol.protocol_kind!=="repeated_excerpt_semantic_blind_listener_v2_private_submission"||
-     candidateProtocol.submission_schema!==SUBMISSION_SCHEMA||candidateProtocol.pilot_pack_sha256!==PACK_SHA256||
-     candidateProtocol.seed_count!==20||candidateProtocol.list_count!==40||candidateProtocol.results_per_list!==5||
-     candidateProtocol.assignment!=="fixed uncertainty-prioritized seed order; opaque deterministic per-session list order"||
-     candidateProtocol.playback!=="20-second strongest-recurrence excerpt; no full-track seeking"||
-     candidateProtocol.seed_order!=="core scenes first, then edge scenes; lower matched-list overlap first within each group; ratings never used"||
-     candidateProtocol.local_storage_namespace!==STORAGE_NAMESPACE||candidateProtocol.submission_endpoint!=="/api/ratings-semantic-v2"||
-     candidateProtocol.private_blob_prefix!=="human-ratings/semantic-v2/"||
-     candidateProtocol.explicit_consent_required!==true||candidateProtocol.automatic_submission!==false||
-     candidateProtocol.partial_submission_allowed!==true||candidateProtocol.research_only!==true||
-     candidateProtocol.promotion_allowed!==false||candidateProtocol.production_recommendation_changed!==false)throw Error("Protocol is not the locked semantic v2 protocol.");
-  if(!exactKeys(candidatePack,PACK_KEYS)||await docHash(candidatePack)!==candidatePack.content_sha256||
-     candidatePack.content_sha256!==PACK_SHA256||candidatePack.schema_version!==2||
-     candidatePack.pack_kind!=="fulltrack_semantic_repeated_excerpt_pilot_v2"||candidatePack.pack_id!=="semantic-repeated-excerpt-v2-20"||
-     candidatePack.rankings_state!=="LOCKED_BEFORE_RATINGS"||candidatePack.ratings_count_at_freeze!==0||
-     candidatePack.seed_count!==20||candidatePack.method_count!==2||candidatePack.results_per_method!==5||
-     candidatePack.source_v2_pack_sha256!=="1980da60810959e7cdd24f39bd7142c8e34c76dab633c705976b85e49b297023"||
-     candidatePack.section_coverage?.uniform_window_budget!==32||candidatePack.section_coverage?.repeated_section_budget!==32||
-     candidatePack.section_coverage?.salient_section_budget!==32||candidatePack.language_policy?.evaluated_here!==false||
-     candidatePack.playback_policy?.kind!=="strongest_nonlocal_recurrence_excerpt"||
-     candidatePack.playback_policy?.excerpt_seconds!==20||candidatePack.playback_policy?.source_window_seconds!==10||
-     candidatePack.playback_policy?.verified_chorus_labels!==false||candidatePack.playback_policy?.full_track_seeking_allowed!==false||
-     candidatePack.seed_order_policy?.randomized!==false||candidatePack.seed_order_policy?.ratings_used!==false||
-     candidatePack.seed_order_policy?.edge_scenes_after_core!==true||!Array.isArray(candidatePack.seed_order_policy?.core_scenes)||
-     candidatePack.research_only!==true||candidatePack.promotion_allowed!==false||candidatePack.production_recommendation_changed!==false||
-     !isRecord(candidatePack.tracks)||!Array.isArray(candidatePack.seeds)||candidatePack.seeds.length!==20)throw Error("Study pack is not the locked public semantic v2 pack.");
-  const publicText=canonical(candidatePack);
-  if(["method_bindings","blinding_key_hex"].some(marker=>publicText.includes(marker)))throw Error("Study pack is not blinded.");
+  if(await docHash(candidateProtocol)!==candidateProtocol.content_sha256||candidateProtocol.content_sha256!==PROTOCOL_SHA256||candidateProtocol.schema_version!==3||
+     candidateProtocol.protocol_kind!=="repeated_excerpt_blind_listener_v3_private_submission"||candidateProtocol.submission_schema!==SUBMISSION_SCHEMA||
+     candidateProtocol.pilot_pack_sha256!==PACK_SHA256||candidateProtocol.local_storage_namespace!==STORAGE_NAMESPACE||
+     candidateProtocol.submission_endpoint!=="/api/ratings-pacing-v3"||candidateProtocol.private_blob_prefix!=="human-ratings/pacing-v3/"||
+     candidateProtocol.explicit_consent_required!==true||candidateProtocol.automatic_submission!==false||candidateProtocol.partial_submission_allowed!==true||
+     candidateProtocol.research_only!==true||candidateProtocol.promotion_allowed!==false||candidateProtocol.production_recommendation_changed!==false||
+     candidateProtocol.language_evaluated!==false)throw Error("Protocol is not the locked pacing V3 protocol.");
+  if(await docHash(candidatePack)!==candidatePack.content_sha256||candidatePack.content_sha256!==PACK_SHA256||candidatePack.schema_version!==3||
+     candidatePack.pack_kind!=="blinded_repeated_excerpt_comparison_v3"||candidatePack.pack_id!=="pacing-v3-blind-20"||candidatePack.rankings_state!=="LOCKED_BEFORE_RATINGS"||
+     candidatePack.ratings_count_at_freeze!==0||candidatePack.seed_count!==20||candidatePack.method_count!==2||candidatePack.results_per_method!==5||
+     candidatePack.source_semantic_v2_pack_sha256!=="939b639abb6d6c6b2c7ba20ae570ff7ae9d06ee67254c219d6e5f61975403347"||
+     candidatePack.source_fulltrack_v2_pack_sha256!=="1980da60810959e7cdd24f39bd7142c8e34c76dab633c705976b85e49b297023"||
+     candidatePack.provenance?.ratings_used!==false||candidatePack.provenance?.signal_dimensions!==29||candidatePack.matched_design?.candidate_pool!==200||
+     candidatePack.matched_design?.one_result_per_artist!==true||candidatePack.playback_policy?.verified_chorus_labels!==false||
+     candidatePack.language_policy?.evaluated_here!==false||candidatePack.research_only!==true||candidatePack.promotion_allowed!==false||
+     candidatePack.production_recommendation_changed!==false||candidatePack.blinding?.method_identity_public!==false||
+     candidatePack.blinding?.method_order_randomized_per_seed_session!==true||!Array.isArray(candidatePack.seeds)||candidatePack.seeds.length!==20)throw Error("Study pack is not the locked blinded pack.");
+  const lists=new Set(),results=new Map(),priority=[];
   Object.entries(candidatePack.tracks).forEach(([key,track])=>validateTrack(key,track));
-  const listIds=new Set(),seedIds=new Set(),resultIds=new Set(),priorityKeys=[];
-  const coreScenes=candidatePack.seed_order_policy.core_scenes,corePositions=new Map(coreScenes.map((scene,index)=>[scene,index]));
-  for(const seed of candidatePack.seeds){
-    if(!exactKeys(seed,["clap_texture_region","lists","matched_list_overlap","priority_rank","result_ids","scene","seed_id","seed_track_id","tempo_bpm","tempo_region"])||
-       !/^semantic-seed-[a-f0-9]{24}$/.test(seed.seed_id)||seedIds.has(seed.seed_id)||!candidatePack.tracks[String(seed.seed_track_id)]||
-       seed.priority_rank!==seedIds.size+1||!Number.isInteger(seed.matched_list_overlap)||seed.matched_list_overlap<0||seed.matched_list_overlap>5||
-       !Array.isArray(seed.result_ids)||!Array.isArray(seed.lists)||seed.lists.length!==2)throw Error("Study seed schema is invalid.");
-    seedIds.add(seed.seed_id);
-    const localResults=new Map();
-    for(const row of seed.result_ids){
-      if(!exactKeys(row,["result_id","track_id"])||!/^semantic-result-[a-f0-9]{24}$/.test(row.result_id)||
-         resultIds.has(row.result_id)||localResults.has(row.result_id)||!candidatePack.tracks[String(row.track_id)])throw Error("Study result identity is invalid.");
-      resultIds.add(row.result_id);localResults.set(row.result_id,row.track_id);
-    }
-    const rankedTrackSets=[];
-    for(const list of seed.lists){
-      if(!exactKeys(list,["binding_commitment_sha256","list_id","ranking"])||!/^[a-f0-9]{64}$/.test(list.binding_commitment_sha256)||
-         !/^semantic-list-[a-f0-9]{24}$/.test(list.list_id)||listIds.has(list.list_id)||!Array.isArray(list.ranking)||list.ranking.length!==5)throw Error("Study list identity is invalid.");
-      listIds.add(list.list_id);
-      const ranked=new Set();
-      list.ranking.forEach((row,index)=>{
-        if(!exactKeys(row,["position","result_id","track_id"])||row.position!==index+1||ranked.has(row.result_id)||
-           localResults.get(row.result_id)!==row.track_id)throw Error("Pilot ranking is invalid.");
-        ranked.add(row.result_id);
-      });
-      rankedTrackSets.push(new Set(list.ranking.map(row=>row.track_id)));
-    }
-    const overlap=[...rankedTrackSets[0]].filter(trackId=>rankedTrackSets[1].has(trackId)).length;
-    if(overlap!==seed.matched_list_overlap)throw Error("Study seed priority evidence is invalid.");
-    const corePosition=corePositions.get(seed.scene);
-    priorityKeys.push([corePosition===undefined?1:0,overlap,corePosition??coreScenes.length,seed.seed_track_id]);
-  }
-  const sortedPriorityKeys=[...priorityKeys].sort((left,right)=>{
-    for(let index=0;index<left.length;index+=1)if(left[index]!==right[index])return left[index]-right[index];
-    return 0;
+  candidatePack.seeds.forEach((seed,index)=>{
+    if(seed.priority_rank!==index+1||!/^pacing-seed-[a-f0-9]{24}$/.test(seed.seed_id)||!Array.isArray(seed.lists)||seed.lists.length!==2)throw Error("Study seed identity is invalid.");
+    const map=new Map(seed.result_ids.map(row=>[row.track_id,row.result_id]));if(map.size!==seed.result_ids.length)throw Error("Study result map is invalid.");
+    const rankingSets=seed.lists.map(list=>{
+      if(!/^pacing-list-[a-f0-9]{24}$/.test(list.list_id)||lists.has(list.list_id)||list.ranking.length!==5)throw Error("Study list identity is invalid.");lists.add(list.list_id);
+      const artists=new Set();list.ranking.forEach((row,position)=>{const track=candidatePack.tracks[String(row.track_id)];
+        if(row.position!==position+1||map.get(row.track_id)!==row.result_id||!/^pacing-result-[a-f0-9]{24}$/.test(row.result_id)||!track)throw Error("Study ranking identity is invalid.");
+        if(results.has(row.result_id)&&results.get(row.result_id)!==row.track_id)throw Error("Opaque result identity is inconsistent.");results.set(row.result_id,row.track_id);artists.add(track.source_identity.artist_id)});
+      if(artists.size!==5)throw Error("Study artist diversity is invalid.");return new Set(list.ranking.map(row=>row.track_id));
+    });
+    const overlap=[...rankingSets[0]].filter(value=>rankingSets[1].has(value)).length;if(seed.matched_list_overlap!==overlap)throw Error("Study disagreement evidence is invalid.");priority.push([overlap,seed.seed_track_id]);
   });
-  if(canonical(priorityKeys)!==canonical(sortedPriorityKeys))throw Error("Study seed priority order is invalid.");
-  if(listIds.size!==40)return false;
-  return true;
+  const sorted=[...priority].sort((a,b)=>a[0]-b[0]||a[1]-b[1]);if(canonical(priority)!==canonical(sorted)||lists.size!==40)return false;return true;
 }
-function save(){
-  if(!state)return;
-  const key=storageKey();localStorage.setItem(key,JSON.stringify(state));localStorage.setItem(storagePointer(),key);
-}
-function restoreAutosave(){
-  try{
-    const key=localStorage.getItem(storagePointer()),saved=key?JSON.parse(localStorage.getItem(key)||"null"):null;
-    return validState(saved)?{...saved,lastInteractionAt:Date.now()}:null;
-  }catch{return null}
-}
+function save(){if(!state)return;const key=storageKey();localStorage.setItem(key,JSON.stringify(state));localStorage.setItem(storagePointer(),key)}
+function restoreAutosave(){try{const key=localStorage.getItem(storagePointer()),saved=key?JSON.parse(localStorage.getItem(key)||"null"):null;return validState(saved)?{...saved,lastInteractionAt:Date.now()}:null}catch{return null}}
+function inputScore(input,previous){if(input.value==="")return null;const value=Number(input.value);if(score(value))return value;input.value=score(previous)?String(previous):"";return undefined}
 function invalidateSubmission(){submissionPayload=null;$("submit-status").classList.remove("success","danger")}
-function touch(rating){
-  const time=Date.now();rating.rated_at=now();rating.interaction_ms=Math.max(1,time-state.lastInteractionAt);
-  state.lastInteractionAt=time;state.last_activity_at=rating.rated_at;invalidateSubmission();save();updateProgress();updateSubmitAvailability();
-}
-async function hmac(payload,keyHex){
-  const key=await crypto.subtle.importKey("raw",enc.encode(keyHex),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
-  return hex(await crypto.subtle.sign("HMAC",key,enc.encode(canonical(payload))));
-}
-async function sessionOrder(items,label,sessionId=state.session_id){
-  const scored=await Promise.all(items.map(async(item,index)=>({
-    item,score:await sha(`${PACK_SHA256}\0${sessionId}\0${label}\0${item.seed_id||item.list_id||index}`)
-  })));
-  return scored.sort((left,right)=>left.score.localeCompare(right.score)).map(row=>row.item);
-}
-function trackPlayerHtml(track,label){
-  const excerpt=track.playback_excerpt;
-  return `<div class="track"><strong>${escapeHtml(label)}</strong><span class="muted"> · 20-second repeated-section excerpt</span>`+
-    `<audio controls preload="metadata" referrerpolicy="no-referrer" src="${escapeAttr(track.audio.url)}" aria-label="${escapeAttr(label)}"`+
-    ` data-excerpt-start="${excerpt.start_seconds}" data-excerpt-end="${excerpt.end_seconds}"></audio></div>`;
-}
-function bindExcerptPlayers(){
-  document.querySelectorAll("audio[data-excerpt-start]").forEach(audio=>{
-    const start=Number(audio.dataset.excerptStart),end=Number(audio.dataset.excerptEnd);
-    const atBoundary=()=>audio.currentTime<start-.05||audio.currentTime>=end;
-    const reset=()=>{audio.currentTime=start};
-    audio.addEventListener("loadedmetadata",reset);
-    audio.addEventListener("play",()=>{if(atBoundary())reset()});
-    audio.addEventListener("seeking",()=>{if(atBoundary()){audio.pause();reset()}});
-    audio.addEventListener("timeupdate",()=>{if(audio.currentTime>=end){audio.pause();reset()}});
-    audio.addEventListener("ended",reset);
-    if(audio.readyState>=1)reset();
-  });
-}
-function trackAttributionHtml(track){
-  return `<p><strong>${escapeHtml(track.title)}</strong> — ${escapeHtml(track.artist)} · ${escapeHtml(track.album)}</p>`+
-    `<p>${escapeHtml(track.license.attribution)} · <a href="${escapeAttr(track.jamendo_url)}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Jamendo track</a> · `+
-    `<a href="${escapeAttr(track.license.url)}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">${escapeHtml(track.license.name)}</a></p>`;
-}
-function listRatingHtml(list){
-  const rating=state.list_ratings[list.list_id]||{},id=escapeAttr(list.list_id),score=Number.isInteger(rating.score_0_10)?String(rating.score_0_10):"";
-  const unrelated=new Set(rating.unrelated_positions_1_to_5||[]);
-  return `<fieldset data-list="${id}"><legend>How similar is this recommendation list to the seed?</legend>`+
-    `<div class="choices">${[["not_similar","Not similar"],["somewhat_similar","Somewhat similar"],["very_similar","Very similar"]].map(([value,label])=>
-      `<label><input type="radio" name="similarity-${id}" value="${value}" ${rating.similarity===value?"checked":""}>${label}</label>`).join("")}</div>`+
-    `<div class="choices"><label>Optional list score 0–10 <input data-score type="number" min="0" max="10" step="1" value="${escapeAttr(score)}"></label></div>`+
-    `<fieldset><legend>Optional unrelated positions</legend><div class="choices">${[1,2,3,4,5].map(position=>
-      `<label><input data-unrelated type="checkbox" value="${position}" ${unrelated.has(position)?"checked":""}>${position}</label>`).join("")}</div></fieldset></fieldset>`;
-}
-function listById(seed,id){return seed.lists.find(list=>list.list_id===id)}
-function updateAttribution(seed,list){
-  const listPanel=document.querySelector(`[data-attribution="${list.list_id}"]`);
-  if(listPanel&&ratingComplete(state.list_ratings[list.list_id])){
-    listPanel.innerHTML=list.ranking.map(row=>trackAttributionHtml(pack.tracks[String(row.track_id)])).join("");
-    listPanel.classList.remove("hidden");
-  }
-  const anyRated=seed.lists.some(item=>ratingComplete(state.list_ratings[item.list_id]));
-  const seedPanel=document.querySelector("[data-seed-attribution]");
-  if(seedPanel&&anyRated){
-    seedPanel.innerHTML=trackAttributionHtml(pack.tracks[String(seed.seed_track_id)]);
-    seedPanel.classList.remove("hidden");
-  }
-}
-function bindInputs(seed){
-  document.querySelectorAll("[data-list]").forEach(fieldset=>{
-    const id=fieldset.dataset.list,list=listById(seed,id);
-    const ensure=()=>state.list_ratings[id]||(state.list_ratings[id]={
-      similarity:null,score_0_10:null,unrelated_positions_1_to_5:[],rated_at:now(),interaction_ms:1});
-    fieldset.querySelectorAll('input[type=radio]').forEach(input=>input.onchange=()=>{
-      const rating=ensure();rating.similarity=input.value;touch(rating);updateAttribution(seed,list);
-    });
-    fieldset.querySelector("[data-score]").onchange=event=>{
-      const rating=ensure(),value=event.target.value;rating.score_0_10=value===""?null:Number(value);
-      touch(rating);updateAttribution(seed,list);
-    };
-    fieldset.querySelectorAll("[data-unrelated]").forEach(input=>input.onchange=()=>{
-      const rating=ensure();rating.unrelated_positions_1_to_5=[...fieldset.querySelectorAll("[data-unrelated]:checked")].map(item=>Number(item.value)).sort((a,b)=>a-b);
-      touch(rating);updateAttribution(seed,list);
-    });
-  });
-}
-function updateProgress(){
-  if(state&&orderedSeeds.length)$("progress").textContent=
-    `Seed ${state.current_seed+1} of ${orderedSeeds.length} · ${Object.values(state.list_ratings).filter(ratingComplete).length} of 40 lists rated`;
-}
-async function render(){
-  state.current_seed=Math.max(0,Math.min(state.current_seed,orderedSeeds.length-1));
-  const seed=orderedSeeds[state.current_seed],lists=await sessionOrder(seed.lists,`list-order:${seed.seed_id}`);
-  $("prev").disabled=state.current_seed===0;$("next").disabled=state.current_seed===orderedSeeds.length-1;
-  updateProgress();
-  const seedTrack=pack.tracks[String(seed.seed_track_id)];
-  $("seed").innerHTML=`<header class="panel"><h2>Seed ${state.current_seed+1}</h2><p>Listen to the anonymous seed, then each anonymous five-track list. Lists use an opaque session-specific order.</p>`+
-    trackPlayerHtml(seedTrack,"Seed track")+`<div class="attribution hidden" data-seed-attribution></div></header>`+
-    `<div class="lists">${lists.map((list,index)=>`<section class="list"><h3>List ${String.fromCharCode(65+index)}</h3>`+
-      list.ranking.map((row,position)=>trackPlayerHtml(pack.tracks[String(row.track_id)],`Result ${position+1}`)).join("")+
-      listRatingHtml(list)+`<div class="attribution hidden" data-attribution="${escapeAttr(list.list_id)}"></div></section>`).join("")}</div>`;
-  bindExcerptPlayers();bindInputs(seed);lists.forEach(list=>updateAttribution(seed,list));save();updateSubmitAvailability();
-}
-async function begin(){
-  try{
-    if(!selected.protocol||!selected.pack)throw Error("Select both locked semantic-study JSON files.");
-    await validateStudy(selected.protocol,selected.pack);protocol=selected.protocol;pack=selected.pack;
-    invalidateSubmission();$("consent").checked=false;
-    const restored=restoreAutosave();state=restored||emptyState();orderedSeeds=[...pack.seeds];
-    $("study").classList.remove("hidden");$("setup-status").classList.remove("danger");
-    $("setup-status").textContent=restored?"Locked semantic study validated. Autosaved session resumed.":"Locked semantic study validated. Autosave is active.";
-    save();await render();
-  }catch(error){$("setup-status").textContent=error.message;$("setup-status").classList.add("danger")}
-}
-async function loadBundled(){
-  try{
-    const options={credentials:"omit",cache:"no-store",referrerPolicy:"no-referrer",headers:{"Accept":"application/json"}};
-    const base=new URL(location.href);base.search="";base.hash="";if(!base.pathname.endsWith("/"))base.pathname+="/";
-    const responses=await Promise.all(["./protocol-semantic-v2.json","./semantic-pack.json"].map(path=>fetch(new URL(path,base),options)));
-    if(responses.some(response=>!response.ok))throw Error("Bundled semantic-study files are unavailable.");
-    [selected.protocol,selected.pack]=await Promise.all(responses.map(response=>response.json()));await begin();
-  }catch(error){$("setup-status").textContent=error.message;$("setup-status").classList.add("danger")}
-}
-function completeEntries(){
-  return Object.entries(state?.list_ratings||{}).filter(([,rating])=>ratingComplete(rating));
-}
-function updateSubmitAvailability(){
-  const count=completeEntries().length,enabled=Boolean(state)&&count>0&&$("consent").checked;
-  $("submit").disabled=!enabled;
-  if(!enabled&&!$("submit-status").classList.contains("success")&&!$("submit-status").classList.contains("danger"))
-    $("submit-status").textContent=count?"Check consent to enable explicit private submission.":"Complete at least one list rating and check consent.";
-}
-async function buildExport(){
-  const payload={...state};delete payload.current_seed;delete payload.lastInteractionAt;
-  payload.list_ratings=Object.fromEntries(completeEntries());payload.exported_at=now();
-  payload.duration_ms=Math.max(1,Date.now()-Date.parse(payload.started_at));payload.integrity_notice=INTEGRITY_NOTICE;
-  payload.integrity_hmac_sha256=await hmac(payload,payload.local_session_key);return payload;
-}
-async function exportRatings(){
-  const payload=await buildExport(),blob=new Blob([JSON.stringify(payload,null,2)+"\n"],{type:"application/json"});
-  const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=`semantic-v2-ratings-${payload.session_id}.json`;
-  link.click();URL.revokeObjectURL(link.href);
-}
-async function stateFromExport(imported){
-  if(!validExport(imported))throw Error("Import is not a strict export for this semantic study.");
-  const signature=imported.integrity_hmac_sha256,payload={...imported};delete payload.integrity_hmac_sha256;
-  if(await hmac(payload,imported.local_session_key)!==signature)throw Error("Import integrity HMAC mismatch.");
-  const restored={...imported,current_seed:0,lastInteractionAt:Date.now()};
-  for(const key of ["integrity_hmac_sha256","integrity_notice","exported_at","duration_ms"])delete restored[key];
-  if(!validState(restored))throw Error("Import cannot be represented as a valid semantic session.");
-  return restored;
-}
-async function resume(file){
-  try{
-    if(!protocol||!pack)throw Error("Load and validate the locked semantic study first.");
-    state=await stateFromExport(await readFile(file));
-    invalidateSubmission();$("consent").checked=false;orderedSeeds=[...pack.seeds];
-    save();await render();$("setup-status").textContent="Valid semantic partial session imported and autosaved.";
-  }catch(error){$("setup-status").textContent=error.message;$("setup-status").classList.add("danger")}
-}
-async function submitRatings(){
-  if($("submit").disabled)return;
-  $("submit").disabled=true;$("submit-status").classList.remove("success","danger");
-  $("submit-status").textContent="Submitting this explicit snapshot to the private semantic v2 inbox…";
-  try{
-    submissionPayload=submissionPayload||await buildExport();
-    const response=await fetch("/api/ratings-semantic-v2",{method:"POST",credentials:"omit",cache:"no-store",referrerPolicy:"no-referrer",
-      headers:{"Accept":"application/json","Content-Type":"application/json"},
-      body:JSON.stringify({consent:true,study:"semantic-repeated-excerpt-v2",ratings:submissionPayload})});
-    const receipt=await response.json().catch(()=>({}));if(!response.ok)throw Error(receipt.error||"request failed");
-    const sanitized={...submissionPayload};for(const key of ["local_session_key","integrity_hmac_sha256","integrity_notice"])delete sanitized[key];
-    const expected=await sha(sanitized),count=Object.keys(submissionPayload.list_ratings).length;
-    if(receipt.receipt_sha256!==expected||receipt.counts?.complete_list_ratings!==count||typeof receipt.duplicate!=="boolean")throw Error("receipt mismatch");
-    $("submit-status").classList.add("success");$("submit-status").textContent=
-      `${receipt.duplicate?"Duplicate safely recognized":"Ratings accepted"}. Receipt ${receipt.receipt_sha256}; ${count} list ratings.`;
-  }catch{
-    $("submit-status").classList.add("danger");$("submit-status").textContent=
-      "Submission failed or returned an invalid receipt. Autosave is unchanged; retry or export JSON.";
-  }finally{updateSubmitAvailability()}
-}
-$("protocol-file").onchange=event=>readFile(event.target.files[0]).then(value=>selected.protocol=value);
-$("pack-file").onchange=event=>readFile(event.target.files[0]).then(value=>selected.pack=value);
-$("resume-file").onchange=event=>resume(event.target.files[0]);
-$("load").onclick=begin;$("load-bundled").onclick=loadBundled;$("export").onclick=exportRatings;
-$("consent").onchange=()=>{invalidateSubmission();updateSubmitAvailability()};$("submit").onclick=submitRatings;
+function touch(rating){const time=Date.now();rating.rated_at=now();rating.interaction_ms=Math.max(1,time-state.lastInteractionAt);state.lastInteractionAt=time;state.last_activity_at=rating.rated_at;invalidateSubmission();save();updateProgress();updateSubmitAvailability()}
+async function hmac(payload,keyHex){const key=await crypto.subtle.importKey("raw",enc.encode(keyHex),{name:"HMAC",hash:"SHA-256"},false,["sign"]);return hex(await crypto.subtle.sign("HMAC",key,enc.encode(canonical(payload))))}
+async function sessionOrder(items,label,sessionId=state.session_id){const scored=await Promise.all(items.map(async(item,index)=>({item,score:await sha(`${PACK_SHA256}\0${sessionId}\0${label}\0${item.seed_id||item.list_id||index}`)})));return scored.sort((a,b)=>a.score.localeCompare(b.score)).map(row=>row.item)}
+function trackPlayerHtml(track,label){const excerpt=track.playback_excerpt;return `<div class="track"><strong>${escapeHtml(label)}</strong><span class="muted"> · repeated-section excerpt</span><audio controls preload="metadata" referrerpolicy="no-referrer" src="${escapeAttr(track.audio.url)}" aria-label="${escapeAttr(label)}" data-excerpt-start="${excerpt.start_seconds}" data-excerpt-end="${excerpt.end_seconds}"></audio></div>`}
+function bindExcerptPlayers(){document.querySelectorAll("audio[data-excerpt-start]").forEach(audio=>{const start=Number(audio.dataset.excerptStart),end=Number(audio.dataset.excerptEnd),outside=()=>audio.currentTime<start-.05||audio.currentTime>=end,reset=()=>{audio.currentTime=start};
+  audio.addEventListener("loadedmetadata",reset);audio.addEventListener("play",()=>{if(outside())reset()});audio.addEventListener("seeking",()=>{if(outside()){audio.pause();reset()}});audio.addEventListener("timeupdate",()=>{if(audio.currentTime>=end){audio.pause();reset()}});audio.addEventListener("ended",reset);if(audio.readyState>=1)reset()})}
+function attributionHtml(track){return `<p><strong>${escapeHtml(track.title)}</strong> — ${escapeHtml(track.artist)} · ${escapeHtml(track.album)}</p><p>${escapeHtml(track.license.attribution)} · <a href="${escapeAttr(track.jamendo_url)}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Jamendo track</a> · <a href="${escapeAttr(track.license.url)}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">${escapeHtml(track.license.name)}</a></p>`}
+function listRatingHtml(list){const rating=state.list_ratings[list.list_id]||{},value=score(rating.score_0_10)?rating.score_0_10:"";return `<fieldset class="rating" data-list="${escapeAttr(list.list_id)}"><legend>Overall list similarity (required for a complete list rating)</legend><label>Score 0–10 <input data-list-score type="number" min="0" max="10" step="1" value="${value}"></label></fieldset>`}
+function resultRatingHtml(row){const rating=state.result_ratings[row.result_id]||{},value=score(rating.score_0_10)?rating.score_0_10:"",selected=new Set(rating.mismatch_reasons||[]),id=escapeAttr(row.result_id);
+  return `<fieldset class="rating" data-result="${id}"><legend>Result score (required)</legend><label>Score 0–10 <input data-result-score type="number" min="0" max="10" step="1" value="${value}"></label><div class="muted">Optional mismatch reasons</div><div class="reasons">${REASONS.map(reason=>`<label><input data-reason type="checkbox" value="${reason}" ${selected.has(reason)?"checked":""}>${reason.replaceAll("_"," ")}</label>`).join("")}</div></fieldset>`}
+const fullListComplete=list=>listComplete(state.list_ratings[list.list_id])&&list.ranking.every(row=>resultComplete(state.result_ratings[row.result_id]));
+function updateAttribution(seed,list){const panel=document.querySelector(`[data-attribution="${list.list_id}"]`),complete=fullListComplete(list);if(panel){panel.innerHTML=complete?list.ranking.map(row=>attributionHtml(pack.tracks[String(row.track_id)])).join(""):"";panel.classList[complete?"remove":"add"]("hidden")}
+  const seedPanel=document.querySelector("[data-seed-attribution]"),seedComplete=seed.lists.some(fullListComplete);if(seedPanel){seedPanel.innerHTML=seedComplete?attributionHtml(pack.tracks[String(seed.seed_track_id)]):"";seedPanel.classList[seedComplete?"remove":"add"]("hidden")}}
+function syncResultInputs(resultId){const rating=state.result_ratings[resultId]||{};document.querySelectorAll(`[data-result="${resultId}"]`).forEach(fieldset=>{fieldset.querySelector("[data-result-score]").value=score(rating.score_0_10)?rating.score_0_10:"";fieldset.querySelectorAll("[data-reason]").forEach(input=>input.checked=(rating.mismatch_reasons||[]).includes(input.value))})}
+function bindInputs(seed){document.querySelectorAll("[data-list]").forEach(fieldset=>{const id=fieldset.dataset.list,list=seed.lists.find(item=>item.list_id===id);fieldset.querySelector("[data-list-score]").onchange=event=>{const current=state.list_ratings[id],value=inputScore(event.target,current?.score_0_10);if(value===undefined)return;const rating=current||{score_0_10:null,rated_at:now(),interaction_ms:1};rating.score_0_10=value;state.list_ratings[id]=rating;touch(rating);updateAttribution(seed,list)}});document.querySelectorAll("[data-result]").forEach(fieldset=>{
+  const id=fieldset.dataset.result,lists=seed.lists.filter(list=>list.ranking.some(row=>row.result_id===id)),ensure=()=>state.result_ratings[id]||(state.result_ratings[id]={score_0_10:null,mismatch_reasons:[],rated_at:now(),interaction_ms:1});
+  fieldset.querySelector("[data-result-score]").onchange=event=>{const current=state.result_ratings[id],value=inputScore(event.target,current?.score_0_10);if(value===undefined)return;const rating=ensure();rating.score_0_10=value;touch(rating);syncResultInputs(id);lists.forEach(list=>updateAttribution(seed,list))};
+  fieldset.querySelectorAll("[data-reason]").forEach(input=>input.onchange=()=>{const rating=ensure(),reasons=new Set(rating.mismatch_reasons);input.checked?reasons.add(input.value):reasons.delete(input.value);rating.mismatch_reasons=[...reasons].sort();touch(rating);syncResultInputs(id);lists.forEach(list=>updateAttribution(seed,list))})})}
+function completeCounts(){return{lists:Object.values(state?.list_ratings||{}).filter(listComplete).length,results:Object.values(state?.result_ratings||{}).filter(resultComplete).length}}
+function updateProgress(){if(state&&orderedSeeds.length){const counts=completeCounts();$("progress").textContent=`Seed ${state.current_seed+1} of ${orderedSeeds.length} · ${counts.lists} lists and ${counts.results} results rated`}}
+async function render(){state.current_seed=Math.max(0,Math.min(state.current_seed,orderedSeeds.length-1));const seed=orderedSeeds[state.current_seed],lists=await sessionOrder(seed.lists,`list-order:${seed.seed_id}`);
+  $("prev").disabled=state.current_seed===0;$("next").disabled=state.current_seed===orderedSeeds.length-1;updateProgress();const seedTrack=pack.tracks[String(seed.seed_track_id)];
+  $("seed").innerHTML=`<header class="panel"><h2>Seed ${state.current_seed+1}</h2><p>Listen to the anonymous seed and both anonymous lists.</p>${trackPlayerHtml(seedTrack,"Seed track")}<div class="attribution hidden" data-seed-attribution></div></header><div class="lists">${lists.map((list,index)=>`<section class="list"><h3>List ${String.fromCharCode(65+index)}</h3>${list.ranking.map((row,position)=>trackPlayerHtml(pack.tracks[String(row.track_id)],`Result ${position+1}`)+resultRatingHtml(row)).join("")}${listRatingHtml(list)}<div class="attribution hidden" data-attribution="${escapeAttr(list.list_id)}"></div></section>`).join("")}</div>`;
+  bindExcerptPlayers();bindInputs(seed);lists.forEach(list=>updateAttribution(seed,list));save();updateSubmitAvailability()}
+async function begin(){try{if(!selected.protocol||!selected.pack)throw Error("Select both locked study JSON files.");await validateStudy(selected.protocol,selected.pack);protocol=selected.protocol;pack=selected.pack;invalidateSubmission();$("consent").checked=false;
+  const restored=restoreAutosave();state=restored||emptyState();orderedSeeds=[...pack.seeds];$("study").classList.remove("hidden");$("setup-status").classList.remove("danger");$("setup-status").textContent=restored?"Locked blinded study validated. Autosaved session resumed.":"Locked blinded study validated. Autosave is active.";save();await render()}catch(error){$("setup-status").textContent=error.message;$("setup-status").classList.add("danger")}}
+async function loadBundled(){try{const options={credentials:"omit",cache:"no-store",referrerPolicy:"no-referrer",headers:{"Accept":"application/json"}},base=new URL(location.href);base.search="";base.hash="";if(!base.pathname.endsWith("/"))base.pathname+="/";
+  const responses=await Promise.all(["./protocol-pacing-v3.json","./pacing-pack.json"].map(path=>fetch(new URL(path,base),options)));if(responses.some(response=>!response.ok))throw Error("Bundled study files are unavailable.");[selected.protocol,selected.pack]=await Promise.all(responses.map(response=>response.json()));await begin()}catch(error){$("setup-status").textContent=error.message;$("setup-status").classList.add("danger")}}
+function updateSubmitAvailability(){const counts=state?completeCounts():{lists:0,results:0},count=counts.lists+counts.results,enabled=Boolean(state)&&count>0&&$("consent").checked;$("submit").disabled=!enabled;if(!enabled&&!$("submit-status").classList.contains("success")&&!$("submit-status").classList.contains("danger"))$("submit-status").textContent=count?"Check consent to enable explicit private submission.":"Complete at least one rating and check consent."}
+async function buildExport(){const payload={...state};delete payload.current_seed;delete payload.lastInteractionAt;payload.list_ratings=Object.fromEntries(Object.entries(state.list_ratings).filter(([,rating])=>listComplete(rating)));payload.result_ratings=Object.fromEntries(Object.entries(state.result_ratings).filter(([,rating])=>resultComplete(rating)));
+  payload.exported_at=now();payload.duration_ms=Math.max(1,Date.now()-Date.parse(payload.started_at));payload.integrity_notice=INTEGRITY_NOTICE;payload.integrity_hmac_sha256=await hmac(payload,payload.local_session_key);return payload}
+async function exportRatings(){const payload=await buildExport(),blob=new Blob([JSON.stringify(payload,null,2)+"\n"],{type:"application/json"}),link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=`pacing-v3-ratings-${payload.session_id}.json`;link.click();URL.revokeObjectURL(link.href)}
+async function stateFromExport(imported){if(!validExport(imported))throw Error("Import is not a strict export for this study.");const signature=imported.integrity_hmac_sha256,payload={...imported};delete payload.integrity_hmac_sha256;if(await hmac(payload,imported.local_session_key)!==signature)throw Error("Import integrity HMAC mismatch.");
+  const restored={...imported,current_seed:0,lastInteractionAt:Date.now()};for(const key of ["integrity_hmac_sha256","integrity_notice","exported_at","duration_ms"])delete restored[key];if(!validState(restored))throw Error("Import cannot be represented as a valid session.");return restored}
+async function resume(file){try{if(!protocol||!pack)throw Error("Load and validate the locked study first.");state=await stateFromExport(await readFile(file));invalidateSubmission();$("consent").checked=false;orderedSeeds=[...pack.seeds];save();await render();$("setup-status").textContent="Valid partial session imported and autosaved."}catch(error){$("setup-status").textContent=error.message;$("setup-status").classList.add("danger")}}
+async function submitRatings(){if($("submit").disabled)return;$("submit").disabled=true;$("submit-status").classList.remove("success","danger");$("submit-status").textContent="Submitting this explicit snapshot to the private pacing V3 inbox…";
+  try{submissionPayload=submissionPayload||await buildExport();const response=await fetch("/api/ratings-pacing-v3",{method:"POST",credentials:"omit",cache:"no-store",referrerPolicy:"no-referrer",headers:{"Accept":"application/json","Content-Type":"application/json"},body:JSON.stringify({consent:true,study:"pacing-v3-blind",ratings:submissionPayload})});
+    const receipt=await response.json().catch(()=>({}));if(!response.ok)throw Error(receipt.error||"request failed");const sanitized={...submissionPayload};for(const key of ["local_session_key","integrity_hmac_sha256","integrity_notice"])delete sanitized[key];const expected=await sha(sanitized),lists=Object.keys(submissionPayload.list_ratings).length,results=Object.keys(submissionPayload.result_ratings).length;
+    if(receipt.receipt_sha256!==expected||receipt.counts?.complete_list_ratings!==lists||receipt.counts?.complete_result_ratings!==results||typeof receipt.duplicate!=="boolean")throw Error("receipt mismatch");$("submit-status").classList.add("success");$("submit-status").textContent=`${receipt.duplicate?"Duplicate safely recognized":"Ratings accepted"}. Receipt ${receipt.receipt_sha256}; ${lists} lists and ${results} results.`}
+  catch{$("submit-status").classList.add("danger");$("submit-status").textContent="Submission failed or returned an invalid receipt. Autosave is unchanged; retry or export JSON."}finally{updateSubmitAvailability()}}
+$("protocol-file").onchange=event=>readFile(event.target.files[0]).then(value=>selected.protocol=value);$("pack-file").onchange=event=>readFile(event.target.files[0]).then(value=>selected.pack=value);$("resume-file").onchange=event=>resume(event.target.files[0]);
+$("load").onclick=begin;$("load-bundled").onclick=loadBundled;$("export").onclick=exportRatings;$("consent").onchange=()=>{invalidateSubmission();updateSubmitAvailability()};$("submit").onclick=submitRatings;
 $("prev").onclick=async()=>{state.current_seed-=1;await render()};$("next").onclick=async()=>{state.current_seed+=1;await render()};
-globalThis.__semanticV2Test={validateStudy,validState,validExport,emptyState,sessionOrder,trackPlayerHtml,bindExcerptPlayers,trackAttributionHtml,
-  buildExport,stateFromExport,save,restoreAutosave,
-  setStudy(candidateProtocol,candidatePack,candidateState){protocol=candidateProtocol;pack=candidatePack;state=candidateState}};
+globalThis.__pacingV3Test={validateStudy,validState,validExport,emptyState,sessionOrder,trackPlayerHtml,bindExcerptPlayers,attributionHtml,listComplete,resultComplete,fullListComplete,inputScore,buildExport,stateFromExport,save,restoreAutosave,
+  setStudy(candidateProtocol,candidatePack,candidateState){protocol=candidateProtocol;pack=candidatePack;state=candidateState;orderedSeeds=candidatePack?.seeds||[]}};
 document.addEventListener("DOMContentLoaded",loadBundled,{once:true});
 </script>
 </body>
