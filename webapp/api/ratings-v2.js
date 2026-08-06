@@ -80,10 +80,10 @@ const RATING_KEYS = [
 const COUNT_KEYS = ["complete_list_ratings"];
 
 const protocol = strictJsonParse(
-  readFileSync(new URL("../evaluate/protocol-v2.json", import.meta.url), "utf8"),
+  readFileSync(new URL("../evaluate-v2/protocol-v2.json", import.meta.url), "utf8"),
 );
 const pilotPack = strictJsonParse(
-  readFileSync(new URL("../evaluate/pilot-pack.json", import.meta.url), "utf8"),
+  readFileSync(new URL("../evaluate-v2/pilot-pack.json", import.meta.url), "utf8"),
 );
 
 function sha256(value) {

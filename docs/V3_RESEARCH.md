@@ -2,8 +2,17 @@
 
 V3 did not clear its final independent gate. The production and rollback path
 remains `dual_sonic64_guardrail`, and V2 remains archived at `/evaluate-v2`.
-The current `/evaluate` page is a separate exploratory audio-versus-semantic
-study, not the rejected V3 candidate. The strongest
+The current `/evaluate` page is a separate research-only blinded
+`fulltrack_audio_study_v2` versus `pacing_tone_study_v3` listening study, not the
+rejected MusicFM V3 candidate described in this document. Pacing V3 uses the frozen
+global top-200 candidate pool, acoustic evidence, repeated-section `vibe_from_signal`
+features, and existing semantic predictors; it does not use MusicFM. Prior ratings
+motivated its feature hypothesis but did not fit weights. Language is not evaluated,
+and `promotion_allowed` and `production_recommendation_changed` remain false. Its
+approximately 20-second playback segment is a recurrence heuristic, not a verified
+chorus classifier.
+
+The strongest MusicFM
 final-reserve candidate reached +20.005% development Recall@10 but only +0.286%
 on the one-time shadow; its interval crossed zero and its worst fold was
 -11.23%. No V3 listening pack was generated and no model was promoted.

@@ -17,28 +17,32 @@ import {
   strictJsonParse,
 } from "./ratings.js";
 
-export const MAX_SEMANTIC_BODY_BYTES = 256 * 1024;
-export const MAX_SEMANTIC_STORED_BYTES = 300 * 1024;
-export const SEMANTIC_PROTOCOL_SHA256 =
-  "177941569960d3cb0abb0fbbac645a22ed691aed8271f71842be186f9b7ea838";
-export const SEMANTIC_PACK_SHA256 =
-  "939b639abb6d6c6b2c7ba20ae570ff7ae9d06ee67254c219d6e5f61975403347";
-export const SEMANTIC_BLOB_PREFIX = "human-ratings/semantic-v2/";
+export const MAX_PACING_BODY_BYTES = 256 * 1024;
+export const MAX_PACING_STORED_BYTES = 300 * 1024;
+export const PACING_PROTOCOL_SHA256 =
+  "69aaba1238ec7fdc567f384001812cdbedc3423710ae13ca8139c2cac6d7d387";
+export const PACING_PACK_SHA256 =
+  "6d6dd1c03412b057e14d52d29ee775e5a4c62eea63c76f7d19c46f60f1942a5c";
+export const PACING_BLOB_PREFIX = "human-ratings/pacing-v3/";
 
-const SUBMISSION_SCHEMA = "repeated_excerpt_semantic_listener_submission_v2";
-const PROVIDER = "hosted_private_semantic_v2_evaluator";
+const SUBMISSION_SCHEMA = "pacing_v3_listener_submission_v1";
+const PROVIDER = "hosted_private_pacing_v3_evaluator";
 const INTEGRITY_NOTICE =
   "Local-key HMAC provides integrity, not identity or authenticity; the key is included in this export.";
 const MAX_DURATION_MS = 366 * 24 * 60 * 60 * 1000;
 const HEX_64 = /^[a-f0-9]{64}$/;
-const RATER_ID = /^anon-semantic-[a-f0-9]{24}$/;
-const SESSION_ID = /^semantic-session-[a-f0-9]{24}$/;
-const LIST_ID = /^semantic-list-[a-f0-9]{24}$/;
+const RATER_ID = /^anon-pacing-[a-f0-9]{24}$/;
+const SESSION_ID = /^pacing-session-[a-f0-9]{24}$/;
+const LIST_ID = /^pacing-list-[a-f0-9]{24}$/;
+const RESULT_ID = /^pacing-result-[a-f0-9]{24}$/;
 const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
-const SIMILARITY = new Set([
-  "not_similar",
-  "somewhat_similar",
-  "very_similar",
+const MISMATCH_REASONS = new Set([
+  "tempo_pacing",
+  "tone_timbre",
+  "instrumentation",
+  "vocals",
+  "mood_feeling",
+  "genre",
 ]);
 const EXPORT_KEYS = [
   "anonymous_rater_id",
@@ -52,6 +56,7 @@ const EXPORT_KEYS = [
   "pilot_pack_sha256",
   "protocol_sha256",
   "provider",
+  "result_ratings",
   "schema_version",
   "session_id",
   "source_kind",
@@ -74,22 +79,23 @@ const RATING_KEYS = [
   "interaction_ms",
   "rated_at",
   "score_0_10",
-  "similarity",
-  "unrelated_positions_1_to_5",
 ].sort();
-const COUNT_KEYS = ["complete_list_ratings"];
+const RESULT_RATING_KEYS = [
+  "interaction_ms",
+  "mismatch_reasons",
+  "rated_at",
+  "score_0_10",
+].sort();
+const COUNT_KEYS = ["complete_list_ratings", "complete_result_ratings"];
 
 const protocol = strictJsonParse(
   readFileSync(
-    new URL("../evaluate-semantic-v2/protocol-semantic-v2.json", import.meta.url),
+    new URL("../evaluate/protocol-pacing-v3.json", import.meta.url),
     "utf8",
   ),
 );
 const pilotPack = strictJsonParse(
-  readFileSync(
-    new URL("../evaluate-semantic-v2/semantic-pack.json", import.meta.url),
-    "utf8",
-  ),
+  readFileSync(new URL("../evaluate/pacing-pack.json", import.meta.url), "utf8"),
 );
 
 function sha256(value) {
@@ -119,34 +125,39 @@ function hasExactKeys(value, expected) {
   );
 }
 
-function buildCommittedListIds() {
+function buildCommittedIds() {
   if (
-    protocol.schema_version !== 2 ||
+    protocol.schema_version !== 3 ||
     protocol.protocol_kind !==
-      "repeated_excerpt_semantic_blind_listener_v2_private_submission" ||
+      "repeated_excerpt_blind_listener_v3_private_submission" ||
     protocol.submission_schema !== SUBMISSION_SCHEMA ||
-    protocol.content_sha256 !== SEMANTIC_PROTOCOL_SHA256 ||
-    protocol.pilot_pack_sha256 !== SEMANTIC_PACK_SHA256 ||
-    protocol.submission_endpoint !== "/api/ratings-semantic-v2" ||
-    protocol.private_blob_prefix !== SEMANTIC_BLOB_PREFIX ||
+    protocol.content_sha256 !== PACING_PROTOCOL_SHA256 ||
+    protocol.pilot_pack_sha256 !== PACING_PACK_SHA256 ||
+    protocol.submission_endpoint !== "/api/ratings-pacing-v3" ||
+    protocol.private_blob_prefix !== PACING_BLOB_PREFIX ||
     protocol.explicit_consent_required !== true ||
     protocol.automatic_submission !== false ||
+    protocol.partial_submission_allowed !== true ||
+    protocol.research_only !== true ||
+    protocol.promotion_allowed !== false ||
     protocol.production_recommendation_changed !== false ||
-    documentHash(protocol) !== SEMANTIC_PROTOCOL_SHA256 ||
-    pilotPack.schema_version !== 2 ||
-    pilotPack.pack_kind !== "fulltrack_semantic_repeated_excerpt_pilot_v2" ||
-    pilotPack.pack_id !== "semantic-repeated-excerpt-v2-20" ||
+    protocol.language_evaluated !== false ||
+    documentHash(protocol) !== PACING_PROTOCOL_SHA256 ||
+    pilotPack.schema_version !== 3 ||
+    pilotPack.pack_kind !== "blinded_repeated_excerpt_comparison_v3" ||
+    pilotPack.pack_id !== "pacing-v3-blind-20" ||
     pilotPack.rankings_state !== "LOCKED_BEFORE_RATINGS" ||
     pilotPack.ratings_count_at_freeze !== 0 ||
     pilotPack.seed_count !== 20 ||
     pilotPack.method_count !== 2 ||
     pilotPack.results_per_method !== 5 ||
-    pilotPack.source_v2_pack_sha256 !==
+    pilotPack.source_semantic_v2_pack_sha256 !==
+      "939b639abb6d6c6b2c7ba20ae570ff7ae9d06ee67254c219d6e5f61975403347" ||
+    pilotPack.source_fulltrack_v2_pack_sha256 !==
       "1980da60810959e7cdd24f39bd7142c8e34c76dab633c705976b85e49b297023" ||
     pilotPack.language_policy?.evaluated_here !== false ||
-    pilotPack.section_coverage?.uniform_window_budget !== 32 ||
-    pilotPack.section_coverage?.repeated_section_budget !== 32 ||
-    pilotPack.section_coverage?.salient_section_budget !== 32 ||
+    pilotPack.matched_design?.candidate_pool !== 200 ||
+    pilotPack.matched_design?.one_result_per_artist !== true ||
     pilotPack.playback_policy?.kind !==
       "strongest_nonlocal_recurrence_excerpt" ||
     pilotPack.playback_policy?.excerpt_seconds !== 20 ||
@@ -157,17 +168,19 @@ function buildCommittedListIds() {
     pilotPack.research_only !== true ||
     pilotPack.promotion_allowed !== false ||
     pilotPack.production_recommendation_changed !== false ||
-    pilotPack.content_sha256 !== SEMANTIC_PACK_SHA256 ||
-    documentHash(pilotPack) !== SEMANTIC_PACK_SHA256 ||
+    pilotPack.provenance?.ratings_used !== false ||
+    pilotPack.content_sha256 !== PACING_PACK_SHA256 ||
+    documentHash(pilotPack) !== PACING_PACK_SHA256 ||
     !Array.isArray(pilotPack.seeds) ||
     pilotPack.seeds.length !== 20
   ) {
-    throw new Error("Committed semantic ratings protocol is inconsistent");
+    throw new Error("Committed pacing ratings protocol is inconsistent");
   }
   const listIds = new Set();
+  const resultIds = new Set();
   for (const seed of pilotPack.seeds) {
     if (!Array.isArray(seed.lists) || seed.lists.length !== 2) {
-      throw new Error("Committed semantic list cardinality is inconsistent");
+      throw new Error("Committed pacing list cardinality is inconsistent");
     }
     for (const list of seed.lists) {
       if (
@@ -176,35 +189,43 @@ function buildCommittedListIds() {
         !Array.isArray(list.ranking) ||
         list.ranking.length !== 5
       ) {
-        throw new Error("Committed semantic list identity is inconsistent");
+        throw new Error("Committed pacing list identity is inconsistent");
       }
       list.ranking.forEach((row, index) => {
-        if (row.position !== index + 1) {
-          throw new Error("Committed semantic list ranking is inconsistent");
+        if (
+          row.position !== index + 1 ||
+          !RESULT_ID.test(row.result_id)
+        ) {
+          throw new Error("Committed pacing list ranking is inconsistent");
         }
+        resultIds.add(row.result_id);
       });
       listIds.add(list.list_id);
     }
   }
   if (listIds.size !== 40) {
-    throw new Error("Committed semantic list count is inconsistent");
+    throw new Error("Committed pacing list count is inconsistent");
   }
   const forbidden = [
-    "fulltrack_audio_control_v1",
-    "semantic_fulltrack_v1",
+    "fulltrack_audio_study_v2",
+    "pacing_tone_study_v3",
     "method_bindings",
     "blinding_key_hex",
   ];
   if (forbidden.some((marker) => canonical(pilotPack).includes(marker))) {
-    throw new Error("Committed semantic study is not blinded");
+    throw new Error("Committed pacing study is not blinded");
   }
-  return listIds;
+  return { listIds, resultIds };
 }
 
-let committedListIds;
+let committedIds;
 function listIds() {
-  if (!committedListIds) committedListIds = buildCommittedListIds();
-  return committedListIds;
+  if (!committedIds) committedIds = buildCommittedIds();
+  return committedIds.listIds;
+}
+function resultIds() {
+  if (!committedIds) committedIds = buildCommittedIds();
+  return committedIds.resultIds;
 }
 
 function parseTimestamp(value) {
@@ -216,30 +237,36 @@ function parseTimestamp(value) {
     : null;
 }
 
-function validUnrelatedPositions(value) {
-  return (
-    Array.isArray(value) &&
-    value.length <= 5 &&
-    value.every(
-      (position, index) =>
-        Number.isInteger(position) &&
-        position >= 1 &&
-        position <= 5 &&
-        (index === 0 || value[index - 1] < position),
-    )
-  );
-}
-
 function validListRating(value, startedAt, exportedAt, duration) {
   if (!hasExactKeys(value, RATING_KEYS)) return false;
   const ratedAt = parseTimestamp(value.rated_at);
   return (
-    SIMILARITY.has(value.similarity) &&
-    (value.score_0_10 === null ||
-      (Number.isInteger(value.score_0_10) &&
-        value.score_0_10 >= 0 &&
-        value.score_0_10 <= 10)) &&
-    validUnrelatedPositions(value.unrelated_positions_1_to_5) &&
+    Number.isInteger(value.score_0_10) &&
+    value.score_0_10 >= 0 &&
+    value.score_0_10 <= 10 &&
+    Number.isInteger(value.interaction_ms) &&
+    value.interaction_ms >= 1 &&
+    value.interaction_ms <= duration &&
+    ratedAt !== null &&
+    ratedAt >= startedAt &&
+    ratedAt <= exportedAt
+  );
+}
+
+function validResultRating(value, startedAt, exportedAt, duration) {
+  if (!hasExactKeys(value, RESULT_RATING_KEYS)) return false;
+  const ratedAt = parseTimestamp(value.rated_at);
+  return (
+    Number.isInteger(value.score_0_10) &&
+    value.score_0_10 >= 0 &&
+    value.score_0_10 <= 10 &&
+    Array.isArray(value.mismatch_reasons) &&
+    value.mismatch_reasons.length <= MISMATCH_REASONS.size &&
+    value.mismatch_reasons.every(
+      (reason, index, array) =>
+        MISMATCH_REASONS.has(reason) &&
+        (index === 0 || array[index - 1] < reason),
+    ) &&
     Number.isInteger(value.interaction_ms) &&
     value.interaction_ms >= 1 &&
     value.interaction_ms <= duration &&
@@ -258,14 +285,14 @@ function validateEvidence(ratings, requireRating = true) {
   const lastActivityAt = parseTimestamp(ratings.last_activity_at);
   const exportedAt = parseTimestamp(ratings.exported_at);
   if (
-    ratings.schema_version !== 2 ||
+    ratings.schema_version !== 3 ||
     ratings.submission_schema !== SUBMISSION_SCHEMA ||
     ratings.source_kind !== "human_listener" ||
     ratings.provider !== PROVIDER ||
     !RATER_ID.test(ratings.anonymous_rater_id) ||
     !SESSION_ID.test(ratings.session_id) ||
-    ratings.protocol_sha256 !== SEMANTIC_PROTOCOL_SHA256 ||
-    ratings.pilot_pack_sha256 !== SEMANTIC_PACK_SHA256 ||
+    ratings.protocol_sha256 !== PACING_PROTOCOL_SHA256 ||
+    ratings.pilot_pack_sha256 !== PACING_PACK_SHA256 ||
     startedAt === null ||
     lastActivityAt === null ||
     exportedAt === null ||
@@ -276,11 +303,13 @@ function validateEvidence(ratings, requireRating = true) {
     ratings.duration_ms > MAX_DURATION_MS ||
     Math.abs(exportedAt - startedAt - ratings.duration_ms) > 1000 ||
     !isRecord(ratings.list_ratings) ||
-    Object.keys(ratings.list_ratings).length > 40
+    Object.keys(ratings.list_ratings).length > 40 ||
+    !isRecord(ratings.result_ratings) ||
+    Object.keys(ratings.result_ratings).length > 200
   ) {
     return null;
   }
-  let count = 0;
+  let listCount = 0;
   for (const [id, rating] of Object.entries(ratings.list_ratings)) {
     if (
       !LIST_ID.test(id) ||
@@ -289,13 +318,27 @@ function validateEvidence(ratings, requireRating = true) {
     ) {
       return null;
     }
-    count += 1;
+    listCount += 1;
   }
-  if (requireRating && count === 0) return null;
-  return { complete_list_ratings: count };
+  let resultCount = 0;
+  for (const [id, rating] of Object.entries(ratings.result_ratings)) {
+    if (
+      !RESULT_ID.test(id) ||
+      !resultIds().has(id) ||
+      !validResultRating(rating, startedAt, exportedAt, ratings.duration_ms)
+    ) {
+      return null;
+    }
+    resultCount += 1;
+  }
+  if (requireRating && listCount + resultCount === 0) return null;
+  return {
+    complete_list_ratings: listCount,
+    complete_result_ratings: resultCount,
+  };
 }
 
-export function validateSemanticExport(ratings) {
+export function validatePacingExport(ratings) {
   if (
     !hasExactKeys(ratings, EXPORT_KEYS) ||
     !HEX_64.test(ratings.local_session_key) ||
@@ -321,7 +364,7 @@ export function validateSemanticExport(ratings) {
   return { counts, ratings };
 }
 
-export function validateSemanticStoredRecord(document, pathname) {
+export function validatePacingStoredRecord(document, pathname) {
   if (!hasExactKeys(document, STORED_KEYS)) return null;
   const ratings = sanitizedEvidence(document);
   const counts = validateEvidence(ratings);
@@ -330,13 +373,14 @@ export function validateSemanticStoredRecord(document, pathname) {
     !counts ||
     receivedAt === null ||
     !hasExactKeys(document.counts, COUNT_KEYS) ||
-    document.counts.complete_list_ratings !== counts.complete_list_ratings
+    document.counts.complete_list_ratings !== counts.complete_list_ratings ||
+    document.counts.complete_result_ratings !== counts.complete_result_ratings
   ) {
     return null;
   }
   const digest = sha256(canonical(ratings));
   const expectedPath =
-    `${SEMANTIC_BLOB_PREFIX}${ratings.session_id}/${digest}.json`;
+    `${PACING_BLOB_PREFIX}${ratings.session_id}/${digest}.json`;
   if (
     document.canonical_payload_sha256 !== digest ||
     (pathname !== undefined && pathname !== expectedPath)
@@ -346,16 +390,16 @@ export function validateSemanticStoredRecord(document, pathname) {
   return { counts, digest, pathname: expectedPath, ratings };
 }
 
-export function parseSemanticStoredRecordBytes(value, pathname) {
+export function parsePacingStoredRecordBytes(value, pathname) {
   const bytes = Buffer.isBuffer(value) ? value : Buffer.from(value);
-  if (bytes.length < 2 || bytes.length > MAX_SEMANTIC_STORED_BYTES) {
-    throw new Error("Invalid private semantic ratings record size");
+  if (bytes.length < 2 || bytes.length > MAX_PACING_STORED_BYTES) {
+    throw new Error("Invalid private pacing ratings record size");
   }
   const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   const document = strictJsonParse(text);
-  const validated = validateSemanticStoredRecord(document, pathname);
+  const validated = validatePacingStoredRecord(document, pathname);
   if (!validated || text !== `${canonical(document)}\n`) {
-    throw new Error("Invalid private semantic ratings record");
+    throw new Error("Invalid private pacing ratings record");
   }
   return { document, ...validated };
 }
@@ -376,7 +420,7 @@ async function readBody(request) {
   if (
     length !== undefined &&
     (!/^(0|[1-9]\d*)$/.test(length) ||
-      Number(length) > MAX_SEMANTIC_BODY_BYTES)
+      Number(length) > MAX_PACING_BODY_BYTES)
   ) {
     const error = new Error("payload");
     error.statusCode = 413;
@@ -398,7 +442,7 @@ async function readBody(request) {
     for await (const chunk of request) {
       const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
       size += bytes.length;
-      if (size > MAX_SEMANTIC_BODY_BYTES) {
+      if (size > MAX_PACING_BODY_BYTES) {
         const error = new Error("payload");
         error.statusCode = 413;
         throw error;
@@ -407,7 +451,7 @@ async function readBody(request) {
     }
     raw = Buffer.concat(chunks);
   }
-  if (raw.length > MAX_SEMANTIC_BODY_BYTES) {
+  if (raw.length > MAX_PACING_BODY_BYTES) {
     const error = new Error("payload");
     error.statusCode = 413;
     throw error;
@@ -483,11 +527,11 @@ async function persist(storage, pathname, body) {
   }
 }
 
-export function createSemanticHandler(
+export function createPacingHandler(
   storage = { head: blobHead, put: blobPut },
   deploymentHost = process.env.VERCEL_URL,
 ) {
-  return async function ratingsSemanticHandler(request, response) {
+  return async function ratingsPacingHandler(request, response) {
     if (request.method !== "POST") {
       response.setHeader("Allow", "POST");
       return send(response, 405, { error: "method not allowed" });
@@ -515,13 +559,13 @@ export function createSemanticHandler(
     if (
       !hasExactKeys(wrapper, ["consent", "ratings", "study"]) ||
       wrapper.consent !== true ||
-      wrapper.study !== "semantic-repeated-excerpt-v2"
+      wrapper.study !== "pacing-v3-blind"
     ) {
       return send(response, 400, { error: "invalid request" });
     }
     let accepted;
     try {
-      accepted = validateSemanticExport(wrapper.ratings);
+      accepted = validatePacingExport(wrapper.ratings);
     } catch {
       accepted = null;
     }
@@ -537,8 +581,8 @@ export function createSemanticHandler(
       counts: accepted.counts,
     };
     const pathname =
-      `${SEMANTIC_BLOB_PREFIX}${sanitized.session_id}/${receiptHash}.json`;
-    if (!validateSemanticStoredRecord(stored, pathname)) {
+      `${PACING_BLOB_PREFIX}${sanitized.session_id}/${receiptHash}.json`;
+    if (!validatePacingStoredRecord(stored, pathname)) {
       return send(response, 500, { error: "internal validation failed" });
     }
     let duplicate;
@@ -555,4 +599,4 @@ export function createSemanticHandler(
   };
 }
 
-export default createSemanticHandler();
+export default createPacingHandler();

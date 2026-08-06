@@ -1,5 +1,8 @@
 .goals/human-quality-recommendations/protocol-v16-hosted-human-development/* -text -whitespace
 .goals/human-quality-recommendations/protocol-v17-submission-human-development/* -text -whitespace
 webapp/evaluate/* -text -whitespace
+webapp/evaluate-v1/protocol.json -text -whitespace
+webapp/evaluate-v1/served-lists.json -text -whitespace
 webapp/evaluate-semantic-v1/* -text -whitespace
+webapp/evaluate-semantic-v2/* -text -whitespace
 webapp/evaluate-v2/* -text -whitespace

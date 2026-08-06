@@ -358,6 +358,12 @@ def test_vercel_routes_and_security_headers_cover_evaluator():
     assert {item["source"]: item["destination"] for item in config["rewrites"]} == {
         "/evaluate": "/evaluate/index.html",
         "/evaluate/": "/evaluate/index.html",
+        "/evaluate-v2": "/evaluate-v2/index.html",
+        "/evaluate-v2/": "/evaluate-v2/index.html",
+        "/evaluate-semantic-v1": "/evaluate-semantic-v1/index.html",
+        "/evaluate-semantic-v1/": "/evaluate-semantic-v1/index.html",
+        "/evaluate-semantic-v2": "/evaluate-semantic-v2/index.html",
+        "/evaluate-semantic-v2/": "/evaluate-semantic-v2/index.html",
         "/evaluate-v1": "/evaluate-v1/index.html",
         "/evaluate-v1/": "/evaluate-v1/index.html",
     }

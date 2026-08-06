@@ -5,7 +5,7 @@ import test from "node:test";
 import vm from "node:vm";
 
 const html = readFileSync(
-  new URL("../evaluate/index.html", import.meta.url),
+  new URL("../evaluate-semantic-v2/index.html", import.meta.url),
   "utf8",
 );
 const v2Html = readFileSync(
@@ -19,12 +19,15 @@ const semanticV1Html = readFileSync(
 const script = html.match(/<script>\s*([\s\S]*?)\s*<\/script>/)?.[1];
 const protocol = JSON.parse(
   readFileSync(
-    new URL("../evaluate/protocol-semantic-v2.json", import.meta.url),
+    new URL("../evaluate-semantic-v2/protocol-semantic-v2.json", import.meta.url),
     "utf8",
   ),
 );
 const pack = JSON.parse(
-  readFileSync(new URL("../evaluate/semantic-pack.json", import.meta.url), "utf8"),
+  readFileSync(
+    new URL("../evaluate-semantic-v2/semantic-pack.json", import.meta.url),
+    "utf8",
+  ),
 );
 
 function context() {
@@ -98,9 +101,9 @@ function context() {
     location: {
       hash: "",
       hostname: "localhost",
-      href: "http://localhost:8788/evaluate/",
+      href: "http://localhost:8788/evaluate-semantic-v2/",
       origin: "http://localhost:8788",
-      pathname: "/evaluate/",
+      pathname: "/evaluate-semantic-v2/",
       protocol: "http:",
       search: "",
     },
@@ -298,6 +301,10 @@ test("preserves byte-locked v2 assets and isolates routes and state", () => {
     config.rewrites.map((item) => [item.source, item.destination]),
   );
   assert.equal(routes["/evaluate"], "/evaluate/index.html");
+  assert.equal(
+    routes["/evaluate-semantic-v2"],
+    "/evaluate-semantic-v2/index.html",
+  );
   assert.equal(
     routes["/evaluate-semantic-v1"],
     "/evaluate-semantic-v1/index.html",

@@ -40,7 +40,7 @@ from soundalike.ml.semantic_eval import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PUBLIC_PACK = ROOT / "webapp" / "evaluate" / "semantic-pack.json"
+PUBLIC_PACK = ROOT / "webapp" / "evaluate-semantic-v2" / "semantic-pack.json"
 PUBLIC_PACK_CONTENT_SHA256 = (
     "939b639abb6d6c6b2c7ba20ae570ff7ae9d06ee67254c219d6e5f61975403347"
 )
