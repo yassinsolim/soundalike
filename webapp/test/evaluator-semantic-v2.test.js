@@ -5,25 +5,26 @@ import test from "node:test";
 import vm from "node:vm";
 
 const html = readFileSync(
-  new URL("../evaluate-semantic-v1/index.html", import.meta.url),
+  new URL("../evaluate/index.html", import.meta.url),
   "utf8",
 );
 const v2Html = readFileSync(
   new URL("../evaluate-v2/index.html", import.meta.url),
   "utf8",
 );
+const semanticV1Html = readFileSync(
+  new URL("../evaluate-semantic-v1/index.html", import.meta.url),
+  "utf8",
+);
 const script = html.match(/<script>\s*([\s\S]*?)\s*<\/script>/)?.[1];
 const protocol = JSON.parse(
   readFileSync(
-    new URL("../evaluate-semantic-v1/protocol-semantic-v1.json", import.meta.url),
+    new URL("../evaluate/protocol-semantic-v2.json", import.meta.url),
     "utf8",
   ),
 );
 const pack = JSON.parse(
-  readFileSync(
-    new URL("../evaluate-semantic-v1/semantic-pack.json", import.meta.url),
-    "utf8",
-  ),
+  readFileSync(new URL("../evaluate/semantic-pack.json", import.meta.url), "utf8"),
 );
 
 function context() {
@@ -97,9 +98,9 @@ function context() {
     location: {
       hash: "",
       hostname: "localhost",
-      href: "http://localhost:8788/evaluate-semantic-v1/",
+      href: "http://localhost:8788/evaluate/",
       origin: "http://localhost:8788",
-      pathname: "/evaluate-semantic-v1/",
+      pathname: "/evaluate/",
       protocol: "http:",
       search: "",
     },
@@ -118,36 +119,36 @@ test("validates the exact locked semantic documents and rejects tampering", asyn
   const trustedProtocol = realmClone(sandbox, protocol);
   const trustedPack = realmClone(sandbox, pack);
   assert.equal(
-    await sandbox.__semanticV1Test.validateStudy(trustedProtocol, trustedPack),
+    await sandbox.__semanticV2Test.validateStudy(trustedProtocol, trustedPack),
     true,
   );
 
   const wrongProtocol = realmClone(sandbox, protocol);
   wrongProtocol.schema_version = 17;
   await assert.rejects(
-    sandbox.__semanticV1Test.validateStudy(wrongProtocol, trustedPack),
+    sandbox.__semanticV2Test.validateStudy(wrongProtocol, trustedPack),
     /Protocol/,
   );
 
   const tamperedPack = realmClone(sandbox, pack);
   tamperedPack.seeds[0].lists[0].ranking[0].track_id += 1;
   await assert.rejects(
-    sandbox.__semanticV1Test.validateStudy(trustedProtocol, tamperedPack),
+    sandbox.__semanticV2Test.validateStudy(trustedProtocol, tamperedPack),
     /pack/,
   );
 });
 
 test("uses stable opaque list orders that vary by session", async () => {
   const sandbox = context();
-  const state = sandbox.__semanticV1Test.emptyState();
-  sandbox.__semanticV1Test.setStudy(protocol, pack, state);
+  const state = sandbox.__semanticV2Test.emptyState();
+  sandbox.__semanticV2Test.setStudy(protocol, pack, state);
   const lists = pack.seeds[0].lists;
-  const first = await sandbox.__semanticV1Test.sessionOrder(
+  const first = await sandbox.__semanticV2Test.sessionOrder(
     lists,
     "list-order:test",
     `semantic-session-${"1".repeat(24)}`,
   );
-  const again = await sandbox.__semanticV1Test.sessionOrder(
+  const again = await sandbox.__semanticV2Test.sessionOrder(
     lists,
     "list-order:test",
     `semantic-session-${"1".repeat(24)}`,
@@ -158,7 +159,7 @@ test("uses stable opaque list orders that vary by session", async () => {
   );
   const observed = new Set();
   for (let value = 1; value <= 8; value += 1) {
-    const order = await sandbox.__semanticV1Test.sessionOrder(
+    const order = await sandbox.__semanticV2Test.sessionOrder(
       lists,
       "list-order:test",
       `semantic-session-${String(value).repeat(24)}`,
@@ -166,11 +167,21 @@ test("uses stable opaque list orders that vary by session", async () => {
     observed.add(order.map((item) => item.list_id).join(","));
   }
   assert.equal(observed.size, 2);
+  assert.deepEqual(
+    pack.seeds.map((seed) => seed.priority_rank),
+    Array.from({ length: 20 }, (_, index) => index + 1),
+  );
+  assert.deepEqual(
+    pack.seeds.slice(0, 3).map((seed) => seed.scene),
+    ["dance", "house", "hiphop"],
+  );
+  assert.equal(html.includes("orderedSeeds=[...pack.seeds]"), true);
+  assert.equal(html.includes("sessionOrder(pack.seeds"), false);
 });
 
 test("autosaves, exports and imports only strict signed semantic state", async () => {
   const sandbox = context();
-  const state = sandbox.__semanticV1Test.emptyState();
+  const state = sandbox.__semanticV2Test.emptyState();
   const time = Date.now();
   state.started_at = new Date(time - 1000).toISOString();
   const ratedAt = new Date(time).toISOString();
@@ -186,41 +197,78 @@ test("autosaves, exports and imports only strict signed semantic state", async (
     "JSON.parse(__ratingJson)",
     sandbox,
   );
-  sandbox.__semanticV1Test.setStudy(protocol, pack, state);
-  assert.equal(sandbox.__semanticV1Test.validState(state), true);
-  sandbox.__semanticV1Test.save();
-  assert.equal(sandbox.__semanticV1Test.restoreAutosave().session_id, state.session_id);
+  sandbox.__semanticV2Test.setStudy(protocol, pack, state);
+  assert.equal(sandbox.__semanticV2Test.validState(state), true);
+  sandbox.__semanticV2Test.save();
+  assert.equal(sandbox.__semanticV2Test.restoreAutosave().session_id, state.session_id);
 
-  const exported = await sandbox.__semanticV1Test.buildExport();
-  assert.equal(sandbox.__semanticV1Test.validExport(exported), true);
-  const imported = await sandbox.__semanticV1Test.stateFromExport(exported);
-  assert.equal(sandbox.__semanticV1Test.validState(imported), true);
+  const exported = await sandbox.__semanticV2Test.buildExport();
+  assert.equal(sandbox.__semanticV2Test.validExport(exported), true);
+  const imported = await sandbox.__semanticV2Test.stateFromExport(exported);
+  assert.equal(sandbox.__semanticV2Test.validState(imported), true);
   assert.equal(imported.session_id, state.session_id);
 
   exported.list_ratings[pack.seeds[0].lists[0].list_id].similarity =
     "not_similar";
   await assert.rejects(
-    sandbox.__semanticV1Test.stateFromExport(exported),
+    sandbox.__semanticV2Test.stateFromExport(exported),
     /HMAC/,
   );
 });
 
 test("keeps attribution out of anonymous player markup until rating", () => {
   const sandbox = context();
-  const state = sandbox.__semanticV1Test.emptyState();
-  sandbox.__semanticV1Test.setStudy(protocol, pack, state);
+  const state = sandbox.__semanticV2Test.emptyState();
+  sandbox.__semanticV2Test.setStudy(protocol, pack, state);
   const track = pack.tracks[pack.seeds[0].seed_track_id];
-  const player = sandbox.__semanticV1Test.trackPlayerHtml(track, "Seed track");
+  const player = sandbox.__semanticV2Test.trackPlayerHtml(track, "Seed track");
   assert.equal(player.includes(track.title), false);
   assert.equal(player.includes(track.artist), false);
   assert.equal(player.includes(track.license.attribution), false);
   assert.equal(player.includes(`trackid=${track.track_id}&amp;format=mp31`), true);
-  assert.equal(player.includes('preload="none"'), true);
+  assert.equal(player.includes('preload="metadata"'), true);
+  assert.equal(
+    player.includes(`data-excerpt-start="${track.playback_excerpt.start_seconds}"`),
+    true,
+  );
+  assert.equal(
+    player.includes(`data-excerpt-end="${track.playback_excerpt.end_seconds}"`),
+    true,
+  );
 
-  const attribution = sandbox.__semanticV1Test.trackAttributionHtml(track);
+  const attribution = sandbox.__semanticV2Test.trackAttributionHtml(track);
   assert.equal(attribution.includes(track.title), true);
   assert.equal(attribution.includes(track.artist), true);
   assert.equal(attribution.includes(track.license.url), true);
+});
+
+test("resets and stops players at committed excerpt boundaries", () => {
+  const sandbox = context();
+  const listeners = new Map();
+  const audio = {
+    currentTime: 0,
+    dataset: { excerptStart: "5", excerptEnd: "25" },
+    readyState: 0,
+    pauseCalls: 0,
+    addEventListener(name, listener) {
+      listeners.set(name, listener);
+    },
+    pause() {
+      this.pauseCalls += 1;
+    },
+  };
+  sandbox.document.querySelectorAll = () => [audio];
+  sandbox.__semanticV2Test.bindExcerptPlayers();
+  listeners.get("play")();
+  assert.equal(audio.currentTime, 5);
+  audio.currentTime = 25;
+  listeners.get("timeupdate")();
+  assert.equal(audio.pauseCalls, 1);
+  assert.equal(audio.currentTime, 5);
+  audio.currentTime = 2;
+  listeners.get("seeking")();
+  assert.equal(audio.pauseCalls, 2);
+  assert.equal(audio.currentTime, 5);
 });
 
 test("preserves byte-locked v2 assets and isolates routes and state", () => {
@@ -236,9 +284,11 @@ test("preserves byte-locked v2 assets and isolates routes and state", () => {
     assert.equal(createHash("sha256").update(bytes).digest("hex"), expected);
   }
   assert.equal(v2Html.includes("soundalike-fulltrack-v2"), true);
-  assert.equal(html.includes("soundalike-semantic-v1"), true);
+  assert.equal(html.includes("soundalike-semantic-v2"), true);
+  assert.equal(semanticV1Html.includes("soundalike-semantic-v1"), true);
   assert.equal(html.includes("soundalike-fulltrack-v2"), false);
-  assert.equal(html.includes("/api/ratings-semantic-v1"), true);
+  assert.equal(html.includes("/api/ratings-semantic-v2"), true);
+  assert.equal(semanticV1Html.includes("/api/ratings-semantic-v1"), true);
   assert.equal(v2Html.includes('fetch("/api/ratings-v2"'), true);
 
   const config = JSON.parse(
@@ -247,6 +297,7 @@ test("preserves byte-locked v2 assets and isolates routes and state", () => {
   const routes = Object.fromEntries(
     config.rewrites.map((item) => [item.source, item.destination]),
   );
+  assert.equal(routes["/evaluate"], "/evaluate/index.html");
   assert.equal(
     routes["/evaluate-semantic-v1"],
     "/evaluate-semantic-v1/index.html",
@@ -256,6 +307,7 @@ test("preserves byte-locked v2 assets and isolates routes and state", () => {
   assert.equal(config.functions["api/ratings.js"].maxDuration, 15);
   assert.equal(config.functions["api/ratings-v2.js"].maxDuration, 15);
   assert.equal(config.functions["api/ratings-semantic-v1.js"].maxDuration, 15);
+  assert.equal(config.functions["api/ratings-semantic-v2.js"].maxDuration, 15);
 });
 
 test("public semantic assets contain no method identity or private unblinding", () => {

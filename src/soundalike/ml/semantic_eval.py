@@ -39,9 +39,10 @@ from .semantic_predictor import (
 )
 
 
-SCHEMA_VERSION = 1
-PACK_KIND = "fulltrack_semantic_blind_pilot_v1"
-PRIVATE_KIND = "fulltrack_semantic_blind_pilot_v1_private_unblinding"
+SCHEMA_VERSION = 2
+PACK_KIND = "fulltrack_semantic_repeated_excerpt_pilot_v2"
+PRIVATE_KIND = "fulltrack_semantic_repeated_excerpt_pilot_v2_private_unblinding"
+PACK_ID = "semantic-repeated-excerpt-v2-20"
 METHODS = ("fulltrack_audio_control_v1", "semantic_fulltrack_v1")
 RESULTS_PER_METHOD = 5
 EXPECTED_V2_PACK_SHA256 = (
@@ -60,10 +61,10 @@ EXPECTED_STORE_BINDING_SHA256 = (
     "66baa07c058d842d5a5a7f068a3ea80070d5c43a4818a7a36f0192cb868de98a"
 )
 EXPECTED_PUBLIC_PACK_SHA256 = (
-    "4f3c34250d5c5fca35dcc671dae1c256f0d56d8ce404d7a758bbbf62a2e5b48a"
+    "939b639abb6d6c6b2c7ba20ae570ff7ae9d06ee67254c219d6e5f61975403347"
 )
 EXPECTED_PRIVATE_UNBLINDING_SHA256 = (
-    "ea53d2b9fbf07c4dff69c6c8a3c876127bc82c836cc12d305f408949bea04efb"
+    "368cb4796a167d321037a978e5673ebc87237cb78825099030f9bebc267a2d23"
 )
 EXPECTED_STORE_TRACKS = 55_701
 EXPECTED_TEST_TRACKS = 11_565
@@ -72,6 +73,26 @@ AUDIO_WEIGHT = 0.75
 CANDIDATE_POOL = 200
 SECTION_BUDGET = 32
 MAX_RESULTS_PER_ARTIST = 1
+PLAYBACK_EXCERPT_SECONDS = 20
+SOURCE_WINDOW_SECONDS = 10
+SOURCE_SAMPLE_RATE = 48_000
+CORE_SCENES = (
+    "dance",
+    "house",
+    "hiphop",
+    "electronic",
+    "rock",
+    "indie",
+    "techno",
+    "funk",
+    "jazz",
+    "trance",
+    "alternative",
+    "metal",
+    "pop",
+    "reggae",
+    "folk",
+)
 _HEX64 = frozenset("0123456789abcdef")
 _PUBLIC_DOCUMENT_KEYS = frozenset(
     {
@@ -90,6 +111,8 @@ _PUBLIC_DOCUMENT_KEYS = frozenset(
         "blinding",
         "audio_delivery",
         "section_coverage",
+        "playback_policy",
+        "seed_order_policy",
         "language_policy",
         "tracks",
         "seeds",
@@ -135,6 +158,8 @@ _PUBLIC_SEED_KEYS = frozenset(
         "tempo_bpm",
         "tempo_region",
         "clap_texture_region",
+        "priority_rank",
+        "matched_list_overlap",
         "result_ids",
         "lists",
     }
@@ -269,6 +294,106 @@ def artist_diverse_top(
         if len(selected) == count:
             return tuple(selected)
     raise SemanticEvalError("candidate pool has fewer than five distinct artists")
+
+
+def prioritize_source_seeds(
+    source_seeds: Sequence[Mapping[str, object]],
+    audio_control_rankings: Mapping[int, Sequence[int]],
+    semantic_rankings: Mapping[int, Sequence[int]],
+) -> Tuple[Mapping[str, object], ...]:
+    seed_ids = tuple(int(seed["seed_track_id"]) for seed in source_seeds)
+    if (
+        len(seed_ids) != 20
+        or len(set(seed_ids)) != 20
+        or set(audio_control_rankings) != set(seed_ids)
+        or set(semantic_rankings) != set(seed_ids)
+    ):
+        raise SemanticEvalError("semantic priority seed/ranking set drift")
+    core_positions = {scene: position for position, scene in enumerate(CORE_SCENES)}
+
+    def priority(seed: Mapping[str, object]) -> Tuple[int, int, int, int]:
+        track_id = int(seed["seed_track_id"])
+        control = {int(value) for value in audio_control_rankings[track_id]}
+        challenger = {int(value) for value in semantic_rankings[track_id]}
+        if len(control) != RESULTS_PER_METHOD or len(challenger) != RESULTS_PER_METHOD:
+            raise SemanticEvalError("semantic priority ranking cardinality drift")
+        scene = str(seed["scene"])
+        return (
+            0 if scene in core_positions else 1,
+            len(control & challenger),
+            core_positions.get(scene, len(CORE_SCENES)),
+            track_id,
+        )
+
+    return tuple(sorted(source_seeds, key=priority))
+
+
+def repeated_section_excerpt(
+    reader: FullTrackStoreReader,
+    track_id: int,
+) -> Mapping[str, object]:
+    track = reader.read_track(int(track_id))
+    if (
+        not len(track.repeated_indices)
+        or not len(track.window_starts)
+        or track.decoded_samples <= 0
+    ):
+        raise SemanticEvalError("track lacks repeated-section playback evidence")
+    repeated_index = int(track.repeated_indices[0])
+    if not 0 <= repeated_index < len(track.window_starts):
+        raise SemanticEvalError("repeated-section playback index drift")
+    source_start = float(track.window_starts[repeated_index]) / SOURCE_SAMPLE_RATE
+    track_duration = float(track.decoded_samples) / SOURCE_SAMPLE_RATE
+    excerpt_duration = min(PLAYBACK_EXCERPT_SECONDS, track_duration)
+    context = max(0.0, (excerpt_duration - SOURCE_WINDOW_SECONDS) / 2.0)
+    start = min(max(0.0, source_start - context), track_duration - excerpt_duration)
+    end = start + excerpt_duration
+
+    def json_seconds(value: float) -> float | int:
+        rounded = round(value, 3)
+        return int(rounded) if rounded.is_integer() else rounded
+
+    return {
+        "kind": "strongest_nonlocal_recurrence",
+        "start_seconds": json_seconds(start),
+        "end_seconds": json_seconds(end),
+        "source_window_start_seconds": json_seconds(source_start),
+        "source_window_seconds": SOURCE_WINDOW_SECONDS,
+    }
+
+
+def _valid_playback_excerpt(value: object) -> bool:
+    if not isinstance(value, Mapping) or set(value) != {
+        "kind",
+        "start_seconds",
+        "end_seconds",
+        "source_window_start_seconds",
+        "source_window_seconds",
+    }:
+        return False
+    numeric = (
+        value["start_seconds"],
+        value["end_seconds"],
+        value["source_window_start_seconds"],
+        value["source_window_seconds"],
+    )
+    if any(
+        isinstance(item, bool)
+        or not isinstance(item, (int, float))
+        or not math.isfinite(float(item))
+        for item in numeric
+    ):
+        return False
+    start = float(value["start_seconds"])
+    end = float(value["end_seconds"])
+    source_start = float(value["source_window_start_seconds"])
+    return (
+        value["kind"] == "strongest_nonlocal_recurrence"
+        and start >= 0.0
+        and 0.0 < end - start <= PLAYBACK_EXCERPT_SECONDS
+        and start <= source_start < end
+        and float(value["source_window_seconds"]) == SOURCE_WINDOW_SECONDS
+    )
 
 
 def _audio_scores(
@@ -579,7 +704,7 @@ def build_blinded_documents(
     public_seeds = []
     private_seeds = []
     all_track_ids = set()
-    for source_seed in source_seeds:
+    for priority_rank, source_seed in enumerate(source_seeds, 1):
         seed_track_id = int(source_seed["seed_track_id"])
         rankings = {
             METHODS[0]: tuple(
@@ -650,6 +775,10 @@ def build_blinded_documents(
                 "tempo_bpm": float(source_seed["tempo_bpm"]),
                 "tempo_region": str(source_seed["tempo_region"]),
                 "clap_texture_region": int(source_seed["clap_texture_region"]),
+                "priority_rank": priority_rank,
+                "matched_list_overlap": len(
+                    set(rankings[METHODS[0]]) & set(rankings[METHODS[1]])
+                ),
                 "result_ids": [
                     {"result_id": result_ids[track_id], "track_id": track_id}
                     for track_id in sorted(result_ids)
@@ -671,7 +800,7 @@ def build_blinded_documents(
     private: Dict[str, object] = {
         "schema_version": SCHEMA_VERSION,
         "artifact_kind": PRIVATE_KIND,
-        "pack_id": "semantic-fulltrack-v1-20",
+        "pack_id": PACK_ID,
         "source_v2_pack_sha256": EXPECTED_V2_PACK_SHA256,
         "source_fingerprint": source_fingerprint,
         "store_binding_sha256": store_binding_sha256,
@@ -688,7 +817,7 @@ def build_blinded_documents(
     public: Dict[str, object] = {
         "schema_version": SCHEMA_VERSION,
         "pack_kind": PACK_KIND,
-        "pack_id": "semantic-fulltrack-v1-20",
+        "pack_id": PACK_ID,
         "rankings_state": "LOCKED_BEFORE_RATINGS",
         "ratings_count_at_freeze": 0,
         "seed_count": 20,
@@ -717,6 +846,20 @@ def build_blinded_documents(
             "repeated_section_budget": SECTION_BUDGET,
             "salient_section_budget": SECTION_BUDGET,
         },
+        "playback_policy": {
+            "kind": "strongest_nonlocal_recurrence_excerpt",
+            "excerpt_seconds": PLAYBACK_EXCERPT_SECONDS,
+            "source_window_seconds": SOURCE_WINDOW_SECONDS,
+            "verified_chorus_labels": False,
+            "full_track_seeking_allowed": False,
+        },
+        "seed_order_policy": {
+            "randomized": False,
+            "ratings_used": False,
+            "core_scenes": list(CORE_SCENES),
+            "within_group": "ascending matched top-five overlap, then fixed scene order and track ID",
+            "edge_scenes_after_core": True,
+        },
         "language_policy": {
             "evaluated_here": False,
             "reason": "MTG-Jamendo provides no trustworthy track-language field",
@@ -728,9 +871,9 @@ def build_blinded_documents(
         "promotion_allowed": False,
         "production_recommendation_changed": False,
         "notice": (
-            "Exploratory blinded comparison of full-track audio retrieval and a "
-            "calibrated genre, mood, and instrument reranker. One listener cannot "
-            "promote a model."
+            "Exploratory blinded comparison of matched full-track retrieval methods "
+            "using repeated-section listening excerpts. One listener cannot promote "
+            "a model."
         ),
     }
     public["content_sha256"] = _content_sha256(public)
@@ -748,7 +891,7 @@ def validate_blinded_documents(
         set(public) != _PUBLIC_DOCUMENT_KEYS
         or public.get("schema_version") != SCHEMA_VERSION
         or public.get("pack_kind") != PACK_KIND
-        or public.get("pack_id") != "semantic-fulltrack-v1-20"
+        or public.get("pack_id") != PACK_ID
         or public.get("content_sha256") != _content_sha256(public)
         or public.get("ratings_count_at_freeze") != 0
         or public.get("rankings_state") != "LOCKED_BEFORE_RATINGS"
@@ -760,9 +903,9 @@ def validate_blinded_documents(
         or public.get("production_recommendation_changed") is not False
         or public.get("notice")
         != (
-            "Exploratory blinded comparison of full-track audio retrieval and a "
-            "calibrated genre, mood, and instrument reranker. One listener cannot "
-            "promote a model."
+            "Exploratory blinded comparison of matched full-track retrieval methods "
+            "using repeated-section listening excerpts. One listener cannot promote "
+            "a model."
         )
     ):
         raise SemanticEvalError("public semantic study document drift")
@@ -770,7 +913,7 @@ def validate_blinded_documents(
         set(private) != _PRIVATE_DOCUMENT_KEYS
         or private.get("schema_version") != SCHEMA_VERSION
         or private.get("artifact_kind") != PRIVATE_KIND
-        or private.get("pack_id") != "semantic-fulltrack-v1-20"
+        or private.get("pack_id") != PACK_ID
         or private.get("content_sha256") != _content_sha256(private)
         or private.get("methods") != list(METHODS)
         or private.get("research_only") is not True
@@ -809,6 +952,22 @@ def validate_blinded_documents(
         "salient_section_budget": SECTION_BUDGET,
     }:
         raise SemanticEvalError("semantic study section policy drift")
+    if public.get("playback_policy") != {
+        "kind": "strongest_nonlocal_recurrence_excerpt",
+        "excerpt_seconds": PLAYBACK_EXCERPT_SECONDS,
+        "source_window_seconds": SOURCE_WINDOW_SECONDS,
+        "verified_chorus_labels": False,
+        "full_track_seeking_allowed": False,
+    }:
+        raise SemanticEvalError("semantic study playback policy drift")
+    if public.get("seed_order_policy") != {
+        "randomized": False,
+        "ratings_used": False,
+        "core_scenes": list(CORE_SCENES),
+        "within_group": "ascending matched top-five overlap, then fixed scene order and track ID",
+        "edge_scenes_after_core": True,
+    }:
+        raise SemanticEvalError("semantic study seed order policy drift")
     if public.get("language_policy") != {
         "evaluated_here": False,
         "reason": "MTG-Jamendo provides no trustworthy track-language field",
@@ -884,7 +1043,9 @@ def validate_blinded_documents(
     seen_seed_tracks: set[int] = set()
     seen_list_ids: set[str] = set()
     seen_result_ids: set[str] = set()
-    for public_seed in public_seed_items:
+    core_positions = {scene: position for position, scene in enumerate(CORE_SCENES)}
+    priority_keys = []
+    for priority_rank, public_seed in enumerate(public_seed_items, 1):
         seed_id = public_seed["seed_id"]
         seed_track_id = public_seed["seed_track_id"]
         private_seed = private_seeds.get(seed_id)
@@ -907,6 +1068,10 @@ def validate_blinded_documents(
             or isinstance(public_seed["clap_texture_region"], bool)
             or not isinstance(public_seed["clap_texture_region"], int)
             or public_seed["clap_texture_region"] not in range(5)
+            or public_seed["priority_rank"] != priority_rank
+            or isinstance(public_seed["matched_list_overlap"], bool)
+            or not isinstance(public_seed["matched_list_overlap"], int)
+            or public_seed["matched_list_overlap"] not in range(RESULTS_PER_METHOD + 1)
         ):
             raise SemanticEvalError("public/private semantic seed binding drift")
         seen_seed_ids.add(seed_id)
@@ -971,6 +1136,7 @@ def validate_blinded_documents(
         all_track_ids.add(seed_track_id)
         method_names = set()
         ranked_track_union: set[int] = set()
+        rankings_by_method: Dict[str, set[int]] = {}
         for public_list in public_lists:
             list_id = public_list["list_id"]
             if (
@@ -1076,16 +1242,32 @@ def validate_blinded_documents(
                 raise SemanticEvalError("semantic list commitment or ranking drift")
             all_track_ids.update(public_ids)
             ranked_track_union.update(public_ids)
+            rankings_by_method[method] = set(public_ids)
         if method_names != set(METHODS):
             raise SemanticEvalError("semantic seed does not bind both study methods")
         if ranked_track_union != set(result_ids_by_track):
             raise SemanticEvalError("semantic result identity map differs from rankings")
+        overlap = len(rankings_by_method[METHODS[0]] & rankings_by_method[METHODS[1]])
+        if public_seed["matched_list_overlap"] != overlap:
+            raise SemanticEvalError("semantic seed priority evidence drift")
+        scene = public_seed["scene"]
+        priority_keys.append(
+            (
+                0 if scene in core_positions else 1,
+                overlap,
+                core_positions.get(scene, len(CORE_SCENES)),
+                seed_track_id,
+            )
+        )
+    if priority_keys != sorted(priority_keys):
+        raise SemanticEvalError("semantic seed priority ordering drift")
     if set(tracks) != {str(track_id) for track_id in all_track_ids}:
         raise SemanticEvalError("semantic study track coverage drift")
     for track_id, track in tracks.items():
         if (
             not isinstance(track, Mapping)
             or str(track.get("track_id")) != track_id
+            or not _valid_playback_excerpt(track.get("playback_excerpt"))
         ):
             raise SemanticEvalError("semantic study track identity drift")
     public_text = json.dumps(public, sort_keys=True)
@@ -1160,6 +1342,11 @@ def build_production_semantic_eval(
         audio_control, semantic, domain = rank_study_methods(
             context, reader, predictor, seed_ids, excluded_by_seed, config
         )
+        source_seeds = prioritize_source_seeds(
+            source_seeds,
+            audio_control,
+            semantic,
+        )
         method_bindings = _method_bindings(
             predictor_meta,
             predictor_model,
@@ -1197,15 +1384,17 @@ def build_production_semantic_eval(
         for track_id in sorted(all_track_ids):
             existing = existing_records.get(str(track_id))
             if existing is not None:
-                track_records[str(track_id)] = existing
+                record = dict(existing)
             else:
-                track_records[str(track_id)] = _track_record(
+                record = _track_record(
                     tracks_by_id[track_id],
                     fold_index=config.fold_index,
                     fold_part=config.part,
                     store_row=store_rows[track_id],
                     audio_verification=audio_evidence[lawful_stream_url(track_id)],
                 )
+            record["playback_excerpt"] = repeated_section_excerpt(reader, track_id)
+            track_records[str(track_id)] = record
 
     key = _read_blinding_key(blinding_key_path, create_blinding_key)
     public, private = build_blinded_documents(

@@ -7,14 +7,14 @@ import {
   MAX_SEMANTIC_STORED_BYTES,
   SEMANTIC_BLOB_PREFIX,
   parseSemanticStoredRecordBytes,
-} from "../api/ratings-semantic-v1.js";
+} from "../api/ratings-semantic-v2.js";
 
 const PATHNAME =
-  /^human-ratings\/semantic-v1\/(semantic-session-[a-f0-9]{24})\/([a-f0-9]{64})\.json$/;
+  /^human-ratings\/semantic-v2\/(semantic-session-[a-f0-9]{24})\/([a-f0-9]{64})\.json$/;
 
 function usage() {
   console.error(
-    "Usage: npm run ratings:semantic-inbox -- <output-dir> --acknowledge-private-data",
+    "Usage: npm run ratings:semantic-v2-inbox -- <output-dir> --acknowledge-private-data",
   );
 }
 

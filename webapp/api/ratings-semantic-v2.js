@@ -20,13 +20,13 @@ import {
 export const MAX_SEMANTIC_BODY_BYTES = 256 * 1024;
 export const MAX_SEMANTIC_STORED_BYTES = 300 * 1024;
 export const SEMANTIC_PROTOCOL_SHA256 =
-  "662fbab57f5264329bfc8d75398bd5998d5e7b01ff049a548778bc834655ddd2";
+  "177941569960d3cb0abb0fbbac645a22ed691aed8271f71842be186f9b7ea838";
 export const SEMANTIC_PACK_SHA256 =
-  "4f3c34250d5c5fca35dcc671dae1c256f0d56d8ce404d7a758bbbf62a2e5b48a";
-export const SEMANTIC_BLOB_PREFIX = "human-ratings/semantic-v1/";
+  "939b639abb6d6c6b2c7ba20ae570ff7ae9d06ee67254c219d6e5f61975403347";
+export const SEMANTIC_BLOB_PREFIX = "human-ratings/semantic-v2/";
 
-const SUBMISSION_SCHEMA = "fulltrack_semantic_listener_submission_v1";
-const PROVIDER = "hosted_private_semantic_v1_evaluator";
+const SUBMISSION_SCHEMA = "repeated_excerpt_semantic_listener_submission_v2";
+const PROVIDER = "hosted_private_semantic_v2_evaluator";
 const INTEGRITY_NOTICE =
   "Local-key HMAC provides integrity, not identity or authenticity; the key is included in this export.";
 const MAX_DURATION_MS = 366 * 24 * 60 * 60 * 1000;
@@ -81,15 +81,12 @@ const COUNT_KEYS = ["complete_list_ratings"];
 
 const protocol = strictJsonParse(
   readFileSync(
-    new URL("../evaluate-semantic-v1/protocol-semantic-v1.json", import.meta.url),
+    new URL("../evaluate/protocol-semantic-v2.json", import.meta.url),
     "utf8",
   ),
 );
 const pilotPack = strictJsonParse(
-  readFileSync(
-    new URL("../evaluate-semantic-v1/semantic-pack.json", import.meta.url),
-    "utf8",
-  ),
+  readFileSync(new URL("../evaluate/semantic-pack.json", import.meta.url), "utf8"),
 );
 
 function sha256(value) {
@@ -121,21 +118,21 @@ function hasExactKeys(value, expected) {
 
 function buildCommittedListIds() {
   if (
-    protocol.schema_version !== 1 ||
+    protocol.schema_version !== 2 ||
     protocol.protocol_kind !==
-      "fulltrack_semantic_blind_listener_v1_private_submission" ||
+      "repeated_excerpt_semantic_blind_listener_v2_private_submission" ||
     protocol.submission_schema !== SUBMISSION_SCHEMA ||
     protocol.content_sha256 !== SEMANTIC_PROTOCOL_SHA256 ||
     protocol.pilot_pack_sha256 !== SEMANTIC_PACK_SHA256 ||
-    protocol.submission_endpoint !== "/api/ratings-semantic-v1" ||
+    protocol.submission_endpoint !== "/api/ratings-semantic-v2" ||
     protocol.private_blob_prefix !== SEMANTIC_BLOB_PREFIX ||
     protocol.explicit_consent_required !== true ||
     protocol.automatic_submission !== false ||
     protocol.production_recommendation_changed !== false ||
     documentHash(protocol) !== SEMANTIC_PROTOCOL_SHA256 ||
-    pilotPack.schema_version !== 1 ||
-    pilotPack.pack_kind !== "fulltrack_semantic_blind_pilot_v1" ||
-    pilotPack.pack_id !== "semantic-fulltrack-v1-20" ||
+    pilotPack.schema_version !== 2 ||
+    pilotPack.pack_kind !== "fulltrack_semantic_repeated_excerpt_pilot_v2" ||
+    pilotPack.pack_id !== "semantic-repeated-excerpt-v2-20" ||
     pilotPack.rankings_state !== "LOCKED_BEFORE_RATINGS" ||
     pilotPack.ratings_count_at_freeze !== 0 ||
     pilotPack.seed_count !== 20 ||
@@ -147,6 +144,13 @@ function buildCommittedListIds() {
     pilotPack.section_coverage?.uniform_window_budget !== 32 ||
     pilotPack.section_coverage?.repeated_section_budget !== 32 ||
     pilotPack.section_coverage?.salient_section_budget !== 32 ||
+    pilotPack.playback_policy?.kind !==
+      "strongest_nonlocal_recurrence_excerpt" ||
+    pilotPack.playback_policy?.excerpt_seconds !== 20 ||
+    pilotPack.playback_policy?.verified_chorus_labels !== false ||
+    pilotPack.playback_policy?.full_track_seeking_allowed !== false ||
+    pilotPack.seed_order_policy?.randomized !== false ||
+    pilotPack.seed_order_policy?.ratings_used !== false ||
     pilotPack.research_only !== true ||
     pilotPack.promotion_allowed !== false ||
     pilotPack.production_recommendation_changed !== false ||
@@ -251,7 +255,7 @@ function validateEvidence(ratings, requireRating = true) {
   const lastActivityAt = parseTimestamp(ratings.last_activity_at);
   const exportedAt = parseTimestamp(ratings.exported_at);
   if (
-    ratings.schema_version !== 1 ||
+    ratings.schema_version !== 2 ||
     ratings.submission_schema !== SUBMISSION_SCHEMA ||
     ratings.source_kind !== "human_listener" ||
     ratings.provider !== PROVIDER ||
@@ -508,7 +512,7 @@ export function createSemanticHandler(
     if (
       !hasExactKeys(wrapper, ["consent", "ratings", "study"]) ||
       wrapper.consent !== true ||
-      wrapper.study !== "semantic-fulltrack-v1"
+      wrapper.study !== "semantic-repeated-excerpt-v2"
     ) {
       return send(response, 400, { error: "invalid request" });
     }

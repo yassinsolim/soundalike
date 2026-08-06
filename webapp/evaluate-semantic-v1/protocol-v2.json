@@ -1,0 +1,22 @@
+{
+  "schema_version": 2,
+  "protocol_kind": "fulltrack_jamendo_blind_listener_v2_private_submission",
+  "submission_schema": "fulltrack_jamendo_listener_submission_v2",
+  "pilot_pack_sha256": "1980da60810959e7cdd24f39bd7142c8e34c76dab633c705976b85e49b297023",
+  "seed_count": 20,
+  "list_count": 80,
+  "results_per_list": 5,
+  "assignment": "opaque deterministic per-session list order",
+  "rating_scale": "three-class list similarity, optional integer 0-10, and unrelated positions 1-5",
+  "local_storage_namespace": "soundalike-fulltrack-v2",
+  "submission_endpoint": "/api/ratings-v2",
+  "private_blob_prefix": "human-ratings/fulltrack-v2/",
+  "explicit_consent_required": true,
+  "automatic_submission": false,
+  "partial_submission_allowed": true,
+  "attribution_release": "seed after the first completed list rating; each result list after its own completed rating",
+  "research_only": true,
+  "promotion_allowed": false,
+  "production_recommendation_changed": false,
+  "content_sha256": "1f7a3cc48ecb62f85d3c3d65fa0f0c0fa5cd73eeccd67049d7bc5e84d1dcc227"
+}

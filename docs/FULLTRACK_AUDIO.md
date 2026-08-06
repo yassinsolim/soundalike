@@ -402,10 +402,15 @@ most one result per source artist. Semantics are the only ranking difference.
 Every result track published in the prior V2 pack is excluded from both methods
 before the shared top-200 pool is selected, so the archived V2 rankings cannot
 unblind the new control. No official test tags or language metadata enter ranking.
+Listener playback is limited to a 20-second excerpt centered on the strongest
+non-local repeated window. This recurrence heuristic is not a labeled chorus
+classifier and changes presentation only; both methods still rank whole tracks.
+Core scenes are presented before edge scenes, with lower matched-list overlap first
+inside each group. Submitted ratings never influence seed order.
 
 The public pack contains 20 seeds, two anonymous five-result lists per seed, and
 first-party Jamendo playback. Its content SHA-256 is
-`4f3c34250d5c5fca35dcc671dae1c256f0d56d8ce404d7a758bbbf62a2e5b48a`.
+`939b639abb6d6c6b2c7ba20ae570ff7ae9d06ee67254c219d6e5f61975403347`.
 The private unblinding document and key stay outside Git. Rebuilding with the
 same inputs and key reproduces both public and private documents byte-for-byte.
 The study is exploratory because these seeds have already been exposed to the
@@ -415,7 +420,8 @@ Jamendo provides no trustworthy track-language field. The study therefore does
 not pretend to test language similarity. Spotify's authenticated lyrics-language
 gate remains a separate, unchanged production layer. Production recommendation
 assets and the rejected V3 model remain unchanged; the prior V2 and v17 browser
-studies remain available at `/evaluate-v2` and `/evaluate-v1`.
+studies remain available at `/evaluate-v2` and `/evaluate-v1`, while semantic v1
+is preserved at `/evaluate-semantic-v1`.
 
 Evaluate all trained candidates on the same frozen global top-200 pools:
 
