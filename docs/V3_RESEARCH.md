@@ -1,7 +1,9 @@
 # V3 similarity research — closed without promotion
 
 V3 did not clear its final independent gate. The production and rollback path
-remains `dual_sonic64_guardrail`, and `/evaluate` remains V2. The strongest
+remains `dual_sonic64_guardrail`, and V2 remains archived at `/evaluate-v2`.
+The current `/evaluate` page is a separate exploratory audio-versus-semantic
+study, not the rejected V3 candidate. The strongest
 final-reserve candidate reached +20.005% development Recall@10 but only +0.286%
 on the one-time shadow; its interval crossed zero and its worst fold was
 -11.23%. No V3 listening pack was generated and no model was promoted.
@@ -397,7 +399,8 @@ result is:
 The candidate fails the fixed +20% Recall gate, the positive paired interval,
 the minimum positive-fold count, and the worst-fold stability check. The final
 reserve shadow is consumed. Listening-pack generation and promotion are
-blocked; `/evaluate` remains on V2. The immutable audit is committed at
+blocked; V2 remains available at `/evaluate-v2`, while `/evaluate` hosts the
+separate exploratory semantic study. The immutable audit is committed at
 `.goals/production-ready-v3/artifacts/final-reserve-shadow-result.json`
 (payload `9e60653f...`). The external audit-state record also binds the
 original result file hash `c088aa43...`.

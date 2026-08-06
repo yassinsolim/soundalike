@@ -54,26 +54,33 @@ Spotify's own site, never hand over a password) to save results as a playlist. S
 [`webapp/DEPLOY.md`](webapp/DEPLOY.md).
 
 **Help with the blind study:** open the public
-[listening evaluator](https://soundalike.yassin.app/evaluate). A complete session is
-usually 90–150 minutes, but partial progress can be resumed. V2 compares four blinded
-full-track methods on 20 held-out Jamendo seeds with exact store, fold, model-artifact,
-source, and license bindings. The prior v17 study remains available at
-[`/evaluate-v1`](https://soundalike.yassin.app/evaluate-v1). Ratings stay in your browser
-until you explicitly consent and press **Submit ratings**. Accepted snapshots go to a
-private, version-isolated ratings inbox; JSON export remains available as a manual
-fallback. See the
+[listening evaluator](https://soundalike.yassin.app/evaluate). The current, shorter
+study compares a matched full-track audio control with one fixed challenger that adds
+calibrated genre, mood/theme, and instrument evidence. Both use the same candidate pool,
+whole-track pooled embeddings, 32-section late interaction, and one-result-per-artist
+policy, so semantics are the only ranking difference. It uses 20 Jamendo seeds and two
+anonymous five-result lists per seed. Previously published V2 result tracks are
+excluded from both methods so the V2 archive cannot reveal either list's identity.
+The locked four-list V2 study remains
+available at [`/evaluate-v2`](https://soundalike.yassin.app/evaluate-v2), and the prior
+v17 study remains at [`/evaluate-v1`](https://soundalike.yassin.app/evaluate-v1).
+Ratings stay in the study's own browser namespace until you explicitly consent and
+press **Submit ratings**. Accepted snapshots go to a private, version-isolated ratings
+inbox; JSON export remains available as a manual fallback. See the
 [deployment and privacy workflow](webapp/DEPLOY.md#private-ratings-inbox).
 
-V2 is a **better-controlled evaluation protocol**, not a claim that a new model is
-already better. The frozen automated benchmark did not select any trained fusion
-candidate overall, and no human improvement can be reported until genuine listening
-ratings are collected.
+The semantic study is exploratory, not a shipped V3 model or a claim that
+recommendations are already better. Jamendo has no trustworthy track-language field,
+so language is not evaluated here; Spotify lyrics-language filtering remains a
+separate unchanged production layer. No human improvement can be reported until
+genuine listening ratings are collected.
 
 **V3 research is complete but not shipped.** Its strongest final-reserve candidate
 reached the preregistered +20% development target, then improved independent shadow
 Recall@10 by only **+0.286%** with an interval crossing zero and a **-11.23%** worst
 fold. The gate correctly rejected it: no V3 listening pack was opened, no production
-model changed, and `/evaluate` remains V2. See
+model changed. V2 remains preserved at `/evaluate-v2`; `/evaluate` now hosts the
+separate exploratory semantic study. See
 [V3 full-track research](#v3-full-track-research-closed-without-promotion) for the complete outcome.
 
 ---

@@ -390,6 +390,33 @@ normalization search. Do not retrain from this evidence alone; the remaining
 blocker is an authorized exact-pipeline catalogue source followed by a newly
 frozen blind listener evaluation.
 
+## Exploratory semantic listening study
+
+`soundalike.ml.semantic_eval` builds the locked two-list study served at
+`/evaluate`. It compares a matched audio-only control against one fixed
+challenger: 75% rank-scaled full-track audio and 25% rank-scaled calibrated
+semantic-profile cosine. Both methods use coverage-weighted global embeddings
+over every 10-second window, symmetric MaxSim with fixed budgets of 32 uniform,
+repeated, and salient sections, the same frozen top-200 candidate pool, and at
+most one result per source artist. Semantics are the only ranking difference.
+Every result track published in the prior V2 pack is excluded from both methods
+before the shared top-200 pool is selected, so the archived V2 rankings cannot
+unblind the new control. No official test tags or language metadata enter ranking.
+
+The public pack contains 20 seeds, two anonymous five-result lists per seed, and
+first-party Jamendo playback. Its content SHA-256 is
+`4f3c34250d5c5fca35dcc671dae1c256f0d56d8ce404d7a758bbbf62a2e5b48a`.
+The private unblinding document and key stay outside Git. Rebuilding with the
+same inputs and key reproduces both public and private documents byte-for-byte.
+The study is exploratory because these seeds have already been exposed to the
+project owner; it cannot independently promote a model.
+
+Jamendo provides no trustworthy track-language field. The study therefore does
+not pretend to test language similarity. Spotify's authenticated lyrics-language
+gate remains a separate, unchanged production layer. Production recommendation
+assets and the rejected V3 model remain unchanged; the prior V2 and v17 browser
+studies remain available at `/evaluate-v2` and `/evaluate-v1`.
+
 Evaluate all trained candidates on the same frozen global top-200 pools:
 
 ```powershell

@@ -5,19 +5,22 @@ import test from "node:test";
 import vm from "node:vm";
 
 const html = readFileSync(
-  new URL("../evaluate-v2/index.html", import.meta.url),
+  new URL("../evaluate/index.html", import.meta.url),
   "utf8",
 );
-const v1Html = readFileSync(
-  new URL("../evaluate-v1/index.html", import.meta.url),
+const v2Html = readFileSync(
+  new URL("../evaluate-v2/index.html", import.meta.url),
   "utf8",
 );
 const script = html.match(/<script>\s*([\s\S]*?)\s*<\/script>/)?.[1];
 const protocol = JSON.parse(
-  readFileSync(new URL("../evaluate-v2/protocol-v2.json", import.meta.url), "utf8"),
+  readFileSync(
+    new URL("../evaluate/protocol-semantic-v1.json", import.meta.url),
+    "utf8",
+  ),
 );
 const pack = JSON.parse(
-  readFileSync(new URL("../evaluate-v2/pilot-pack.json", import.meta.url), "utf8"),
+  readFileSync(new URL("../evaluate/semantic-pack.json", import.meta.url), "utf8"),
 );
 
 function context() {
@@ -91,9 +94,9 @@ function context() {
     location: {
       hash: "",
       hostname: "localhost",
-      href: "http://localhost:8788/evaluate-v2/",
+      href: "http://localhost:8788/evaluate/",
       origin: "http://localhost:8788",
-      pathname: "/evaluate-v2/",
+      pathname: "/evaluate/",
       protocol: "http:",
       search: "",
     },
@@ -107,63 +110,64 @@ function realmClone(sandbox, value) {
   return vm.runInContext("JSON.parse(__cloneJson)", sandbox);
 }
 
-test("validates the exact locked public v2 documents and rejects tampering", async () => {
+test("validates the exact locked semantic documents and rejects tampering", async () => {
   const sandbox = context();
   const trustedProtocol = realmClone(sandbox, protocol);
   const trustedPack = realmClone(sandbox, pack);
   assert.equal(
-    await sandbox.__fulltrackV2Test.validateStudy(trustedProtocol, trustedPack),
+    await sandbox.__semanticV1Test.validateStudy(trustedProtocol, trustedPack),
     true,
   );
 
   const wrongProtocol = realmClone(sandbox, protocol);
   wrongProtocol.schema_version = 17;
   await assert.rejects(
-    sandbox.__fulltrackV2Test.validateStudy(wrongProtocol, trustedPack),
+    sandbox.__semanticV1Test.validateStudy(wrongProtocol, trustedPack),
     /Protocol/,
   );
 
   const tamperedPack = realmClone(sandbox, pack);
   tamperedPack.seeds[0].lists[0].ranking[0].track_id += 1;
   await assert.rejects(
-    sandbox.__fulltrackV2Test.validateStudy(trustedProtocol, tamperedPack),
+    sandbox.__semanticV1Test.validateStudy(trustedProtocol, tamperedPack),
     /pack/,
   );
 });
 
 test("uses stable opaque list orders that vary by session", async () => {
   const sandbox = context();
-  const state = sandbox.__fulltrackV2Test.emptyState();
-  sandbox.__fulltrackV2Test.setStudy(protocol, pack, state);
+  const state = sandbox.__semanticV1Test.emptyState();
+  sandbox.__semanticV1Test.setStudy(protocol, pack, state);
   const lists = pack.seeds[0].lists;
-  const first = await sandbox.__fulltrackV2Test.sessionOrder(
+  const first = await sandbox.__semanticV1Test.sessionOrder(
     lists,
     "list-order:test",
-    `fulltrack-session-${"1".repeat(24)}`,
+    `semantic-session-${"1".repeat(24)}`,
   );
-  const again = await sandbox.__fulltrackV2Test.sessionOrder(
+  const again = await sandbox.__semanticV1Test.sessionOrder(
     lists,
     "list-order:test",
-    `fulltrack-session-${"1".repeat(24)}`,
-  );
-  const second = await sandbox.__fulltrackV2Test.sessionOrder(
-    lists,
-    "list-order:test",
-    `fulltrack-session-${"2".repeat(24)}`,
+    `semantic-session-${"1".repeat(24)}`,
   );
   assert.deepEqual(
     first.map((item) => item.list_id),
     again.map((item) => item.list_id),
   );
-  assert.notDeepEqual(
-    first.map((item) => item.list_id),
-    second.map((item) => item.list_id),
-  );
+  const observed = new Set();
+  for (let value = 1; value <= 8; value += 1) {
+    const order = await sandbox.__semanticV1Test.sessionOrder(
+      lists,
+      "list-order:test",
+      `semantic-session-${String(value).repeat(24)}`,
+    );
+    observed.add(order.map((item) => item.list_id).join(","));
+  }
+  assert.equal(observed.size, 2);
 });
 
-test("autosaves, exports and imports only strict signed v2 state", async () => {
+test("autosaves, exports and imports only strict signed semantic state", async () => {
   const sandbox = context();
-  const state = sandbox.__fulltrackV2Test.emptyState();
+  const state = sandbox.__semanticV1Test.emptyState();
   const time = Date.now();
   state.started_at = new Date(time - 1000).toISOString();
   const ratedAt = new Date(time).toISOString();
@@ -179,59 +183,60 @@ test("autosaves, exports and imports only strict signed v2 state", async () => {
     "JSON.parse(__ratingJson)",
     sandbox,
   );
-  sandbox.__fulltrackV2Test.setStudy(protocol, pack, state);
-  assert.equal(sandbox.__fulltrackV2Test.validState(state), true);
-  sandbox.__fulltrackV2Test.save();
-  assert.equal(sandbox.__fulltrackV2Test.restoreAutosave().session_id, state.session_id);
+  sandbox.__semanticV1Test.setStudy(protocol, pack, state);
+  assert.equal(sandbox.__semanticV1Test.validState(state), true);
+  sandbox.__semanticV1Test.save();
+  assert.equal(sandbox.__semanticV1Test.restoreAutosave().session_id, state.session_id);
 
-  const exported = await sandbox.__fulltrackV2Test.buildExport();
-  assert.equal(sandbox.__fulltrackV2Test.validExport(exported), true);
-  const imported = await sandbox.__fulltrackV2Test.stateFromExport(exported);
-  assert.equal(sandbox.__fulltrackV2Test.validState(imported), true);
+  const exported = await sandbox.__semanticV1Test.buildExport();
+  assert.equal(sandbox.__semanticV1Test.validExport(exported), true);
+  const imported = await sandbox.__semanticV1Test.stateFromExport(exported);
+  assert.equal(sandbox.__semanticV1Test.validState(imported), true);
   assert.equal(imported.session_id, state.session_id);
 
   exported.list_ratings[pack.seeds[0].lists[0].list_id].similarity =
     "not_similar";
   await assert.rejects(
-    sandbox.__fulltrackV2Test.stateFromExport(exported),
+    sandbox.__semanticV1Test.stateFromExport(exported),
     /HMAC/,
   );
 });
 
 test("keeps attribution out of anonymous player markup until rating", () => {
   const sandbox = context();
-  const state = sandbox.__fulltrackV2Test.emptyState();
-  sandbox.__fulltrackV2Test.setStudy(protocol, pack, state);
+  const state = sandbox.__semanticV1Test.emptyState();
+  sandbox.__semanticV1Test.setStudy(protocol, pack, state);
   const track = pack.tracks[pack.seeds[0].seed_track_id];
-  const player = sandbox.__fulltrackV2Test.trackPlayerHtml(track, "Seed track");
+  const player = sandbox.__semanticV1Test.trackPlayerHtml(track, "Seed track");
   assert.equal(player.includes(track.title), false);
   assert.equal(player.includes(track.artist), false);
   assert.equal(player.includes(track.license.attribution), false);
   assert.equal(player.includes(`trackid=${track.track_id}&amp;format=mp31`), true);
   assert.equal(player.includes('preload="none"'), true);
 
-  const attribution = sandbox.__fulltrackV2Test.trackAttributionHtml(track);
+  const attribution = sandbox.__semanticV1Test.trackAttributionHtml(track);
   assert.equal(attribution.includes(track.title), true);
   assert.equal(attribution.includes(track.artist), true);
   assert.equal(attribution.includes(track.license.url), true);
 });
 
-test("preserves byte-locked v17 assets and isolates routes and state", () => {
+test("preserves byte-locked v2 assets and isolates routes and state", () => {
   const hashes = {
-    "index.html": "b6445a1400e0b92a7187e895ec22e8301e53abcc73f9974ceb13436fecc9f537",
-    "protocol.json": "02fb2baa60d3a7bc2ae67f198ea470f5cd1837ff6c9704526f4c41b3281975a1",
-    "served-lists.json":
-      "1253cfd0501f320bf6cda4d451509d7b2fa552a1ecbe5636a9e3477137850f20",
+    "index.html": "b245ba0cbdc1be2821e5a7722b946c3e4330b508d848bdc74c593ff68fb628c6",
+    "pilot-pack.json":
+      "d23d66768f15fd5e37e01ad2a8905d181b4ff278c85674386edcd7dc50b267d3",
+    "protocol-v2.json":
+      "a88108894e3875159a9ae5b3fae61b01522e9c22647d9ff32748d53d0a5c981c",
   };
   for (const [name, expected] of Object.entries(hashes)) {
-    const bytes = readFileSync(new URL(`../evaluate-v1/${name}`, import.meta.url));
+    const bytes = readFileSync(new URL(`../evaluate-v2/${name}`, import.meta.url));
     assert.equal(createHash("sha256").update(bytes).digest("hex"), expected);
   }
-  assert.equal(v1Html.includes("soundalike-human-v17"), true);
-  assert.equal(html.includes("soundalike-fulltrack-v2"), true);
-  assert.equal(html.includes("soundalike-human-v17"), false);
-  assert.equal(html.includes("/api/ratings-v2"), true);
-  assert.equal(v1Html.includes('fetch("/api/ratings"'), true);
+  assert.equal(v2Html.includes("soundalike-fulltrack-v2"), true);
+  assert.equal(html.includes("soundalike-semantic-v1"), true);
+  assert.equal(html.includes("soundalike-fulltrack-v2"), false);
+  assert.equal(html.includes("/api/ratings-semantic-v1"), true);
+  assert.equal(v2Html.includes('fetch("/api/ratings-v2"'), true);
 
   const config = JSON.parse(
     readFileSync(new URL("../vercel.json", import.meta.url), "utf8"),
@@ -239,23 +244,23 @@ test("preserves byte-locked v17 assets and isolates routes and state", () => {
   const routes = Object.fromEntries(
     config.rewrites.map((item) => [item.source, item.destination]),
   );
+  assert.equal(routes["/evaluate"], "/evaluate/index.html");
   assert.equal(routes["/evaluate-v2"], "/evaluate-v2/index.html");
   assert.equal(routes["/evaluate-v1"], "/evaluate-v1/index.html");
   assert.equal(config.functions["api/ratings.js"].maxDuration, 15);
   assert.equal(config.functions["api/ratings-v2.js"].maxDuration, 15);
+  assert.equal(config.functions["api/ratings-semantic-v1.js"].maxDuration, 15);
 });
 
-test("public v2 assets contain no model identity or private unblinding", () => {
+test("public semantic assets contain no method identity or private unblinding", () => {
   const publicText = [
     html,
     JSON.stringify(protocol),
     JSON.stringify(pack),
   ].join("\n");
   for (const marker of [
-    "nonnegative_linear",
-    "monotonic_network",
-    "channel_gated_embedding",
-    "frozen_hybrid",
+    "fulltrack_audio_control_v1",
+    "semantic_fulltrack_v1",
     "BEGIN PRIVATE KEY",
   ]) {
     assert.equal(publicText.includes(marker), false);

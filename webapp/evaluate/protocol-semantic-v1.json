@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "protocol_kind": "fulltrack_semantic_blind_listener_v1_private_submission",
+  "submission_schema": "fulltrack_semantic_listener_submission_v1",
+  "pilot_pack_sha256": "4f3c34250d5c5fca35dcc671dae1c256f0d56d8ce404d7a758bbbf62a2e5b48a",
+  "seed_count": 20,
+  "list_count": 40,
+  "results_per_list": 5,
+  "assignment": "opaque deterministic per-session list order",
+  "rating_scale": "three-class list similarity, optional integer 0-10, and unrelated positions 1-5",
+  "local_storage_namespace": "soundalike-semantic-v1",
+  "submission_endpoint": "/api/ratings-semantic-v1",
+  "private_blob_prefix": "human-ratings/semantic-v1/",
+  "explicit_consent_required": true,
+  "automatic_submission": false,
+  "partial_submission_allowed": true,
+  "attribution_release": "the browser UI shows the seed after the first completed list rating and each result list after its own completed rating; public license records remain inspectable",
+  "research_only": true,
+  "promotion_allowed": false,
+  "production_recommendation_changed": false,
+  "content_sha256": "662fbab57f5264329bfc8d75398bd5998d5e7b01ff049a548778bc834655ddd2"
+}

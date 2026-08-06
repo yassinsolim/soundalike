@@ -144,17 +144,20 @@ recommendations — only for the optional "Save as playlist".
 
 ## Private ratings inboxes
 
-`/evaluate` is the research-only 20-seed full-track v2 pilot. `/evaluate-v1`
-retains the exact v17 browser application and files so existing
-`soundalike-human-v17` autosaves remain resumable. The v2 page instead uses the
-`soundalike-fulltrack-v2` namespace and never scans, migrates, or deletes v17
-state.
+`/evaluate` is the research-only 20-seed semantic comparison. It uses the
+`soundalike-semantic-v1` browser namespace and a locked two-list pack. The prior
+full-track V2 application is byte-preserved at `/evaluate-v2` so existing
+`soundalike-fulltrack-v2` autosaves remain resumable. `/evaluate-v1` retains the
+exact v17 browser application and its `soundalike-human-v17` state. None of the
+three pages scans, migrates, or deletes another study's state.
 
 Both evaluators submit only after the listener checks the consent box and presses
 the explicit submit button. Neither submits on autosave, page unload, playback,
-or export. JSON export/import remains a manual fallback. V2 attribution and
-license links appear only after the corresponding list judgment; the public pack
-contains no model identity or private unblinding document.
+or export. JSON export/import remains a manual fallback. Attribution and license links appear
+only after the corresponding list judgment; public packs contain no method identity
+or private unblinding document. The semantic study evaluates genre, mood/theme, and
+instrument reranking, not language. Spotify lyrics-language filtering remains a
+separate production layer because Jamendo has no trustworthy language field.
 
 ### Blob setup
 
@@ -166,8 +169,8 @@ contains no model identity or private unblinding document.
    server-side environment variable. `@vercel/blob` uses this official fallback
    automatically. Never expose either credential to browser code.
 4. Deploy from `webapp`; `npm ci` installs the pinned official Blob SDK.
-5. Add Vercel Firewall rate-limit rules for `POST /api/ratings` and
-   `POST /api/ratings-v2`. Origin checks and
+5. Add Vercel Firewall rate-limit rules for `POST /api/ratings`,
+   `POST /api/ratings-v2`, and `POST /api/ratings-semantic-v1`. Origin checks and
    the browser's local-key HMAC provide abuse resistance and integrity; they are
    not authentication, so application validation is not a replacement for rate
    limiting.
@@ -181,6 +184,10 @@ V2 uses its own immutable prefix and schema:
 `human-ratings/fulltrack-v2/<fulltrack-session-id>/<canonical-payload-sha>.json`.
 A v1 payload cannot validate against the v2 endpoint, and a v2 payload cannot
 validate against the v1 endpoint.
+
+The semantic study is isolated again:
+`human-ratings/semantic-v1/<semantic-session-id>/<canonical-payload-sha>.json`.
+Its schema, hashes, IDs, endpoint, and committed list set reject v1 and V2 payloads.
 
 The stored record contains random anonymous/session IDs, ratings, rating timestamps
 and durations, locked protocol/list hashes, server receipt time, canonical digest,
@@ -198,6 +205,7 @@ cd webapp
 npm ci
 npm run ratings:inbox -- ../private-ratings-inbox --acknowledge-private-data
 npm run ratings:v2-inbox -- ../private-ratings-v2-inbox --acknowledge-private-data
+npm run ratings:semantic-inbox -- ../private-ratings-semantic-inbox --acknowledge-private-data
 python ../tools/aggregate_ratings.py ../private-ratings-inbox \
   --output ../ratings-aggregate.local.json
 ```
@@ -209,12 +217,12 @@ client exports and v17 sanitized server records. It deduplicates snapshots by di
 and session, merges additions, and stops on conflicting values rather than silently
 choosing one. Neither private inputs nor local aggregates should be committed.
 
-Before opening the pilot, an authorized analyst must use private Blob
-credentials to record the v17 prefix count, submit one fresh v2 test snapshot,
-download and validate that receipt only through `ratings:v2-inbox`, confirm it
-does not appear under the v17 prefix, and delete the exact test object with the
-official private Blob SDK/CLI. Record only counts and the deletion result, never
-listener identifiers, credentials, private URLs, or rating contents.
+Before opening a study, an authorized analyst must use private Blob credentials
+to record the other prefix counts, submit one fresh test snapshot, download and
+validate that receipt only through the matching inbox command, confirm it does not
+appear under either other prefix, and delete the exact test object with the official
+private Blob SDK/CLI. Record only counts and the deletion result, never listener
+identifiers, credentials, private URLs, or rating contents.
 
 Choose and document a retention period before collection. On review dates, an
 authorized analyst should download and verify the private inbox, keep only the

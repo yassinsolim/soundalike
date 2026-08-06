@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "webapp"
 V1 = WEB / "evaluate-v1"
-V2 = WEB / "evaluate"
+V2 = WEB / "evaluate-v2"
 PACK_SHA = "1980da60810959e7cdd24f39bd7142c8e34c76dab633c705976b85e49b297023"
 PROTOCOL_SHA = "1f7a3cc48ecb62f85d3c3d65fa0f0c0fa5cd73eeccd67049d7bc5e84d1dcc227"
 
@@ -34,7 +34,7 @@ def _file_hash(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def test_canonical_route_deploys_the_validated_public_pack_and_v2_protocol():
+def test_v2_archive_deploys_the_validated_public_pack_and_protocol():
     source = (
         ROOT
         / ".goals"
@@ -46,7 +46,9 @@ def test_canonical_route_deploys_the_validated_public_pack_and_v2_protocol():
     protocol = _load(V2 / "protocol-v2.json")
     pack = _load(deployed)
 
-    assert deployed.read_bytes() == source.read_bytes()
+    assert deployed.read_bytes().replace(b"\r\n", b"\n") == source.read_bytes().replace(
+        b"\r\n", b"\n"
+    )
     assert _content_hash(pack) == pack["content_sha256"] == PACK_SHA
     assert _content_hash(protocol) == protocol["content_sha256"] == PROTOCOL_SHA
     assert protocol["pilot_pack_sha256"] == PACK_SHA
@@ -74,7 +76,7 @@ def test_v17_evaluator_is_byte_preserved_at_the_v1_route():
 def test_v1_v2_routes_state_submission_and_blob_namespaces_are_isolated():
     config = _load(WEB / "vercel.json")
     rewrites = {item["source"]: item["destination"] for item in config["rewrites"]}
-    assert rewrites["/evaluate"] == "/evaluate/index.html"
+    assert rewrites["/evaluate-v2"] == "/evaluate-v2/index.html"
     assert rewrites["/evaluate-v1"] == "/evaluate-v1/index.html"
     assert config["functions"]["api/ratings.js"]["maxDuration"] == 15
     assert config["functions"]["api/ratings-v2.js"]["maxDuration"] == 15

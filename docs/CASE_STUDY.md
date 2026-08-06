@@ -579,7 +579,8 @@ independently from sealed stores, and frozen before the label-free MusicFM shado
 
 The independent result failed the predeclared +20% gain, positive-interval, four-fold, and
 worst-fold checks. That ended the branch: no listening pack, no promotion, and no retuning on the
-consumed shadow. V2 remains at `/evaluate`; the hosted recommender remains
+consumed shadow. V2 remains available at `/evaluate-v2`; the current `/evaluate`
+page is a separate exploratory semantic study. The hosted recommender remains
 `dual_sonic64_guardrail`.
 
 This negative result is the strongest demonstration of the project’s evaluation discipline.

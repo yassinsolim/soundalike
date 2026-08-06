@@ -6,7 +6,7 @@
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; media-src https://prod-1.storage.jamendo.com; connect-src 'self'">
-  <title>Soundalike semantic blind study</title>
+  <title>Soundalike full-track v2 blind pilot</title>
   <style>
     :root{color-scheme:dark;--bg:#0e1214;--panel:#182025;--panel2:#202a30;--ink:#f4f7f8;--muted:#aab8be;--line:#35444b;--accent:#6ee7ad;--danger:#ffb4ab}
     *{box-sizing:border-box}html,body{margin:0;min-height:100%}
@@ -34,20 +34,19 @@
 </head>
 <body>
 <main>
-  <h1>Genre, mood &amp; instrument blind study</h1>
-  <p class="research">This shorter 20-seed Jamendo study compares a matched full-track audio control with one fixed semantic challenger. The only ranking difference is the challenger's calibrated genre, mood/theme, and instrument evidence. It cannot promote a model or change production recommendations. No rating is submitted automatically.</p>
-  <p>Both methods represent long and variable songs with coverage-weighted pooling over every 10-second window, plus up to 32 uniform, repeated, and salient sections. Both are limited to one result per artist.</p>
-  <p class="muted">Language is not evaluated here because Jamendo has no trustworthy track-language field. Spotify lyrics-language filtering remains a separate, unchanged production layer. The page UI shows track attribution and licenses only after judgment; public license records remain inspectable. Method identities are absent from this page and public pack.</p>
+  <h1>Full-track v2 blind listening pilot</h1>
+  <p class="research">This 20-seed Jamendo pilot collects research evidence only. It cannot promote a model or change production recommendations. Please judge only what you genuinely hear; no rating is submitted automatically.</p>
+  <p class="muted">The browser plays first-party Jamendo full tracks from the locked public pack. Track attribution and license links appear after the corresponding judgment so they do not influence the rating. Method identities are absent from this page and public pack.</p>
   <section class="panel" aria-labelledby="setup-title">
     <h2 id="setup-title">1. Load locked pilot</h2>
     <div class="tools">
-      <button id="load-bundled" type="button">Load bundled semantic study</button>
+      <button id="load-bundled" type="button">Load bundled v2 pilot</button>
       <label class="button">Protocol JSON<input id="protocol-file" type="file" accept=".json,application/json"></label>
-      <label class="button">Study pack JSON<input id="pack-file" type="file" accept=".json,application/json"></label>
+      <label class="button">Pilot pack JSON<input id="pack-file" type="file" accept=".json,application/json"></label>
       <button id="load" type="button">Validate manual files</button>
       <label class="button">Resume/import export<input id="resume-file" type="file" accept=".json,application/json"></label>
     </div>
-    <p id="setup-status" class="status" role="status">Loading the bundled semantic study…</p>
+    <p id="setup-status" class="status" role="status">Loading the bundled locked pilot…</p>
   </section>
   <section id="study" class="hidden">
     <div class="tools nav">
@@ -60,9 +59,9 @@
       <h2 id="submit-title">2. Submit a private snapshot</h2>
       <p>Progress autosaves only in this browser. Export/import is available for transfer or backup. Submission happens only after you check consent and press the button.</p>
       <p class="muted">The application stores random session identifiers, list ratings, timestamps, durations, and locked hashes. It strips the local integrity key before storage and does not copy IP address, Origin, user-agent, cookies, identity, email, raw headers, or a private Blob URL into the record.</p>
-      <label class="consent"><input id="consent" type="checkbox">I consent to submit my current semantic-study ratings to the project's private semantic v1 inbox.</label>
+      <label class="consent"><input id="consent" type="checkbox">I consent to submit my current v2 ratings to the project's private full-track v2 inbox.</label>
       <div class="tools">
-        <button id="submit" type="button" disabled>Submit current semantic ratings</button>
+        <button id="submit" type="button" disabled>Submit current v2 ratings</button>
         <span id="submit-status" class="status" role="status" aria-atomic="true">Complete at least one list rating and check consent.</span>
       </div>
     </section>
@@ -72,15 +71,15 @@
 <script>
 "use strict";
 const $=id=>document.getElementById(id),enc=new TextEncoder();
-const PROTOCOL_SHA256="662fbab57f5264329bfc8d75398bd5998d5e7b01ff049a548778bc834655ddd2";
-const PACK_SHA256="4f3c34250d5c5fca35dcc671dae1c256f0d56d8ce404d7a758bbbf62a2e5b48a";
-const STORAGE_NAMESPACE="soundalike-semantic-v1";
-const SUBMISSION_SCHEMA="fulltrack_semantic_listener_submission_v1";
-const PROVIDER="hosted_private_semantic_v1_evaluator";
+const V2_PROTOCOL_SHA256="1f7a3cc48ecb62f85d3c3d65fa0f0c0fa5cd73eeccd67049d7bc5e84d1dcc227";
+const V2_PACK_SHA256="1980da60810959e7cdd24f39bd7142c8e34c76dab633c705976b85e49b297023";
+const STORAGE_NAMESPACE="soundalike-fulltrack-v2";
+const SUBMISSION_SCHEMA="fulltrack_jamendo_listener_submission_v2";
+const PROVIDER="hosted_private_fulltrack_v2_evaluator";
 const INTEGRITY_NOTICE="Local-key HMAC provides integrity, not identity or authenticity; the key is included in this export.";
 const MAX_DURATION_MS=366*24*60*60*1000;
 const PROTOCOL_KEYS=["schema_version","protocol_kind","submission_schema","pilot_pack_sha256","seed_count","list_count","results_per_list","assignment","rating_scale","local_storage_namespace","submission_endpoint","private_blob_prefix","explicit_consent_required","automatic_submission","partial_submission_allowed","attribution_release","research_only","promotion_allowed","production_recommendation_changed","content_sha256"];
-const PACK_KEYS=["audio_delivery","blinding","content_sha256","language_policy","method_count","notice","pack_id","pack_kind","production_recommendation_changed","promotion_allowed","rankings_state","ratings_count_at_freeze","research_only","results_per_method","schema_version","section_coverage","seed_count","seeds","source_fingerprint","source_v2_pack_sha256","store_binding","store_binding_sha256","tracks"];
+const PACK_KEYS=["schema_version","pack_kind","pack_id","rankings_state","ratings_count_at_freeze","seed_count","method_count","results_per_method","fold","fold_part","evidence_scope","source_fingerprint","store_binding","store_binding_sha256","blinding","audio_delivery","diversity_evidence","tracks","seeds","research_only","promotion_allowed","notice","content_sha256"];
 const STATE_KEYS=["schema_version","submission_schema","source_kind","provider","anonymous_rater_id","session_id","protocol_sha256","pilot_pack_sha256","local_session_key","started_at","last_activity_at","current_seed","list_ratings","lastInteractionAt"];
 const EXPORT_KEYS=["schema_version","submission_schema","source_kind","provider","anonymous_rater_id","session_id","protocol_sha256","pilot_pack_sha256","local_session_key","started_at","last_activity_at","list_ratings","exported_at","duration_ms","integrity_notice","integrity_hmac_sha256"];
 const RATING_KEYS=["similarity","score_0_10","unrelated_positions_1_to_5","rated_at","interaction_ms"];
@@ -104,13 +103,13 @@ const iso=value=>typeof value==="string"&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\
   Number.isFinite(Date.parse(value))&&new Date(Date.parse(value)).toISOString()===value;
 const escapeHtml=value=>{const node=document.createElement("div");node.textContent=String(value??"");return node.innerHTML};
 const escapeAttr=value=>escapeHtml(value).replaceAll('"',"&quot;");
-const storagePointer=()=>`${STORAGE_NAMESPACE}-current:${PROTOCOL_SHA256}:${PACK_SHA256}`;
-const storageKey=()=>`${STORAGE_NAMESPACE}:${PROTOCOL_SHA256}:${PACK_SHA256}:${state.session_id}`;
+const storagePointer=()=>`${STORAGE_NAMESPACE}-current:${V2_PROTOCOL_SHA256}:${V2_PACK_SHA256}`;
+const storageKey=()=>`${STORAGE_NAMESPACE}:${V2_PROTOCOL_SHA256}:${V2_PACK_SHA256}:${state.session_id}`;
 function emptyState(){
   const started=now();
-  return {schema_version:1,submission_schema:SUBMISSION_SCHEMA,source_kind:"human_listener",provider:PROVIDER,
-    anonymous_rater_id:"anon-semantic-"+randomHex(12),session_id:"semantic-session-"+randomHex(12),
-    protocol_sha256:PROTOCOL_SHA256,pilot_pack_sha256:PACK_SHA256,local_session_key:randomHex(32),
+  return {schema_version:2,submission_schema:SUBMISSION_SCHEMA,source_kind:"human_listener",provider:PROVIDER,
+    anonymous_rater_id:"anon-v2-"+randomHex(12),session_id:"fulltrack-session-"+randomHex(12),
+    protocol_sha256:V2_PROTOCOL_SHA256,pilot_pack_sha256:V2_PACK_SHA256,local_session_key:randomHex(32),
     started_at:started,last_activity_at:started,current_seed:0,list_ratings:{},lastInteractionAt:Date.now()};
 }
 function ratingComplete(value){
@@ -133,17 +132,17 @@ function committedListIds(){
   return new Set((pack?.seeds||[]).flatMap(seed=>seed.lists.map(list=>list.list_id)));
 }
 function validRatingsMap(value,completeOnly,startedAt,endedAt,duration){
-  if(!isRecord(value)||Object.keys(value).length>40)return false;
+  if(!isRecord(value)||Object.keys(value).length>80)return false;
   const validIds=committedListIds();
-  return Object.entries(value).every(([id,rating])=>validIds.has(id)&&/^semantic-list-[a-f0-9]{24}$/.test(id)&&
+  return Object.entries(value).every(([id,rating])=>validIds.has(id)&&/^list-[a-f0-9]{24}$/.test(id)&&
     validRating(rating,completeOnly,startedAt,endedAt,duration));
 }
 function validState(value){
-  if(!exactKeys(value,STATE_KEYS)||value.schema_version!==1||value.submission_schema!==SUBMISSION_SCHEMA||
+  if(!exactKeys(value,STATE_KEYS)||value.schema_version!==2||value.submission_schema!==SUBMISSION_SCHEMA||
      value.source_kind!=="human_listener"||value.provider!==PROVIDER||
-     !/^anon-semantic-[a-f0-9]{24}$/.test(value.anonymous_rater_id)||
-     !/^semantic-session-[a-f0-9]{24}$/.test(value.session_id)||
-     value.protocol_sha256!==PROTOCOL_SHA256||value.pilot_pack_sha256!==PACK_SHA256||
+     !/^anon-v2-[a-f0-9]{24}$/.test(value.anonymous_rater_id)||
+     !/^fulltrack-session-[a-f0-9]{24}$/.test(value.session_id)||
+     value.protocol_sha256!==V2_PROTOCOL_SHA256||value.pilot_pack_sha256!==V2_PACK_SHA256||
      !/^[a-f0-9]{64}$/.test(value.local_session_key)||!iso(value.started_at)||!iso(value.last_activity_at)||
      !Number.isInteger(value.current_seed)||value.current_seed<0||value.current_seed>=20||
      !Number.isFinite(value.lastInteractionAt))return false;
@@ -152,11 +151,11 @@ function validState(value){
     validRatingsMap(value.list_ratings,false,started,ended,Math.max(1,duration+1000));
 }
 function validExport(value){
-  if(!exactKeys(value,EXPORT_KEYS)||value.schema_version!==1||value.submission_schema!==SUBMISSION_SCHEMA||
+  if(!exactKeys(value,EXPORT_KEYS)||value.schema_version!==2||value.submission_schema!==SUBMISSION_SCHEMA||
      value.source_kind!=="human_listener"||value.provider!==PROVIDER||
-     !/^anon-semantic-[a-f0-9]{24}$/.test(value.anonymous_rater_id)||
-     !/^semantic-session-[a-f0-9]{24}$/.test(value.session_id)||
-     value.protocol_sha256!==PROTOCOL_SHA256||value.pilot_pack_sha256!==PACK_SHA256||
+     !/^anon-v2-[a-f0-9]{24}$/.test(value.anonymous_rater_id)||
+     !/^fulltrack-session-[a-f0-9]{24}$/.test(value.session_id)||
+     value.protocol_sha256!==V2_PROTOCOL_SHA256||value.pilot_pack_sha256!==V2_PACK_SHA256||
      !/^[a-f0-9]{64}$/.test(value.local_session_key)||!/^[a-f0-9]{64}$/.test(value.integrity_hmac_sha256)||
      value.integrity_notice!==INTEGRITY_NOTICE||!iso(value.started_at)||!iso(value.last_activity_at)||!iso(value.exported_at)||
      !Number.isInteger(value.duration_ms)||value.duration_ms<1||value.duration_ms>MAX_DURATION_MS)return false;
@@ -185,43 +184,41 @@ function validateTrack(key,track){
 }
 async function validateStudy(candidateProtocol,candidatePack){
   if(!exactKeys(candidateProtocol,PROTOCOL_KEYS)||await docHash(candidateProtocol)!==candidateProtocol.content_sha256||
-     candidateProtocol.content_sha256!==PROTOCOL_SHA256||candidateProtocol.schema_version!==1||
-     candidateProtocol.protocol_kind!=="fulltrack_semantic_blind_listener_v1_private_submission"||
-     candidateProtocol.submission_schema!==SUBMISSION_SCHEMA||candidateProtocol.pilot_pack_sha256!==PACK_SHA256||
-     candidateProtocol.seed_count!==20||candidateProtocol.list_count!==40||candidateProtocol.results_per_list!==5||
-     candidateProtocol.local_storage_namespace!==STORAGE_NAMESPACE||candidateProtocol.submission_endpoint!=="/api/ratings-semantic-v1"||
-     candidateProtocol.private_blob_prefix!=="human-ratings/semantic-v1/"||
+     candidateProtocol.content_sha256!==V2_PROTOCOL_SHA256||candidateProtocol.schema_version!==2||
+     candidateProtocol.protocol_kind!=="fulltrack_jamendo_blind_listener_v2_private_submission"||
+     candidateProtocol.submission_schema!==SUBMISSION_SCHEMA||candidateProtocol.pilot_pack_sha256!==V2_PACK_SHA256||
+     candidateProtocol.seed_count!==20||candidateProtocol.list_count!==80||candidateProtocol.results_per_list!==5||
+     candidateProtocol.local_storage_namespace!==STORAGE_NAMESPACE||candidateProtocol.submission_endpoint!=="/api/ratings-v2"||
+     candidateProtocol.private_blob_prefix!=="human-ratings/fulltrack-v2/"||
      candidateProtocol.explicit_consent_required!==true||candidateProtocol.automatic_submission!==false||
      candidateProtocol.partial_submission_allowed!==true||candidateProtocol.research_only!==true||
-     candidateProtocol.promotion_allowed!==false||candidateProtocol.production_recommendation_changed!==false)throw Error("Protocol is not the locked semantic v1 protocol.");
+     candidateProtocol.promotion_allowed!==false||candidateProtocol.production_recommendation_changed!==false)throw Error("Protocol is not the locked v2 protocol.");
   if(!exactKeys(candidatePack,PACK_KEYS)||await docHash(candidatePack)!==candidatePack.content_sha256||
-     candidatePack.content_sha256!==PACK_SHA256||candidatePack.schema_version!==1||
-     candidatePack.pack_kind!=="fulltrack_semantic_blind_pilot_v1"||candidatePack.pack_id!=="semantic-fulltrack-v1-20"||
+     candidatePack.content_sha256!==V2_PACK_SHA256||candidatePack.schema_version!==2||
+     candidatePack.pack_kind!=="fulltrack_jamendo_blind_pilot_v2"||candidatePack.pack_id!=="fulltrack-v2-pilot-20"||
      candidatePack.rankings_state!=="LOCKED_BEFORE_RATINGS"||candidatePack.ratings_count_at_freeze!==0||
-     candidatePack.seed_count!==20||candidatePack.method_count!==2||candidatePack.results_per_method!==5||
-     candidatePack.source_v2_pack_sha256!=="1980da60810959e7cdd24f39bd7142c8e34c76dab633c705976b85e49b297023"||
-     candidatePack.section_coverage?.uniform_window_budget!==32||candidatePack.section_coverage?.repeated_section_budget!==32||
-     candidatePack.section_coverage?.salient_section_budget!==32||candidatePack.language_policy?.evaluated_here!==false||
-     candidatePack.research_only!==true||candidatePack.promotion_allowed!==false||candidatePack.production_recommendation_changed!==false||
-     !isRecord(candidatePack.tracks)||!Array.isArray(candidatePack.seeds)||candidatePack.seeds.length!==20)throw Error("Study pack is not the locked public semantic v1 pack.");
+     candidatePack.seed_count!==20||candidatePack.method_count!==4||candidatePack.results_per_method!==5||
+     candidatePack.fold!==0||candidatePack.fold_part!=="test"||candidatePack.evidence_scope!=="full_track_jamendo_research"||
+     candidatePack.research_only!==true||candidatePack.promotion_allowed!==false||
+     !isRecord(candidatePack.tracks)||!Array.isArray(candidatePack.seeds)||candidatePack.seeds.length!==20)throw Error("Pilot pack is not the locked public v2 pack.");
   const publicText=canonical(candidatePack);
-  if(["method_bindings","blinding_key_hex"].some(marker=>publicText.includes(marker)))throw Error("Study pack is not blinded.");
+  if(["model_artifact_sha256","weights_npz_sha256","method_binding","blinding_key_hex"].some(marker=>publicText.includes(marker)))throw Error("Pilot pack is not blinded.");
   Object.entries(candidatePack.tracks).forEach(([key,track])=>validateTrack(key,track));
   const listIds=new Set(),seedIds=new Set(),resultIds=new Set();
   for(const seed of candidatePack.seeds){
-    if(!exactKeys(seed,["clap_texture_region","lists","result_ids","scene","seed_id","seed_track_id","tempo_bpm","tempo_region"])||
-       !/^semantic-seed-[a-f0-9]{24}$/.test(seed.seed_id)||seedIds.has(seed.seed_id)||!candidatePack.tracks[String(seed.seed_track_id)]||
-       !Array.isArray(seed.result_ids)||!Array.isArray(seed.lists)||seed.lists.length!==2)throw Error("Study seed schema is invalid.");
+    if(!exactKeys(seed,["seed_id","scene","seed_track_id","tempo_bpm","tempo_region","clap_texture_region","result_ids","lists"])||
+       !/^seed-[a-f0-9]{24}$/.test(seed.seed_id)||seedIds.has(seed.seed_id)||!candidatePack.tracks[String(seed.seed_track_id)]||
+       !Array.isArray(seed.result_ids)||!Array.isArray(seed.lists)||seed.lists.length!==4)throw Error("Pilot seed schema is invalid.");
     seedIds.add(seed.seed_id);
     const localResults=new Map();
     for(const row of seed.result_ids){
-      if(!exactKeys(row,["result_id","track_id"])||!/^semantic-result-[a-f0-9]{24}$/.test(row.result_id)||
-         resultIds.has(row.result_id)||localResults.has(row.result_id)||!candidatePack.tracks[String(row.track_id)])throw Error("Study result identity is invalid.");
+      if(!exactKeys(row,["result_id","track_id"])||!/^result-[a-f0-9]{24}$/.test(row.result_id)||
+         resultIds.has(row.result_id)||localResults.has(row.result_id)||!candidatePack.tracks[String(row.track_id)])throw Error("Pilot result identity is invalid.");
       resultIds.add(row.result_id);localResults.set(row.result_id,row.track_id);
     }
     for(const list of seed.lists){
       if(!exactKeys(list,["binding_commitment_sha256","list_id","ranking"])||!/^[a-f0-9]{64}$/.test(list.binding_commitment_sha256)||
-         !/^semantic-list-[a-f0-9]{24}$/.test(list.list_id)||listIds.has(list.list_id)||!Array.isArray(list.ranking)||list.ranking.length!==5)throw Error("Study list identity is invalid.");
+         !/^list-[a-f0-9]{24}$/.test(list.list_id)||listIds.has(list.list_id)||!Array.isArray(list.ranking)||list.ranking.length!==5)throw Error("Pilot list identity is invalid.");
       listIds.add(list.list_id);
       const ranked=new Set();
       list.ranking.forEach((row,index)=>{
@@ -231,7 +228,7 @@ async function validateStudy(candidateProtocol,candidatePack){
       });
     }
   }
-  if(listIds.size!==40)return false;
+  if(listIds.size!==80)return false;
   return true;
 }
 function save(){
@@ -255,7 +252,7 @@ async function hmac(payload,keyHex){
 }
 async function sessionOrder(items,label,sessionId=state.session_id){
   const scored=await Promise.all(items.map(async(item,index)=>({
-    item,score:await sha(`${PACK_SHA256}\0${sessionId}\0${label}\0${item.seed_id||item.list_id||index}`)
+    item,score:await sha(`${V2_PACK_SHA256}\0${sessionId}\0${label}\0${item.seed_id||item.list_id||index}`)
   })));
   return scored.sort((left,right)=>left.score.localeCompare(right.score)).map(row=>row.item);
 }
@@ -311,7 +308,7 @@ function bindInputs(seed){
 }
 function updateProgress(){
   if(state&&orderedSeeds.length)$("progress").textContent=
-    `Seed ${state.current_seed+1} of ${orderedSeeds.length} · ${Object.values(state.list_ratings).filter(ratingComplete).length} of 40 lists rated`;
+    `Seed ${state.current_seed+1} of ${orderedSeeds.length} · ${Object.values(state.list_ratings).filter(ratingComplete).length} of 80 lists rated`;
 }
 async function render(){
   state.current_seed=Math.max(0,Math.min(state.current_seed,orderedSeeds.length-1));
@@ -328,12 +325,12 @@ async function render(){
 }
 async function begin(){
   try{
-    if(!selected.protocol||!selected.pack)throw Error("Select both locked semantic-study JSON files.");
+    if(!selected.protocol||!selected.pack)throw Error("Select both locked v2 JSON files.");
     await validateStudy(selected.protocol,selected.pack);protocol=selected.protocol;pack=selected.pack;
     invalidateSubmission();$("consent").checked=false;
     const restored=restoreAutosave();state=restored||emptyState();orderedSeeds=await sessionOrder(pack.seeds,"seed-order");
     $("study").classList.remove("hidden");$("setup-status").classList.remove("danger");
-    $("setup-status").textContent=restored?"Locked semantic study validated. Autosaved session resumed.":"Locked semantic study validated. Autosave is active.";
+    $("setup-status").textContent=restored?"Locked v2 pilot validated. Autosaved session resumed.":"Locked v2 pilot validated. Autosave is active.";
     save();await render();
   }catch(error){$("setup-status").textContent=error.message;$("setup-status").classList.add("danger")}
 }
@@ -341,8 +338,8 @@ async function loadBundled(){
   try{
     const options={credentials:"omit",cache:"no-store",referrerPolicy:"no-referrer",headers:{"Accept":"application/json"}};
     const base=new URL(location.href);base.search="";base.hash="";if(!base.pathname.endsWith("/"))base.pathname+="/";
-    const responses=await Promise.all(["./protocol-semantic-v1.json","./semantic-pack.json"].map(path=>fetch(new URL(path,base),options)));
-    if(responses.some(response=>!response.ok))throw Error("Bundled semantic-study files are unavailable.");
+    const responses=await Promise.all(["./protocol-v2.json","./pilot-pack.json"].map(path=>fetch(new URL(path,base),options)));
+    if(responses.some(response=>!response.ok))throw Error("Bundled v2 files are unavailable.");
     [selected.protocol,selected.pack]=await Promise.all(responses.map(response=>response.json()));await begin();
   }catch(error){$("setup-status").textContent=error.message;$("setup-status").classList.add("danger")}
 }
@@ -363,35 +360,35 @@ async function buildExport(){
 }
 async function exportRatings(){
   const payload=await buildExport(),blob=new Blob([JSON.stringify(payload,null,2)+"\n"],{type:"application/json"});
-  const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=`semantic-v1-ratings-${payload.session_id}.json`;
+  const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=`fulltrack-v2-ratings-${payload.session_id}.json`;
   link.click();URL.revokeObjectURL(link.href);
 }
 async function stateFromExport(imported){
-  if(!validExport(imported))throw Error("Import is not a strict export for this semantic study.");
+  if(!validExport(imported))throw Error("Import is not a strict export for this v2 pilot.");
   const signature=imported.integrity_hmac_sha256,payload={...imported};delete payload.integrity_hmac_sha256;
   if(await hmac(payload,imported.local_session_key)!==signature)throw Error("Import integrity HMAC mismatch.");
   const restored={...imported,current_seed:0,lastInteractionAt:Date.now()};
   for(const key of ["integrity_hmac_sha256","integrity_notice","exported_at","duration_ms"])delete restored[key];
-  if(!validState(restored))throw Error("Import cannot be represented as a valid semantic session.");
+  if(!validState(restored))throw Error("Import cannot be represented as a valid v2 session.");
   return restored;
 }
 async function resume(file){
   try{
-    if(!protocol||!pack)throw Error("Load and validate the locked semantic study first.");
+    if(!protocol||!pack)throw Error("Load and validate the locked v2 pilot first.");
     state=await stateFromExport(await readFile(file));
     invalidateSubmission();$("consent").checked=false;orderedSeeds=await sessionOrder(pack.seeds,"seed-order");
-    save();await render();$("setup-status").textContent="Valid semantic partial session imported and autosaved.";
+    save();await render();$("setup-status").textContent="Valid v2 partial session imported and autosaved.";
   }catch(error){$("setup-status").textContent=error.message;$("setup-status").classList.add("danger")}
 }
 async function submitRatings(){
   if($("submit").disabled)return;
   $("submit").disabled=true;$("submit-status").classList.remove("success","danger");
-  $("submit-status").textContent="Submitting this explicit snapshot to the private semantic v1 inbox…";
+  $("submit-status").textContent="Submitting this explicit snapshot to the private v2 inbox…";
   try{
     submissionPayload=submissionPayload||await buildExport();
-    const response=await fetch("/api/ratings-semantic-v1",{method:"POST",credentials:"omit",cache:"no-store",referrerPolicy:"no-referrer",
+    const response=await fetch("/api/ratings-v2",{method:"POST",credentials:"omit",cache:"no-store",referrerPolicy:"no-referrer",
       headers:{"Accept":"application/json","Content-Type":"application/json"},
-      body:JSON.stringify({consent:true,study:"semantic-fulltrack-v1",ratings:submissionPayload})});
+      body:JSON.stringify({consent:true,study:"fulltrack-v2-pilot",ratings:submissionPayload})});
     const receipt=await response.json().catch(()=>({}));if(!response.ok)throw Error(receipt.error||"request failed");
     const sanitized={...submissionPayload};for(const key of ["local_session_key","integrity_hmac_sha256","integrity_notice"])delete sanitized[key];
     const expected=await sha(sanitized),count=Object.keys(submissionPayload.list_ratings).length;
@@ -409,7 +406,7 @@ $("resume-file").onchange=event=>resume(event.target.files[0]);
 $("load").onclick=begin;$("load-bundled").onclick=loadBundled;$("export").onclick=exportRatings;
 $("consent").onchange=()=>{invalidateSubmission();updateSubmitAvailability()};$("submit").onclick=submitRatings;
 $("prev").onclick=async()=>{state.current_seed-=1;await render()};$("next").onclick=async()=>{state.current_seed+=1;await render()};
-globalThis.__semanticV1Test={validateStudy,validState,validExport,emptyState,sessionOrder,trackPlayerHtml,trackAttributionHtml,
+globalThis.__fulltrackV2Test={validateStudy,validState,validExport,emptyState,sessionOrder,trackPlayerHtml,trackAttributionHtml,
   buildExport,stateFromExport,save,restoreAutosave,
   setStudy(candidateProtocol,candidatePack,candidateState){protocol=candidateProtocol;pack=candidatePack;state=candidateState}};
 document.addEventListener("DOMContentLoaded",loadBundled,{once:true});
