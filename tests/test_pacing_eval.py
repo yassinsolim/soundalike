@@ -15,7 +15,7 @@ from soundalike.ml.fulltrack_pilot import _content_sha256
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PUBLIC = ROOT / "webapp" / "evaluate" / "pacing-pack.json"
+PUBLIC = ROOT / "webapp" / "evaluate-pacing-v3" / "pacing-pack.json"
 ARCHIVE = ROOT / "webapp" / "evaluate-semantic-v2"
 PRIVATE = (
     Path(r"C:\soundalike-data")

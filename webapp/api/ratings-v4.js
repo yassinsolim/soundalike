@@ -3,11 +3,7 @@ import {
   head as blobHead,
   put as blobPut,
 } from "@vercel/blob";
-import {
-  createHash,
-  createHmac,
-  timingSafeEqual,
-} from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { TextDecoder } from "node:util";
 
@@ -17,32 +13,40 @@ import {
   strictJsonParse,
 } from "./ratings.js";
 
-export const MAX_PACING_BODY_BYTES = 256 * 1024;
-export const MAX_PACING_STORED_BYTES = 300 * 1024;
-export const PACING_PROTOCOL_SHA256 =
-  "69aaba1238ec7fdc567f384001812cdbedc3423710ae13ca8139c2cac6d7d387";
-export const PACING_PACK_SHA256 =
-  "6d6dd1c03412b057e14d52d29ee775e5a4c62eea63c76f7d19c46f60f1942a5c";
-export const PACING_BLOB_PREFIX = "human-ratings/pacing-v3/";
+export const MAX_V4_BODY_BYTES = 128 * 1024;
+export const MAX_V4_STORED_BYTES = 160 * 1024;
+export const V4_PROTOCOL_SHA256 =
+  "ab878afe8fa05c9dc735b483a684aa8b713e76dc00b53877f1c421d666c10d9c";
+export const V4_PACK_SHA256 =
+  "95fc47ff62d627dc12e1bdcd7ddf0bd884fcbf9f728543e255e7f15d083922fb";
+export const V4_BLOB_PREFIX = "human-ratings/active-v4/";
 
-const SUBMISSION_SCHEMA = "pacing_v3_listener_submission_v1";
-const PROVIDER = "hosted_private_pacing_v3_evaluator";
+const SUBMISSION_SCHEMA = "v4_active_listener_submission_v1";
+const PROVIDER = "hosted_private_active_v4_evaluator";
 const INTEGRITY_NOTICE =
   "Local-key HMAC provides integrity, not identity or authenticity; the key is included in this export.";
 const MAX_DURATION_MS = 366 * 24 * 60 * 60 * 1000;
 const HEX_64 = /^[a-f0-9]{64}$/;
-const RATER_ID = /^anon-pacing-[a-f0-9]{24}$/;
-const SESSION_ID = /^pacing-session-[a-f0-9]{24}$/;
-const LIST_ID = /^pacing-list-[a-f0-9]{24}$/;
-const RESULT_ID = /^pacing-result-[a-f0-9]{24}$/;
+const RATER_ID = /^anon-v4-[a-f0-9]{24}$/;
+const SESSION_ID = /^v4-session-[a-f0-9]{24}$/;
+const TASK_ID = /^v4-(task|anchor)-[a-f0-9]{24}$/;
+const CHOICE_ID = /^v4-choice-[a-f0-9]{24}$/;
 const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
-const MISMATCH_REASONS = new Set([
+const REASONS = new Set([
+  "genre",
+  "instrumentation",
+  "mood_feeling",
+  "none_uncertain",
+  "overall_structure",
   "tempo_pacing",
   "tone_timbre",
-  "instrumentation",
-  "vocals",
-  "mood_feeling",
-  "genre",
+  "vocals_language",
+]);
+const SKIP_REASONS = new Set([
+  "audio_problem",
+  "cannot_decide",
+  "out_of_scope",
+  "unfamiliar_style",
 ]);
 const EXPORT_KEYS = [
   "anonymous_rater_id",
@@ -51,17 +55,16 @@ const EXPORT_KEYS = [
   "integrity_hmac_sha256",
   "integrity_notice",
   "last_activity_at",
-  "list_ratings",
   "local_session_key",
   "pilot_pack_sha256",
   "protocol_sha256",
   "provider",
-  "result_ratings",
   "schema_version",
   "session_id",
   "source_kind",
   "started_at",
   "submission_schema",
+  "task_ratings",
 ].sort();
 const SANITIZED_KEYS = EXPORT_KEYS.filter(
   (key) =>
@@ -76,29 +79,26 @@ const STORED_KEYS = [
   "received_at",
 ].sort();
 const RATING_KEYS = [
+  "completed_at",
   "interaction_ms",
-  "rated_at",
-  "score_0_10",
+  "least_similar_choice_id",
+  "most_similar_choice_id",
+  "outcome",
+  "skip_reason",
+  "worst_primary_reason",
 ].sort();
-const RESULT_RATING_KEYS = [
-  "interaction_ms",
-  "mismatch_reasons",
-  "rated_at",
-  "score_0_10",
+const COUNT_KEYS = [
+  "complete_task_ratings",
+  "rated_tasks",
+  "skipped_tasks",
+  "unique_comparisons",
 ].sort();
-const COUNT_KEYS = ["complete_list_ratings", "complete_result_ratings"];
 
 const protocol = strictJsonParse(
-  readFileSync(
-    new URL("../evaluate-pacing-v3/protocol-pacing-v3.json", import.meta.url),
-    "utf8",
-  ),
+  readFileSync(new URL("../evaluate/protocol-v4.json", import.meta.url), "utf8"),
 );
 const pilotPack = strictJsonParse(
-  readFileSync(
-    new URL("../evaluate-pacing-v3/pacing-pack.json", import.meta.url),
-    "utf8",
-  ),
+  readFileSync(new URL("../evaluate/active-pack.json", import.meta.url), "utf8"),
 );
 
 function sha256(value) {
@@ -128,107 +128,78 @@ function hasExactKeys(value, expected) {
   );
 }
 
-function buildCommittedIds() {
+function buildCommittedTasks() {
   if (
-    protocol.schema_version !== 3 ||
+    protocol.schema_version !== 1 ||
     protocol.protocol_kind !==
-      "repeated_excerpt_blind_listener_v3_private_submission" ||
+      "active_best_worst_listener_v4_private_submission" ||
     protocol.submission_schema !== SUBMISSION_SCHEMA ||
-    protocol.content_sha256 !== PACING_PROTOCOL_SHA256 ||
-    protocol.pilot_pack_sha256 !== PACING_PACK_SHA256 ||
-    protocol.submission_endpoint !== "/api/ratings-pacing-v3" ||
-    protocol.private_blob_prefix !== PACING_BLOB_PREFIX ||
+    protocol.content_sha256 !== V4_PROTOCOL_SHA256 ||
+    protocol.pilot_pack_sha256 !== V4_PACK_SHA256 ||
+    protocol.submission_endpoint !== "/api/ratings-v4" ||
+    protocol.private_blob_prefix !== V4_BLOB_PREFIX ||
     protocol.explicit_consent_required !== true ||
     protocol.automatic_submission !== false ||
     protocol.partial_submission_allowed !== true ||
+    protocol.skip_allowed !== true ||
     protocol.research_only !== true ||
     protocol.promotion_allowed !== false ||
     protocol.production_recommendation_changed !== false ||
-    protocol.language_evaluated !== false ||
-    documentHash(protocol) !== PACING_PROTOCOL_SHA256 ||
-    pilotPack.schema_version !== 3 ||
-    pilotPack.pack_kind !== "blinded_repeated_excerpt_comparison_v3" ||
-    pilotPack.pack_id !== "pacing-v3-blind-20" ||
-    pilotPack.rankings_state !== "LOCKED_BEFORE_RATINGS" ||
-    pilotPack.ratings_count_at_freeze !== 0 ||
-    pilotPack.seed_count !== 20 ||
-    pilotPack.method_count !== 2 ||
-    pilotPack.results_per_method !== 5 ||
-    pilotPack.source_semantic_v2_pack_sha256 !==
-      "939b639abb6d6c6b2c7ba20ae570ff7ae9d06ee67254c219d6e5f61975403347" ||
-    pilotPack.source_fulltrack_v2_pack_sha256 !==
-      "1980da60810959e7cdd24f39bd7142c8e34c76dab633c705976b85e49b297023" ||
-    pilotPack.language_policy?.evaluated_here !== false ||
-    pilotPack.matched_design?.candidate_pool !== 200 ||
-    pilotPack.matched_design?.one_result_per_artist !== true ||
-    pilotPack.playback_policy?.kind !==
-      "strongest_nonlocal_recurrence_excerpt" ||
-    pilotPack.playback_policy?.excerpt_seconds !== 20 ||
-    pilotPack.playback_policy?.verified_chorus_labels !== false ||
-    pilotPack.playback_policy?.full_track_seeking_allowed !== false ||
-    pilotPack.seed_order_policy?.randomized !== false ||
-    pilotPack.seed_order_policy?.ratings_used !== false ||
+    documentHash(protocol) !== V4_PROTOCOL_SHA256 ||
+    pilotPack.schema_version !== 1 ||
+    pilotPack.pack_kind !== "soundalike_v4_active_best_worst" ||
+    pilotPack.pack_id !== "v4-active-best-worst-1" ||
     pilotPack.research_only !== true ||
     pilotPack.promotion_allowed !== false ||
     pilotPack.production_recommendation_changed !== false ||
-    pilotPack.provenance?.ratings_used !== false ||
-    pilotPack.content_sha256 !== PACING_PACK_SHA256 ||
-    documentHash(pilotPack) !== PACING_PACK_SHA256 ||
-    !Array.isArray(pilotPack.seeds) ||
-    pilotPack.seeds.length !== 20
+    pilotPack.task_format?.candidates !== 4 ||
+    pilotPack.task_format?.adaptive_stop_after_unique_tasks !== 12 ||
+    pilotPack.content_sha256 !== V4_PACK_SHA256 ||
+    documentHash(pilotPack) !== V4_PACK_SHA256 ||
+    !Array.isArray(pilotPack.tasks) ||
+    pilotPack.tasks.length !== 18
   ) {
-    throw new Error("Committed pacing ratings protocol is inconsistent");
+    throw new Error("Committed V4 ratings protocol is inconsistent");
   }
-  const listIds = new Set();
-  const resultIds = new Set();
-  for (const seed of pilotPack.seeds) {
-    if (!Array.isArray(seed.lists) || seed.lists.length !== 2) {
-      throw new Error("Committed pacing list cardinality is inconsistent");
+  const tasks = new Map();
+  const choiceIds = new Set();
+  for (const [index, task] of pilotPack.tasks.entries()) {
+    if (
+      task.priority_rank !== index + 1 ||
+      !TASK_ID.test(task.task_id) ||
+      tasks.has(task.task_id) ||
+      !Array.isArray(task.candidates) ||
+      task.candidates.length !== 4
+    ) {
+      throw new Error("Committed V4 task identity is inconsistent");
     }
-    for (const list of seed.lists) {
+    const choices = new Set();
+    for (const choice of task.candidates) {
       if (
-        !LIST_ID.test(list.list_id) ||
-        listIds.has(list.list_id) ||
-        !Array.isArray(list.ranking) ||
-        list.ranking.length !== 5
+        !CHOICE_ID.test(choice.choice_id) ||
+        choices.has(choice.choice_id) ||
+        choiceIds.has(choice.choice_id)
       ) {
-        throw new Error("Committed pacing list identity is inconsistent");
+        throw new Error("Committed V4 choice identity is inconsistent");
       }
-      list.ranking.forEach((row, index) => {
-        if (
-          row.position !== index + 1 ||
-          !RESULT_ID.test(row.result_id)
-        ) {
-          throw new Error("Committed pacing list ranking is inconsistent");
-        }
-        resultIds.add(row.result_id);
-      });
-      listIds.add(list.list_id);
+      choices.add(choice.choice_id);
+      choiceIds.add(choice.choice_id);
     }
+    const signature =
+      `${task.seed_track_id}:` +
+      task.candidates
+        .map((choice) => choice.track_id)
+        .sort((left, right) => left - right)
+        .join(",");
+    tasks.set(task.task_id, { choices, signature });
   }
-  if (listIds.size !== 40) {
-    throw new Error("Committed pacing list count is inconsistent");
-  }
-  const forbidden = [
-    "fulltrack_audio_study_v2",
-    "pacing_tone_study_v3",
-    "method_bindings",
-    "blinding_key_hex",
-  ];
-  if (forbidden.some((marker) => canonical(pilotPack).includes(marker))) {
-    throw new Error("Committed pacing study is not blinded");
-  }
-  return { listIds, resultIds };
+  return tasks;
 }
 
-let committedIds;
-function listIds() {
-  if (!committedIds) committedIds = buildCommittedIds();
-  return committedIds.listIds;
-}
-function resultIds() {
-  if (!committedIds) committedIds = buildCommittedIds();
-  return committedIds.resultIds;
+let committedTasks;
+function tasks() {
+  if (!committedTasks) committedTasks = buildCommittedTasks();
+  return committedTasks;
 }
 
 function parseTimestamp(value) {
@@ -240,42 +211,36 @@ function parseTimestamp(value) {
     : null;
 }
 
-function validListRating(value, startedAt, exportedAt, duration) {
-  if (!hasExactKeys(value, RATING_KEYS)) return false;
-  const ratedAt = parseTimestamp(value.rated_at);
+function validTaskRating(taskId, value, startedAt, exportedAt, duration) {
+  const committed = tasks().get(taskId);
+  const completedAt = parseTimestamp(value?.completed_at);
+  if (
+    !committed ||
+    !hasExactKeys(value, RATING_KEYS) ||
+    completedAt === null ||
+    completedAt < startedAt ||
+    completedAt > exportedAt ||
+    !Number.isInteger(value.interaction_ms) ||
+    value.interaction_ms < 1 ||
+    value.interaction_ms > duration
+  ) {
+    return false;
+  }
+  if (value.outcome === "rated") {
+    return (
+      committed.choices.has(value.most_similar_choice_id) &&
+      committed.choices.has(value.least_similar_choice_id) &&
+      value.most_similar_choice_id !== value.least_similar_choice_id &&
+      REASONS.has(value.worst_primary_reason) &&
+      value.skip_reason === null
+    );
+  }
   return (
-    Number.isInteger(value.score_0_10) &&
-    value.score_0_10 >= 0 &&
-    value.score_0_10 <= 10 &&
-    Number.isInteger(value.interaction_ms) &&
-    value.interaction_ms >= 1 &&
-    value.interaction_ms <= duration &&
-    ratedAt !== null &&
-    ratedAt >= startedAt &&
-    ratedAt <= exportedAt
-  );
-}
-
-function validResultRating(value, startedAt, exportedAt, duration) {
-  if (!hasExactKeys(value, RESULT_RATING_KEYS)) return false;
-  const ratedAt = parseTimestamp(value.rated_at);
-  return (
-    Number.isInteger(value.score_0_10) &&
-    value.score_0_10 >= 0 &&
-    value.score_0_10 <= 10 &&
-    Array.isArray(value.mismatch_reasons) &&
-    value.mismatch_reasons.length <= MISMATCH_REASONS.size &&
-    value.mismatch_reasons.every(
-      (reason, index, array) =>
-        MISMATCH_REASONS.has(reason) &&
-        (index === 0 || array[index - 1] < reason),
-    ) &&
-    Number.isInteger(value.interaction_ms) &&
-    value.interaction_ms >= 1 &&
-    value.interaction_ms <= duration &&
-    ratedAt !== null &&
-    ratedAt >= startedAt &&
-    ratedAt <= exportedAt
+    value.outcome === "skipped" &&
+    value.most_similar_choice_id === null &&
+    value.least_similar_choice_id === null &&
+    value.worst_primary_reason === null &&
+    SKIP_REASONS.has(value.skip_reason)
   );
 }
 
@@ -283,19 +248,19 @@ function sanitizedEvidence(ratings) {
   return Object.fromEntries(SANITIZED_KEYS.map((key) => [key, ratings[key]]));
 }
 
-function validateEvidence(ratings, requireRating = true) {
+function validateEvidence(ratings) {
   const startedAt = parseTimestamp(ratings.started_at);
   const lastActivityAt = parseTimestamp(ratings.last_activity_at);
   const exportedAt = parseTimestamp(ratings.exported_at);
   if (
-    ratings.schema_version !== 3 ||
+    ratings.schema_version !== 1 ||
     ratings.submission_schema !== SUBMISSION_SCHEMA ||
     ratings.source_kind !== "human_listener" ||
     ratings.provider !== PROVIDER ||
     !RATER_ID.test(ratings.anonymous_rater_id) ||
     !SESSION_ID.test(ratings.session_id) ||
-    ratings.protocol_sha256 !== PACING_PROTOCOL_SHA256 ||
-    ratings.pilot_pack_sha256 !== PACING_PACK_SHA256 ||
+    ratings.protocol_sha256 !== V4_PROTOCOL_SHA256 ||
+    ratings.pilot_pack_sha256 !== V4_PACK_SHA256 ||
     startedAt === null ||
     lastActivityAt === null ||
     exportedAt === null ||
@@ -305,43 +270,41 @@ function validateEvidence(ratings, requireRating = true) {
     ratings.duration_ms < 1 ||
     ratings.duration_ms > MAX_DURATION_MS ||
     Math.abs(exportedAt - startedAt - ratings.duration_ms) > 1000 ||
-    !isRecord(ratings.list_ratings) ||
-    Object.keys(ratings.list_ratings).length > 40 ||
-    !isRecord(ratings.result_ratings) ||
-    Object.keys(ratings.result_ratings).length > 200
+    !isRecord(ratings.task_ratings) ||
+    Object.keys(ratings.task_ratings).length < 1 ||
+    Object.keys(ratings.task_ratings).length > 18
   ) {
     return null;
   }
-  let listCount = 0;
-  for (const [id, rating] of Object.entries(ratings.list_ratings)) {
+  let rated = 0;
+  let skipped = 0;
+  const signatures = new Set();
+  for (const [taskId, rating] of Object.entries(ratings.task_ratings)) {
     if (
-      !LIST_ID.test(id) ||
-      !listIds().has(id) ||
-      !validListRating(rating, startedAt, exportedAt, ratings.duration_ms)
+      !TASK_ID.test(taskId) ||
+      !validTaskRating(
+        taskId,
+        rating,
+        startedAt,
+        exportedAt,
+        ratings.duration_ms,
+      )
     ) {
       return null;
     }
-    listCount += 1;
+    rated += rating.outcome === "rated" ? 1 : 0;
+    skipped += rating.outcome === "skipped" ? 1 : 0;
+    signatures.add(tasks().get(taskId).signature);
   }
-  let resultCount = 0;
-  for (const [id, rating] of Object.entries(ratings.result_ratings)) {
-    if (
-      !RESULT_ID.test(id) ||
-      !resultIds().has(id) ||
-      !validResultRating(rating, startedAt, exportedAt, ratings.duration_ms)
-    ) {
-      return null;
-    }
-    resultCount += 1;
-  }
-  if (requireRating && listCount + resultCount === 0) return null;
   return {
-    complete_list_ratings: listCount,
-    complete_result_ratings: resultCount,
+    complete_task_ratings: rated + skipped,
+    rated_tasks: rated,
+    skipped_tasks: skipped,
+    unique_comparisons: signatures.size,
   };
 }
 
-export function validatePacingExport(ratings) {
+export function validateV4Export(ratings) {
   if (
     !hasExactKeys(ratings, EXPORT_KEYS) ||
     !HEX_64.test(ratings.local_session_key) ||
@@ -367,7 +330,7 @@ export function validatePacingExport(ratings) {
   return { counts, ratings };
 }
 
-export function validatePacingStoredRecord(document, pathname) {
+export function validateV4StoredRecord(document, pathname) {
   if (!hasExactKeys(document, STORED_KEYS)) return null;
   const ratings = sanitizedEvidence(document);
   const counts = validateEvidence(ratings);
@@ -376,14 +339,13 @@ export function validatePacingStoredRecord(document, pathname) {
     !counts ||
     receivedAt === null ||
     !hasExactKeys(document.counts, COUNT_KEYS) ||
-    document.counts.complete_list_ratings !== counts.complete_list_ratings ||
-    document.counts.complete_result_ratings !== counts.complete_result_ratings
+    COUNT_KEYS.some((key) => document.counts[key] !== counts[key])
   ) {
     return null;
   }
   const digest = sha256(canonical(ratings));
   const expectedPath =
-    `${PACING_BLOB_PREFIX}${ratings.session_id}/${digest}.json`;
+    `${V4_BLOB_PREFIX}${ratings.session_id}/${digest}.json`;
   if (
     document.canonical_payload_sha256 !== digest ||
     (pathname !== undefined && pathname !== expectedPath)
@@ -393,16 +355,16 @@ export function validatePacingStoredRecord(document, pathname) {
   return { counts, digest, pathname: expectedPath, ratings };
 }
 
-export function parsePacingStoredRecordBytes(value, pathname) {
+export function parseV4StoredRecordBytes(value, pathname) {
   const bytes = Buffer.isBuffer(value) ? value : Buffer.from(value);
-  if (bytes.length < 2 || bytes.length > MAX_PACING_STORED_BYTES) {
-    throw new Error("Invalid private pacing ratings record size");
+  if (bytes.length < 2 || bytes.length > MAX_V4_STORED_BYTES) {
+    throw new Error("Invalid private V4 ratings record size");
   }
   const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   const document = strictJsonParse(text);
-  const validated = validatePacingStoredRecord(document, pathname);
+  const validated = validateV4StoredRecord(document, pathname);
   if (!validated || text !== `${canonical(document)}\n`) {
-    throw new Error("Invalid private pacing ratings record");
+    throw new Error("Invalid private V4 ratings record");
   }
   return { document, ...validated };
 }
@@ -422,8 +384,7 @@ async function readBody(request) {
   const length = header(request, "content-length");
   if (
     length !== undefined &&
-    (!/^(0|[1-9]\d*)$/.test(length) ||
-      Number(length) > MAX_PACING_BODY_BYTES)
+    (!/^(0|[1-9]\d*)$/.test(length) || Number(length) > MAX_V4_BODY_BYTES)
   ) {
     const error = new Error("payload");
     error.statusCode = 413;
@@ -445,7 +406,7 @@ async function readBody(request) {
     for await (const chunk of request) {
       const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
       size += bytes.length;
-      if (size > MAX_PACING_BODY_BYTES) {
+      if (size > MAX_V4_BODY_BYTES) {
         const error = new Error("payload");
         error.statusCode = 413;
         throw error;
@@ -454,7 +415,7 @@ async function readBody(request) {
     }
     raw = Buffer.concat(chunks);
   }
-  if (raw.length > MAX_PACING_BODY_BYTES) {
+  if (raw.length > MAX_V4_BODY_BYTES) {
     const error = new Error("payload");
     error.statusCode = 413;
     throw error;
@@ -478,7 +439,10 @@ function setSecurityHeaders(response) {
   );
   response.setHeader("Content-Type", "application/json; charset=utf-8");
   response.setHeader("Cross-Origin-Resource-Policy", "same-origin");
-  response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  response.setHeader(
+    "Permissions-Policy",
+    "camera=(), microphone=(), geolocation=()",
+  );
   response.setHeader("Referrer-Policy", "no-referrer");
   response.setHeader("Vary", "Origin");
   response.setHeader("X-Frame-Options", "DENY");
@@ -530,11 +494,11 @@ async function persist(storage, pathname, body) {
   }
 }
 
-export function createPacingHandler(
+export function createV4Handler(
   storage = { head: blobHead, put: blobPut },
   deploymentHost = process.env.VERCEL_URL,
 ) {
-  return async function ratingsPacingHandler(request, response) {
+  return async function ratingsV4Handler(request, response) {
     if (request.method !== "POST") {
       response.setHeader("Allow", "POST");
       return send(response, 405, { error: "method not allowed" });
@@ -562,13 +526,13 @@ export function createPacingHandler(
     if (
       !hasExactKeys(wrapper, ["consent", "ratings", "study"]) ||
       wrapper.consent !== true ||
-      wrapper.study !== "pacing-v3-blind"
+      wrapper.study !== "active-v4-blind"
     ) {
       return send(response, 400, { error: "invalid request" });
     }
     let accepted;
     try {
-      accepted = validatePacingExport(wrapper.ratings);
+      accepted = validateV4Export(wrapper.ratings);
     } catch {
       accepted = null;
     }
@@ -584,8 +548,8 @@ export function createPacingHandler(
       counts: accepted.counts,
     };
     const pathname =
-      `${PACING_BLOB_PREFIX}${sanitized.session_id}/${receiptHash}.json`;
-    if (!validatePacingStoredRecord(stored, pathname)) {
+      `${V4_BLOB_PREFIX}${sanitized.session_id}/${receiptHash}.json`;
+    if (!validateV4StoredRecord(stored, pathname)) {
       return send(response, 500, { error: "internal validation failed" });
     }
     let duplicate;
@@ -602,4 +566,4 @@ export function createPacingHandler(
   };
 }
 
-export default createPacingHandler();
+export default createV4Handler();

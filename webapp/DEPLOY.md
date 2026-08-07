@@ -146,26 +146,30 @@ recommendations — only for the optional "Save as playlist".
 
 ## Private ratings inboxes
 
-`/evaluate` is the research-only 20-seed pacing V3 comparison. It uses the
-`soundalike-pacing-v3` browser namespace and a locked two-list pack. Playback is
-limited to committed approximately 20-second strongest-recurrence excerpts, while
-ranking remains whole-track. The excerpt is a recurrence heuristic, not a verified
-chorus classifier. Seeds prioritize method disagreement without submitted ratings;
-anonymous list labels are randomized per seed and session. The semantic v2 study is
-byte-preserved at `/evaluate-semantic-v2` with its `soundalike-semantic-v2` state,
+`/evaluate` is the research-only V4 active best/worst study. It uses the
+`soundalike-active-v4` browser namespace and a locked four-candidate pack. Playback is
+limited to committed approximately 20-second strongest-recurrence excerpts. The
+excerpt is a recurrence heuristic, not a verified chorus classifier. Tasks prioritize
+ranking disagreement without using submitted ratings, include two repeated anchors,
+and allow adaptive stopping after 12 unique comparisons. The pacing V3 study is
+byte-preserved at `/evaluate-pacing-v3` with its `soundalike-pacing-v3` state.
+The semantic v2 study remains at `/evaluate-semantic-v2` with its isolated state,
 and semantic v1 remains at `/evaluate-semantic-v1`. The prior
 full-track V2 application is byte-preserved at `/evaluate-v2` so existing
 `soundalike-fulltrack-v2` autosaves remain resumable. `/evaluate-v1` retains the
 exact v17 browser application and its `soundalike-human-v17` state. None of the
-five pages scans, migrates, or deletes another study's state.
+six pages scans, migrates, or deletes another study's state.
 
-Both evaluators submit only after the listener checks the consent box and presses
+All evaluators submit only after the listener checks the consent box and presses
 the explicit submit button. Neither submits on autosave, page unload, playback,
-or export. JSON export/import remains a manual fallback. For pacing V3, attribution and license links appear only after the list's overall
+or export. JSON export/import remains a manual fallback. In V4, attribution appears
+only after a best/worst task is completed or skipped. For pacing V3, attribution and
+license links appear only after the list's overall
 0–10 score and all five required result scores are complete. Optional mismatch reasons
 use a closed enum and no free text. Public packs contain no method identity or private
-unblinding document. Language is not evaluated. Spotify lyrics-language filtering
-remains separate because Jamendo has no trustworthy language field.
+unblinding document. V4 filters only high-confidence vocal and singing-language
+mismatches and retains unknowns; it saves language classifications but no transcript.
+The archived pacing study did not evaluate language.
 
 ### Blob setup
 
@@ -179,7 +183,8 @@ remains separate because Jamendo has no trustworthy language field.
 4. Deploy from `webapp`; `npm ci` installs the pinned official Blob SDK.
 5. Add Vercel Firewall rate-limit rules for `POST /api/ratings`,
    `POST /api/ratings-v2`, `POST /api/ratings-semantic-v1`, and
-   `POST /api/ratings-semantic-v2`, and `POST /api/ratings-pacing-v3`. Origin checks and
+   `POST /api/ratings-semantic-v2`, `POST /api/ratings-pacing-v3`, and
+   `POST /api/ratings-v4`. Origin checks and
    the browser's local-key HMAC provide abuse resistance and integrity; they are
    not authentication, so application validation is not a replacement for rate
    limiting.
@@ -199,8 +204,10 @@ The archived semantic v1 study remains isolated at:
 Its schema, hashes, IDs, endpoint, and committed list set reject v1 and V2 payloads.
 The archived semantic v2 study writes only to:
 `human-ratings/semantic-v2/<semantic-session-id>/<canonical-payload-sha>.json`.
-The active study writes only to:
+The archived pacing V3 study writes only to:
 `human-ratings/pacing-v3/<pacing-session-id>/<canonical-payload-sha>.json`.
+The active V4 study writes only to:
+`human-ratings/active-v4/<v4-session-id>/<canonical-payload-sha>.json`.
 
 The stored record contains random anonymous/session IDs, ratings, rating timestamps
 and durations, locked protocol/list hashes, server receipt time, canonical digest,
@@ -221,6 +228,10 @@ npm run ratings:v2-inbox -- ../private-ratings-v2-inbox --acknowledge-private-da
 npm run ratings:semantic-inbox -- ../private-ratings-semantic-inbox --acknowledge-private-data
 npm run ratings:semantic-v2-inbox -- ../private-ratings-semantic-v2-inbox --acknowledge-private-data
 npm run ratings:pacing-v3-inbox -- ../private-ratings-pacing-v3-inbox --acknowledge-private-data
+npm run ratings:v4-inbox -- ../private-ratings-v4-inbox --acknowledge-private-data
+npm run ratings:v4-analysis -- ../private-ratings-v4-inbox \
+  ../private-v4-unblinding.json ../ratings-v4-analysis.local.json \
+  --acknowledge-private-data
 python ../tools/aggregate_ratings.py ../private-ratings-inbox \
   --output ../ratings-aggregate.local.json
 ```
@@ -231,6 +242,10 @@ URLs or rating contents. The aggregator also accepts already-downloaded v16 sign
 client exports and v17 sanitized server records. It deduplicates snapshots by digest
 and session, merges additions, and stops on conflicting values rather than silently
 choosing one. Neither private inputs nor local aggregates should be committed.
+The V4 analyzer validates the active pack and private unblinding binding, uses only
+the latest valid snapshot per session, excludes repeated anchors from primary
+pairwise totals, and separately reports mismatch reasons, skips, and anchor
+consistency. Its report never makes an automatic promotion decision.
 
 Before opening a study, an authorized analyst must use private Blob credentials
 to record the other prefix counts, submit one fresh test snapshot, download and

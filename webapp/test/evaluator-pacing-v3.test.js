@@ -4,13 +4,22 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 
-const html = readFileSync(new URL("../evaluate/index.html", import.meta.url), "utf8");
+const html = readFileSync(
+  new URL("../evaluate-pacing-v3/index.html", import.meta.url),
+  "utf8",
+);
 const script = html.match(/<script>\s*([\s\S]*?)\s*<\/script>/)?.[1];
 const protocol = JSON.parse(
-  readFileSync(new URL("../evaluate/protocol-pacing-v3.json", import.meta.url), "utf8"),
+  readFileSync(
+    new URL("../evaluate-pacing-v3/protocol-pacing-v3.json", import.meta.url),
+    "utf8",
+  ),
 );
 const pack = JSON.parse(
-  readFileSync(new URL("../evaluate/pacing-pack.json", import.meta.url), "utf8"),
+  readFileSync(
+    new URL("../evaluate-pacing-v3/pacing-pack.json", import.meta.url),
+    "utf8",
+  ),
 );
 
 function context() {
@@ -66,9 +75,9 @@ function context() {
     location: {
       hash: "",
       hostname: "localhost",
-      href: "http://localhost:8788/evaluate/",
+      href: "http://localhost:8788/evaluate-pacing-v3/",
       origin: "http://localhost:8788",
-      pathname: "/evaluate/",
+      pathname: "/evaluate-pacing-v3/",
       protocol: "http:",
       search: "",
     },
@@ -232,7 +241,10 @@ test("archives semantic v2 byte-for-byte and exposes all versioned routes", () =
   const routes = Object.fromEntries(
     config.rewrites.map((item) => [item.source, item.destination]),
   );
-  assert.equal(routes["/evaluate"], "/evaluate/index.html");
+  assert.equal(
+    routes["/evaluate-pacing-v3"],
+    "/evaluate-pacing-v3/index.html",
+  );
   assert.equal(routes["/evaluate-semantic-v2"], "/evaluate-semantic-v2/index.html");
   assert.equal(routes["/evaluate-semantic-v1"], "/evaluate-semantic-v1/index.html");
   assert.equal(routes["/evaluate-v2"], "/evaluate-v2/index.html");

@@ -20,7 +20,7 @@ import { downloadPacing } from "../tools/ratings-pacing-v3-inbox.js";
 
 const pack = JSON.parse(
   readFileSync(
-    new URL("../evaluate/pacing-pack.json", import.meta.url),
+    new URL("../evaluate-pacing-v3/pacing-pack.json", import.meta.url),
     "utf8",
   ),
 );
