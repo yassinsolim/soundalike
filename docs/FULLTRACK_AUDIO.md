@@ -392,8 +392,8 @@ frozen blind listener evaluation.
 
 ## Exploratory semantic listening study
 
-`soundalike.ml.semantic_eval` builds the locked two-list study served at
-`/evaluate`. It compares a matched audio-only control against one fixed
+`soundalike.ml.semantic_eval` builds the locked two-list study preserved at
+`/evaluate-semantic-v2`. It compares a matched audio-only control against one fixed
 challenger: 75% rank-scaled full-track audio and 25% rank-scaled calibrated
 semantic-profile cosine. Both methods use coverage-weighted global embeddings
 over every 10-second window, symmetric MaxSim with fixed budgets of 32 uniform,
