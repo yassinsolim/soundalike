@@ -55,18 +55,18 @@ Spotify's own site, never hand over a password) to save results as a playlist. S
 
 **Help with the blind study:** open the public
 [listening evaluator](https://soundalike.yassin.app/evaluate). The active research-only
-study is an isolated blinded comparison of the frozen full-track audio ranking and a
-pacing/tone reranker. Both use the same global-embedding top-200 candidate pool,
-32-section evidence, and one-result-per-artist policy. Seeds prioritize anonymous
-method disagreement without using ratings, and list labels are randomized per seed and
-browser session. Playback uses an approximately 20-second strongest-recurrence excerpt;
-this is a recurrence heuristic, not a verified chorus classifier, and ranking remains
-whole-track.
+study presents one seed and four blinded candidates, then asks for the most similar,
+least similar, and one primary mismatch reason. Disagreement-first ordering and two
+repeated consistency checks concentrate the listening time on decisions that can
+actually change the next ranking. The core study stops after 12 unique comparisons;
+four optional robustness comparisons remain available.
 
-Each list and result uses an integer 0–10 score. Result mismatch reasons are optional
-closed categories; there is no free text. Shared result IDs synchronize across lists,
-and attribution remains hidden until a list score plus all five result scores are
-complete. The frozen semantic v2 study remains available at
+Playback uses an approximately 20-second strongest-recurrence excerpt. This is a
+repeated-section heuristic, not a verified chorus classifier. High-confidence vocal
+and singing-language mismatches are filtered using conservative independent detectors;
+ambiguous tracks remain eligible instead of being guessed. Attribution stays hidden
+until each task is completed or skipped. The prior pacing V3 study remains available at
+[`/evaluate-pacing-v3`](https://soundalike.yassin.app/evaluate-pacing-v3), semantic v2 at
 [`/evaluate-semantic-v2`](https://soundalike.yassin.app/evaluate-semantic-v2), the locked
 four-list V2 study at [`/evaluate-v2`](https://soundalike.yassin.app/evaluate-v2), semantic v1 at
 [`/evaluate-semantic-v1`](https://soundalike.yassin.app/evaluate-semantic-v1), and the prior
@@ -76,10 +76,10 @@ press **Submit ratings**. Accepted snapshots go to a private, version-isolated r
 inbox; JSON export remains available as a manual fallback. See the
 [deployment and privacy workflow](webapp/DEPLOY.md#private-ratings-inbox).
 
-The pacing V3 study is exploratory, not a shipped model or evidence that recommendations
-are already better. Prior ratings motivated the feature hypothesis but did not fit its
-weights. Jamendo has no trustworthy track-language field, so language is not evaluated;
-Spotify lyrics-language filtering remains a separate unchanged production layer.
+The active V4 study is development evidence, not a shipped model or proof that
+recommendations are already better. The compact learned reranker missed its fixed
+validation gate and is not used in the challenger. Production recommendations remain
+unchanged until fresh blinded evidence passes the independent promotion criteria.
 
 **V3 research is complete but not shipped.** Its strongest final-reserve candidate
 reached the preregistered +20% development target, then improved independent shadow
