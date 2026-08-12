@@ -63,10 +63,13 @@ actually change the next ranking. The core study stops after 12 unique compariso
 four optional robustness comparisons remain available.
 
 Playback uses an approximately 20-second strongest-recurrence excerpt. This is a
-repeated-section heuristic, not a verified chorus classifier. Every reserve track is
-checked for singing language. Vocal tasks require a known language and same-language
-candidates; ambiguous vocal/language tracks are excluded. Attribution stays hidden
-until each task is completed or skipped. The prior pacing V3 study remains available at
+repeated-section heuristic, not a verified chorus classifier. Vocal tracks must have
+three separate 30-second detector positions that agree on one known language, at least
+one vocal detector must support vocals, and no detector may confidently report
+instrumental. Vocal candidates must exactly match the seed language, and all 80 unique
+study tracks come from distinct artists. Attribution stays hidden until each task is
+completed or skipped. The superseded strict V4 study remains
+available at [`/evaluate-v4`](https://soundalike.yassin.app/evaluate-v4), pacing V3 at
 [`/evaluate-pacing-v3`](https://soundalike.yassin.app/evaluate-pacing-v3), semantic v2 at
 [`/evaluate-semantic-v2`](https://soundalike.yassin.app/evaluate-semantic-v2), the locked
 four-list V2 study at [`/evaluate-v2`](https://soundalike.yassin.app/evaluate-v2), semantic v1 at
@@ -77,10 +80,12 @@ press **Submit ratings**. Accepted snapshots go to a private, version-isolated r
 inbox; JSON export remains available as a manual fallback. See the
 [deployment and privacy workflow](webapp/DEPLOY.md#private-ratings-inbox).
 
-The active V4 study is development evidence, not a shipped model or proof that
-recommendations are already better. The compact learned reranker missed its fixed
-validation gate and is not used in the challenger. Production recommendations remain
-unchanged until fresh blinded evidence passes the independent promotion criteria.
+The active V5 study is development evidence, not a shipped model or proof that
+recommendations are already better. It scores three frozen research methods against
+each complete A-D ranking without changing a model during collection. The prior V4
+pack was not promoted: a later three-position language audit invalidated 13 of its 18
+presented tasks under the stricter fail-closed policy. Production recommendations
+remain unchanged until fresh blinded evidence passes independent promotion criteria.
 
 **V3 research is complete but not shipped.** Its strongest final-reserve candidate
 reached the preregistered +20% development target, then improved independent shadow

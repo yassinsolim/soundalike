@@ -4,16 +4,13 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 
-const html = readFileSync(
-  new URL("../evaluate-v4/index.html", import.meta.url),
-  "utf8",
-);
+const html = readFileSync(new URL("../evaluate/index.html", import.meta.url), "utf8");
 const script = html.match(/<script>\s*([\s\S]*?)\s*<\/script>/)?.[1];
 const protocol = JSON.parse(
-  readFileSync(new URL("../evaluate-v4/protocol-v4.json", import.meta.url), "utf8"),
+  readFileSync(new URL("../evaluate/protocol-v5.json", import.meta.url), "utf8"),
 );
 const pack = JSON.parse(
-  readFileSync(new URL("../evaluate-v4/active-pack.json", import.meta.url), "utf8"),
+  readFileSync(new URL("../evaluate/active-pack.json", import.meta.url), "utf8"),
 );
 
 function context() {
@@ -95,16 +92,16 @@ test("validates only the exact frozen active pack and protocol", async () => {
   const sandbox = context();
   const trustedProtocol = clone(sandbox, protocol);
   const trustedPack = clone(sandbox, pack);
-  assert.equal(await sandbox.__v4Test.docHash(trustedProtocol), protocol.content_sha256);
-  assert.equal(await sandbox.__v4Test.docHash(trustedPack), pack.content_sha256);
+  assert.equal(await sandbox.__v5Test.docHash(trustedProtocol), protocol.content_sha256);
+  assert.equal(await sandbox.__v5Test.docHash(trustedPack), pack.content_sha256);
   assert.deepEqual(
     ["method_bindings", "control", "challenger"].filter((key) =>
-      sandbox.__v4Test.nestedKeys(trustedPack).has(key),
+      sandbox.__v5Test.nestedKeys(trustedPack).has(key),
     ),
     [],
   );
   assert.equal(
-    await sandbox.__v4Test.validateStudy(
+    await sandbox.__v5Test.validateStudy(
       trustedProtocol,
       trustedPack,
     ),
@@ -113,7 +110,7 @@ test("validates only the exact frozen active pack and protocol", async () => {
   const tampered = clone(sandbox, pack);
   tampered.tasks[0].candidates[0].track_id += 1;
   await assert.rejects(
-    sandbox.__v4Test.validateStudy(clone(sandbox, protocol), tampered),
+    sandbox.__v5Test.validateStudy(clone(sandbox, protocol), tampered),
     /pack|Choice|Track/,
   );
 });
@@ -121,7 +118,7 @@ test("validates only the exact frozen active pack and protocol", async () => {
 test("contains 16 unique comparisons and two interleaved repeated anchors", () => {
   const sandbox = context();
   const signatures = pack.tasks.map((task) =>
-    sandbox.__v4Test.taskSignature(clone(sandbox, task)),
+    sandbox.__v5Test.taskSignature(clone(sandbox, task)),
   );
   assert.equal(new Set(signatures).size, 16);
   const repeated = signatures
@@ -135,11 +132,19 @@ test("contains 16 unique comparisons and two interleaved repeated anchors", () =
     repeated.map((row) => row.index + 1),
     [7, 14],
   );
+  assert.equal(
+    new Set(
+      Object.values(pack.tracks).map(
+        (track) => track.source_identity.artist_id,
+      ),
+    ).size,
+    Object.keys(pack.tracks).length,
+  );
 });
 
 test("builds and imports strict full-ranking partial exports", async () => {
   const sandbox = context();
-  const state = sandbox.__v4Test.emptyState();
+  const state = sandbox.__v5Test.emptyState();
   const task = pack.tasks[0];
   const stamp = Date.now();
   state.started_at = new Date(stamp - 2000).toISOString();
@@ -153,12 +158,12 @@ test("builds and imports strict full-ranking partial exports", async () => {
     interaction_ms: 1000,
   });
 
-  sandbox.__v4Test.setStudy(protocol, pack, state);
-  assert.equal(sandbox.__v4Test.validState(state), true);
-  const exported = await sandbox.__v4Test.buildExport();
-  assert.equal(sandbox.__v4Test.validExport(exported), true);
-  const imported = await sandbox.__v4Test.importExport(exported);
-  assert.equal(sandbox.__v4Test.validState(imported), true);
+  sandbox.__v5Test.setStudy(protocol, pack, state);
+  assert.equal(sandbox.__v5Test.validState(state), true);
+  const exported = await sandbox.__v5Test.buildExport();
+  assert.equal(sandbox.__v5Test.validExport(exported), true);
+  const imported = await sandbox.__v5Test.importExport(exported);
+  assert.equal(sandbox.__v5Test.validState(imported), true);
   assert.deepEqual(
     Array.from(imported.task_ratings[task.task_id].ranked_choice_ids),
     task.candidates.map((choice) => choice.choice_id),
@@ -167,25 +172,25 @@ test("builds and imports strict full-ranking partial exports", async () => {
 
 test("keeps draft autosave from resetting rated-task interaction time", () => {
   const sandbox = context();
-  const state = sandbox.__v4Test.emptyState();
+  const state = sandbox.__v5Test.emptyState();
   const task = pack.tasks[0];
   const draft = clone(sandbox, {
     ranking: task.candidates.map((choice) => choice.choice_id),
     reason: "tempo_pacing",
   });
   state.lastInteractionAt = Date.now() - 5000;
-  sandbox.__v4Test.setStudy(protocol, pack, state);
-  sandbox.__v4Test.saveDraft(clone(sandbox, task), draft);
+  sandbox.__v5Test.setStudy(protocol, pack, state);
+  sandbox.__v5Test.saveDraft(clone(sandbox, task), draft);
   assert.equal(
-    sandbox.__v4Test.completeRatedTask(clone(sandbox, task), draft),
+    sandbox.__v5Test.completeRatedTask(clone(sandbox, task), draft),
     true,
   );
   assert.ok(state.task_ratings[task.task_id].interaction_ms >= 4000);
 });
 
 test("loads frozen assets from the canonical evaluate route", () => {
-  assert.equal(html.includes('fetch("/evaluate-v4/protocol-v4.json"'), true);
-  assert.equal(html.includes('fetch("/evaluate-v4/active-pack.json"'), true);
+  assert.equal(html.includes('fetch("/evaluate/protocol-v5.json"'), true);
+  assert.equal(html.includes('fetch("/evaluate/active-pack.json"'), true);
   assert.equal(
     html.match(/<meta http-equiv="Content-Security-Policy"[^>]+>/)?.[0]
       .includes("frame-ancestors"),
@@ -196,8 +201,8 @@ test("loads frozen assets from the canonical evaluate route", () => {
 test("hides attribution until a task is complete and preserves excerpt bounds", () => {
   const sandbox = context();
   const track = pack.tracks[String(pack.tasks[0].seed_track_id)];
-  const hidden = sandbox.__v4Test.trackHtml(clone(sandbox, track), "Seed", false);
-  const revealed = sandbox.__v4Test.trackHtml(
+  const hidden = sandbox.__v5Test.trackHtml(clone(sandbox, track), "Seed", false);
+  const revealed = sandbox.__v5Test.trackHtml(
     clone(sandbox, track),
     "Seed",
     true,
@@ -211,10 +216,13 @@ test("hides attribution until a task is complete and preserves excerpt bounds", 
   );
 });
 
-test("public V4 assets contain no method mapping or private key", () => {
+test("public V5 assets contain no method mapping or private key", () => {
   const text = [html, JSON.stringify(protocol), JSON.stringify(pack)].join("\n");
   for (const marker of [
     "method_bindings",
+    "method_orders",
+    "method_rankings",
+    "candidate_selection_sources",
     "blinding_key",
     '"control"',
     '"challenger"',
@@ -244,6 +252,7 @@ test("pacing V3 archive is byte-identical and version routed", () => {
     config.rewrites.map((item) => [item.source, item.destination]),
   );
   assert.equal(routes["/evaluate"], "/evaluate/index.html");
+  assert.equal(routes["/evaluate-v4"], "/evaluate-v4/index.html");
   assert.equal(
     routes["/evaluate-pacing-v3"],
     "/evaluate-pacing-v3/index.html",

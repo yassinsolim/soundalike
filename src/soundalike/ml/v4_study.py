@@ -56,6 +56,12 @@ RERANK_WEIGHTS = {
     "voice_compatibility": 0.02,
 }
 CODE_STATES = {value: key for key, value in STATE_CODES.items()}
+SUPPORTED_GATE_CACHE_IDENTITIES = frozenset(
+    {
+        (2, "soundalike_v4_study_track_gates_v2"),
+        (3, "soundalike_v5_multisegment_track_gates_v1"),
+    }
+)
 NICHE_TAGS = frozenset(
     {
         "genre---ambient",
@@ -351,8 +357,8 @@ def _load_gate_cache(
     rows = cache.get("tracks")
     valid_states = {VOCAL, INSTRUMENTAL, UNKNOWN}
     if (
-        cache.get("schema_version") != 2
-        or cache.get("gate_kind") != "soundalike_v4_study_track_gates_v2"
+        (cache.get("schema_version"), cache.get("gate_kind"))
+        not in SUPPORTED_GATE_CACHE_IDENTITIES
         or cache.get("source_fingerprint") != source_fingerprint
         or cache.get("content_sha256") != _content_sha256(cache)
         or not isinstance(rows, Mapping)

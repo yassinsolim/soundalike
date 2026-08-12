@@ -95,7 +95,6 @@ def _fit(
     model = LogisticRegression(
         C=regularization,
         fit_intercept=False,
-        penalty="l2",
         solver="liblinear",
         max_iter=10_000,
         random_state=0,
