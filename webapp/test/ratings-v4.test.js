@@ -27,7 +27,10 @@ const KEY = "a".repeat(64);
 function sign(ratings) {
   const payload = { ...ratings };
   delete payload.integrity_hmac_sha256;
-  ratings.integrity_hmac_sha256 = createHmac("sha256", KEY)
+  ratings.integrity_hmac_sha256 = createHmac(
+    "sha256",
+    Buffer.from(KEY, "hex"),
+  )
     .update(canonical(payload), "utf8")
     .digest("hex");
   return ratings;
@@ -35,8 +38,8 @@ function sign(ratings) {
 
 function validExport(outcome = "rated") {
   return sign({
-    schema_version: 1,
-    submission_schema: "v4_active_listener_submission_v1",
+    schema_version: 2,
+    submission_schema: "v4_active_listener_submission_v2",
     source_kind: "human_listener",
     provider: "hosted_private_active_v4_evaluator",
     anonymous_rater_id: `anon-v4-${"1".repeat(24)}`,
@@ -49,10 +52,10 @@ function validExport(outcome = "rated") {
     task_ratings: {
       [task.task_id]: {
         outcome,
-        most_similar_choice_id:
-          outcome === "rated" ? task.candidates[0].choice_id : null,
-        least_similar_choice_id:
-          outcome === "rated" ? task.candidates[1].choice_id : null,
+        ranked_choice_ids:
+          outcome === "rated"
+            ? task.candidates.map((choice) => choice.choice_id)
+            : null,
         worst_primary_reason: outcome === "rated" ? "tempo_pacing" : null,
         skip_reason: outcome === "skipped" ? "out_of_scope" : null,
         completed_at: "2026-07-30T00:00:01.000Z",
@@ -117,7 +120,7 @@ async function submit(ratings = validExport(), storage = new MemoryStorage(), op
     },
     body:
       options.rawBody ??
-      options.wrapper ?? { consent: true, study: "active-v4-blind", ratings },
+      options.wrapper ?? { consent: true, study: "active-v4-ranking", ratings },
   };
   await createV4Handler(storage)(request, res);
   return { res, storage };
@@ -160,13 +163,13 @@ test("accepts skip evidence and rejects choice, reason, schema and HMAC tamperin
 
   const mutations = [
     (value) => {
-      value.schema_version = 2;
+      value.schema_version = 3;
     },
     (value) => {
       value.protocol_sha256 = "0".repeat(64);
     },
     (value) => {
-      value.task_ratings[task.task_id].least_similar_choice_id =
+      value.task_ratings[task.task_id].ranked_choice_ids[3] =
         task.candidates[0].choice_id;
     },
     (value) => {
@@ -191,11 +194,11 @@ test("accepts skip evidence and rejects choice, reason, schema and HMAC tamperin
 
 test("requires exact consent and enforces origin, body and method boundaries", async () => {
   for (const wrapper of [
-    { consent: false, study: "active-v4-blind", ratings: validExport() },
+    { consent: false, study: "active-v4-ranking", ratings: validExport() },
     { consent: true, study: "v3", ratings: validExport() },
     {
       consent: true,
-      study: "active-v4-blind",
+      study: "active-v4-ranking",
       ratings: validExport(),
       extra: true,
     },

@@ -32,11 +32,11 @@ from .v4_gates import INSTRUMENTAL, UNKNOWN, VOCAL, compatibility_allowed
 from .v4_population import validate_population_manifest
 
 
-SCHEMA_VERSION = 1
-PACK_KIND = "soundalike_v4_active_best_worst"
-PRIVATE_KIND = "soundalike_v4_active_best_worst_private"
+SCHEMA_VERSION = 2
+PACK_KIND = "soundalike_v4_active_full_ranking"
+PRIVATE_KIND = "soundalike_v4_active_full_ranking_private"
 PLAN_KIND = "soundalike_v4_active_study_plan"
-PACK_ID = "v4-active-best-worst-1"
+PACK_ID = "v4-active-full-ranking-2"
 CANDIDATE_POOL = 200
 SEED_SHORTLIST = 24
 UNIQUE_TASKS = 16
@@ -120,15 +120,70 @@ def _artist_diverse(
     raise V4StudyError("ranking lacks enough artist-diverse candidates")
 
 
+def _artist_unique_pool(
+    positions: np.ndarray,
+    similarities: np.ndarray,
+    tracks: Sequence[JamendoTrack],
+    count: int,
+) -> np.ndarray:
+    """Keep the nearest track per artist so the shared pool is diverse."""
+    if count <= 0 or len(positions) != len(similarities):
+        raise V4StudyError("candidate pool inputs are invalid")
+    ordered = np.lexsort(
+        (
+            np.asarray(
+                [int(tracks[int(position)].track_id) for position in positions]
+            ),
+            -np.asarray(similarities, dtype=np.float64),
+        )
+    )
+    selected = []
+    artists = set()
+    for local_position in ordered:
+        position = int(positions[int(local_position)])
+        artist_id = int(tracks[position].artist_id)
+        if artist_id in artists:
+            continue
+        selected.append(position)
+        artists.add(artist_id)
+        if len(selected) == count:
+            break
+    if len(selected) < RANKING_DEPTH:
+        raise V4StudyError("candidate pool lacks enough compatible artists")
+    return np.asarray(selected, dtype=np.int64)
+
+
 def _choose_seeds(
     tracks: Sequence[JamendoTrack],
     embeddings: np.ndarray,
+    gate_cache: Mapping[str, object] | None,
 ) -> tuple[int, ...]:
     matrix = normalize_rows(np.asarray(embeddings, dtype=np.float32))
+    compatible_artists: dict[tuple[str, str], set[int]] = {}
+    if gate_cache is not None:
+        for track in tracks:
+            gate = _effective_gate(int(track.track_id), UNKNOWN, gate_cache)
+            compatible_artists.setdefault(gate, set()).add(int(track.artist_id))
     one_per_artist = {}
     for position, track in enumerate(tracks):
         if not MINIMUM_SEED_SECONDS <= track.duration_seconds <= MAXIMUM_SEED_SECONDS:
             continue
+        if gate_cache is not None:
+            vocal_state, language = _effective_gate(
+                int(track.track_id), UNKNOWN, gate_cache
+            )
+            if vocal_state == UNKNOWN or (
+                vocal_state == VOCAL and language == UNKNOWN
+            ):
+                continue
+            if (
+                len(
+                    compatible_artists[(vocal_state, language)]
+                    - {int(track.artist_id)}
+                )
+                < RANKING_DEPTH
+            ):
+                continue
         current = one_per_artist.get(int(track.artist_id))
         quality = (
             len(track.tags),
@@ -296,7 +351,8 @@ def _load_gate_cache(
     rows = cache.get("tracks")
     valid_states = {VOCAL, INSTRUMENTAL, UNKNOWN}
     if (
-        cache.get("gate_kind") != "soundalike_v4_study_track_gates"
+        cache.get("schema_version") != 2
+        or cache.get("gate_kind") != "soundalike_v4_study_track_gates_v2"
         or cache.get("source_fingerprint") != source_fingerprint
         or cache.get("content_sha256") != _content_sha256(cache)
         or not isinstance(rows, Mapping)
@@ -384,6 +440,10 @@ def build_study(
         gate_cache_path,
         source_fingerprint=context.source_fingerprint,
     )
+    if gate_cache is not None and set(gate_cache["tracks"]) != {
+        str(track_id) for track_id in reserve_ids
+    }:
+        raise V4StudyError("V4 detector gate cache does not cover the reserve")
     if not blinding_key_path.exists():
         blinding_key_path.parent.mkdir(parents=True, exist_ok=True)
         blinding_key_path.write_bytes(secrets.token_bytes(32))
@@ -412,7 +472,7 @@ def build_study(
             expected_source_fingerprint=context.source_fingerprint,
             expected_track_ids=store_ids,
         )
-        seed_ids = _choose_seeds(reserve_tracks, reserve_globals)
+        seed_ids = _choose_seeds(reserve_tracks, reserve_globals, gate_cache)
         reserve_position = {
             int(track.track_id): position
             for position, track in enumerate(reserve_tracks)
@@ -421,31 +481,40 @@ def build_study(
         all_ids = set(seed_ids)
         for seed_id in seed_ids:
             seed_position = reserve_position[seed_id]
-            eligible = np.asarray(
-                [
-                    position
-                    for position, candidate in enumerate(reserve_tracks)
-                    if int(candidate.track_id) != seed_id
-                    and int(candidate.artist_id) != artist_by_track[seed_id]
-                ],
-                dtype=np.int64,
-            )
+            query_gate = _effective_gate(seed_id, UNKNOWN, gate_cache)
+            eligible_positions = []
+            for position, candidate in enumerate(reserve_tracks):
+                candidate_id = int(candidate.track_id)
+                if (
+                    candidate_id == seed_id
+                    or int(candidate.artist_id) == artist_by_track[seed_id]
+                ):
+                    continue
+                candidate_gate = _effective_gate(
+                    candidate_id, UNKNOWN, gate_cache
+                )
+                if gate_cache is not None and not compatibility_allowed(
+                    query_gate[0],
+                    candidate_gate[0],
+                    query_gate[1],
+                    candidate_gate[1],
+                ):
+                    continue
+                eligible_positions.append(position)
+            if len(eligible_positions) < RANKING_DEPTH:
+                raise V4StudyError(
+                    "seed lacks enough language-compatible candidates"
+                )
+            eligible = np.asarray(eligible_positions, dtype=np.int64)
             similarities = (
                 reserve_globals[eligible] @ reserve_globals[seed_position]
             )
-            pool_positions = eligible[
-                np.lexsort(
-                    (
-                        np.asarray(
-                            [
-                                int(reserve_tracks[position].track_id)
-                                for position in eligible
-                            ]
-                        ),
-                        -similarities,
-                    )
-                )[:CANDIDATE_POOL]
-            ]
+            pool_positions = _artist_unique_pool(
+                eligible,
+                similarities,
+                reserve_tracks,
+                CANDIDATE_POOL,
+            )
             pool_ids = tuple(
                 int(reserve_tracks[position].track_id)
                 for position in pool_positions
@@ -516,36 +585,11 @@ def build_study(
             score += RERANK_WEIGHTS["voice_compatibility"] * percentile_scores(
                 voice_compatibility
             )
-            query_state = CODE_STATES[int(voice_states[query_row])]
-            query_state, query_language = _effective_gate(
-                seed_id, query_state, gate_cache
-            )
-            allowed = np.asarray(
-                [
-                    compatibility_allowed(
-                        query_state,
-                        _effective_gate(
-                            track_id,
-                            CODE_STATES[int(voice_states[store_row[track_id]])],
-                            gate_cache,
-                        )[0],
-                        query_language,
-                        _effective_gate(
-                            track_id,
-                            CODE_STATES[int(voice_states[store_row[track_id]])],
-                            gate_cache,
-                        )[1],
-                    )
-                    for track_id in pool_ids
-                ],
-                dtype=bool,
-            )
-            gated_score = np.where(allowed, score, -np.inf)
             control = _artist_diverse(
                 pool_ids, acoustic, artist_by_track, RANKING_DEPTH
             )
             challenger = _artist_diverse(
-                pool_ids, gated_score, artist_by_track, RANKING_DEPTH
+                pool_ids, score, artist_by_track, RANKING_DEPTH
             )
             overlap = len(set(control[:4]) & set(challenger[:4]))
             niche = bool(set(by_id[seed_id].tags) & NICHE_TAGS)
@@ -683,7 +727,7 @@ def build_study(
         "task_format": {
             "seed": 1,
             "candidates": CANDIDATES_PER_TASK,
-            "questions": ["most_similar", "least_similar", "worst_primary_reason"],
+            "questions": ["full_similarity_ranking", "worst_primary_reason"],
             "partial_submission_allowed": True,
             "adaptive_stop_after_unique_tasks": 12,
         },
@@ -695,7 +739,10 @@ def build_study(
             ),
             "listener_ratings_used_for_ranking": False,
             "learned_preference_head_used": False,
-            "candidate_gate": "known vocal/language mismatch only; unknown eligible",
+            "candidate_gate": (
+                "known voice class required; vocal candidates must match the "
+                "seed's known language"
+            ),
         },
         "tasks": tasks,
         "tracks": {
@@ -712,13 +759,13 @@ def build_study(
             "control": "frozen 30/25/25/20 acoustic score",
             "challenger": {
                 "weights": RERANK_WEIGHTS,
-                "known_vocal_language_gate": True,
+                "strict_vocal_language_gate": True,
                 "detector_gate_sha256": (
                     gate_cache["content_sha256"]
                     if gate_cache is not None
                     else None
                 ),
-                "unknown_fallback": True,
+                "unknown_fallback": False,
                 "learned_preference_head": "rejected by grouped gate",
             },
         },
@@ -727,17 +774,7 @@ def build_study(
     private["content_sha256"] = _content_sha256(private)
     public["private_unblinding_sha256"] = private["content_sha256"]
     public["content_sha256"] = _content_sha256(public)
-    gate_track_ids = sorted(
-        {
-            track_id
-            for row in ranking_rows
-            for track_id in [
-                row["seed_track_id"],
-                *row["control"],
-                *row["challenger"],
-            ]
-        }
-    )
+    gate_track_ids = sorted(reserve_ids)
     plan: dict[str, object] = {
         "schema_version": SCHEMA_VERSION,
         "plan_kind": PLAN_KIND,
