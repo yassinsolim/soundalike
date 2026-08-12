@@ -134,7 +134,7 @@ test("contains 16 unique comparisons and two interleaved repeated anchors", () =
   );
 });
 
-test("builds and imports strict best-worst partial exports", async () => {
+test("builds and imports strict full-ranking partial exports", async () => {
   const sandbox = context();
   const state = sandbox.__v4Test.emptyState();
   const task = pack.tasks[0];
@@ -143,8 +143,7 @@ test("builds and imports strict best-worst partial exports", async () => {
   state.last_activity_at = new Date(stamp - 1000).toISOString();
   state.task_ratings[task.task_id] = clone(sandbox, {
     outcome: "rated",
-    most_similar_choice_id: task.candidates[0].choice_id,
-    least_similar_choice_id: task.candidates[1].choice_id,
+    ranked_choice_ids: task.candidates.map((choice) => choice.choice_id),
     worst_primary_reason: "tempo_pacing",
     skip_reason: null,
     completed_at: state.last_activity_at,
@@ -157,9 +156,9 @@ test("builds and imports strict best-worst partial exports", async () => {
   assert.equal(sandbox.__v4Test.validExport(exported), true);
   const imported = await sandbox.__v4Test.importExport(exported);
   assert.equal(sandbox.__v4Test.validState(imported), true);
-  assert.equal(
-    imported.task_ratings[task.task_id].least_similar_choice_id,
-    task.candidates[1].choice_id,
+  assert.deepEqual(
+    Array.from(imported.task_ratings[task.task_id].ranked_choice_ids),
+    task.candidates.map((choice) => choice.choice_id),
   );
 });
 
@@ -168,8 +167,7 @@ test("keeps draft autosave from resetting rated-task interaction time", () => {
   const state = sandbox.__v4Test.emptyState();
   const task = pack.tasks[0];
   const draft = clone(sandbox, {
-    most: task.candidates[0].choice_id,
-    least: task.candidates[1].choice_id,
+    ranking: task.candidates.map((choice) => choice.choice_id),
     reason: "tempo_pacing",
   });
   state.lastInteractionAt = Date.now() - 5000;

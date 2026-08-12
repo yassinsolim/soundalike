@@ -34,8 +34,8 @@ from .v4_language_probe import (
 from .v4_study import CODE_STATES, PLAN_KIND, _excerpt
 
 
-SCHEMA_VERSION = 1
-GATE_KIND = "soundalike_v4_study_track_gates"
+SCHEMA_VERSION = 2
+GATE_KIND = "soundalike_v4_study_track_gates_v2"
 
 
 class V4TrackGateError(RuntimeError):
@@ -79,6 +79,20 @@ def conservative_vocal_state(semantic_state: str, panns_state: str) -> str:
     if semantic_state not in valid or panns_state not in valid:
         raise V4TrackGateError("vocal detector state is invalid")
     return semantic_state if semantic_state == panns_state else UNKNOWN
+
+
+def resolved_vocal_state(
+    semantic_state: str,
+    panns_state: str,
+    language: str,
+) -> str:
+    """Treat a confident sung-language decision as direct vocal evidence."""
+    if not isinstance(language, str) or not language:
+        raise V4TrackGateError("language detector state is invalid")
+    if language != UNKNOWN:
+        conservative_vocal_state(semantic_state, panns_state)
+        return VOCAL
+    return conservative_vocal_state(semantic_state, panns_state)
 
 
 def _load_audio(
@@ -280,7 +294,7 @@ def build_track_gate_cache(
         for track_id in track_ids
         if str(track_id) in existing_rows
     }
-    vocal_track_ids = []
+    language_track_ids = []
     if pending_track_ids:
         from panns_inference import AudioTagging, labels
 
@@ -300,20 +314,20 @@ def build_track_gate_cache(
         for track_id, score in zip(pending_track_ids, panns_scores):
             semantic_state = CODE_STATES[int(semantic_codes[store_row[track_id]])]
             panns_state = classify_vocal(score, thresholds)
-            vocal_state = conservative_vocal_state(semantic_state, panns_state)
             rows[str(track_id)] = {
                 "semantic_vocal_state": semantic_state,
                 "panns_voice_score": round(score, 8),
                 "panns_vocal_state": panns_state,
-                "vocal_state": vocal_state,
+                "vocal_state": conservative_vocal_state(
+                    semantic_state, panns_state
+                ),
                 "language": UNKNOWN,
                 "language_confidence": 0.0,
                 "language_margin": 0.0,
             }
-            if vocal_state == VOCAL:
-                vocal_track_ids.append(track_id)
+            language_track_ids.append(track_id)
 
-    if vocal_track_ids:
+    if language_track_ids:
         import torch
         from transformers import AutoProcessor, WhisperForConditionalGeneration
 
@@ -340,12 +354,12 @@ def build_track_gate_cache(
                 / 2.0
                 - WHISPER_EXCERPT_SECONDS / 2.0,
             )
-            for track_id in vocal_track_ids
+            for track_id in language_track_ids
         ]
         decisions = _whisper_decisions(
             whisper_model,
             processor,
-            [by_id[track_id].audio_path for track_id in vocal_track_ids],
+            [by_id[track_id].audio_path for track_id in language_track_ids],
             language_starts,
             minimum_confidence=float(
                 language_thresholds["minimum_confidence"]
@@ -353,12 +367,18 @@ def build_track_gate_cache(
             minimum_margin=float(language_thresholds["minimum_margin"]),
             batch_size=whisper_batch_size,
         )
-        for track_id, decision in zip(vocal_track_ids, decisions):
+        for track_id, decision in zip(language_track_ids, decisions):
+            row = rows[str(track_id)]
             rows[str(track_id)].update(
                 {
                     "language": decision["language"],
                     "language_confidence": decision["confidence"],
                     "language_margin": decision["margin"],
+                    "vocal_state": resolved_vocal_state(
+                        str(row["semantic_vocal_state"]),
+                        str(row["panns_vocal_state"]),
+                        str(decision["language"]),
+                    ),
                 }
             )
 
@@ -372,10 +392,13 @@ def build_track_gate_cache(
         "panns_calibration_sha256": panns_report["content_sha256"],
         "whisper_calibration_sha256": whisper_report["content_sha256"],
         "policy": {
-            "excerpt": "same strongest-recurrence section used by the evaluator",
-            "vocal_state": "known only when semantic and PANNs detectors agree",
-            "language": "Whisper classification only for confidently vocal tracks",
-            "unknown_fallback": True,
+            "excerpt": "30 seconds centered on the evaluator strongest-recurrence section",
+            "vocal_state": (
+                "confident language establishes vocal; otherwise semantic and "
+                "PANNs must agree"
+            ),
+            "language": "Whisper classification runs on every study track",
+            "unknown_fallback": False,
             "transcription_saved": False,
         },
         "observed": {

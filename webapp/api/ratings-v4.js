@@ -16,12 +16,12 @@ import {
 export const MAX_V4_BODY_BYTES = 128 * 1024;
 export const MAX_V4_STORED_BYTES = 160 * 1024;
 export const V4_PROTOCOL_SHA256 =
-  "ab878afe8fa05c9dc735b483a684aa8b713e76dc00b53877f1c421d666c10d9c";
+  "c0a1ff45bd5c57099aff352553b84579df8d3b4fc806bcb74e731b0dd5581966";
 export const V4_PACK_SHA256 =
-  "95fc47ff62d627dc12e1bdcd7ddf0bd884fcbf9f728543e255e7f15d083922fb";
-export const V4_BLOB_PREFIX = "human-ratings/active-v4/";
+  "899197ad4eed5b84d69e2f37ee2a4fc04f36f73ed1bf0a8421dd1ef5654b1384";
+export const V4_BLOB_PREFIX = "human-ratings/active-v4-ranking-v2/";
 
-const SUBMISSION_SCHEMA = "v4_active_listener_submission_v1";
+const SUBMISSION_SCHEMA = "v4_active_listener_submission_v2";
 const PROVIDER = "hosted_private_active_v4_evaluator";
 const INTEGRITY_NOTICE =
   "Local-key HMAC provides integrity, not identity or authenticity; the key is included in this export.";
@@ -81,9 +81,8 @@ const STORED_KEYS = [
 const RATING_KEYS = [
   "completed_at",
   "interaction_ms",
-  "least_similar_choice_id",
-  "most_similar_choice_id",
   "outcome",
+  "ranked_choice_ids",
   "skip_reason",
   "worst_primary_reason",
 ].sort();
@@ -130,9 +129,9 @@ function hasExactKeys(value, expected) {
 
 function buildCommittedTasks() {
   if (
-    protocol.schema_version !== 1 ||
+    protocol.schema_version !== 2 ||
     protocol.protocol_kind !==
-      "active_best_worst_listener_v4_private_submission" ||
+      "active_full_ranking_listener_v4_private_submission" ||
     protocol.submission_schema !== SUBMISSION_SCHEMA ||
     protocol.content_sha256 !== V4_PROTOCOL_SHA256 ||
     protocol.pilot_pack_sha256 !== V4_PACK_SHA256 ||
@@ -146,9 +145,10 @@ function buildCommittedTasks() {
     protocol.promotion_allowed !== false ||
     protocol.production_recommendation_changed !== false ||
     documentHash(protocol) !== V4_PROTOCOL_SHA256 ||
-    pilotPack.schema_version !== 1 ||
-    pilotPack.pack_kind !== "soundalike_v4_active_best_worst" ||
-    pilotPack.pack_id !== "v4-active-best-worst-1" ||
+    protocol.unknown_language_allowed !== false ||
+    pilotPack.schema_version !== 2 ||
+    pilotPack.pack_kind !== "soundalike_v4_active_full_ranking" ||
+    pilotPack.pack_id !== "v4-active-full-ranking-2" ||
     pilotPack.research_only !== true ||
     pilotPack.promotion_allowed !== false ||
     pilotPack.production_recommendation_changed !== false ||
@@ -227,18 +227,19 @@ function validTaskRating(taskId, value, startedAt, exportedAt, duration) {
     return false;
   }
   if (value.outcome === "rated") {
+    const ranking = value.ranked_choice_ids;
     return (
-      committed.choices.has(value.most_similar_choice_id) &&
-      committed.choices.has(value.least_similar_choice_id) &&
-      value.most_similar_choice_id !== value.least_similar_choice_id &&
+      Array.isArray(ranking) &&
+      ranking.length === 4 &&
+      new Set(ranking).size === 4 &&
+      ranking.every((choiceId) => committed.choices.has(choiceId)) &&
       REASONS.has(value.worst_primary_reason) &&
       value.skip_reason === null
     );
   }
   return (
     value.outcome === "skipped" &&
-    value.most_similar_choice_id === null &&
-    value.least_similar_choice_id === null &&
+    value.ranked_choice_ids === null &&
     value.worst_primary_reason === null &&
     SKIP_REASONS.has(value.skip_reason)
   );
@@ -248,12 +249,12 @@ function sanitizedEvidence(ratings) {
   return Object.fromEntries(SANITIZED_KEYS.map((key) => [key, ratings[key]]));
 }
 
-function validateEvidence(ratings) {
+function validateEvidenceDetailed(ratings) {
   const startedAt = parseTimestamp(ratings.started_at);
   const lastActivityAt = parseTimestamp(ratings.last_activity_at);
   const exportedAt = parseTimestamp(ratings.exported_at);
   if (
-    ratings.schema_version !== 1 ||
+    ratings.schema_version !== 2 ||
     ratings.submission_schema !== SUBMISSION_SCHEMA ||
     ratings.source_kind !== "human_listener" ||
     ratings.provider !== PROVIDER ||
@@ -269,12 +270,18 @@ function validateEvidence(ratings) {
     !Number.isInteger(ratings.duration_ms) ||
     ratings.duration_ms < 1 ||
     ratings.duration_ms > MAX_DURATION_MS ||
-    Math.abs(exportedAt - startedAt - ratings.duration_ms) > 1000 ||
-    !isRecord(ratings.task_ratings) ||
-    Object.keys(ratings.task_ratings).length < 1 ||
-    Object.keys(ratings.task_ratings).length > 18
+    Math.abs(exportedAt - startedAt - ratings.duration_ms) > 1000
   ) {
-    return null;
+    return { counts: null, error: "invalid_snapshot_metadata" };
+  }
+  if (!isRecord(ratings.task_ratings)) {
+    return { counts: null, error: "invalid_task_collection" };
+  }
+  if (Object.keys(ratings.task_ratings).length < 1) {
+    return { counts: null, error: "no_complete_tasks" };
+  }
+  if (Object.keys(ratings.task_ratings).length > 18) {
+    return { counts: null, error: "too_many_tasks" };
   }
   let rated = 0;
   let skipped = 0;
@@ -290,34 +297,46 @@ function validateEvidence(ratings) {
         ratings.duration_ms,
       )
     ) {
-      return null;
+      return { counts: null, error: "invalid_task_rating" };
     }
     rated += rating.outcome === "rated" ? 1 : 0;
     skipped += rating.outcome === "skipped" ? 1 : 0;
     signatures.add(tasks().get(taskId).signature);
   }
   return {
-    complete_task_ratings: rated + skipped,
-    rated_tasks: rated,
-    skipped_tasks: skipped,
-    unique_comparisons: signatures.size,
+    counts: {
+      complete_task_ratings: rated + skipped,
+      rated_tasks: rated,
+      skipped_tasks: skipped,
+      unique_comparisons: signatures.size,
+    },
+    error: null,
   };
 }
 
-export function validateV4Export(ratings) {
+function validateEvidence(ratings) {
+  return validateEvidenceDetailed(ratings).counts;
+}
+
+export function validateV4ExportDetailed(ratings) {
   if (
     !hasExactKeys(ratings, EXPORT_KEYS) ||
     !HEX_64.test(ratings.local_session_key) ||
     !HEX_64.test(ratings.integrity_hmac_sha256) ||
     ratings.integrity_notice !== INTEGRITY_NOTICE
   ) {
-    return null;
+    return { accepted: null, error: "invalid_snapshot_shape" };
   }
-  const counts = validateEvidence(ratings);
-  if (!counts) return null;
+  const validation = validateEvidenceDetailed(ratings);
+  if (!validation.counts) {
+    return { accepted: null, error: validation.error };
+  }
   const signedPayload = { ...ratings };
   delete signedPayload.integrity_hmac_sha256;
-  const expected = createHmac("sha256", ratings.local_session_key)
+  const expected = createHmac(
+    "sha256",
+    Buffer.from(ratings.local_session_key, "hex"),
+  )
     .update(canonical(signedPayload), "utf8")
     .digest();
   const supplied = Buffer.from(ratings.integrity_hmac_sha256, "hex");
@@ -325,9 +344,16 @@ export function validateV4Export(ratings) {
     supplied.length !== expected.length ||
     !timingSafeEqual(supplied, expected)
   ) {
-    return null;
+    return { accepted: null, error: "integrity_check_failed" };
   }
-  return { counts, ratings };
+  return {
+    accepted: { counts: validation.counts, ratings },
+    error: null,
+  };
+}
+
+export function validateV4Export(ratings) {
+  return validateV4ExportDetailed(ratings).accepted;
 }
 
 export function validateV4StoredRecord(document, pathname) {
@@ -526,18 +552,25 @@ export function createV4Handler(
     if (
       !hasExactKeys(wrapper, ["consent", "ratings", "study"]) ||
       wrapper.consent !== true ||
-      wrapper.study !== "active-v4-blind"
+      wrapper.study !== "active-v4-ranking"
     ) {
-      return send(response, 400, { error: "invalid request" });
+      return send(response, 400, {
+        error: "invalid request",
+        code: "invalid_wrapper",
+      });
     }
-    let accepted;
+    let validation;
     try {
-      accepted = validateV4Export(wrapper.ratings);
+      validation = validateV4ExportDetailed(wrapper.ratings);
     } catch {
-      accepted = null;
+      validation = { accepted: null, error: "validation_failed" };
     }
+    const accepted = validation.accepted;
     if (!accepted) {
-      return send(response, 400, { error: "invalid request" });
+      return send(response, 400, {
+        error: "invalid request",
+        code: validation.error,
+      });
     }
     const sanitized = sanitizedEvidence(accepted.ratings);
     const receiptHash = sha256(canonical(sanitized));

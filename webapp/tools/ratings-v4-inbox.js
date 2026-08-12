@@ -10,7 +10,7 @@ import {
 } from "../api/ratings-v4.js";
 
 const PATHNAME =
-  /^human-ratings\/active-v4\/(v4-session-[a-f0-9]{24})\/([a-f0-9]{64})\.json$/;
+  /^human-ratings\/active-v4-ranking-v2\/(v4-session-[a-f0-9]{24})\/([a-f0-9]{64})\.json$/;
 
 async function readBounded(stream) {
   const chunks = [];

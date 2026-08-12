@@ -130,6 +130,7 @@ export function analyzeV4Snapshots(records, pack, privateMap) {
     completed_pairs: 0,
     rated_pairs: 0,
     exact_matches: 0,
+    full_ranking_matches: 0,
     most_similar_matches: 0,
     least_similar_matches: 0,
     mismatch_reason_matches: 0,
@@ -157,17 +158,23 @@ export function analyzeV4Snapshots(records, pack, privateMap) {
       anchors.rated_pairs += 1;
       const firstTask = publicTasks.get(mapping.anchor_of);
       const repeatTask = publicTasks.get(mapping.task_id);
+      const firstRanking = first.ranked_choice_ids.map((choiceId) =>
+        choiceTrack(firstTask, choiceId),
+      );
+      const repeatRanking = repeat.ranked_choice_ids.map((choiceId) =>
+        choiceTrack(repeatTask, choiceId),
+      );
+      const rankingMatch = canonical(firstRanking) === canonical(repeatRanking);
       const mostMatch =
-        choiceTrack(firstTask, first.most_similar_choice_id) ===
-        choiceTrack(repeatTask, repeat.most_similar_choice_id);
+        firstRanking[0] === repeatRanking[0];
       const leastMatch =
-        choiceTrack(firstTask, first.least_similar_choice_id) ===
-        choiceTrack(repeatTask, repeat.least_similar_choice_id);
+        firstRanking.at(-1) === repeatRanking.at(-1);
       const reasonMatch = first.worst_primary_reason === repeat.worst_primary_reason;
+      anchors.full_ranking_matches += rankingMatch ? 1 : 0;
       anchors.most_similar_matches += mostMatch ? 1 : 0;
       anchors.least_similar_matches += leastMatch ? 1 : 0;
       anchors.mismatch_reason_matches += reasonMatch ? 1 : 0;
-      anchors.exact_matches += mostMatch && leastMatch && reasonMatch ? 1 : 0;
+      anchors.exact_matches += rankingMatch && reasonMatch ? 1 : 0;
     }
   }
 
@@ -183,24 +190,31 @@ export function analyzeV4Snapshots(records, pack, privateMap) {
     const source = privateTask.anchor_of
       ? privateTasks.get(privateTask.anchor_of)
       : privateTask;
-    const mostOrigins =
-      source.candidate_origins[
-        choiceTrack(task, rating.most_similar_choice_id)
-      ];
-    const leastOrigins =
-      source.candidate_origins[
-        choiceTrack(task, rating.least_similar_choice_id)
-      ];
+    const rankedTracks = rating.ranked_choice_ids.map((choiceId) =>
+      choiceTrack(task, choiceId),
+    );
+    const rankedOrigins = rankedTracks.map(
+      (trackId) => source.candidate_origins[trackId],
+    );
+    const mostOrigins = rankedOrigins[0];
+    const leastOrigins = rankedOrigins.at(-1);
     for (const origin of mostOrigins) count(mostSelections, origin);
     for (const origin of leastOrigins) count(leastSelections, origin);
-    const mostMethod = exclusiveMethod(mostOrigins);
-    const leastMethod = exclusiveMethod(leastOrigins);
-    if (mostMethod === "challenger" && leastMethod === "control") {
-      pairwise.challenger_over_control += 1;
-    } else if (mostMethod === "control" && leastMethod === "challenger") {
-      pairwise.control_over_challenger += 1;
-    } else {
-      pairwise.ambiguous_or_within_method += 1;
+    for (let higher = 0; higher < rankedOrigins.length; higher += 1) {
+      for (let lower = higher + 1; lower < rankedOrigins.length; lower += 1) {
+        const higherMethod = exclusiveMethod(rankedOrigins[higher]);
+        const lowerMethod = exclusiveMethod(rankedOrigins[lower]);
+        if (higherMethod === "challenger" && lowerMethod === "control") {
+          pairwise.challenger_over_control += 1;
+        } else if (
+          higherMethod === "control" &&
+          lowerMethod === "challenger"
+        ) {
+          pairwise.control_over_challenger += 1;
+        } else {
+          pairwise.ambiguous_or_within_method += 1;
+        }
+      }
     }
   }
 

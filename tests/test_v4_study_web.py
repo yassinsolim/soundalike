@@ -11,9 +11,9 @@ ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "webapp"
 ACTIVE = WEB / "evaluate"
 ARCHIVE = WEB / "evaluate-pacing-v3"
-PACK_SHA = "95fc47ff62d627dc12e1bdcd7ddf0bd884fcbf9f728543e255e7f15d083922fb"
-PACK_FILE_SHA = "7889d06a7f940bc7f02e8805369b8a128e6b04834d0bdef11ae0fbdc781ea2da"
-PROTOCOL_SHA = "ab878afe8fa05c9dc735b483a684aa8b713e76dc00b53877f1c421d666c10d9c"
+PACK_SHA = "899197ad4eed5b84d69e2f37ee2a4fc04f36f73ed1bf0a8421dd1ef5654b1384"
+PACK_FILE_SHA = "0b3b6875b2f19394f6d1a9ac1bcf2fdae4fb90d0be03c80d8f42b02e32c96f01"
+PROTOCOL_SHA = "c0a1ff45bd5c57099aff352553b84579df8d3b4fc806bcb74e731b0dd5581966"
 
 
 def _load(path: Path) -> dict:
@@ -39,12 +39,14 @@ def test_active_route_deploys_exact_blinded_v4_pack_and_protocol():
     assert _file_hash(ACTIVE / "active-pack.json") == PACK_FILE_SHA
     assert _content_hash(protocol) == protocol["content_sha256"] == PROTOCOL_SHA
     assert protocol["pilot_pack_sha256"] == PACK_SHA
-    assert protocol["local_storage_namespace"] == "soundalike-active-v4"
+    assert protocol["schema_version"] == 2
+    assert protocol["local_storage_namespace"] == "soundalike-active-v4-ranking-v2"
     assert protocol["submission_endpoint"] == "/api/ratings-v4"
-    assert protocol["private_blob_prefix"] == "human-ratings/active-v4/"
+    assert protocol["private_blob_prefix"] == "human-ratings/active-v4-ranking-v2/"
     assert protocol["adaptive_stop_after_unique_tasks"] == 12
     assert protocol["repeated_anchor_count"] == 2
     assert protocol["language_evaluated"] is True
+    assert protocol["unknown_language_allowed"] is False
     assert protocol["transcription_saved"] is False
 
     assert len(pack["tasks"]) == 18
@@ -68,7 +70,7 @@ def test_active_route_deploys_exact_blinded_v4_pack_and_protocol():
     assert pack["provenance"]["learned_preference_head_used"] is False
     assert (
         pack["provenance"]["detector_gate_sha256"]
-        == "05f54b6b57367ec56b80acf072518175303734ff37f402545e1c9169a86b4a96"
+        == "504ce2b35bce262893861435257dd7d56800877f1d2735ca5e84ae3c2c9c5276"
     )
 
 
@@ -134,9 +136,9 @@ def test_routes_and_private_inboxes_are_version_isolated():
     active_html = (ACTIVE / "index.html").read_text(encoding="utf-8")
     active_api = (WEB / "api" / "ratings-v4.js").read_text(encoding="utf-8")
     pacing_api = (WEB / "api" / "ratings-pacing-v3.js").read_text(encoding="utf-8")
-    assert "soundalike-active-v4" in active_html
+    assert "soundalike-active-v4-ranking-v2" in active_html
     assert "soundalike-pacing-v3" not in active_html
-    assert "human-ratings/active-v4/" in active_api
+    assert "human-ratings/active-v4-ranking-v2/" in active_api
     assert "human-ratings/pacing-v3/" not in active_api
     assert "../evaluate-pacing-v3/pacing-pack.json" in pacing_api
     assert "blobList" not in active_api

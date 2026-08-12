@@ -146,8 +146,8 @@ recommendations — only for the optional "Save as playlist".
 
 ## Private ratings inboxes
 
-`/evaluate` is the research-only V4 active best/worst study. It uses the
-`soundalike-active-v4` browser namespace and a locked four-candidate pack. Playback is
+`/evaluate` is the research-only V4 active full-ranking study. It uses the
+`soundalike-active-v4-ranking-v2` browser namespace and a locked four-candidate pack. Playback is
 limited to committed approximately 20-second strongest-recurrence excerpts. The
 excerpt is a recurrence heuristic, not a verified chorus classifier. Tasks prioritize
 ranking disagreement without using submitted ratings, include two repeated anchors,
@@ -163,12 +163,13 @@ six pages scans, migrates, or deletes another study's state.
 All evaluators submit only after the listener checks the consent box and presses
 the explicit submit button. Neither submits on autosave, page unload, playback,
 or export. JSON export/import remains a manual fallback. In V4, attribution appears
-only after a best/worst task is completed or skipped. For pacing V3, attribution and
+only after a complete A–D ranking is saved or the task is skipped. For pacing V3, attribution and
 license links appear only after the list's overall
 0–10 score and all five required result scores are complete. Optional mismatch reasons
 use a closed enum and no free text. Public packs contain no method identity or private
-unblinding document. V4 filters only high-confidence vocal and singing-language
-mismatches and retains unknowns; it saves language classifications but no transcript.
+unblinding document. V4 runs singing-language classification over the full reserve,
+requires known same-language candidates for vocal seeds, and excludes unknown vocal
+or language states from tasks; it saves language classifications but no transcript.
 The archived pacing study did not evaluate language.
 
 ### Blob setup
@@ -207,7 +208,7 @@ The archived semantic v2 study writes only to:
 The archived pacing V3 study writes only to:
 `human-ratings/pacing-v3/<pacing-session-id>/<canonical-payload-sha>.json`.
 The active V4 study writes only to:
-`human-ratings/active-v4/<v4-session-id>/<canonical-payload-sha>.json`.
+`human-ratings/active-v4-ranking-v2/<v4-session-id>/<canonical-payload-sha>.json`.
 
 The stored record contains random anonymous/session IDs, ratings, rating timestamps
 and durations, locked protocol/list hashes, server receipt time, canonical digest,
