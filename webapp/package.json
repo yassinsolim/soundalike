@@ -10,7 +10,9 @@
     "ratings:semantic-v2-inbox": "node tools/ratings-semantic-v2-inbox.js",
     "ratings:pacing-v3-inbox": "node tools/ratings-pacing-v3-inbox.js",
     "ratings:v4-inbox": "node tools/ratings-v4-inbox.js",
-    "ratings:v4-analysis": "node tools/ratings-v4-analysis.js"
+    "ratings:v4-analysis": "node tools/ratings-v4-analysis.js",
+    "ratings:v5-inbox": "node tools/ratings-v5-inbox.js",
+    "ratings:v5-analysis": "node tools/ratings-v5-analysis.js"
   },
   "dependencies": {
     "@vercel/blob": "2.6.1"

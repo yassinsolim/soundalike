@@ -9,17 +9,17 @@ import test from "node:test";
 
 import { canonical } from "../api/ratings.js";
 import {
-  MAX_V4_BODY_BYTES,
-  V4_BLOB_PREFIX,
-  V4_PACK_SHA256,
-  V4_PROTOCOL_SHA256,
-  createV4Handler,
-  parseV4StoredRecordBytes,
-} from "../api/ratings-v4.js";
-import { downloadV4 } from "../tools/ratings-v4-inbox.js";
+  MAX_V5_BODY_BYTES,
+  V5_BLOB_PREFIX,
+  V5_PACK_SHA256,
+  V5_PROTOCOL_SHA256,
+  createV5Handler,
+  parseV5StoredRecordBytes,
+} from "../api/ratings-v5.js";
+import { downloadV5 } from "../tools/ratings-v5-inbox.js";
 
 const pack = JSON.parse(
-  readFileSync(new URL("../evaluate-v4/active-pack.json", import.meta.url), "utf8"),
+  readFileSync(new URL("../evaluate/active-pack.json", import.meta.url), "utf8"),
 );
 const task = pack.tasks[0];
 const KEY = "a".repeat(64);
@@ -38,14 +38,14 @@ function sign(ratings) {
 
 function validExport(outcome = "rated") {
   return sign({
-    schema_version: 2,
-    submission_schema: "v4_active_listener_submission_v2",
+    schema_version: 1,
+    submission_schema: "v5_strict_listener_submission_v1",
     source_kind: "human_listener",
-    provider: "hosted_private_active_v4_evaluator",
-    anonymous_rater_id: `anon-v4-${"1".repeat(24)}`,
-    session_id: `v4-session-${"2".repeat(24)}`,
-    protocol_sha256: V4_PROTOCOL_SHA256,
-    pilot_pack_sha256: V4_PACK_SHA256,
+    provider: "hosted_private_strict_v5_evaluator",
+    anonymous_rater_id: `anon-v5-${"1".repeat(24)}`,
+    session_id: `v5-session-${"2".repeat(24)}`,
+    protocol_sha256: V5_PROTOCOL_SHA256,
+    pilot_pack_sha256: V5_PACK_SHA256,
     local_session_key: KEY,
     started_at: "2026-07-30T00:00:00.000Z",
     last_activity_at: "2026-07-30T00:00:01.000Z",
@@ -120,13 +120,13 @@ async function submit(ratings = validExport(), storage = new MemoryStorage(), op
     },
     body:
       options.rawBody ??
-      options.wrapper ?? { consent: true, study: "active-v4-ranking", ratings },
+      options.wrapper ?? { consent: true, study: "strict-v5-ranking", ratings },
   };
-  await createV4Handler(storage)(request, res);
+  await createV5Handler(storage)(request, res);
   return { res, storage };
 }
 
-test("stores only sanitized V4 evidence in its private prefix", async () => {
+test("stores only sanitized V5 evidence in its private prefix", async () => {
   const { res, storage } = await submit();
   assert.equal(res.statusCode, 200);
   assert.deepEqual(res.body.counts, {
@@ -139,7 +139,7 @@ test("stores only sanitized V4 evidence in its private prefix", async () => {
   const put = storage.puts[0];
   assert.equal(
     put.pathname,
-    `${V4_BLOB_PREFIX}v4-session-${"2".repeat(24)}/${res.body.receipt_sha256}.json`,
+    `${V5_BLOB_PREFIX}v5-session-${"2".repeat(24)}/${res.body.receipt_sha256}.json`,
   );
   assert.deepEqual(put.options, {
     access: "private",
@@ -151,7 +151,7 @@ test("stores only sanitized V4 evidence in its private prefix", async () => {
   assert.equal(stored.local_session_key, undefined);
   assert.equal(stored.integrity_hmac_sha256, undefined);
   assert.equal(
-    parseV4StoredRecordBytes(put.body, put.pathname).digest,
+    parseV5StoredRecordBytes(put.body, put.pathname).digest,
     res.body.receipt_sha256,
   );
 });
@@ -194,11 +194,11 @@ test("accepts skip evidence and rejects choice, reason, schema and HMAC tamperin
 
 test("requires exact consent and enforces origin, body and method boundaries", async () => {
   for (const wrapper of [
-    { consent: false, study: "active-v4-ranking", ratings: validExport() },
+    { consent: false, study: "strict-v5-ranking", ratings: validExport() },
     { consent: true, study: "v3", ratings: validExport() },
     {
       consent: true,
-      study: "active-v4-ranking",
+      study: "strict-v5-ranking",
       ratings: validExport(),
       extra: true,
     },
@@ -214,7 +214,7 @@ test("requires exact consent and enforces origin, body and method boundaries", a
   );
   assert.equal(
     (await submit(validExport(), new MemoryStorage(), {
-      contentLength: MAX_V4_BODY_BYTES + 1,
+      contentLength: MAX_V5_BODY_BYTES + 1,
     })).res.statusCode,
     413,
   );
@@ -241,7 +241,7 @@ test("analyst tool validates bounded private downloads", async () => {
   const bytes = Buffer.from(put.body);
   const analystStorage = {
     async list(options) {
-      assert.equal(options.prefix, V4_BLOB_PREFIX);
+      assert.equal(options.prefix, V5_BLOB_PREFIX);
       return {
         blobs: [{ pathname: put.pathname, size: bytes.length }],
         hasMore: false,
@@ -261,20 +261,20 @@ test("analyst tool validates bounded private downloads", async () => {
       };
     },
   };
-  const directory = await mkdtemp(join(tmpdir(), "soundalike-v4-inbox-"));
+  const directory = await mkdtemp(join(tmpdir(), "soundalike-v5-inbox-"));
   try {
-    assert.deepEqual(await downloadV4(directory, analystStorage), {
+    assert.deepEqual(await downloadV5(directory, analystStorage), {
       downloaded: 1,
       existing: 0,
     });
-    assert.deepEqual(await downloadV4(directory, analystStorage), {
+    assert.deepEqual(await downloadV5(directory, analystStorage), {
       downloaded: 0,
       existing: 1,
     });
     const saved = await readFile(
       join(
         directory,
-        `v4-session-${"2".repeat(24)}`,
+        `v5-session-${"2".repeat(24)}`,
         `${submitted.res.body.receipt_sha256}.json`,
       ),
     );
@@ -286,7 +286,7 @@ test("analyst tool validates bounded private downloads", async () => {
 
 test("submission endpoint exposes no private listing or read capability", () => {
   const source = readFileSync(
-    new URL("../api/ratings-v4.js", import.meta.url),
+    new URL("../api/ratings-v5.js", import.meta.url),
     "utf8",
   );
   assert.equal(source.includes("blobList"), false);

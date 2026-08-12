@@ -140,6 +140,18 @@ def test_gate_cache_rejects_tampering(tmp_path):
         v4_study._load_gate_cache(path, source_fingerprint="source") == cache
     )
 
+    strict_cache = {
+        **cache,
+        "schema_version": 3,
+        "gate_kind": "soundalike_v5_multisegment_track_gates_v1",
+    }
+    strict_cache["content_sha256"] = v4_study._content_sha256(strict_cache)
+    path.write_text(json.dumps(strict_cache), encoding="utf-8")
+    assert (
+        v4_study._load_gate_cache(path, source_fingerprint="source")
+        == strict_cache
+    )
+
     cache["tracks"]["20"]["language"] = "es"
     cache["content_sha256"] = v4_study._content_sha256(cache)
     path.write_text(json.dumps(cache), encoding="utf-8")

@@ -40,6 +40,38 @@ function exclusiveMethod(origins) {
     : null;
 }
 
+function exactSignFlipOneSided(deltas) {
+  const observed = deltas.reduce((total, value) => total + value, 0);
+  const nonzero = deltas.filter((value) => value !== 0).map(Math.abs);
+  if (!nonzero.length) return 1;
+  let distribution = new Map([[0, 1]]);
+  for (const delta of nonzero) {
+    const next = new Map();
+    for (const [total, probability] of distribution) {
+      next.set(total + delta, (next.get(total + delta) ?? 0) + probability / 2);
+      next.set(total - delta, (next.get(total - delta) ?? 0) + probability / 2);
+    }
+    distribution = next;
+  }
+  return [...distribution.entries()]
+    .filter(([total]) => total >= observed)
+    .reduce((probability, [, value]) => probability + value, 0);
+}
+
+function clusteredDeltas(observations, clusterKey) {
+  const clusters = new Map();
+  for (const observation of observations) {
+    const key = clusterKey(observation);
+    const values = clusters.get(key) ?? [];
+    values.push(observation.delta);
+    clusters.set(key, values);
+  }
+  return [...clusters.values()].map(
+    (values) =>
+      values.reduce((total, current) => total + current, 0) / values.length,
+  );
+}
+
 export function validateV4AnalysisArtifacts(pack, privateMap) {
   if (
     !pack ||
@@ -126,6 +158,7 @@ export function analyzeV4Snapshots(records, pack, privateMap) {
     control_over_challenger: 0,
     ambiguous_or_within_method: 0,
   };
+  const taskMethodObservations = [];
   const anchors = {
     completed_pairs: 0,
     rated_pairs: 0,
@@ -146,7 +179,12 @@ export function analyzeV4Snapshots(records, pack, privateMap) {
       const signature = taskSignature(task);
       if (!seen.has(signature)) {
         seen.add(signature);
-        primaryTasks.set(`${record.session_id}:${signature}`, { task, rating });
+        primaryTasks.set(`${record.session_id}:${signature}`, {
+          task,
+          rating,
+          session_id: record.session_id,
+          signature,
+        });
       }
     }
     for (const mapping of privateMap.tasks.filter((task) => task.anchor_of)) {
@@ -178,7 +216,7 @@ export function analyzeV4Snapshots(records, pack, privateMap) {
     }
   }
 
-  for (const { task, rating } of primaryTasks.values()) {
+  for (const { task, rating, session_id, signature } of primaryTasks.values()) {
     if (rating.outcome === "skipped") {
       skipped += 1;
       count(skipReasons, rating.skip_reason);
@@ -196,6 +234,8 @@ export function analyzeV4Snapshots(records, pack, privateMap) {
     const rankedOrigins = rankedTracks.map(
       (trackId) => source.candidate_origins[trackId],
     );
+    let taskChallengerWins = 0;
+    let taskControlWins = 0;
     const mostOrigins = rankedOrigins[0];
     const leastOrigins = rankedOrigins.at(-1);
     for (const origin of mostOrigins) count(mostSelections, origin);
@@ -206,19 +246,38 @@ export function analyzeV4Snapshots(records, pack, privateMap) {
         const lowerMethod = exclusiveMethod(rankedOrigins[lower]);
         if (higherMethod === "challenger" && lowerMethod === "control") {
           pairwise.challenger_over_control += 1;
+          taskChallengerWins += 1;
         } else if (
           higherMethod === "control" &&
           lowerMethod === "challenger"
         ) {
           pairwise.control_over_challenger += 1;
+          taskControlWins += 1;
         } else {
           pairwise.ambiguous_or_within_method += 1;
         }
       }
     }
+    if (taskChallengerWins + taskControlWins > 0) {
+      taskMethodObservations.push({
+        session_id,
+        signature,
+        delta: taskChallengerWins - taskControlWins,
+      });
+    }
   }
 
   const completed = rated + skipped;
+  const comparableMethodPairs =
+    pairwise.challenger_over_control + pairwise.control_over_challenger;
+  const taskMethodDeltas = clusteredDeltas(
+    taskMethodObservations,
+    (observation) => observation.signature,
+  );
+  const listenerMethodDeltas = clusteredDeltas(
+    taskMethodObservations,
+    (observation) => observation.session_id,
+  );
   return {
     schema_version: 1,
     report_kind: "soundalike_v4_human_evidence_analysis",
@@ -236,6 +295,21 @@ export function analyzeV4Snapshots(records, pack, privateMap) {
       skip_rate: completed ? skipped / completed : 0,
     },
     method_pairwise_evidence: pairwise,
+    method_pairwise_inference: {
+      comparable_pairs: comparableMethodPairs,
+      challenger_win_rate: comparableMethodPairs
+        ? pairwise.challenger_over_control / comparableMethodPairs
+        : null,
+      rated_task_observations: taskMethodObservations.length,
+      task_clusters: taskMethodDeltas.length,
+      listener_clusters: listenerMethodDeltas.length,
+      observed_challenger_minus_control_wins:
+        pairwise.challenger_over_control - pairwise.control_over_challenger,
+      exact_task_sign_flip_one_sided_p:
+        exactSignFlipOneSided(taskMethodDeltas),
+      exact_listener_sign_flip_one_sided_p:
+        exactSignFlipOneSided(listenerMethodDeltas),
+    },
     method_selection_counts: {
       most_similar: mostSelections,
       least_similar: leastSelections,
@@ -297,7 +371,10 @@ async function main() {
     return;
   }
   const pack = JSON.parse(
-    await readFile(new URL("../evaluate/active-pack.json", import.meta.url), "utf8"),
+    await readFile(
+      new URL("../evaluate-v4/active-pack.json", import.meta.url),
+      "utf8",
+    ),
   );
   const privateMap = JSON.parse(await readFile(resolve(positional[1]), "utf8"));
   validateV4AnalysisArtifacts(pack, privateMap);

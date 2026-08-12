@@ -146,30 +146,34 @@ recommendations — only for the optional "Save as playlist".
 
 ## Private ratings inboxes
 
-`/evaluate` is the research-only V4 active full-ranking study. It uses the
-`soundalike-active-v4-ranking-v2` browser namespace and a locked four-candidate pack. Playback is
-limited to committed approximately 20-second strongest-recurrence excerpts. The
-excerpt is a recurrence heuristic, not a verified chorus classifier. Tasks prioritize
-ranking disagreement without using submitted ratings, include two repeated anchors,
-and allow adaptive stopping after 12 unique comparisons. The pacing V3 study is
-byte-preserved at `/evaluate-pacing-v3` with its `soundalike-pacing-v3` state.
+`/evaluate` is the research-only V5 full-ranking study. It uses the
+`soundalike-strict-v5-ranking-v1` browser namespace and a locked four-candidate pack.
+Playback is limited to committed approximately 20-second strongest-recurrence
+excerpts. The excerpt is a recurrence heuristic, not a verified chorus classifier.
+Tasks prioritize disagreements among three frozen methods without using current
+submitted ratings, include two repeated anchors, and allow adaptive stopping after 12
+unique comparisons. All 80 unique study tracks have distinct artists. Strict V4 is
+preserved at `/evaluate-v4` with its original
+`soundalike-active-v4-ranking-v2` state. The pacing V3 study is preserved at
+`/evaluate-pacing-v3` with its `soundalike-pacing-v3` state.
 The semantic v2 study remains at `/evaluate-semantic-v2` with its isolated state,
 and semantic v1 remains at `/evaluate-semantic-v1`. The prior
 full-track V2 application is byte-preserved at `/evaluate-v2` so existing
 `soundalike-fulltrack-v2` autosaves remain resumable. `/evaluate-v1` retains the
 exact v17 browser application and its `soundalike-human-v17` state. None of the
-six pages scans, migrates, or deletes another study's state.
+seven pages scans, migrates, or deletes another study's state.
 
 All evaluators submit only after the listener checks the consent box and presses
 the explicit submit button. Neither submits on autosave, page unload, playback,
-or export. JSON export/import remains a manual fallback. In V4, attribution appears
+or export. JSON export/import remains a manual fallback. In V4 and V5, attribution appears
 only after a complete A–D ranking is saved or the task is skipped. For pacing V3, attribution and
 license links appear only after the list's overall
 0–10 score and all five required result scores are complete. Optional mismatch reasons
 use a closed enum and no free text. Public packs contain no method identity or private
-unblinding document. V4 runs singing-language classification over the full reserve,
-requires known same-language candidates for vocal seeds, and excludes unknown vocal
-or language states from tasks; it saves language classifications but no transcript.
+unblinding document. V5 classifies three separate positions for every plausible vocal
+reserve track, requires all three decisions to agree, rejects vocal/instrumental
+detector conflicts, and requires exact same-language candidates for vocal seeds. It
+saves language decisions but no transcript.
 The archived pacing study did not evaluate language.
 
 ### Blob setup
@@ -183,9 +187,9 @@ The archived pacing study did not evaluate language.
    automatically. Never expose either credential to browser code.
 4. Deploy from `webapp`; `npm ci` installs the pinned official Blob SDK.
 5. Add Vercel Firewall rate-limit rules for `POST /api/ratings`,
-   `POST /api/ratings-v2`, `POST /api/ratings-semantic-v1`, and
-   `POST /api/ratings-semantic-v2`, `POST /api/ratings-pacing-v3`, and
-   `POST /api/ratings-v4`. Origin checks and
+   `POST /api/ratings-v2`, `POST /api/ratings-semantic-v1`,
+   `POST /api/ratings-semantic-v2`, `POST /api/ratings-pacing-v3`,
+   `POST /api/ratings-v4`, and `POST /api/ratings-v5`. Origin checks and
    the browser's local-key HMAC provide abuse resistance and integrity; they are
    not authentication, so application validation is not a replacement for rate
    limiting.
@@ -209,6 +213,8 @@ The archived pacing V3 study writes only to:
 `human-ratings/pacing-v3/<pacing-session-id>/<canonical-payload-sha>.json`.
 The active V4 study writes only to:
 `human-ratings/active-v4-ranking-v2/<v4-session-id>/<canonical-payload-sha>.json`.
+The active V5 study writes only to:
+`human-ratings/strict-v5-ranking-v1/<v5-session-id>/<canonical-payload-sha>.json`.
 
 The stored record contains random anonymous/session IDs, ratings, rating timestamps
 and durations, locked protocol/list hashes, server receipt time, canonical digest,
@@ -233,6 +239,10 @@ npm run ratings:v4-inbox -- ../private-ratings-v4-inbox --acknowledge-private-da
 npm run ratings:v4-analysis -- ../private-ratings-v4-inbox \
   ../private-v4-unblinding.json ../ratings-v4-analysis.local.json \
   --acknowledge-private-data
+npm run ratings:v5-inbox -- ../private-ratings-v5-inbox --acknowledge-private-data
+npm run ratings:v5-analysis -- ../private-ratings-v5-inbox \
+  ../private-v5-unblinding.json ../ratings-v5-analysis.local.json \
+  --acknowledge-private-data
 python ../tools/aggregate_ratings.py ../private-ratings-inbox \
   --output ../ratings-aggregate.local.json
 ```
@@ -246,7 +256,15 @@ choosing one. Neither private inputs nor local aggregates should be committed.
 The V4 analyzer validates the active pack and private unblinding binding, uses only
 the latest valid snapshot per session, excludes repeated anchors from primary
 pairwise totals, and separately reports mismatch reasons, skips, and anchor
-consistency. Its report never makes an automatic promotion decision.
+consistency. Repeated listener observations are averaged within task for primary
+inference, with listener-clustered sensitivity reported separately. Its report never
+makes an automatic promotion decision.
+The V5 analyzer applies the same snapshot and anchor rules, then scores all six
+pairwise predictions made by each frozen method for every complete A-D ranking.
+Primary inference averages multiple listener observations of the same task into one
+cluster before exact task-level sign-flip comparisons. Listener-clustered sensitivity
+results are reported separately. The analyzer never makes an automatic promotion
+decision.
 
 Before opening a study, an authorized analyst must use private Blob credentials
 to record the other prefix counts, submit one fresh test snapshot, download and
