@@ -262,23 +262,15 @@ def compatibility_allowed(
     query_language: str = UNKNOWN,
     candidate_language: str = UNKNOWN,
 ) -> bool:
-    """Reject only known vocal or known vocal-language mismatches."""
+    """Require a known matching voice class and, for vocals, language."""
     valid_vocal = {VOCAL, INSTRUMENTAL, UNKNOWN}
     if query_vocal not in valid_vocal or candidate_vocal not in valid_vocal:
         raise V4GateError("vocal state is invalid")
-    if (
-        query_vocal != UNKNOWN
-        and candidate_vocal != UNKNOWN
-        and query_vocal != candidate_vocal
-    ):
+    if UNKNOWN in {query_vocal, candidate_vocal} or query_vocal != candidate_vocal:
         return False
-    return not (
-        query_vocal == VOCAL
-        and candidate_vocal == VOCAL
-        and query_language != UNKNOWN
-        and candidate_language != UNKNOWN
-        and query_language != candidate_language
-    )
+    if query_vocal == INSTRUMENTAL:
+        return query_language == candidate_language == UNKNOWN
+    return query_language != UNKNOWN and query_language == candidate_language
 
 
 def representative_starts(

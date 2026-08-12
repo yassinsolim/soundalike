@@ -1,11 +1,11 @@
 {
-  "schema_version": 1,
-  "protocol_kind": "active_best_worst_listener_v4_private_submission",
-  "submission_schema": "v4_active_listener_submission_v1",
-  "pilot_pack_sha256": "95fc47ff62d627dc12e1bdcd7ddf0bd884fcbf9f728543e255e7f15d083922fb",
-  "local_storage_namespace": "soundalike-active-v4",
+  "schema_version": 2,
+  "protocol_kind": "active_full_ranking_listener_v4_private_submission",
+  "submission_schema": "v4_active_listener_submission_v2",
+  "pilot_pack_sha256": "899197ad4eed5b84d69e2f37ee2a4fc04f36f73ed1bf0a8421dd1ef5654b1384",
+  "local_storage_namespace": "soundalike-active-v4-ranking-v2",
   "submission_endpoint": "/api/ratings-v4",
-  "private_blob_prefix": "human-ratings/active-v4/",
+  "private_blob_prefix": "human-ratings/active-v4-ranking-v2/",
   "task_count": 18,
   "unique_task_count": 16,
   "repeated_anchor_count": 2,
@@ -15,9 +15,10 @@
   "partial_submission_allowed": true,
   "skip_allowed": true,
   "language_evaluated": true,
+  "unknown_language_allowed": false,
   "transcription_saved": false,
   "research_only": true,
   "promotion_allowed": false,
   "production_recommendation_changed": false,
-  "content_sha256": "ab878afe8fa05c9dc735b483a684aa8b713e76dc00b53877f1c421d666c10d9c"
+  "content_sha256": "c0a1ff45bd5c57099aff352553b84579df8d3b4fc806bcb74e731b0dd5581966"
 }

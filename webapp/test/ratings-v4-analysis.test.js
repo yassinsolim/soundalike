@@ -63,11 +63,10 @@ const privateMap = {
   ],
 };
 
-function rated(most, least, reason) {
+function rated(ranking, reason) {
   return {
     outcome: "rated",
-    most_similar_choice_id: most,
-    least_similar_choice_id: least,
+    ranked_choice_ids: ranking,
     worst_primary_reason: reason,
     skip_reason: null,
   };
@@ -81,7 +80,10 @@ test("uses the latest snapshot, avoids anchor double counting, and reports consi
       received_at: "2026-01-01T00:00:02.000Z",
       canonical_payload_sha256: "a",
       task_ratings: {
-        "v4-task-a": rated("a-control", "a-challenger", "tempo_pacing"),
+        "v4-task-a": rated(
+          ["a-control", "a-fill", "a-shared", "a-challenger"],
+          "tempo_pacing",
+        ),
       },
     },
     {
@@ -90,12 +92,17 @@ test("uses the latest snapshot, avoids anchor double counting, and reports consi
       received_at: "2026-01-01T00:00:04.000Z",
       canonical_payload_sha256: "b",
       task_ratings: {
-        "v4-task-a": rated("a-challenger", "a-control", "tone_timbre"),
-        "v4-anchor-a": rated("r-challenger", "r-control", "tone_timbre"),
+        "v4-task-a": rated(
+          ["a-challenger", "a-fill", "a-shared", "a-control"],
+          "tone_timbre",
+        ),
+        "v4-anchor-a": rated(
+          ["r-challenger", "r-fill", "r-shared", "r-control"],
+          "tone_timbre",
+        ),
         "v4-task-b": {
           outcome: "skipped",
-          most_similar_choice_id: null,
-          least_similar_choice_id: null,
+          ranked_choice_ids: null,
           worst_primary_reason: null,
           skip_reason: "audio_problem",
         },
@@ -115,13 +122,18 @@ test("uses the latest snapshot, avoids anchor double counting, and reports consi
     skipped: 1,
     skip_rate: 0.5,
   });
-  assert.equal(report.method_pairwise_evidence.challenger_over_control, 1);
+  assert.deepEqual(report.method_pairwise_evidence, {
+    challenger_over_control: 1,
+    control_over_challenger: 0,
+    ambiguous_or_within_method: 5,
+  });
   assert.equal(report.worst_primary_mismatch_reasons.tone_timbre, 1);
   assert.equal(report.skip_reasons.audio_problem, 1);
   assert.deepEqual(report.repeated_anchor_consistency, {
     completed_pairs: 1,
     rated_pairs: 1,
     exact_matches: 1,
+    full_ranking_matches: 1,
     most_similar_matches: 1,
     least_similar_matches: 1,
     mismatch_reason_matches: 1,

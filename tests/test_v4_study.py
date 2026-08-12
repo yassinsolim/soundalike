@@ -27,6 +27,25 @@ def test_artist_diverse_skips_gated_candidates():
         )
 
 
+def test_artist_unique_pool_keeps_closest_track_per_artist():
+    tracks = [
+        SimpleNamespace(track_id=10, artist_id=1),
+        SimpleNamespace(track_id=11, artist_id=1),
+        *[
+            SimpleNamespace(track_id=20 + index, artist_id=2 + index)
+            for index in range(15)
+        ],
+    ]
+    positions = np.arange(len(tracks), dtype=np.int64)
+    similarities = np.linspace(1.0, 0.0, len(tracks))
+    selected = v4_study._artist_unique_pool(
+        positions, similarities, tracks, 200
+    )
+    assert selected[:2].tolist() == [0, 2]
+    assert len(selected) == 16
+    assert len({tracks[position].artist_id for position in selected}) == 16
+
+
 def test_seed_selection_excludes_non_song_length_edges():
     assert v4_study.MINIMUM_SEED_SECONDS == 90.0
     assert v4_study.MAXIMUM_SEED_SECONDS == 480.0
@@ -106,7 +125,8 @@ def test_repeated_vibe_cache_reuses_exact_rows_and_extracts_only_missing(
 
 def test_gate_cache_rejects_tampering(tmp_path):
     cache = {
-        "gate_kind": "soundalike_v4_study_track_gates",
+        "schema_version": 2,
+        "gate_kind": "soundalike_v4_study_track_gates_v2",
         "source_fingerprint": "source",
         "tracks": {
             "10": {"vocal_state": "vocal", "language": "en"},

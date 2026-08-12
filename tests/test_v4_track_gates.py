@@ -30,6 +30,19 @@ def test_conservative_vocal_state_rejects_invalid_state():
         track_gates.conservative_vocal_state("speech", VOCAL)
 
 
+def test_confident_language_establishes_vocal_state():
+    assert (
+        track_gates.resolved_vocal_state(UNKNOWN, INSTRUMENTAL, "ru")
+        == VOCAL
+    )
+    assert (
+        track_gates.resolved_vocal_state(INSTRUMENTAL, INSTRUMENTAL, UNKNOWN)
+        == INSTRUMENTAL
+    )
+    with pytest.raises(track_gates.V4TrackGateError, match="language"):
+        track_gates.resolved_vocal_state(VOCAL, VOCAL, "")
+
+
 def test_bound_report_rejects_tampering(tmp_path):
     report = {
         "probe_kind": "expected-kind",

@@ -11,7 +11,8 @@ motivated its feature hypothesis but did not fit weights. Language is not evalua
 and `promotion_allowed` and `production_recommendation_changed` remain false. Its
 approximately 20-second playback segment is a recurrence heuristic, not a verified
 chorus classifier. The active `/evaluate` route now hosts the later V4 active
-best/worst study; neither evaluator changes production recommendations.
+full-ranking study with strict same-language vocal tasks; neither evaluator changes
+production recommendations.
 
 The strongest MusicFM
 final-reserve candidate reached +20.005% development Recall@10 but only +0.286%

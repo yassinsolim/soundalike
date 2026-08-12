@@ -55,16 +55,17 @@ Spotify's own site, never hand over a password) to save results as a playlist. S
 
 **Help with the blind study:** open the public
 [listening evaluator](https://soundalike.yassin.app/evaluate). The active research-only
-study presents one seed and four blinded candidates, then asks for the most similar,
-least similar, and one primary mismatch reason. Disagreement-first ordering and two
+study presents one seed and four blinded candidates, then asks the listener to rank
+all four from closest to least close and give one primary mismatch reason for fourth
+place. Disagreement-first ordering and two
 repeated consistency checks concentrate the listening time on decisions that can
 actually change the next ranking. The core study stops after 12 unique comparisons;
 four optional robustness comparisons remain available.
 
 Playback uses an approximately 20-second strongest-recurrence excerpt. This is a
-repeated-section heuristic, not a verified chorus classifier. High-confidence vocal
-and singing-language mismatches are filtered using conservative independent detectors;
-ambiguous tracks remain eligible instead of being guessed. Attribution stays hidden
+repeated-section heuristic, not a verified chorus classifier. Every reserve track is
+checked for singing language. Vocal tasks require a known language and same-language
+candidates; ambiguous vocal/language tracks are excluded. Attribution stays hidden
 until each task is completed or skipped. The prior pacing V3 study remains available at
 [`/evaluate-pacing-v3`](https://soundalike.yassin.app/evaluate-pacing-v3), semantic v2 at
 [`/evaluate-semantic-v2`](https://soundalike.yassin.app/evaluate-semantic-v2), the locked

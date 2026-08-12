@@ -35,7 +35,7 @@ def test_thresholds_leave_ambiguous_scores_unknown():
     ) == gates.UNKNOWN
 
 
-def test_language_and_compatibility_fail_open_on_unknown():
+def test_language_and_compatibility_require_known_matching_language():
     known = gates.decide_language(
         {"en": 0.9, "es": 0.05},
         minimum_confidence=0.8,
@@ -48,10 +48,17 @@ def test_language_and_compatibility_fail_open_on_unknown():
     )
     assert known.language == "en"
     assert ambiguous.language == gates.UNKNOWN
-    assert gates.compatibility_allowed(gates.VOCAL, gates.UNKNOWN, "en", "es")
+    assert not gates.compatibility_allowed(gates.VOCAL, gates.UNKNOWN, "en", "es")
     assert not gates.compatibility_allowed(gates.VOCAL, gates.INSTRUMENTAL)
     assert not gates.compatibility_allowed(gates.VOCAL, gates.VOCAL, "en", "es")
-    assert gates.compatibility_allowed(gates.VOCAL, gates.VOCAL, "en", gates.UNKNOWN)
+    assert not gates.compatibility_allowed(
+        gates.VOCAL, gates.VOCAL, "en", gates.UNKNOWN
+    )
+    assert gates.compatibility_allowed(gates.VOCAL, gates.VOCAL, "en", "en")
+    assert gates.compatibility_allowed(
+        gates.INSTRUMENTAL,
+        gates.INSTRUMENTAL,
+    )
 
 
 def test_language_threshold_calibration_preserves_precision_floor():
