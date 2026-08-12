@@ -127,6 +127,16 @@ test("uses the latest snapshot, avoids anchor double counting, and reports consi
     control_over_challenger: 0,
     ambiguous_or_within_method: 5,
   });
+  assert.deepEqual(report.method_pairwise_inference, {
+    comparable_pairs: 1,
+    challenger_win_rate: 1,
+    rated_task_observations: 1,
+    task_clusters: 1,
+    listener_clusters: 1,
+    observed_challenger_minus_control_wins: 1,
+    exact_task_sign_flip_one_sided_p: 0.5,
+    exact_listener_sign_flip_one_sided_p: 0.5,
+  });
   assert.equal(report.worst_primary_mismatch_reasons.tone_timbre, 1);
   assert.equal(report.skip_reasons.audio_problem, 1);
   assert.deepEqual(report.repeated_anchor_consistency, {
@@ -140,4 +150,28 @@ test("uses the latest snapshot, avoids anchor double counting, and reports consi
   });
   assert.equal(report.automatic_promotion_allowed, false);
   assert.equal(report.promotion_decision, "not_evaluated");
+});
+
+test("does not multiply V4 task clusters across listeners", () => {
+  const taskRating = rated(
+    ["a-challenger", "a-fill", "a-shared", "a-control"],
+    "tone_timbre",
+  );
+  const records = ["1", "2"].map((value) => ({
+    session_id: `session-${value}`,
+    exported_at: `2026-01-01T00:00:0${value}.000Z`,
+    received_at: `2026-01-01T00:00:1${value}.000Z`,
+    canonical_payload_sha256: value,
+    task_ratings: { "v4-task-a": taskRating },
+  }));
+  const inference = analyzeV4Snapshots(
+    records,
+    pack,
+    privateMap,
+  ).method_pairwise_inference;
+  assert.equal(inference.rated_task_observations, 2);
+  assert.equal(inference.task_clusters, 1);
+  assert.equal(inference.listener_clusters, 2);
+  assert.equal(inference.exact_task_sign_flip_one_sided_p, 0.5);
+  assert.equal(inference.exact_listener_sign_flip_one_sided_p, 0.25);
 });

@@ -10,8 +10,8 @@ features, and existing semantic predictors; it does not use MusicFM. Prior ratin
 motivated its feature hypothesis but did not fit weights. Language is not evaluated,
 and `promotion_allowed` and `production_recommendation_changed` remain false. Its
 approximately 20-second playback segment is a recurrence heuristic, not a verified
-chorus classifier. The active `/evaluate` route now hosts the later V4 active
-full-ranking study with strict same-language vocal tasks; neither evaluator changes
+chorus classifier. The active `/evaluate` route now hosts the later V5 full-ranking
+study with fail-closed three-position same-language vocal tasks; neither evaluator changes
 production recommendations.
 
 The strongest MusicFM
