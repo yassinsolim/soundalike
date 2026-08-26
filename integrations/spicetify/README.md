@@ -26,9 +26,19 @@ automatically uses the hosted 272,853-track recommendation library.
   names, album names, and measured BPM.
 - For a seed with a known Spotify lyrics language, only candidates with that
   exact known language are shown (English with English, French with French,
-  and so on). Different-language candidates and candidates with unavailable
-  language metadata are hidden rather than used as fallbacks, so strict
-  filtering can return fewer than 20 results.
+  and so on). The gate examines only the model's original top 20: it never
+  promotes a weak lower-ranked song merely because that song has language
+  metadata. Results stay hidden until the checks finish instead of flashing
+  an unfiltered list first.
+- Different-language candidates and candidates with genuinely unavailable
+  lyrics metadata are hidden rather than used as fallbacks, so strict
+  filtering can return fewer than 20 results. "No lyrics metadata" does not
+  mean Spotify detected a foreign language; it means language could not be
+  established safely.
+- Temporary Spotify language failures are retried and are not cached as
+  permanent unknowns. Among exact-language candidates in the top 20, artists
+  Spotify directly relates to the seed artist are shown first while preserving
+  the model order within each group.
 - If Spotify has no language for the seed, Soundalike preserves the normal
   ranking. Lyrics metadata alone cannot safely distinguish an instrumental
   from a metadata failure.
@@ -43,8 +53,8 @@ automatically uses the hosted 272,853-track recommendation library.
   page. It never plays a low-confidence match.
 - Successful recommendations and resolved Spotify metadata are cached locally
   for seven days, so reopening the same track avoids repeating the expensive
-  recommendation and catalog lookups. Unresolved Spotify searches are not
-  cached, so a temporary catalog miss can recover on the next attempt.
+  recommendation and catalog lookups. Unresolved Spotify searches and failed
+  language checks are not cached, so a temporary miss can recover.
 
 ## Privacy
 
@@ -53,8 +63,9 @@ Soundalike sends the selected track's title and artist to
 service is unavailable, it sends the same title and artist to
 `https://soundalike.yassin.app` as a fallback. It never sends your Spotify
 password, access token, library, listening history, or artwork. Language
-labels come directly from Spotify inside the already-authenticated desktop
-client and are not sent to Soundalike. No separate Spotify login is required.
+labels and related-artist context come directly from Spotify inside the
+already-authenticated desktop client and are not sent to Soundalike. No
+separate Spotify login is required.
 
 ## Good to know
 

@@ -90,8 +90,10 @@ not mislabeled or deployed as a commercial-catalog model. Production keeps the
 independently validated `dual_sonic64_guardrail` ranker while the Spicetify
 integration adopts V5's deployable improvement: exact known-language matches,
 with different or unavailable candidate languages hidden for a known-language
-seed. The prior V4 pack remains rejected because a later three-position audit
-invalidated 13 of its 18 tasks.
+seed. Only the model's original top 20 are eligible, failed language lookups
+retry instead of becoming seven-day unknowns, and Spotify-related artists are
+prioritized within that strict quality head. The prior V4 pack remains rejected
+because a later three-position audit invalidated 13 of its 18 tasks.
 
 **V3 research is complete but not shipped.** Its strongest final-reserve candidate
 reached the preregistered +20% development target, then improved independent shadow

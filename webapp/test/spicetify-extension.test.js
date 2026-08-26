@@ -39,11 +39,13 @@ function loadExtension(fetchImpl, options = {}) {
   const rows = (options.results || []).map((_, index) => ({
     dataset: { index: String(index) },
     hidden: index >= 20,
+    style: {},
     querySelector() {
       return null;
     },
   }));
   const languageStatus = { textContent: "" };
+  const languageLoading = { hidden: false };
   function makeDiv() {
     return {
       className: "",
@@ -65,6 +67,7 @@ function loadExtension(fetchImpl, options = {}) {
       },
       querySelector(selector) {
         if (selector === ".sa-language-status") return languageStatus;
+        if (selector === ".sa-language-loading") return languageLoading;
         const match = selector.match(/data-index="(\d+)"/);
         return match ? rows[Number(match[1])] : null;
       },
@@ -91,6 +94,7 @@ function loadExtension(fetchImpl, options = {}) {
   Object.assign(wrap, {
     querySelector(selector) {
       if (selector === ".sa-language-status") return languageStatus;
+      if (selector === ".sa-language-loading") return languageLoading;
       const match = selector.match(/data-index="(\d+)"/);
       return match ? rows[Number(match[1])] : null;
     },
@@ -208,10 +212,20 @@ function loadExtension(fetchImpl, options = {}) {
     "search-tracks",
     null,
   );
+  const queryArtistRelated = new GraphQLDefinition(
+    "queryArtistRelated",
+    "query",
+    "artist-related",
+    null,
+  );
   const definitions = { getTrack, searchModalResults };
   if (options.includeSearchTracksDefinition !== false) {
     definitions.searchTracks = searchTracks;
   }
+  if (options.includeRelatedArtistsDefinition !== false) {
+    definitions.queryArtistRelated = queryArtistRelated;
+  }
+  const languageAttempts = new Map();
   context.Spicetify = {
     ContextMenu: {
       Item: class {
@@ -226,6 +240,11 @@ function loadExtension(fetchImpl, options = {}) {
       async Request(definition, variables) {
         graphqlRequests.push({ definition, variables });
         if (definition === getTrack) {
+          if (options.seedTrack && variables?.uri === "spotify:track:test") {
+            return {
+              data: { trackUnion: options.seedTrack },
+            };
+          }
           if (
             options.spotifyTrackDetails &&
             variables?.uri === options.spotifyTrackDetails.uri
@@ -239,6 +258,19 @@ function loadExtension(fetchImpl, options = {}) {
               trackUnion: {
                 name: "Blinding Lights",
                 firstArtist: { items: [{ profile: { name: "The Weeknd" } }] },
+              },
+            },
+          };
+        }
+        if (definition === queryArtistRelated) {
+          return {
+            data: {
+              artistUnion: {
+                relatedContent: {
+                  relatedArtists: {
+                    items: options.relatedArtists || [],
+                  },
+                },
               },
             },
           };
@@ -284,7 +316,13 @@ function loadExtension(fetchImpl, options = {}) {
         async get(url) {
           cosmosRequests.push(url);
           const trackId = url.match(/\/track\/([^?]+)/)?.[1];
-          const language = options.languageByTrackId[trackId];
+          const configured = options.languageByTrackId[trackId];
+          const attempt = languageAttempts.get(trackId) || 0;
+          languageAttempts.set(trackId, attempt + 1);
+          const language = Array.isArray(configured)
+            ? configured[Math.min(attempt, configured.length - 1)]
+            : configured;
+          if (language?.error) throw new Error(language.error);
           return language
             ? { lyrics: { language } }
             : { code: 404, error: "lyrics unavailable" };
@@ -366,6 +404,7 @@ function loadExtension(fetchImpl, options = {}) {
     cosmosRequests,
     nativeChildren: pageContainer.children,
     languageStatus,
+    languageLoading,
     rows,
     get currentPage() {
       return currentPage;
@@ -415,13 +454,13 @@ test("uses the always-on hosted library when the local companion is unavailable"
     /^https:\/\/soundalike-api\.yassin\.app\/api\/spicetify_recommend\?/,
   );
   assert.match(page.innerHTML, /Dual-Sonic64/);
-  assert.match(page.innerHTML, /V5 strict language/);
+  assert.match(page.innerHTML, /V5 strict \+ artist context/);
   assert.equal(new URL(urls[1]).searchParams.get("v"), "4");
   assert.equal(
     new URL(urls[1]).searchParams.get("language_policy"),
     "spotify-lyrics-strict-v2",
   );
-  assert.equal(new URL(urls[1]).searchParams.get("n"), "50");
+  assert.equal(new URL(urls[1]).searchParams.get("n"), "20");
   assert.match(page.innerHTML, /HOSTED LIBRARY/);
   assert.deepEqual(app.history, ["/soundalike"]);
   assert.equal(
@@ -824,7 +863,7 @@ test("does not persist unresolved Spotify searches", async () => {
   await first.run();
   await new Promise((resolve) => setTimeout(resolve, 150));
 
-  const persisted = JSON.parse(storage.get("soundalike:spicetify-cache:v6"));
+  const persisted = JSON.parse(storage.get("soundalike:spicetify-cache:v7"));
   const cacheId = "result:catalog miss::unknown artist";
   assert.equal(Object.hasOwn(persisted.spotifyTracks, cacheId), false);
 
@@ -940,16 +979,173 @@ test("strictly filters cross-language and unavailable-language results", async (
   });
 
   await app.run();
-  await new Promise((resolve) => setTimeout(resolve, 20));
+  await new Promise((resolve) => setTimeout(resolve, 450));
 
   assert.match(app.languageStatus.textContent, /French lyrics/);
-  assert.equal(app.cosmosRequests.length, 4);
+  assert.equal(app.cosmosRequests.length, 5);
   assert.equal(app.rows[0].hidden, false);
   assert.equal(app.rows[1].hidden, true);
   assert.equal(app.rows[2].hidden, true);
+  assert.equal(app.languageLoading.hidden, true);
+  assert.equal(
+    (app.currentPage.innerHTML.match(/class="sa-row"[^>]* hidden/g) || []).length,
+    3,
+  );
   assert.match(app.languageStatus.textContent, /1 exact match/);
   assert.match(app.languageStatus.textContent, /1 different hidden/);
-  assert.match(app.languageStatus.textContent, /1 unavailable hidden/);
+  assert.match(app.languageStatus.textContent, /1 no-lyrics hidden/);
+});
+
+test("retries transient lyrics misses before hiding a candidate", async () => {
+  const result = { title: "Recovered Song", artist: "Related Artist" };
+  const spotifyTrack = {
+    __typename: "Track",
+    name: result.title,
+    uri: "spotify:track:result0",
+    albumOfTrack: { coverArt: { sources: [] } },
+    artists: {
+      items: [{
+        uri: "spotify:artist:related",
+        profile: { name: result.artist },
+      }],
+    },
+  };
+  const app = loadExtension(async (url) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    return response(200, { ...recommendation, results: [result] });
+  }, {
+    results: [result],
+    spotifyTrack,
+    languageByTrackId: {
+      test: "en",
+      result0: [null, "en"],
+    },
+  });
+
+  await app.run();
+  await new Promise((resolve) => setTimeout(resolve, 450));
+
+  assert.equal(app.rows[0].hidden, false);
+  assert.equal(app.cosmosRequests.length, 3);
+  assert.match(app.languageStatus.textContent, /1 exact match in top 1/);
+});
+
+test("does not persist failed language lookups as unavailable", async () => {
+  const storage = new Map();
+  const result = { title: "Retry Song", artist: "Retry Artist" };
+  const spotifyTrack = {
+    __typename: "Track",
+    name: result.title,
+    uri: "spotify:track:result0",
+    albumOfTrack: { coverArt: { sources: [] } },
+    artists: { items: [{ profile: { name: result.artist } }] },
+  };
+  const app = loadExtension(async (url) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    return response(200, { ...recommendation, results: [result] });
+  }, {
+    results: [result],
+    spotifyTrack,
+    storage,
+    languageByTrackId: {
+      test: "en",
+      result0: [
+        { error: "temporary failure" },
+        { error: "temporary failure" },
+        "en",
+      ],
+    },
+  });
+
+  await app.run();
+  await new Promise((resolve) => setTimeout(resolve, 450));
+  assert.equal(app.rows[0].hidden, true);
+  assert.match(app.languageStatus.textContent, /1 checks failed/);
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  const firstCache = JSON.parse(storage.get("soundalike:spicetify-cache:v7"));
+  const cacheId = "result:retry song::retry artist";
+  assert.equal(
+    Object.hasOwn(firstCache.spotifyTracks[cacheId].value, "soundalikeLanguage"),
+    false,
+  );
+
+  await app.run();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(app.rows[0].hidden, false);
+  assert.equal(app.cosmosRequests.length, 4);
+});
+
+test("prioritizes related artists only inside the original quality head", async () => {
+  const results = [
+    { title: "Unrelated One", artist: "Unrelated Artist" },
+    { title: "Related One", artist: "Related Artist" },
+    ...Array.from({ length: 18 }, (_, index) => ({
+      title: `Head ${index}`,
+      artist: `Head Artist ${index}`,
+    })),
+    { title: "Related Tail", artist: "Related Artist" },
+  ];
+  const spotifyTracks = Object.fromEntries(results.map((result, index) => [
+    `${result.title} ${result.artist}`,
+    {
+      __typename: "Track",
+      name: result.title,
+      uri: `spotify:track:result${index}`,
+      albumOfTrack: { coverArt: { sources: [] } },
+      artists: {
+        items: [{
+          uri: index === 1 || index === 20
+            ? "spotify:artist:related"
+            : `spotify:artist:unrelated${index}`,
+          profile: { name: result.artist },
+        }],
+      },
+    },
+  ]));
+  const languageByTrackId = Object.fromEntries([
+    ["test", "en"],
+    ...results.map((_, index) => [`result${index}`, "en"]),
+  ]);
+  const app = loadExtension(async (url) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    return response(200, { ...recommendation, results });
+  }, {
+    results,
+    seedTrack: {
+      __typename: "Track",
+      name: "Blinding Lights",
+      uri: "spotify:track:test",
+      firstArtist: {
+        items: [{
+          uri: "spotify:artist:seed",
+          profile: { name: "The Weeknd" },
+        }],
+      },
+      albumOfTrack: { coverArt: { sources: [] } },
+    },
+    spotifyTracks,
+    languageByTrackId,
+    relatedArtists: [{
+      id: "related",
+      uri: "spotify:artist:related",
+      profile: { name: "Related Artist" },
+    }],
+  });
+
+  await app.run();
+  await new Promise((resolve) => setTimeout(resolve, 150));
+
+  assert.equal(
+    app.graphqlRequests.some(
+      ({ definition }) => definition?.name === "queryArtistRelated",
+    ),
+    true,
+  );
+  assert.equal(app.rows[1].hidden, false);
+  assert.equal(app.rows[1].style.order, "1");
+  assert.equal(app.rows[0].style.order, "2");
+  assert.equal(app.rows[20].hidden, true);
+  assert.match(app.languageStatus.textContent, /1 related prioritized/);
 });
 
 test("reuses persisted recommendations and Spotify metadata on repeated tracks", async () => {
@@ -958,6 +1154,7 @@ test("reuses persisted recommendations and Spotify metadata on repeated tracks",
   storage.set("soundalike:spicetify-cache:v3", "{\"oversized\":true}");
   storage.set("soundalike:spicetify-cache:v4", "{\"negative\":true}");
   storage.set("soundalike:spicetify-cache:v5", "{\"permissive\":true}");
+  storage.set("soundalike:spicetify-cache:v6", "{\"deepTail\":true}");
   const result = { title: "Take My Breath", artist: "The Weeknd", bpm: 122 };
   const spotifyTrack = {
     __typename: "Track",
@@ -990,6 +1187,7 @@ test("reuses persisted recommendations and Spotify metadata on repeated tracks",
   assert.equal(storage.has("soundalike:spicetify-cache:v3"), false);
   assert.equal(storage.has("soundalike:spicetify-cache:v4"), false);
   assert.equal(storage.has("soundalike:spicetify-cache:v5"), false);
+  assert.equal(storage.has("soundalike:spicetify-cache:v6"), false);
 
   await first.run();
   await new Promise((resolve) => setTimeout(resolve, 250));
@@ -997,8 +1195,8 @@ test("reuses persisted recommendations and Spotify metadata on repeated tracks",
     urls.filter((url) => url.includes("/api/spicetify_recommend")).length,
     1,
   );
-  const persisted = JSON.parse(storage.get("soundalike:spicetify-cache:v6"));
-  assert.ok(storage.get("soundalike:spicetify-cache:v6").length < 10000);
+  const persisted = JSON.parse(storage.get("soundalike:spicetify-cache:v7"));
+  assert.ok(storage.get("soundalike:spicetify-cache:v7").length < 10000);
   assert.ok(persisted.spotifyTracks["spotify:track:test"]);
 
   const second = loadExtension(async (url) => {
