@@ -148,7 +148,10 @@ def test_spicetify_bpm_uses_track_id_for_duplicate_titles():
 
 
 def test_spicetify_query_canonicalization_uses_decoded_values():
-    from spicetify_recommend import _needs_canonical_redirect
+    from spicetify_recommend import (
+        _language_policy_supported,
+        _needs_canonical_redirect,
+    )
 
     params = {
         "query": ["Blinding Lights — The Weeknd"],
@@ -190,6 +193,82 @@ def test_spicetify_query_canonicalization_uses_decoded_values():
         "spotify-lyrics-v1",
         True,
     )
+
+    params = {
+        "query": ["Blinding Lights — The Weeknd"],
+        "n": ["50"],
+        "diversity": ["0.15"],
+        "v": ["4"],
+        "language_policy": ["spotify-lyrics-strict-v2"],
+    }
+    assert not _needs_canonical_redirect(
+        params,
+        "Blinding Lights — The Weeknd",
+        50,
+        0.15,
+        "4",
+        "spotify-lyrics-strict-v2",
+    )
+    assert _language_policy_supported("2", None)
+    assert _language_policy_supported("3", "spotify-lyrics-v1")
+    assert _language_policy_supported("4", "spotify-lyrics-strict-v2")
+    assert not _language_policy_supported("4", "spotify-lyrics-v1")
+
+
+def test_spicetify_v4_endpoint_accepts_only_the_strict_policy(monkeypatch):
+    import spicetify_recommend
+
+    class Recommender:
+        feature_names = ["tempo"]
+        track_ids = np.asarray([101, 202])
+        _vscaled = np.asarray([[100.0], [120.0]])
+        _w = np.asarray([1.0])
+        _vstd = np.asarray([1.0])
+        _vmean = np.asarray([0.0])
+
+        @staticmethod
+        def find_row(_title, _artist):
+            return 0
+
+        @staticmethod
+        def recommend(_row, **_kwargs):
+            return {
+                "ok": True,
+                "results": [{
+                    "deezer_id": 202,
+                    "title": "Candidate",
+                    "artist": "Artist",
+                }],
+                "vibe": {},
+            }
+
+    monkeypatch.setattr(spicetify_recommend, "get_recommender", Recommender)
+    request = spicetify_recommend.handler.__new__(spicetify_recommend.handler)
+    sent = []
+    request._send = lambda code, body, cacheable=True: sent.append(
+        (code, body, cacheable)
+    )
+    request._redirect = lambda _location: pytest.fail("unexpected redirect")
+    request.path = (
+        "/api/spicetify_recommend?query=Seed&n=1&diversity=0.15&v=4"
+        "&language_policy=spotify-lyrics-strict-v2"
+    )
+
+    request.do_GET()
+
+    assert sent[0][0] == 200
+    assert sent[0][1]["language_policy"] == "spotify-lyrics-strict-v2"
+    assert sent[0][1]["results"][0]["bpm"] == 120
+
+    sent.clear()
+    request.path = (
+        "/api/spicetify_recommend?query=Seed&n=1&diversity=0.15&v=4"
+        "&language_policy=spotify-lyrics-v1"
+    )
+    request.do_GET()
+    assert sent == [
+        (400, {"ok": False, "error": "unsupported language policy"}, True)
+    ]
 
 
 def test_enhanced_recommender_differs_from_baseline(tmp_path):

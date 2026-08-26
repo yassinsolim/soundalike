@@ -24,10 +24,14 @@ automatically uses the hosted 272,853-track recommendation library.
   and the list stays visible while music plays.
 - Results use a playlist-style layout with album artwork, verified artist
   names, album names, and measured BPM.
-- Spotify's own lyrics metadata keeps confidently identified languages
-  together (English with English, French with French, and so on). Tracks
-  without lyrics/language metadata remain eligible as a fallback, so
-  instrumentals and sparse-language catalogs do not produce an empty page.
+- For a seed with a known Spotify lyrics language, only candidates with that
+  exact known language are shown (English with English, French with French,
+  and so on). Different-language candidates and candidates with unavailable
+  language metadata are hidden rather than used as fallbacks, so strict
+  filtering can return fewer than 20 results.
+- If Spotify has no language for the seed, Soundalike preserves the normal
+  ranking. Lyrics metadata alone cannot safely distinguish an instrumental
+  from a metadata failure.
 - The play button on a verified result plays that exact Spotify track
   immediately without closing or leaving the page. Double-clicking anywhere
   on the row does the same; a single click does not interrupt playback.
@@ -60,11 +64,17 @@ client and are not sent to Soundalike. No separate Spotify login is required.
   seconds. Repeated tracks use the local cache, and hosted responses can be
   reused by the CDN.
 - The hosted library currently covers 272,853 tracks.
-- Production uses the V2 `dual_sonic64_guardrail` model. The `v=3` value in an
-  extension network request is the language-policy API contract, not a V3
-  recommendation model. The public `/evaluate` page is the locked V2 blind
-  pilot; no public V3 evaluator exists because the research candidate failed
-  its independent promotion gate.
+- Production ranking continues to use the independently validated
+  `dual_sonic64_guardrail` model. The `v=4` value in an extension request is
+  the strict Spotify-lyrics policy contract, not a V4 recommendation model.
+  It invalidates permissive cached results and fails over to the Vercel
+  endpoint if the always-on service has not yet received the new contract.
+- The completed V5 receipt favored the full-track acoustic control by 56/96
+  pairwise choices, versus 54/96 for the preference head and 46/96 for fixed
+  V4. That research scorer depends on Jamendo full-track section embeddings
+  unavailable for arbitrary Spotify songs, so it is not falsely presented as
+  the production ranker. V5's exact-language behavior is the deployable policy
+  promoted here.
 - Spotify availability and Soundalike library coverage are different. The
   extension can now resolve recommendations through Spotify's full Songs
   search, but a Spotify seed that is absent from the 272,853-track embedding

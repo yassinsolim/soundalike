@@ -14,18 +14,19 @@
   const PRIMARY_HOSTED_TIMEOUT_MS = 5000;
   const FALLBACK_HOSTED_TIMEOUT_MS = 65000;
   const LOCAL_STATUS_TTL_MS = 30000;
-  const CACHE_KEY = "soundalike:spicetify-cache:v5";
+  const CACHE_KEY = "soundalike:spicetify-cache:v6";
   const LEGACY_CACHE_KEYS = [
     "soundalike:spicetify-cache:v2",
     "soundalike:spicetify-cache:v3",
     "soundalike:spicetify-cache:v4",
+    "soundalike:spicetify-cache:v5",
   ];
   const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
   const MAX_RECOMMENDATION_CACHE_SIZE = 50;
   const MAX_SPOTIFY_CACHE_SIZE = 500;
-  const HOSTED_API_VERSION = "3";
-  const LANGUAGE_POLICY = "spotify-lyrics-v1";
-  const RECOMMENDATION_POOL_SIZE = 40;
+  const HOSTED_API_VERSION = "4";
+  const LANGUAGE_POLICY = "spotify-lyrics-strict-v2";
+  const RECOMMENDATION_POOL_SIZE = 50;
   const DISPLAY_RESULT_COUNT = 20;
   const SPOTIFY_TRACK_SEARCH_LIMIT = 20;
   const SPOTIFY_TRACK_SEARCH_HASH =
@@ -140,7 +141,7 @@
     } catch {
       throw new Error(`Recommendation service returned HTTP ${response.status}.`);
     }
-    if (!response.ok && response.status !== 400 && response.status !== 422) {
+    if (!response.ok && response.status !== 422) {
       throw new Error(
         result?.error || `Recommendation service returned HTTP ${response.status}.`
       );
@@ -858,15 +859,18 @@
   function applyLanguageGate(page, results, tracks, seedLanguage) {
     const eligible = [];
     let sameLanguage = 0;
-    let unknown = 0;
+    let unavailable = 0;
+    let differentLanguage = 0;
     for (let index = 0; index < results.length; index++) {
       const language = tracks[index]?.soundalikeLanguage || null;
-      if (!seedLanguage || language === seedLanguage || !language) {
-        eligible.push(index);
+      if (!seedLanguage || language === seedLanguage) {
+        if (eligible.length < DISPLAY_RESULT_COUNT) eligible.push(index);
         if (language === seedLanguage) sameLanguage++;
-        else if (!language) unknown++;
+      } else if (!language) {
+        unavailable++;
+      } else {
+        differentLanguage++;
       }
-      if (eligible.length >= DISPLAY_RESULT_COUNT) break;
     }
     const visible = new Set(eligible);
     page.querySelectorAll(".sa-row").forEach((row) => {
@@ -891,12 +895,21 @@
       return;
     }
     status.textContent = `${languageName(seedLanguage)} lyrics · ` +
-      `${sameLanguage} matched${unknown ? ` · ${unknown} unknown fallback` : ""}`;
+      `${sameLanguage} exact ${sameLanguage === 1 ? "match" : "matches"}` +
+      `${differentLanguage ? ` · ${differentLanguage} different hidden` : ""}` +
+      `${unavailable ? ` · ${unavailable} unavailable hidden` : ""}`;
+    if (!eligible.length) {
+      Spicetify.showNotification(
+        `No exact ${languageName(seedLanguage)}-language matches were found.`,
+        true
+      );
+    }
   }
 
   async function hydrateSpotifyRows(results, page, tracks, seedLanguage) {
     if (!Spicetify.GraphQL.Definitions.searchModalResults) {
       console.warn("[soundalike] Spotify artwork lookup is unavailable in this client.");
+      applyLanguageGate(page, results, tracks, seedLanguage);
       return;
     }
     let cursor = 0;
@@ -947,9 +960,9 @@
       ? `${languageName(seedLanguage)} lyrics · checking recommendations`
       : "Language gate unavailable - preserving normal ranking";
     const modelLabel = data.method === "dual_sonic64_guardrail"
-      ? "V2 model"
+      ? "Dual-Sonic64"
       : "Production model";
-    const tags = [modelLabel, v.tempo, v.dynamics, v.low_end, v.tone]
+    const tags = [modelLabel, "V5 strict language", v.tempo, v.dynamics, v.low_end, v.tone]
       .map((t) => `<span class="sa-tag">${esc(t)}</span>`)
       .join("") +
       `<span class="sa-tag sa-language-status">${esc(languageStatus)}</span>`;

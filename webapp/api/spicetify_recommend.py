@@ -40,7 +40,15 @@ def _enrich_result_tempos(recommender, result):
     return result
 
 
-_LANGUAGE_POLICY = "spotify-lyrics-v1"
+_LANGUAGE_POLICIES = {
+    "3": "spotify-lyrics-v1",
+    "4": "spotify-lyrics-strict-v2",
+}
+_SUPPORTED_API_VERSIONS = frozenset({"2", *_LANGUAGE_POLICIES})
+
+
+def _language_policy_supported(version, language_policy):
+    return language_policy == _LANGUAGE_POLICIES.get(version)
 
 
 def _needs_canonical_redirect(
@@ -95,12 +103,10 @@ class handler(BaseHTTPRequestHandler):
         ):
             return self._send(400, {"ok": False, "error": "invalid query parameters"})
         version = params.get("v", ["2"])[0]
-        if version not in {"2", "3"}:
+        if version not in _SUPPORTED_API_VERSIONS:
             return self._send(400, {"ok": False, "error": "unsupported API version"})
         language_policy = params.get("language_policy", [None])[0]
-        if version == "3" and language_policy != _LANGUAGE_POLICY:
-            return self._send(400, {"ok": False, "error": "unsupported language policy"})
-        if version == "2" and language_policy is not None:
+        if not _language_policy_supported(version, language_policy):
             return self._send(400, {"ok": False, "error": "unsupported language policy"})
         warm_value = params.get("warm", ["0"])[0]
         if warm_value not in {"0", "1"}:
