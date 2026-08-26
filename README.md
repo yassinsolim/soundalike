@@ -38,8 +38,8 @@ including the Microsoft-Store build.
 
 Want the recommendations *inside* Spotify — a right-click **“Find soundalikes”**
 menu that opens a navigable, playlist-style results page with artwork, artists,
-albums, measured BPM, same-language gating from Spotify lyrics metadata, cached
-results, double-click playback, and Spotify's native track actions on
+albums, measured BPM, strict same-language gating from Spotify lyrics metadata,
+cached results, double-click playback, and Spotify's native track actions on
 right-click? Use the
 [**Spicetify extension**](integrations/spicetify/README.md). A Marketplace
 install works immediately with the hosted 272,853-track library. The separate
@@ -80,12 +80,18 @@ press **Submit ratings**. Accepted snapshots go to a private, version-isolated r
 inbox; JSON export remains available as a manual fallback. See the
 [deployment and privacy workflow](webapp/DEPLOY.md#private-ratings-inbox).
 
-The active V5 study is development evidence, not a shipped model or proof that
-recommendations are already better. It scores three frozen research methods against
-each complete A-D ranking without changing a model during collection. The prior V4
-pack was not promoted: a later three-position language audit invalidated 13 of its 18
-presented tasks under the stricter fail-closed policy. Production recommendations
-remain unchanged until fresh blinded evidence passes independent promotion criteria.
+The first complete V5 receipt favored the full-track acoustic control by 56/96
+pairwise choices, versus 54/96 for the frozen preference head and 46/96 for
+fixed V4. The acoustic/preference difference was only two choices, neither beat
+chance significantly, and the two repeated anchors disagreed on first place.
+The winning control also requires Jamendo full-track section embeddings that do
+not exist for arbitrary songs in the 272,853-track production catalog, so it is
+not mislabeled or deployed as a commercial-catalog model. Production keeps the
+independently validated `dual_sonic64_guardrail` ranker while the Spicetify
+integration adopts V5's deployable improvement: exact known-language matches,
+with different or unavailable candidate languages hidden for a known-language
+seed. The prior V4 pack remains rejected because a later three-position audit
+invalidated 13 of its 18 tasks.
 
 **V3 research is complete but not shipped.** Its strongest final-reserve candidate
 reached the preregistered +20% development target, then improved independent shadow
