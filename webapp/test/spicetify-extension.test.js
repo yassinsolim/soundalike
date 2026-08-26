@@ -454,13 +454,16 @@ test("prefers a healthy local companion over the hosted library", async () => {
   );
 });
 
-test("uses the Vercel fallback when the primary lacks the strict policy", async () => {
+test("reuses the fast primary ranking when it lacks the strict contract", async () => {
   const urls = [];
   const app = loadExtension(async (url) => {
     urls.push(url);
     if (url.endsWith("/health")) throw new TypeError("connection refused");
     if (url.startsWith("https://soundalike-api.yassin.app")) {
-      return response(400, { ok: false, error: "unsupported API version" });
+      const version = new URL(url).searchParams.get("v");
+      if (version === "4") {
+        return response(400, { ok: false, error: "unsupported API version" });
+      }
     }
     return response(200, recommendation);
   });
@@ -470,8 +473,39 @@ test("uses the Vercel fallback when the primary lacks the strict policy", async 
   assert.equal(urls.length, 3);
   assert.match(
     urls[2],
+    /^https:\/\/soundalike-api\.yassin\.app\/api\/spicetify_recommend\?/,
+  );
+  assert.equal(new URL(urls[2]).searchParams.get("v"), "3");
+  assert.equal(
+    new URL(urls[2]).searchParams.get("language_policy"),
+    "spotify-lyrics-v1",
+  );
+  assert.match(page.innerHTML, /HOSTED LIBRARY/);
+});
+
+test("uses Vercel when both primary contracts fail", async () => {
+  const urls = [];
+  const app = loadExtension(async (url) => {
+    urls.push(url);
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    if (url.startsWith("https://soundalike-api.yassin.app")) {
+      const version = new URL(url).searchParams.get("v");
+      return response(version === "4" ? 400 : 503, {
+        ok: false,
+        error: version === "4" ? "unsupported API version" : "service unavailable",
+      });
+    }
+    return response(200, recommendation);
+  });
+
+  const page = await app.run();
+
+  assert.equal(urls.length, 4);
+  assert.match(
+    urls[3],
     /^https:\/\/soundalike\.yassin\.app\/api\/spicetify_recommend\?/,
   );
+  assert.equal(new URL(urls[3]).searchParams.get("v"), "4");
   assert.match(page.innerHTML, /HOSTED LIBRARY/);
 });
 
