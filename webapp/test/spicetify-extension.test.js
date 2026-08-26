@@ -493,16 +493,13 @@ test("prefers a healthy local companion over the hosted library", async () => {
   );
 });
 
-test("reuses the fast primary ranking when it lacks the strict contract", async () => {
+test("uses Vercel when the primary lacks the strict contract", async () => {
   const urls = [];
   const app = loadExtension(async (url) => {
     urls.push(url);
     if (url.endsWith("/health")) throw new TypeError("connection refused");
     if (url.startsWith("https://soundalike-api.yassin.app")) {
-      const version = new URL(url).searchParams.get("v");
-      if (version === "4") {
-        return response(400, { ok: false, error: "unsupported API version" });
-      }
+      return response(400, { ok: false, error: "unsupported API version" });
     }
     return response(200, recommendation);
   });
@@ -512,26 +509,25 @@ test("reuses the fast primary ranking when it lacks the strict contract", async 
   assert.equal(urls.length, 3);
   assert.match(
     urls[2],
-    /^https:\/\/soundalike-api\.yassin\.app\/api\/spicetify_recommend\?/,
+    /^https:\/\/soundalike\.yassin\.app\/api\/spicetify_recommend\?/,
   );
-  assert.equal(new URL(urls[2]).searchParams.get("v"), "3");
+  assert.equal(new URL(urls[2]).searchParams.get("v"), "4");
   assert.equal(
     new URL(urls[2]).searchParams.get("language_policy"),
-    "spotify-lyrics-v1",
+    "spotify-lyrics-strict-v2",
   );
   assert.match(page.innerHTML, /HOSTED LIBRARY/);
 });
 
-test("uses Vercel when both primary contracts fail", async () => {
+test("uses Vercel when the primary service fails", async () => {
   const urls = [];
   const app = loadExtension(async (url) => {
     urls.push(url);
     if (url.endsWith("/health")) throw new TypeError("connection refused");
     if (url.startsWith("https://soundalike-api.yassin.app")) {
-      const version = new URL(url).searchParams.get("v");
-      return response(version === "4" ? 400 : 503, {
+      return response(503, {
         ok: false,
-        error: version === "4" ? "unsupported API version" : "service unavailable",
+        error: "service unavailable",
       });
     }
     return response(200, recommendation);
@@ -539,12 +535,12 @@ test("uses Vercel when both primary contracts fail", async () => {
 
   const page = await app.run();
 
-  assert.equal(urls.length, 4);
+  assert.equal(urls.length, 3);
   assert.match(
-    urls[3],
+    urls[2],
     /^https:\/\/soundalike\.yassin\.app\/api\/spicetify_recommend\?/,
   );
-  assert.equal(new URL(urls[3]).searchParams.get("v"), "4");
+  assert.equal(new URL(urls[2]).searchParams.get("v"), "4");
   assert.match(page.innerHTML, /HOSTED LIBRARY/);
 });
 
@@ -876,7 +872,7 @@ test("does not persist unresolved Spotify searches", async () => {
   await first.run();
   await new Promise((resolve) => setTimeout(resolve, 150));
 
-  const persisted = JSON.parse(storage.get("soundalike:spicetify-cache:v7"));
+  const persisted = JSON.parse(storage.get("soundalike:spicetify-cache:v8"));
   const cacheId = "result:catalog miss::unknown artist";
   assert.equal(Object.hasOwn(persisted.spotifyTracks, cacheId), false);
 
@@ -1075,7 +1071,7 @@ test("does not persist failed language lookups as unavailable", async () => {
   assert.equal(app.rows[0].hidden, true);
   assert.match(app.languageStatus.textContent, /1 checks failed/);
   await new Promise((resolve) => setTimeout(resolve, 150));
-  const firstCache = JSON.parse(storage.get("soundalike:spicetify-cache:v7"));
+  const firstCache = JSON.parse(storage.get("soundalike:spicetify-cache:v8"));
   const cacheId = "result:retry song::retry artist";
   assert.equal(
     Object.hasOwn(firstCache.spotifyTracks[cacheId].value, "soundalikeLanguage"),
@@ -1168,6 +1164,7 @@ test("reuses persisted recommendations and Spotify metadata on repeated tracks",
   storage.set("soundalike:spicetify-cache:v4", "{\"negative\":true}");
   storage.set("soundalike:spicetify-cache:v5", "{\"permissive\":true}");
   storage.set("soundalike:spicetify-cache:v6", "{\"deepTail\":true}");
+  storage.set("soundalike:spicetify-cache:v7", "{\"compatibility\":true}");
   const result = { title: "Take My Breath", artist: "The Weeknd", bpm: 122 };
   const spotifyTrack = {
     __typename: "Track",
@@ -1201,6 +1198,7 @@ test("reuses persisted recommendations and Spotify metadata on repeated tracks",
   assert.equal(storage.has("soundalike:spicetify-cache:v4"), false);
   assert.equal(storage.has("soundalike:spicetify-cache:v5"), false);
   assert.equal(storage.has("soundalike:spicetify-cache:v6"), false);
+  assert.equal(storage.has("soundalike:spicetify-cache:v7"), false);
 
   await first.run();
   await new Promise((resolve) => setTimeout(resolve, 250));
@@ -1208,8 +1206,8 @@ test("reuses persisted recommendations and Spotify metadata on repeated tracks",
     urls.filter((url) => url.includes("/api/spicetify_recommend")).length,
     1,
   );
-  const persisted = JSON.parse(storage.get("soundalike:spicetify-cache:v7"));
-  assert.ok(storage.get("soundalike:spicetify-cache:v7").length < 10000);
+  const persisted = JSON.parse(storage.get("soundalike:spicetify-cache:v8"));
+  assert.ok(storage.get("soundalike:spicetify-cache:v8").length < 10000);
   assert.ok(persisted.spotifyTracks["spotify:track:test"]);
 
   const second = loadExtension(async (url) => {
