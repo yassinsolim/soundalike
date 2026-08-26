@@ -54,6 +54,32 @@ _DEFAULT_WEIGHTS = {
     "band_sub": 2.5, "band_bass": 2.0,
 }
 
+_VERSION_MARKER_RE = re.compile(
+    r"\b(?:remix|version|edit|mix|live|acoustic|demo|instrumental|extended|"
+    r"radio\s+edit|single\s+version|english\s+version|spanish\s+version)\b",
+    re.IGNORECASE,
+)
+_VERSION_BRACKET_RE = re.compile(r"[\(\[\{]([^\)\]\}]*)[\)\]\}]")
+_VERSION_DASH_SUFFIX_RE = re.compile(r"\s+[-\u2013\u2014:]\s+(.+)$")
+_VERSION_CONTEXT_RE = re.compile(
+    r"(?:\bremix\b|"
+    r"\b(?:version|edit|mix)\b\s*$|"
+    r"^(?:live(?:\s+acoustic|\s+(?:at|from)\b.*)?|"
+    r"acoustic(?:\s+(?:session|version))?|demo|"
+    r"instrumental(?:\s+version)?|extended(?:\s+(?:mix|version))?)$)",
+    re.IGNORECASE,
+)
+_VERSION_SUFFIX_RE = re.compile(
+    r"\s+(?:(?:\S+\s+){0,4}remix|"
+    r"(?:album|single|english|spanish|original)\s+version|"
+    r"(?:radio|club|extended)\s+(?:edit|mix)|"
+    r"(?:acoustic|demo|instrumental|extended|edit|mix|version)|"
+    r"live\s+(?:at|from)\b.*)\s*$",
+    re.IGNORECASE,
+)
+_DUAL_TAIL_AUDIO_POOL_SIZE = 1_000
+_DUAL_TAIL_PRIOR_SCALE = 0.25
+
 _TITLE_JUNK_RE = re.compile(
     r"\b(?:slowed|reverb|sped[- ]up|speed[- ]up|nightcore|karaoke|karaōke|"
     r"backing\s+track|instrumental\s+(?:version|mix|cover|track)|a\s+cappella|"
@@ -118,6 +144,28 @@ class _TitleQualityFilter:
             min(len(seed), len(result)) >= 8
             and SequenceMatcher(None, seed, result).ratio() >= 0.90
         )
+
+
+def _version_penalty(title, artist=""):
+    text = str(title)
+    contexts = _VERSION_BRACKET_RE.findall(text)
+    dash_suffix = _VERSION_DASH_SUFFIX_RE.search(text)
+    if dash_suffix:
+        contexts.append(dash_suffix.group(1))
+    plain_suffix = _VERSION_SUFFIX_RE.search(text)
+    if plain_suffix:
+        contexts.append(plain_suffix.group(0))
+    contexts = [
+        context for context in contexts
+        if _VERSION_CONTEXT_RE.search(context.strip())
+    ]
+    metadata = " ".join(contexts)
+    penalty = 0.0
+    if re.search(r"\bremix\b", metadata, re.IGNORECASE):
+        penalty += 0.22
+    if _VERSION_MARKER_RE.search(metadata):
+        penalty += 0.10
+    return min(penalty, 0.30)
 
 
 class _ArtistCentroidIndex:
@@ -230,6 +278,11 @@ class WebRecommender:
         w = np.array([_DEFAULT_WEIGHTS.get(n, 1.0) for n in self.feature_names], np.float32)
         self._w = np.sqrt(np.clip(w, 0.0, None))
         self._vscaled = ((vibe - self._vmean) / self._vstd) * self._w
+        self._version_penalty_policy = np.asarray(
+            [_version_penalty(title, artist) for title, artist in zip(self.titles, self.artists)],
+            dtype=np.float32,
+        )
+        self._version_penalty = np.zeros_like(self._version_penalty_policy)
 
         # Search metadata is shared with the lightweight autocomplete path.
         self._catalog = SearchCatalog(self.titles, self.artists)
@@ -248,6 +301,7 @@ class WebRecommender:
         module.  The deployment installs numpy only and cannot import the desktop
         package from outside the ``webapp`` root.
         """
+        self._version_penalty = self._version_penalty_policy
         self._qfilter = _TitleQualityFilter()
         self._qmask = self._qfilter.keep_mask(self.titles, self.artists)
         self._centroid_idx = _ArtistCentroidIndex(
@@ -407,26 +461,29 @@ class WebRecommender:
         clap = self._compact_cosine(
             self._clap, np.asarray(self._clap[row], dtype=np.float32)
         )
-        score = (
+        audio_score = (
             0.25 * self._z(efficientnet)
             + 0.75 * self._z(clap)
-            + 0.20 * self._wiki
-            + 0.10 * self._wiki_specific
         )
-        seed_artist = str(self.artists[row]).casefold()
+        pool_size = min(len(audio_score), _DUAL_TAIL_AUDIO_POOL_SIZE)
+        audio_pool = np.argsort(audio_score)[::-1][:pool_size]
+        score = audio_score.copy()
+        score[audio_pool] -= self._version_penalty[audio_pool]
+        score[audio_pool] += _DUAL_TAIL_PRIOR_SCALE * (
+            0.20 * self._wiki[audio_pool]
+            + 0.10 * self._wiki_specific[audio_pool]
+        )
         seed_title = str(self.titles[row])
         seen_recordings, chosen = set(), []
         qfilter = self._qfilter
         qmask = self._qmask if qfilter is not None else None
-        for raw in np.argsort(score)[::-1]:
+        for raw in audio_pool[np.argsort(score[audio_pool])[::-1]]:
             candidate = int(raw)
             if candidate == row:
                 continue
             title = str(self.titles[candidate])
             artist = str(self.artists[candidate])
             artist_key = artist.casefold()
-            if seed_artist and seed_artist in artist_key:
-                continue
             if qmask is not None and not bool(qmask[candidate]):
                 continue
             if qfilter is not None and qfilter.seed_title_in_result(seed_title, title):
@@ -462,9 +519,9 @@ class WebRecommender:
         qv = self._vscaled[row]
         vibe_sim = 1.0 / (1.0 + np.linalg.norm(self._vscaled - qv, axis=1))
         blended = a * self._z(neural_sim) + (1 - a) * self._z(vibe_sim)
+        blended = blended - self._version_penalty
 
         seed_artist_raw = str(self.artists[row])
-        seed_artist = seed_artist_raw.casefold()
         seed_id = int(self.track_ids[row])
         seed_title = str(self.titles[row])
 
@@ -491,8 +548,6 @@ class WebRecommender:
             if int(self.track_ids[i]) == seed_id:
                 continue
             akey = str(self.artists[i]).casefold()
-            if seed_artist and seed_artist in akey:
-                continue
             title_i = str(self.titles[i])
             # Approach 1: skip junk tracks
             if qmask is not None and not qmask[i]:
@@ -560,7 +615,7 @@ class WebRecommender:
         qv = self._vscaled[row]
         vibe_sim = 1.0 / (1.0 + np.linalg.norm(self._vscaled - qv, axis=1))
         blended = a * self._z(sonic_sim) + (1 - a) * self._z(vibe_sim)
-        seed_artist = str(self.artists[row]).casefold()
+        blended = blended - self._version_penalty
         seed_title = str(self.titles[row])
         candidates, seen_recordings, seen_artists = [], set(), set()
         qfilter = self._qfilter
@@ -572,8 +627,6 @@ class WebRecommender:
             title = str(self.titles[candidate])
             artist = str(self.artists[candidate])
             artist_key = artist.casefold()
-            if seed_artist and seed_artist in artist_key:
-                continue
             if qmask is not None and not bool(qmask[candidate]):
                 continue
             if (

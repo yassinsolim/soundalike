@@ -534,11 +534,15 @@ def cmd_deep_vibe_similar(args: argparse.Namespace) -> int:
         weights[name] = float(value)
 
     rec = DeepVibeRecommender(index, alpha=args.alpha, vibe_weights=weights)
+    single_seed_artist = (
+        seed_labels[0].split(" — ")[-1] if len(seed_labels) == 1 else None
+    )
     results = rec.recommend(
         seed_neural, seed_vibe, n=args.num, exclude_ids=seed_ids,
-        exclude_artist=(seed_labels[0].split(" — ")[-1] if args.exclude_artist and len(seed_labels) == 1 else None),
+        exclude_artist=single_seed_artist if args.exclude_artist else None,
         diversity=args.diversity, max_per_artist=args.max_per_artist,
         seed_sonic=seed_sonic,
+        seed_artist=single_seed_artist,
     )
     if len(seed_labels) == 1:
         v = seed_vibe.describe()

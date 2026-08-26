@@ -91,9 +91,14 @@ independently validated `dual_sonic64_guardrail` ranker while the Spicetify
 integration adopts V5's deployable improvement: exact known-language matches,
 with different or unavailable candidate languages hidden for a known-language
 seed. Only the model's original top 20 are eligible, failed language lookups
-retry instead of becoming seven-day unknowns, and Spotify-related artists are
-prioritized within that strict quality head. The prior V4 pack remains rejected
-because a later three-position audit invalidated 13 of its 18 tasks.
+retry instead of becoming seven-day unknowns, same-artist matches are allowed
+when they are genuinely strong, and remix/version variants are softly
+penalized so originals stay ahead within that strict quality head. Global
+notability priors may only reorder the top 1,000 audio-qualified tail
+candidates and run at 25% strength, preventing famous but sonically distant
+tracks from becoming universal recommendations. The prior
+V4 pack remains rejected because a later three-position audit invalidated 13
+of its 18 tasks.
 
 **V3 research is complete but not shipped.** Its strongest final-reserve candidate
 reached the preregistered +20% development target, then improved independent shadow
@@ -370,10 +375,13 @@ this is evidence that clears the frozen +20% engineering threshold—not a popul
 claim.
 
 Dual-Sonic64 combines compressed EfficientNet and calibrated LAION-CLAP spectrogram embeddings
-with source-independent Wikipedia song-article priors. It preserves the reviewed guarded top five,
+with source-independent Wikipedia song-article priors. Audio similarity first limits the tail to
+1,000 candidates; the priors then run at 25% strength only inside that pool. This prevents global
+notability from admitting acoustically distant tracks. It preserves the reviewed guarded top five,
 appends the quality-filtered baseline top ten as a regression guardrail, then fills the tail from
-the learned candidate order. Direct judgments are **17/20** on both the retained UX set and the
-final 20 seeds versus **11/20** for the original baseline; they remain secondary evidence.
+the bounded learned candidate order. A replay of the frozen final benchmark retains both Recall@50
+hits at ranks 12 and 50 (primary 0.0526). Direct judgments are **17/20** on both the retained UX set
+and the final 20 seeds versus **11/20** for the original baseline; they remain secondary evidence.
 
 PANNs Cnn14, VGGish, eight-vector late interaction, chroma-FFT DSP, CLAP title/artist text,
 hard-negative metric learning, and pageview-heavy learned reranking all failed to improve the
@@ -784,7 +792,7 @@ pytest -q
 - [x] **Web app + right-click integration** — `soundalike serve` (paste a song / Spotify "Copy Song Link" → instant soundalikes) and a Spicetify extension with a Back/Forward-aware results page, in-place playback, native track menus, and Spotify-metadata language gating
 - [x] **Categorized real-world benchmark** — 93 sourced pairs separate pure-sonic and diagnostic relationships, with a 20-pair final artist-disjoint split, transitive graph audit, frozen 272,853-song outputs, and pair bootstrap uncertainty
 - [x] **Pretrained sonic retrieval** — dual PCA64 EfficientNet/CLAP retrieval lifts final pure-sonic primary 0.0281→0.0529 (+88.3%) while the guarded top five retains 17/20 direct passes
-- [x] **Desktop/hosted Dual-Sonic64 parity** — the 299 MB checksum-pinned release index carries both 64-d matrices and source-independent priors; numpy serving paths expose the active method/version and have exact parity tests
+- [x] **Desktop/hosted Dual-Sonic64 parity** — the 299 MB checksum-pinned release index carries both 64-d matrices and bounded source-independent priors; numpy serving paths expose the active method/version and have exact parity tests
 - [ ] Inline audio previews in the web UI
 
 Contributions welcome — this is meant to be community-built.
