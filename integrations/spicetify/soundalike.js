@@ -978,7 +978,30 @@
         React.createElement("div", { className: "sa-title" }, result.title),
         React.createElement("div", { className: "sa-artist" }, artist)
       ),
-      React.createElement("div", { className: "sa-album" }, spotifyAlbum(track)),
+      React.createElement(
+        "div",
+        { className: "sa-album" },
+        (() => {
+          const albumName = track?.albumOfTrack?.name;
+          if (!albumName) return "\u2014";
+          const albumId = track?.albumOfTrack?.uri?.split(":album:")[1];
+          if (!albumId) return albumName;
+          return React.createElement(
+            "a",
+            {
+              className: "sa-album-link",
+              href: "#",
+              title: "Open album in Spotify",
+              onClick: (event) => {
+                event.stopPropagation();
+                event.preventDefault();
+                Spicetify.Platform.History.push(`/album/${albumId}`);
+              },
+            },
+            albumName
+          );
+        })()
+      ),
       React.createElement("div", { className: "sa-bpm" }, formatBpm(result.bpm))
     );
     const menu = nativeTrackMenu(track);
@@ -1211,6 +1234,8 @@
         .sa-title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .sa-artist{color:var(--spice-subtext,#b3b3b3);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
         .sa-album{min-width:0;color:var(--spice-subtext,#b3b3b3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .sa-album-link{color:inherit;text-decoration:none}
+        .sa-album-link:hover,.sa-album-link:focus-visible{color:var(--spice-text,#fff);text-decoration:underline;outline:none}
         .sa-bpm{color:var(--spice-subtext,#b3b3b3);font-variant-numeric:tabular-nums;text-align:right}
         .sa-play{grid-area:1/1;display:none;width:30px;height:30px;border:0;border-radius:50%;background:transparent;color:var(--spice-text,#fff);font-size:15px;cursor:pointer}
         .sa-row-content:hover .sa-rank,.sa-row-content:focus-within .sa-rank{display:none}
