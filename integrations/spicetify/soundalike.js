@@ -122,14 +122,21 @@
     return result;
   }
 
-  async function getCacheableHostedRecommendations(server, payload, timeoutMs) {
-    const params = new URLSearchParams({
+  async function getCacheableHostedRecommendations(
+    server,
+    payload,
+    timeoutMs,
+    apiVersion = HOSTED_API_VERSION,
+    languagePolicy = LANGUAGE_POLICY
+  ) {
+    const values = {
       query: payload.query,
       n: String(payload.n),
       diversity: String(payload.diversity),
-      v: HOSTED_API_VERSION,
-      language_policy: LANGUAGE_POLICY,
-    });
+      v: apiVersion,
+    };
+    if (languagePolicy) values.language_policy = languagePolicy;
+    const params = new URLSearchParams(values);
     const response = await fetchWithTimeout(
       `${server}/api/spicetify_recommend?${params}`,
       { cache: "default" },
@@ -142,9 +149,11 @@
       throw new Error(`Recommendation service returned HTTP ${response.status}.`);
     }
     if (!response.ok && response.status !== 422) {
-      throw new Error(
+      const error = new Error(
         result?.error || `Recommendation service returned HTTP ${response.status}.`
       );
+      error.status = response.status;
+      throw error;
     }
     if (!response.ok && !result?.error) {
       throw new Error(`Recommendation service returned HTTP ${response.status}.`);
@@ -160,10 +169,31 @@
         PRIMARY_HOSTED_TIMEOUT_MS
       );
     } catch (error) {
-      console.warn(
-        "[soundalike] Primary hosted endpoint failed; using Vercel fallback.",
-        error
-      );
+      if (error?.status === 400) {
+        try {
+          console.warn(
+            "[soundalike] Primary hosted endpoint uses the compatibility contract.",
+            error
+          );
+          return await getCacheableHostedRecommendations(
+            PRIMARY_HOSTED_SERVER,
+            payload,
+            PRIMARY_HOSTED_TIMEOUT_MS,
+            "3",
+            "spotify-lyrics-v1"
+          );
+        } catch (compatibilityError) {
+          console.warn(
+            "[soundalike] Primary compatibility request failed; using Vercel fallback.",
+            compatibilityError
+          );
+        }
+      } else {
+        console.warn(
+          "[soundalike] Primary hosted endpoint failed; using Vercel fallback.",
+          error
+        );
+      }
     }
     try {
       return await getCacheableHostedRecommendations(
