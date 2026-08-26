@@ -700,10 +700,23 @@ test("renders playlist metadata, plays on double-click, and exposes the native m
     (node) => node.props?.className === "sa-leading",
   );
   assert.equal(findElement(leadingCell, (node) => node === playButton), playButton);
-  assert.equal(
-    findElement(rowTree, (node) => node.props?.className === "sa-album").props.children,
-    "Dawn FM",
-  );
+  const albumCell = findElement(rowTree, (node) => node.props?.className === "sa-album");
+  const albumLink = findElement(albumCell, (node) => node.props?.className === "sa-album-link");
+  assert.ok(albumLink, "album name should be a link when the album URI is available");
+  assert.equal(albumLink.props.children, "Dawn FM");
+  {
+    let defaultPrevented = false;
+    let propagationStopped = false;
+    albumLink.props.onClick({
+      preventDefault: () => { defaultPrevented = true; },
+      stopPropagation: () => { propagationStopped = true; },
+    });
+    assert.ok(defaultPrevented, "album link click should prevent default");
+    assert.ok(propagationStopped, "album link click should stop propagation");
+    assert.equal(app.history.at(-1), "/album/verified", "album link should navigate to the album page");
+    app.navigate("/soundalike");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
   assert.equal(
     findElement(rowTree, (node) => node.props?.className === "sa-bpm").props.children,
     "122",
@@ -724,7 +737,7 @@ test("renders playlist metadata, plays on double-click, and exposes the native m
   });
   assert.equal(propagationStopped, true);
   assert.deepEqual(app.played, [spotifyTrack.uri, spotifyTrack.uri]);
-  assert.deepEqual(app.history, ["/soundalike"]);
+  assert.deepEqual(app.history, ["/soundalike", "/album/verified", "/soundalike"]);
   assert.ok(app.currentPage);
 });
 
