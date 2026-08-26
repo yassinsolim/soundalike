@@ -67,8 +67,10 @@ client and are not sent to Soundalike. No separate Spotify login is required.
 - Production ranking continues to use the independently validated
   `dual_sonic64_guardrail` model. The `v=4` value in an extension request is
   the strict Spotify-lyrics policy contract, not a V4 recommendation model.
-  It invalidates permissive cached results and fails over to the Vercel
-  endpoint if the always-on service has not yet received the new contract.
+  It invalidates permissive cached results. If the always-on service has not
+  received that contract yet, the extension reuses its identical v3 ranking
+  response while still enforcing the strict gate locally; Vercel remains the
+  infrastructure fallback.
 - The completed V5 receipt favored the full-track acoustic control by 56/96
   pairwise choices, versus 54/96 for the preference head and 46/96 for fixed
   V4. That research scorer depends on Jamendo full-track section embeddings
