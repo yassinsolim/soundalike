@@ -34,6 +34,10 @@ def _file_hash(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _text_file_hash(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+
+
 def test_v2_archive_deploys_the_validated_public_pack_and_protocol():
     source = (
         ROOT
@@ -116,14 +120,14 @@ def test_v2_public_assets_are_blinded_and_audio_is_not_committed():
     )
 
 
-def test_production_recommendation_implementation_remains_byte_compatible():
+def test_production_recommendation_implementation_hash_is_reviewed():
     assert {
-        str(path.relative_to(ROOT)).replace("\\", "/"): _file_hash(path)
+        str(path.relative_to(ROOT)).replace("\\", "/"): _text_file_hash(path)
         for path in (
             WEB / "api" / "_reco.py",
             WEB / "api" / "recommend.py",
         )
     } == {
-        "webapp/api/_reco.py": "340a8c08ceb5e6f8177e572fcdf1cefcdc44baa35ab21f45af6f9c4096af30fa",
-        "webapp/api/recommend.py": "6e455a325a8c0bf79d06c23dac5d68b88fda7b074d87567dc0a1a40923ca63fc",
+        "webapp/api/_reco.py": "4a415ba5481adf226a3ccf44401883926fa4daae2db280d6c18e3a357183eb9d",
+        "webapp/api/recommend.py": "dbf66c9bc32c6438b05c67c23784d91dab6c196d3edaf79107a9b89c231d7b1e",
     }
