@@ -38,9 +38,9 @@ including the Microsoft-Store build.
 
 Want the recommendations *inside* Spotify — a right-click **“Find soundalikes”**
 menu that opens a navigable, playlist-style results page with artwork, artists,
-albums, measured BPM, strict same-language gating from Spotify lyrics metadata,
-cached results, double-click playback, and Spotify's native track actions on
-right-click? Use the
+clickable albums, measured BPM, strict same-language gating from Spotify lyrics
+metadata, cached results, double-click playback, Spotify's native track actions
+on right-click, and a small optional anonymous match-quality survey? Use the
 [**Spicetify extension**](integrations/spicetify/README.md). A Marketplace
 install works immediately with the hosted 272,853-track library. The separate
 [advanced setup guide](integrations/spicetify/SETUP.md) covers manual installs,
@@ -53,11 +53,13 @@ browser, with an optional client-side "Log in with Spotify" (OAuth PKCE — user
 Spotify's own site, never hand over a password) to save results as a playlist. See
 [`webapp/DEPLOY.md`](webapp/DEPLOY.md).
 
-**Help with the blind study:** open the public
-[listening evaluator](https://soundalike.yassin.app/evaluate). The active research-only
-study presents one seed and four blinded candidates, then asks the listener to rank
-all four from closest to least close and give one primary mismatch reason for fourth
-place. Disagreement-first ordering and two
+**Help improve the model:** open the public
+[listening evaluator](https://soundalike.yassin.app/evaluate). The active V6
+development study presents one seed and four blinded candidates, then asks the
+listener to rank the most similar, next most similar, second least similar, and
+least similar choices and give one primary mismatch reason for fourth place.
+This is model-improvement evidence, not an independent promotion holdout.
+Disagreement-first ordering and two
 repeated consistency checks concentrate the listening time on decisions that can
 actually change the next ranking. The core study stops after 12 unique comparisons;
 four optional robustness comparisons remain available.
@@ -68,8 +70,9 @@ three separate 30-second detector positions that agree on one known language, at
 one vocal detector must support vocals, and no detector may confidently report
 instrumental. Vocal candidates must exactly match the seed language, and all 80 unique
 study tracks come from distinct artists. Attribution stays hidden until each task is
-completed or skipped. The superseded strict V4 study remains
-available at [`/evaluate-v4`](https://soundalike.yassin.app/evaluate-v4), pacing V3 at
+completed or skipped. The consumed, inconclusive V5 study remains byte-preserved
+at [`/evaluate-v5`](https://soundalike.yassin.app/evaluate-v5), strict V4 remains
+at [`/evaluate-v4`](https://soundalike.yassin.app/evaluate-v4), pacing V3 at
 [`/evaluate-pacing-v3`](https://soundalike.yassin.app/evaluate-pacing-v3), semantic v2 at
 [`/evaluate-semantic-v2`](https://soundalike.yassin.app/evaluate-semantic-v2), the locked
 four-list V2 study at [`/evaluate-v2`](https://soundalike.yassin.app/evaluate-v2), semantic v1 at
@@ -78,7 +81,16 @@ v17 study remains at [`/evaluate-v1`](https://soundalike.yassin.app/evaluate-v1)
 Ratings stay in the study's own browser namespace until you explicitly consent and
 press **Submit ratings**. Accepted snapshots go to a private, version-isolated ratings
 inbox; JSON export remains available as a manual fallback. See the
-[deployment and privacy workflow](webapp/DEPLOY.md#private-ratings-inbox).
+[deployment and privacy workflow](webapp/DEPLOY.md#private-ratings-inboxes).
+
+After Spicetify finishes strict filtering, it may also show an inline
+**Good / Mixed / Off** prompt. It never submits automatically. Mixed and Off can
+include up to two closed reason tags and an optional 280-character note with a
+personal-information warning. A submission contains only the seed, the results
+actually displayed in their displayed order, ranking-policy metadata, the chosen
+feedback, and random anonymous install/session nonces—never Spotify account
+identity, credentials, library, listening history, headers, IP addresses, or
+hidden candidates.
 
 The first complete V5 receipt favored the full-track acoustic control by 56/96
 pairwise choices, versus 54/96 for the frozen preference head and 46/96 for
@@ -98,7 +110,10 @@ notability priors may only reorder the top 1,000 audio-qualified tail
 candidates and run at 25% strength, preventing famous but sonically distant
 tracks from becoming universal recommendations. The prior
 V4 pack remains rejected because a later three-position audit invalidated 13
-of its 18 tasks.
+of its 18 tasks. V6 uses the remaining lawful reserve and excludes every
+track and artist exposed by earlier evaluator packs, including V5; because it
+was selected for model-improvement value, it cannot be reused as an independent
+promotion holdout.
 
 **V3 research is complete but not shipped.** Its strongest final-reserve candidate
 reached the preregistered +20% development target, then improved independent shadow

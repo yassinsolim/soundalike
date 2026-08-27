@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { webcrypto } from "node:crypto";
 import fs from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
@@ -46,6 +47,70 @@ function loadExtension(fetchImpl, options = {}) {
   }));
   const languageStatus = { textContent: "" };
   const languageLoading = { hidden: false };
+  function control(value = "") {
+    const classes = new Set();
+    return {
+      value,
+      checked: false,
+      disabled: false,
+      hidden: false,
+      textContent: "",
+      classList: {
+        add(name) {
+          classes.add(name);
+        },
+        remove(name) {
+          classes.delete(name);
+        },
+        contains(name) {
+          return classes.has(name);
+        },
+      },
+    };
+  }
+  const feedback = {
+    panel: { ...control(), hidden: true, dataset: {} },
+    details: { ...control(), hidden: true },
+    ratings: ["good", "mixed", "off"].map(control),
+    reasons: [
+      "style",
+      "mood_energy",
+      "tempo",
+      "vocals_language",
+      "instruments_timbre",
+    ].map(control),
+    note: { ...control(), maxLength: 280 },
+    count: control(),
+    send: { ...control(), disabled: true },
+    dismiss: control(),
+    status: control(),
+  };
+  function queryPage(selector) {
+    if (selector === ".sa-language-status") return languageStatus;
+    if (selector === ".sa-language-loading") return languageLoading;
+    const controls = {
+      ".sa-feedback": feedback.panel,
+      ".sa-feedback-details": feedback.details,
+      ".sa-feedback-note": feedback.note,
+      ".sa-feedback-count": feedback.count,
+      ".sa-feedback-send": feedback.send,
+      ".sa-feedback-dismiss": feedback.dismiss,
+      ".sa-feedback-status": feedback.status,
+    };
+    if (controls[selector]) return controls[selector];
+    const match = selector.match(/data-index="(\d+)"/);
+    return match ? rows[Number(match[1])] : null;
+  }
+  function queryAllPage(selector) {
+    if (selector === ".sa-row") return rows;
+    if (selector === 'input[name="sa-feedback-rating"]') {
+      return feedback.ratings;
+    }
+    if (selector === 'input[name="sa-feedback-reason"]') {
+      return feedback.reasons;
+    }
+    return [];
+  }
   function makeDiv() {
     return {
       className: "",
@@ -66,13 +131,10 @@ function loadExtension(fetchImpl, options = {}) {
         if (this.className === "sa-results-host") currentPage = undefined;
       },
       querySelector(selector) {
-        if (selector === ".sa-language-status") return languageStatus;
-        if (selector === ".sa-language-loading") return languageLoading;
-        const match = selector.match(/data-index="(\d+)"/);
-        return match ? rows[Number(match[1])] : null;
+        return queryPage(selector);
       },
       querySelectorAll(selector) {
-        return selector === ".sa-row" ? rows : [];
+        return queryAllPage(selector);
       },
     };
   }
@@ -91,17 +153,6 @@ function loadExtension(fetchImpl, options = {}) {
     },
   };
   const wrap = makeDiv();
-  Object.assign(wrap, {
-    querySelector(selector) {
-      if (selector === ".sa-language-status") return languageStatus;
-      if (selector === ".sa-language-loading") return languageLoading;
-      const match = selector.match(/data-index="(\d+)"/);
-      return match ? rows[Number(match[1])] : null;
-    },
-    querySelectorAll(selector) {
-      return selector === ".sa-row" ? rows : [];
-    },
-  });
   const registry = {};
   const platform = {};
   const AppProvider = function AppProvider() {};
@@ -168,6 +219,7 @@ function loadExtension(fetchImpl, options = {}) {
     Date,
     URLSearchParams,
     clearTimeout,
+    crypto: webcrypto,
     fetch: fetchImpl,
     setTimeout,
     console: { error() {}, log() {}, warn() {} },
@@ -405,6 +457,7 @@ function loadExtension(fetchImpl, options = {}) {
     nativeChildren: pageContainer.children,
     languageStatus,
     languageLoading,
+    feedback,
     rows,
     get currentPage() {
       return currentPage;
@@ -1223,4 +1276,289 @@ test("reuses persisted recommendations and Spotify metadata on repeated tracks",
   assert.deepEqual(second.graphqlRequests, []);
   assert.equal(second.rows[0].dataset.uri, spotifyTrack.uri);
   assert.equal(second.currentPage !== undefined, true);
+});
+
+test("offers feedback only after filtering settles and sends displayed order only", async () => {
+  const results = [
+    { title: "Model First", artist: "Artist One" },
+    { title: "Related First", artist: "Related Artist" },
+    { title: "French Hidden", artist: "Artiste Trois" },
+  ];
+  const spotifyTracks = Object.fromEntries(results.map((result, index) => [
+    `${result.title} ${result.artist}`,
+    {
+      __typename: "Track",
+      name: result.title,
+      uri: `spotify:track:feedback${index}`,
+      albumOfTrack: { coverArt: { sources: [] } },
+      artists: {
+        items: [{
+          uri: index === 1
+            ? "spotify:artist:related-feedback"
+            : `spotify:artist:feedback${index}`,
+          profile: { name: result.artist },
+        }],
+      },
+    },
+  ]));
+  const feedbackRequests = [];
+  const app = loadExtension(async (url, options) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    if (url.endsWith("/api/spicetify-feedback")) {
+      feedbackRequests.push(options);
+      return response(200, { receipt_sha256: "a".repeat(64) });
+    }
+    return response(200, {
+      ...recommendation,
+      index_version: "index-2026.07.11-dual-sonic64",
+      results,
+    });
+  }, {
+    results,
+    seedTrack: {
+      __typename: "Track",
+      name: "Blinding Lights",
+      uri: "spotify:track:test",
+      firstArtist: {
+        items: [{
+          uri: "spotify:artist:seed-feedback",
+          profile: { name: "The Weeknd" },
+        }],
+      },
+      albumOfTrack: { coverArt: { sources: [] } },
+    },
+    spotifyTracks,
+    languageByTrackId: {
+      test: "en",
+      feedback0: [null, "en"],
+      feedback1: "en",
+      feedback2: "fr",
+    },
+    relatedArtists: [{
+      id: "related-feedback",
+      uri: "spotify:artist:related-feedback",
+      profile: { name: "Related Artist" },
+    }],
+  });
+
+  await app.run();
+  assert.equal(app.feedback.panel.hidden, true);
+  assert.equal(feedbackRequests.length, 0, "feedback must never auto-submit");
+  await new Promise((resolve) => setTimeout(resolve, 450));
+  assert.equal(app.feedback.panel.hidden, false);
+
+  app.feedback.ratings[1].checked = true;
+  app.feedback.ratings[1].onchange();
+  assert.equal(app.feedback.details.hidden, false);
+  app.feedback.reasons[0].checked = true;
+  app.feedback.reasons[0].onchange();
+  app.feedback.reasons[2].checked = true;
+  app.feedback.reasons[2].onchange();
+  app.feedback.note.value = "Tempo drifted after the first result.";
+  app.feedback.note.oninput();
+  await app.feedback.send.onclick();
+
+  assert.equal(feedbackRequests.length, 1);
+  const sent = JSON.parse(feedbackRequests[0].body);
+  assert.deepEqual(sent.seed, {
+    title: "Blinding Lights",
+    artist: "The Weeknd",
+  });
+  assert.deepEqual(sent.displayed_results, [
+    { position: 1, title: "Related First", artist: "Related Artist" },
+    { position: 2, title: "Model First", artist: "Artist One" },
+  ]);
+  assert.equal(
+    sent.displayed_results.some((row) => row.title === "French Hidden"),
+    false,
+  );
+  assert.equal(sent.method, "dual_sonic64_guardrail");
+  assert.equal(sent.index_version, "index-2026.07.11-dual-sonic64");
+  assert.equal(sent.api_version, "4");
+  assert.equal(sent.language_policy, "spotify-lyrics-strict-v2");
+  assert.equal(
+    sent.selection_policy,
+    "top-20-strict-language-related-artist-v1",
+  );
+  assert.equal(sent.source, "hosted");
+  assert.equal(sent.selection, "mixed");
+  assert.deepEqual(sent.reasons, ["style", "tempo"]);
+  assert.equal(sent.note, "Tempo drifted after the first result.");
+  for (const forbidden of [
+    "account",
+    "credentials",
+    "headers",
+    "history",
+    "hidden_candidates",
+    "ip",
+    "library",
+  ]) {
+    assert.equal(Object.hasOwn(sent, forbidden), false);
+  }
+  assert.match(sent.install_nonce, /^[a-f0-9]{32}$/);
+  assert.match(sent.session_nonce, /^[a-f0-9]{32}$/);
+  assert.match(app.feedback.status.textContent, /feedback received.*Receipt a{12}/);
+  assert.equal(app.feedback.send.hidden, true);
+  assert.equal(app.feedback.dismiss.hidden, true);
+});
+
+test("reveals optional details conditionally and caps reasons and note", async () => {
+  const result = { title: "Candidate", artist: "Artist" };
+  const app = loadExtension(async (url) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    return response(200, { ...recommendation, results: [result] });
+  }, { results: [result] });
+
+  await app.run();
+  assert.equal(app.feedback.panel.hidden, false);
+  assert.equal(app.feedback.details.hidden, true);
+  assert.equal(app.feedback.send.disabled, true);
+
+  app.feedback.ratings[2].checked = true;
+  app.feedback.ratings[2].onchange();
+  assert.equal(app.feedback.details.hidden, false);
+  for (const reason of app.feedback.reasons.slice(0, 2)) {
+    reason.checked = true;
+    reason.onchange();
+  }
+  assert.equal(app.feedback.reasons[2].disabled, true);
+  app.feedback.reasons[2].checked = true;
+  app.feedback.reasons[2].onchange();
+  assert.equal(app.feedback.reasons[2].checked, false);
+  assert.match(app.feedback.status.textContent, /up to two/);
+
+  app.feedback.note.value = "x".repeat(300);
+  app.feedback.note.oninput();
+  assert.equal(app.feedback.note.value.length, 280);
+  assert.equal(app.feedback.count.textContent, "280/280");
+
+  app.feedback.ratings.forEach((rating) => {
+    rating.checked = rating.value === "good";
+  });
+  app.feedback.ratings[0].onchange();
+  assert.equal(app.feedback.details.hidden, true);
+  assert.equal(app.feedback.reasons.some((reason) => reason.checked), false);
+  assert.equal(app.feedback.note.value, "");
+});
+
+test("keeps failed feedback retryable and reuses the same anonymous payload", async () => {
+  const result = { title: "Candidate", artist: "Artist" };
+  const feedbackBodies = [];
+  const storage = new Map();
+  const fetchImpl = async (url, options) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    if (url.endsWith("/api/spicetify-feedback")) {
+      feedbackBodies.push(options.body);
+      return feedbackBodies.length === 1
+        ? response(503, { error: "storage unavailable" })
+        : response(200, { receipt_sha256: "b".repeat(64) });
+    }
+    return response(200, { ...recommendation, results: [result] });
+  };
+  const app = loadExtension(fetchImpl, { results: [result], storage });
+
+  await app.run();
+  app.feedback.ratings[0].checked = true;
+  app.feedback.ratings[0].onchange();
+  await app.feedback.send.onclick();
+  assert.equal(app.feedback.send.hidden, false);
+  assert.equal(app.feedback.send.disabled, false);
+  assert.equal(app.feedback.send.textContent, "Retry feedback");
+  assert.match(app.feedback.status.textContent, /retry/);
+  assert.equal(
+    app.feedback.status.classList.contains("sa-feedback-error"),
+    true,
+  );
+  assert.equal(storage.has("soundalike:feedback-suppression:v1"), false);
+
+  await app.feedback.send.onclick();
+  assert.equal(feedbackBodies.length, 2);
+  assert.equal(feedbackBodies[0], feedbackBodies[1]);
+  assert.equal(app.feedback.send.hidden, true);
+  assert.equal(
+    JSON.parse(storage.get("soundalike:feedback-suppression:v1")).outcome,
+    "success",
+  );
+  const later = loadExtension(fetchImpl, { results: [result], storage });
+  await later.run();
+  assert.equal(later.feedback.panel.hidden, true);
+});
+
+test("dismissal suppresses a later prompt locally without network submission", async () => {
+  const storage = new Map();
+  const result = { title: "Candidate", artist: "Artist" };
+  const feedbackUrls = [];
+  const fetchImpl = async (url) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    if (url.endsWith("/api/spicetify-feedback")) feedbackUrls.push(url);
+    return response(200, { ...recommendation, results: [result] });
+  };
+  const first = loadExtension(fetchImpl, { results: [result], storage });
+  await first.run();
+  assert.equal(first.feedback.panel.hidden, false);
+  first.feedback.dismiss.onclick();
+  assert.equal(first.feedback.panel.hidden, true);
+  assert.deepEqual(
+    JSON.parse(storage.get("soundalike:feedback-suppression:v1")).outcome,
+    "dismissed",
+  );
+  assert.equal(feedbackUrls.length, 0);
+
+  const second = loadExtension(fetchImpl, { results: [result], storage });
+  await second.run();
+  assert.equal(second.feedback.panel.hidden, true);
+  assert.equal(feedbackUrls.length, 0);
+});
+
+test("feedback records local and legacy API sources accurately", async () => {
+  const result = { title: "Candidate", artist: "Artist" };
+  for (const mode of ["local", "legacy"]) {
+    let payload;
+    const app = loadExtension(async (url, options) => {
+      if (url.endsWith("/api/spicetify-feedback")) {
+        payload = JSON.parse(options.body);
+        return response(200, { receipt_sha256: "c".repeat(64) });
+      }
+      if (url.endsWith("/health")) {
+        if (mode === "local") return response(200, { ok: true });
+        throw new TypeError("connection refused");
+      }
+      if (mode === "legacy" && url.includes("/api/spicetify_recommend")) {
+        return response(404, { error: "not found" });
+      }
+      return response(200, { ...recommendation, results: [result] });
+    }, { results: [result] });
+    await app.run();
+    app.feedback.ratings[0].checked = true;
+    app.feedback.ratings[0].onchange();
+    await app.feedback.send.onclick();
+    assert.equal(payload.source, mode === "local" ? "local" : "hosted");
+    assert.equal(payload.api_version, mode);
+  }
+});
+
+test("feedback markup is inline and exposes accessible form semantics", () => {
+  assert.match(
+    extensionSource,
+    /<section class="sa-feedback" hidden aria-labelledby="sa-feedback-question">/,
+  );
+  assert.match(
+    extensionSource,
+    /<legend id="sa-feedback-question">How close were these matches\?<\/legend>/,
+  );
+  assert.equal(
+    (extensionSource.match(/name="sa-feedback-rating" value=/g) || []).length,
+    3,
+  );
+  assert.equal(
+    (extensionSource.match(/name="sa-feedback-reason" value=/g) || []).length,
+    5,
+  );
+  assert.match(extensionSource, /maxlength="280"/);
+  assert.match(extensionSource, /Please don’t include personal information\./);
+  assert.match(
+    extensionSource,
+    /class="sa-feedback-status" role="status" aria-live="polite"/,
+  );
+  assert.equal(extensionSource.includes("dialog"), false);
 });

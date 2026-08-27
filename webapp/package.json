@@ -12,7 +12,10 @@
     "ratings:v4-inbox": "node tools/ratings-v4-inbox.js",
     "ratings:v4-analysis": "node tools/ratings-v4-analysis.js",
     "ratings:v5-inbox": "node tools/ratings-v5-inbox.js",
-    "ratings:v5-analysis": "node tools/ratings-v5-analysis.js"
+    "ratings:v5-analysis": "node tools/ratings-v5-analysis.js",
+    "ratings:v6-inbox": "node tools/ratings-v6-inbox.js",
+    "ratings:v6-analysis": "node tools/ratings-v6-analysis.js",
+    "feedback:inbox": "node tools/spicetify-feedback-inbox.js"
   },
   "dependencies": {
     "@vercel/blob": "2.6.1"

@@ -93,7 +93,11 @@ webapp/
     ratings.js        # POST-only private v17 ratings ingestion
     ratings-v2.js     # POST-only private full-track v2 ingestion
     ratings-pacing-v3.js # POST-only private pacing V3 ingestion
-  evaluate/           # active blinded pacing V3 evaluator + locked pack
+    ratings-v5.js     # archived V5 private ratings ingestion
+    ratings-v6.js     # active V6 development ratings ingestion
+    spicetify-feedback.js # public-CORS, private-Blob extension feedback
+  evaluate/           # active blinded V6 evaluator + compatibility V5 assets
+  evaluate-v5/        # byte-preserved V5 evaluator
   evaluate-semantic-v2/ # byte-preserved semantic v2 evaluator
   evaluate-v1/        # byte-preserved v17 evaluator public payload
   package.json        # official @vercel/blob SDK
@@ -146,14 +150,22 @@ recommendations — only for the optional "Save as playlist".
 
 ## Private ratings inboxes
 
-`/evaluate` is the research-only V5 full-ranking study. It uses the
-`soundalike-strict-v5-ranking-v1` browser namespace and a locked four-candidate pack.
+`/evaluate` is the V6 development/model-improvement full-ranking study. It uses
+the isolated `soundalike-development-v6-ranking-v1` browser namespace and a
+locked four-candidate pack. Listeners assign the most similar, next most
+similar, second least similar, and least similar positions, then give the
+existing closed worst-item reason. V6 is explicitly **not** an independent
+promotion holdout and cannot authorize model promotion on its own.
 Playback is limited to committed approximately 20-second strongest-recurrence
 excerpts. The excerpt is a recurrence heuristic, not a verified chorus classifier.
 Tasks prioritize disagreements among three frozen methods without using current
 submitted ratings, include two repeated anchors, and allow adaptive stopping after 12
-unique comparisons. All 80 unique study tracks have distinct artists. Strict V4 is
-preserved at `/evaluate-v4` with its original
+unique comparisons. All 80 unique study tracks have distinct artists, and every
+track and artist exposed by earlier evaluator packs—including V5—is excluded.
+The consumed, inconclusive V5 application is byte-preserved at `/evaluate-v5`
+with its original `soundalike-strict-v5-ranking-v1` state, `/api/ratings-v5`
+receipt behavior, and private analysis namespace. Strict V4 is preserved at
+`/evaluate-v4` with its original
 `soundalike-active-v4-ranking-v2` state. The pacing V3 study is preserved at
 `/evaluate-pacing-v3` with its `soundalike-pacing-v3` state.
 The semantic v2 study remains at `/evaluate-semantic-v2` with its isolated state,
@@ -161,16 +173,16 @@ and semantic v1 remains at `/evaluate-semantic-v1`. The prior
 full-track V2 application is byte-preserved at `/evaluate-v2` so existing
 `soundalike-fulltrack-v2` autosaves remain resumable. `/evaluate-v1` retains the
 exact v17 browser application and its `soundalike-human-v17` state. None of the
-seven pages scans, migrates, or deletes another study's state.
+eight pages scans, migrates, or deletes another study's state.
 
 All evaluators submit only after the listener checks the consent box and presses
 the explicit submit button. Neither submits on autosave, page unload, playback,
-or export. JSON export/import remains a manual fallback. In V4 and V5, attribution appears
+or export. JSON export/import remains a manual fallback. In V4, V5, and V6, attribution appears
 only after a complete A–D ranking is saved or the task is skipped. For pacing V3, attribution and
 license links appear only after the list's overall
 0–10 score and all five required result scores are complete. Optional mismatch reasons
 use a closed enum and no free text. Public packs contain no method identity or private
-unblinding document. V5 classifies three separate positions for every plausible vocal
+unblinding document. V5 and V6 classify three separate positions for every plausible vocal
 reserve track, requires all three decisions to agree, rejects vocal/instrumental
 detector conflicts, and requires exact same-language candidates for vocal seeds. It
 saves language decisions but no transcript.
@@ -189,10 +201,14 @@ The archived pacing study did not evaluate language.
 5. Add Vercel Firewall rate-limit rules for `POST /api/ratings`,
    `POST /api/ratings-v2`, `POST /api/ratings-semantic-v1`,
    `POST /api/ratings-semantic-v2`, `POST /api/ratings-pacing-v3`,
-   `POST /api/ratings-v4`, and `POST /api/ratings-v5`. Origin checks and
-   the browser's local-key HMAC provide abuse resistance and integrity; they are
-   not authentication, so application validation is not a replacement for rate
-   limiting.
+   `POST /api/ratings-v4`, `POST /api/ratings-v5`, `POST /api/ratings-v6`,
+   and `POST /api/spicetify-feedback`. Ratings origin checks and the browser's
+   local-key HMAC provide abuse resistance and integrity; these controls are
+   not authentication. The extension feedback endpoint is intentionally
+   unauthenticated and allows public CORS because a Spicetify extension cannot
+   safely hold a secret. Its exact schema, body limits, immutable digest
+   deduplication, and private storage are still not substitutes for a Vercel
+   Firewall rate limit.
 
 Accepted records use immutable, deduplicated private paths:
 `human-ratings/v17/<session-id>/<canonical-payload-sha>.json`. A retry of the exact
@@ -211,17 +227,32 @@ The archived semantic v2 study writes only to:
 `human-ratings/semantic-v2/<semantic-session-id>/<canonical-payload-sha>.json`.
 The archived pacing V3 study writes only to:
 `human-ratings/pacing-v3/<pacing-session-id>/<canonical-payload-sha>.json`.
-The active V4 study writes only to:
+The archived V4 study writes only to:
 `human-ratings/active-v4-ranking-v2/<v4-session-id>/<canonical-payload-sha>.json`.
-The active V5 study writes only to:
+The archived V5 study writes only to:
 `human-ratings/strict-v5-ranking-v1/<v5-session-id>/<canonical-payload-sha>.json`.
+The active V6 development study writes only to:
+`human-ratings/development-v6-ranking-v1/<v6-session-id>/<canonical-payload-sha>.json`.
+
+Optional Spicetify feedback uses its own immutable private prefix:
+`spicetify-feedback/match-quality-v1/<canonical-payload-sha>.json`. The public
+CORS endpoint accepts only `POST` and bounded `OPTIONS` preflight, requires
+unencoded `application/json`, rejects unknown keys and invalid enum/count/string
+bounds, and caps notes at 280 characters. The digest is computed from the
+normalized accepted payload, so a retry receives the same receipt without an
+overwrite. Responses contain only `receipt_sha256`, never a Blob URL.
 
 The stored record contains random anonymous/session IDs, ratings, rating timestamps
 and durations, locked protocol/list hashes, server receipt time, canonical digest,
 and server-derived counts. It strips the local HMAC key and HMAC. Application code
 does not store IP addresses, Origin, user-agent, cookies, raw headers, Spotify
 identity, email, or a Blob URL. Vercel may process request metadata in operational
-infrastructure; review project log settings separately. There is no public GET, listing, admin, or unblinding endpoint for either inbox.
+infrastructure; review project log settings separately. There is no public GET,
+listing, admin, or unblinding endpoint for any inbox. Feedback application
+records likewise omit account identity, credentials, library/history, headers,
+IP addresses, user agent, and hidden candidates. They contain only the seed,
+displayed rows in order, bounded policy labels, selected feedback, an optional
+plain-text note, random anonymous nonces, receipt time, and digest.
 
 ### Authorized analyst and retention workflow
 
@@ -230,26 +261,37 @@ Private downloads are deliberately local-only. From an authorized workstation:
 ```bash
 cd webapp
 npm ci
-npm run ratings:inbox -- ../private-ratings-inbox --acknowledge-private-data
-npm run ratings:v2-inbox -- ../private-ratings-v2-inbox --acknowledge-private-data
-npm run ratings:semantic-inbox -- ../private-ratings-semantic-inbox --acknowledge-private-data
-npm run ratings:semantic-v2-inbox -- ../private-ratings-semantic-v2-inbox --acknowledge-private-data
-npm run ratings:pacing-v3-inbox -- ../private-ratings-pacing-v3-inbox --acknowledge-private-data
-npm run ratings:v4-inbox -- ../private-ratings-v4-inbox --acknowledge-private-data
-npm run ratings:v4-analysis -- ../private-ratings-v4-inbox \
-  ../private-v4-unblinding.json ../ratings-v4-analysis.local.json \
+PRIVATE_ROOT="${SOUNDALIKE_PRIVATE_ROOT:-$HOME/.soundalike/private}"
+mkdir -p "$PRIVATE_ROOT"
+npm run ratings:inbox -- "$PRIVATE_ROOT/ratings-v1" --acknowledge-private-data
+npm run ratings:v2-inbox -- "$PRIVATE_ROOT/ratings-v2" --acknowledge-private-data
+npm run ratings:semantic-inbox -- "$PRIVATE_ROOT/ratings-semantic-v1" --acknowledge-private-data
+npm run ratings:semantic-v2-inbox -- "$PRIVATE_ROOT/ratings-semantic-v2" --acknowledge-private-data
+npm run ratings:pacing-v3-inbox -- "$PRIVATE_ROOT/ratings-pacing-v3" --acknowledge-private-data
+npm run ratings:v4-inbox -- "$PRIVATE_ROOT/ratings-v4" --acknowledge-private-data
+npm run ratings:v4-analysis -- "$PRIVATE_ROOT/ratings-v4" \
+  "$PRIVATE_ROOT/private-v4-unblinding.json" "$PRIVATE_ROOT/ratings-v4-analysis.local.json" \
   --acknowledge-private-data
-npm run ratings:v5-inbox -- ../private-ratings-v5-inbox --acknowledge-private-data
-npm run ratings:v5-analysis -- ../private-ratings-v5-inbox \
-  ../private-v5-unblinding.json ../ratings-v5-analysis.local.json \
+npm run ratings:v5-inbox -- "$PRIVATE_ROOT/ratings-v5" --acknowledge-private-data
+npm run ratings:v5-analysis -- "$PRIVATE_ROOT/ratings-v5" \
+  "$PRIVATE_ROOT/private-v5-unblinding.json" "$PRIVATE_ROOT/ratings-v5-analysis.local.json" \
   --acknowledge-private-data
-python ../tools/aggregate_ratings.py ../private-ratings-inbox \
-  --output ../ratings-aggregate.local.json
+npm run ratings:v6-inbox -- "$PRIVATE_ROOT/ratings-v6" --acknowledge-private-data
+npm run ratings:v6-analysis -- "$PRIVATE_ROOT/ratings-v6" \
+  "$PRIVATE_ROOT/private-v6-unblinding.json" "$PRIVATE_ROOT/ratings-v6-analysis.local.json" \
+  --acknowledge-private-data
+npm run feedback:inbox -- "$PRIVATE_ROOT/spicetify-feedback" \
+  --acknowledge-private-data --retention-days 90
+python ../tools/aggregate_ratings.py "$PRIVATE_ROOT/ratings-v1" \
+  --output "$PRIVATE_ROOT/ratings-aggregate.local.json"
 ```
 
-The inbox command uses the same official SDK credential resolution (OIDC first,
-static token fallback), validates every private object path, and never prints Blob
-URLs or rating contents. The aggregator also accepts already-downloaded v16 signed
+The inbox commands use the same official SDK credential resolution (OIDC first,
+static token fallback), validate every private object path and byte count, and
+never print Blob URLs, free-text feedback comments, or rating contents. The
+feedback downloader reports only downloaded/existing counts and how many records
+are older than the configured retention window; it never deletes automatically.
+The aggregator also accepts already-downloaded v16 signed
 client exports and v17 sanitized server records. It deduplicates snapshots by digest
 and session, merges additions, and stops on conflicting values rather than silently
 choosing one. Neither private inputs nor local aggregates should be committed.
@@ -258,13 +300,21 @@ the latest valid snapshot per session, excludes repeated anchors from primary
 pairwise totals, and separately reports mismatch reasons, skips, and anchor
 consistency. Repeated listener observations are averaged within task for primary
 inference, with listener-clustered sensitivity reported separately. Its report never
-makes an automatic promotion decision.
+makes an automatic promotion decision. The repository also ignores conventional
+private inbox, unblinding, and local-analysis names as defense in depth, but the
+external private root remains mandatory.
 The V5 analyzer applies the same snapshot and anchor rules, then scores all six
 pairwise predictions made by each frozen method for every complete A-D ranking.
 Primary inference averages multiple listener observations of the same task into one
 cluster before exact task-level sign-flip comparisons. Listener-clustered sensitivity
 results are reported separately. The analyzer never makes an automatic promotion
 decision.
+The V6 analyzer keeps that method-order and task-clustered analysis behavior in
+the new development-only namespace. It validates the V6 public/private binding
+and does not reinterpret V6 as independent promotion evidence. Sign-flip
+inference is exact through 16 nonzero clusters (the complete task population);
+listener sensitivity uses 100,000 deterministic Monte Carlo draws above that
+bound so a large response count cannot cause exponential memory growth.
 
 Before opening a study, an authorized analyst must use private Blob credentials
 to record the other prefix counts, submit one fresh test snapshot, download and
@@ -273,11 +323,15 @@ appear under either other prefix, and delete the exact test object with the offi
 private Blob SDK/CLI. Record only counts and the deletion result, never listener
 identifiers, credentials, private URLs, or rating contents.
 
-Choose and document a retention period before collection. On review dates, an
-authorized analyst should download and verify the private inbox, keep only the
-approved encrypted analysis copy, and delete expired Blob objects with the official
-Vercel Blob SDK/CLI. Record deletion totals without recording listener identifiers.
-Do not retain credentials in shell history or analysis output.
+Use **90 days** as the private Spicetify feedback record retention period unless
+a documented legal or research requirement approves a different duration. On
+review dates, an authorized analyst should download and verify the private
+inbox, keep only the approved encrypted analysis copy, and delete expired Blob
+objects with the official Vercel Blob SDK/CLI. Deletion is a separate,
+deliberate maintainer action; the inbox tool only identifies the count eligible
+for review. Record deletion totals without recording listener identifiers,
+comments, or URLs. Do not retain credentials in shell history or analysis
+output.
 
 For an end-to-end local function test use `vercel dev` with a dedicated test-only
 private store. `python webapp/dev_server.py` remains useful for recommendation and

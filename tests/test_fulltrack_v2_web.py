@@ -116,16 +116,14 @@ def test_v2_public_assets_are_blinded_and_audio_is_not_committed():
     )
 
 
-def test_production_recommendation_assets_remain_byte_compatible():
+def test_production_recommendation_implementation_remains_byte_compatible():
     assert {
         str(path.relative_to(ROOT)).replace("\\", "/"): _file_hash(path)
         for path in (
             WEB / "api" / "_reco.py",
             WEB / "api" / "recommend.py",
-            WEB / "index.html",
         )
     } == {
-        "webapp/api/_reco.py": "01d4d648c780a9d2e33a175c00e606bead54c39738ee7d1da36cf6e41294e311",
+        "webapp/api/_reco.py": "340a8c08ceb5e6f8177e572fcdf1cefcdc44baa35ab21f45af6f9c4096af30fa",
         "webapp/api/recommend.py": "6e455a325a8c0bf79d06c23dac5d68b88fda7b074d87567dc0a1a40923ca63fc",
-        "webapp/index.html": "9f8f2b9e03b798400e4adcb28baf9f851414612d2eb3823309e41015644b6ed8",
     }

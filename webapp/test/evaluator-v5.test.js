@@ -4,13 +4,16 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 
-const html = readFileSync(new URL("../evaluate/index.html", import.meta.url), "utf8");
+const html = readFileSync(
+  new URL("../evaluate-v5/index.html", import.meta.url),
+  "utf8",
+);
 const script = html.match(/<script>\s*([\s\S]*?)\s*<\/script>/)?.[1];
 const protocol = JSON.parse(
-  readFileSync(new URL("../evaluate/protocol-v5.json", import.meta.url), "utf8"),
+  readFileSync(new URL("../evaluate-v5/protocol-v5.json", import.meta.url), "utf8"),
 );
 const pack = JSON.parse(
-  readFileSync(new URL("../evaluate/active-pack.json", import.meta.url), "utf8"),
+  readFileSync(new URL("../evaluate-v5/active-pack.json", import.meta.url), "utf8"),
 );
 
 function context() {
@@ -257,4 +260,55 @@ test("pacing V3 archive is byte-identical and version routed", () => {
     routes["/evaluate-pacing-v3"],
     "/evaluate-pacing-v3/index.html",
   );
+});
+
+test("V5 is byte-preserved at its archive route and keeps its namespace", () => {
+  const expected = {
+    "active-pack.json":
+      "4d138e12604e8119f1a3ee76e2fb040d301ef8bc478c7211c2977bac48612c18",
+    "index.html":
+      "a4c0108622bb856c3c9c72b28ae01dc36ea33e5c573465dc01cbe0f049043ccd",
+    "protocol-v5.json":
+      "fd077b80dfcbe873ab413e21c87b9150f668030343bea3983f3fa1ba9c1d552e",
+  };
+  for (const [name, digest] of Object.entries(expected)) {
+    const archived = readFileSync(
+      new URL(`../evaluate-v5/${name}`, import.meta.url),
+    );
+    assert.equal(createHash("sha256").update(archived).digest("hex"), digest);
+    if (name !== "index.html") {
+      const compatibility = readFileSync(
+        new URL(`../evaluate/${name}`, import.meta.url),
+      );
+      assert.equal(archived.equals(compatibility), true);
+    }
+  }
+  const config = JSON.parse(
+    readFileSync(new URL("../vercel.json", import.meta.url)),
+  );
+  const routes = Object.fromEntries(
+    config.rewrites.map((item) => [item.source, item.destination]),
+  );
+  assert.equal(routes["/evaluate-v5"], "/evaluate-v5/index.html");
+  assert.equal(routes["/evaluate-v5/"], "/evaluate-v5/index.html");
+  assert.equal(protocol.submission_endpoint, "/api/ratings-v5");
+  assert.equal(
+    protocol.local_storage_namespace,
+    "soundalike-strict-v5-ranking-v1",
+  );
+  assert.equal(
+    protocol.private_blob_prefix,
+    "human-ratings/strict-v5-ranking-v1/",
+  );
+  const endpoint = readFileSync(
+    new URL("../api/ratings-v5.js", import.meta.url),
+    "utf8",
+  );
+  const analysis = readFileSync(
+    new URL("../tools/ratings-v5-analysis.js", import.meta.url),
+    "utf8",
+  );
+  assert.match(endpoint, /\.\.\/evaluate-v5\/protocol-v5\.json/);
+  assert.match(endpoint, /\.\.\/evaluate-v5\/active-pack\.json/);
+  assert.match(analysis, /\.\.\/evaluate-v5\/active-pack\.json/);
 });
