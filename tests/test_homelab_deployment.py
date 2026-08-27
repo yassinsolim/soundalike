@@ -111,6 +111,52 @@ def test_failed_activation_rolls_back_and_verifies_old_health(tmp_path, monkeypa
     assert ("probe", old.name, True) in calls
 
 
+def test_failed_initial_activation_restores_legacy_unit(tmp_path, monkeypatch):
+    updater = _module("update")
+    root = tmp_path / "soundalike"
+    release = root / "releases/new"
+    release.mkdir(parents=True)
+    units = tmp_path / "systemd"
+    units.mkdir()
+    unit = units / updater.DEFAULT_SERVICE
+    unit.write_bytes(b"legacy unit")
+    deployment = updater.Updater(
+        root,
+        "https://example.test/repo.git",
+        "b" * 40,
+        unit_directory=units,
+    )
+    monkeypatch.setattr(deployment, "_stage", lambda: release)
+    monkeypatch.setattr(updater, "_run", lambda *_args, **_kwargs: "")
+
+    def switch(current_root, _release):
+        current_root.mkdir(parents=True, exist_ok=True)
+        (current_root / "current").write_text("new release", encoding="utf-8")
+
+    monkeypatch.setattr(updater, "switch_release", switch)
+    monkeypatch.setattr(
+        deployment,
+        "_install_unit",
+        lambda _release: unit.write_bytes(b"new unit"),
+    )
+    probes = []
+
+    def probe(candidate, health_only=False):
+        probes.append((candidate, health_only))
+        if len(probes) == 1:
+            raise RuntimeError("new release failed")
+        assert unit.read_bytes() == b"legacy unit"
+        assert not (root / "current").exists()
+
+    monkeypatch.setattr(deployment, "_restart_and_probe", probe)
+
+    with pytest.raises(updater.UpdateError, match="legacy service was restored"):
+        deployment.execute()
+
+    assert probes == [(release, False), (release, True)]
+    assert unit.read_bytes() == b"legacy unit"
+
+
 def test_restart_waits_for_model_startup_before_full_canary(tmp_path, monkeypatch):
     updater = _module("update")
     release = tmp_path / "release"

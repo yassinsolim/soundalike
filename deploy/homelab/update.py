@@ -210,7 +210,14 @@ def _run(command: Iterable[str], *, cwd: Optional[Path] = None, capture: bool = 
 
 
 class Updater:
-    def __init__(self, root: Path, repository: str, target: str, origin: str = DEFAULT_ORIGIN):
+    def __init__(
+        self,
+        root: Path,
+        repository: str,
+        target: str,
+        origin: str = DEFAULT_ORIGIN,
+        unit_directory: Path = Path("/etc/systemd/system"),
+    ):
         if origin.rstrip("/") != DEFAULT_ORIGIN:
             raise UpdateError(f"deployment probes must use the local origin {DEFAULT_ORIGIN}")
         self.root = root
@@ -218,6 +225,7 @@ class Updater:
         self.target = target
         self.origin = DEFAULT_ORIGIN
         self.releases = root / "releases"
+        self.unit_path = unit_directory / DEFAULT_SERVICE
 
     def dry_run(self) -> None:
         print(f"would stage commit {self.target} from {self.repository}")
@@ -256,11 +264,25 @@ class Updater:
 
     def _install_unit(self, release: Path) -> None:
         source = release / "deploy/homelab/soundalike.service"
-        destination = Path("/etc/systemd/system") / DEFAULT_SERVICE
-        temporary = destination.with_name(f".{destination.name}.new-{os.getpid()}")
+        self.unit_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self.unit_path.with_name(
+            f".{self.unit_path.name}.new-{os.getpid()}"
+        )
         shutil.copyfile(source, temporary)
         temporary.chmod(0o644)
-        os.replace(temporary, destination)
+        os.replace(temporary, self.unit_path)
+        _run(("systemctl", "daemon-reload"))
+
+    def _restore_unit(self, content: Optional[bytes]) -> None:
+        if content is None:
+            self.unit_path.unlink(missing_ok=True)
+        else:
+            temporary = self.unit_path.with_name(
+                f".{self.unit_path.name}.rollback-{os.getpid()}"
+            )
+            temporary.write_bytes(content)
+            temporary.chmod(0o644)
+            os.replace(temporary, self.unit_path)
         _run(("systemctl", "daemon-reload"))
 
     def _restart_and_probe(self, release: Path, health_only: bool = False) -> None:
@@ -288,13 +310,31 @@ class Updater:
     def execute(self) -> None:
         release = self._stage()
         previous = _release_target(self.root / "current", self.releases)
+        previous_unit = (
+            self.unit_path.read_bytes() if self.unit_path.is_file() else None
+        )
         try:
             switch_release(self.root, release)
             self._install_unit(release)
             self._restart_and_probe(release)
         except Exception as failure:
             if previous is None:
-                raise UpdateError(f"activation failed with no release to roll back to: {failure}") from failure
+                (self.root / "current").unlink(missing_ok=True)
+                try:
+                    self._restore_unit(previous_unit)
+                    if previous_unit is not None:
+                        self._restart_and_probe(release, health_only=True)
+                    else:
+                        _run(("systemctl", "stop", DEFAULT_SERVICE))
+                except Exception as rollback:
+                    raise UpdateError(
+                        f"initial activation failed ({failure}); legacy rollback "
+                        f"verification failed ({rollback})"
+                    ) from rollback
+                raise UpdateError(
+                    f"initial activation failed and the legacy service was "
+                    f"restored: {failure}"
+                ) from failure
             try:
                 restore_release(self.root, previous)
                 self._install_unit(previous)
