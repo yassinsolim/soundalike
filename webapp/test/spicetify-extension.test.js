@@ -14,6 +14,7 @@ const recommendation = {
   seed: { title: "Blinding Lights", artist: "The Weeknd" },
   vibe: { low_end: "balanced", dynamics: "moderate", tone: "neutral" },
   method: "dual_sonic64_guardrail",
+  ranking_policy: "model-quality-v1",
   results: [],
 };
 
@@ -622,6 +623,30 @@ test("uses Vercel when the primary lacks the strict contract", async () => {
   assert.equal(
     new URL(urls[2]).searchParams.get("language_policy"),
     "spotify-lyrics-strict-v2",
+  );
+  assert.match(page.innerHTML, /HOSTED LIBRARY/);
+});
+
+test("uses Vercel when the primary returns an outdated ranking policy", async () => {
+  const urls = [];
+  const app = loadExtension(async (url) => {
+    urls.push(url);
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    if (url.startsWith("https://soundalike-api.yassin.app")) {
+      return response(200, {
+        ...recommendation,
+        ranking_policy: "legacy-v1",
+      });
+    }
+    return response(200, recommendation);
+  });
+
+  const page = await app.run();
+
+  assert.equal(urls.length, 3);
+  assert.match(
+    urls[2],
+    /^https:\/\/soundalike\.yassin\.app\/api\/spicetify_recommend\?/,
   );
   assert.match(page.innerHTML, /HOSTED LIBRARY/);
 });
