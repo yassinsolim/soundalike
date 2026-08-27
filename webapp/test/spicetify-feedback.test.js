@@ -227,6 +227,10 @@ test("requires exact keys and validates nested types and enums", async () => {
   local.source = "local";
   local.api_version = "local";
   assert.equal((await submit(local)).res.statusCode, 200);
+  const modelQuality = validPayload();
+  modelQuality.selection_policy =
+    "top-20-strict-language-related-artist-model-quality-v1";
+  assert.equal((await submit(modelQuality)).res.statusCode, 200);
 });
 
 test("enforces displayed order, result count, labels, and reason rules", async () => {

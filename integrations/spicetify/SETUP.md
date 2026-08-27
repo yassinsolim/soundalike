@@ -181,9 +181,13 @@ Marketplace paginates extension cards. If a new session does not show
 Soundalike in filtered results, clear the search, select **Load more** once,
 and scroll to the newly listed extensions.
 
-That is enough for normal use: Marketplace installs and updates
-`soundalike.js`, and the extension automatically uses the public hosted library.
-Steps 3 and 4 are optional local-companion setup.
+That is enough for normal use: Marketplace installs the immutable
+`bootstrap.js`, which automatically verifies and loads signed Soundalike
+runtime updates from the public hosted library. **If you installed Soundalike
+before this bootstrap release, uninstall and reinstall it once in
+Marketplace, then restart Spotify.** The old immutable runtime cannot update
+itself; after that final reinstall, runtime updates are automatic. Steps 3 and
+4 are optional local-companion setup.
 
 Manual install:
 

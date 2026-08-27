@@ -18,6 +18,21 @@ That is all normal use requires. There is no Soundalike account, Python
 installation, terminal command, or local server to configure. The extension
 automatically uses the hosted 272,853-track recommendation library.
 
+### Marketplace updates
+
+Marketplace now installs a small, commit-pinned bootstrap. On Spotify start it
+checks a signed stable release feed, verifies the signature, immutable Git
+commit URL, SHA-256 hash, and browser SRI before loading the runtime. It keeps
+the last verified runtime locally and falls back to that runtime (then its
+baked-in runtime) if an update cannot be trusted or fetched. Future signed
+runtime releases do **not** require a Marketplace manifest change.
+
+**Existing Marketplace users must reinstall once**: uninstall Soundalike in
+Marketplace, install it again, and restart Spotify. Older immutable runtime
+copies cannot update themselves. After that final reinstall, runtime updates
+are automatic. Manual installs remain manual; use the current file and run
+`spicetify apply` when updating.
+
 ## Spotify-native results
 
 - Results open on a normal Spotify page, so the Back and Forward buttons work

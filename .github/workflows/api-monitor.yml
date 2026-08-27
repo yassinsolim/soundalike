@@ -1,0 +1,79 @@
+name: Soundalike API monitor
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      deploy_commit:
+        description: "Optional full commit SHA to deploy after the probe passes"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      MONITOR_WEBHOOK: ${{ secrets.SOUNDALIKE_MONITOR_WEBHOOK }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe public v4 contract
+        run: python deploy/homelab/probe_v4.py --url https://soundalike-api.yassin.app
+      - name: Notify optional protected webhook
+        if: failure() && env.MONITOR_WEBHOOK != ''
+        env:
+          WEBHOOK: ${{ env.MONITOR_WEBHOOK }}
+        run: >-
+          curl --fail --silent --show-error --max-time 15
+          --request POST --header "Content-Type: application/json"
+          --data "{\"text\":\"Soundalike API monitor failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
+          "$WEBHOOK"
+
+  deploy:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.deploy_commit != '' &&
+      vars.SOUNDALIKE_DEPLOY_ENABLED == 'true'
+    needs: probe
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 5
+    steps:
+      - name: Require an immutable commit identifier
+        env:
+          COMMIT: ${{ inputs.deploy_commit }}
+        run: |
+          [[ "$COMMIT" =~ ^[0-9a-fA-F]{40}$ ]] || {
+            echo "deploy_commit must be a full 40-character commit SHA" >&2
+            exit 1
+          }
+      - name: Configure strict SSH host verification
+        env:
+          KNOWN_HOSTS: ${{ secrets.SOUNDALIKE_SSH_KNOWN_HOSTS }}
+          DEPLOY_KEY: ${{ secrets.SOUNDALIKE_DEPLOY_SSH_KEY }}
+          HOST: ${{ secrets.SOUNDALIKE_DEPLOY_HOST }}
+          USER: ${{ secrets.SOUNDALIKE_DEPLOY_USER }}
+        run: |
+          [[ -n "$KNOWN_HOSTS" && -n "$DEPLOY_KEY" && -n "$HOST" && -n "$USER" ]] || {
+            echo "Protected deployment secrets are incomplete" >&2
+            exit 1
+          }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+      - name: Start validated VM update
+        env:
+          HOST: ${{ secrets.SOUNDALIKE_DEPLOY_HOST }}
+          USER: ${{ secrets.SOUNDALIKE_DEPLOY_USER }}
+          COMMIT: ${{ inputs.deploy_commit }}
+        run: >-
+          ssh -i ~/.ssh/id_ed25519
+          -o BatchMode=yes -o StrictHostKeyChecking=yes
+          -o UserKnownHostsFile=~/.ssh/known_hosts
+          "$USER@$HOST"
+          "sudo /opt/soundalike/current/deploy/homelab/update.py --commit '$COMMIT'"

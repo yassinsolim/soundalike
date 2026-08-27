@@ -454,6 +454,23 @@ manifest points to a newer pack, so the default experience stays zero-friction.
 soundalike fetch-index
 ```
 
+Before expanding the catalog, maintainers can audit the exact deployed NPZ
+offline against reviewed artist anchors:
+
+```bash
+python -m soundalike.ml.coverage_audit \
+  --index /path/to/deepvibe_index.npz \
+  --output coverage-audit.json
+python -m soundalike.ml.grow_broad \
+  --targeted-plan coverage-audit.json \
+  --max-artists 10 --max-tracks 40 --max-api-calls 80 --dry-run
+```
+
+The report calls its categories **curated artist-anchor proxies**, not genres,
+because the index has no genre field. Targeted harvesting never adds broad
+default seeds and refuses to run without finite artist, track, and actual
+Deezer API-call budgets.
+
 To publish a larger library: build the index, upload it plus the encoder to a Release, and update
 the manifest's `release_tag` + SHA-256s. This is what lets the library scale to hundreds of
 thousands of songs without ever hitting the repo file-size limit.

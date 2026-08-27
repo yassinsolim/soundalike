@@ -1,0 +1,20 @@
+{
+  "index": {
+    "sha256": "f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9",
+    "url": "https://github.com/yassinsolim/soundalike/releases/download/index-2026.07.11-dual-sonic64/deepvibe_index.npz"
+  },
+  "requirements": {
+    "path": "webapp/requirements.txt",
+    "sha256": "160fed6c8729d47bc2bbe7bce0518c27451f9ca8b46023ac3b6860d6696ca73f"
+  },
+  "runtime_files": {
+    "deploy/homelab/probe_v4.py": "ce493d1b7fc08031e2b900d96e0d32fdb7b18dadecad8a49a62dab8cc1ed6c22",
+    "deploy/homelab/server.py": "33a540edbe0ccae83be0fddcfba3965f044d439484d33f3b06f2f46c7334d872",
+    "deploy/homelab/soundalike.service": "5e888bd68930a8fd7c2045d240d28e69684e4a2b3ee03a2de99eb3a00886053e",
+    "deploy/homelab/update.py": "c505031cee4e7cbdea3aab5f5f6d7113d551d1db13a117d1a592e678aab23efc",
+    "webapp/api/_reco.py": "4a415ba5481adf226a3ccf44401883926fa4daae2db280d6c18e3a357183eb9d",
+    "webapp/api/_search.py": "126f9b0e2f86ffbe2e7929fe5247e2bd1e54d9ea1b8bbddcf13ad183084b5c87",
+    "webapp/api/spicetify_recommend.py": "1a74d62f06d98333f30e92f4aeb34c286b5845239d36e4d9a3ba21ac24b0b31f"
+  },
+  "schema": 1
+}

@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "category_model": "Categories are curated artist-anchor proxies, not inferred genres: the index contains no genre metadata. They make coverage gaps reviewable without claiming genre classification.",
+  "categories": [
+    {
+      "name": "electronic",
+      "description": "Curated artist-anchor proxy for electronic and dance listening.",
+      "anchors": [
+        {"artist": "Aphex Twin", "minimum_tracks": 100},
+        {"artist": "Daft Punk", "minimum_tracks": 100},
+        {"artist": "Fred again..", "minimum_tracks": 100},
+        {"artist": "Skrillex", "minimum_tracks": 100}
+      ]
+    },
+    {
+      "name": "global-regional",
+      "description": "Curated artist-anchor proxy for globally and regionally rooted popular music.",
+      "anchors": [
+        {"artist": "Bad Bunny", "minimum_tracks": 75},
+        {"artist": "Burna Boy", "minimum_tracks": 75},
+        {"artist": "Karol G", "minimum_tracks": 75},
+        {"artist": "YOASOBI", "minimum_tracks": 60}
+      ]
+    },
+    {
+      "name": "indie-dream-pop",
+      "description": "Curated artist-anchor proxy for indie, dream-pop, and bedroom-pop listening.",
+      "anchors": [
+        {"artist": "Beach House", "minimum_tracks": 60},
+        {"artist": "Clairo", "minimum_tracks": 60},
+        {"artist": "Men I Trust", "minimum_tracks": 60},
+        {"artist": "TV Girl", "minimum_tracks": 60}
+      ]
+    },
+    {
+      "name": "metal-heavy",
+      "description": "Curated artist-anchor proxy for heavy, metal, and adjacent rock listening.",
+      "anchors": [
+        {"artist": "Deftones", "minimum_tracks": 75},
+        {"artist": "Gojira", "minimum_tracks": 75},
+        {"artist": "Metallica", "minimum_tracks": 75},
+        {"artist": "System of a Down", "minimum_tracks": 75}
+      ]
+    },
+    {
+      "name": "pop-rnb",
+      "description": "Curated artist-anchor proxy for pop, R&B, and adjacent mainstream listening.",
+      "anchors": [
+        {"artist": "Beyoncé", "aliases": ["Beyonce"], "minimum_tracks": 100},
+        {"artist": "Bruno Mars", "minimum_tracks": 60},
+        {"artist": "Childish Gambino", "minimum_tracks": 100},
+        {"artist": "Cleo Sol", "minimum_tracks": 60},
+        {"artist": "Daniel Caesar", "minimum_tracks": 60},
+        {"artist": "Frank Ocean", "minimum_tracks": 60},
+        {"artist": "Giveon", "minimum_tracks": 60},
+        {"artist": "Kali Uchis", "minimum_tracks": 75},
+        {"artist": "Sampha", "minimum_tracks": 60},
+        {"artist": "Solange", "minimum_tracks": 60},
+        {"artist": "SZA", "minimum_tracks": 75},
+        {"artist": "Steve Lacy", "minimum_tracks": 60},
+        {"artist": "The Weeknd", "minimum_tracks": 100}
+      ]
+    },
+    {
+      "name": "rap-hip-hop",
+      "description": "Curated artist-anchor proxy for rap, hip-hop, and adjacent listening.",
+      "anchors": [
+        {"artist": "Drake", "minimum_tracks": 75},
+        {"artist": "Future", "minimum_tracks": 75},
+        {"artist": "J. Cole", "aliases": ["J Cole"], "minimum_tracks": 75},
+        {"artist": "Kendrick Lamar", "minimum_tracks": 75},
+        {"artist": "MF DOOM", "minimum_tracks": 75},
+        {"artist": "Travis Scott", "minimum_tracks": 75},
+        {"artist": "Tyler, The Creator", "minimum_tracks": 75},
+        {"artist": "A$AP Rocky", "minimum_tracks": 75}
+      ]
+    }
+  ]
+}
