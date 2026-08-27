@@ -43,6 +43,8 @@ const manifestUrl =
   "https://raw.githubusercontent.com/yassinsolim/soundalike/main/integrations/spicetify/releases/stable.json";
 const runtimeBase =
   "https://raw.githubusercontent.com/yassinsolim/soundalike/";
+const runtimeCdnBase =
+  "https://cdn.jsdelivr.net/gh/yassinsolim/soundalike@";
 const bundledRuntime = Buffer.from(execFileSync(
   "git",
   ["show", "52ee71dfea4503fd1619762613b0d795815bc3e8:integrations/spicetify/soundalike.js"],
@@ -129,6 +131,7 @@ function loadBootstrap({
   source = testSource,
   fetchOverride,
   scriptError = false,
+  legacyPromise,
 } = {}) {
   const scripts = [];
   const requests = [];
@@ -154,6 +157,7 @@ function loadBootstrap({
       warn(...values) { logs.push(["warn", ...values]); },
     },
     crypto,
+    ...(legacyPromise ? { __soundalikeBootstrapPromise: legacyPromise } : {}),
     document: {
       head: documentRoot,
       createElement(tag) {
@@ -187,7 +191,7 @@ function loadBootstrap({
     scripts,
     storage,
     async done() {
-      await context.__soundalikeBootstrapPromise;
+      await context.__soundalikeBootstrapPromiseV2;
       await new Promise((resolve) => setTimeout(resolve, 0));
     },
   };
@@ -202,7 +206,7 @@ test("loads a valid signed immutable update, verifies its hash, and persists it"
 
   assert.deepEqual(app.requests, [manifestUrl, update.url]);
   assert.equal(app.scripts.length, 1);
-  assert.equal(app.scripts[0].src, update.url);
+  assert.equal(app.scripts[0].src, executableRuntimeUrl(update.url));
   assert.equal(app.scripts[0].integrity, update.sri);
   assert.equal(app.scripts[0].crossOrigin, "anonymous");
   assert.deepEqual(
@@ -273,7 +277,7 @@ test("rejects a signed semantic downgrade even with a newer sequence", async () 
   await app.done();
 
   assert.deepEqual(app.requests, [manifestUrl, lkg.url]);
-  assert.equal(app.scripts[0].src, lkg.url);
+  assert.equal(app.scripts[0].src, executableRuntimeUrl(lkg.url));
 });
 
 test("rejects a runtime hash mismatch before it creates a script", async () => {
@@ -371,7 +375,7 @@ test("uses a persisted LKG when the feed is unavailable", async () => {
 
   await app.done();
 
-  assert.equal(app.scripts[0].src, lkg.url);
+  assert.equal(app.scripts[0].src, executableRuntimeUrl(lkg.url));
 });
 
 test("shares one global loader promise when bootstrap is evaluated repeatedly", async () => {
@@ -388,15 +392,50 @@ test("shares one global loader promise when bootstrap is evaluated repeatedly", 
   assert.equal(app.scripts.length, 1);
 });
 
+test("loads even when the broken legacy bootstrap promise already exists", async () => {
+  const update = candidate();
+  const app = loadBootstrap({
+    manifest: signedManifest(update),
+    bodies: new Map([[update.url, Buffer.from("verified runtime")]]),
+    legacyPromise: Promise.resolve(),
+  });
+
+  await app.done();
+
+  assert.deepEqual(app.requests, [manifestUrl, update.url]);
+  assert.equal(app.scripts.length, 1);
+  assert.equal(app.scripts[0].src, executableRuntimeUrl(update.url));
+});
+
 function expectBundledRuntimeUrl() {
   return `${runtimeBase}52ee71dfea4503fd1619762613b0d795815bc3e8/integrations/spicetify/soundalike.js`;
 }
+
+function executableRuntimeUrl(runtimeUrl) {
+  const commit = new URL(runtimeUrl).pathname.split("/")[3];
+  return `${runtimeCdnBase}${commit}/integrations/spicetify/soundalike.js`;
+}
+
+test("executes verified runtime bytes from an immutable JavaScript CDN URL", async () => {
+  const update = candidate();
+  const app = loadBootstrap({
+    manifest: signedManifest(update),
+    bodies: new Map([[update.url, Buffer.from("verified runtime")]]),
+  });
+
+  await app.done();
+
+  assert.deepEqual(app.requests, [manifestUrl, update.url]);
+  assert.equal(app.scripts[0].src, executableRuntimeUrl(update.url));
+  assert.match(app.scripts[0].src, /^https:\/\/cdn\.jsdelivr\.net\/gh\//);
+  assert.equal(app.scripts[0].integrity, update.sri);
+});
 
 test("Marketplace permanently pins the bootstrap implementation commit", () => {
   assert.equal(marketplaceManifest.main, "integrations/spicetify/bootstrap.js");
   assert.equal(
     marketplaceManifest.branch,
-    "833fa84ad77ad5bee2ab8f04a371810527ed87c5",
+    "38ca29ca9ec760dc40e58a567ca6aaff632ae306",
   );
   assert.match(marketplaceManifest.branch, /^[a-f0-9]{40}$/);
 });
