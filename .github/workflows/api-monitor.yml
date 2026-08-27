@@ -20,7 +20,7 @@ jobs:
     env:
       MONITOR_WEBHOOK: ${{ secrets.SOUNDALIKE_MONITOR_WEBHOOK }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Probe public v4 contract
         run: python deploy/homelab/probe_v4.py --url https://soundalike-api.yassin.app
       - name: Notify optional protected webhook
