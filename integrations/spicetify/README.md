@@ -38,7 +38,10 @@ automatically uses the hosted 272,853-track recommendation library.
 - Temporary Spotify language failures are retried and are not cached as
   permanent unknowns. Among exact-language candidates in the top 20, artists
   Spotify directly relates to the seed artist are shown first while preserving
-  the model order within each group.
+  the model order within each group. Same-artist matches are no longer blocked,
+  remix/version variants are softly penalized so originals stay ahead, and
+  global notability can only reorder the top 1,000 audio-qualified tail
+  candidates at 25% strength.
 - If Spotify has no language for the seed, Soundalike preserves the normal
   ranking. Lyrics metadata alone cannot safely distinguish an instrumental
   from a metadata failure.

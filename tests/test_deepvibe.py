@@ -93,13 +93,34 @@ def test_dual_sonic_preserves_guarded_head_and_baseline_top_ten():
     )
     dual = rec.recommend(
         idx.neural[0], vibe, n=25, exclude_ids={0},
-        exclude_artist="artist 0", seed_title="title 0", diversity=.15,
+        exclude_artist=None, seed_title="title 0", diversity=.15,
         max_per_artist=1, seed_row=0,
     )
     ids = [item.track_id for item in dual]
     assert ids[:5] == [item.track_id for item in guarded]
     assert {item.track_id for item in baseline} <= set(ids[:15])
     assert rec.last_retrieval_mode == "dual_sonic64_guardrail"
+
+
+def test_same_artist_is_allowed_unless_explicitly_excluded():
+    idx = _toy_index()
+    idx.artists[1] = "x"
+    rec = DeepVibeRecommender(idx, enhance=False)
+    seed_vibe = VibeFeatures.from_vector(idx.vibe[0])
+
+    default = rec.recommend(
+        idx.neural[0], seed_vibe, n=4, exclude_ids={1}
+    )
+    excluded = rec.recommend(
+        idx.neural[0],
+        seed_vibe,
+        n=4,
+        exclude_ids={1},
+        exclude_artist="x",
+    )
+
+    assert 2 in {item.track_id for item in default}
+    assert all(item.artist.casefold() != "x" for item in excluded)
 
 
 def test_stable_sonic_preserves_head_and_changes_tail():
