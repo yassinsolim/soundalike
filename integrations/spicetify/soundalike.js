@@ -7,7 +7,7 @@
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.1.0";
+  const RUNTIME_SEMANTIC_VERSION = "2.1.1";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -492,6 +492,9 @@
     if (!response.ok && !result?.error) {
       throw new Error(`Recommendation service returned HTTP ${response.status}.`);
     }
+    if (result?.ok && result.ranking_policy !== RANKING_POLICY) {
+      throw new Error("Recommendation service returned an outdated ranking policy.");
+    }
     return { data: result, cacheable: true, apiVersion };
   }
 
@@ -564,8 +567,12 @@
   async function requestRecommendationsUncached(payload) {
     if (await localServerReady()) {
       try {
+        const data = await postRecommendations(LOCAL_SERVER, payload);
+        if (data?.ok && data.ranking_policy !== RANKING_POLICY) {
+          throw new Error("Local engine uses an outdated ranking policy.");
+        }
         return {
-          data: await postRecommendations(LOCAL_SERVER, payload),
+          data,
           source: "local",
           apiVersion: "local",
         };

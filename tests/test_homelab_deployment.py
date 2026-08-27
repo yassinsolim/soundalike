@@ -150,6 +150,8 @@ def test_monitor_workflow_checks_secrets_inside_a_step():
     )
     job_if = workflow.split("  deploy:", 1)[1].split("    needs:", 1)[0]
     assert "secrets." not in job_if
+    assert "if: failure() && secrets." not in workflow
+    assert "if: failure() && env.MONITOR_WEBHOOK" in workflow
     assert "Protected deployment secrets are incomplete" in workflow
 
 

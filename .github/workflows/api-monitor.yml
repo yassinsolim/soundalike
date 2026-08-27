@@ -17,14 +17,16 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     timeout-minutes: 3
+    env:
+      MONITOR_WEBHOOK: ${{ secrets.SOUNDALIKE_MONITOR_WEBHOOK }}
     steps:
       - uses: actions/checkout@v4
       - name: Probe public v4 contract
         run: python deploy/homelab/probe_v4.py --url https://soundalike-api.yassin.app
       - name: Notify optional protected webhook
-        if: failure() && secrets.SOUNDALIKE_MONITOR_WEBHOOK != ''
+        if: failure() && env.MONITOR_WEBHOOK != ''
         env:
-          WEBHOOK: ${{ secrets.SOUNDALIKE_MONITOR_WEBHOOK }}
+          WEBHOOK: ${{ env.MONITOR_WEBHOOK }}
         run: >-
           curl --fail --silent --show-error --max-time 15
           --request POST --header "Content-Type: application/json"
