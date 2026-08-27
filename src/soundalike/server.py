@@ -246,8 +246,9 @@ class SoundalikeEngine:
 
             results = self.recommender.recommend(
                 seed_neural, seed_vibe, n=n, exclude_ids=exclude_ids,
-                exclude_artist=seed_artist, seed_title=seed_title, diversity=diversity,
-                max_per_artist=max_per_artist, seed_sonic=seed_sonic, seed_row=row)
+                exclude_artist=None, seed_title=seed_title, diversity=diversity,
+                max_per_artist=max_per_artist, seed_sonic=seed_sonic, seed_row=row,
+                seed_artist=seed_artist)
 
         vibe = seed_vibe.describe()
         out = []

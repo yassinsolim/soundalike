@@ -100,10 +100,81 @@ def test_web_recommender_matches_canonical(tmp_path):
             np.asarray(idx.neural[row], np.float32),
             VibeFeatures.from_vector(np.asarray(idx.vibe[row], np.float32)),
             n=15, exclude_ids={int(idx.track_ids[row])},
-            exclude_artist=str(idx.artists[row]), diversity=0.15, max_per_artist=1,
+            exclude_artist=None, diversity=0.15, max_per_artist=1,
             quality_filter=False, genre_rerank=False, related_boost=False)
         assert [(x["title"], x["artist"]) for x in w["results"]] == \
                [(r.title, r.artist) for r in c], f"mismatch at row {row}"
+
+
+def test_web_recommender_can_return_same_artist_candidates(tmp_path):
+    from _reco import WebRecommender
+
+    path, _ = _synthetic_index(tmp_path, n_artists=4, per=4, seed=11)
+    recommender = WebRecommender(str(path), enhance=True)
+    result = recommender.recommend(0, n=5, diversity=0.0, max_per_artist=1)
+    artists = [item["artist"] for item in result["results"]]
+    assert "artist 0" in artists
+
+
+def test_web_recommender_penalizes_versioned_variants(tmp_path):
+    from _reco import WebRecommender
+    from soundalike.ml.deepvibe import DeepVibeIndex
+
+    neural = np.array([
+        [0.0, 0.0, 1.0, 0.0],
+        [0.2, 0.0, 0.98, 0.0],
+        [0.2, 0.0, 0.98, 0.0],
+    ], dtype=np.float32)
+    vibe = np.zeros((3, 29), dtype=np.float32)
+    vibe[:, 0] = [120, 121, 121]
+    idx = DeepVibeIndex(
+        np.array([1, 2, 3]),
+        np.array(["Seed Song", "Echoes", "Echoes (Remix)"], dtype=object),
+        np.array(["Seed Artist", "Artist A", "Artist B"], dtype=object),
+        neural,
+        vibe,
+    )
+    path = tmp_path / "versioned.npz"
+    idx.save(path)
+    recommender = WebRecommender(str(path), enhance=True)
+    result = recommender.recommend(0, n=2, diversity=0.0, max_per_artist=1)
+
+    assert [item["title"] for item in result["results"]][:2] == [
+        "Echoes", "Echoes (Remix)"
+    ]
+
+
+def test_version_penalty_uses_title_metadata_not_artist_names():
+    from _reco import _version_penalty as hosted_penalty
+    from soundalike.ml.deepvibe import _version_penalty as canonical_penalty
+
+    cases = [
+        ("Live Forever", "Oasis", 0.0),
+        ("Normal Song", "Little Mix", 0.0),
+        ("Normal Song", "Live", 0.0),
+        ("Hard to Live in the City", "Albert Hammond Jr.", 0.0),
+        ("The Folks Who Live on the Hill", "Peggy Lee", 0.0),
+        ("Free (You Got To Live)", "Ultra Naté", 0.0),
+        ("Echoes (Acoustic)", "Artist", 0.10),
+        ("Echoes - Live", "Artist", 0.10),
+        ("Echoes (Club Remix)", "Artist", 0.30),
+    ]
+    for title, artist, expected in cases:
+        assert canonical_penalty(title, artist) == expected
+        assert hosted_penalty(title, artist) == expected
+
+
+def test_version_penalty_is_disabled_for_unmodified_baseline(tmp_path):
+    from _reco import WebRecommender
+
+    path, _ = _synthetic_index(tmp_path, seed=12)
+    baseline = WebRecommender(str(path), enhance=False)
+    enhanced = WebRecommender(str(path), enhance=True)
+
+    assert not np.any(baseline._version_penalty)
+    assert np.array_equal(
+        enhanced._version_penalty, enhanced._version_penalty_policy
+    )
 
 
 def test_spicetify_results_include_measured_bpm(tmp_path):
@@ -307,8 +378,9 @@ def test_enhanced_web_recommender_matches_canonical(tmp_path):
             VibeFeatures.from_vector(np.asarray(idx.vibe[row], np.float32)),
             n=15,
             exclude_ids={int(idx.track_ids[row])},
-            exclude_artist=str(idx.artists[row]),
+            exclude_artist=None,
             seed_title=str(idx.titles[row]),
+            seed_artist=str(idx.artists[row]),
             diversity=0.15,
             max_per_artist=1,
         )
@@ -332,7 +404,7 @@ def test_sonic_hosted_matches_canonical_and_reports_diagnostics(tmp_path):
         canonical = desktop.recommend(
             idx.neural[row], VibeFeatures.from_vector(idx.vibe[row]), n=20,
             exclude_ids={int(idx.track_ids[row])},
-            exclude_artist=str(idx.artists[row]), seed_title=str(idx.titles[row]),
+            exclude_artist=None, seed_title=str(idx.titles[row]),
             diversity=.15, max_per_artist=1, seed_row=row,
         )
         assert [(item["title"], item["artist"]) for item in web_result["results"]] == [
@@ -363,7 +435,7 @@ def test_dual_sonic_hosted_matches_canonical_and_preserves_guardrails(tmp_path):
     canonical = desktop.recommend(
         idx.neural[0], VibeFeatures.from_vector(idx.vibe[0]), n=20,
         exclude_ids={int(idx.track_ids[0])},
-        exclude_artist=str(idx.artists[0]), seed_title=str(idx.titles[0]),
+        exclude_artist=None, seed_title=str(idx.titles[0]),
         diversity=.15, max_per_artist=1, seed_row=0,
     )
     assert [(item["title"], item["artist"]) for item in web_result["results"]] == [
@@ -372,6 +444,77 @@ def test_dual_sonic_hosted_matches_canonical_and_preserves_guardrails(tmp_path):
     assert web_result["results"][:5] == legacy_head
     assert web_result["method"] == "dual_sonic64_guardrail"
     assert web_result["index_version"] == "2026.07.11-dual-sonic64"
+
+
+def test_dual_tail_priors_cannot_bypass_audio_candidate_gate(tmp_path):
+    from _reco import WebRecommender
+    from soundalike.ml.deepvibe import DeepVibeIndex, DeepVibeRecommender
+
+    rng = np.random.default_rng(45)
+    count = 1_002
+    cosine = np.linspace(0.99, 0.10, count - 2, dtype=np.float32)
+    compact = np.zeros((count, 64), dtype=np.float32)
+    compact[0, 0] = 1.0
+    compact[1:-1, 0] = cosine
+    compact[1:-1, 1] = np.sqrt(1.0 - cosine * cosine)
+    compact[-1, 1] = 1.0
+    titles = [f"song {i}" for i in range(count)]
+    titles[999] = "song 999 (Remix)"
+    idx = DeepVibeIndex(
+        np.arange(10_000, 10_000 + count),
+        titles,
+        [f"artist {i}" for i in range(count)],
+        rng.normal(size=(count, 12)).astype(np.float32),
+        rng.normal(size=(count, 29)).astype(np.float32),
+        compact.astype(np.float16),
+        compact.astype(np.float16),
+        np.zeros(count, dtype=np.float16),
+        np.zeros(count, dtype=np.uint8),
+    )
+    path = tmp_path / "hub-gate.npz"
+    idx.save(path)
+    canonical = DeepVibeRecommender(idx, enhance=True)
+    hosted = WebRecommender(str(path), enhance=True)
+
+    promoted_row = 900
+    hub_row = count - 1
+    for recommender in (canonical, hosted):
+        recommender._wiki[promoted_row] = 100.0
+        recommender._wiki[hub_row] = 200.0
+
+    old_ungated_score = (
+        0.25 * canonical._zscore(
+            canonical._compact_cosine(canonical._sonic, idx.sonic[0])
+        )
+        + 0.75 * canonical._zscore(
+            canonical._compact_cosine(canonical._clap, idx.clap[0])
+        )
+        + 0.20 * canonical._wiki
+        + 0.10 * canonical._wiki_specific
+        - canonical._version_penalty
+    )
+    assert int(np.argmax(old_ungated_score)) == hub_row
+
+    canonical_tail = canonical._recommend_dual_tail(
+        idx.sonic[0],
+        idx.clap[0],
+        n=20,
+        exclude_ids={int(idx.track_ids[0])},
+        exclude_artist=None,
+        seed_title=str(idx.titles[0]),
+    )
+    hosted_tail = hosted._recommend_dual_tail(0, n=20)
+    canonical_ids = [item.track_id for item in canonical_tail]
+    hosted_ids = [item["deezer_id"] for item in hosted_tail]
+
+    assert canonical_ids == hosted_ids
+    assert int(idx.track_ids[promoted_row]) == canonical_ids[0]
+    assert int(idx.track_ids[hub_row]) not in canonical_ids
+    oversized = hosted._recommend_dual_tail(0, n=count)
+    oversized_ids = {item["deezer_id"] for item in oversized}
+    assert len(oversized) == 999
+    assert int(idx.track_ids[999]) in oversized_ids
+    assert int(idx.track_ids[1000]) not in oversized_ids
 
 
 def test_sonic_stable_head_is_exact_and_tail_changes(tmp_path):

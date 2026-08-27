@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import re
 from typing import Callable, Dict, List, Optional, Set
 
 import numpy as np
@@ -36,6 +37,56 @@ class DeepVibeRecommendation:
 
     def __str__(self) -> str:
         return f"{self.title} — {self.artist}  ({self.score:.3f})"
+
+
+_VERSION_MARKER_RE = re.compile(
+    r"\b(?:remix|version|edit|mix|live|acoustic|demo|instrumental|extended|"
+    r"radio\s+edit|single\s+version|english\s+version|spanish\s+version)\b",
+    re.IGNORECASE,
+)
+_VERSION_BRACKET_RE = re.compile(r"[\(\[\{]([^\)\]\}]*)[\)\]\}]")
+_VERSION_DASH_SUFFIX_RE = re.compile(r"\s+[-\u2013\u2014:]\s+(.+)$")
+_VERSION_CONTEXT_RE = re.compile(
+    r"(?:\bremix\b|"
+    r"\b(?:version|edit|mix)\b\s*$|"
+    r"^(?:live(?:\s+acoustic|\s+(?:at|from)\b.*)?|"
+    r"acoustic(?:\s+(?:session|version))?|demo|"
+    r"instrumental(?:\s+version)?|extended(?:\s+(?:mix|version))?)$)",
+    re.IGNORECASE,
+)
+_VERSION_SUFFIX_RE = re.compile(
+    r"\s+(?:(?:\S+\s+){0,4}remix|"
+    r"(?:album|single|english|spanish|original)\s+version|"
+    r"(?:radio|club|extended)\s+(?:edit|mix)|"
+    r"(?:acoustic|demo|instrumental|extended|edit|mix|version)|"
+    r"live\s+(?:at|from)\b.*)\s*$",
+    re.IGNORECASE,
+)
+_DUAL_TAIL_AUDIO_POOL_SIZE = 1_000
+_DUAL_TAIL_PRIOR_SCALE = 0.25
+
+
+def _version_penalty(title: str, artist: str = "") -> float:
+    """Small penalty for alternate versions that should trail originals."""
+    text = str(title)
+    contexts = _VERSION_BRACKET_RE.findall(text)
+    dash_suffix = _VERSION_DASH_SUFFIX_RE.search(text)
+    if dash_suffix:
+        contexts.append(dash_suffix.group(1))
+    plain_suffix = _VERSION_SUFFIX_RE.search(text)
+    if plain_suffix:
+        contexts.append(plain_suffix.group(0))
+    contexts = [
+        context for context in contexts
+        if _VERSION_CONTEXT_RE.search(context.strip())
+    ]
+    metadata = " ".join(contexts)
+    penalty = 0.0
+    if re.search(r"\bremix\b", metadata, re.IGNORECASE):
+        penalty += 0.22
+    if _VERSION_MARKER_RE.search(metadata):
+        penalty += 0.10
+    return min(penalty, 0.30)
 
 
 class DeepVibeIndex:
@@ -215,6 +266,12 @@ class DeepVibeRecommender:
             None if index.wiki_specific is None
             else self._zscore(np.asarray(index.wiki_specific, dtype=np.float32))
         )
+        self._version_penalty_policy = np.asarray(
+            [_version_penalty(str(title), str(artist))
+             for title, artist in zip(self.index.titles, self.index.artists)],
+            dtype=np.float32,
+        )
+        self._version_penalty = np.zeros_like(self._version_penalty_policy)
         self.last_retrieval_mode = "legacy_no_sonic_seed"
 
         # ── Enhancement modules ──────────────────────────────────────────────
@@ -233,6 +290,7 @@ class DeepVibeRecommender:
         import fails (e.g., running without the soundalike package installed as
         an editable install, or with a stripped deployment).
         """
+        self._version_penalty = self._version_penalty_policy
         try:
             from .quality_filter import TitleQualityFilter
             self._qfilter = TitleQualityFilter()
@@ -312,6 +370,7 @@ class DeepVibeRecommender:
         seed_sonic: Optional[np.ndarray] = None,
         seed_clap: Optional[np.ndarray] = None,
         seed_row: Optional[int] = None,
+        seed_artist: Optional[str] = None,
     ) -> List[DeepVibeRecommendation]:
         """Recommend songs similar to (seed_neural, seed_vibe).
 
@@ -326,6 +385,15 @@ class DeepVibeRecommender:
           graph is not loaded by serving.
         """
         sonic = self._sonic
+        seed_artist_context = seed_artist or ""
+        if (
+            not seed_artist_context
+            and seed_row is not None
+            and 0 <= int(seed_row) < len(self.index)
+        ):
+            seed_artist_context = str(self.index.artists[int(seed_row)])
+        if not seed_artist_context:
+            seed_artist_context = exclude_artist or ""
         use_dual = (
             sonic is not None
             and self._clap is not None
@@ -351,12 +419,14 @@ class DeepVibeRecommender:
                 exclude_artist=exclude_artist, seed_title=seed_title,
                 diversity=diversity, max_per_artist=max_per_artist,
                 quality_filter=True, genre_rerank=True,
+                seed_artist=seed_artist_context,
             )
             baseline_guardrail = self.recommend(
                 seed_neural, seed_vibe, n=10, exclude_ids=exclude_ids,
                 exclude_artist=exclude_artist, seed_title=seed_title,
                 diversity=diversity, max_per_artist=max_per_artist,
                 quality_filter=True, genre_rerank=False,
+                seed_artist=seed_artist_context,
             )
             tail = self._recommend_dual_tail(
                 np.asarray(seed_sonic), np.asarray(seed_clap), max(n, 50),
@@ -394,10 +464,11 @@ class DeepVibeRecommender:
                 quality_filter=quality_filter, genre_rerank=genre_rerank,
                 related_boost=related_boost, genre_gamma=genre_gamma,
                 related_gamma=related_gamma,
+                seed_artist=seed_artist_context,
             )
             sonic_results = self._recommend_sonic_tail(
                 seed_neural, seed_vibe, np.asarray(seed_sonic), max(n, 50),
-                exclude_ids or set(), exclude_artist, seed_title,
+                exclude_ids or set(), exclude_artist, seed_artist_context, seed_title,
                 quality_filter, genre_rerank, genre_gamma,
             )
             merged = list(legacy[:min(5, n)])
@@ -428,6 +499,7 @@ class DeepVibeRecommender:
 
         # Blend on comparable (z-scored) scales so alpha is meaningful.
         blended = self.alpha * self._zscore(neural_sim) + (1 - self.alpha) * self._zscore(vibe_sim)
+        blended = blended - self._version_penalty
 
         order = np.argsort(blended)[::-1]
 
@@ -483,7 +555,7 @@ class DeepVibeRecommender:
         # hit in the sourced held-out benchmark.
         if genre_rerank and self._centroid_idx is not None and chosen:
             centroid_score = self._centroid_idx.blend_with_genre(
-                blended, exclude_artist or "", seed_neural_w=qn, gamma=genre_gamma)
+                blended, seed_artist_context, seed_neural_w=qn, gamma=genre_gamma)
             boundary = min(20, len(chosen))
             chosen = sorted(
                 chosen[:boundary],
@@ -520,16 +592,22 @@ class DeepVibeRecommender:
             raise ValueError("Dual-Sonic64 tail requires all release arrays")
         efficientnet = self._compact_cosine(self._sonic, seed_sonic)
         clap = self._compact_cosine(self._clap, seed_clap)
-        score = (
+        audio_score = (
             0.25 * self._zscore(efficientnet)
             + 0.75 * self._zscore(clap)
-            + 0.20 * self._wiki
-            + 0.10 * self._wiki_specific
+        )
+        pool_size = min(len(audio_score), _DUAL_TAIL_AUDIO_POOL_SIZE)
+        audio_pool = np.argsort(audio_score)[::-1][:pool_size]
+        score = audio_score.copy()
+        score[audio_pool] -= self._version_penalty[audio_pool]
+        score[audio_pool] += _DUAL_TAIL_PRIOR_SCALE * (
+            0.20 * self._wiki[audio_pool]
+            + 0.10 * self._wiki_specific[audio_pool]
         )
         excluded_artist = (exclude_artist or "").casefold()
         seen_recordings: Set[str] = set()
         rows: List[int] = []
-        for raw in np.argsort(score)[::-1]:
+        for raw in audio_pool[np.argsort(score[audio_pool])[::-1]]:
             row = int(raw)
             if int(self.index.track_ids[row]) in exclude_ids:
                 continue
@@ -573,6 +651,7 @@ class DeepVibeRecommender:
         n: int,
         exclude_ids: Set,
         exclude_artist: Optional[str],
+        seed_artist: Optional[str],
         seed_title: Optional[str],
         quality_filter: bool,
         genre_rerank: bool,
@@ -589,6 +668,7 @@ class DeepVibeRecommender:
             self.alpha * self._zscore(sonic_sim)
             + (1 - self.alpha) * self._zscore(vibe_sim)
         )
+        blended = blended - self._version_penalty
         qmask = self._qmask if quality_filter else None
         excluded_artist = (exclude_artist or "").casefold()
         candidates: List[int] = []
@@ -647,7 +727,7 @@ class DeepVibeRecommender:
             if self._whiten:
                 qn = self._apply_whiten(qn)
             centroid = self._centroid_idx.blend_with_genre(
-                blended, exclude_artist or "", qn, gamma=genre_gamma
+                blended, seed_artist or "", qn, gamma=genre_gamma
             )
             boundary = min(20, len(chosen))
             chosen = sorted(
