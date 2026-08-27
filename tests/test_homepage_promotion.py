@@ -102,4 +102,4 @@ def test_marketplace_description_pins_the_immutable_update_bootstrap():
         "optional anonymous feedback."
     )
     assert manifest["main"] == "integrations/spicetify/bootstrap.js"
-    assert manifest["branch"] == "833fa84ad77ad5bee2ab8f04a371810527ed87c5"
+    assert manifest["branch"] == "38ca29ca9ec760dc40e58a567ca6aaff632ae306"
