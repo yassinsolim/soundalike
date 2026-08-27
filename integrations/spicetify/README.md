@@ -28,8 +28,9 @@ automatically uses the hosted 272,853-track recommendation library.
   exact known language are shown (English with English, French with French,
   and so on). The gate examines only the model's original top 20: it never
   promotes a weak lower-ranked song merely because that song has language
-  metadata. Results stay hidden until the checks finish instead of flashing
-  an unfiltered list first.
+  metadata. Each candidate stays hidden until its own check finishes; verified
+  exact-language rows appear progressively and are never later removed for a
+  language mismatch.
 - Different-language candidates and candidates with genuinely unavailable
   lyrics metadata are hidden rather than used as fallbacks, so strict
   filtering can return fewer than 20 results. "No lyrics metadata" does not

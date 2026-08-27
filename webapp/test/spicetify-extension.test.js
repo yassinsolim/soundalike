@@ -27,6 +27,23 @@ function response(status, body) {
   };
 }
 
+function deferred() {
+  let resolve;
+  const promise = new Promise((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+async function waitFor(predicate, timeoutMs = 500) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (predicate()) return;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  assert.fail("Timed out waiting for condition");
+}
+
 function loadExtension(fetchImpl, options = {}) {
   let handler;
   let currentPage;
@@ -35,6 +52,7 @@ function loadExtension(fetchImpl, options = {}) {
   const played = [];
   const graphqlRequests = [];
   const cosmosRequests = [];
+  const logs = [];
   const historyListeners = [];
   const storage = options.storage || new Map();
   const rows = (options.results || []).map((_, index) => ({
@@ -232,7 +250,13 @@ function loadExtension(fetchImpl, options = {}) {
     crypto: webcrypto,
     fetch: fetchImpl,
     setTimeout,
-    console: { error() {}, log() {}, warn() {} },
+    console: {
+      error() {},
+      log(...values) {
+        logs.push(values.join(" "));
+      },
+      warn() {},
+    },
     document: {
       body,
       createElement(tag) {
@@ -301,6 +325,7 @@ function loadExtension(fetchImpl, options = {}) {
       Definitions: definitions,
       async Request(definition, variables) {
         graphqlRequests.push({ definition, variables });
+        await options.beforeGraphqlRequest?.(definition, variables);
         if (definition === getTrack) {
           if (options.seedTrack && variables?.uri === "spotify:track:test") {
             return {
@@ -464,6 +489,7 @@ function loadExtension(fetchImpl, options = {}) {
     played,
     graphqlRequests,
     cosmosRequests,
+    logs,
     nativeChildren: pageContainer.children,
     languageStatus,
     languageLoading,
@@ -493,6 +519,20 @@ function findElement(node, predicate) {
   }
   return null;
 }
+
+test("starts the optional local probe before the first search", async () => {
+  const probe = deferred();
+  const urls = [];
+  loadExtension((url) => {
+    urls.push(url);
+    return probe.promise;
+  });
+
+  assert.deepEqual(urls, ["http://127.0.0.1:8787/health"]);
+
+  probe.resolve(response(200, { ok: false }));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+});
 
 test("uses the always-on hosted library when the local companion is unavailable", async () => {
   const urls = [];
@@ -1019,6 +1059,183 @@ test("restores cached results when navigating back to the Soundalike page", asyn
   assert.equal(firstPage.innerHTML, app.currentPage.innerHTML);
   assert.equal(app.rows[0].dataset.uri, spotifyTrack.uri);
   assert.deepEqual(app.nativeChildren, [{ id: "spotify-owned-content" }]);
+});
+
+test("opens the results page without waiting for related-artist context", async () => {
+  const relatedArtists = deferred();
+  const result = { title: "Fast Result", artist: "Fast Artist" };
+  const spotifyTrack = {
+    __typename: "Track",
+    name: result.title,
+    uri: "spotify:track:fast-result",
+    albumOfTrack: {
+      name: "Fast Album",
+      uri: "spotify:album:fast",
+      coverArt: {
+        sources: [{ url: "https://i.scdn.co/image/fast", width: 64 }],
+      },
+    },
+    artists: {
+      items: [{
+        uri: "spotify:artist:fast",
+        profile: { name: result.artist },
+      }],
+    },
+  };
+  const app = loadExtension(async (url) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    return response(200, { ...recommendation, results: [result] });
+  }, {
+    results: [result],
+    seedTrack: {
+      __typename: "Track",
+      name: "Blinding Lights",
+      uri: "spotify:track:test",
+      firstArtist: {
+        items: [{
+          uri: "spotify:artist:seed",
+          profile: { name: "The Weeknd" },
+        }],
+      },
+      albumOfTrack: { coverArt: { sources: [] } },
+    },
+    spotifyTrack,
+    languageByTrackId: {
+      test: "en",
+      "fast-result": "en",
+    },
+    beforeGraphqlRequest(definition) {
+      return definition?.name === "queryArtistRelated"
+        ? relatedArtists.promise
+        : undefined;
+    },
+  });
+
+  const run = app.run();
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  const navigatedBeforeRelatedArtists = app.history.at(-1) === "/soundalike";
+  relatedArtists.resolve();
+  await run;
+  await waitFor(() => app.languageLoading.hidden);
+
+  assert.equal(navigatedBeforeRelatedArtists, true);
+  assert.match(app.logs.join("\n"), /results page ready in \d+ ms/);
+});
+
+test("reveals verified rows progressively and skips redundant detail lookups", async () => {
+  const delayedSearch = deferred();
+  const results = [
+    { title: "Ready First", artist: "Ready Artist" },
+    { title: "Delayed Second", artist: "Delayed Artist" },
+  ];
+  const spotifyTracks = Object.fromEntries(results.map((result, index) => [
+    `${result.title} ${result.artist}`,
+    {
+      __typename: "Track",
+      name: result.title,
+      uri: `spotify:track:progressive${index}`,
+      albumOfTrack: {
+        name: `Album ${index}`,
+        uri: `spotify:album:progressive${index}`,
+        coverArt: {
+          sources: [{
+            url: `https://i.scdn.co/image/progressive${index}`,
+            width: 64,
+          }],
+        },
+      },
+      artists: {
+        items: [{
+          uri: `spotify:artist:progressive${index}`,
+          profile: { name: result.artist },
+        }],
+      },
+    },
+  ]));
+  const app = loadExtension(async (url) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    return response(200, { ...recommendation, results });
+  }, {
+    results,
+    seedTrack: {
+      __typename: "Track",
+      name: "Blinding Lights",
+      uri: "spotify:track:test",
+      firstArtist: {
+        items: [{
+          uri: "spotify:artist:seed",
+          profile: { name: "The Weeknd" },
+        }],
+      },
+      albumOfTrack: { coverArt: { sources: [] } },
+    },
+    spotifyTracks,
+    languageByTrackId: {
+      test: "en",
+      progressive0: "en",
+      progressive1: "en",
+    },
+    beforeGraphqlRequest(definition, variables) {
+      return definition?.name === "searchModalResults" &&
+          variables?.searchTerm === "Delayed Second Delayed Artist"
+        ? delayedSearch.promise
+        : undefined;
+    },
+  });
+
+  await app.run();
+  await waitFor(() => app.rows[0].hidden === false);
+
+  assert.equal(app.rows[1].hidden, true);
+  assert.equal(app.languageLoading.hidden, false);
+
+  delayedSearch.resolve();
+  await waitFor(() => app.languageLoading.hidden);
+
+  assert.equal(app.rows[1].hidden, false);
+  assert.equal(
+    app.graphqlRequests.filter(({ definition }) => definition?.name === "getTrack")
+      .length,
+    1,
+    "complete search metadata should avoid per-result detail requests",
+  );
+  assert.match(app.logs.join("\n"), /Spotify metadata settled in \d+ ms/);
+});
+
+test("shows model-order rows immediately when seed language is unavailable", async () => {
+  const delayedSearch = deferred();
+  const result = { title: "No Gate Result", artist: "No Gate Artist" };
+  const app = loadExtension(async (url) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    return response(200, { ...recommendation, results: [result] });
+  }, {
+    results: [result],
+    seedTrack: {
+      __typename: "Track",
+      name: "Instrumental Seed",
+      uri: "spotify:track:test",
+      firstArtist: {
+        items: [{
+          uri: "spotify:artist:seed",
+          profile: { name: "Seed Artist" },
+        }],
+      },
+      albumOfTrack: { coverArt: { sources: [] } },
+    },
+    beforeGraphqlRequest(definition, variables) {
+      return definition?.name === "searchModalResults" && variables?.searchTerm
+        ? delayedSearch.promise
+        : undefined;
+    },
+  });
+
+  await app.run();
+
+  assert.equal(app.rows[0].hidden, false);
+  assert.equal(app.languageLoading.hidden, false);
+
+  delayedSearch.resolve();
+  await waitFor(() => app.languageLoading.hidden);
 });
 
 test("strictly filters cross-language and unavailable-language results", async () => {
