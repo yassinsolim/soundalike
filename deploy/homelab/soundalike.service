@@ -7,13 +7,13 @@ After=network-online.target
 Type=simple
 User=soundalike
 Group=soundalike
-WorkingDirectory=/opt/soundalike
+WorkingDirectory=/opt/soundalike/current
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=PYTHONUNBUFFERED=1
 Environment=SOUNDALIKE_HOST=127.0.0.1
 Environment=SOUNDALIKE_PORT=8788
-Environment=SOUNDALIKE_INDEX_PATH=/var/lib/soundalike/deepvibe_index.npz
-ExecStart=/opt/soundalike/.venv/bin/python /opt/soundalike/deploy/homelab/server.py
+Environment=SOUNDALIKE_INDEX_PATH=/opt/soundalike/current/runtime/deepvibe_index.npz
+ExecStart=/opt/soundalike/current/.venv/bin/python /opt/soundalike/current/deploy/homelab/server.py
 Restart=always
 RestartSec=5
 TimeoutStartSec=120
