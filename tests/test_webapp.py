@@ -177,6 +177,56 @@ def test_version_penalty_is_disabled_for_unmodified_baseline(tmp_path):
     )
 
 
+
+def test_model_quality_family_collapse_and_audio_penalties_match_hosted(tmp_path):
+    from _reco import WebRecommender
+    from soundalike.ml.deepvibe import DeepVibeIndex, DeepVibeRecommender
+
+    rng = np.random.default_rng(91)
+    titles = np.array([
+        "Seed", "Echoes (Live)", "Echoes", "Echoes (Acoustic)",
+        "Live Forever", "Different Song", "Echoes (Remix)",
+    ], dtype=object)
+    artists = np.array([
+        "Seed Artist", "Artist A", "Artist A", "Artist A",
+        "Artist A", "Artist A", "Artist B",
+    ], dtype=object)
+    vibe = rng.normal(size=(len(titles), 29)).astype(np.float32)
+    vibe[:, 0] = [120, 60, 120, 205, 124, 128, 132]
+    vibe[:, 5:8] = np.array([0.1, 0.2, 0.3], dtype=np.float32)
+    index = DeepVibeIndex(
+        np.arange(1, len(titles) + 1), titles, artists,
+        rng.normal(size=(len(titles), 12)).astype(np.float32), vibe,
+    )
+    path = tmp_path / "model-quality.npz"
+    index.save(path)
+    canonical = DeepVibeRecommender(index, enhance=True)
+    hosted = WebRecommender(str(path), enhance=True)
+
+    rows = [1, 3, 2, 4, 5, 6]
+    expected = [2, 4, 5, 6]
+    assert canonical._collapse_recording_families(rows, n=10) == expected
+    assert hosted._collapse_recording_families(rows, n=10) == expected
+    assert canonical._collapse_recording_families([3, 1], n=10) == [3]
+
+    penalty_rows = np.array([1, 2, 3])
+    canonical_penalties = canonical._audio_compatibility_penalty(
+        index.vibe[0], penalty_rows
+    )
+    hosted_penalties = hosted._audio_compatibility_penalty(0, penalty_rows)
+    assert np.allclose(canonical_penalties, hosted_penalties)
+    assert canonical_penalties[0] == pytest.approx(0.0, abs=1e-7)
+    assert canonical_penalties[1] == pytest.approx(0.0, abs=1e-7)
+    assert canonical_penalties[2] > canonical_penalties[1]
+    assert np.all(canonical_penalties <= 0.070001)
+
+    index.vibe[3, :] = np.nan
+    canonical._vscaled[3, :] = np.nan
+    hosted._vscaled[3, :] = np.nan
+    assert canonical._audio_compatibility_penalty(index.vibe[0], [3])[0] == 0
+    assert hosted._audio_compatibility_penalty(0, [3])[0] == 0
+
+
 def test_spicetify_results_include_measured_bpm(tmp_path):
     from _reco import WebRecommender
     from spicetify_recommend import _enrich_result_tempos, _tempo_bpm
@@ -280,6 +330,27 @@ def test_spicetify_query_canonicalization_uses_decoded_values():
         "4",
         "spotify-lyrics-strict-v2",
     )
+    params["ranking_policy"] = ["model-quality-v1"]
+    assert not _needs_canonical_redirect(
+        params,
+        "Blinding Lights — The Weeknd",
+        50,
+        0.15,
+        "4",
+        "spotify-lyrics-strict-v2",
+        False,
+        "model-quality-v1",
+    )
+    assert _needs_canonical_redirect(
+        {key: value for key, value in params.items() if key != "ranking_policy"},
+        "Blinding Lights — The Weeknd",
+        50,
+        0.15,
+        "4",
+        "spotify-lyrics-strict-v2",
+        False,
+        "model-quality-v1",
+    )
     assert _language_policy_supported("2", None)
     assert _language_policy_supported("3", "spotify-lyrics-v1")
     assert _language_policy_supported("4", "spotify-lyrics-strict-v2")
@@ -322,13 +393,14 @@ def test_spicetify_v4_endpoint_accepts_only_the_strict_policy(monkeypatch):
     request._redirect = lambda _location: pytest.fail("unexpected redirect")
     request.path = (
         "/api/spicetify_recommend?query=Seed&n=1&diversity=0.15&v=4"
-        "&language_policy=spotify-lyrics-strict-v2"
+        "&language_policy=spotify-lyrics-strict-v2&ranking_policy=model-quality-v1"
     )
 
     request.do_GET()
 
     assert sent[0][0] == 200
     assert sent[0][1]["language_policy"] == "spotify-lyrics-strict-v2"
+    assert sent[0][1]["ranking_policy"] == "model-quality-v1"
     assert sent[0][1]["results"][0]["bpm"] == 120
 
     sent.clear()
@@ -387,6 +459,7 @@ def test_enhanced_web_recommender_matches_canonical(tmp_path):
         assert [(item["title"], item["artist"]) for item in hosted["results"]] == [
             (item.title, item.artist) for item in desktop
         ], f"enhanced mismatch at row {row}"
+        assert hosted["ranking_policy"] == "model-quality-v1"
 
 
 def test_sonic_hosted_matches_canonical_and_reports_diagnostics(tmp_path):
@@ -498,6 +571,7 @@ def test_dual_tail_priors_cannot_bypass_audio_candidate_gate(tmp_path):
     canonical_tail = canonical._recommend_dual_tail(
         idx.sonic[0],
         idx.clap[0],
+        idx.vibe[0],
         n=20,
         exclude_ids={int(idx.track_ids[0])},
         exclude_artist=None,

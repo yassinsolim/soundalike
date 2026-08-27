@@ -13,7 +13,10 @@ export const MAX_FEEDBACK_BODY_BYTES = 32 * 1024;
 export const MAX_FEEDBACK_STORED_BYTES = 40 * 1024;
 
 const SURVEY_VERSION = "spicetify-match-feedback-v1";
-const SELECTION_POLICY = "top-20-strict-language-related-artist-v1";
+const SELECTION_POLICIES = new Set([
+  "top-20-strict-language-related-artist-v1",
+  "top-20-strict-language-related-artist-model-quality-v1",
+]);
 const LANGUAGE_POLICY = "spotify-lyrics-strict-v2";
 const HEX_32 = /^[a-f0-9]{32}$/;
 const INDEX_VERSION = /^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/;
@@ -127,7 +130,7 @@ export function validateFeedbackPayload(value) {
     !INDEX_VERSION.test(value.index_version) ||
     !API_VERSIONS.has(value.api_version) ||
     value.language_policy !== LANGUAGE_POLICY ||
-    value.selection_policy !== SELECTION_POLICY ||
+    !SELECTION_POLICIES.has(value.selection_policy) ||
     !SOURCES.has(value.source) ||
     (value.source === "local") !== (value.api_version === "local") ||
     !SELECTIONS.has(value.selection) ||
@@ -189,7 +192,7 @@ export function validateFeedbackPayload(value) {
     index_version: value.index_version,
     api_version: value.api_version,
     language_policy: LANGUAGE_POLICY,
-    selection_policy: SELECTION_POLICY,
+    selection_policy: value.selection_policy,
     source: value.source,
     selection: value.selection,
     reasons: [...value.reasons],
