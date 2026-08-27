@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import json
+
+import pytest
+
 from soundalike.audio.previews import DeezerTrack
 from soundalike.ml.grow_broad import (
     BROAD_SEED_ARTISTS,
     _load_candidates,
     _save_candidates,
+    harvest_targeted_to_cache,
 )
 
 
@@ -43,3 +48,40 @@ def test_candidates_roundtrip_missing_preview(tmp_path):
     _save_candidates(p, tracks)
     back = _load_candidates(p)
     assert len(back) == 1 and back[0].preview_url == ""
+
+
+def _targeted_report(path, plan):
+    path.write_text(json.dumps({"targeted_crawl_plan": plan}), encoding="utf-8")
+    return path
+
+
+def test_targeted_dry_run_uses_plan_without_network_clients(tmp_path, monkeypatch):
+    report = _targeted_report(tmp_path / "audit.json", [{
+        "artist": "Missing Artist", "category": "proxy", "observed": 0,
+        "minimum": 2, "reason": "missing",
+    }])
+
+    def fail_if_network_client_is_created(*_args, **_kwargs):
+        raise AssertionError("dry run must not construct a network client")
+
+    monkeypatch.setattr("soundalike.ml.grow_broad._gather_artist_ids", fail_if_network_client_is_created)
+    monkeypatch.setattr("soundalike.ml.grow_broad.DeezerClient", fail_if_network_client_is_created)
+    monkeypatch.setattr("soundalike.ml.grow_broad.requests.Session", fail_if_network_client_is_created)
+    assert harvest_targeted_to_cache(
+        tmp_path / "cache.npz", report, max_artists=1, max_tracks=2,
+        max_api_calls=4, dry_run=True,
+    ) is None
+
+
+def test_targeted_crawl_refuses_unbounded_or_insufficient_api_budgets(tmp_path):
+    report = _targeted_report(tmp_path / "audit.json", [{
+        "artist": "Missing Artist", "category": "proxy", "observed": 0,
+        "minimum": 2, "reason": "missing",
+    }])
+
+    with pytest.raises(ValueError, match="finite positive budgets"):
+        harvest_targeted_to_cache(tmp_path / "cache.npz", report, max_artists=1, max_tracks=2)
+    with pytest.raises(ValueError, match="exceeds max_api_calls=3"):
+        harvest_targeted_to_cache(
+            tmp_path / "cache.npz", report, max_artists=1, max_tracks=2, max_api_calls=3,
+        )
