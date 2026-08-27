@@ -11,26 +11,26 @@ import {
   allowedRequestOrigin,
   canonical,
   strictJsonParse,
-} from "./ratings.js";
+} from "../api/ratings.js";
 
-export const MAX_V5_BODY_BYTES = 128 * 1024;
-export const MAX_V5_STORED_BYTES = 160 * 1024;
-export const V5_PROTOCOL_SHA256 =
-  "0de4a51704a9b7bf11007e9649d6ab49afcf6105199089b91180d02b991a9718";
-export const V5_PACK_SHA256 =
-  "9a58ed0ca004e05e20184ddc37c930f2a15f8c9d3fdb4add412f09103f27e095";
-export const V5_BLOB_PREFIX = "human-ratings/strict-v5-ranking-v1/";
+export const MAX_V6_BODY_BYTES = 128 * 1024;
+export const MAX_V6_STORED_BYTES = 160 * 1024;
+export const V6_PROTOCOL_SHA256 =
+  "084c25271bd8630949dacf50bfa8670328afcbab197303a7c79af7f95801d0f1";
+export const V6_PACK_SHA256 =
+  "38cf7b0a4c035b27237288c9e4022a2b44d73ad82a0f3bd9085a2f862bea9637";
+export const V6_BLOB_PREFIX = "human-ratings/development-v6-ranking-v1/";
 
-const SUBMISSION_SCHEMA = "v5_strict_listener_submission_v1";
-const PROVIDER = "hosted_private_strict_v5_evaluator";
+const SUBMISSION_SCHEMA = "v6_development_listener_submission_v1";
+const PROVIDER = "hosted_private_development_v6_evaluator";
 const INTEGRITY_NOTICE =
   "Local-key HMAC provides integrity, not identity or authenticity; the key is included in this export.";
 const MAX_DURATION_MS = 366 * 24 * 60 * 60 * 1000;
 const HEX_64 = /^[a-f0-9]{64}$/;
-const RATER_ID = /^anon-v5-[a-f0-9]{24}$/;
-const SESSION_ID = /^v5-session-[a-f0-9]{24}$/;
-const TASK_ID = /^v5-(task|anchor)-[a-f0-9]{24}$/;
-const CHOICE_ID = /^v5-choice-[a-f0-9]{24}$/;
+const RATER_ID = /^anon-v6-[a-f0-9]{24}$/;
+const SESSION_ID = /^v6-session-[a-f0-9]{24}$/;
+const TASK_ID = /^v6-(task|anchor)-[a-f0-9]{24}$/;
+const CHOICE_ID = /^v6-choice-[a-f0-9]{24}$/;
 const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const REASONS = new Set([
   "genre",
@@ -94,10 +94,10 @@ const COUNT_KEYS = [
 ].sort();
 
 const protocol = strictJsonParse(
-  readFileSync(new URL("../evaluate-v5/protocol-v5.json", import.meta.url), "utf8"),
+  readFileSync(new URL("../evaluate/protocol-v6.json", import.meta.url), "utf8"),
 );
 const pilotPack = strictJsonParse(
-  readFileSync(new URL("../evaluate-v5/active-pack.json", import.meta.url), "utf8"),
+  readFileSync(new URL("../evaluate/active-pack-v6.json", import.meta.url), "utf8"),
 );
 
 function sha256(value) {
@@ -131,58 +131,84 @@ function buildCommittedTasks() {
   if (
     protocol.schema_version !== 1 ||
     protocol.protocol_kind !==
-      "strict_three_method_listener_v5_private_submission" ||
+      "development_complete_ranking_v6_private_submission" ||
     protocol.submission_schema !== SUBMISSION_SCHEMA ||
-    protocol.content_sha256 !== V5_PROTOCOL_SHA256 ||
-    protocol.pilot_pack_sha256 !== V5_PACK_SHA256 ||
-    protocol.submission_endpoint !== "/api/ratings-v5" ||
-    protocol.private_blob_prefix !== V5_BLOB_PREFIX ||
+    protocol.content_sha256 !== V6_PROTOCOL_SHA256 ||
+    protocol.pilot_pack_sha256 !== V6_PACK_SHA256 ||
+    protocol.submission_endpoint !== "/api/ratings-v6" ||
+    protocol.private_blob_prefix !== V6_BLOB_PREFIX ||
     protocol.explicit_consent_required !== true ||
     protocol.automatic_submission !== false ||
     protocol.partial_submission_allowed !== true ||
     protocol.skip_allowed !== true ||
     protocol.research_only !== true ||
+    protocol.development_evidence !== true ||
+    protocol.independent_holdout !== false ||
+    protocol.evidence_role !== "development_model_improvement" ||
     protocol.promotion_allowed !== false ||
     protocol.production_recommendation_changed !== false ||
-    documentHash(protocol) !== V5_PROTOCOL_SHA256 ||
+    documentHash(protocol) !== V6_PROTOCOL_SHA256 ||
     protocol.unknown_language_allowed !== false ||
     protocol.language_segments_per_track !== 3 ||
     protocol.pairwise_predictions_per_rated_task !== 6 ||
+    canonical(protocol.ranking_slots) !==
+      canonical([
+        "most_similar",
+        "next_most_similar",
+        "second_least_similar",
+        "least_similar",
+      ]) ||
+    protocol.worst_item_reason_required !== true ||
     pilotPack.schema_version !== 1 ||
-    pilotPack.pack_kind !== "soundalike_v5_strict_three_method_ranking" ||
-    pilotPack.pack_id !== "v5-strict-three-method-ranking-1" ||
+    pilotPack.pack_kind !== "soundalike_v6_development_full_ranking" ||
+    pilotPack.pack_id !== "v6-development-full-ranking-1" ||
     pilotPack.research_only !== true ||
+    pilotPack.development_evidence !== true ||
+    pilotPack.independent_holdout !== false ||
+    pilotPack.evidence_role !== "development_model_improvement" ||
     pilotPack.promotion_allowed !== false ||
     pilotPack.production_recommendation_changed !== false ||
     pilotPack.task_format?.candidates !== 4 ||
     pilotPack.task_format?.adaptive_stop_after_unique_tasks !== 12 ||
-    pilotPack.content_sha256 !== V5_PACK_SHA256 ||
-    documentHash(pilotPack) !== V5_PACK_SHA256 ||
+    canonical(pilotPack.task_format?.ranking_slots) !==
+      canonical([
+        "most_similar",
+        "next_most_similar",
+        "second_least_similar",
+        "least_similar",
+      ]) ||
+    pilotPack.provenance?.includes_v5_exposure !== true ||
+    pilotPack.provenance?.excludes_all_prior_exposed_tracks_and_artists !==
+      true ||
+    pilotPack.content_sha256 !== V6_PACK_SHA256 ||
+    documentHash(pilotPack) !== V6_PACK_SHA256 ||
     !Array.isArray(pilotPack.tasks) ||
     pilotPack.tasks.length !== 18
   ) {
-    throw new Error("Committed V5 ratings protocol is inconsistent");
+    throw new Error("Committed V6 ratings protocol is inconsistent");
   }
   const tasks = new Map();
   const choiceIds = new Set();
   for (const [index, task] of pilotPack.tasks.entries()) {
     if (
       task.priority_rank !== index + 1 ||
+      typeof task.task_id !== "string" ||
       !TASK_ID.test(task.task_id) ||
       tasks.has(task.task_id) ||
       !Array.isArray(task.candidates) ||
       task.candidates.length !== 4
     ) {
-      throw new Error("Committed V5 task identity is inconsistent");
+      throw new Error("Committed V6 task identity is inconsistent");
     }
     const choices = new Set();
     for (const choice of task.candidates) {
       if (
+        typeof choice.choice_id !== "string" ||
         !CHOICE_ID.test(choice.choice_id) ||
         choices.has(choice.choice_id) ||
         choiceIds.has(choice.choice_id)
       ) {
-        throw new Error("Committed V5 choice identity is inconsistent");
+        throw new Error("Committed V6 choice identity is inconsistent");
       }
       choices.add(choice.choice_id);
       choiceIds.add(choice.choice_id);
@@ -260,10 +286,12 @@ function validateEvidenceDetailed(ratings) {
     ratings.submission_schema !== SUBMISSION_SCHEMA ||
     ratings.source_kind !== "human_listener" ||
     ratings.provider !== PROVIDER ||
+    typeof ratings.anonymous_rater_id !== "string" ||
     !RATER_ID.test(ratings.anonymous_rater_id) ||
+    typeof ratings.session_id !== "string" ||
     !SESSION_ID.test(ratings.session_id) ||
-    ratings.protocol_sha256 !== V5_PROTOCOL_SHA256 ||
-    ratings.pilot_pack_sha256 !== V5_PACK_SHA256 ||
+    ratings.protocol_sha256 !== V6_PROTOCOL_SHA256 ||
+    ratings.pilot_pack_sha256 !== V6_PACK_SHA256 ||
     startedAt === null ||
     lastActivityAt === null ||
     exportedAt === null ||
@@ -320,10 +348,12 @@ function validateEvidence(ratings) {
   return validateEvidenceDetailed(ratings).counts;
 }
 
-export function validateV5ExportDetailed(ratings) {
+export function validateV6ExportDetailed(ratings) {
   if (
     !hasExactKeys(ratings, EXPORT_KEYS) ||
+    typeof ratings.local_session_key !== "string" ||
     !HEX_64.test(ratings.local_session_key) ||
+    typeof ratings.integrity_hmac_sha256 !== "string" ||
     !HEX_64.test(ratings.integrity_hmac_sha256) ||
     ratings.integrity_notice !== INTEGRITY_NOTICE
   ) {
@@ -354,11 +384,11 @@ export function validateV5ExportDetailed(ratings) {
   };
 }
 
-export function validateV5Export(ratings) {
-  return validateV5ExportDetailed(ratings).accepted;
+export function validateV6Export(ratings) {
+  return validateV6ExportDetailed(ratings).accepted;
 }
 
-export function validateV5StoredRecord(document, pathname) {
+export function validateV6StoredRecord(document, pathname) {
   if (!hasExactKeys(document, STORED_KEYS)) return null;
   const ratings = sanitizedEvidence(document);
   const counts = validateEvidence(ratings);
@@ -373,7 +403,7 @@ export function validateV5StoredRecord(document, pathname) {
   }
   const digest = sha256(canonical(ratings));
   const expectedPath =
-    `${V5_BLOB_PREFIX}${ratings.session_id}/${digest}.json`;
+    `${V6_BLOB_PREFIX}${ratings.session_id}/${digest}.json`;
   if (
     document.canonical_payload_sha256 !== digest ||
     (pathname !== undefined && pathname !== expectedPath)
@@ -383,16 +413,16 @@ export function validateV5StoredRecord(document, pathname) {
   return { counts, digest, pathname: expectedPath, ratings };
 }
 
-export function parseV5StoredRecordBytes(value, pathname) {
+export function parseV6StoredRecordBytes(value, pathname) {
   const bytes = Buffer.isBuffer(value) ? value : Buffer.from(value);
-  if (bytes.length < 2 || bytes.length > MAX_V5_STORED_BYTES) {
-    throw new Error("Invalid private V5 ratings record size");
+  if (bytes.length < 2 || bytes.length > MAX_V6_STORED_BYTES) {
+    throw new Error("Invalid private V6 ratings record size");
   }
   const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   const document = strictJsonParse(text);
-  const validated = validateV5StoredRecord(document, pathname);
+  const validated = validateV6StoredRecord(document, pathname);
   if (!validated || text !== `${canonical(document)}\n`) {
-    throw new Error("Invalid private V5 ratings record");
+    throw new Error("Invalid private V6 ratings record");
   }
   return { document, ...validated };
 }
@@ -412,38 +442,41 @@ async function readBody(request) {
   const length = header(request, "content-length");
   if (
     length !== undefined &&
-    (!/^(0|[1-9]\d*)$/.test(length) || Number(length) > MAX_V5_BODY_BYTES)
+    (!/^(0|[1-9]\d*)$/.test(length) || Number(length) > MAX_V6_BODY_BYTES)
   ) {
     const error = new Error("payload");
     error.statusCode = 413;
     throw error;
   }
-  let raw;
-  if (request.body !== undefined) {
-    raw = Buffer.isBuffer(request.body)
-      ? request.body
-      : Buffer.from(
-          typeof request.body === "string"
-            ? request.body
-            : JSON.stringify(request.body),
-          "utf8",
-        );
-  } else {
+  // Vercel replays its lazily buffered request through data/end listeners.
+  // Avoid request.body so duplicate JSON keys remain observable.
+  const raw = await new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
-    for await (const chunk of request) {
+    let settled = false;
+    const finish = (error, value) => {
+      if (settled) return;
+      settled = true;
+      if (error) reject(error);
+      else resolve(value);
+    };
+    request.on("data", (chunk) => {
+      if (settled) return;
       const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
       size += bytes.length;
-      if (size > MAX_V5_BODY_BYTES) {
+      if (size > MAX_V6_BODY_BYTES) {
         const error = new Error("payload");
         error.statusCode = 413;
-        throw error;
+        finish(error);
+        return;
       }
       chunks.push(bytes);
-    }
-    raw = Buffer.concat(chunks);
-  }
-  if (raw.length > MAX_V5_BODY_BYTES) {
+    });
+    request.on("end", () => finish(null, Buffer.concat(chunks)));
+    request.on("error", () => finish(new Error("request stream failed")));
+    request.on("aborted", () => finish(new Error("request stream aborted")));
+  });
+  if (raw.length > MAX_V6_BODY_BYTES) {
     const error = new Error("payload");
     error.statusCode = 413;
     throw error;
@@ -522,11 +555,11 @@ async function persist(storage, pathname, body) {
   }
 }
 
-export function createV5Handler(
+export function createV6Handler(
   storage = { head: blobHead, put: blobPut },
   deploymentHost = process.env.VERCEL_URL,
 ) {
-  return async function ratingsV5Handler(request, response) {
+  return async function ratingsV6Handler(request, response) {
     if (request.method !== "POST") {
       response.setHeader("Allow", "POST");
       return send(response, 405, { error: "method not allowed" });
@@ -554,7 +587,7 @@ export function createV5Handler(
     if (
       !hasExactKeys(wrapper, ["consent", "ratings", "study"]) ||
       wrapper.consent !== true ||
-      wrapper.study !== "strict-v5-ranking"
+      wrapper.study !== "development-v6-ranking"
     ) {
       return send(response, 400, {
         error: "invalid request",
@@ -563,7 +596,7 @@ export function createV5Handler(
     }
     let validation;
     try {
-      validation = validateV5ExportDetailed(wrapper.ratings);
+      validation = validateV6ExportDetailed(wrapper.ratings);
     } catch {
       validation = { accepted: null, error: "validation_failed" };
     }
@@ -583,8 +616,8 @@ export function createV5Handler(
       counts: accepted.counts,
     };
     const pathname =
-      `${V5_BLOB_PREFIX}${sanitized.session_id}/${receiptHash}.json`;
-    if (!validateV5StoredRecord(stored, pathname)) {
+      `${V6_BLOB_PREFIX}${sanitized.session_id}/${receiptHash}.json`;
+    if (!validateV6StoredRecord(stored, pathname)) {
       return send(response, 500, { error: "internal validation failed" });
     }
     let duplicate;
@@ -601,4 +634,4 @@ export function createV5Handler(
   };
 }
 
-export default createV5Handler();
+export default createV6Handler();

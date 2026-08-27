@@ -821,4 +821,25 @@ export function createHandler(
   };
 }
 
-export default createHandler();
+export function createDispatchHandler(
+  legacyHandler = createHandler(),
+  loaders = {
+    "ratings-v6": async () =>
+      (await import("../server/ratings-v6.js")).default,
+    "spicetify-feedback": async () =>
+      (await import("../server/spicetify-feedback.js")).default,
+  },
+) {
+  return async function dispatchedRatingsHandler(request, response) {
+    const route = new URL(
+      request.url || "/api/ratings",
+      "http://localhost",
+    ).searchParams.get("__soundalike_handler");
+    const loader = loaders[route];
+    if (!loader) return legacyHandler(request, response);
+    const handler = await loader();
+    return handler(request, response);
+  };
+}
+
+export default createDispatchHandler();

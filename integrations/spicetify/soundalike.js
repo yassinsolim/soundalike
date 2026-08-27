@@ -13,6 +13,7 @@
   const LOCAL_PROBE_TIMEOUT_MS = 250;
   const PRIMARY_HOSTED_TIMEOUT_MS = 5000;
   const FALLBACK_HOSTED_TIMEOUT_MS = 65000;
+  const FEEDBACK_TIMEOUT_MS = 10000;
   const LOCAL_STATUS_TTL_MS = 30000;
   const CACHE_KEY = "soundalike:spicetify-cache:v8";
   const LEGACY_CACHE_KEYS = [
@@ -38,6 +39,17 @@
   const SPOTIFY_TRACK_SEARCH_HASH =
     "59ee4a659c32e9ad894a71308207594a65ba67bb6b632b183abe97303a51fa55";
   const RESULTS_PATH = "/soundalike";
+  const FEEDBACK_ENDPOINT =
+    `${FALLBACK_HOSTED_SERVER}/api/spicetify-feedback`;
+  const FEEDBACK_INSTALL_KEY = "soundalike:feedback-install:v1";
+  const FEEDBACK_SUPPRESSION_KEY = "soundalike:feedback-suppression:v1";
+  const FEEDBACK_SUCCESS_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
+  const FEEDBACK_DISMISS_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+  const FEEDBACK_METHODS = new Set([
+    "dual_sonic64_guardrail",
+    "sonic64_stable_head",
+    "legacy_no_sonic_seed",
+  ]);
   let localStatus = { available: false, checkedAt: 0 };
   let nativeContextChain;
   let warnedAboutNativeMenus = false;
@@ -82,6 +94,247 @@
     } finally {
       clearTimeout(timeout);
     }
+  }
+
+  function anonymousNonce() {
+    if (typeof globalThis.crypto?.getRandomValues !== "function") return null;
+    const bytes = new Uint8Array(16);
+    globalThis.crypto.getRandomValues(bytes);
+    return Array.from(bytes, (value) => value.toString(16).padStart(2, "0"))
+      .join("");
+  }
+
+  function feedbackInstallNonce() {
+    const existing = Spicetify.LocalStorage.get(FEEDBACK_INSTALL_KEY);
+    if (/^[a-f0-9]{32}$/.test(existing || "")) return existing;
+    const created = anonymousNonce();
+    if (created) Spicetify.LocalStorage.set(FEEDBACK_INSTALL_KEY, created);
+    return created;
+  }
+
+  function feedbackIsSuppressed() {
+    const saved = Spicetify.LocalStorage.get(FEEDBACK_SUPPRESSION_KEY);
+    if (!saved) return false;
+    try {
+      const value = JSON.parse(saved);
+      const cooldown = value?.outcome === "success"
+        ? FEEDBACK_SUCCESS_COOLDOWN_MS
+        : value?.outcome === "dismissed"
+        ? FEEDBACK_DISMISS_COOLDOWN_MS
+        : 0;
+      return (
+        cooldown > 0 &&
+        Number.isFinite(value?.at) &&
+        value.at <= Date.now() &&
+        Date.now() - value.at < cooldown
+      );
+    } catch (error) {
+      console.warn("[soundalike] Ignoring invalid local feedback preference.", error);
+      Spicetify.LocalStorage.remove(FEEDBACK_SUPPRESSION_KEY);
+      return false;
+    }
+  }
+
+  function suppressFeedback(outcome) {
+    Spicetify.LocalStorage.set(
+      FEEDBACK_SUPPRESSION_KEY,
+      JSON.stringify({ outcome, at: Date.now() })
+    );
+  }
+
+  function feedbackMethod(value) {
+    return FEEDBACK_METHODS.has(value) ? value : "unknown";
+  }
+
+  function feedbackIndexVersion(value) {
+    return typeof value === "string" &&
+        /^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/.test(value)
+      ? value
+      : "unknown";
+  }
+
+  function feedbackPayload(data, displayed, installNonce, sessionNonce, form) {
+    const selection = form.selection();
+    const detailed = selection === "mixed" || selection === "off";
+    return {
+      schema_version: 1,
+      survey_version: "spicetify-match-feedback-v1",
+      install_nonce: installNonce,
+      session_nonce: sessionNonce,
+      seed: {
+        title: String(data.seed?.title || ""),
+        artist: String(data.seed?.artist || ""),
+      },
+      displayed_results: displayed.map((result, index) => ({
+        position: index + 1,
+        title: String(result.title || ""),
+        artist: String(result.artist || ""),
+      })),
+      method: feedbackMethod(data.method),
+      index_version: feedbackIndexVersion(data.index_version),
+      api_version: ["4", "legacy", "local", "unknown"].includes(
+        data.__soundalikeApiVersion
+      )
+        ? data.__soundalikeApiVersion
+        : "unknown",
+      language_policy: LANGUAGE_POLICY,
+      selection_policy: "top-20-strict-language-related-artist-v1",
+      source: data.__soundalikeSource === "local" ? "local" : "hosted",
+      selection,
+      reasons: detailed ? form.reasons() : [],
+      note: detailed ? form.note().slice(0, 280) : "",
+    };
+  }
+
+  function setupFeedbackPrompt(page, data, displayed) {
+    const panel = page.querySelector(".sa-feedback");
+    if (
+      !panel ||
+      panel.dataset?.ready === "true" ||
+      !displayed.length ||
+      feedbackIsSuppressed()
+    ) {
+      return;
+    }
+    const installNonce = feedbackInstallNonce();
+    const sessionNonce = anonymousNonce();
+    if (!installNonce || !sessionNonce) {
+      console.warn("[soundalike] Anonymous feedback nonce generation is unavailable.");
+      return;
+    }
+    if (panel.dataset) panel.dataset.ready = "true";
+    const ratings = Array.from(
+      page.querySelectorAll('input[name="sa-feedback-rating"]')
+    );
+    const reasons = Array.from(
+      page.querySelectorAll('input[name="sa-feedback-reason"]')
+    );
+    const details = page.querySelector(".sa-feedback-details");
+    const note = page.querySelector(".sa-feedback-note");
+    const count = page.querySelector(".sa-feedback-count");
+    const send = page.querySelector(".sa-feedback-send");
+    const dismiss = page.querySelector(".sa-feedback-dismiss");
+    const status = page.querySelector(".sa-feedback-status");
+    if (!details || !note || !count || !send || !dismiss || !status) {
+      console.warn("[soundalike] Feedback controls are unavailable.");
+      return;
+    }
+    const selectedRating = () => ratings.find((input) => input.checked)?.value || "";
+    const selectedReasons = () =>
+      reasons.filter((input) => input.checked).map((input) => input.value);
+    const form = {
+      selection: selectedRating,
+      reasons: selectedReasons,
+      note: () => String(note?.value || "").trim(),
+    };
+    let sending = false;
+
+    const sync = () => {
+      const selection = selectedRating();
+      const detailed = selection === "mixed" || selection === "off";
+      if (details) details.hidden = !detailed;
+      if (!detailed) {
+        reasons.forEach((input) => {
+          input.checked = false;
+          input.disabled = false;
+        });
+        if (note) note.value = "";
+      }
+      const selected = selectedReasons();
+      reasons.forEach((input) => {
+        input.disabled = selected.length >= 2 && !input.checked;
+      });
+      if (count) count.textContent = `${String(note?.value || "").length}/280`;
+      if (send) send.disabled = sending || !selection;
+    };
+    ratings.forEach((input) => {
+      input.onchange = () => {
+        status.textContent = "";
+        status.classList?.remove("sa-feedback-error");
+        status.classList?.remove("sa-feedback-success");
+        sync();
+      };
+    });
+    reasons.forEach((input) => {
+      input.onchange = () => {
+        if (selectedReasons().length > 2) {
+          input.checked = false;
+          if (status) status.textContent = "Choose up to two reasons.";
+        } else if (status) {
+          status.textContent = "";
+        }
+        sync();
+      };
+    });
+    if (note) {
+      note.oninput = () => {
+        if (note.value.length > 280) note.value = note.value.slice(0, 280);
+        sync();
+      };
+    }
+    dismiss.onclick = () => {
+      if (sending) return;
+      suppressFeedback("dismissed");
+      panel.hidden = true;
+    };
+    send.onclick = async () => {
+      if (sending || !selectedRating()) return;
+      sending = true;
+      send.textContent = "Sending…";
+      if (status) status.textContent = "Sending feedback…";
+      sync();
+      try {
+        const payload = feedbackPayload(
+          data,
+          displayed,
+          installNonce,
+          sessionNonce,
+          form
+        );
+        const response = await fetchWithTimeout(
+          FEEDBACK_ENDPOINT,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          },
+          FEEDBACK_TIMEOUT_MS
+        );
+        const receipt = await response.json();
+        if (!response.ok || !/^[a-f0-9]{64}$/.test(receipt?.receipt_sha256 || "")) {
+          throw new Error("feedback receipt was not accepted");
+        }
+        suppressFeedback("success");
+        ratings.forEach((input) => {
+          input.disabled = true;
+        });
+        reasons.forEach((input) => {
+          input.disabled = true;
+        });
+        if (note) note.disabled = true;
+        send.hidden = true;
+        dismiss.hidden = true;
+        if (details) details.hidden = true;
+        if (status) {
+          status.textContent =
+            `Thanks — feedback received. Receipt ${receipt.receipt_sha256.slice(0, 12)}.`;
+          status.classList?.remove("sa-feedback-error");
+          status.classList?.add("sa-feedback-success");
+        }
+      } catch {
+        console.warn("[soundalike] Feedback submission failed.");
+        sending = false;
+        send.textContent = "Retry feedback";
+        if (status) {
+          status.textContent = "Couldn’t send feedback. Check your connection and retry.";
+          status.classList?.remove("sa-feedback-success");
+          status.classList?.add("sa-feedback-error");
+        }
+        sync();
+      }
+    };
+    panel.hidden = false;
+    sync();
   }
 
   async function localServerReady() {
@@ -166,7 +419,7 @@
     if (!response.ok && !result?.error) {
       throw new Error(`Recommendation service returned HTTP ${response.status}.`);
     }
-    return { data: result, cacheable: true };
+    return { data: result, cacheable: true, apiVersion };
   }
 
   async function getHostedRecommendations(payload) {
@@ -206,13 +459,19 @@
         true
       ),
       cacheable: false,
+      apiVersion: "legacy",
     };
   }
 
   async function requestRecommendations(payload, cacheId) {
     const cached = readCacheEntry("recommendations", cacheId);
     if (cached) {
-      return { data: cached.data, source: cached.source, cached: true };
+      return {
+        data: cached.data,
+        source: cached.source,
+        apiVersion: cached.apiVersion,
+        cached: true,
+      };
     }
     if (pendingRecommendations.has(cacheId)) {
       return pendingRecommendations.get(cacheId);
@@ -235,6 +494,7 @@
         return {
           data: await postRecommendations(LOCAL_SERVER, payload),
           source: "local",
+          apiVersion: "local",
         };
       } catch (error) {
         localStatus = { available: false, checkedAt: Date.now() };
@@ -247,7 +507,12 @@
       5000
     );
     const hosted = await getHostedRecommendations(payload);
-    return { data: hosted.data, source: "hosted", cacheable: hosted.cacheable };
+    return {
+      data: hosted.data,
+      source: "hosted",
+      apiVersion: hosted.apiVersion,
+      cacheable: hosted.cacheable,
+    };
   }
 
   async function findSoundalikes(uris) {
@@ -304,6 +569,8 @@
       data = recommendation.data;
       if (data && typeof data === "object") {
         data.__soundalikeSource = recommendation.source;
+        data.__soundalikeApiVersion = recommendation.apiVersion ||
+          (recommendation.source === "local" ? "local" : "unknown");
       }
     } catch (e) {
       Spicetify.showNotification(
@@ -1064,6 +1331,13 @@
     });
     const loading = page.querySelector(".sa-language-loading");
     if (loading) loading.hidden = true;
+    if (page === activePage?.view && resultsState?.data) {
+      setupFeedbackPrompt(
+        page,
+        resultsState.data,
+        displayed.map(({ index }) => results[index])
+      );
+    }
     const status = page.querySelector(".sa-language-status");
     if (!status) return;
     if (!seedLanguage) {
@@ -1223,9 +1497,30 @@
         .sa-play:hover,.sa-play:focus-visible{background:var(--spice-button,#1ed760);color:#000;outline:none}
         .sa-row-content:hover .sa-title,.sa-row-content:focus-visible .sa-title{color:var(--spice-text,#fff)}
         .sa-menu-loading{padding:8px 12px;color:var(--spice-subtext,#b3b3b3);white-space:nowrap}
+        .sa-feedback{max-width:680px;margin:24px 0 0;padding:16px;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:rgba(255,255,255,.04)}
+        .sa-feedback[hidden],.sa-feedback-details[hidden]{display:none}
+        .sa-feedback fieldset{border:0;margin:0;padding:0}
+        .sa-feedback legend{font-weight:700;margin-bottom:10px}
+        .sa-feedback-options,.sa-feedback-reasons,.sa-feedback-actions{display:flex;flex-wrap:wrap;gap:8px}
+        .sa-feedback-choice,.sa-feedback-reason{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:7px 11px;border:1px solid rgba(255,255,255,.16);border-radius:999px;cursor:pointer}
+        .sa-feedback-choice:focus-within,.sa-feedback-reason:focus-within{outline:2px solid var(--spice-button,#1ed760);outline-offset:2px}
+        .sa-feedback-details{margin-top:14px}
+        .sa-feedback-reasons{margin-bottom:12px}
+        .sa-feedback-note-label{display:block;font-weight:600;margin-bottom:6px}
+        .sa-feedback-note{box-sizing:border-box;width:100%;min-height:72px;resize:vertical;padding:9px 10px;border:1px solid rgba(255,255,255,.18);border-radius:6px;background:var(--spice-card,#242424);color:var(--spice-text,#fff);font:inherit}
+        .sa-feedback-help{display:flex;justify-content:space-between;gap:12px;color:var(--spice-subtext,#b3b3b3);font-size:12px;margin-top:4px}
+        .sa-feedback-actions{align-items:center;margin-top:14px}
+        .sa-feedback-actions button{min-height:36px;border-radius:999px;padding:7px 14px;font:inherit;font-weight:700;cursor:pointer}
+        .sa-feedback-send{border:0;background:var(--spice-button,#1ed760);color:#000}
+        .sa-feedback-send:disabled{cursor:not-allowed;opacity:.55}
+        .sa-feedback-dismiss{border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--spice-text,#fff)}
+        .sa-feedback-status{min-height:20px;color:var(--spice-subtext,#b3b3b3)}
+        .sa-feedback-success{color:var(--spice-button,#1ed760)}
+        .sa-feedback-error{color:#f29d9d}
         @media(max-width:760px){
           .sa-list-head,.sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 56px}
           .sa-album,.sa-list-head .sa-album-head{display:none}
+          .sa-feedback-help{display:block}
         }
       </style>
       <div class="sa-seed">
@@ -1243,7 +1538,40 @@
       <div class="sa-list">
         <div class="sa-language-loading">Checking Spotify language and artist context before showing results…</div>
         ${rows}
-      </div>`;
+      </div>
+      <section class="sa-feedback" hidden aria-labelledby="sa-feedback-question">
+        <fieldset>
+          <legend id="sa-feedback-question">How close were these matches?</legend>
+          <div class="sa-feedback-options">
+            <label class="sa-feedback-choice"><input type="radio" name="sa-feedback-rating" value="good"> Good</label>
+            <label class="sa-feedback-choice"><input type="radio" name="sa-feedback-rating" value="mixed"> Mixed</label>
+            <label class="sa-feedback-choice"><input type="radio" name="sa-feedback-rating" value="off"> Off</label>
+          </div>
+        </fieldset>
+        <div class="sa-feedback-details" hidden>
+          <fieldset>
+            <legend>What felt off? <span class="sa-kicker">(optional, choose up to two)</span></legend>
+            <div class="sa-feedback-reasons">
+              <label class="sa-feedback-reason"><input type="checkbox" name="sa-feedback-reason" value="style"> style</label>
+              <label class="sa-feedback-reason"><input type="checkbox" name="sa-feedback-reason" value="mood_energy"> mood/energy</label>
+              <label class="sa-feedback-reason"><input type="checkbox" name="sa-feedback-reason" value="tempo"> tempo</label>
+              <label class="sa-feedback-reason"><input type="checkbox" name="sa-feedback-reason" value="vocals_language"> vocals/language</label>
+              <label class="sa-feedback-reason"><input type="checkbox" name="sa-feedback-reason" value="instruments_timbre"> instruments/timbre</label>
+            </div>
+          </fieldset>
+          <label class="sa-feedback-note-label" for="sa-feedback-note">Optional note</label>
+          <textarea id="sa-feedback-note" class="sa-feedback-note" maxlength="280" aria-describedby="sa-feedback-privacy sa-feedback-count"></textarea>
+          <div class="sa-feedback-help">
+            <span id="sa-feedback-privacy">Please don’t include personal information.</span>
+            <span id="sa-feedback-count" class="sa-feedback-count">0/280</span>
+          </div>
+        </div>
+        <div class="sa-feedback-actions">
+          <button class="sa-feedback-send" type="button" disabled>Send feedback</button>
+          <button class="sa-feedback-dismiss" type="button">Not now</button>
+          <span class="sa-feedback-status" role="status" aria-live="polite"></span>
+        </div>
+      </section>`;
 
     wrap.querySelectorAll(".sa-row").forEach((row, index) => {
       row.hidden = true;

@@ -356,8 +356,14 @@ def test_evaluator_auto_load_export_and_explicit_private_submission():
 def test_vercel_routes_and_security_headers_cover_evaluator():
     config = _load(ROOT / "webapp" / "vercel.json")
     assert {item["source"]: item["destination"] for item in config["rewrites"]} == {
+        "/api/ratings-v6": "/api/ratings?__soundalike_handler=ratings-v6",
+        "/api/spicetify-feedback": (
+            "/api/ratings?__soundalike_handler=spicetify-feedback"
+        ),
         "/evaluate": "/evaluate/index.html",
         "/evaluate/": "/evaluate/index.html",
+        "/evaluate-v5": "/evaluate-v5/index.html",
+        "/evaluate-v5/": "/evaluate-v5/index.html",
         "/evaluate-v4": "/evaluate-v4/index.html",
         "/evaluate-v4/": "/evaluate-v4/index.html",
         "/evaluate-pacing-v3": "/evaluate-pacing-v3/index.html",

@@ -580,8 +580,10 @@ independently from sealed stores, and frozen before the label-free MusicFM shado
 The independent result failed the predeclared +20% gain, positive-interval, four-fold, and
 worst-fold checks. That ended the branch: no listening pack, no promotion, and no retuning on the
 consumed shadow. V2 remains available at `/evaluate-v2`; the current `/evaluate`
-page is a separate strict multi-segment V5 study, while the superseded V4 study and
-earlier studies remain versioned. The hosted recommender remains
+page is a separate exposure-disjoint V6 development/model-improvement study,
+while the consumed, inconclusive V5 application is byte-preserved at
+`/evaluate-v5` and the superseded V4 and earlier studies remain versioned. V6
+cannot serve as an independent promotion holdout. The hosted recommender remains
 `dual_sonic64_guardrail`.
 
 This negative result is the strongest demonstration of the project’s evaluation discipline.
@@ -590,6 +592,33 @@ showed that it was not a production-quality improvement. The right engineering d
 preserve the rollback path and record the failed generalization instead of weakening the gate.
 Any future V3 effort needs new lawful supervision and a newly frozen independent population.
 The complete chronological evidence is in [V3_RESEARCH.md](V3_RESEARCH.md).
+
+### Current product surface and anonymous feedback
+
+The shipped product serves a checksum-pinned **272,853-track** catalog. Its
+Dual-Sonic64 guardrail first requires a pure-audio top-1,000 candidate prior;
+bounded source-independent notability may reorder only that qualified tail.
+Inside Spotify, the Spicetify extension then applies strict Spotify
+lyrics-language filtering to the original top 20. Results remain hidden until
+that check settles, and the final page supports in-app playback, Spotify-native
+track menus, and clickable albums.
+
+After those final rows and their order settle, a deliberately small inline
+**Good / Mixed / Off** survey can collect optional development feedback. Mixed
+and Off reveal at most two closed reason tags and an optional 280-character
+plain-text note with a warning not to include personal information. Submission
+is always explicit, failures remain retryable, and success returns only a
+receipt. The private application record contains the seed, displayed rows in
+order, bounded method/index/API/policy/source labels, the response, and random
+anonymous deduplication nonces—not Spotify identity, credentials, library or
+history, headers, IP addresses, or hidden candidates.
+
+The feedback endpoint is intentionally public-CORS because an extension cannot
+keep a client secret. Strict validation, request-size limits, deterministic
+immutable Blob paths, a Vercel Firewall rate limit, and a recommended 90-day
+private-record retention window form the abuse/privacy boundary. This informal
+feedback and the active V6 evaluator are model-improvement inputs, not evidence
+that independently authorizes promotion.
 
 ### Resources and reproduction
 
@@ -676,7 +705,7 @@ For anyone evaluating this as a portfolio piece, the work spans:
   CUDA memory-layout and precision tuning, reading cuDNN kernel selection.
 - **API integration & security:** OAuth 2.0 PKCE, token lifecycle management, rate-limit handling,
   secret hygiene.
-- **Software engineering:** clean package design, a 285-test suite, packaging, a documented CLI,
+- **Software engineering:** clean package design, a broad automated test suite, packaging, a documented CLI,
   decoupling I/O from compute (the harvest-once spec cache), and reviewed, merged pull requests.
   Includes a reproducible human-aligned evaluation suite, three ranking improvements (quality
   filter, genre reranker, collaborative graph), and desktop/hosted parity tests.

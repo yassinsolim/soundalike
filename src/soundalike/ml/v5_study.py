@@ -85,12 +85,22 @@ def _collect_track_ids(value: object) -> set[int]:
 
 def _load_exposure_packs(
     paths: Sequence[Path],
+    labels: Sequence[str] | None = None,
 ) -> tuple[set[int], Mapping[str, str]]:
     if len(paths) < 2 or len(set(paths)) != len(paths):
         raise V5StudyError("V5 requires distinct prior exposure packs")
+    resolved_labels = (
+        tuple(path.name for path in paths) if labels is None else tuple(labels)
+    )
+    if (
+        len(resolved_labels) != len(paths)
+        or len(set(resolved_labels)) != len(resolved_labels)
+        or any(not label or not isinstance(label, str) for label in resolved_labels)
+    ):
+        raise V5StudyError("V5 exposure pack labels must be distinct")
     track_ids: set[int] = set()
     hashes = {}
-    for path in paths:
+    for path, label in zip(paths, resolved_labels):
         document = json.loads(path.read_text(encoding="utf-8"))
         if document.get("content_sha256") != _content_sha256(document):
             raise V5StudyError(f"exposure pack binding failed: {path.name}")
@@ -98,9 +108,7 @@ def _load_exposure_packs(
         if not current_ids:
             raise V5StudyError(f"exposure pack contains no tracks: {path.name}")
         track_ids.update(current_ids)
-        if path.name in hashes:
-            raise V5StudyError("V5 exposure pack filenames must be distinct")
-        hashes[path.name] = str(document["content_sha256"])
+        hashes[label] = str(document["content_sha256"])
     return track_ids, dict(sorted(hashes.items()))
 
 
@@ -237,6 +245,8 @@ def build_study(
     gate_cache_path: Path,
     exposure_pack_paths: Sequence[Path],
     workers: int,
+    exposure_pack_labels: Sequence[str] | None = None,
+    additional_exposed_artist_names: Sequence[str] = (),
 ) -> tuple[Mapping[str, object], Mapping[str, object], Mapping[str, object]]:
     if workers <= 0:
         raise V5StudyError("V5 worker count is invalid")
@@ -248,12 +258,27 @@ def build_study(
     original_reserve_ids = set(population["human_reserve"]["track_ids"])
     all_tracks = {int(track.track_id): track for track in context.tracks}
 
-    exposed_track_ids, exposure_hashes = _load_exposure_packs(exposure_pack_paths)
+    exposed_track_ids, exposure_hashes = _load_exposure_packs(
+        exposure_pack_paths, exposure_pack_labels
+    )
     if not exposed_track_ids.issubset(all_tracks):
         raise V5StudyError("an exposure pack references an unknown corpus track")
     exposed_artist_ids = {
         int(all_tracks[track_id].artist_id) for track_id in exposed_track_ids
     }
+    normalized_artist_names = {
+        name.strip().casefold()
+        for name in additional_exposed_artist_names
+        if isinstance(name, str) and name.strip()
+    }
+    if len(normalized_artist_names) != len(additional_exposed_artist_names):
+        raise V5StudyError("additional exposure artist names are invalid")
+    named_exposed_artist_ids = {
+        int(track.artist_id)
+        for track in context.tracks
+        if track.artist_name.strip().casefold() in normalized_artist_names
+    }
+    exposed_artist_ids.update(named_exposed_artist_ids)
     reserve_tracks = tuple(
         track
         for track in context.tracks
