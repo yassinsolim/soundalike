@@ -435,7 +435,7 @@ test("Marketplace permanently pins the bootstrap implementation commit", () => {
   assert.equal(marketplaceManifest.main, "integrations/spicetify/bootstrap.js");
   assert.equal(
     marketplaceManifest.branch,
-    "833fa84ad77ad5bee2ab8f04a371810527ed87c5",
+    "38ca29ca9ec760dc40e58a567ca6aaff632ae306",
   );
   assert.match(marketplaceManifest.branch, /^[a-f0-9]{40}$/);
 });
