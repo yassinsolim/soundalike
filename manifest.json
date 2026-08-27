@@ -2,9 +2,9 @@
   "name": "Soundalike",
   "description": "Find same-language audio matches in Spotify with native playback and optional anonymous feedback.",
   "preview": "docs/spicetify-results.png",
-  "main": "integrations/spicetify/soundalike.js",
+  "main": "integrations/spicetify/bootstrap.js",
   "readme": "integrations/spicetify/README.md",
-  "branch": "52ee71dfea4503fd1619762613b0d795815bc3e8",
+  "branch": "833fa84ad77ad5bee2ab8f04a371810527ed87c5",
   "authors": [
     {
       "name": "Yassin Soliman",
