@@ -7,6 +7,7 @@
 // README for Marketplace or manual setup.
 
 (function soundalike() {
+  const RUNTIME_SEMANTIC_VERSION = "2.0.0";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -79,7 +80,10 @@
     setTimeout(soundalike, 400);
     return;
   }
-  if (window.__soundalikeContextMenuItem) return;
+  // The signed Marketplace bootstrap may be executed more than once during
+  // client navigation. Never register a second context-menu item.
+  if (window.__soundalikeRuntimeVersion || window.__soundalikeContextMenuItem) return;
+  window.__soundalikeRuntimeVersion = RUNTIME_SEMANTIC_VERSION;
   removeLegacyCaches();
   removeLegacyFeedbackSuppression();
   persistentCache = loadPersistentCache();
