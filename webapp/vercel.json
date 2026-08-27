@@ -15,11 +15,15 @@
     "api/ratings-semantic-v2.js": { "maxDuration": 15 },
     "api/ratings-pacing-v3.js": { "maxDuration": 15 },
     "api/ratings-v4.js": { "maxDuration": 15 },
-    "api/ratings-v5.js": { "maxDuration": 15 }
+    "api/ratings-v5.js": { "maxDuration": 15 },
+    "api/ratings-v6.js": { "maxDuration": 15 },
+    "api/spicetify-feedback.js": { "maxDuration": 15 }
   },
   "rewrites": [
     { "source": "/evaluate", "destination": "/evaluate/index.html" },
     { "source": "/evaluate/", "destination": "/evaluate/index.html" },
+    { "source": "/evaluate-v5", "destination": "/evaluate-v5/index.html" },
+    { "source": "/evaluate-v5/", "destination": "/evaluate-v5/index.html" },
     { "source": "/evaluate-v4", "destination": "/evaluate-v4/index.html" },
     { "source": "/evaluate-v4/", "destination": "/evaluate-v4/index.html" },
     { "source": "/evaluate-pacing-v3", "destination": "/evaluate-pacing-v3/index.html" },
@@ -53,6 +57,20 @@
     },
     {
       "source": "/evaluate/(.*)",
+      "headers": [
+        { "key": "Content-Security-Policy", "value": "default-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; frame-ancestors 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; media-src https://prod-1.storage.jamendo.com; connect-src 'self'" },
+        { "key": "Cache-Control", "value": "no-store, max-age=0" }
+      ]
+    },
+    {
+      "source": "/evaluate-v5",
+      "headers": [
+        { "key": "Content-Security-Policy", "value": "default-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; frame-ancestors 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; media-src https://prod-1.storage.jamendo.com; connect-src 'self'" },
+        { "key": "Cache-Control", "value": "no-store, max-age=0" }
+      ]
+    },
+    {
+      "source": "/evaluate-v5/(.*)",
       "headers": [
         { "key": "Content-Security-Policy", "value": "default-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; frame-ancestors 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; media-src https://prod-1.storage.jamendo.com; connect-src 'self'" },
         { "key": "Cache-Control", "value": "no-store, max-age=0" }

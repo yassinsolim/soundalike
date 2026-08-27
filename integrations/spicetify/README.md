@@ -23,7 +23,7 @@ automatically uses the hosted 272,853-track recommendation library.
 - Results open on a normal Spotify page, so the Back and Forward buttons work
   and the list stays visible while music plays.
 - Results use a playlist-style layout with album artwork, verified artist
-  names, album names, and measured BPM.
+  names, clickable album names, and measured BPM.
 - For a seed with a known Spotify lyrics language, only candidates with that
   exact known language are shown (English with English, French with French,
   and so on). The gate examines only the model's original top 20: it never
@@ -58,6 +58,13 @@ automatically uses the hosted 272,853-track recommendation library.
   for seven days, so reopening the same track avoids repeating the expensive
   recommendation and catalog lookups. Unresolved Spotify searches and failed
   language checks are not cached, so a temporary miss can recover.
+- Once language filtering and final ordering settle, a compact inline prompt
+  may ask **How close were these matches?** Choose **Good**, **Mixed**, or
+  **Off**. Mixed and Off reveal up to two optional reason chips and an optional
+  280-character note; the note explicitly warns against personal information.
+  Nothing is sent until **Send feedback** is pressed. **Not now** dismisses it,
+  failures remain retryable, and a successful receipt or dismissal suppresses
+  another prompt locally for 30 or 7 days respectively.
 
 ## Privacy
 
@@ -69,6 +76,16 @@ password, access token, library, listening history, or artwork. Language
 labels and related-artist context come directly from Spotify inside the
 already-authenticated desktop client and are not sent to Soundalike. No
 separate Spotify login is required.
+
+Optional feedback is sent to the public CORS endpoint at
+`https://soundalike.yassin.app/api/spicetify-feedback`. Its record contains only
+the seed title/artist, the rows actually displayed and their final order,
+method/index/API/language/selection policy labels, Good/Mixed/Off, selected
+closed reasons, the optional note, and random anonymous install/session
+nonces used for retry deduplication. It does **not** include Spotify account
+identity, credentials, access tokens, library, listening history, request
+headers, IP addresses, or hidden candidates. The endpoint returns only a
+receipt digest; the extension never receives a private storage URL.
 
 ## Good to know
 

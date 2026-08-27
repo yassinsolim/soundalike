@@ -1,0 +1,2708 @@
+{
+  "schema_version": 1,
+  "pack_kind": "soundalike_v6_development_full_ranking",
+  "pack_id": "v6-development-full-ranking-1",
+  "research_only": true,
+  "promotion_allowed": false,
+  "production_recommendation_changed": false,
+  "task_format": {
+    "seed": 1,
+    "candidates": 4,
+    "questions": [
+      "full_similarity_ranking",
+      "worst_primary_reason"
+    ],
+    "partial_submission_allowed": true,
+    "adaptive_stop_after_unique_tasks": 12,
+    "ranking_slots": [
+      "most_similar",
+      "next_most_similar",
+      "second_least_similar",
+      "least_similar"
+    ]
+  },
+  "provenance": {
+    "source_fingerprint": "060f43ed0fa12e5a583e26a7728be14a5334c7daffebe2289f08875e9ec0c709",
+    "population_sha256": "9e35cae2d1eb41e9f6f24c98eeba40e850f5d780ecb73b31b7887a85a62e8136",
+    "detector_gate_sha256": "7884f97795dc91cec436758f692a011816cbb35002d94718b8053c9e9b52a31e",
+    "prior_exposure_pack_sha256s": {
+      "blinded_actual_served_lists_v17_private_submission_supersession": "2311a7f3dc3b84452060e7ba1c42ed33cd886d602caeb2511363dd8cb90e2eeb",
+      "blinded_repeated_excerpt_comparison_v3": "6d6dd1c03412b057e14d52d29ee775e5a4c62eea63c76f7d19c46f60f1942a5c",
+      "fulltrack_jamendo_blind_pilot_v2": "1980da60810959e7cdd24f39bd7142c8e34c76dab633c705976b85e49b297023",
+      "fulltrack_semantic_blind_pilot_v1": "4f3c34250d5c5fca35dcc671dae1c256f0d56d8ce404d7a758bbbf62a2e5b48a",
+      "fulltrack_semantic_repeated_excerpt_pilot_v2": "939b639abb6d6c6b2c7ba20ae570ff7ae9d06ee67254c219d6e5f61975403347",
+      "soundalike_v4_active_full_ranking": "899197ad4eed5b84d69e2f37ee2a4fc04f36f73ed1bf0a8421dd1ef5654b1384",
+      "soundalike_v5_strict_three_method_ranking": "9a58ed0ca004e05e20184ddc37c930f2a15f8c9d3fdb4add412f09103f27e095"
+    },
+    "frozen_method_count": 3,
+    "method_identity_public": false,
+    "listener_ratings_used_for_pack_selection": false,
+    "candidate_gate": "known voice class required; vocal tracks require three stable language decisions and exact seed-language compatibility",
+    "excludes_all_prior_exposed_tracks_and_artists": true,
+    "includes_v5_exposure": true,
+    "selection_objective": "high-value frozen-method disagreement for model improvement"
+  },
+  "tasks": [
+    {
+      "task_id": "v6-task-84c82c6a9f7b945af73dbe74",
+      "priority_rank": 1,
+      "seed_track_id": 149861,
+      "candidates": [
+        {
+          "choice_id": "v6-choice-b49c82803732f20679707f25",
+          "track_id": 1414621
+        },
+        {
+          "choice_id": "v6-choice-bfac88a83ef9d4c9dc6f97d8",
+          "track_id": 707018
+        },
+        {
+          "choice_id": "v6-choice-df4feedc509c763f0e93981b",
+          "track_id": 1369045
+        },
+        {
+          "choice_id": "v6-choice-f8043cec44c25d579c00f217",
+          "track_id": 1027956
+        }
+      ]
+    },
+    {
+      "task_id": "v6-task-8388ee63970216c9d31c0ccb",
+      "priority_rank": 2,
+      "seed_track_id": 181427,
+      "candidates": [
+        {
+          "choice_id": "v6-choice-1f92ed6c81823b951fb0d521",
+          "track_id": 202750
+        },
+        {
+          "choice_id": "v6-choice-83758f49ba42a761ac234c5e",
+          "track_id": 382370
+        },
+        {
+          "choice_id": "v6-choice-85ab9068f4eed411ae6d83d4",
+          "track_id": 1373184
+        },
+        {
+          "choice_id": "v6-choice-a98d70cf4c7f29924396ec9d",
+          "track_id": 455146
+        }
+      ]
+    },
+    {
+      "task_id": "v6-task-675b744f88a6ad9c7e42ea73",
+      "priority_rank": 3,
+      "seed_track_id": 1217789,
+      "candidates": [
+        {
+          "choice_id": "v6-choice-39be5d7d4875931a70a8e5d4",
+          "track_id": 1109819
+        },
+        {
+          "choice_id": "v6-choice-7decf09acfc435edacb28071",
+          "track_id": 1245188
+        },
+        {
+          "choice_id": "v6-choice-85494df307a333ad3b75c30e",
+          "track_id": 399227
+        },
+        {
+          "choice_id": "v6-choice-d5ea26b1a1908dc49a3f152a",
+          "track_id": 1416337
+        }
+      ]
+    },
+    {
+      "task_id": "v6-task-97f11c94f4f50d17dacc94d7",
+      "priority_rank": 4,
+      "seed_track_id": 1420899,
+      "candidates": [
+        {
+          "choice_id": "v6-choice-00dea62dcfc025c0b7585856",
+          "track_id": 319625
+        },
+        {
+          "choice_id": "v6-choice-4e5e8c59270930714a20bb73",
+          "track_id": 1141677
+        },
+        {
+          "choice_id": "v6-choice-922492c6baf87eb607fa84f8",
+          "track_id": 792446
+        },
+        {
+          "choice_id": "v6-choice-c315aaf3d60dbe873e79664d",
+          "track_id": 694890
+        }
+      ]
+    },
+    {
+      "task_id": "v6-task-19cfb082a2dab58f7b2af8f0",
+      "priority_rank": 5,
+      "seed_track_id": 192638,
+      "candidates": [
+        {
+          "choice_id": "v6-choice-170aebd52dcaa597dc19211f",
+          "track_id": 1381534
+        },
+        {
+          "choice_id": "v6-choice-253268f2d782dd122a3369f2",
+          "track_id": 1075820
+        },
+        {
+          "choice_id": "v6-choice-59bed387c0c5db03483a72be",
+          "track_id": 1406565
+        },
+        {
+          "choice_id": "v6-choice-9e8259d54f07b0c7ab7127d7",
+          "track_id": 128545
+        }
+      ]
+    },
+    {
+      "task_id": "v6-task-e8604ccfe86cafb1084be41f",
+      "priority_rank": 6,
+      "seed_track_id": 295661,
+      "candidates": [
+        {
+          "choice_id": "v6-choice-140affce65b6c6e5e8b51ca5",
+          "track_id": 857085
+        },
+        {
+          "choice_id": "v6-choice-42dff7a92eeb58b7d6357388",
+          "track_id": 1128658
+        },
+        {
+          "choice_id": "v6-choice-52ef81153f54c9d2178a2d7a",
+          "track_id": 1134446
+        },
+        {
+          "choice_id": "v6-choice-985235169b6224e18401c2e5",
+          "track_id": 391307
+        }
+      ]
+    },
+    {
+      "task_id": "v6-anchor-e403be05a155def81fdd1e25",
+      "priority_rank": 7,
+      "seed_track_id": 149861,
+      "candidates": [
+        {
+          "choice_id": "v6-choice-e3a983ad1595a89603622654",
+          "track_id": 1027956
+        },
+        {
+          "choice_id": "v6-choice-eb2bd5dac8711bee2879597b",
+          "track_id": 1369045
+        },
+        {
+          "choice_id": "v6-choice-871f703b8f98ed663bce33c7",
+          "track_id": 707018
+        },
+        {
+          "choice_id": "v6-choice-8b94a2a6655a0d1dd0eb1de3",
+          "track_id": 1414621
+        }
+      ]
+    },
+    {
+      "task_id": "v6-task-902bbf5e1e34298e7296ce02",
+      "priority_rank": 8,
+      "seed_track_id": 1085234,
+      "candidates": [
+        {
+          "choice_id": "v6-choice-68112a45ec03f5c4448ab424",
+          "track_id": 1174415
+        },
+        {
+          "choice_id": "v6-choice-722a98f50eb456bddda2f840",
+          "track_id": 1165631
+        },
+        {
+          "choice_id": "v6-choice-81e2ab6949ba473a71e6d49b",
+          "track_id": 346914
+        },
+        {
+          "choice_id": "v6-choice-bc280c204e9c62b4dd102826",
+          "track_id": 285626
+        }
+      ]
+    },
+    {
+      "task_id": "v6-task-e044b6bd2bb72775994eedff",
+      "priority_rank": 9,
+      "seed_track_id": 1186121,
+      "candidates": [
+        {
+          "choice_id": "v6-choice-8e6ca44e6d1d66247bfa9a96",
+          "track_id": 1343571
+        },
+        {
+          "choice_id": "v6-choice-b0a9885cec5e6cadcdc736a7",
+          "track_id": 146422
+        },
+        {
+          "choice_id": "v6-choice-b68354dd53442a1c09f984b7",
+          "track_id": 354914
+        },
+        {
+          "choice_id": "v6-choice-c793d2f6add8f731e9f2e95b",
+          "track_id": 79518
+        }
+      ]
+    },
+    {
+      "task_id": "v6-task-29d24fd33ea2aa9972b214a6",
+      "priority_rank": 10,
+      "seed_track_id": 1339570,
+      "candidates": [
+        {
+          "choice_id": "v6-choice-4d5f0ac53090a90162de9093",
+          "track_id": 1402360
+        },
+        {
+          "choice_id": "v6-choice-645a950db279cd612ee322dd",
+          "track_id": 411480
+        },
+        {
+          "choice_id": "v6-choice-6c2a26b50ec719a807981305",
+          "track_id": 1034578
+        },
+        {
+          "choice_id": "v6-choice-ba132d5355d71b3464694c12",
+          "track_id": 6155
+        }
+      ]
+    },
+    {
+      "task_id": "v6-task-20cbc4dc28a44777f28fd64a",
+      "priority_rank": 11,
+      "seed_track_id": 421665,
+      "candidates": [
+        {
+          "choice_id": "v6-choice-3f7c9c144c305772a4e75c79",
+          "track_id": 339557
+        },
+        {
+          "choice_id": "v6-choice-80680d0cf2fa7a304374f629",
+          "track_id": 176936
+        },
+        {
+          "choice_id": "v6-choice-cdef8e7081c4e9e1e462bd57",
+          "track_id": 952609
+        },
+        {
+          "choice_id": "v6-choice-d9a03ec045690c3876bdf0db",
+          "track_id": 437792
+        }
+      ]
+    },
+    {
+      "task_id": "v6-task-44bfabda2a61f7d7ea90a0fd",
+      "priority_rank": 12,
+      "seed_track_id": 1060333,
+      "candidates": [
+        {
+          "choice_id": "v6-choice-366c4629e1ef06b0290571b4",
+          "track_id": 1077278
+        },
+        {
+          "choice_id": "v6-choice-d70507c61061b410b7b7140c",
+          "track_id": 1266299
+        },
+        {
+          "choice_id": "v6-choice-e26f545cbf607caa9bc7d59d",
+          "track_id": 511100
+        },
+        {
+          "choice_id": "v6-choice-f5cfb522e5d54773c073b07d",
+          "track_id": 1211607
+        }
+      ]
+    },
+    {
+      "task_id": "v6-task-64144217c6ca7acc93fd0bb7",
+      "priority_rank": 13,
+      "seed_track_id": 1168685,
+      "candidates": [
+        {
+          "choice_id": "v6-choice-73fe6f3e1d144c5b309fbef9",
+          "track_id": 1386919
+        },
+        {
+          "choice_id": "v6-choice-b43530ae8f2e3d43f66ea56b",
+          "track_id": 1208245
+        },
+        {
+          "choice_id": "v6-choice-c7978f3eea53d64db601a0f0",
+          "track_id": 1360218
+        },
+        {
+          "choice_id": "v6-choice-fc6a4da568f3bf377520ec05",
+          "track_id": 1371512
+        }
+      ]
+    },
+    {
+      "task_id": "v6-anchor-4668acbf775350d6100e4ad8",
+      "priority_rank": 14,
+      "seed_track_id": 1339570,
+      "candidates": [
+        {
+          "choice_id": "v6-choice-5bf9d6813dc254352b418780",
+          "track_id": 6155
+        },
+        {
+          "choice_id": "v6-choice-2262e99e88a496138c7db5b3",
+          "track_id": 1034578
+        },
+        {
+          "choice_id": "v6-choice-ef71538c3c12b2e66f5dbc4d",
+          "track_id": 411480
+        },
+        {
+          "choice_id": "v6-choice-defb9777833493b3842ce292",
+          "track_id": 1402360
+        }
+      ]
+    },
+    {
+      "task_id": "v6-task-e78ed8b04c51e7bb879d00d2",
+      "priority_rank": 15,
+      "seed_track_id": 1338036,
+      "candidates": [
+        {
+          "choice_id": "v6-choice-5f2d77adf8d27d05c54f6446",
+          "track_id": 222215
+        },
+        {
+          "choice_id": "v6-choice-7164bcfeb8235fece699ff04",
+          "track_id": 1103094
+        },
+        {
+          "choice_id": "v6-choice-73bf72b94f94900a6d3c64f8",
+          "track_id": 1228627
+        },
+        {
+          "choice_id": "v6-choice-d683171de96c2be8c82206ee",
+          "track_id": 974582
+        }
+      ]
+    },
+    {
+      "task_id": "v6-task-c6402146aacb9cc0d2f432e9",
+      "priority_rank": 16,
+      "seed_track_id": 1155160,
+      "candidates": [
+        {
+          "choice_id": "v6-choice-798968833674c57a78ddc307",
+          "track_id": 1024416
+        },
+        {
+          "choice_id": "v6-choice-80afba393898b657cddaaff4",
+          "track_id": 1182880
+        },
+        {
+          "choice_id": "v6-choice-e91e99b4fa432b223c47a773",
+          "track_id": 344323
+        },
+        {
+          "choice_id": "v6-choice-ec677e0fe322169212504da7",
+          "track_id": 1133621
+        }
+      ]
+    },
+    {
+      "task_id": "v6-task-11aa73ca82448d3a9d5ad225",
+      "priority_rank": 17,
+      "seed_track_id": 1164431,
+      "candidates": [
+        {
+          "choice_id": "v6-choice-9dde038b8abe055c2e984b72",
+          "track_id": 1343445
+        },
+        {
+          "choice_id": "v6-choice-c6cecdfe15f79593689a94fa",
+          "track_id": 1216162
+        },
+        {
+          "choice_id": "v6-choice-d21a1a1d98bd0d27137e65c0",
+          "track_id": 1215374
+        },
+        {
+          "choice_id": "v6-choice-db493169ced7204d41791ddf",
+          "track_id": 1202875
+        }
+      ]
+    },
+    {
+      "task_id": "v6-task-a1749c55734abf47cb9c1d64",
+      "priority_rank": 18,
+      "seed_track_id": 238092,
+      "candidates": [
+        {
+          "choice_id": "v6-choice-2518440f202b2fc74e7fea83",
+          "track_id": 512843
+        },
+        {
+          "choice_id": "v6-choice-4be4f3521d3394644c9770c2",
+          "track_id": 877425
+        },
+        {
+          "choice_id": "v6-choice-53f1baf73b52eaa9b420a59e",
+          "track_id": 141260
+        },
+        {
+          "choice_id": "v6-choice-995c383a9b0cb09400f22745",
+          "track_id": 878925
+        }
+      ]
+    }
+  ],
+  "tracks": {
+    "6155": {
+      "track_id": 6155,
+      "title": "Track 010",
+      "artist": "BOOSTIE",
+      "album": "1 st New Year 2006 Boostie Mix / 1er de l'an 2006 Boostie mix",
+      "source_identity": {
+        "artist_id": 847,
+        "album_id": 950,
+        "source_audio_sha256": "cef325ea3dfc14cda76580466c2348c59ec39ef351e1e315d93ae61059ed9fc8",
+        "source_audio_bytes": 15972354
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=6155&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 255,
+          "end_seconds": 275,
+          "source_window_start_seconds": 260,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/6155",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/2.0/fr/",
+        "credit": "Track 010 by BOOSTIE from Jamendo: http://www.jamendo.com/track/6155"
+      }
+    },
+    "79518": {
+      "track_id": 79518,
+      "title": "Faking your life",
+      "artist": "Briovere Buffentis",
+      "album": "Weird world weird music (26)",
+      "source_identity": {
+        "artist_id": 1659,
+        "album_id": 7261,
+        "source_audio_sha256": "90320e1da890a46ed2af6c30d16fe158b15bbe97d320f1c6f733f509b5eec71d",
+        "source_audio_bytes": 9043636
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=79518&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 175,
+          "end_seconds": 195,
+          "source_window_start_seconds": 180,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/79518",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "Faking your life by Briovere Buffentis from Jamendo: http://www.jamendo.com/track/79518"
+      }
+    },
+    "128545": {
+      "track_id": 128545,
+      "title": "AMDG",
+      "artist": "B.O.Y.L.",
+      "album": "Codenames",
+      "source_identity": {
+        "artist_id": 1355,
+        "album_id": 18134,
+        "source_audio_sha256": "19dda653baeaee0644ce68a71af7da931bdbfaba2cbdc317bc013e48d34a38da",
+        "source_audio_bytes": 16416436
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=128545&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 200,
+          "end_seconds": 220,
+          "source_window_start_seconds": 205,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/128545",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "AMDG by B.O.Y.L. from Jamendo: http://www.jamendo.com/track/128545"
+      }
+    },
+    "141260": {
+      "track_id": 141260,
+      "title": "Classical",
+      "artist": "Gilles Costard",
+      "album": "My World",
+      "source_identity": {
+        "artist_id": 338424,
+        "album_id": 20201,
+        "source_audio_sha256": "440b9ca5d902204f6cd7666a49be4189871eb6c54c8566090913d8f427ae2715",
+        "source_audio_bytes": 2623782
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=141260&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 15,
+          "end_seconds": 35,
+          "source_window_start_seconds": 20,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/141260",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "Classical by Gilles Costard from Jamendo: http://www.jamendo.com/track/141260"
+      }
+    },
+    "146422": {
+      "track_id": 146422,
+      "title": "Dancing Buddha of Delight",
+      "artist": "Kavi Jezzie Hockaday",
+      "album": "Dancing Buddhas",
+      "source_identity": {
+        "artist_id": 338642,
+        "album_id": 20841,
+        "source_audio_sha256": "349e8c802339781bc06eefc9c4048a95a5d71439aa3e9ad2d6bff4a35b34204b",
+        "source_audio_bytes": 15097774
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=146422&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 280,
+          "end_seconds": 300,
+          "source_window_start_seconds": 285,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/146422",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "Dancing Buddha of Delight by Kavi Jezzie Hockaday from Jamendo: http://www.jamendo.com/track/146422"
+      }
+    },
+    "149861": {
+      "track_id": 149861,
+      "title": "KAOS - ESQUISSE",
+      "artist": "KaOS",
+      "album": "Esquisse",
+      "source_identity": {
+        "artist_id": 7294,
+        "album_id": 21455,
+        "source_audio_sha256": "d1cf19ed628b2fcd43f6ba36f9341315b360fc90bc7fcc3d41d1216c436bbeb4",
+        "source_audio_bytes": 13149040
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=149861&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 165,
+          "end_seconds": 185,
+          "source_window_start_seconds": 170,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/149861",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/2.0/fr/",
+        "credit": "KAOS - ESQUISSE by KaOS from Jamendo: http://www.jamendo.com/track/149861"
+      }
+    },
+    "176936": {
+      "track_id": 176936,
+      "title": "Wrong",
+      "artist": "Timado",
+      "album": "The Spoon Sessions",
+      "source_identity": {
+        "artist_id": 340001,
+        "album_id": 26174,
+        "source_audio_sha256": "686c3acf3cd2c0475d69be6bc24b00b52f82d9a1a25ab7459a6f71a5154cd30b",
+        "source_audio_bytes": 12276550
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=176936&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 235,
+          "end_seconds": 255,
+          "source_window_start_seconds": 240,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/176936",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/3.0/",
+        "credit": "Wrong by Timado from Jamendo: http://www.jamendo.com/track/176936"
+      }
+    },
+    "181427": {
+      "track_id": 181427,
+      "title": "Dead or Alive",
+      "artist": "Mad Mav",
+      "album": "Ancestry of all evil",
+      "source_identity": {
+        "artist_id": 340202,
+        "album_id": 27110,
+        "source_audio_sha256": "47f580751f5c92a086ee5cd2344c27816b32664390d5faf3ffa889c8c8da2f1b",
+        "source_audio_bytes": 11928599
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=181427&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 40,
+          "end_seconds": 60,
+          "source_window_start_seconds": 45,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/181427",
+        "license_name": "a Creative Commons Attribution-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nd/3.0/",
+        "credit": "Dead or Alive by Mad Mav from Jamendo: http://www.jamendo.com/track/181427"
+      }
+    },
+    "192638": {
+      "track_id": 192638,
+      "title": "Lost In A Dream",
+      "artist": "One Nasty Ego",
+      "album": "Longing",
+      "source_identity": {
+        "artist_id": 340723,
+        "album_id": 28790,
+        "source_audio_sha256": "4d2d6c4ab8f8e5043bc575370a237482aeda05ced475e38d568708cb48404f06",
+        "source_audio_bytes": 12598378
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=192638&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 240,
+          "end_seconds": 260,
+          "source_window_start_seconds": 245,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/192638",
+        "license_name": "a Creative Commons Attribution-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nd/3.0/",
+        "credit": "Lost In A Dream by One Nasty Ego from Jamendo: http://www.jamendo.com/track/192638"
+      }
+    },
+    "202750": {
+      "track_id": 202750,
+      "title": "Estación Reptil",
+      "artist": "Manganzoides",
+      "album": "Radio Komodo",
+      "source_identity": {
+        "artist_id": 341162,
+        "album_id": 30132,
+        "source_audio_sha256": "1c354f45d582d599a66298eacfdbd329b30a65eced22486fe8e28bccebca8f99",
+        "source_audio_bytes": 3175489
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=202750&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 0,
+          "end_seconds": 20,
+          "source_window_start_seconds": 5,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/202750",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "Estación Reptil by Manganzoides from Jamendo: http://www.jamendo.com/track/202750"
+      }
+    },
+    "222215": {
+      "track_id": 222215,
+      "title": "semi demonic pleasures",
+      "artist": "Moonrise",
+      "album": "blackest blue",
+      "source_identity": {
+        "artist_id": 342215,
+        "album_id": 32719,
+        "source_audio_sha256": "618224fe81500d045bbb5fed589c35f1e1ad353e8be25ddf8472c2018576c5bb",
+        "source_audio_bytes": 16355831
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=222215&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 170,
+          "end_seconds": 190,
+          "source_window_start_seconds": 175,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/222215",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/3.0/",
+        "credit": "semi demonic pleasures by Moonrise from Jamendo: http://www.jamendo.com/track/222215"
+      }
+    },
+    "238092": {
+      "track_id": 238092,
+      "title": "Altair",
+      "artist": "JT Bruce",
+      "album": "Universica",
+      "source_identity": {
+        "artist_id": 1435,
+        "album_id": 34714,
+        "source_audio_sha256": "37cf6d4dbff49389e18d8350eb7f75c2e751b3490e33ce4b64673d45a148f524",
+        "source_audio_bytes": 11707080
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=238092&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 65,
+          "end_seconds": 85,
+          "source_window_start_seconds": 70,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/238092",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/3.0/",
+        "credit": "Altair by JT Bruce from Jamendo: http://www.jamendo.com/track/238092"
+      }
+    },
+    "285626": {
+      "track_id": 285626,
+      "title": "Pulsar",
+      "artist": "AK-99",
+      "album": "Trance world",
+      "source_identity": {
+        "artist_id": 347625,
+        "album_id": 39798,
+        "source_audio_sha256": "db9bdae2b13f325e3338e3b6c4d72c2487d2de65991fdaf017fe54c8ad8943a8",
+        "source_audio_bytes": 10048827
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=285626&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 70,
+          "end_seconds": 90,
+          "source_window_start_seconds": 75,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/285626",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/2.5/it/",
+        "credit": "Pulsar by AK-99 from Jamendo: http://www.jamendo.com/track/285626"
+      }
+    },
+    "295661": {
+      "track_id": 295661,
+      "title": "the 1th",
+      "artist": "Ransom",
+      "album": "Ransom",
+      "source_identity": {
+        "artist_id": 347638,
+        "album_id": 40636,
+        "source_audio_sha256": "c660c505c22fc72de836bce99ff2aad869687de859618567f35ce4cdb96393e4",
+        "source_audio_bytes": 8658068
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=295661&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 145,
+          "end_seconds": 165,
+          "source_window_start_seconds": 150,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/295661",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "the 1th by Ransom from Jamendo: http://www.jamendo.com/track/295661"
+      }
+    },
+    "319625": {
+      "track_id": 319625,
+      "title": "III",
+      "artist": "NikolasV",
+      "album": "exoplanet epodes",
+      "source_identity": {
+        "artist_id": 349196,
+        "album_id": 43146,
+        "source_audio_sha256": "46e763765f5e9c38a29d0dce13547906e3b76435b2d4293f5d0b038baa2ce5ad",
+        "source_audio_bytes": 7630933
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=319625&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 20,
+          "end_seconds": 40,
+          "source_window_start_seconds": 25,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/319625",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/3.0/",
+        "credit": "III by NikolasV from Jamendo: http://www.jamendo.com/track/319625"
+      }
+    },
+    "339557": {
+      "track_id": 339557,
+      "title": "My Home (The Spring Joke Version)",
+      "artist": "Horda",
+      "album": "The Spring Joke",
+      "source_identity": {
+        "artist_id": 339683,
+        "album_id": 44900,
+        "source_audio_sha256": "24a0ad2638d7af99b4dd477e9d9f33ec0cfba7f7fab9698f50e8c1f113f5bdf0",
+        "source_audio_bytes": 8322656
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=339557&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 55,
+          "end_seconds": 75,
+          "source_window_start_seconds": 60,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/339557",
+        "license_name": "a Creative Commons Attribution-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-sa/3.0/",
+        "credit": "My Home (The Spring Joke Version) by Horda from Jamendo: http://www.jamendo.com/track/339557"
+      }
+    },
+    "344323": {
+      "track_id": 344323,
+      "title": "Childhood",
+      "artist": "Alexander Stamenkovic",
+      "album": "Instrumental Lullabies - Jingle Bells and Friends",
+      "source_identity": {
+        "artist_id": 350222,
+        "album_id": 45343,
+        "source_audio_sha256": "fd28cd3801851e7e69558e8aed7c8a99c680d36c6d75a32d42bca3be7d809137",
+        "source_audio_bytes": 7207750
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=344323&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 60,
+          "end_seconds": 80,
+          "source_window_start_seconds": 65,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/344323",
+        "license_name": "a Creative Commons Attribution-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-sa/3.0/",
+        "credit": "Childhood by Alexander Stamenkovic from Jamendo: http://www.jamendo.com/track/344323"
+      }
+    },
+    "346914": {
+      "track_id": 346914,
+      "title": "Evgeny Minin - The reference to clubmen",
+      "artist": "Evgeny Minin",
+      "album": "The reference to clubmen",
+      "source_identity": {
+        "artist_id": 350432,
+        "album_id": 45588,
+        "source_audio_sha256": "e1ed5e71d2e1bc0e5003fe8bbe97357118fc5b44b78f810a16449ef9c92db758",
+        "source_audio_bytes": 12365366
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=346914&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 170,
+          "end_seconds": 190,
+          "source_window_start_seconds": 175,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/346914",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "Evgeny Minin - The reference to clubmen by Evgeny Minin from Jamendo: http://www.jamendo.com/track/346914"
+      }
+    },
+    "354914": {
+      "track_id": 354914,
+      "title": "SAMBA 1940",
+      "artist": "JAY MARTINEZ",
+      "album": "SWING IN ORLEANS",
+      "source_identity": {
+        "artist_id": 347954,
+        "album_id": 46349,
+        "source_audio_sha256": "c93b9bcb58dae1cecd6c5b841297358b589247957d090d8bf99fb52a7debdc04",
+        "source_audio_bytes": 16516746
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=354914&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 40,
+          "end_seconds": 60,
+          "source_window_start_seconds": 45,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/354914",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "SAMBA 1940 by JAY MARTINEZ from Jamendo: http://www.jamendo.com/track/354914"
+      }
+    },
+    "382370": {
+      "track_id": 382370,
+      "title": "new song",
+      "artist": "filippo martin",
+      "album": "Still in my dreams",
+      "source_identity": {
+        "artist_id": 351840,
+        "album_id": 48478,
+        "source_audio_sha256": "bd356cc6d4cc06f38f33cec9e67751da1a30ebc840cb252ef79e0e2873e87e04",
+        "source_audio_bytes": 12986036
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=382370&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 165,
+          "end_seconds": 185,
+          "source_window_start_seconds": 170,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/382370",
+        "license_name": "a Creative Commons Attribution license",
+        "license_url": "http://creativecommons.org/licenses/by/3.0/",
+        "credit": "new song by filippo martin from Jamendo: http://www.jamendo.com/track/382370"
+      }
+    },
+    "391307": {
+      "track_id": 391307,
+      "title": "Hymn duszy",
+      "artist": "Paweł Zach",
+      "album": "Paul Zach - Uwierz w Miłość , Hymn Duszy",
+      "source_identity": {
+        "artist_id": 342618,
+        "album_id": 49247,
+        "source_audio_sha256": "f86d49d33c9952e676fd6adf2887c047691be6899327bf99c77a7cbd27e7bc29",
+        "source_audio_bytes": 9126765
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=391307&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 80,
+          "end_seconds": 100,
+          "source_window_start_seconds": 85,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/391307",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "Hymn duszy by Paweł Zach from Jamendo: http://www.jamendo.com/track/391307"
+      }
+    },
+    "399227": {
+      "track_id": 399227,
+      "title": "Yesterdays Child",
+      "artist": "Gerry Davis",
+      "album": "Land of Our Fathers",
+      "source_identity": {
+        "artist_id": 338058,
+        "album_id": 49830,
+        "source_audio_sha256": "fda383f633ad9b19736ddd713cd37316c528879ba596db3c801e7f50b74ff3ab",
+        "source_audio_bytes": 5402166
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=399227&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 85,
+          "end_seconds": 105,
+          "source_window_start_seconds": 90,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/399227",
+        "license_name": "a Creative Commons Attribution-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-sa/3.0/",
+        "credit": "Yesterdays Child by Gerry Davis from Jamendo: http://www.jamendo.com/track/399227"
+      }
+    },
+    "411480": {
+      "track_id": 411480,
+      "title": "Nova Shot Stream (Sorrow Dawn Mix)",
+      "artist": "Mike Feast",
+      "album": "Nova Shot Stream - CD Single Vol. 1",
+      "source_identity": {
+        "artist_id": 336866,
+        "album_id": 50854,
+        "source_audio_sha256": "dc737200f4c0fc82c288576413fff450f375e1a6640ef43385dd6f5817598433",
+        "source_audio_bytes": 14348582
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=411480&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 270,
+          "end_seconds": 290,
+          "source_window_start_seconds": 275,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/411480",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/2.5/co/",
+        "credit": "Nova Shot Stream (Sorrow Dawn Mix) by Mike Feast from Jamendo: http://www.jamendo.com/track/411480"
+      }
+    },
+    "421665": {
+      "track_id": 421665,
+      "title": "Aloe Vera",
+      "artist": "Hypnostate",
+      "album": "Curious State of Harmony",
+      "source_identity": {
+        "artist_id": 353335,
+        "album_id": 51701,
+        "source_audio_sha256": "219549319ed7ff5065f146509a98f23c1e4747a441b6c699a6e7be95894f7544",
+        "source_audio_bytes": 7835733
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=421665&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 120,
+          "end_seconds": 140,
+          "source_window_start_seconds": 125,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/421665",
+        "license_name": "a Creative Commons Attribution-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nd/3.0/",
+        "credit": "Aloe Vera by Hypnostate from Jamendo: http://www.jamendo.com/track/421665"
+      }
+    },
+    "437792": {
+      "track_id": 437792,
+      "title": "Sunlight_m",
+      "artist": "entheos",
+      "album": "entheos",
+      "source_identity": {
+        "artist_id": 353967,
+        "album_id": 53026,
+        "source_audio_sha256": "1b61063e99f965fd43bb827e8cd62ddb00ddfe0ab911e80788b508e7211b76ea",
+        "source_audio_bytes": 10597399
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=437792&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 130,
+          "end_seconds": 150,
+          "source_window_start_seconds": 135,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/437792",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "Sunlight_m by entheos from Jamendo: http://www.jamendo.com/track/437792"
+      }
+    },
+    "455146": {
+      "track_id": 455146,
+      "title": "Pa of Sash - Blowing Forest (instr.)",
+      "artist": "Pa of Sash",
+      "album": "Vote for me",
+      "source_identity": {
+        "artist_id": 354654,
+        "album_id": 54486,
+        "source_audio_sha256": "7427971c275d4dd1b868424edc5bb0d4b7e5a636b271e5009385c7e78f1ffb3e",
+        "source_audio_bytes": 12313121
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=455146&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 45,
+          "end_seconds": 65,
+          "source_window_start_seconds": 50,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/455146",
+        "license_name": "a Creative Commons Attribution-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nd/3.0/",
+        "credit": "Pa of Sash - Blowing Forest (instr.) by Pa of Sash from Jamendo: http://www.jamendo.com/track/455146"
+      }
+    },
+    "511100": {
+      "track_id": 511100,
+      "title": "Into Pieces",
+      "artist": "Sleeping Sky",
+      "album": "Remind the Past",
+      "source_identity": {
+        "artist_id": 339048,
+        "album_id": 59802,
+        "source_audio_sha256": "1468ef86d5c2260dacd7d5e779d60cc2224b00cc70df5fa93cd0f6c217ed3133",
+        "source_audio_bytes": 8854509
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=511100&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 35,
+          "end_seconds": 55,
+          "source_window_start_seconds": 40,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/511100",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/3.0/",
+        "credit": "Into Pieces by Sleeping Sky from Jamendo: http://www.jamendo.com/track/511100"
+      }
+    },
+    "512843": {
+      "track_id": 512843,
+      "title": "vintager",
+      "artist": "viRoos",
+      "album": "instrumentAll",
+      "source_identity": {
+        "artist_id": 8134,
+        "album_id": 60002,
+        "source_audio_sha256": "799247d3920213a80ad84756f833063f1e8463f0236722f7c94f85b5311f0e86",
+        "source_audio_bytes": 6776207
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=512843&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 75,
+          "end_seconds": 95,
+          "source_window_start_seconds": 80,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/512843",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/3.0/",
+        "credit": "vintager by viRoos from Jamendo: http://www.jamendo.com/track/512843"
+      }
+    },
+    "694890": {
+      "track_id": 694890,
+      "title": "Hinter der Zeit (Ep Version)",
+      "artist": "Ignomus",
+      "album": "Pocket EP",
+      "source_identity": {
+        "artist_id": 365130,
+        "album_id": 81045,
+        "source_audio_sha256": "37700ed87cb905fe6776b974fe95056340422631aa628573abcc7bf3fd5ec980",
+        "source_audio_bytes": 11360174
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=694890&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 220,
+          "end_seconds": 240,
+          "source_window_start_seconds": 225,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/694890",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "Hinter der Zeit (Ep Version) by Ignomus from Jamendo: http://www.jamendo.com/track/694890"
+      }
+    },
+    "707018": {
+      "track_id": 707018,
+      "title": "No Idea",
+      "artist": "Ishi",
+      "album": "The UniVerse",
+      "source_identity": {
+        "artist_id": 339330,
+        "album_id": 82472,
+        "source_audio_sha256": "ee2d408149e20b5664bc1985bf9f4c96d5e85acd8bb1eda69e1774429c28ee64",
+        "source_audio_bytes": 6449154
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=707018&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 110,
+          "end_seconds": 130,
+          "source_window_start_seconds": 115,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/707018",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "No Idea by Ishi from Jamendo: http://www.jamendo.com/track/707018"
+      }
+    },
+    "792446": {
+      "track_id": 792446,
+      "title": "Solace of the Forest",
+      "artist": "Indigo78",
+      "album": "Sun Stone",
+      "source_identity": {
+        "artist_id": 361501,
+        "album_id": 92962,
+        "source_audio_sha256": "3b61d0a25892831fa965c8a788bf7ae92e7b3d476f8b09207b09cbe8d267201a",
+        "source_audio_bytes": 7230738
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=792446&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 40,
+          "end_seconds": 60,
+          "source_window_start_seconds": 45,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/792446",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "Solace of the Forest by Indigo78 from Jamendo: http://www.jamendo.com/track/792446"
+      }
+    },
+    "857085": {
+      "track_id": 857085,
+      "title": "Molybdiq",
+      "artist": "Klangbrandung",
+      "album": "Lounge Control",
+      "source_identity": {
+        "artist_id": 373002,
+        "album_id": 100286,
+        "source_audio_sha256": "23aae7e3c611beacb380b8c6a51cf2d0578343a1b1b3a67343f5262cd591f326",
+        "source_audio_bytes": 11054019
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=857085&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 75,
+          "end_seconds": 95,
+          "source_window_start_seconds": 80,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/857085",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/2.0/de/",
+        "credit": "Molybdiq by Klangbrandung from Jamendo: http://www.jamendo.com/track/857085"
+      }
+    },
+    "877425": {
+      "track_id": 877425,
+      "title": "Chasing Eagle",
+      "artist": "fifty waves of ray",
+      "album": "Sharpsword",
+      "source_identity": {
+        "artist_id": 366067,
+        "album_id": 103020,
+        "source_audio_sha256": "3124852296cf1a6a31e11ec097c5ed4bed401908c531c3dc597d8bc074a2d5a1",
+        "source_audio_bytes": 15480207
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=877425&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 80,
+          "end_seconds": 100,
+          "source_window_start_seconds": 85,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/877425",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "Chasing Eagle by fifty waves of ray from Jamendo: http://www.jamendo.com/track/877425"
+      }
+    },
+    "878925": {
+      "track_id": 878925,
+      "title": "Carol of the Bells",
+      "artist": "Exalted Dirt",
+      "album": "Behold the Face",
+      "source_identity": {
+        "artist_id": 364882,
+        "album_id": 103236,
+        "source_audio_sha256": "6fe259347f30807e154ecea6d1aec3f36d34d068e2797d699780ef552ef44eed",
+        "source_audio_bytes": 13004844
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=878925&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 15,
+          "end_seconds": 35,
+          "source_window_start_seconds": 20,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/878925",
+        "license_name": "a Creative Commons Attribution-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-sa/3.0/",
+        "credit": "Carol of the Bells by Exalted Dirt from Jamendo: http://www.jamendo.com/track/878925"
+      }
+    },
+    "952609": {
+      "track_id": 952609,
+      "title": "When No One Stares At Us",
+      "artist": "Snowed Under",
+      "album": "Green EP",
+      "source_identity": {
+        "artist_id": 368059,
+        "album_id": 112002,
+        "source_audio_sha256": "79673bfc9cf5439330c9352eba3ce673a9b2ac9d782fb72497653e2ce01882b1",
+        "source_audio_bytes": 15383031
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=952609&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 195,
+          "end_seconds": 215,
+          "source_window_start_seconds": 200,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/952609",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "When No One Stares At Us by Snowed Under from Jamendo: http://www.jamendo.com/track/952609"
+      }
+    },
+    "974582": {
+      "track_id": 974582,
+      "title": "1000 Moons",
+      "artist": "CaliKO",
+      "album": "1000 Moons",
+      "source_identity": {
+        "artist_id": 426546,
+        "album_id": 114766,
+        "source_audio_sha256": "dfc82c8a172edda274054a877b5eb9c6116e9fafd68757007ddd09cbf9ebe47f",
+        "source_audio_bytes": 9266199
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=974582&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 55,
+          "end_seconds": 75,
+          "source_window_start_seconds": 60,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/974582",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "1000 Moons by CaliKO from Jamendo: http://www.jamendo.com/track/974582"
+      }
+    },
+    "1024416": {
+      "track_id": 1024416,
+      "title": "Obduco",
+      "artist": "P Eric",
+      "album": "Iunctura of Vices",
+      "source_identity": {
+        "artist_id": 432589,
+        "album_id": 120423,
+        "source_audio_sha256": "3473bf775a276668b506e6fffc45904f7670b41acdbc7c6cf0590f725be32dfe",
+        "source_audio_bytes": 9762525
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1024416&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 30,
+          "end_seconds": 50,
+          "source_window_start_seconds": 35,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1024416",
+        "license_name": "a Creative Commons Attribution-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-sa/3.0/",
+        "credit": "Obduco by P Eric from Jamendo: http://www.jamendo.com/track/1024416"
+      }
+    },
+    "1027956": {
+      "track_id": 1027956,
+      "title": "Atlantis",
+      "artist": "LASERTRACKS",
+      "album": "ADVENTURES (Film, TV an Web Music)",
+      "source_identity": {
+        "artist_id": 360311,
+        "album_id": 120875,
+        "source_audio_sha256": "f1261a48c61ef66d500a0e2101250f4a0e9f40d1cb9231bbefb7f1ec68a5c607",
+        "source_audio_bytes": 11806346
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1027956&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 130,
+          "end_seconds": 150,
+          "source_window_start_seconds": 135,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1027956",
+        "license_name": "a Creative Commons Attribution-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nd/2.0/de/",
+        "credit": "Atlantis by LASERTRACKS from Jamendo: http://www.jamendo.com/track/1027956"
+      }
+    },
+    "1034578": {
+      "track_id": 1034578,
+      "title": "A long way (Part 2)",
+      "artist": "Maeces",
+      "album": "new era",
+      "source_identity": {
+        "artist_id": 432466,
+        "album_id": 121784,
+        "source_audio_sha256": "b054af806a929c7c3b79492adffeb82bc89a0b1e75b42e504ed2877dc959eb39",
+        "source_audio_bytes": 7339245
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1034578&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 140,
+          "end_seconds": 160,
+          "source_window_start_seconds": 145,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1034578",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "A long way (Part 2) by Maeces from Jamendo: http://www.jamendo.com/track/1034578"
+      }
+    },
+    "1060333": {
+      "track_id": 1060333,
+      "title": "My Name is Time",
+      "artist": "Anima Adversa",
+      "album": "El Sueño de los Justos",
+      "source_identity": {
+        "artist_id": 347675,
+        "album_id": 125082,
+        "source_audio_sha256": "2a19e85649b61f8ed012221862ce202048ee2cbed11a4bdfacdca531f1c9b3f5",
+        "source_audio_bytes": 10183566
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1060333&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 180,
+          "end_seconds": 200,
+          "source_window_start_seconds": 185,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1060333",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/3.0/",
+        "credit": "My Name is Time by Anima Adversa from Jamendo: http://www.jamendo.com/track/1060333"
+      }
+    },
+    "1075820": {
+      "track_id": 1075820,
+      "title": "Genesis Ring",
+      "artist": "Pinofas",
+      "album": "Kepler-62e",
+      "source_identity": {
+        "artist_id": 435948,
+        "album_id": 128135,
+        "source_audio_sha256": "fd3bc3115a3ff548996fa2f3796fafc651093677fcc041886e2c06e769427e7b",
+        "source_audio_bytes": 11111489
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1075820&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 55,
+          "end_seconds": 75,
+          "source_window_start_seconds": 60,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1075820",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/3.0/",
+        "credit": "Genesis Ring by Pinofas from Jamendo: http://www.jamendo.com/track/1075820"
+      }
+    },
+    "1077278": {
+      "track_id": 1077278,
+      "title": "Tar Tar Tar",
+      "artist": "Curtis Chris Roman",
+      "album": "Letter A-Frame EP (Partial)",
+      "source_identity": {
+        "artist_id": 439012,
+        "album_id": 128320,
+        "source_audio_sha256": "cec0f682e28211c0032ef262b11b9bca37c58ece58020a7217d81882ddfb286b",
+        "source_audio_bytes": 6355113
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1077278&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 10,
+          "end_seconds": 30,
+          "source_window_start_seconds": 15,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1077278",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "Tar Tar Tar by Curtis Chris Roman from Jamendo: http://www.jamendo.com/track/1077278"
+      }
+    },
+    "1085234": {
+      "track_id": 1085234,
+      "title": "Back in Time 1",
+      "artist": "K.R",
+      "album": "Back in Time",
+      "source_identity": {
+        "artist_id": 434847,
+        "album_id": 129312,
+        "source_audio_sha256": "02a5546c4b99835822b2281b349ad1aacbc0ec3fe4ae96e20881780626855904",
+        "source_audio_bytes": 12482395
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1085234&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 50,
+          "end_seconds": 70,
+          "source_window_start_seconds": 55,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1085234",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "Back in Time 1 by K.R from Jamendo: http://www.jamendo.com/track/1085234"
+      }
+    },
+    "1103094": {
+      "track_id": 1103094,
+      "title": "My belieff",
+      "artist": "Culture of Youth",
+      "album": "All My Memories",
+      "source_identity": {
+        "artist_id": 441802,
+        "album_id": 131660,
+        "source_audio_sha256": "89de3c47c23d09a5e1f1fec2c85208cdf9b96cecbe50e03f853a8a265861dd29",
+        "source_audio_bytes": 9343521
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1103094&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 60,
+          "end_seconds": 80,
+          "source_window_start_seconds": 65,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1103094",
+        "license_name": "a Creative Commons Attribution-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-sa/3.0/",
+        "credit": "My belieff by Culture of Youth from Jamendo: http://www.jamendo.com/track/1103094"
+      }
+    },
+    "1109819": {
+      "track_id": 1109819,
+      "title": "Only a Shadow Remains",
+      "artist": "Udo Vismann",
+      "album": "Fly (Preview)",
+      "source_identity": {
+        "artist_id": 437998,
+        "album_id": 132617,
+        "source_audio_sha256": "d81ed109ecced49b37497eea5a3dfa9df73dee8ed832244dba025f600c3d4595",
+        "source_audio_bytes": 5280958
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1109819&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 0,
+          "end_seconds": 20,
+          "source_window_start_seconds": 5,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1109819",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "Only a Shadow Remains by Udo Vismann from Jamendo: http://www.jamendo.com/track/1109819"
+      }
+    },
+    "1128658": {
+      "track_id": 1128658,
+      "title": "Nebula UF-005 (Music - New Age, Ambient, Space, Instrumental, Soundtrack)",
+      "artist": "Ufancy",
+      "album": "Nebula UF-005 5-2 (Music - New Age, Ambient, Space, Instrumental",
+      "source_identity": {
+        "artist_id": 444081,
+        "album_id": 135209,
+        "source_audio_sha256": "26e4c53e6888adf7b26e4a8e77e412979240b95de5e2b6c862134e58cfe27369",
+        "source_audio_bytes": 4415782
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1128658&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 55,
+          "end_seconds": 75,
+          "source_window_start_seconds": 60,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1128658",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/3.0/",
+        "credit": "Nebula UF-005 (Music - New Age, Ambient, Space, Instrumental, Soundtrack) by Ufancy from Jamendo: http://www.jamendo.com/track/1128658"
+      }
+    },
+    "1133621": {
+      "track_id": 1133621,
+      "title": "Snowsleep - Twilight Zone",
+      "artist": "Snowsleep",
+      "album": "Noises Around Us",
+      "source_identity": {
+        "artist_id": 444409,
+        "album_id": 136017,
+        "source_audio_sha256": "a6cf36a77e9037af1476f32e4b11fea870ed10d0609d79892ad6cd0711816b18",
+        "source_audio_bytes": 11921285
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1133621&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 210,
+          "end_seconds": 230,
+          "source_window_start_seconds": 215,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1133621",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/3.0/",
+        "credit": "Snowsleep - Twilight Zone by Snowsleep from Jamendo: http://www.jamendo.com/track/1133621"
+      }
+    },
+    "1134446": {
+      "track_id": 1134446,
+      "title": "Without You",
+      "artist": "MegaEnx",
+      "album": "Space Debris",
+      "source_identity": {
+        "artist_id": 365279,
+        "album_id": 136140,
+        "source_audio_sha256": "069a160891991d7bf848ea8a8dd2376b039df8e48dfb115039730b52ae0fae75",
+        "source_audio_bytes": 10068680
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1134446&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 185,
+          "end_seconds": 205,
+          "source_window_start_seconds": 190,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1134446",
+        "license_name": "a Creative Commons Attribution-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-sa/3.0/",
+        "credit": "Without You by MegaEnx from Jamendo: http://www.jamendo.com/track/1134446"
+      }
+    },
+    "1141677": {
+      "track_id": 1141677,
+      "title": "Jazzy",
+      "artist": "Thomas Attwood",
+      "album": "The Third Album",
+      "source_identity": {
+        "artist_id": 450094,
+        "album_id": 136938,
+        "source_audio_sha256": "9e8f14d98244a97afbeb14ddead606fd4af93ae41e1e285a2a204a646b8b6e79",
+        "source_audio_bytes": 2802460
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1141677&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 5,
+          "end_seconds": 25,
+          "source_window_start_seconds": 10,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1141677",
+        "license_name": "a Creative Commons Attribution license",
+        "license_url": "http://creativecommons.org/licenses/by/3.0/",
+        "credit": "Jazzy by Thomas Attwood from Jamendo: http://www.jamendo.com/track/1141677"
+      }
+    },
+    "1155160": {
+      "track_id": 1155160,
+      "title": "Melting Hearts",
+      "artist": "JTiKey",
+      "album": "Melting Hearts EP",
+      "source_identity": {
+        "artist_id": 442937,
+        "album_id": 138585,
+        "source_audio_sha256": "29000210c094b52e4b32f09a34e1d517ecc0dad6bf3dcd8eccfc3cde045113d8",
+        "source_audio_bytes": 10380060
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1155160&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 5,
+          "end_seconds": 25,
+          "source_window_start_seconds": 10,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1155160",
+        "license_name": "a Creative Commons Attribution license",
+        "license_url": "http://creativecommons.org/licenses/by/3.0/",
+        "credit": "Melting Hearts by JTiKey from Jamendo: http://www.jamendo.com/track/1155160"
+      }
+    },
+    "1164431": {
+      "track_id": 1164431,
+      "title": "Celentic age",
+      "artist": "Nick [Foxmillet] Ladushkin",
+      "album": "Chinchilla",
+      "source_identity": {
+        "artist_id": 454501,
+        "album_id": 139941,
+        "source_audio_sha256": "1ff1989273fe9ae3ace99bcd44d3f73981a08ec9d503fadd81a36b70ca09fb6c",
+        "source_audio_bytes": 15416590
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1164431&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 195,
+          "end_seconds": 215,
+          "source_window_start_seconds": 200,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1164431",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/3.0/",
+        "credit": "Celentic age by Nick [Foxmillet] Ladushkin from Jamendo: http://www.jamendo.com/track/1164431"
+      }
+    },
+    "1165631": {
+      "track_id": 1165631,
+      "title": "DJ Dr@fT - in the night club",
+      "artist": "Young YARIK",
+      "album": "Club Life ",
+      "source_identity": {
+        "artist_id": 456355,
+        "album_id": 140139,
+        "source_audio_sha256": "cd0ec825bcfe0d62a10fab49bfb009c1e38e4ace1c96112e4203b6b196e25eb7",
+        "source_audio_bytes": 10804289
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1165631&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 105,
+          "end_seconds": 125,
+          "source_window_start_seconds": 110,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1165631",
+        "license_name": "a Creative Commons Attribution-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-sa/3.0/",
+        "credit": "DJ Dr@fT - in the night club by Young YARIK from Jamendo: http://www.jamendo.com/track/1165631"
+      }
+    },
+    "1168685": {
+      "track_id": 1168685,
+      "title": "- Bailando con Lola (instrumental) (Chimo & Rac29 )",
+      "artist": "BANKERS",
+      "album": "BANKERS   E P -  6",
+      "source_identity": {
+        "artist_id": 364943,
+        "album_id": 140575,
+        "source_audio_sha256": "237ba4088831b470a17c696ce24c92ad2734811de5fd4c79d106a5d57ac73c97",
+        "source_audio_bytes": 4413693
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1168685&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 25,
+          "end_seconds": 45,
+          "source_window_start_seconds": 30,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1168685",
+        "license_name": "a Creative Commons Attribution-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-sa/3.0/",
+        "credit": "- Bailando con Lola (instrumental) (Chimo & Rac29 ) by BANKERS from Jamendo: http://www.jamendo.com/track/1168685"
+      }
+    },
+    "1174415": {
+      "track_id": 1174415,
+      "title": "Lecklick",
+      "artist": "RunJoeRun",
+      "album": "Cosmic Merger",
+      "source_identity": {
+        "artist_id": 457852,
+        "album_id": 141454,
+        "source_audio_sha256": "d27081e7e005781ed926d33c4fb3e366dfa9f014221b0bb0d7b9b800b2c7b1ec",
+        "source_audio_bytes": 10282885
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1174415&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 100,
+          "end_seconds": 120,
+          "source_window_start_seconds": 105,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1174415",
+        "license_name": "a Creative Commons Attribution-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nd/3.0/",
+        "credit": "Lecklick by RunJoeRun from Jamendo: http://www.jamendo.com/track/1174415"
+      }
+    },
+    "1182880": {
+      "track_id": 1182880,
+      "title": "The End",
+      "artist": "Spin Day",
+      "album": "Spin Day And The Emotional Godfather",
+      "source_identity": {
+        "artist_id": 458918,
+        "album_id": 142352,
+        "source_audio_sha256": "00506ce87c7c31baec1115738de33b266327f91301251072bd425470c3bfebc3",
+        "source_audio_bytes": 8376991
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1182880&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 60,
+          "end_seconds": 80,
+          "source_window_start_seconds": 65,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1182880",
+        "license_name": "a Creative Commons Attribution license",
+        "license_url": "http://creativecommons.org/licenses/by/3.0/",
+        "credit": "The End by Spin Day from Jamendo: http://www.jamendo.com/track/1182880"
+      }
+    },
+    "1186121": {
+      "track_id": 1186121,
+      "title": "Disco On The Beach",
+      "artist": "Udder Steel",
+      "album": "Ultimate",
+      "source_identity": {
+        "artist_id": 362100,
+        "album_id": 142761,
+        "source_audio_sha256": "86c3441ee45b66d3a3012d1ecc903ceb38aae4486ba4045f268a427dc62bb623",
+        "source_audio_bytes": 8923472
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1186121&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 55,
+          "end_seconds": 75,
+          "source_window_start_seconds": 60,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1186121",
+        "license_name": "a Creative Commons Attribution license",
+        "license_url": "http://creativecommons.org/licenses/by/3.0/",
+        "credit": "Disco On The Beach by Udder Steel from Jamendo: http://www.jamendo.com/track/1186121"
+      }
+    },
+    "1202875": {
+      "track_id": 1202875,
+      "title": "Au-dela",
+      "artist": "Patrice Bohélay",
+      "album": "Anges et Démons",
+      "source_identity": {
+        "artist_id": 461535,
+        "album_id": 144484,
+        "source_audio_sha256": "5e19868bda2b80421f7d2677cac872af40f86b4ad2d31527c42983ad36f86c89",
+        "source_audio_bytes": 6082395
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1202875&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 110,
+          "end_seconds": 130,
+          "source_window_start_seconds": 115,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1202875",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/3.0/",
+        "credit": "Au-dela by Patrice Bohélay from Jamendo: http://www.jamendo.com/track/1202875"
+      }
+    },
+    "1208245": {
+      "track_id": 1208245,
+      "title": "IHCODHA",
+      "artist": "Overfill Minor",
+      "album": "Songs not to drive to...",
+      "source_identity": {
+        "artist_id": 438161,
+        "album_id": 145109,
+        "source_audio_sha256": "b0cb0234388cd389b2d56b96bae547cf5406d0db63effbd7fedee96a69155c70",
+        "source_audio_bytes": 17400729
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1208245&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 150,
+          "end_seconds": 170,
+          "source_window_start_seconds": 155,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1208245",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/3.0/",
+        "credit": "IHCODHA by Overfill Minor from Jamendo: http://www.jamendo.com/track/1208245"
+      }
+    },
+    "1211607": {
+      "track_id": 1211607,
+      "title": "Void",
+      "artist": "Joshua Ticsay",
+      "album": "What You Seek - The Unplugged EP",
+      "source_identity": {
+        "artist_id": 465566,
+        "album_id": 145503,
+        "source_audio_sha256": "b941a76ddf21875fc116642a53d7f03c22544728c6dfb57991380b98c625f0d8",
+        "source_audio_bytes": 5604876
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1211607&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 20,
+          "end_seconds": 40,
+          "source_window_start_seconds": 25,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1211607",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/3.0/",
+        "credit": "Void by Joshua Ticsay from Jamendo: http://www.jamendo.com/track/1211607"
+      }
+    },
+    "1215374": {
+      "track_id": 1215374,
+      "title": "Elegy 1",
+      "artist": "Ray Kosmick and his Porn Groove Crew",
+      "album": "Aperçus",
+      "source_identity": {
+        "artist_id": 359795,
+        "album_id": 145813,
+        "source_audio_sha256": "38aa4623a05c384fd656875c3909285bddf0d5310cbbc0c987bc61c3d32f5d99",
+        "source_audio_bytes": 8323701
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1215374&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 140,
+          "end_seconds": 160,
+          "source_window_start_seconds": 145,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1215374",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/3.0/",
+        "credit": "Elegy 1 by Ray Kosmick and his Porn Groove Crew from Jamendo: http://www.jamendo.com/track/1215374"
+      }
+    },
+    "1216162": {
+      "track_id": 1216162,
+      "title": "Winter Land (Melancholic Drama)",
+      "artist": "Lionel Desmond Schmitt",
+      "album": "The Cinematic Journey -  Adventures, Emotions & Action",
+      "source_identity": {
+        "artist_id": 458175,
+        "album_id": 145895,
+        "source_audio_sha256": "a72e7672ff1dca470ae738ee9dd6cc6d560f71936cc2adfd63d80c5b16c60709",
+        "source_audio_bytes": 5216174
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1216162&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 10,
+          "end_seconds": 30,
+          "source_window_start_seconds": 15,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1216162",
+        "license_name": "a Creative Commons Attribution license",
+        "license_url": "http://creativecommons.org/licenses/by/3.0/",
+        "credit": "Winter Land (Melancholic Drama) by Lionel Desmond Schmitt from Jamendo: http://www.jamendo.com/track/1216162"
+      }
+    },
+    "1217789": {
+      "track_id": 1217789,
+      "title": "film 01",
+      "artist": "V-zen instrumental beat",
+      "album": "v - beat 2015 BY V-ZEN",
+      "source_identity": {
+        "artist_id": 343154,
+        "album_id": 146100,
+        "source_audio_sha256": "2d0819545a1dd5f3f42743a22a3113393dd95eba4332e3689709537c52c821f4",
+        "source_audio_bytes": 11690362
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1217789&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 100,
+          "end_seconds": 120,
+          "source_window_start_seconds": 105,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1217789",
+        "license_name": "a Creative Commons Attribution license",
+        "license_url": "http://creativecommons.org/licenses/by/3.0/",
+        "credit": "film 01 by V-zen instrumental beat from Jamendo: http://www.jamendo.com/track/1217789"
+      }
+    },
+    "1228627": {
+      "track_id": 1228627,
+      "title": "05 - NO FEELINGS",
+      "artist": "Fourteen Steps To Hell",
+      "album": "Hopeless",
+      "source_identity": {
+        "artist_id": 452157,
+        "album_id": 147395,
+        "source_audio_sha256": "39c2b13da6cd0a56c411383489709986a8adbd16f946793c3b628aa53bebcde2",
+        "source_audio_bytes": 8642395
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1228627&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 85,
+          "end_seconds": 105,
+          "source_window_start_seconds": 90,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1228627",
+        "license_name": "a Creative Commons Attribution-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nd/3.0/",
+        "credit": "05 - NO FEELINGS by Fourteen Steps To Hell from Jamendo: http://www.jamendo.com/track/1228627"
+      }
+    },
+    "1245188": {
+      "track_id": 1245188,
+      "title": "Champagne",
+      "artist": "Ton in Ton",
+      "album": "Al Cante",
+      "source_identity": {
+        "artist_id": 476715,
+        "album_id": 149189,
+        "source_audio_sha256": "8a79110085de2b6ed5a85b04cf5270316f88d62a7b3663bb601b9e44f4ec7024",
+        "source_audio_bytes": 10310052
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1245188&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 85,
+          "end_seconds": 105,
+          "source_window_start_seconds": 90,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1245188",
+        "license_name": "a Creative Commons Attribution license",
+        "license_url": "http://creativecommons.org/licenses/by/3.0/",
+        "credit": "Champagne by Ton in Ton from Jamendo: http://www.jamendo.com/track/1245188"
+      }
+    },
+    "1266299": {
+      "track_id": 1266299,
+      "title": "Bena Nights",
+      "artist": "King &amp; Crozier",
+      "album": "Bena Nights - EP",
+      "source_identity": {
+        "artist_id": 480331,
+        "album_id": 151330,
+        "source_audio_sha256": "beb23e6d55acbbdb3ad0ef5b40e883d5b8953770d2c24a98e82138bda62882ac",
+        "source_audio_bytes": 8163831
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1266299&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 15,
+          "end_seconds": 35,
+          "source_window_start_seconds": 20,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1266299",
+        "license_name": "a Creative Commons Attribution license",
+        "license_url": "http://creativecommons.org/licenses/by/3.0/",
+        "credit": "Bena Nights by King &amp; Crozier from Jamendo: http://www.jamendo.com/track/1266299"
+      }
+    },
+    "1338036": {
+      "track_id": 1338036,
+      "title": "BeenCalledWorse-Velcro",
+      "artist": "Tab",
+      "album": "BeenCalledWorse-Velcro (Single)",
+      "source_identity": {
+        "artist_id": 348835,
+        "album_id": 158085,
+        "source_audio_sha256": "64e16a7fd256c9c33a26492cbda3e0b9afb279c0c02dca2835e98acb4747bd31",
+        "source_audio_bytes": 7591227
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1338036&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 25,
+          "end_seconds": 45,
+          "source_window_start_seconds": 30,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1338036",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/3.0/",
+        "credit": "BeenCalledWorse-Velcro by Tab from Jamendo: http://www.jamendo.com/track/1338036"
+      }
+    },
+    "1339570": {
+      "track_id": 1339570,
+      "title": "Running in the City",
+      "artist": "GUZMUS",
+      "album": "Love on the moon (instrumental mix)",
+      "source_identity": {
+        "artist_id": 459750,
+        "album_id": 158244,
+        "source_audio_sha256": "0754b49b498c06f04e8caeff90e4f4bd95c4dd7905175c4e7b1960a62cd335c6",
+        "source_audio_bytes": 11769774
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1339570&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 225,
+          "end_seconds": 245,
+          "source_window_start_seconds": 230,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1339570",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "Running in the City by GUZMUS from Jamendo: http://www.jamendo.com/track/1339570"
+      }
+    },
+    "1343445": {
+      "track_id": 1343445,
+      "title": "Out of time",
+      "artist": "Airmusic",
+      "album": "Nature songs",
+      "source_identity": {
+        "artist_id": 488843,
+        "album_id": 158863,
+        "source_audio_sha256": "77e87d8382e66598cd14e5402095e58e9862d138bb1516599f68b768ad4aff88",
+        "source_audio_bytes": 3871391
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1343445&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 5,
+          "end_seconds": 25,
+          "source_window_start_seconds": 10,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1343445",
+        "license_name": "a Creative Commons Attribution-Non-Commercial license",
+        "license_url": "http://creativecommons.org/licenses/by-nc/3.0/",
+        "credit": "Out of time by Airmusic from Jamendo: http://www.jamendo.com/track/1343445"
+      }
+    },
+    "1343571": {
+      "track_id": 1343571,
+      "title": "Chic And Luxury",
+      "artist": "Olezha Chopalish",
+      "album": "Hot",
+      "source_identity": {
+        "artist_id": 489220,
+        "album_id": 158611,
+        "source_audio_sha256": "689a93f03c768a3b784d02958b7ead93055a6dff67ab72d11e728d2ac2cf5f96",
+        "source_audio_bytes": 7978885
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1343571&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 5,
+          "end_seconds": 25,
+          "source_window_start_seconds": 10,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1343571",
+        "license_name": "a Creative Commons Attribution-Non-Commercial license",
+        "license_url": "http://creativecommons.org/licenses/by-nc/3.0/",
+        "credit": "Chic And Luxury by Olezha Chopalish from Jamendo: http://www.jamendo.com/track/1343571"
+      }
+    },
+    "1360218": {
+      "track_id": 1360218,
+      "title": "Run",
+      "artist": "Sebastiano Conte",
+      "album": "Black Passion",
+      "source_identity": {
+        "artist_id": 491628,
+        "album_id": 160262,
+        "source_audio_sha256": "66be27a3e02fa2989bf2c23c29ca644c45bb65a22ad2313d591e5a31266f2b53",
+        "source_audio_bytes": 9090656
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1360218&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 165,
+          "end_seconds": 185,
+          "source_window_start_seconds": 170,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1360218",
+        "license_name": "a Creative Commons Attribution license",
+        "license_url": "http://creativecommons.org/licenses/by/3.0/",
+        "credit": "Run by Sebastiano Conte from Jamendo: http://www.jamendo.com/track/1360218"
+      }
+    },
+    "1369045": {
+      "track_id": 1369045,
+      "title": "06",
+      "artist": "BLINDSIGHT",
+      "album": "Lost For Words",
+      "source_identity": {
+        "artist_id": 492585,
+        "album_id": 161074,
+        "source_audio_sha256": "3e79921a518a33f655485a922d65bc3f2482e30f645102afeec8b7e3ac916eeb",
+        "source_audio_bytes": 9858656
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1369045&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 145,
+          "end_seconds": 165,
+          "source_window_start_seconds": 150,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1369045",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "06 by BLINDSIGHT from Jamendo: http://www.jamendo.com/track/1369045"
+      }
+    },
+    "1371512": {
+      "track_id": 1371512,
+      "title": "California Spring",
+      "artist": "Evgeny Teilor",
+      "album": "South Pulse",
+      "source_identity": {
+        "artist_id": 458008,
+        "album_id": 161341,
+        "source_audio_sha256": "9a19da87654c2352d94de72bbf9648c1523ffa0ad07d626418a0d3d26d22b3bd",
+        "source_audio_bytes": 7528533
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1371512&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 50,
+          "end_seconds": 70,
+          "source_window_start_seconds": 55,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1371512",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "California Spring by Evgeny Teilor from Jamendo: http://www.jamendo.com/track/1371512"
+      }
+    },
+    "1373184": {
+      "track_id": 1373184,
+      "title": "Mars - Red Light Planet",
+      "artist": "REH-TORTE",
+      "album": "Planets",
+      "source_identity": {
+        "artist_id": 377663,
+        "album_id": 161509,
+        "source_audio_sha256": "63d7c22b67b071ff113ee581665eeafaf6e17b3684aedbf5c4c5a5a3c10b039a",
+        "source_audio_bytes": 14104076
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1373184&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 265,
+          "end_seconds": 285,
+          "source_window_start_seconds": 270,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1373184",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/3.0/",
+        "credit": "Mars - Red Light Planet by REH-TORTE from Jamendo: http://www.jamendo.com/track/1373184"
+      }
+    },
+    "1381534": {
+      "track_id": 1381534,
+      "title": "I kiss you now (1989 - extended remix 2016)",
+      "artist": "D27m",
+      "album": "I kiss you now (single 3 tracks 1989 - remixes 2016)",
+      "source_identity": {
+        "artist_id": 363557,
+        "album_id": 162246,
+        "source_audio_sha256": "fd19e79a01c2fa8fa8b724e6b73b9af3a547aebf6beeaf26fb7c9440fd21a420",
+        "source_audio_bytes": 14555472
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1381534&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 280,
+          "end_seconds": 300,
+          "source_window_start_seconds": 285,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1381534",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "I kiss you now (1989 - extended remix 2016) by D27m from Jamendo: http://www.jamendo.com/track/1381534"
+      }
+    },
+    "1386919": {
+      "track_id": 1386919,
+      "title": "Cannon Meditation",
+      "artist": "K Rother",
+      "album": "Working Coastlines EP",
+      "source_identity": {
+        "artist_id": 494218,
+        "album_id": 162677,
+        "source_audio_sha256": "c84276ffae9b53c4cf1c0299e4227d6c66b50ea4efcb236ed1369ffa4cc2b10c",
+        "source_audio_bytes": 9443831
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1386919&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 50,
+          "end_seconds": 70,
+          "source_window_start_seconds": 55,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1386919",
+        "license_name": "a Creative Commons Attribution-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-sa/3.0/",
+        "credit": "Cannon Meditation by K Rother from Jamendo: http://www.jamendo.com/track/1386919"
+      }
+    },
+    "1402360": {
+      "track_id": 1402360,
+      "title": "TANGO - XXXXXXXXX",
+      "artist": "TANGO inc.",
+      "album": "TANGO - XXXXX",
+      "source_identity": {
+        "artist_id": 353802,
+        "album_id": 164060,
+        "source_audio_sha256": "6f526cfaa623b03133caa2d225d8628520839550e298f247e3ac2a7f2851d779",
+        "source_audio_bytes": 5292452
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1402360&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 75,
+          "end_seconds": 95,
+          "source_window_start_seconds": 80,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1402360",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/3.0/",
+        "credit": "TANGO - XXXXXXXXX by TANGO inc. from Jamendo: http://www.jamendo.com/track/1402360"
+      }
+    },
+    "1406565": {
+      "track_id": 1406565,
+      "title": "The Fate",
+      "artist": "Roman Batyuk",
+      "album": "Beginning",
+      "source_identity": {
+        "artist_id": 496074,
+        "album_id": 164445,
+        "source_audio_sha256": "80f991c4685fed338adc4f59b07ddff3d5d0791d64b7162ecb9e7735f1487172",
+        "source_audio_bytes": 14843864
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1406565&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 125,
+          "end_seconds": 145,
+          "source_window_start_seconds": 130,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1406565",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "The Fate by Roman Batyuk from Jamendo: http://www.jamendo.com/track/1406565"
+      }
+    },
+    "1414621": {
+      "track_id": 1414621,
+      "title": "A Sunday morning",
+      "artist": "Walter Mazzaccaro",
+      "album": "The way that you want me",
+      "source_identity": {
+        "artist_id": 496499,
+        "album_id": 165151,
+        "source_audio_sha256": "1cf3fc7f6902fe3376520ea03372ac5ee83f2318fca8cc482e4e115c983c9fd0",
+        "source_audio_bytes": 8505513
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1414621&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 20,
+          "end_seconds": 40,
+          "source_window_start_seconds": 25,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1414621",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-No Derivatives license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-nd/3.0/",
+        "credit": "A Sunday morning by Walter Mazzaccaro from Jamendo: http://www.jamendo.com/track/1414621"
+      }
+    },
+    "1416337": {
+      "track_id": 1416337,
+      "title": "Feeling Corporate",
+      "artist": "Blue Giraffe",
+      "album": "Feeling Corporate",
+      "source_identity": {
+        "artist_id": 463893,
+        "album_id": 165482,
+        "source_audio_sha256": "1ce7e91d58b930261eb83f1638fc05268eec265157b44363e3128816f57a063a",
+        "source_audio_bytes": 4950770
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1416337&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 85,
+          "end_seconds": 105,
+          "source_window_start_seconds": 90,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1416337",
+        "license_name": "a Creative Commons Attribution-Non-Commercial-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+        "credit": "Feeling Corporate by Blue Giraffe from Jamendo: http://www.jamendo.com/track/1416337"
+      }
+    },
+    "1420899": {
+      "track_id": 1420899,
+      "title": "Streetview",
+      "artist": "Bruise In Blues",
+      "album": "Interminable Drift",
+      "source_identity": {
+        "artist_id": 349215,
+        "album_id": 165706,
+        "source_audio_sha256": "c8cc39964abf813c00f03dd06113187660125bfbc6ef2eb88f7d2d34155ef1b6",
+        "source_audio_bytes": 10339309
+      },
+      "audio": {
+        "url": "https://prod-1.storage.jamendo.com/?trackid=1420899&format=mp31",
+        "excerpt": {
+          "kind": "strongest_nonlocal_recurrence",
+          "start_seconds": 120,
+          "end_seconds": 140,
+          "source_window_start_seconds": 125,
+          "source_window_seconds": 10
+        }
+      },
+      "attribution": {
+        "track_url": "https://www.jamendo.com/track/1420899",
+        "license_name": "a Creative Commons Attribution-Share-Alike license",
+        "license_url": "http://creativecommons.org/licenses/by-sa/3.0/",
+        "credit": "Streetview by Bruise In Blues from Jamendo: http://www.jamendo.com/track/1420899"
+      }
+    }
+  },
+  "private_unblinding_sha256": "d70f43347dec7cbecd7cae4cbfa2ed7a28f9c01a38cb4beebedfbb420fd52545",
+  "development_evidence": true,
+  "independent_holdout": false,
+  "evidence_role": "development_model_improvement",
+  "content_sha256": "38cf7b0a4c035b27237288c9e4022a2b44d73ad82a0f3bd9085a2f862bea9637"
+}

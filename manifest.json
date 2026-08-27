@@ -1,6 +1,6 @@
 {
   "name": "Soundalike",
-  "description": "Find fast, same-language soundalikes from Spotify's right-click menu using audio embeddings.",
+  "description": "Find same-language audio matches in Spotify with native playback and optional anonymous feedback.",
   "preview": "docs/spicetify-results.png",
   "main": "integrations/spicetify/soundalike.js",
   "readme": "integrations/spicetify/README.md",
