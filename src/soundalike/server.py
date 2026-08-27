@@ -272,6 +272,7 @@ class SoundalikeEngine:
             "results": out,
             "library_size": len(self.index),
             "retrieval_mode": self.recommender.last_retrieval_mode,
+            "ranking_policy": self.recommender.ranking_policy,
         }
 
 # ============================================================ HTTP server layer

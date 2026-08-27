@@ -176,6 +176,7 @@ def test_v4_probe_accepts_the_complete_contract_and_local_port():
         "retrieval_mode": probe.EXPECTED_METHOD,
         "index_version": probe.EXPECTED_INDEX_VERSION,
         "language_policy": probe.EXPECTED_LANGUAGE_POLICY,
+        "ranking_policy": probe.EXPECTED_RANKING_POLICY,
         "results": [{"title": "Candidate"}],
     }
     requested = []
@@ -190,6 +191,7 @@ def test_v4_probe_accepts_the_complete_contract_and_local_port():
     assert requested_url.startswith("http://127.0.0.1:8788/api/spicetify_recommend?")
     assert "v=4" in requested_url
     assert "language_policy=spotify-lyrics-strict-v2" in requested_url
+    assert "ranking_policy=model-quality-v1" in requested_url
     assert requested[0][0].get_header("User-agent") == "Soundalike-V4-Monitor/1.0"
     service = (ROOT / "deploy/homelab/soundalike.service").read_text(encoding="utf-8")
     assert "Environment=SOUNDALIKE_HOST=127.0.0.1" in service
@@ -217,6 +219,7 @@ def test_v4_probe_refuses_gateway_errors_and_malformed_json(opener, message):
         ("retrieval_mode", "legacy", "retrieval mode"),
         ("index_version", "wrong-index", "index version"),
         ("language_policy", "permissive", "language policy"),
+        ("ranking_policy", "legacy", "ranking policy"),
         ("results", [], "no recommendations"),
     ],
 )
@@ -228,6 +231,7 @@ def test_v4_probe_refuses_wrong_ranking_contract(field, value, message):
         "retrieval_mode": probe.EXPECTED_METHOD,
         "index_version": probe.EXPECTED_INDEX_VERSION,
         "language_policy": probe.EXPECTED_LANGUAGE_POLICY,
+        "ranking_policy": probe.EXPECTED_RANKING_POLICY,
         "results": [{"title": "Candidate"}],
     }
     response[field] = value

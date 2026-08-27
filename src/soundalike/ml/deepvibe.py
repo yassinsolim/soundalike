@@ -89,6 +89,36 @@ def _version_penalty(title: str, artist: str = "") -> float:
     return min(penalty, 0.30)
 
 
+_RANKING_POLICY = "model-quality-v1"
+_BASELINE_RANKING_POLICY = "baseline-v1"
+_TEMPO_COMPATIBILITY_PENALTY = 0.035
+_MOOD_COMPATIBILITY_PENALTY = 0.035
+_TEMPO_COMPATIBILITY_DISTANCE = 40.0
+_MOOD_COMPATIBILITY_DISTANCE = 3.0
+_MOOD_FEATURE_NAMES = ("rms_std", "dynamic_range", "crest")
+
+
+def _recording_family_base(title: str) -> Optional[str]:
+    """Return a normalized base only when title metadata names a version."""
+    text = str(title).strip()
+    for match in _VERSION_BRACKET_RE.finditer(text):
+        if _VERSION_CONTEXT_RE.search(match.group(1).strip()):
+            base = text[:match.start()].strip(" -–—:")
+            if base:
+                return " ".join(base.casefold().split())
+    dash_suffix = _VERSION_DASH_SUFFIX_RE.search(text)
+    if dash_suffix and _VERSION_CONTEXT_RE.search(dash_suffix.group(1).strip()):
+        base = text[:dash_suffix.start()].strip(" -–—:")
+        if base:
+            return " ".join(base.casefold().split())
+    plain_suffix = _VERSION_SUFFIX_RE.search(text)
+    if plain_suffix and _VERSION_CONTEXT_RE.search(plain_suffix.group(0).strip()):
+        base = text[:plain_suffix.start()].strip(" -–—:")
+        if base:
+            return " ".join(base.casefold().split())
+    return None
+
+
 class DeepVibeIndex:
     """Parallel arrays of neural embeddings + vibe vectors for a library."""
 
@@ -272,6 +302,13 @@ class DeepVibeRecommender:
             dtype=np.float32,
         )
         self._version_penalty = np.zeros_like(self._version_penalty_policy)
+        self.ranking_policy = (
+            _RANKING_POLICY if enhance else _BASELINE_RANKING_POLICY
+        )
+        self._model_quality_enabled = bool(enhance)
+        self._recording_family_keys, self._recording_family_variants = (
+            self._build_recording_family_keys()
+        )
         self.last_retrieval_mode = "legacy_no_sonic_seed"
 
         # ── Enhancement modules ──────────────────────────────────────────────
@@ -291,6 +328,8 @@ class DeepVibeRecommender:
         an editable install, or with a stripped deployment).
         """
         self._version_penalty = self._version_penalty_policy
+        self._model_quality_enabled = True
+        self.ranking_policy = _RANKING_POLICY
         try:
             from .quality_filter import TitleQualityFilter
             self._qfilter = TitleQualityFilter()
@@ -306,6 +345,135 @@ class DeepVibeRecommender:
                 self._neural, self.index.artists, min_songs=2)
         except Exception:
             pass
+
+    def _build_recording_family_keys(self):
+        parsed = [
+            _recording_family_base(str(title)) for title in self.index.titles
+        ]
+        artists = [str(artist).casefold() for artist in self.index.artists]
+        versioned_bases = {
+            (artist, base) for artist, base in zip(artists, parsed)
+            if base is not None
+        }
+        self._versioned_recording_bases = versioned_bases
+        keys = []
+        for artist, title, base in zip(artists, self.index.titles, parsed):
+            if base is not None:
+                keys.append((artist, base))
+                continue
+            plain = " ".join(str(title).casefold().split())
+            keys.append((artist, plain) if (artist, plain) in versioned_bases else None)
+        return keys, np.asarray([base is not None for base in parsed], dtype=bool)
+
+    def _collapse_recording_families(self, rows: List[int], n: int) -> List[int]:
+        if not self._model_quality_enabled:
+            return list(rows)[:n]
+        collapsed: List[int] = []
+        positions: Dict[tuple, int] = {}
+        for raw in rows:
+            row = int(raw)
+            family = self._recording_family_keys[row]
+            if family is None:
+                collapsed.append(row)
+                continue
+            existing = positions.get(family)
+            if existing is None:
+                positions[family] = len(collapsed)
+                collapsed.append(row)
+            elif (
+                self._recording_family_variants[collapsed[existing]]
+                and not self._recording_family_variants[row]
+            ):
+                collapsed[existing] = row
+        return collapsed[:n]
+
+    def _collapse_recommendation_results(
+        self, results: List[DeepVibeRecommendation], n: int
+    ) -> List[DeepVibeRecommendation]:
+        if not self._model_quality_enabled:
+            return results[:n]
+        collapsed: List[DeepVibeRecommendation] = []
+        positions: Dict[tuple, int] = {}
+        for item in results:
+            artist = item.artist.casefold()
+            base = _recording_family_base(item.title)
+            plain = " ".join(item.title.casefold().split())
+            family = (
+                (artist, base) if base is not None
+                else (artist, plain)
+                if (artist, plain) in self._versioned_recording_bases else None
+            )
+            if family is None:
+                collapsed.append(item)
+                continue
+            existing = positions.get(family)
+            if existing is None:
+                positions[family] = len(collapsed)
+                collapsed.append(item)
+            elif (
+                _recording_family_base(collapsed[existing].title) is not None
+                and base is None
+            ):
+                collapsed[existing] = item
+        return collapsed[:n]
+
+    def _audio_compatibility_penalty(
+        self, seed_vibe: np.ndarray, rows: np.ndarray
+    ) -> np.ndarray:
+        """Return bounded soft penalties for valid tempo and dynamics mismatches."""
+        rows = np.asarray(rows, dtype=int)
+        penalties = np.zeros(len(rows), dtype=np.float32)
+        if not self._model_quality_enabled or not len(rows):
+            return penalties
+        try:
+            tempo_index = FEATURE_NAMES.index("tempo")
+            mood_indices = [FEATURE_NAMES.index(name) for name in _MOOD_FEATURE_NAMES]
+            weights = self._w
+            if (
+                not np.all(np.isfinite(weights))
+                or np.any(weights <= 0)
+                or not np.all(np.isfinite(self._vstd))
+                or np.any(self._vstd <= 0)
+            ):
+                return penalties
+            candidate_z = self._vscaled[rows] / weights
+            seed = np.asarray(seed_vibe, dtype=np.float32)
+            if seed.ndim != 1 or len(seed) != len(FEATURE_NAMES):
+                return penalties
+            seed_z = (seed - self._vmean) / self._vstd
+        except (IndexError, TypeError, ValueError, FloatingPointError):
+            return penalties
+
+        candidate_tempo = (
+            candidate_z[:, tempo_index] * self._vstd[tempo_index]
+            + self._vmean[tempo_index]
+        )
+        seed_tempo = float(seed[tempo_index])
+        valid_tempo = np.isfinite(candidate_tempo) & np.isfinite(seed_tempo)
+        valid_tempo &= (candidate_tempo > 0) & (seed_tempo > 0)
+        if np.any(valid_tempo):
+            distance = np.minimum.reduce((
+                np.abs(candidate_tempo - seed_tempo),
+                np.abs(2.0 * candidate_tempo - seed_tempo),
+                np.abs(candidate_tempo - 2.0 * seed_tempo),
+            ))
+            penalties[valid_tempo] += _TEMPO_COMPATIBILITY_PENALTY * np.minimum(
+                distance[valid_tempo] / _TEMPO_COMPATIBILITY_DISTANCE, 1.0
+            )
+
+        candidate_mood = candidate_z[:, mood_indices]
+        seed_mood = seed_z[mood_indices]
+        valid_mood = np.isfinite(seed_mood).all()
+        if valid_mood:
+            valid_mood = np.isfinite(candidate_mood).all(axis=1)
+            if np.any(valid_mood):
+                distance = np.linalg.norm(
+                    candidate_mood - seed_mood, axis=1
+                ) / np.sqrt(len(mood_indices))
+                penalties[valid_mood] += _MOOD_COMPATIBILITY_PENALTY * np.minimum(
+                    distance[valid_mood] / _MOOD_COMPATIBILITY_DISTANCE, 1.0
+                )
+        return penalties
 
     def _apply_whiten(self, vecs: np.ndarray) -> np.ndarray:
         """Center + ZCA-whiten + re-normalize (rows) of one or many embeddings."""
@@ -429,21 +597,23 @@ class DeepVibeRecommender:
                 seed_artist=seed_artist_context,
             )
             tail = self._recommend_dual_tail(
-                np.asarray(seed_sonic), np.asarray(seed_clap), max(n, 50),
+                np.asarray(seed_sonic), np.asarray(seed_clap),
+                np.asarray(seed_vibe.vector(), dtype=np.float32), max(n, 50),
                 exclude_ids or set(), exclude_artist, seed_title,
             )
             merged: List[DeepVibeRecommendation] = []
             used_ids: Set[int] = set()
+            visible_pool = max(n + 50, 100)
             for pool in (guarded[:5], baseline_guardrail[:10], tail):
                 for item in pool:
-                    if len(merged) >= n:
+                    if len(merged) >= visible_pool:
                         break
                     if item.track_id in used_ids:
                         continue
                     merged.append(item)
                     used_ids.add(item.track_id)
             self.last_retrieval_mode = "dual_sonic64_guardrail"
-            return merged[:n]
+            return self._collapse_recommendation_results(merged, n)
 
         use_sonic = sonic is not None and (
             seed_sonic is not None or seed_row is not None
@@ -474,8 +644,9 @@ class DeepVibeRecommender:
             merged = list(legacy[:min(5, n)])
             used_ids = {item.track_id for item in merged}
             used_artists = {item.artist.casefold() for item in merged}
+            visible_pool = max(n + 50, 100)
             for item in sonic_results:
-                if len(merged) >= n:
+                if len(merged) >= visible_pool:
                     break
                 artist = item.artist.casefold()
                 if item.track_id in used_ids or artist in used_artists:
@@ -484,7 +655,7 @@ class DeepVibeRecommender:
                 used_ids.add(item.track_id)
                 used_artists.add(artist)
             self.last_retrieval_mode = "sonic64_stable_head"
-            return merged
+            return self._collapse_recommendation_results(merged, n)
 
         self.last_retrieval_mode = "legacy_no_sonic_seed"
         exclude_ids = exclude_ids or set()
@@ -514,7 +685,7 @@ class DeepVibeRecommender:
         guarded = genre_rerank and self._centroid_idx is not None
         pool_cap = max(n * 25, 500) if (
             diversity > 0 or max_per_artist or guarded
-        ) else n
+        ) else (max(n + 50, 100) if self._model_quality_enabled else n)
         for idx in order:
             i = int(idx)
             tid = int(self.index.track_ids[i])
@@ -544,7 +715,12 @@ class DeepVibeRecommender:
             if len(cand) >= pool_cap:
                 break
 
-        select_n = max(n, 50) if (genre_rerank and self._centroid_idx is not None) else n
+        visible_pool = max(n + 50, 100) if self._model_quality_enabled else n
+        select_n = (
+            max(visible_pool, 50)
+            if (genre_rerank and self._centroid_idx is not None)
+            else visible_pool
+        )
         chosen = (
             self._mmr(cand, blended, select_n, diversity)
             if diversity > 0 else cand[:select_n]
@@ -562,7 +738,7 @@ class DeepVibeRecommender:
                 key=lambda i: float(centroid_score[i]),
                 reverse=True,
             ) + chosen[boundary:]
-        chosen = chosen[:n]
+        chosen = self._collapse_recording_families(chosen, n)
 
         results: List[DeepVibeRecommendation] = []
         for i in chosen:
@@ -577,6 +753,7 @@ class DeepVibeRecommender:
         self,
         seed_sonic: np.ndarray,
         seed_clap: np.ndarray,
+        seed_vibe: np.ndarray,
         n: int,
         exclude_ids: Set,
         exclude_artist: Optional[str],
@@ -600,6 +777,9 @@ class DeepVibeRecommender:
         audio_pool = np.argsort(audio_score)[::-1][:pool_size]
         score = audio_score.copy()
         score[audio_pool] -= self._version_penalty[audio_pool]
+        score[audio_pool] -= self._audio_compatibility_penalty(
+            seed_vibe, audio_pool
+        )
         score[audio_pool] += _DUAL_TAIL_PRIOR_SCALE * (
             0.20 * self._wiki[audio_pool]
             + 0.10 * self._wiki_specific[audio_pool]
