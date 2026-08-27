@@ -6,6 +6,12 @@ signature and monotonic sequence, then loads only an immutable runtime URL
 whose SHA-256 and SRI agree. Do not change Marketplace's manifest for ordinary
 runtime releases.
 
+Runtime bytes are fetched and hashed from their signed immutable GitHub Raw
+URL. They are executed from the corresponding immutable jsDelivr URL because
+GitHub Raw serves JavaScript as `text/plain` with `nosniff`, which Chromium
+correctly refuses to execute. Browser-enforced SRI binds the CDN response to
+the already verified SHA-256.
+
 ## Release a runtime
 
 1. Update `RUNTIME_SEMANTIC_VERSION` in `soundalike.js` using a new

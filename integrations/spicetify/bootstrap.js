@@ -3,11 +3,13 @@
 (function soundalikeMarketplaceBootstrap() {
   "use strict";
 
-  const GLOBAL_PROMISE = "__soundalikeBootstrapPromise";
+  const GLOBAL_PROMISE = "__soundalikeBootstrapPromiseV2";
   if (window[GLOBAL_PROMISE]) return;
 
   const REPOSITORY = "yassinsolim/soundalike";
   const RAW_ORIGIN = "https://raw.githubusercontent.com";
+  const CDN_ORIGIN = "https://cdn.jsdelivr.net";
+  const RUNTIME_PATH = "integrations/spicetify/soundalike.js";
   const MANIFEST_URL =
     `${RAW_ORIGIN}/${REPOSITORY}/main/integrations/spicetify/releases/stable.json`;
   const MANIFEST_TIMEOUT_MS = 5000;
@@ -26,8 +28,8 @@
   };
   const RUNTIME_URL_PATTERN = new RegExp(
     `^${RAW_ORIGIN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/` +
-      `${REPOSITORY.replace("/", "\\/")}/[a-f0-9]{40}/` +
-      "integrations/spicetify/soundalike\\.js$",
+      `${REPOSITORY.replace("/", "\\/")}/([a-f0-9]{40})/` +
+      `${RUNTIME_PATH.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
   );
 
   function bytesFromBase64(value) {
@@ -77,6 +79,13 @@
     const expectedSri = `sha256-${bytesToBase64(hexToBytes(runtime.sha256))}`;
     if (runtime.sri !== expectedSri) throw new Error("Runtime SRI does not match SHA-256.");
     return runtime;
+  }
+
+  function executableRuntimeUrl(runtimeUrl) {
+    const match = RUNTIME_URL_PATTERN.exec(runtimeUrl);
+    if (!match) throw new Error("Runtime URL is not an immutable allowlisted URL.");
+    const commit = match[1];
+    return `${CDN_ORIGIN}/gh/${REPOSITORY}@${commit}/${RUNTIME_PATH}`;
   }
 
   function hexToBytes(value) {
@@ -190,7 +199,7 @@
         script.remove?.();
         reject(new Error("Runtime script timed out."));
       }, RUNTIME_TIMEOUT_MS);
-      script.src = candidate.url;
+      script.src = executableRuntimeUrl(candidate.url);
       script.integrity = candidate.sri;
       script.crossOrigin = "anonymous";
       script.onload = () => {
@@ -199,7 +208,7 @@
       };
       script.onerror = () => {
         clearTimeout(timeout);
-        reject(new Error("Runtime script SRI verification failed."));
+        reject(new Error("Runtime script SRI or MIME verification failed."));
       };
       (document.head || document.documentElement || document.body).appendChild(script);
     });
