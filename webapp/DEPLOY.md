@@ -61,10 +61,10 @@ installation succeed. The old target remains both on disk and at
 After switching the symlink it reloads and restarts `soundalike.service`, checks
 local `/healthz`, and runs a full strict API-v4 canary. The canary requires a
 200 JSON response, `dual_sonic64_guardrail` method and retrieval mode, the
-`2026.07.11-dual-sonic64` index, `spotify-lyrics-strict-v2`, and non-empty
-results. Any restart or probe failure atomically restores the prior symlink,
-reinstalls the prior unit, restarts it, and verifies rollback health before
-reporting failure.
+`2026.07.11-dual-sonic64` index, `spotify-lyrics-strict-v2`,
+`model-quality-v1`, and non-empty results. Any restart or probe failure
+atomically restores the prior symlink, reinstalls the prior unit, restarts it,
+and verifies rollback health before reporting failure.
 
 Initial bootstrap (replace the commit with an immutable 40-character SHA):
 

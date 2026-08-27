@@ -227,6 +227,53 @@ def test_model_quality_family_collapse_and_audio_penalties_match_hosted(tmp_path
     assert hosted._audio_compatibility_penalty(0, [3])[0] == 0
 
 
+def test_model_quality_guardrail_breaks_audio_ties_toward_compatible_pacing(
+    tmp_path,
+):
+    from _reco import WebRecommender
+    from soundalike.ml.deepvibe import DeepVibeIndex, DeepVibeRecommender
+
+    compact = np.zeros((4, 64), dtype=np.float32)
+    compact[0, 0] = 1.0
+    compact[1:3, 0] = 0.9
+    compact[1:3, 1] = np.sqrt(1.0 - 0.9 ** 2)
+    compact[3, 0] = 0.5
+    compact[3, 1] = np.sqrt(1.0 - 0.5 ** 2)
+    vibe = np.zeros((4, 29), dtype=np.float32)
+    vibe[:, 0] = [120, 120, 205, 120]
+    index = DeepVibeIndex(
+        np.arange(4),
+        ["Seed", "Compatible", "Extreme Tempo", "Other"],
+        ["Seed Artist", "Artist A", "Artist B", "Artist C"],
+        np.eye(4, 12, dtype=np.float32),
+        vibe,
+        compact,
+        compact,
+        np.zeros(4, dtype=np.float16),
+        np.zeros(4, dtype=np.uint8),
+    )
+    path = tmp_path / "pacing-guardrail.npz"
+    index.save(path)
+    canonical = DeepVibeRecommender(index, enhance=True)
+    hosted = WebRecommender(str(path), enhance=True)
+
+    canonical_tail = canonical._recommend_dual_tail(
+        index.sonic[0],
+        index.clap[0],
+        index.vibe[0],
+        n=3,
+        exclude_ids={0},
+        exclude_artist=None,
+        seed_title="Seed",
+    )
+    hosted_tail = hosted._recommend_dual_tail(0, n=3)
+
+    assert canonical_tail[0].title == "Compatible"
+    assert [item.track_id for item in canonical_tail] == [
+        item["deezer_id"] for item in hosted_tail
+    ]
+
+
 def test_spicetify_results_include_measured_bpm(tmp_path):
     from _reco import WebRecommender
     from spicetify_recommend import _enrich_result_tempos, _tempo_bpm

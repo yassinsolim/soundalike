@@ -1,12 +1,17 @@
 import assert from "node:assert/strict";
 import {
   createHash,
+  createPublicKey,
   generateKeyPairSync,
   sign,
+  verify,
   webcrypto,
 } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 import vm from "node:vm";
 
@@ -19,6 +24,13 @@ const marketplaceManifest = JSON.parse(fs.readFileSync(
   new URL("../../manifest.json", import.meta.url),
   "utf8",
 ));
+const stableManifest = JSON.parse(fs.readFileSync(
+  new URL("../../integrations/spicetify/releases/stable.json", import.meta.url),
+  "utf8",
+));
+const productionPublicSpki = bootstrapSource.match(
+  /PUBLIC_KEY_SPKI_BASE64\s*=\s*\n?\s*"([^"]+)"/,
+)?.[1];
 const signingKey = generateKeyPairSync("ed25519");
 const publicSpki = signingKey.publicKey
   .export({ type: "spki", format: "der" })
@@ -387,4 +399,98 @@ test("Marketplace permanently pins the bootstrap implementation commit", () => {
     "833fa84ad77ad5bee2ab8f04a371810527ed87c5",
   );
   assert.match(marketplaceManifest.branch, /^[a-f0-9]{40}$/);
+});
+
+test("committed stable feed verifies against the production key and runtime", () => {
+  assert.ok(productionPublicSpki);
+  const publicKey = createPublicKey({
+    key: Buffer.from(productionPublicSpki, "base64"),
+    format: "der",
+    type: "spki",
+  });
+  assert.equal(
+    verify(
+      null,
+      Buffer.from(canonicalJson(stableManifest.payload)),
+      publicKey,
+      Buffer.from(stableManifest.signature, "base64"),
+    ),
+    true,
+  );
+  const runtime = Buffer.from(execFileSync(
+    "git",
+    [
+      "show",
+      `${new URL(stableManifest.payload.runtime.url).pathname.split("/")[3]}` +
+        ":integrations/spicetify/soundalike.js",
+    ],
+    { cwd: new URL("../..", import.meta.url) },
+  ));
+  const digest = createHash("sha256").update(runtime).digest();
+  assert.equal(stableManifest.payload.runtime.sha256, digest.toString("hex"));
+  assert.equal(
+    stableManifest.payload.runtime.sri,
+    `sha256-${digest.toString("base64")}`,
+  );
+  assert.match(
+    runtime.toString("utf8"),
+    new RegExp(
+      `const RUNTIME_SEMANTIC_VERSION = ` +
+        `"${stableManifest.payload.runtime.version.replaceAll(".", "\\.")}";`,
+    ),
+  );
+});
+
+test("release signer enforces matching runtime and monotonic versions", () => {
+  const root = fileURLToPath(new URL("../..", import.meta.url));
+  const releaseDirectory = fs.mkdtempSync(path.join(
+    root,
+    "integrations",
+    "spicetify",
+    "releases",
+    "signer-test-",
+  ));
+  const keyDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "soundalike-signing-"));
+  const output = path.join(releaseDirectory, "stable.json");
+  const keyFile = path.join(keyDirectory, "private.pem");
+  fs.writeFileSync(
+    keyFile,
+    signingKey.privateKey.export({ type: "pkcs8", format: "pem" }),
+  );
+  fs.writeFileSync(output, JSON.stringify({
+    payload: {
+      sequence: 2,
+      runtime: { version: "2.0.0" },
+    },
+  }));
+  const command = [
+    "integrations/spicetify/tools/sign-release.cjs",
+    "--runtime-file",
+    "integrations/spicetify/soundalike.js",
+    "--runtime-url",
+    stableManifest.payload.runtime.url,
+    "--version",
+    stableManifest.payload.runtime.version,
+    "--sequence",
+    String(stableManifest.payload.sequence),
+    "--out",
+    output,
+    "--key",
+    keyFile,
+  ];
+  try {
+    execFileSync(process.execPath, command, { cwd: root });
+    const signed = JSON.parse(fs.readFileSync(output, "utf8"));
+    assert.equal(signed.payload.sequence, 3);
+    assert.throws(
+      () => execFileSync(process.execPath, command, {
+        cwd: root,
+        stdio: "pipe",
+      }),
+      /Command failed/,
+    );
+  } finally {
+    fs.rmSync(releaseDirectory, { recursive: true, force: true });
+    fs.rmSync(keyDirectory, { recursive: true, force: true });
+  }
 });
