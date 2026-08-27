@@ -40,6 +40,9 @@ def _enrich_result_tempos(recommender, result):
     return result
 
 
+_RANKING_POLICY = "model-quality-v1"
+
+
 _LANGUAGE_POLICIES = {
     "3": "spotify-lyrics-v1",
     "4": "spotify-lyrics-strict-v2",
@@ -52,7 +55,8 @@ def _language_policy_supported(version, language_policy):
 
 
 def _needs_canonical_redirect(
-    params, query, count, diversity, version="2", language_policy=None, warm=False
+    params, query, count, diversity, version="2", language_policy=None, warm=False,
+    ranking_policy=None,
 ):
     return (
         params["query"][0] != query
@@ -64,6 +68,10 @@ def _needs_canonical_redirect(
             and params.get("language_policy", [""])[0] != language_policy
         )
         or params.get("warm", ["0"])[0] != ("1" if warm else "0")
+        or (
+            ranking_policy is not None
+            and params.get("ranking_policy", [""])[0] != ranking_policy
+        )
     )
 
 
@@ -97,7 +105,8 @@ class handler(BaseHTTPRequestHandler):
         request = urlsplit(self.path)
         params = parse_qs(request.query, keep_blank_values=True)
         if set(params) - {
-            "query", "n", "diversity", "v", "language_policy", "warm"
+            "query", "n", "diversity", "v", "language_policy", "warm",
+            "ranking_policy",
         } or any(
             len(values) != 1 for values in params.values()
         ):
@@ -108,6 +117,9 @@ class handler(BaseHTTPRequestHandler):
         language_policy = params.get("language_policy", [None])[0]
         if not _language_policy_supported(version, language_policy):
             return self._send(400, {"ok": False, "error": "unsupported language policy"})
+        ranking_policy = params.get("ranking_policy", [None])[0]
+        if ranking_policy is not None and ranking_policy != _RANKING_POLICY:
+            return self._send(400, {"ok": False, "error": "unsupported ranking policy"})
         warm_value = params.get("warm", ["0"])[0]
         if warm_value not in {"0", "1"}:
             return self._send(400, {"ok": False, "error": "invalid warm parameter"})
@@ -134,11 +146,14 @@ class handler(BaseHTTPRequestHandler):
         }
         if language_policy is not None:
             canonical_params["language_policy"] = language_policy
+        if ranking_policy is not None:
+            canonical_params["ranking_policy"] = ranking_policy
         if warm:
             canonical_params["warm"] = "1"
         canonical_query = urlencode(canonical_params)
         if _needs_canonical_redirect(
-            params, query, count, diversity, version, language_policy, warm
+            params, query, count, diversity, version, language_policy, warm,
+            ranking_policy,
         ):
             return self._redirect(f"{request.path}?{canonical_query}")
         try:
@@ -161,6 +176,7 @@ class handler(BaseHTTPRequestHandler):
                 result.setdefault("vibe", {})["tempo"] = f"{seed_bpm} BPM"
             if language_policy is not None:
                 result["language_policy"] = language_policy
+            result.setdefault("ranking_policy", _RANKING_POLICY)
             self._send(
                 200,
                 _enrich_result_tempos(recommender, result),

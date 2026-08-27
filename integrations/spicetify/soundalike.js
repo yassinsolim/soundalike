@@ -7,7 +7,7 @@
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.0.0";
+  const RUNTIME_SEMANTIC_VERSION = "2.1.0";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -16,8 +16,9 @@
   const FALLBACK_HOSTED_TIMEOUT_MS = 65000;
   const FEEDBACK_TIMEOUT_MS = 10000;
   const LOCAL_STATUS_TTL_MS = 30000;
-  const CACHE_KEY = "soundalike:spicetify-cache:v8";
+  const CACHE_KEY = "soundalike:spicetify-cache:v9";
   const LEGACY_CACHE_KEYS = [
+    "soundalike:spicetify-cache:v8",
     "soundalike:spicetify-cache:v2",
     "soundalike:spicetify-cache:v3",
     "soundalike:spicetify-cache:v4",
@@ -30,6 +31,9 @@
   const MAX_SPOTIFY_CACHE_SIZE = 500;
   const HOSTED_API_VERSION = "4";
   const LANGUAGE_POLICY = "spotify-lyrics-strict-v2";
+  const RANKING_POLICY = "model-quality-v1";
+  const FEEDBACK_SELECTION_POLICY =
+    "top-20-strict-language-related-artist-model-quality-v1";
   const DISPLAY_RESULT_COUNT = 20;
   const RECOMMENDATION_POOL_SIZE = DISPLAY_RESULT_COUNT;
   const LANGUAGE_LOOKUP_ATTEMPTS = 2;
@@ -209,7 +213,7 @@
         ? data.__soundalikeApiVersion
         : "unknown",
       language_policy: LANGUAGE_POLICY,
-      selection_policy: "top-20-strict-language-related-artist-v1",
+      selection_policy: FEEDBACK_SELECTION_POLICY,
       source: data.__soundalikeSource === "local" ? "local" : "hosted",
       selection,
       reasons: detailed ? form.reasons() : [],
@@ -465,6 +469,7 @@
       v: apiVersion,
     };
     if (languagePolicy) values.language_policy = languagePolicy;
+    values.ranking_policy = RANKING_POLICY;
     const params = new URLSearchParams(values);
     const response = await fetchWithTimeout(
       `${server}/api/spicetify_recommend?${params}`,
@@ -616,7 +621,7 @@
         query: `${seedTrack.name} — ${artist}`,
         n: RECOMMENDATION_POOL_SIZE,
         diversity: 0.15,
-      }, `${LANGUAGE_POLICY}:${seedUri}`);
+      }, `${LANGUAGE_POLICY}:${RANKING_POLICY}:${seedUri}`);
       const [recommendation, seedLanguageState] = await Promise.all([
         recommendationPromise,
         languagePromise,
@@ -1834,6 +1839,7 @@
         diversity: "0",
         v: HOSTED_API_VERSION,
         language_policy: LANGUAGE_POLICY,
+        ranking_policy: RANKING_POLICY,
         warm: "1",
       });
       try {
