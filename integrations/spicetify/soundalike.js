@@ -50,6 +50,7 @@
     "legacy_no_sonic_seed",
   ]);
   let localStatus = { available: false, checkedAt: 0 };
+  let pendingLocalProbe;
   let nativeContextChain;
   let warnedAboutNativeMenus = false;
   let resultsState = null;
@@ -102,6 +103,14 @@
     globalThis.crypto.getRandomValues(bytes);
     return Array.from(bytes, (value) => value.toString(16).padStart(2, "0"))
       .join("");
+  }
+
+  function nowMs() {
+    return globalThis.performance?.now?.() ?? Date.now();
+  }
+
+  function elapsedMs(startedAt) {
+    return Math.max(0, Math.round(nowMs() - startedAt));
   }
 
   function feedbackInstallNonce() {
@@ -390,20 +399,26 @@
     if (Date.now() - localStatus.checkedAt < LOCAL_STATUS_TTL_MS) {
       return localStatus.available;
     }
-    let available = false;
-    try {
-      const response = await fetchWithTimeout(
-        `${LOCAL_SERVER}/health`,
-        { cache: "no-store" },
-        LOCAL_PROBE_TIMEOUT_MS
-      );
-      const health = response.ok ? await response.json() : null;
-      available = health?.ok === true;
-    } catch {
-      available = false;
-    }
-    localStatus = { available, checkedAt: Date.now() };
-    return available;
+    if (pendingLocalProbe) return pendingLocalProbe;
+    pendingLocalProbe = (async () => {
+      let available = false;
+      try {
+        const response = await fetchWithTimeout(
+          `${LOCAL_SERVER}/health`,
+          { cache: "no-store" },
+          LOCAL_PROBE_TIMEOUT_MS
+        );
+        const health = response.ok ? await response.json() : null;
+        available = health?.ok === true;
+      } catch {
+        available = false;
+      }
+      localStatus = { available, checkedAt: Date.now() };
+      return available;
+    })().finally(() => {
+      pendingLocalProbe = undefined;
+    });
+    return pendingLocalProbe;
   }
 
   async function postRecommendations(server, payload, timeoutMs, allowErrorResponse = false) {
@@ -565,11 +580,13 @@
   }
 
   async function findSoundalikes(uris) {
+    const startedAt = nowMs();
     const id = uris[0].split(":track:")[1];
     Spicetify.showNotification("Finding soundalikes…");
     let data;
     let seedTrack;
-    let relatedArtistUris = new Set();
+    let relatedArtistsPromise = Promise.resolve(new Set());
+    let seedReadyAt = startedAt;
     try {
       const seedUri = `spotify:track:${id}`;
       seedTrack = readCacheEntry("spotifyTracks", seedUri);
@@ -585,26 +602,21 @@
       if (!seedTrack?.name || !artist) {
         throw new Error("Spotify did not return track metadata.");
       }
+      seedReadyAt = nowMs();
       const cachedLanguageState = languageStateFromTrack(seedTrack);
       const languagePromise = cachedLanguageState
         ? Promise.resolve(cachedLanguageState)
         : getSpotifyTrackLanguageState(seedUri);
-      const relatedArtistsPromise = getRelatedArtistUris(seedTrack);
+      relatedArtistsPromise = getRelatedArtistUris(seedTrack);
       const recommendationPromise = requestRecommendations({
         query: `${seedTrack.name} — ${artist}`,
         n: RECOMMENDATION_POOL_SIZE,
         diversity: 0.15,
       }, `${LANGUAGE_POLICY}:${seedUri}`);
-      const [
-        recommendation,
-        seedLanguageState,
-        resolvedRelatedArtistUris,
-      ] = await Promise.all([
+      const [recommendation, seedLanguageState] = await Promise.all([
         recommendationPromise,
         languagePromise,
-        relatedArtistsPromise,
       ]);
-      relatedArtistUris = resolvedRelatedArtistUris;
       if (seedLanguageState.status === "error") {
         throw new Error("Spotify lyrics-language check failed. Please retry.");
       }
@@ -630,7 +642,15 @@
       Spicetify.showNotification((data && data.error) || "No match found.", true);
       return;
     }
-    showResultsPage(data, seedTrack, relatedArtistUris);
+    const initialReadyMs = elapsedMs(startedAt);
+    console.log(
+      `[soundalike] results page ready in ${initialReadyMs} ms ` +
+      `(seed metadata ${Math.max(0, Math.round(seedReadyAt - startedAt))} ms).`
+    );
+    showResultsPage(data, seedTrack, relatedArtistsPromise, {
+      startedAt,
+      initialReadyMs,
+    });
   }
 
   function languageStateFromTrack(track) {
@@ -764,22 +784,34 @@
     if (!match) return null;
     const languagePromise = getSpotifyTrackLanguageState(match.uri);
     let resolvedTrack = match;
-    try {
-      const details = await Spicetify.GraphQL.Request(
-        Spicetify.GraphQL.Definitions.getTrack,
-        { uri: match.uri }
-      );
-      resolvedTrack = mergeSpotifyTrackDetails(match, details?.data?.trackUnion);
-    } catch (error) {
-      console.warn(
-        `[soundalike] Spotify action metadata lookup failed for ${match.uri}`,
-        error
-      );
+    if (!hasCompleteSpotifyMetadata(match)) {
+      try {
+        const details = await Spicetify.GraphQL.Request(
+          Spicetify.GraphQL.Definitions.getTrack,
+          { uri: match.uri }
+        );
+        resolvedTrack = mergeSpotifyTrackDetails(match, details?.data?.trackUnion);
+      } catch (error) {
+        console.warn(
+          `[soundalike] Spotify action metadata lookup failed for ${match.uri}`,
+          error
+        );
+      }
     }
     const languageState = await languagePromise;
     return withLanguageState({
       ...resolvedTrack,
     }, languageState);
+  }
+
+  function hasCompleteSpotifyMetadata(track) {
+    const artists = track?.artists?.items || [];
+    const artwork = track?.albumOfTrack?.coverArt?.sources || [];
+    return Boolean(
+      track?.albumOfTrack?.uri &&
+      artists.some((artist) => artist?.uri && artist?.profile?.name) &&
+      artwork.some((source) => source?.url)
+    );
   }
 
   function bestSpotifyTrackMatch(hits, result) {
@@ -1411,15 +1443,34 @@
     }
   }
 
+  function revealResolvedRow(page, results, tracks, index, seedLanguage) {
+    const row = page.querySelector(`.sa-row[data-index="${index}"]`);
+    if (!row || page !== activePage?.view) return;
+    const track = tracks[index] || null;
+    renderResultRow(row, results[index], index, track);
+    if (!seedLanguage || track?.soundalikeLanguage === seedLanguage) {
+      row.hidden = false;
+      row.style.order = String(index + 1);
+    }
+  }
+
   async function hydrateSpotifyRows(
     results,
     page,
     tracks,
     seedLanguage,
-    relatedArtistUris
+    relatedArtistsPromise,
+    timing
   ) {
+    const startedAt = nowMs();
+    const resolvedRelatedArtists = Promise.resolve(relatedArtistsPromise)
+      .catch((error) => {
+        console.warn("[soundalike] Related-artist ordering failed.", error);
+        return new Set();
+      });
     if (!Spicetify.GraphQL.Definitions.searchModalResults) {
       console.warn("[soundalike] Spotify artwork lookup is unavailable in this client.");
+      const relatedArtistUris = await resolvedRelatedArtists;
       applyLanguageGate(
         page,
         results,
@@ -1435,18 +1486,17 @@
       while (cursor < results.length) {
         const index = cursor++;
         if (index in tracks) {
-          const cachedRow = page.querySelector(`.sa-row[data-index="${index}"]`);
-          if (cachedRow) renderResultRow(cachedRow, results[index], index, tracks[index]);
+          revealResolvedRow(page, results, tracks, index, seedLanguage);
           continue;
         }
         try {
           const track = await findSpotifyTrack(results[index]);
           tracks[index] = track;
-          const row = page.querySelector(`.sa-row[data-index="${index}"]`);
-          if (!track || !row || page !== activePage?.view) continue;
-          renderResultRow(row, results[index], index, track);
-          enriched++;
+          revealResolvedRow(page, results, tracks, index, seedLanguage);
+          if (track) enriched++;
         } catch (error) {
+          tracks[index] = null;
+          revealResolvedRow(page, results, tracks, index, seedLanguage);
           console.warn(
             `[soundalike] Spotify metadata lookup failed for ${results[index].title}`,
             error
@@ -1456,6 +1506,7 @@
     }
     const workerCount = Math.min(SPOTIFY_ENRICH_WORKERS, results.length);
     await Promise.all(Array.from({ length: workerCount }, worker));
+    const relatedArtistUris = await resolvedRelatedArtists;
     if (page === activePage?.view) {
       applyLanguageGate(
         page,
@@ -1466,7 +1517,9 @@
       );
     }
     console.log(
-      `[soundalike] added Spotify metadata to ${enriched}/${results.length} rows.`
+      `[soundalike] Spotify metadata settled in ${elapsedMs(startedAt)} ms ` +
+      `(${enriched}/${results.length} rows, ` +
+      `${timing ? `${elapsedMs(timing.startedAt)} ms total` : "total unavailable"}).`
     );
   }
 
@@ -1635,7 +1688,7 @@
       </section>`;
 
     wrap.querySelectorAll(".sa-row").forEach((row, index) => {
-      row.hidden = true;
+      row.hidden = Boolean(seedLanguage);
       renderResultRow(row, data.results[index], index, tracks[index] || null);
     });
     return wrap;
@@ -1702,7 +1755,8 @@
       view,
       resultsState.tracks,
       resultsState.seedLanguage,
-      resultsState.relatedArtistUris
+      resultsState.relatedArtistsPromise,
+      resultsState.timing
     ).catch((error) => {
       console.error("[soundalike] Spotify result enrichment failed", error);
     });
@@ -1735,12 +1789,13 @@
     scheduleResultsRoute();
   }
 
-  function showResultsPage(data, seedTrack, relatedArtistUris) {
+  function showResultsPage(data, seedTrack, relatedArtistsPromise, timing) {
     resultsState = {
       data,
       seedTrack,
       seedLanguage: seedTrack?.soundalikeLanguage || null,
-      relatedArtistUris,
+      relatedArtistsPromise,
+      timing,
       tracks: [],
     };
     Spicetify.Platform.History.push({
@@ -1764,6 +1819,7 @@
     "enhance" // Spicetify built-in icon
   );
   window.__soundalikeContextMenuItem.register();
+  void localServerReady();
 
   function prewarmFallbackRecommender() {
     if (!window.requestIdleCallback) return;
