@@ -7,7 +7,7 @@ import {
   V6_BLOB_PREFIX,
   V6_PACK_SHA256,
   parseV6StoredRecordBytes,
-} from "../api/ratings-v6.js";
+} from "../server/ratings-v6.js";
 import { canonical } from "../api/ratings.js";
 
 const METHODS = ["acoustic_control", "fixed_v4", "frozen_preference_v1"];

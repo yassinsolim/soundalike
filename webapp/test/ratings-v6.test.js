@@ -8,7 +8,7 @@ import { join } from "node:path";
 import { Readable } from "node:stream";
 import test from "node:test";
 
-import { canonical } from "../api/ratings.js";
+import ratingsDispatch, { canonical } from "../api/ratings.js";
 import {
   MAX_V6_BODY_BYTES,
   V6_BLOB_PREFIX,
@@ -16,7 +16,7 @@ import {
   V6_PROTOCOL_SHA256,
   createV6Handler,
   parseV6StoredRecordBytes,
-} from "../api/ratings-v6.js";
+} from "../server/ratings-v6.js";
 import { downloadV6 } from "../tools/ratings-v6-inbox.js";
 
 const pack = JSON.parse(
@@ -275,6 +275,22 @@ test("accepts a Vercel-style replay without touching request.body", async () => 
   assert.equal(result.storage.puts.length, 1);
 });
 
+test("shared ratings function dispatches the public V6 route", async () => {
+  const request = Readable.from([Buffer.from("{}")]);
+  request.method = "POST";
+  request.url = "/api/ratings?__soundalike_handler=ratings-v6";
+  request.headers = {
+    origin: "https://soundalike.yassin.app",
+    host: "soundalike.yassin.app",
+    "content-type": "application/json",
+  };
+  const res = response();
+
+  await ratingsDispatch(request, res);
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.body.code, "invalid_wrapper");
+});
+
 test("deduplicates exact snapshots without overwrite", async () => {
   const storage = new MemoryStorage();
   const ratings = validExport();
@@ -336,7 +352,7 @@ test("analyst tool validates bounded private downloads", async () => {
 
 test("submission endpoint exposes no private listing or read capability", () => {
   const source = readFileSync(
-    new URL("../api/ratings-v6.js", import.meta.url),
+    new URL("../server/ratings-v6.js", import.meta.url),
     "utf8",
   );
   assert.equal(source.includes("blobList"), false);

@@ -7,7 +7,7 @@ import {
   MAX_V6_STORED_BYTES,
   V6_BLOB_PREFIX,
   parseV6StoredRecordBytes,
-} from "../api/ratings-v6.js";
+} from "../server/ratings-v6.js";
 
 const PATHNAME =
   /^human-ratings\/development-v6-ranking-v1\/(v6-session-[a-f0-9]{24})\/([a-f0-9]{64})\.json$/;

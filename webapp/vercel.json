@@ -15,11 +15,11 @@
     "api/ratings-semantic-v2.js": { "maxDuration": 15 },
     "api/ratings-pacing-v3.js": { "maxDuration": 15 },
     "api/ratings-v4.js": { "maxDuration": 15 },
-    "api/ratings-v5.js": { "maxDuration": 15 },
-    "api/ratings-v6.js": { "maxDuration": 15 },
-    "api/spicetify-feedback.js": { "maxDuration": 15 }
+    "api/ratings-v5.js": { "maxDuration": 15 }
   },
   "rewrites": [
+    { "source": "/api/ratings-v6", "destination": "/api/ratings?__soundalike_handler=ratings-v6" },
+    { "source": "/api/spicetify-feedback", "destination": "/api/ratings?__soundalike_handler=spicetify-feedback" },
     { "source": "/evaluate", "destination": "/evaluate/index.html" },
     { "source": "/evaluate/", "destination": "/evaluate/index.html" },
     { "source": "/evaluate-v5", "destination": "/evaluate-v5/index.html" },

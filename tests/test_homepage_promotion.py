@@ -95,10 +95,10 @@ def test_homepage_search_accessibility_and_wiring_remain_present():
     assert 'fetch("/api/recommend"' in HTML
 
 
-def test_marketplace_description_changes_without_advancing_branch_pin():
+def test_marketplace_description_pins_the_immutable_feedback_feature():
     manifest = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["description"] == (
         "Find same-language audio matches in Spotify with native playback and "
         "optional anonymous feedback."
     )
-    assert manifest["branch"] == "278048ecc5e0361f1dd61396bf38fb4cbb3a92f8"
+    assert manifest["branch"] == "7c13260bf3611d88112673af6fccebc22888fb04"

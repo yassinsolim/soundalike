@@ -7,13 +7,14 @@ import { join } from "node:path";
 import { Readable } from "node:stream";
 import test from "node:test";
 
+import ratingsDispatch from "../api/ratings.js";
 import {
   FEEDBACK_BLOB_PREFIX,
   MAX_FEEDBACK_BODY_BYTES,
   MAX_FEEDBACK_STORED_BYTES,
   createFeedbackHandler,
   parseFeedbackStoredRecordBytes,
-} from "../api/spicetify-feedback.js";
+} from "../server/spicetify-feedback.js";
 import { downloadSpicetifyFeedback } from "../tools/spicetify-feedback-inbox.js";
 
 function validPayload() {
@@ -357,6 +358,18 @@ test("accepts a Vercel-style replay without touching request.body", async () => 
   assert.equal(storage.puts.length, 1);
 });
 
+test("shared ratings function dispatches feedback preflight", async () => {
+  const request = Readable.from([]);
+  request.method = "OPTIONS";
+  request.url = "/api/ratings?__soundalike_handler=spicetify-feedback";
+  request.headers = {};
+  const res = response();
+
+  await ratingsDispatch(request, res);
+  assert.equal(res.statusCode, 204);
+  assert.equal(res.headers["Access-Control-Allow-Origin"], "*");
+});
+
 test("deduplicates deterministically without overwrite", async () => {
   const storage = new MemoryStorage();
   const first = await submit(validPayload(), storage);
@@ -509,11 +522,16 @@ test("inbox rejects an oversized listing and has no content logging path", async
   }
 });
 
-test("Vercel registers the bounded public feedback function", () => {
+test("Vercel routes feedback through the shared bounded ratings function", () => {
   const config = JSON.parse(
     readFileSync(new URL("../vercel.json", import.meta.url), "utf8"),
   );
-  assert.deepEqual(config.functions["api/spicetify-feedback.js"], {
-    maxDuration: 15,
-  });
+  assert.equal(Object.keys(config.functions).length, 12);
+  assert.equal(config.functions["api/spicetify-feedback.js"], undefined);
+  assert.equal(
+    config.rewrites.find(
+      (rewrite) => rewrite.source === "/api/spicetify-feedback",
+    )?.destination,
+    "/api/ratings?__soundalike_handler=spicetify-feedback",
+  );
 });

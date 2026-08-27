@@ -11,7 +11,7 @@ import {
   allowedRequestOrigin,
   canonical,
   strictJsonParse,
-} from "./ratings.js";
+} from "../api/ratings.js";
 
 export const MAX_V6_BODY_BYTES = 128 * 1024;
 export const MAX_V6_STORED_BYTES = 160 * 1024;

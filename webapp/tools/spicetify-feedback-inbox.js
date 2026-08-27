@@ -7,7 +7,7 @@ import {
   FEEDBACK_BLOB_PREFIX,
   MAX_FEEDBACK_STORED_BYTES,
   parseFeedbackStoredRecordBytes,
-} from "../api/spicetify-feedback.js";
+} from "../server/spicetify-feedback.js";
 
 const PATHNAME =
   /^spicetify-feedback\/match-quality-v1\/([a-f0-9]{64})\.json$/;

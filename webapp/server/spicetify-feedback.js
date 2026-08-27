@@ -6,7 +6,7 @@ import {
 import { createHash } from "node:crypto";
 import { TextDecoder } from "node:util";
 
-import { canonical, strictJsonParse } from "./ratings.js";
+import { canonical, strictJsonParse } from "../api/ratings.js";
 
 export const FEEDBACK_BLOB_PREFIX = "spicetify-feedback/match-quality-v1/";
 export const MAX_FEEDBACK_BODY_BYTES = 32 * 1024;

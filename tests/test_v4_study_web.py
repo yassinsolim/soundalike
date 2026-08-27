@@ -212,9 +212,16 @@ def test_routes_and_private_inboxes_are_version_isolated():
     )
     assert config["functions"]["api/ratings-v4.js"]["maxDuration"] == 15
     assert config["functions"]["api/ratings-v5.js"]["maxDuration"] == 15
-    assert config["functions"]["api/ratings-v6.js"]["maxDuration"] == 15
+    assert len(config["functions"]) == 12
+    assert "api/ratings-v6.js" not in config["functions"]
+    assert rewrites["/api/ratings-v6"] == (
+        "/api/ratings?__soundalike_handler=ratings-v6"
+    )
+    assert rewrites["/api/spicetify-feedback"] == (
+        "/api/ratings?__soundalike_handler=spicetify-feedback"
+    )
     active_html = (ACTIVE / "index.html").read_text(encoding="utf-8")
-    active_api = (WEB / "api" / "ratings-v6.js").read_text(encoding="utf-8")
+    active_api = (WEB / "server" / "ratings-v6.js").read_text(encoding="utf-8")
     v5_api = (WEB / "api" / "ratings-v5.js").read_text(encoding="utf-8")
     archived_api = (WEB / "api" / "ratings-v4.js").read_text(encoding="utf-8")
     archived_analysis = (WEB / "tools" / "ratings-v4-analysis.js").read_text(
