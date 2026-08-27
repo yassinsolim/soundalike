@@ -44,32 +44,79 @@ initialization happens once at service startup instead of during a user request.
 The public hostname `soundalike-api.yassin.app` is a Cloudflare Tunnel route to
 `http://127.0.0.1:8788`; the VM has no public application port.
 
-The reproducible service files are in `deploy/homelab/`. On the VM:
+The reproducible service files are in `deploy/homelab/`. The public hostname
+is **only** a Cloudflare Tunnel route to `http://127.0.0.1:8788`; do not expose
+the application port on the VM firewall.
+
+### Safe releases and rollback
+
+The production unit always executes `/opt/soundalike/current`. The updater
+builds an immutable, commit-named release in `/opt/soundalike/releases/`,
+verifies the checked-out commit plus the committed runtime-file and
+`webapp/requirements.txt` checksums, then downloads and verifies the pinned
+release index. It only switches `current` after all checks and dependency
+installation succeed. The old target remains both on disk and at
+`/opt/soundalike/previous`.
+
+After switching the symlink it reloads and restarts `soundalike.service`, checks
+local `/healthz`, and runs a full strict API-v4 canary. The canary requires a
+200 JSON response, `dual_sonic64_guardrail` method and retrieval mode, the
+`2026.07.11-dual-sonic64` index, `spotify-lyrics-strict-v2`, and non-empty
+results. Any restart or probe failure atomically restores the prior symlink,
+reinstalls the prior unit, restarts it, and verifies rollback health before
+reporting failure.
+
+Initial bootstrap (replace the commit with an immutable 40-character SHA):
 
 ```bash
-sudo useradd --system --home /var/lib/soundalike --shell /usr/sbin/nologin soundalike
+sudo groupadd --system soundalike
+sudo useradd --system --gid soundalike --home /var/lib/soundalike --shell /usr/sbin/nologin soundalike
 sudo install -d -o root -g soundalike -m 0750 /opt/soundalike /var/lib/soundalike
-sudo git clone https://github.com/yassinsolim/soundalike.git /opt/soundalike
-sudo python3 -m venv /opt/soundalike/.venv
-sudo /opt/soundalike/.venv/bin/pip install -r /opt/soundalike/webapp/requirements.txt
-curl --fail --location --output /tmp/deepvibe_index.npz \
-  https://github.com/yassinsolim/soundalike/releases/download/index-2026.07.11-dual-sonic64/deepvibe_index.npz
-echo 'f3ed57af1b8073f2872eed1e9192dee04d1089c7266fb98a157d1ea194526fb9  /tmp/deepvibe_index.npz' |
-  sha256sum --check
-sudo install -o root -g soundalike -m 0640 /tmp/deepvibe_index.npz \
-  /var/lib/soundalike/deepvibe_index.npz
-sudo install -o root -g root -m 0644 \
-  /opt/soundalike/deploy/homelab/soundalike.service \
-  /etc/systemd/system/soundalike.service
-sudo systemctl daemon-reload
-sudo systemctl enable --now soundalike.service
-curl --fail http://127.0.0.1:8788/healthz
+sudo git clone https://github.com/yassinsolim/soundalike.git /opt/soundalike/bootstrap
+commit=PUT_A_FULL_40_CHARACTER_COMMIT_SHA_HERE
+sudo python3 /opt/soundalike/bootstrap/deploy/homelab/update.py --commit "$commit"
+sudo systemctl enable soundalike.service
 ```
 
-Keep the Cloudflare Tunnel token only in root-readable VM configuration. Never
-place it in this repository. Configure the tunnel ingress to send
-`soundalike-api.yassin.app` to `http://localhost:8788`, followed by a catch-all
-404 rule.
+For every later release, first inspect the no-change dry run, then run the same
+command from `current`:
+
+```bash
+sudo /opt/soundalike/current/deploy/homelab/update.py \
+  --commit PUT_A_FULL_40_CHARACTER_COMMIT_SHA_HERE --dry-run
+sudo /opt/soundalike/current/deploy/homelab/update.py \
+  --commit PUT_A_FULL_40_CHARACTER_COMMIT_SHA_HERE
+```
+
+The updater has no password argument and does not accept mutable refs. Use
+normal `sudo` policy; grant an automation account access only to this updater,
+not unrestricted root. It uses normal TLS certificate verification for the
+public Git repository and index download. Keep the Cloudflare Tunnel token only
+in root-readable VM configuration, never in this repository. Configure the
+tunnel ingress to send `soundalike-api.yassin.app` to
+`http://127.0.0.1:8788`, followed by a catch-all 404 rule.
+
+When changing a checksummed runtime file or `webapp/requirements.txt`, regenerate
+and commit the manifest in the same change:
+
+```bash
+python3 deploy/homelab/write_manifest.py
+python3 deploy/homelab/write_manifest.py --check
+```
+
+`deploy/homelab/probe_v4.py` is also safe to run from an external monitor:
+
+```bash
+python3 deploy/homelab/probe_v4.py --url https://soundalike-api.yassin.app
+```
+
+The scheduled GitHub Actions workflow runs this probe every six hours. A failed
+workflow uses GitHub's normal failed-run notifications. It sends a webhook only
+when the optional protected `SOUNDALIKE_MONITOR_WEBHOOK` secret is set. Manual
+deployment is disabled unless the protected production environment contains
+the SSH key, host key, host, and user secrets **and**
+`SOUNDALIKE_DEPLOY_ENABLED=true`; it uses `BatchMode` and
+`StrictHostKeyChecking=yes`, never a password or relaxed host verification.
 
 The website and Spicetify extension try this always-on origin first and retain
 Vercel's cacheable GET endpoint as a fallback. The Vercel POST endpoint remains
