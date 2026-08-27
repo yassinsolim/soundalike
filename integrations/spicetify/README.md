@@ -62,9 +62,11 @@ automatically uses the hosted 272,853-track recommendation library.
   may ask **How close were these matches?** Choose **Good**, **Mixed**, or
   **Off**. Mixed and Off reveal up to two optional reason chips and an optional
   280-character note; the note explicitly warns against personal information.
-  Nothing is sent until **Send feedback** is pressed. **Not now** dismisses it,
-  failures remain retryable, and a successful receipt or dismissal suppresses
-  another prompt locally for 30 or 7 days respectively.
+  Nothing is sent until **Send feedback** is pressed, and failures remain
+  retryable. The prompt appears after each completed result set unless you opt
+  out. **Not now** hides only the current prompt; after the second dismissal,
+  the extension asks whether it should keep showing the survey. **Yes** keeps
+  showing it after future searches, while **No** stores an opt-out locally.
 
 ## Privacy
 

@@ -81,6 +81,11 @@ function loadExtension(fetchImpl, options = {}) {
     ].map(control),
     note: { ...control(), maxLength: 280 },
     count: control(),
+    question: control(),
+    actions: control(),
+    preference: { ...control(), hidden: true },
+    keepShowing: control(),
+    stopShowing: control(),
     send: { ...control(), disabled: true },
     dismiss: control(),
     status: control(),
@@ -93,6 +98,11 @@ function loadExtension(fetchImpl, options = {}) {
       ".sa-feedback-details": feedback.details,
       ".sa-feedback-note": feedback.note,
       ".sa-feedback-count": feedback.count,
+      ".sa-feedback-question": feedback.question,
+      ".sa-feedback-actions": feedback.actions,
+      ".sa-feedback-preference": feedback.preference,
+      ".sa-feedback-keep-showing": feedback.keepShowing,
+      ".sa-feedback-stop-showing": feedback.stopShowing,
       ".sa-feedback-send": feedback.send,
       ".sa-feedback-dismiss": feedback.dismiss,
       ".sa-feedback-status": feedback.status,
@@ -1441,7 +1451,7 @@ test("reveals optional details conditionally and caps reasons and note", async (
   assert.equal(app.feedback.note.value, "");
 });
 
-test("keeps failed feedback retryable and reuses the same anonymous payload", async () => {
+test("keeps failed feedback retryable and asks again after successful feedback", async () => {
   const result = { title: "Candidate", artist: "Artist" };
   const feedbackBodies = [];
   const storage = new Map();
@@ -1469,22 +1479,18 @@ test("keeps failed feedback retryable and reuses the same anonymous payload", as
     app.feedback.status.classList.contains("sa-feedback-error"),
     true,
   );
-  assert.equal(storage.has("soundalike:feedback-suppression:v1"), false);
+  assert.equal(storage.has("soundalike:feedback-preference:v2"), false);
 
   await app.feedback.send.onclick();
   assert.equal(feedbackBodies.length, 2);
   assert.equal(feedbackBodies[0], feedbackBodies[1]);
   assert.equal(app.feedback.send.hidden, true);
-  assert.equal(
-    JSON.parse(storage.get("soundalike:feedback-suppression:v1")).outcome,
-    "success",
-  );
   const later = loadExtension(fetchImpl, { results: [result], storage });
   await later.run();
-  assert.equal(later.feedback.panel.hidden, true);
+  assert.equal(later.feedback.panel.hidden, false);
 });
 
-test("dismissal suppresses a later prompt locally without network submission", async () => {
+test("asks after the second dismissal and keeps showing after Yes", async () => {
   const storage = new Map();
   const result = { title: "Candidate", artist: "Artist" };
   const feedbackUrls = [];
@@ -1499,15 +1505,75 @@ test("dismissal suppresses a later prompt locally without network submission", a
   first.feedback.dismiss.onclick();
   assert.equal(first.feedback.panel.hidden, true);
   assert.deepEqual(
-    JSON.parse(storage.get("soundalike:feedback-suppression:v1")).outcome,
-    "dismissed",
+    JSON.parse(storage.get("soundalike:feedback-preference:v2")),
+    { dismissals: 1, showAgain: null },
   );
   assert.equal(feedbackUrls.length, 0);
 
   const second = loadExtension(fetchImpl, { results: [result], storage });
   await second.run();
+  assert.equal(second.feedback.panel.hidden, false);
+  second.feedback.dismiss.onclick();
+  assert.equal(second.feedback.panel.hidden, false);
+  assert.equal(second.feedback.question.hidden, true);
+  assert.equal(second.feedback.actions.hidden, true);
+  assert.equal(second.feedback.preference.hidden, false);
+  second.feedback.keepShowing.onclick();
   assert.equal(second.feedback.panel.hidden, true);
+  assert.deepEqual(
+    JSON.parse(storage.get("soundalike:feedback-preference:v2")),
+    { dismissals: 2, showAgain: true },
+  );
+
+  const third = loadExtension(fetchImpl, { results: [result], storage });
+  await third.run();
+  assert.equal(third.feedback.panel.hidden, false);
+  third.feedback.dismiss.onclick();
+  assert.equal(third.feedback.panel.hidden, true);
   assert.equal(feedbackUrls.length, 0);
+});
+
+test("stops future surveys when No is chosen after the second dismissal", async () => {
+  const storage = new Map();
+  const result = { title: "Candidate", artist: "Artist" };
+  const fetchImpl = async (url) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    return response(200, { ...recommendation, results: [result] });
+  };
+
+  const first = loadExtension(fetchImpl, { results: [result], storage });
+  await first.run();
+  first.feedback.dismiss.onclick();
+
+  const second = loadExtension(fetchImpl, { results: [result], storage });
+  await second.run();
+  second.feedback.dismiss.onclick();
+  second.feedback.stopShowing.onclick();
+  assert.deepEqual(
+    JSON.parse(storage.get("soundalike:feedback-preference:v2")),
+    { dismissals: 2, showAgain: false },
+  );
+
+  const third = loadExtension(fetchImpl, { results: [result], storage });
+  await third.run();
+  assert.equal(third.feedback.panel.hidden, true);
+});
+
+test("removes legacy cooldowns and shows the survey again", async () => {
+  const storage = new Map([[
+    "soundalike:feedback-suppression:v1",
+    JSON.stringify({ outcome: "dismissed", at: Date.now() }),
+  ]]);
+  const result = { title: "Candidate", artist: "Artist" };
+  const app = loadExtension(async (url) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    return response(200, { ...recommendation, results: [result] });
+  }, { results: [result], storage });
+
+  await app.run();
+
+  assert.equal(storage.has("soundalike:feedback-suppression:v1"), false);
+  assert.equal(app.feedback.panel.hidden, false);
 });
 
 test("feedback records local and legacy API sources accurately", async () => {
@@ -1545,6 +1611,18 @@ test("feedback markup is inline and exposes accessible form semantics", () => {
   assert.match(
     extensionSource,
     /<legend id="sa-feedback-question">How close were these matches\?<\/legend>/,
+  );
+  assert.match(
+    extensionSource,
+    /Do you want this survey to keep showing after future searches\?/,
+  );
+  assert.match(
+    extensionSource,
+    /class="sa-feedback-keep-showing" type="button">Yes<\/button>/,
+  );
+  assert.match(
+    extensionSource,
+    /class="sa-feedback-stop-showing" type="button">No<\/button>/,
   );
   assert.equal(
     (extensionSource.match(/name="sa-feedback-rating" value=/g) || []).length,
