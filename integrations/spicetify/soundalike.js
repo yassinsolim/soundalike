@@ -14,13 +14,14 @@
   const PRIMARY_HOSTED_TIMEOUT_MS = 5000;
   const FALLBACK_HOSTED_TIMEOUT_MS = 65000;
   const LOCAL_STATUS_TTL_MS = 30000;
-  const CACHE_KEY = "soundalike:spicetify-cache:v7";
+  const CACHE_KEY = "soundalike:spicetify-cache:v8";
   const LEGACY_CACHE_KEYS = [
     "soundalike:spicetify-cache:v2",
     "soundalike:spicetify-cache:v3",
     "soundalike:spicetify-cache:v4",
     "soundalike:spicetify-cache:v5",
     "soundalike:spicetify-cache:v6",
+    "soundalike:spicetify-cache:v7",
   ];
   const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
   const MAX_RECOMMENDATION_CACHE_SIZE = 50;
@@ -176,31 +177,10 @@
         PRIMARY_HOSTED_TIMEOUT_MS
       );
     } catch (error) {
-      if (error?.status === 400) {
-        try {
-          console.warn(
-            "[soundalike] Primary hosted endpoint uses the compatibility contract.",
-            error
-          );
-          return await getCacheableHostedRecommendations(
-            PRIMARY_HOSTED_SERVER,
-            payload,
-            PRIMARY_HOSTED_TIMEOUT_MS,
-            "3",
-            "spotify-lyrics-v1"
-          );
-        } catch (compatibilityError) {
-          console.warn(
-            "[soundalike] Primary compatibility request failed; using Vercel fallback.",
-            compatibilityError
-          );
-        }
-      } else {
-        console.warn(
-          "[soundalike] Primary hosted endpoint failed; using Vercel fallback.",
-          error
-        );
-      }
+      console.warn(
+        "[soundalike] Primary hosted endpoint is unavailable or outdated; using Vercel fallback.",
+        error
+      );
     }
     try {
       return await getCacheableHostedRecommendations(
