@@ -168,6 +168,36 @@ def _version_penalty(title, artist=""):
     return min(penalty, 0.30)
 
 
+_RANKING_POLICY = "model-quality-v1"
+_BASELINE_RANKING_POLICY = "baseline-v1"
+_TEMPO_COMPATIBILITY_PENALTY = 0.035
+_MOOD_COMPATIBILITY_PENALTY = 0.035
+_TEMPO_COMPATIBILITY_DISTANCE = 40.0
+_MOOD_COMPATIBILITY_DISTANCE = 3.0
+_MOOD_FEATURE_NAMES = ("rms_std", "dynamic_range", "crest")
+
+
+def _recording_family_base(title: str) -> Optional[str]:
+    """Return a normalized base only when title metadata names a version."""
+    text = str(title).strip()
+    for match in _VERSION_BRACKET_RE.finditer(text):
+        if _VERSION_CONTEXT_RE.search(match.group(1).strip()):
+            base = text[:match.start()].strip(" -–—:")
+            if base:
+                return " ".join(base.casefold().split())
+    dash_suffix = _VERSION_DASH_SUFFIX_RE.search(text)
+    if dash_suffix and _VERSION_CONTEXT_RE.search(dash_suffix.group(1).strip()):
+        base = text[:dash_suffix.start()].strip(" -–—:")
+        if base:
+            return " ".join(base.casefold().split())
+    plain_suffix = _VERSION_SUFFIX_RE.search(text)
+    if plain_suffix and _VERSION_CONTEXT_RE.search(plain_suffix.group(0).strip()):
+        base = text[:plain_suffix.start()].strip(" -–—:")
+        if base:
+            return " ".join(base.casefold().split())
+    return None
+
+
 class _ArtistCentroidIndex:
     """Compact numpy-only centroid index shared by warm hosted requests."""
 
@@ -283,6 +313,13 @@ class WebRecommender:
             dtype=np.float32,
         )
         self._version_penalty = np.zeros_like(self._version_penalty_policy)
+        self.ranking_policy = (
+            _RANKING_POLICY if enhance else _BASELINE_RANKING_POLICY
+        )
+        self._model_quality_enabled = bool(enhance)
+        self._recording_family_keys, self._recording_family_variants = (
+            self._build_recording_family_keys()
+        )
 
         # Search metadata is shared with the lightweight autocomplete path.
         self._catalog = SearchCatalog(self.titles, self.artists)
@@ -302,11 +339,136 @@ class WebRecommender:
         package from outside the ``webapp`` root.
         """
         self._version_penalty = self._version_penalty_policy
+        self._model_quality_enabled = True
+        self.ranking_policy = _RANKING_POLICY
         self._qfilter = _TitleQualityFilter()
         self._qmask = self._qfilter.keep_mask(self.titles, self.artists)
         self._centroid_idx = _ArtistCentroidIndex(
             self._neural, self.artists, min_songs=2
         )
+
+    def _build_recording_family_keys(self):
+        parsed = [_recording_family_base(title) for title in self.titles]
+        artists = [str(artist).casefold() for artist in self.artists]
+        versioned_bases = {
+            (artist, base) for artist, base in zip(artists, parsed)
+            if base is not None
+        }
+        self._versioned_recording_bases = versioned_bases
+        keys = []
+        for artist, title, base in zip(artists, self.titles, parsed):
+            if base is not None:
+                keys.append((artist, base))
+                continue
+            plain = " ".join(str(title).casefold().split())
+            keys.append((artist, plain) if (artist, plain) in versioned_bases else None)
+        return keys, np.asarray([base is not None for base in parsed], dtype=bool)
+
+    def _collapse_recording_families(self, rows: List[int], n: int) -> List[int]:
+        if not self._model_quality_enabled:
+            return list(rows)[:n]
+        collapsed: List[int] = []
+        positions: Dict[tuple, int] = {}
+        for raw in rows:
+            row = int(raw)
+            family = self._recording_family_keys[row]
+            if family is None:
+                collapsed.append(row)
+                continue
+            existing = positions.get(family)
+            if existing is None:
+                positions[family] = len(collapsed)
+                collapsed.append(row)
+            elif (
+                self._recording_family_variants[collapsed[existing]]
+                and not self._recording_family_variants[row]
+            ):
+                collapsed[existing] = row
+        return collapsed[:n]
+
+    def _collapse_recommendation_results(
+        self, results: List[Dict], n: int
+    ) -> List[Dict]:
+        if not self._model_quality_enabled:
+            return results[:n]
+        collapsed: List[Dict] = []
+        positions: Dict[tuple, int] = {}
+        for item in results:
+            artist = str(item["artist"]).casefold()
+            title = str(item["title"])
+            base = _recording_family_base(title)
+            plain = " ".join(title.casefold().split())
+            family = (
+                (artist, base) if base is not None
+                else (artist, plain)
+                if (artist, plain) in self._versioned_recording_bases else None
+            )
+            if family is None:
+                collapsed.append(item)
+                continue
+            existing = positions.get(family)
+            if existing is None:
+                positions[family] = len(collapsed)
+                collapsed.append(item)
+            elif (
+                _recording_family_base(str(collapsed[existing]["title"])) is not None
+                and base is None
+            ):
+                collapsed[existing] = item
+        return collapsed[:n]
+
+    def _audio_compatibility_penalty(self, seed_row: int, rows: np.ndarray) -> np.ndarray:
+        """Return bounded soft penalties for valid tempo and dynamics mismatches."""
+        rows = np.asarray(rows, dtype=int)
+        penalties = np.zeros(len(rows), dtype=np.float32)
+        if not self._model_quality_enabled or not len(rows):
+            return penalties
+        try:
+            tempo_index = self.feature_names.index("tempo")
+            mood_indices = [self.feature_names.index(name) for name in _MOOD_FEATURE_NAMES]
+            weights = self._w
+            if (
+                not np.all(np.isfinite(weights))
+                or np.any(weights <= 0)
+                or not np.all(np.isfinite(self._vstd))
+                or np.any(self._vstd <= 0)
+            ):
+                return penalties
+            candidate_z = self._vscaled[rows] / weights
+            seed_z = self._vscaled[int(seed_row)] / weights
+        except (IndexError, TypeError, ValueError, FloatingPointError):
+            return penalties
+
+        candidate_tempo = (
+            candidate_z[:, tempo_index] * self._vstd[tempo_index]
+            + self._vmean[tempo_index]
+        )
+        seed_tempo = seed_z[tempo_index] * self._vstd[tempo_index] + self._vmean[tempo_index]
+        valid_tempo = np.isfinite(candidate_tempo) & np.isfinite(seed_tempo)
+        valid_tempo &= (candidate_tempo > 0) & (seed_tempo > 0)
+        if np.any(valid_tempo):
+            distance = np.minimum.reduce((
+                np.abs(candidate_tempo - seed_tempo),
+                np.abs(2.0 * candidate_tempo - seed_tempo),
+                np.abs(candidate_tempo - 2.0 * seed_tempo),
+            ))
+            penalties[valid_tempo] += _TEMPO_COMPATIBILITY_PENALTY * np.minimum(
+                distance[valid_tempo] / _TEMPO_COMPATIBILITY_DISTANCE, 1.0
+            )
+
+        candidate_mood = candidate_z[:, mood_indices]
+        seed_mood = seed_z[mood_indices]
+        valid_mood = np.isfinite(seed_mood).all()
+        if valid_mood:
+            valid_mood = np.isfinite(candidate_mood).all(axis=1)
+            if np.any(valid_mood):
+                distance = np.linalg.norm(
+                    candidate_mood - seed_mood, axis=1
+                ) / np.sqrt(len(mood_indices))
+                penalties[valid_mood] += _MOOD_COMPATIBILITY_PENALTY * np.minimum(
+                    distance[valid_mood] / _MOOD_COMPATIBILITY_DISTANCE, 1.0
+                )
+        return penalties
 
     def _apply_whiten(self, vecs: np.ndarray) -> np.ndarray:
         x = (vecs - self._nmean) @ self._W
@@ -393,23 +555,25 @@ class WebRecommender:
             tail = self._recommend_dual_tail(row, max(n, 50))
             results: List[Dict] = []
             used_ids = set()
+            visible_pool = max(n + 50, 100)
             for pool in (
                 guarded["results"][:5],
                 baseline["results"][:10],
                 tail,
             ):
                 for item in pool:
-                    if len(results) >= n:
+                    if len(results) >= visible_pool:
                         break
                     if item["deezer_id"] in used_ids:
                         continue
                     results.append(item)
                     used_ids.add(item["deezer_id"])
             self.last_retrieval_mode = "dual_sonic64_guardrail"
-            guarded["results"] = results[:n]
+            guarded["results"] = self._collapse_recommendation_results(results, n)
             guarded["retrieval_mode"] = self.last_retrieval_mode
             guarded["method"] = self.last_retrieval_mode
             guarded["index_version"] = self.index_version
+            guarded["ranking_policy"] = self.ranking_policy
             return guarded
         if self._sonic is not None:
             legacy = self._recommend_legacy(
@@ -422,8 +586,9 @@ class WebRecommender:
             results = list(legacy["results"][:min(5, n)])
             used_ids = {item["deezer_id"] for item in results}
             used_artists = {item["artist"].casefold() for item in results}
+            visible_pool = max(n + 50, 100)
             for item in tail:
-                if len(results) >= n:
+                if len(results) >= visible_pool:
                     break
                 artist = item["artist"].casefold()
                 if item["deezer_id"] in used_ids or artist in used_artists:
@@ -432,10 +597,11 @@ class WebRecommender:
                 used_ids.add(item["deezer_id"])
                 used_artists.add(artist)
             self.last_retrieval_mode = "sonic64_stable_head"
-            legacy["results"] = results
+            legacy["results"] = self._collapse_recommendation_results(results, n)
             legacy["retrieval_mode"] = self.last_retrieval_mode
             legacy["method"] = self.last_retrieval_mode
             legacy["index_version"] = self.index_version
+            legacy["ranking_policy"] = self.ranking_policy
             return legacy
         result = self._recommend_legacy(
             row, n, alpha, diversity, max_per_artist,
@@ -445,6 +611,7 @@ class WebRecommender:
         result["retrieval_mode"] = self.last_retrieval_mode
         result["method"] = self.last_retrieval_mode
         result["index_version"] = self.index_version
+        result["ranking_policy"] = self.ranking_policy
         return result
 
     def _recommend_dual_tail(self, row: int, n: int) -> List[Dict]:
@@ -469,6 +636,7 @@ class WebRecommender:
         audio_pool = np.argsort(audio_score)[::-1][:pool_size]
         score = audio_score.copy()
         score[audio_pool] -= self._version_penalty[audio_pool]
+        score[audio_pool] -= self._audio_compatibility_penalty(row, audio_pool)
         score[audio_pool] += _DUAL_TAIL_PRIOR_SCALE * (
             0.20 * self._wiki[audio_pool]
             + 0.10 * self._wiki_specific[audio_pool]
@@ -542,7 +710,7 @@ class WebRecommender:
         guarded = genre_rerank and self._centroid_idx is not None
         pool_cap = max(n * 25, 500) if (
             diversity > 0 or max_per_artist or guarded
-        ) else n
+        ) else (max(n + 50, 100) if self._model_quality_enabled else n)
         for idx in order:
             i = int(idx)
             if int(self.track_ids[i]) == seed_id:
@@ -569,7 +737,12 @@ class WebRecommender:
             if len(cand) >= pool_cap:
                 break
 
-        select_n = max(n, 50) if (genre_rerank and self._centroid_idx is not None) else n
+        visible_pool = max(n + 50, 100) if self._model_quality_enabled else n
+        select_n = (
+            max(visible_pool, 50)
+            if (genre_rerank and self._centroid_idx is not None)
+            else visible_pool
+        )
         chosen = (
             self._mmr(cand, blended, select_n, diversity)
             if diversity > 0 else cand[:select_n]
@@ -587,7 +760,7 @@ class WebRecommender:
                 key=lambda i: float(centroid_score[i]),
                 reverse=True,
             ) + chosen[boundary:]
-        chosen = chosen[:n]
+        chosen = self._collapse_recording_families(chosen, n)
         results = []
         from urllib.parse import quote
         for i in chosen:

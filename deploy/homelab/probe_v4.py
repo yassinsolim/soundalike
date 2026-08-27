@@ -16,6 +16,7 @@ DEFAULT_ORIGIN = "http://127.0.0.1:8788"
 EXPECTED_METHOD = "dual_sonic64_guardrail"
 EXPECTED_INDEX_VERSION = "2026.07.11-dual-sonic64"
 EXPECTED_LANGUAGE_POLICY = "spotify-lyrics-strict-v2"
+EXPECTED_RANKING_POLICY = "model-quality-v1"
 DEFAULT_SEED = "Redbone — Childish Gambino"
 
 
@@ -33,6 +34,7 @@ def canary_url(origin: str, seed: str = DEFAULT_SEED) -> str:
         'diversity': '0.15',
         'v': '4',
         'language_policy': EXPECTED_LANGUAGE_POLICY,
+        'ranking_policy': EXPECTED_RANKING_POLICY,
     })}"
 
 
@@ -95,6 +97,8 @@ def check_v4(
         raise ProbeError("v4 canary returned an unexpected index version")
     if body.get("language_policy") != EXPECTED_LANGUAGE_POLICY:
         raise ProbeError("v4 canary returned an unexpected language policy")
+    if body.get("ranking_policy") != EXPECTED_RANKING_POLICY:
+        raise ProbeError("v4 canary returned an unexpected ranking policy")
     if not isinstance(body.get("results"), list) or not body["results"]:
         raise ProbeError("v4 canary returned no recommendations")
 
