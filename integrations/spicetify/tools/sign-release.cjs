@@ -2,7 +2,7 @@
 "use strict";
 
 const { createHash, createPrivateKey, sign } = require("node:crypto");
-const { readFileSync, writeFileSync } = require("node:fs");
+const { existsSync, readFileSync, writeFileSync } = require("node:fs");
 const { execFileSync } = require("node:child_process");
 const { isAbsolute, relative, resolve } = require("node:path");
 
@@ -30,6 +30,18 @@ function canonicalJson(value) {
 function inside(child, parent) {
   const path = relative(parent, child);
   return path && !path.startsWith("..") && !isAbsolute(path);
+}
+
+function compareVersions(left, right) {
+  const parse = (value) => value.split(".").map(Number);
+  const leftParts = parse(left);
+  const rightParts = parse(right);
+  for (let index = 0; index < 3; index += 1) {
+    if (leftParts[index] !== rightParts[index]) {
+      return leftParts[index] > rightParts[index] ? 1 : -1;
+    }
+  }
+  return 0;
 }
 
 function main() {
@@ -61,11 +73,40 @@ function main() {
   }
 
   const immutableCommit = new URL(runtimeUrl).pathname.split("/")[3];
+  const runtimePath = relative(repo, runtimeFile).replaceAll("\\", "/");
+  if (runtimePath !== "integrations/spicetify/soundalike.js") {
+    throw new Error("Runtime file must be integrations/spicetify/soundalike.js.");
+  }
   const publishedRuntime = execFileSync(
     "git",
-    ["show", `${immutableCommit}:integrations/spicetify/soundalike.js`],
+    ["show", `${immutableCommit}:${runtimePath}`],
     { cwd: repo },
   );
+  try {
+    execFileSync(
+      "git",
+      ["diff", "--quiet", immutableCommit, "--", runtimePath],
+      { cwd: repo },
+    );
+  } catch {
+    throw new Error("The checked-out runtime does not match the immutable commit.");
+  }
+  if (!publishedRuntime.toString("utf8").includes(
+    `const RUNTIME_SEMANTIC_VERSION = "${version}";`,
+  )) {
+    throw new Error("The requested version does not match the runtime source.");
+  }
+  if (existsSync(output)) {
+    const previous = JSON.parse(readFileSync(output, "utf8"));
+    const previousSequence = previous?.payload?.sequence;
+    const previousVersion = previous?.payload?.runtime?.version;
+    if (!Number.isSafeInteger(previousSequence) || typeof previousVersion !== "string") {
+      throw new Error("The existing release feed is malformed.");
+    }
+    if (sequence <= previousSequence || compareVersions(version, previousVersion) <= 0) {
+      throw new Error("Release sequence and version must both increase monotonically.");
+    }
+  }
   const hash = createHash("sha256").update(publishedRuntime).digest();
   const payload = {
     schema: 1,
@@ -78,7 +119,11 @@ function main() {
       sri: `sha256-${hash.toString("base64")}`,
     },
   };
-  const signature = sign(null, Buffer.from(canonicalJson(payload)), createPrivateKey(keyPem));
+  const privateKey = createPrivateKey(keyPem);
+  if (privateKey.asymmetricKeyType !== "ed25519") {
+    throw new Error("The release signing key must be Ed25519.");
+  }
+  const signature = sign(null, Buffer.from(canonicalJson(payload)), privateKey);
   writeFileSync(output, `${JSON.stringify({
     payload,
     signature: signature.toString("base64"),
