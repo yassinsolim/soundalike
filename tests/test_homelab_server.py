@@ -6,6 +6,9 @@ import importlib.util
 from pathlib import Path
 
 
+import pytest
+
+
 def _server_module():
     path = (
         Path(__file__).resolve().parents[1]
@@ -65,3 +68,12 @@ def test_unknown_endpoint_returns_uncached_404():
     request.do_GET()
 
     assert sent == [(404, {"ok": False, "error": "not found"}, False)]
+
+
+def test_main_refuses_to_break_the_local_tunnel_contract(monkeypatch):
+    module = _server_module()
+    monkeypatch.setenv("SOUNDALIKE_HOST", "0.0.0.0")
+    monkeypatch.setenv("SOUNDALIKE_PORT", "8788")
+
+    with pytest.raises(ValueError, match="127.0.0.1:8788"):
+        module.main()

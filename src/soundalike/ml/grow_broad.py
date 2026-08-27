@@ -26,17 +26,19 @@ re-embed-forever and fully resumable.
 from __future__ import annotations
 
 import json
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Tuple
 
 import numpy as np
 import requests
 
 from ..audio.previews import DeezerClient, DeezerTrack
 from ..audio.vibe import vibe_from_file
+from .coverage_audit import CoverageAuditError, load_targeted_crawl_plan
 from .spec_cache import SpecCache, _artist_id
 from .spectrogram import SpectrogramConfig, _fit_frames, load_audio, log_mel_full
 
@@ -209,6 +211,48 @@ POPULAR_SEED_ARTISTS: List[str] = [
 ]
 
 
+class ApiCallBudgetExceeded(RuntimeError):
+    """A targeted crawl attempted to exceed its hard metadata-request budget."""
+
+
+class _BudgetedSession:
+    def __init__(self, session: requests.Session, max_calls: int):
+        self._session = session
+        self._max_calls = max_calls
+        self._used = 0
+        self._lock = threading.Lock()
+
+    @property
+    def used(self) -> int:
+        with self._lock:
+            return self._used
+
+    def get(self, *args, **kwargs):
+        with self._lock:
+            if self._used >= self._max_calls:
+                raise ApiCallBudgetExceeded(
+                    f"Targeted crawl exhausted max_api_calls={self._max_calls}"
+                )
+            self._used += 1
+        return self._session.get(*args, **kwargs)
+
+
+def _target_artist_id(session: _BudgetedSession, name: str) -> Optional[int]:
+    response = session.get(
+        "https://api.deezer.com/search/artist",
+        params={"q": name, "limit": 1},
+        timeout=20,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    if not isinstance(payload, dict):
+        raise RuntimeError("Deezer artist search returned a non-object response")
+    if payload.get("error"):
+        raise RuntimeError(f"Deezer API error: {payload['error']}")
+    matches = payload.get("data") or []
+    return int(matches[0]["id"]) if matches else None
+
+
 def _global_chart_artists(client: DeezerClient, limit: int,
                           progress: Callable[[str], None]) -> List[int]:
     """Deezer's public genre endpoints ignore the genre id (they all return the
@@ -282,6 +326,123 @@ def _gather_artist_ids(
     return list(artist_ids)
 
 
+def _require_target_budgets(
+    max_artists: Optional[int], max_tracks: Optional[int], max_api_calls: Optional[int]
+) -> Tuple[int, int, int]:
+    """Reject targeted crawling unless every externally costly dimension is finite."""
+    values = {
+        "max_artists": max_artists,
+        "max_tracks": max_tracks,
+        "max_api_calls": max_api_calls,
+    }
+    invalid = [name for name, value in values.items()
+               if isinstance(value, bool) or not isinstance(value, int) or value < 1]
+    if invalid:
+        raise ValueError("Targeted crawl requires finite positive budgets for " + ", ".join(invalid))
+    assert isinstance(max_artists, int)
+    assert isinstance(max_tracks, int)
+    assert isinstance(max_api_calls, int)
+    return max_artists, max_tracks, max_api_calls
+
+
+def harvest_targeted_to_cache(
+    cache_path: Path,
+    audit_report_path: Path,
+    max_artists: Optional[int] = None,
+    max_tracks: Optional[int] = None,
+    max_api_calls: Optional[int] = None,
+    per_artist: int = 15,
+    workers: int = 16,
+    dry_run: bool = False,
+    progress: Callable[[str], None] = print,
+) -> Optional[SpecCache]:
+    """Harvest only an audit report's missing/thin artist anchors.
+
+    The targeted path deliberately does not use broad-harvest seeds, charts, or
+    graph expansion. Its metadata-call upper bound is one artist search, one
+    top-track request per artist, and one fresh-preview request per selected
+    track; preview CDN downloads are not Deezer API calls.
+    """
+    max_artists, max_tracks, max_api_calls = _require_target_budgets(
+        max_artists, max_tracks, max_api_calls
+    )
+    if isinstance(per_artist, bool) or not isinstance(per_artist, int) or per_artist < 1:
+        raise ValueError("per_artist must be a finite positive integer")
+    if isinstance(workers, bool) or not isinstance(workers, int) or workers < 1:
+        raise ValueError("workers must be a finite positive integer")
+    try:
+        plan = load_targeted_crawl_plan(audit_report_path)
+    except CoverageAuditError as exc:
+        raise ValueError(f"Invalid targeted crawl plan: {exc}") from exc
+
+    requested = []
+    remaining_tracks = max_tracks
+    for item in plan[:max_artists]:
+        tracks = min(item["minimum"] - item["observed"], per_artist, remaining_tracks)
+        if tracks:
+            requested.append((item, tracks))
+            remaining_tracks -= tracks
+        if not remaining_tracks:
+            break
+    required_api_calls = 2 * len(requested) + sum(tracks for _, tracks in requested)
+    if required_api_calls > max_api_calls:
+        raise ValueError(
+            f"Targeted crawl needs at most {required_api_calls} Deezer API calls, "
+            f"which exceeds max_api_calls={max_api_calls}"
+        )
+    progress(
+        f"Targeted crawl: {len(requested)} artists, {sum(tracks for _, tracks in requested)} tracks, "
+        f"at most {required_api_calls} Deezer API calls."
+    )
+    for item, tracks in requested:
+        progress(f"  [{item['reason']}] {item['category']} / {item['artist']}: "
+                 f"{item['observed']}/{item['minimum']} (request {tracks})")
+    if dry_run:
+        return None
+
+    cache = SpecCache.load(cache_path) if Path(cache_path).exists() else SpecCache()
+    api_session = _BudgetedSession(requests.Session(), max_api_calls)
+    client = DeezerClient(session=api_session)
+    candidates = {}
+    for item, tracks in requested:
+        artist_id = _target_artist_id(api_session, item["artist"])
+        if not artist_id:
+            progress(f"Artist not found: {item['artist']}")
+            continue
+        try:
+            for track in client.artist_top_tracks(artist_id, tracks):
+                if track.has_preview and not cache.has(track.id) and track.id not in candidates:
+                    candidates[track.id] = track
+        except ApiCallBudgetExceeded:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            progress(f"Track lookup failed for {item['artist']}: {exc}")
+    todo = list(candidates.values())[:max_tracks]
+
+    with TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = [executor.submit(
+                _process_candidate,
+                track,
+                SpectrogramConfig(),
+                workdir,
+                api_session,
+            )
+                       for track in todo]
+            for future in as_completed(futures):
+                result = future.result()
+                if result is not None:
+                    track, spec, vibe = result
+                    cache.add(track.id, track.title, track.artist, spec, vibe)
+    cache.save(cache_path)
+    progress(
+        f"Targeted crawl complete after {api_session.used}/{max_api_calls} "
+        f"Deezer API calls. Cache now {len(cache)} tracks -> {cache_path}"
+    )
+    return cache
+
+
 def _save_candidates(path: Path, tracks: List[DeezerTrack]) -> None:
     path.write_text(json.dumps(
         [{"id": t.id, "title": t.title, "artist": t.artist,
@@ -299,14 +460,20 @@ def _load_candidates(path: Path) -> List[DeezerTrack]:
 _API_SESSION = requests.Session()  # thread-safe for concurrent GETs (urllib3 pool)
 
 
-def _fresh_preview(track_id: int) -> Optional[str]:
+def _fresh_preview(
+    track_id: int,
+    api_session: Optional[requests.Session] = None,
+) -> Optional[str]:
     """Deezer preview URLs are signed and expire, so a URL saved during the
     gather phase is often stale (403) by download time. Fetch a fresh one by
     track id right before downloading, backing off on the API rate limit."""
+    session = api_session or _API_SESSION
     for attempt in range(5):
         try:
-            r = _API_SESSION.get(f"https://api.deezer.com/track/{track_id}", timeout=20)
+            r = session.get(f"https://api.deezer.com/track/{track_id}", timeout=20)
             data = r.json()
+        except ApiCallBudgetExceeded:
+            raise
         except Exception:  # noqa: BLE001
             time.sleep(min(2 ** attempt, 15))
             continue
@@ -317,9 +484,14 @@ def _fresh_preview(track_id: int) -> Optional[str]:
     return None
 
 
-def _process_candidate(track: DeezerTrack, cfg: SpectrogramConfig, tmp: Path):
+def _process_candidate(
+    track: DeezerTrack,
+    cfg: SpectrogramConfig,
+    tmp: Path,
+    api_session: Optional[requests.Session] = None,
+):
     """Fetch a fresh preview URL, download + analyze it (thread-safe)."""
-    preview = _fresh_preview(track.id)
+    preview = _fresh_preview(track.id, api_session)
     if not preview:
         return None
     dest = tmp / f"{track.id}.mp3"
@@ -331,6 +503,8 @@ def _process_candidate(track: DeezerTrack, cfg: SpectrogramConfig, tmp: Path):
                 resp.raise_for_status()
                 content = resp.content
                 break
+            except ApiCallBudgetExceeded:
+                raise
             except Exception:  # noqa: BLE001
                 time.sleep(1.5 * (attempt + 1))
         if not content:
@@ -441,21 +615,31 @@ def harvest_broad_to_cache(
 
 def main(argv: Optional[list] = None) -> int:
     import argparse
-    import sys
 
-    parser = argparse.ArgumentParser(description="Broad multi-scene deep-vibe harvest.")
+    parser = argparse.ArgumentParser(description="Broad or audit-targeted deep-vibe harvest.")
     parser.add_argument("--cache", default="ml_data/spec_cache.npz")
     parser.add_argument("--per-artist", type=int, default=15)
     parser.add_argument("--per-genre-artists", type=int, default=100)
     parser.add_argument("--related-per-seed", type=int, default=8)
     parser.add_argument("--hop2-sample", type=int, default=1500)
-    parser.add_argument("--max-artists", type=int, default=6000)
+    parser.add_argument("--max-artists", type=int, default=None,
+                        help="Finite artist budget; required with --targeted-plan (broad default: 6000).")
+    parser.add_argument("--max-tracks", type=int, default=None,
+                        help="Finite track budget; required with --targeted-plan.")
+    parser.add_argument("--max-api-calls", type=int, default=None,
+                        help="Finite Deezer metadata-call budget; required with --targeted-plan.")
+    parser.add_argument("--targeted-plan", type=Path,
+                        help="Coverage-audit JSON report to crawl; never uses broad default seeds.")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Print a targeted crawl's bounded work without creating network clients.")
     parser.add_argument("--workers", type=int, default=16)
     parser.add_argument("--target", type=int, default=0,
-                        help="Stop once the cache reaches this many tracks (0 = all).")
+                        help="Broad mode only: stop once the cache reaches this many tracks (0 = all).")
     parser.add_argument("--log", default=None, help="Also append progress to this file.")
     args = parser.parse_args(argv)
 
+    if args.dry_run and not args.targeted_plan:
+        parser.error("--dry-run is only available with --targeted-plan")
     log_fh = open(args.log, "a", encoding="utf-8", buffering=1) if args.log else None
 
     def progress(msg: str) -> None:
@@ -465,13 +649,24 @@ def main(argv: Optional[list] = None) -> int:
             log_fh.write(line + "\n")
 
     try:
-        harvest_broad_to_cache(
-            Path(args.cache), per_artist=args.per_artist,
-            per_genre_artists=args.per_genre_artists,
-            related_per_seed=args.related_per_seed, hop2_sample=args.hop2_sample,
-            max_artists=args.max_artists, workers=args.workers, target=args.target,
-            progress=progress,
-        )
+        if args.targeted_plan:
+            try:
+                harvest_targeted_to_cache(
+                    Path(args.cache), args.targeted_plan, max_artists=args.max_artists,
+                    max_tracks=args.max_tracks, max_api_calls=args.max_api_calls,
+                    per_artist=args.per_artist, workers=args.workers, dry_run=args.dry_run,
+                    progress=progress,
+                )
+            except ValueError as exc:
+                parser.error(str(exc))
+        else:
+            harvest_broad_to_cache(
+                Path(args.cache), per_artist=args.per_artist,
+                per_genre_artists=args.per_genre_artists,
+                related_per_seed=args.related_per_seed, hop2_sample=args.hop2_sample,
+                max_artists=args.max_artists if args.max_artists is not None else 6000,
+                workers=args.workers, target=args.target, progress=progress,
+            )
     finally:
         if log_fh:
             log_fh.close()

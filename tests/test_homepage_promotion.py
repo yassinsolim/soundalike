@@ -95,10 +95,11 @@ def test_homepage_search_accessibility_and_wiring_remain_present():
     assert 'fetch("/api/recommend"' in HTML
 
 
-def test_marketplace_description_pins_the_immutable_feedback_feature():
+def test_marketplace_description_pins_the_immutable_update_bootstrap():
     manifest = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["description"] == (
         "Find same-language audio matches in Spotify with native playback and "
         "optional anonymous feedback."
     )
-    assert manifest["branch"] == "7c13260bf3611d88112673af6fccebc22888fb04"
+    assert manifest["main"] == "integrations/spicetify/bootstrap.js"
+    assert manifest["branch"] == "833fa84ad77ad5bee2ab8f04a371810527ed87c5"
