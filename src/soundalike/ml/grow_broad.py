@@ -26,6 +26,7 @@ re-embed-forever and fully resumable.
 from __future__ import annotations
 
 import json
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -210,6 +211,48 @@ POPULAR_SEED_ARTISTS: List[str] = [
 ]
 
 
+class ApiCallBudgetExceeded(RuntimeError):
+    """A targeted crawl attempted to exceed its hard metadata-request budget."""
+
+
+class _BudgetedSession:
+    def __init__(self, session: requests.Session, max_calls: int):
+        self._session = session
+        self._max_calls = max_calls
+        self._used = 0
+        self._lock = threading.Lock()
+
+    @property
+    def used(self) -> int:
+        with self._lock:
+            return self._used
+
+    def get(self, *args, **kwargs):
+        with self._lock:
+            if self._used >= self._max_calls:
+                raise ApiCallBudgetExceeded(
+                    f"Targeted crawl exhausted max_api_calls={self._max_calls}"
+                )
+            self._used += 1
+        return self._session.get(*args, **kwargs)
+
+
+def _target_artist_id(session: _BudgetedSession, name: str) -> Optional[int]:
+    response = session.get(
+        "https://api.deezer.com/search/artist",
+        params={"q": name, "limit": 1},
+        timeout=20,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    if not isinstance(payload, dict):
+        raise RuntimeError("Deezer artist search returned a non-object response")
+    if payload.get("error"):
+        raise RuntimeError(f"Deezer API error: {payload['error']}")
+    matches = payload.get("data") or []
+    return int(matches[0]["id"]) if matches else None
+
+
 def _global_chart_artists(client: DeezerClient, limit: int,
                           progress: Callable[[str], None]) -> List[int]:
     """Deezer's public genre endpoints ignore the genre id (they all return the
@@ -358,11 +401,11 @@ def harvest_targeted_to_cache(
         return None
 
     cache = SpecCache.load(cache_path) if Path(cache_path).exists() else SpecCache()
-    client = DeezerClient()
-    session = requests.Session()
+    api_session = _BudgetedSession(requests.Session(), max_api_calls)
+    client = DeezerClient(session=api_session)
     candidates = {}
     for item, tracks in requested:
-        artist_id = _artist_id(session, item["artist"])
+        artist_id = _target_artist_id(api_session, item["artist"])
         if not artist_id:
             progress(f"Artist not found: {item['artist']}")
             continue
@@ -370,6 +413,8 @@ def harvest_targeted_to_cache(
             for track in client.artist_top_tracks(artist_id, tracks):
                 if track.has_preview and not cache.has(track.id) and track.id not in candidates:
                     candidates[track.id] = track
+        except ApiCallBudgetExceeded:
+            raise
         except Exception as exc:  # noqa: BLE001
             progress(f"Track lookup failed for {item['artist']}: {exc}")
     todo = list(candidates.values())[:max_tracks]
@@ -377,7 +422,13 @@ def harvest_targeted_to_cache(
     with TemporaryDirectory() as tmp:
         workdir = Path(tmp)
         with ThreadPoolExecutor(max_workers=workers) as executor:
-            futures = [executor.submit(_process_candidate, track, SpectrogramConfig(), workdir)
+            futures = [executor.submit(
+                _process_candidate,
+                track,
+                SpectrogramConfig(),
+                workdir,
+                api_session,
+            )
                        for track in todo]
             for future in as_completed(futures):
                 result = future.result()
@@ -385,7 +436,10 @@ def harvest_targeted_to_cache(
                     track, spec, vibe = result
                     cache.add(track.id, track.title, track.artist, spec, vibe)
     cache.save(cache_path)
-    progress(f"Targeted crawl complete. Cache now {len(cache)} tracks -> {cache_path}")
+    progress(
+        f"Targeted crawl complete after {api_session.used}/{max_api_calls} "
+        f"Deezer API calls. Cache now {len(cache)} tracks -> {cache_path}"
+    )
     return cache
 
 
@@ -406,14 +460,20 @@ def _load_candidates(path: Path) -> List[DeezerTrack]:
 _API_SESSION = requests.Session()  # thread-safe for concurrent GETs (urllib3 pool)
 
 
-def _fresh_preview(track_id: int) -> Optional[str]:
+def _fresh_preview(
+    track_id: int,
+    api_session: Optional[requests.Session] = None,
+) -> Optional[str]:
     """Deezer preview URLs are signed and expire, so a URL saved during the
     gather phase is often stale (403) by download time. Fetch a fresh one by
     track id right before downloading, backing off on the API rate limit."""
+    session = api_session or _API_SESSION
     for attempt in range(5):
         try:
-            r = _API_SESSION.get(f"https://api.deezer.com/track/{track_id}", timeout=20)
+            r = session.get(f"https://api.deezer.com/track/{track_id}", timeout=20)
             data = r.json()
+        except ApiCallBudgetExceeded:
+            raise
         except Exception:  # noqa: BLE001
             time.sleep(min(2 ** attempt, 15))
             continue
@@ -424,9 +484,14 @@ def _fresh_preview(track_id: int) -> Optional[str]:
     return None
 
 
-def _process_candidate(track: DeezerTrack, cfg: SpectrogramConfig, tmp: Path):
+def _process_candidate(
+    track: DeezerTrack,
+    cfg: SpectrogramConfig,
+    tmp: Path,
+    api_session: Optional[requests.Session] = None,
+):
     """Fetch a fresh preview URL, download + analyze it (thread-safe)."""
-    preview = _fresh_preview(track.id)
+    preview = _fresh_preview(track.id, api_session)
     if not preview:
         return None
     dest = tmp / f"{track.id}.mp3"
@@ -438,6 +503,8 @@ def _process_candidate(track: DeezerTrack, cfg: SpectrogramConfig, tmp: Path):
                 resp.raise_for_status()
                 content = resp.content
                 break
+            except ApiCallBudgetExceeded:
+                raise
             except Exception:  # noqa: BLE001
                 time.sleep(1.5 * (attempt + 1))
         if not content:

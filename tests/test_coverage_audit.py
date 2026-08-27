@@ -6,6 +6,7 @@ import json
 import socket
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from soundalike.ml.coverage_audit import build_audit_report, main
@@ -46,6 +47,33 @@ def test_report_is_deterministic_and_contains_input_hashes(tmp_path):
     assert len(first["index"]["sha256"]) == 64
     assert len(first["targets"]["sha256"]) == 64
     assert json.dumps(first, sort_keys=True) == json.dumps(second, sort_keys=True)
+
+
+def test_audits_the_deployed_npz_format_directly(tmp_path):
+    index = tmp_path / "deepvibe_index.npz"
+    np.savez(
+        index,
+        artists=np.asarray([
+            "Childish Gambino",
+            "Childish Gambino",
+            "SZA",
+            "",
+        ]),
+    )
+    targets = _write_json(tmp_path / "targets.json", _targets([
+        _category(
+            "rap-rnb",
+            [{"artist": "Childish Gambino", "minimum_tracks": 3}],
+        ),
+    ]))
+
+    report = build_audit_report(index, targets)
+
+    assert report["index"]["format"] == "npz"
+    assert report["index"]["entries"] == 4
+    assert report["index"]["unknown_artist_entries"] == 1
+    assert report["artist_presence_and_thinness"][0]["observed"] == 2
+    assert report["artist_presence_and_thinness"][0]["status"] == "thin"
 
 
 def test_aliases_count_under_the_curated_anchor(tmp_path):
