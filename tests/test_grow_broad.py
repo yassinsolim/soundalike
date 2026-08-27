@@ -8,7 +8,10 @@ import pytest
 
 from soundalike.audio.previews import DeezerTrack
 from soundalike.ml.grow_broad import (
+    ApiCallBudgetExceeded,
     BROAD_SEED_ARTISTS,
+    _BudgetedSession,
+    _fresh_preview,
     _load_candidates,
     _save_candidates,
     harvest_targeted_to_cache,
@@ -85,3 +88,27 @@ def test_targeted_crawl_refuses_unbounded_or_insufficient_api_budgets(tmp_path):
         harvest_targeted_to_cache(
             tmp_path / "cache.npz", report, max_artists=1, max_tracks=2, max_api_calls=3,
         )
+
+
+def test_targeted_api_budget_is_enforced_across_retries(monkeypatch):
+    class Response:
+        @staticmethod
+        def json():
+            return {"error": {"code": 4}}
+
+    class Session:
+        calls = 0
+
+        def get(self, *_args, **_kwargs):
+            self.calls += 1
+            return Response()
+
+    raw = Session()
+    budgeted = _BudgetedSession(raw, max_calls=1)
+    monkeypatch.setattr("soundalike.ml.grow_broad.time.sleep", lambda _seconds: None)
+
+    with pytest.raises(ApiCallBudgetExceeded, match="max_api_calls=1"):
+        _fresh_preview(123, budgeted)
+
+    assert raw.calls == 1
+    assert budgeted.used == 1

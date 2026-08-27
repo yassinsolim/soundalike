@@ -2,7 +2,7 @@
 
 The index stores artists but no genre labels.  Consequently, category results are
 explicitly *curated artist-anchor proxies*, never inferred genre classifications.
-This module only reads local JSON files and never constructs a network client.
+This module only reads local JSON/NPZ files and never constructs a network client.
 """
 
 from __future__ import annotations
@@ -14,7 +14,9 @@ import re
 import unicodedata
 from collections import Counter
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, Optional
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
+
+import numpy as np
 
 
 class CoverageAuditError(ValueError):
@@ -29,7 +31,11 @@ def normalize_artist_name(value: str) -> str:
 
 
 def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _load_json_object(path: Path, label: str) -> Dict[str, Any]:
@@ -106,19 +112,52 @@ def _validated_targets(config: Mapping[str, Any]) -> List[Dict[str, Any]]:
     return sorted(result, key=lambda item: item["name"].casefold())
 
 
-def _index_artist_counts(index: Mapping[str, Any]) -> Counter:
+def _json_index_artists(index: Mapping[str, Any]) -> List[str]:
     entries = index.get("entries")
     if not isinstance(entries, list):
         raise CoverageAuditError("index.entries must be a list")
-    counts: Counter = Counter()
+    artists = []
     for position, entry in enumerate(entries):
         if not isinstance(entry, dict):
             raise CoverageAuditError(f"index.entries[{position}] must be an object")
         artist = entry.get("artist")
         if not isinstance(artist, str) or not normalize_artist_name(artist):
             raise CoverageAuditError(f"index.entries[{position}].artist must be a non-empty string")
-        counts[normalize_artist_name(artist)] += 1
-    return counts
+        artists.append(artist)
+    return artists
+
+
+def _index_artist_counts(index_path: Path) -> Tuple[Counter, int, str, int]:
+    if index_path.suffix.casefold() == ".npz":
+        try:
+            with np.load(index_path, allow_pickle=False) as index:
+                if "artists" not in index.files:
+                    raise CoverageAuditError("NPZ index must contain an artists array")
+                artists = index["artists"]
+        except (OSError, ValueError) as exc:
+            raise CoverageAuditError(f"Cannot read index: {index_path}") from exc
+        if artists.ndim != 1:
+            raise CoverageAuditError("NPZ index artists must be one-dimensional")
+        values = artists.astype(str).tolist()
+        index_format = "npz"
+    else:
+        index = _load_json_object(index_path, "index")
+        values = _json_index_artists(index)
+        index_format = "json"
+
+    counts: Counter = Counter()
+    unknown = 0
+    for position, artist in enumerate(values):
+        if not isinstance(artist, str):
+            raise CoverageAuditError(
+                f"index artist at position {position} must be a string"
+            )
+        normalized = normalize_artist_name(artist)
+        if not normalized:
+            unknown += 1
+            continue
+        counts[normalized] += 1
+    return counts, len(values), index_format, unknown
 
 
 def _artist_result(category: str, anchor: Mapping[str, Any], counts: Counter) -> Dict[str, Any]:
@@ -141,13 +180,14 @@ def _artist_result(category: str, anchor: Mapping[str, Any], counts: Counter) ->
 
 
 def build_audit_report(index_path: Path, targets_path: Path) -> Dict[str, Any]:
-    """Build a stable report from local JSON files without any network access."""
+    """Build a stable report from a local JSON/NPZ index without network access."""
     index_path = Path(index_path)
     targets_path = Path(targets_path)
-    index = _load_json_object(index_path, "index")
     targets = _load_json_object(targets_path, "targets")
     categories = _validated_targets(targets)
-    artist_counts = _index_artist_counts(index)
+    artist_counts, entry_count, index_format, unknown_artists = (
+        _index_artist_counts(index_path)
+    )
 
     artist_results: List[Dict[str, Any]] = []
     category_results: List[Dict[str, Any]] = []
@@ -191,7 +231,12 @@ def build_audit_report(index_path: Path, targets_path: Path) -> Dict[str, Any]:
     return {
         "schema_version": 1,
         "category_model": targets["category_model"],
-        "index": {"sha256": _sha256(index_path), "entries": len(index["entries"])},
+        "index": {
+            "sha256": _sha256(index_path),
+            "entries": entry_count,
+            "format": index_format,
+            "unknown_artist_entries": unknown_artists,
+        },
         "targets": {"sha256": _sha256(targets_path), "schema_version": targets["schema_version"]},
         "artist_presence_and_thinness": artist_results,
         "category_proxy_coverage": category_results,
@@ -235,8 +280,12 @@ def _default_data_file(name: str) -> Path:
 def main(argv: Optional[List[str]] = None) -> int:
     """Write an offline audit report; this command never makes network calls."""
     parser = argparse.ArgumentParser(description="Audit local artist-anchor coverage without network access.")
-    parser.add_argument("--index", type=Path, default=_default_data_file("vibe_index.json"))
-    parser.add_argument("--targets", type=Path, default=_default_data_file("coverage_targets.json"))
+    parser.add_argument("--index", type=Path, default=_default_data_file("deepvibe_index.npz"))
+    parser.add_argument(
+        "--targets",
+        type=Path,
+        default=_default_data_file("coverage_targets.v1.json"),
+    )
     parser.add_argument("--output", type=Path, required=True, help="Path for the deterministic JSON report.")
     args = parser.parse_args(argv)
 
