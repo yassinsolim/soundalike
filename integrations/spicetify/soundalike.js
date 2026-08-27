@@ -42,9 +42,8 @@
   const FEEDBACK_ENDPOINT =
     `${FALLBACK_HOSTED_SERVER}/api/spicetify-feedback`;
   const FEEDBACK_INSTALL_KEY = "soundalike:feedback-install:v1";
-  const FEEDBACK_SUPPRESSION_KEY = "soundalike:feedback-suppression:v1";
-  const FEEDBACK_SUCCESS_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
-  const FEEDBACK_DISMISS_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+  const FEEDBACK_PREFERENCE_KEY = "soundalike:feedback-preference:v2";
+  const LEGACY_FEEDBACK_SUPPRESSION_KEY = "soundalike:feedback-suppression:v1";
   const FEEDBACK_METHODS = new Set([
     "dual_sonic64_guardrail",
     "sonic64_stable_head",
@@ -81,6 +80,7 @@
   }
   if (window.__soundalikeContextMenuItem) return;
   removeLegacyCaches();
+  removeLegacyFeedbackSuppression();
   persistentCache = loadPersistentCache();
 
   const onlyTracks = (uris) =>
@@ -112,34 +112,52 @@
     return created;
   }
 
-  function feedbackIsSuppressed() {
-    const saved = Spicetify.LocalStorage.get(FEEDBACK_SUPPRESSION_KEY);
-    if (!saved) return false;
+  function removeLegacyFeedbackSuppression() {
+    Spicetify.LocalStorage.remove(LEGACY_FEEDBACK_SUPPRESSION_KEY);
+  }
+
+  function feedbackPreference() {
+    const saved = Spicetify.LocalStorage.get(FEEDBACK_PREFERENCE_KEY);
+    if (!saved) return { dismissals: 0, showAgain: null };
     try {
       const value = JSON.parse(saved);
-      const cooldown = value?.outcome === "success"
-        ? FEEDBACK_SUCCESS_COOLDOWN_MS
-        : value?.outcome === "dismissed"
-        ? FEEDBACK_DISMISS_COOLDOWN_MS
-        : 0;
-      return (
-        cooldown > 0 &&
-        Number.isFinite(value?.at) &&
-        value.at <= Date.now() &&
-        Date.now() - value.at < cooldown
-      );
+      return {
+        dismissals: Number.isInteger(value?.dismissals) && value.dismissals > 0
+          ? Math.min(value.dismissals, 2)
+          : 0,
+        showAgain: typeof value?.showAgain === "boolean" ? value.showAgain : null,
+      };
     } catch (error) {
       console.warn("[soundalike] Ignoring invalid local feedback preference.", error);
-      Spicetify.LocalStorage.remove(FEEDBACK_SUPPRESSION_KEY);
-      return false;
+      Spicetify.LocalStorage.remove(FEEDBACK_PREFERENCE_KEY);
+      return { dismissals: 0, showAgain: null };
     }
   }
 
-  function suppressFeedback(outcome) {
+  function saveFeedbackPreference(preference) {
     Spicetify.LocalStorage.set(
-      FEEDBACK_SUPPRESSION_KEY,
-      JSON.stringify({ outcome, at: Date.now() })
+      FEEDBACK_PREFERENCE_KEY,
+      JSON.stringify(preference)
     );
+  }
+
+  function feedbackIsSuppressed() {
+    return feedbackPreference().showAgain === false;
+  }
+
+  function recordFeedbackDismissal() {
+    const current = feedbackPreference();
+    const next = {
+      ...current,
+      dismissals: Math.min(current.dismissals + 1, 2),
+    };
+    saveFeedbackPreference(next);
+    return next;
+  }
+
+  function setFeedbackShowAgain(showAgain) {
+    const current = feedbackPreference();
+    saveFeedbackPreference({ ...current, showAgain });
   }
 
   function feedbackMethod(value) {
@@ -212,10 +230,27 @@
     const details = page.querySelector(".sa-feedback-details");
     const note = page.querySelector(".sa-feedback-note");
     const count = page.querySelector(".sa-feedback-count");
+    const question = page.querySelector(".sa-feedback-question");
+    const actions = page.querySelector(".sa-feedback-actions");
+    const preference = page.querySelector(".sa-feedback-preference");
+    const keepShowing = page.querySelector(".sa-feedback-keep-showing");
+    const stopShowing = page.querySelector(".sa-feedback-stop-showing");
     const send = page.querySelector(".sa-feedback-send");
     const dismiss = page.querySelector(".sa-feedback-dismiss");
     const status = page.querySelector(".sa-feedback-status");
-    if (!details || !note || !count || !send || !dismiss || !status) {
+    if (
+      !details ||
+      !note ||
+      !count ||
+      !question ||
+      !actions ||
+      !preference ||
+      !keepShowing ||
+      !stopShowing ||
+      !send ||
+      !dismiss ||
+      !status
+    ) {
       console.warn("[soundalike] Feedback controls are unavailable.");
       return;
     }
@@ -274,7 +309,22 @@
     }
     dismiss.onclick = () => {
       if (sending) return;
-      suppressFeedback("dismissed");
+      const saved = recordFeedbackDismissal();
+      if (saved.dismissals > 1 && saved.showAgain === null) {
+        question.hidden = true;
+        details.hidden = true;
+        actions.hidden = true;
+        preference.hidden = false;
+        return;
+      }
+      panel.hidden = true;
+    };
+    keepShowing.onclick = () => {
+      setFeedbackShowAgain(true);
+      panel.hidden = true;
+    };
+    stopShowing.onclick = () => {
+      setFeedbackShowAgain(false);
       panel.hidden = true;
     };
     send.onclick = async () => {
@@ -304,7 +354,6 @@
         if (!response.ok || !/^[a-f0-9]{64}$/.test(receipt?.receipt_sha256 || "")) {
           throw new Error("feedback receipt was not accepted");
         }
-        suppressFeedback("success");
         ratings.forEach((input) => {
           input.disabled = true;
         });
@@ -1498,7 +1547,7 @@
         .sa-row-content:hover .sa-title,.sa-row-content:focus-visible .sa-title{color:var(--spice-text,#fff)}
         .sa-menu-loading{padding:8px 12px;color:var(--spice-subtext,#b3b3b3);white-space:nowrap}
         .sa-feedback{max-width:680px;margin:24px 0 0;padding:16px;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:rgba(255,255,255,.04)}
-        .sa-feedback[hidden],.sa-feedback-details[hidden]{display:none}
+        .sa-feedback[hidden],.sa-feedback-details[hidden],.sa-feedback-question[hidden],.sa-feedback-actions[hidden],.sa-feedback-preference[hidden]{display:none}
         .sa-feedback fieldset{border:0;margin:0;padding:0}
         .sa-feedback legend{font-weight:700;margin-bottom:10px}
         .sa-feedback-options,.sa-feedback-reasons,.sa-feedback-actions{display:flex;flex-wrap:wrap;gap:8px}
@@ -1514,6 +1563,11 @@
         .sa-feedback-send{border:0;background:var(--spice-button,#1ed760);color:#000}
         .sa-feedback-send:disabled{cursor:not-allowed;opacity:.55}
         .sa-feedback-dismiss{border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--spice-text,#fff)}
+        .sa-feedback-preference p{font-weight:700;margin:0 0 10px}
+        .sa-feedback-preference-actions{display:flex;gap:8px}
+        .sa-feedback-preference button{min-height:36px;border-radius:999px;padding:7px 14px;font:inherit;font-weight:700;cursor:pointer}
+        .sa-feedback-keep-showing{border:0;background:var(--spice-button,#1ed760);color:#000}
+        .sa-feedback-stop-showing{border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--spice-text,#fff)}
         .sa-feedback-status{min-height:20px;color:var(--spice-subtext,#b3b3b3)}
         .sa-feedback-success{color:var(--spice-button,#1ed760)}
         .sa-feedback-error{color:#f29d9d}
@@ -1540,7 +1594,7 @@
         ${rows}
       </div>
       <section class="sa-feedback" hidden aria-labelledby="sa-feedback-question">
-        <fieldset>
+        <fieldset class="sa-feedback-question">
           <legend id="sa-feedback-question">How close were these matches?</legend>
           <div class="sa-feedback-options">
             <label class="sa-feedback-choice"><input type="radio" name="sa-feedback-rating" value="good"> Good</label>
@@ -1564,6 +1618,13 @@
           <div class="sa-feedback-help">
             <span id="sa-feedback-privacy">Please don’t include personal information.</span>
             <span id="sa-feedback-count" class="sa-feedback-count">0/280</span>
+          </div>
+        </div>
+        <div class="sa-feedback-preference" hidden role="group" aria-labelledby="sa-feedback-preference-question">
+          <p id="sa-feedback-preference-question">Do you want this survey to keep showing after future searches?</p>
+          <div class="sa-feedback-preference-actions">
+            <button class="sa-feedback-keep-showing" type="button">Yes</button>
+            <button class="sa-feedback-stop-showing" type="button">No</button>
           </div>
         </div>
         <div class="sa-feedback-actions">
