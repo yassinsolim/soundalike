@@ -37,8 +37,8 @@ class Server(ThreadingHTTPServer):
 def main():
     host = os.environ.get("SOUNDALIKE_HOST", "127.0.0.1")
     port = int(os.environ.get("SOUNDALIKE_PORT", "8788"))
-    if not 1 <= port <= 65535:
-        raise ValueError("SOUNDALIKE_PORT must be between 1 and 65535")
+    if (host, port) != ("127.0.0.1", 8788):
+        raise ValueError("the homelab tunnel contract requires 127.0.0.1:8788")
 
     recommender = get_recommender()
     print(
