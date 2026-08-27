@@ -459,8 +459,8 @@ test("release signer enforces matching runtime and monotonic versions", () => {
   );
   fs.writeFileSync(output, JSON.stringify({
     payload: {
-      sequence: 2,
-      runtime: { version: "2.0.0" },
+      sequence: stableManifest.payload.sequence - 1,
+      runtime: { version: "2.1.0" },
     },
   }));
   const command = [
@@ -481,7 +481,7 @@ test("release signer enforces matching runtime and monotonic versions", () => {
   try {
     execFileSync(process.execPath, command, { cwd: root });
     const signed = JSON.parse(fs.readFileSync(output, "utf8"));
-    assert.equal(signed.payload.sequence, 3);
+    assert.equal(signed.payload.sequence, stableManifest.payload.sequence);
     assert.throws(
       () => execFileSync(process.execPath, command, {
         cwd: root,
