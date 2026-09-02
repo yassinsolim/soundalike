@@ -7,7 +7,9 @@ import { join } from "node:path";
 import { Readable } from "node:stream";
 import test from "node:test";
 
-import ratingsDispatch from "../api/ratings.js";
+import ratingsDispatch, {
+  createDispatchHandler,
+} from "../api/ratings.js";
 import {
   createDiscordWebhookSender,
   formatFeedbackDigest,
@@ -427,6 +429,30 @@ test("shared ratings function dispatches feedback preflight", async () => {
   assert.equal(res.headers["Access-Control-Allow-Origin"], "*");
 });
 
+test("shared ratings function dispatches the daily digest route", async () => {
+  let called = false;
+  const dispatch = createDispatchHandler(
+    async () => {
+      throw new Error("legacy handler must not run");
+    },
+    {
+      "feedback-digest": async () => async (_request, response) => {
+        called = true;
+        return response.status(200).json({ ok: true });
+      },
+    },
+  );
+  const request = Readable.from([]);
+  request.method = "GET";
+  request.url = "/api/ratings?__soundalike_handler=feedback-digest";
+  request.headers = {};
+  const res = response();
+  await dispatch(request, res);
+  assert.equal(called, true);
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.body, { ok: true });
+});
+
 test("deduplicates deterministically without overwrite", async () => {
   const storage = new MemoryStorage();
   const first = await submit(validPayload(), storage);
@@ -825,7 +851,7 @@ test("Vercel routes feedback through the shared bounded ratings function", () =>
   const config = JSON.parse(
     readFileSync(new URL("../vercel.json", import.meta.url), "utf8"),
   );
-  assert.equal(Object.keys(config.functions).length, 13);
+  assert.equal(Object.keys(config.functions).length, 12);
   assert.equal(config.functions["api/spicetify-feedback.js"], undefined);
   assert.equal(
     config.rewrites.find(
@@ -833,9 +859,14 @@ test("Vercel routes feedback through the shared bounded ratings function", () =>
     )?.destination,
     "/api/ratings?__soundalike_handler=spicetify-feedback",
   );
-  assert.deepEqual(config.functions["api/feedback-digest.js"], {
-    maxDuration: 30,
-  });
+  assert.deepEqual(config.functions["api/ratings.js"], { maxDuration: 60 });
+  assert.equal(config.functions["api/feedback-digest.js"], undefined);
+  assert.equal(
+    config.rewrites.find(
+      (rewrite) => rewrite.source === "/api/feedback-digest",
+    )?.destination,
+    "/api/ratings?__soundalike_handler=feedback-digest",
+  );
   assert.deepEqual(config.crons, [
     { path: "/api/feedback-digest", schedule: "0 15 * * *" },
   ]);

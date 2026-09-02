@@ -9,14 +9,13 @@
     },
     "api/stats.py": { "maxDuration": 30 },
     "api/preview.py": { "maxDuration": 15 },
-    "api/ratings.js": { "maxDuration": 15 },
+    "api/ratings.js": { "maxDuration": 60 },
     "api/ratings-v2.js": { "maxDuration": 15 },
     "api/ratings-semantic-v1.js": { "maxDuration": 15 },
     "api/ratings-semantic-v2.js": { "maxDuration": 15 },
     "api/ratings-pacing-v3.js": { "maxDuration": 15 },
     "api/ratings-v4.js": { "maxDuration": 15 },
-    "api/ratings-v5.js": { "maxDuration": 15 },
-    "api/feedback-digest.js": { "maxDuration": 30 }
+    "api/ratings-v5.js": { "maxDuration": 15 }
   },
   "crons": [
     { "path": "/api/feedback-digest", "schedule": "0 15 * * *" }
@@ -24,6 +23,7 @@
   "rewrites": [
     { "source": "/api/ratings-v6", "destination": "/api/ratings?__soundalike_handler=ratings-v6" },
     { "source": "/api/spicetify-feedback", "destination": "/api/ratings?__soundalike_handler=spicetify-feedback" },
+    { "source": "/api/feedback-digest", "destination": "/api/ratings?__soundalike_handler=feedback-digest" },
     { "source": "/evaluate", "destination": "/evaluate/index.html" },
     { "source": "/evaluate/", "destination": "/evaluate/index.html" },
     { "source": "/evaluate-v5", "destination": "/evaluate-v5/index.html" },

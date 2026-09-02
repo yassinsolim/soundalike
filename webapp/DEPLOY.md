@@ -139,12 +139,11 @@ webapp/
     _reco.py          # numpy recommender (fetches the index from the GitHub Release)
     recommend.py      # POST /api/recommend
     search.py         # GET  /api/search?q=
-    ratings.js        # POST-only private v17 ratings ingestion
+    ratings.js        # shared ratings, feedback, and digest dispatcher
     ratings-v2.js     # POST-only private full-track v2 ingestion
     ratings-pacing-v3.js # POST-only private pacing V3 ingestion
     ratings-v5.js     # archived V5 private ratings ingestion
     ratings-v6.js     # active V6 development ratings ingestion
-    feedback-digest.js # authenticated daily Discord digest
     spicetify-feedback.js # public-CORS, private-Blob extension feedback
   evaluate/           # active blinded V6 evaluator + compatibility V5 assets
   evaluate-v5/        # byte-preserved V5 evaluator
