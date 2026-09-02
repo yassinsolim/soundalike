@@ -1,6 +1,6 @@
 # Soundalike
 
-Find tracks that genuinely sound like the song you are playing, directly
+Find tracks that sound like the song you are playing, directly
 inside Spotify. Soundalike compares precomputed audio embeddings instead of
 using genres, popularity, or listening-history recommendations.
 
@@ -46,7 +46,7 @@ are automatic. Manual installs remain manual; use the current file and run
   metadata. Each candidate stays hidden until its own check finishes; verified
   exact-language rows appear progressively and are never later removed for a
   language mismatch.
-- Different-language candidates and candidates with genuinely unavailable
+- Different-language candidates and candidates with confirmed unavailable
   lyrics metadata are hidden rather than used as fallbacks, so strict
   filtering can return fewer than 20 results. "No lyrics metadata" does not
   mean Spotify detected a foreign language; it means language could not be

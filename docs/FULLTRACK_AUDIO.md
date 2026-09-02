@@ -209,8 +209,8 @@ every per-fold metric and defines:
 - **fold-macro**: the unweighted mean of the five fold metrics; and
 - **query-weighted**: the mean over pooled per-query observations.
 
-For every method and each metric—Recall@K, standard MRR over the complete ranked
-list, and graded NDCG@K—the query-weighted summary reports method-minus-global
+For every method and metric (Recall@K, standard MRR over the complete ranked
+list, and graded NDCG@K), the query-weighted summary reports method-minus-global
 uncertainty from a deterministic pooled paired bootstrap over aligned
 `(fold, track_id)` observations. These method/budget comparisons are descriptive and
 have no multiple-comparison correction.
