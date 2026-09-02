@@ -59,6 +59,19 @@ npx expo prebuild
 npm run ios       # or: npm run android
 ```
 
+## Icons
+
+The icon is generated so it stays in step with the web app's brand, which is a
+diamond mark on a green to violet gradient:
+
+```bash
+python scripts/make-icons.py
+```
+
+That rewrites everything in `assets/`. The Android background widens the
+gradient on purpose, because Android crops an adaptive icon to its centre and a
+plain corner to corner ramp would lose both brand colours.
+
 ## Checks
 
 ```bash
