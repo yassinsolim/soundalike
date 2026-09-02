@@ -828,6 +828,8 @@ export function createDispatchHandler(
       (await import("../server/ratings-v6.js")).default,
     "spicetify-feedback": async () =>
       (await import("../server/spicetify-feedback.js")).default,
+    "feedback-digest": async () =>
+      (await import("../server/spicetify-feedback-digest.js")).default,
   },
 ) {
   return async function dispatchedRatingsHandler(request, response) {

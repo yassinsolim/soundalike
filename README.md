@@ -156,6 +156,11 @@ The feedback endpoint does not receive your Spotify identity, credentials,
 tokens, library, listening history, hidden candidates, or a private storage
 URL.
 
+The maintainer may receive a private Discord notification containing the
+Good/Mixed/Off selection, seed title and artist, selected reasons, number of
+displayed results, and a short receipt. Optional notes, anonymous nonces, and
+the displayed result list are not sent to Discord.
+
 ## How recommendations are built
 
 The production ranker uses two compact audio representations:

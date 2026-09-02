@@ -7,14 +7,26 @@ import { join } from "node:path";
 import { Readable } from "node:stream";
 import test from "node:test";
 
-import ratingsDispatch from "../api/ratings.js";
+import ratingsDispatch, {
+  createDispatchHandler,
+} from "../api/ratings.js";
+import {
+  createDiscordWebhookSender,
+  formatFeedbackDigest,
+} from "../server/discord-feedback.js";
 import {
   FEEDBACK_BLOB_PREFIX,
+  FEEDBACK_DIGEST_INPUT_PREFIX,
   MAX_FEEDBACK_BODY_BYTES,
   MAX_FEEDBACK_STORED_BYTES,
   createFeedbackHandler,
   parseFeedbackStoredRecordBytes,
 } from "../server/spicetify-feedback.js";
+import {
+  FEEDBACK_DIGEST_BLOB_PREFIX,
+  createFeedbackDigestHandler,
+  summarizeFeedback,
+} from "../server/spicetify-feedback-digest.js";
 import { downloadSpicetifyFeedback } from "../tools/spicetify-feedback-inbox.js";
 
 function validPayload() {
@@ -68,6 +80,7 @@ function response() {
 class MemoryStorage {
   constructor() {
     this.objects = new Map();
+    this.lists = [];
     this.puts = [];
     this.failPut = false;
   }
@@ -77,13 +90,42 @@ class MemoryStorage {
       error.name = "BlobNotFoundError";
       throw error;
     }
-    return { pathname };
+    const body = this.objects.get(pathname);
+    return {
+      pathname,
+      size: Buffer.byteLength(body),
+      contentType: "application/json",
+    };
   }
   async put(pathname, body, options) {
     if (this.failPut) throw new Error("offline");
     if (this.objects.has(pathname)) throw new Error("exists");
     this.objects.set(pathname, body);
     this.puts.push({ pathname, body, options });
+  }
+  async list(options) {
+    this.lists.push(options);
+    const blobs = [...this.objects.entries()]
+      .filter(([pathname]) => pathname.startsWith(options.prefix))
+      .map(([pathname, body]) => ({
+        pathname,
+        size: Buffer.byteLength(body),
+      }));
+    return { blobs, hasMore: false };
+  }
+  async get(pathname, options) {
+    assert.deepEqual(options, { access: "private", useCache: false });
+    const body = this.objects.get(pathname);
+    if (body === undefined) throw new Error("missing");
+    const size = Buffer.byteLength(body);
+    return {
+      statusCode: 200,
+      stream: Readable.from([Buffer.from(body)]),
+      blob: { pathname, size, contentType: "application/json" },
+    };
+  }
+  async del(pathname) {
+    this.objects.delete(pathname);
   }
 }
 
@@ -121,7 +163,13 @@ async function submit(
       request.emit("end");
     });
   }
-  await createFeedbackHandler(storage)(request, res);
+  const pending = [];
+  const handlerOptions = { ...(options.handlerOptions || {}) };
+  if (!handlerOptions.waitUntil) {
+    handlerOptions.waitUntil = (promise) => pending.push(promise);
+  }
+  await createFeedbackHandler(storage, handlerOptions)(request, res);
+  await Promise.all(pending);
   return { res, storage };
 }
 
@@ -132,7 +180,7 @@ test("stores a strict private record and returns only a receipt", async () => {
   assert.match(res.body.receipt_sha256, /^[a-f0-9]{64}$/);
   assert.equal(JSON.stringify(res.body).includes("url"), false);
   assert.equal(JSON.stringify(res.body).includes("note"), false);
-  assert.equal(storage.puts.length, 1);
+  assert.equal(storage.puts.length, 2);
   const put = storage.puts[0];
   assert.equal(
     put.pathname,
@@ -144,6 +192,13 @@ test("stores a strict private record and returns only a receipt", async () => {
     allowOverwrite: false,
     contentType: "application/json",
   });
+  assert.match(
+    storage.puts[1].pathname,
+    new RegExp(
+      `^${FEEDBACK_DIGEST_INPUT_PREFIX}` +
+        `\\d{4}-\\d{2}-\\d{2}/${res.body.receipt_sha256}\\.json$`,
+    ),
+  );
   const parsed = parseFeedbackStoredRecordBytes(put.body, put.pathname);
   assert.equal(parsed.digest, res.body.receipt_sha256);
   assert.equal(parsed.payload.note, validPayload().note);
@@ -359,7 +414,7 @@ test("accepts a Vercel-style replay without touching request.body", async () => 
     { replayed: true },
   );
   assert.equal(res.statusCode, 200);
-  assert.equal(storage.puts.length, 1);
+  assert.equal(storage.puts.length, 2);
 });
 
 test("shared ratings function dispatches feedback preflight", async () => {
@@ -374,6 +429,30 @@ test("shared ratings function dispatches feedback preflight", async () => {
   assert.equal(res.headers["Access-Control-Allow-Origin"], "*");
 });
 
+test("shared ratings function dispatches the daily digest route", async () => {
+  let called = false;
+  const dispatch = createDispatchHandler(
+    async () => {
+      throw new Error("legacy handler must not run");
+    },
+    {
+      "feedback-digest": async () => async (_request, response) => {
+        called = true;
+        return response.status(200).json({ ok: true });
+      },
+    },
+  );
+  const request = Readable.from([]);
+  request.method = "GET";
+  request.url = "/api/ratings?__soundalike_handler=feedback-digest";
+  request.headers = {};
+  const res = response();
+  await dispatch(request, res);
+  assert.equal(called, true);
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.body, { ok: true });
+});
+
 test("deduplicates deterministically without overwrite", async () => {
   const storage = new MemoryStorage();
   const first = await submit(validPayload(), storage);
@@ -384,7 +463,7 @@ test("deduplicates deterministically without overwrite", async () => {
     first.res.body.receipt_sha256,
     second.res.body.receipt_sha256,
   );
-  assert.equal(storage.puts.length, 1);
+  assert.equal(storage.puts.length, 2);
 
   const changed = validPayload();
   changed.note = "A different observation.";
@@ -393,7 +472,7 @@ test("deduplicates deterministically without overwrite", async () => {
     first.res.body.receipt_sha256,
     third.res.body.receipt_sha256,
   );
-  assert.equal(storage.puts.length, 2);
+  assert.equal(storage.puts.length, 4);
 });
 
 test("reports storage failure without leaking storage details", async () => {
@@ -402,6 +481,248 @@ test("reports storage failure without leaking storage details", async () => {
   const { res } = await submit(validPayload(), storage);
   assert.equal(res.statusCode, 503);
   assert.deepEqual(res.body, { error: "storage unavailable" });
+});
+
+test("notifies Discord once with a redacted summary after storage", async () => {
+  const storage = new MemoryStorage();
+  const messages = [];
+  const handlerOptions = {
+    sendDiscord: async (content) => {
+      messages.push(content);
+      return true;
+    },
+  };
+  const first = await submit(validPayload(), storage, { handlerOptions });
+  const retry = await submit(validPayload(), storage, { handlerOptions });
+  assert.equal(first.res.statusCode, 200);
+  assert.equal(retry.res.statusCode, 200);
+  assert.equal(messages.length, 1);
+  assert.match(messages[0], /New Soundalike feedback/);
+  assert.match(messages[0], /Rating: \*\*Mixed\*\*/);
+  assert.match(messages[0], /Blinding Lights - The Weeknd/);
+  assert.doesNotMatch(messages[0], /Close overall/);
+  assert.doesNotMatch(messages[0], /Take My Breath/);
+  assert.doesNotMatch(messages[0], /1111111111111111/);
+  assert.doesNotMatch(messages[0], /2222222222222222/);
+});
+
+test("keeps stored feedback successful when Discord is unavailable", async () => {
+  const messages = [];
+  const { res, storage } = await submit(validPayload(), new MemoryStorage(), {
+    handlerOptions: {
+      sendDiscord: async () => {
+        throw new Error("offline");
+      },
+      logger: {
+        error(message) {
+          messages.push(message);
+        },
+      },
+    },
+  });
+  assert.equal(res.statusCode, 200);
+  assert.equal(storage.puts.length, 2);
+  assert.deepEqual(messages, [
+    "Soundalike feedback Discord notification failed.",
+  ]);
+});
+
+test("Discord sender validates its URL and disables mentions and embeds", async () => {
+  const requests = [];
+  const sender = createDiscordWebhookSender({
+    webhookUrl:
+      "https://discord.com/api/webhooks/123456789012345678/" +
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMN",
+    fetchImpl: async (url, options) => {
+      requests.push({ url, options });
+      return { ok: true, status: 204 };
+    },
+  });
+
+  assert.equal(await sender("New feedback from @everyone"), true);
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].options.redirect, "error");
+  const body = JSON.parse(requests[0].options.body);
+  assert.deepEqual(body.allowed_mentions, { parse: [] });
+  assert.equal(body.flags, 4);
+  assert.equal(body.username, "Soundalike Feedback");
+  await assert.rejects(
+    createDiscordWebhookSender({
+      webhookUrl: "https://example.com/webhook",
+      fetchImpl: async () => ({ ok: true }),
+    })("test"),
+    /Invalid Discord webhook configuration/,
+  );
+});
+
+test("returns the feedback receipt before Discord delivery finishes", async () => {
+  let finish;
+  let pending;
+  const delivery = new Promise((resolve) => {
+    finish = resolve;
+  });
+  const result = await submit(validPayload(), new MemoryStorage(), {
+    handlerOptions: {
+      sendDiscord: async () => delivery,
+      waitUntil(promise) {
+        pending = promise;
+      },
+    },
+  });
+  assert.equal(result.res.statusCode, 200);
+  assert.ok(pending instanceof Promise);
+  finish(true);
+  await pending;
+});
+
+test("summarizes feedback without notes, nonces, or result lists", () => {
+  const mixed = validPayload();
+  const off = validPayload();
+  off.selection = "off";
+  off.reasons = ["style"];
+  const summary = summarizeFeedback("2026-09-01", [mixed, off]);
+  assert.equal(summary.total, 2);
+  assert.deepEqual(summary.selections, { good: 0, mixed: 1, off: 1 });
+  assert.equal(summary.reasons.mood_energy, 1);
+  assert.equal(summary.reasons.tempo, 1);
+  assert.equal(summary.reasons.style, 1);
+  const serialized = JSON.stringify(summary);
+  assert.doesNotMatch(serialized, /Close overall/);
+  assert.doesNotMatch(serialized, /Take My Breath/);
+  assert.doesNotMatch(serialized, /1111111111111111/);
+  assert.doesNotMatch(formatFeedbackDigest(summary), /Close overall/);
+});
+
+test("daily digest is authenticated, redacted, and processed once", async () => {
+  const storage = new MemoryStorage();
+  const recordTime = Date.UTC(2026, 8, 1, 12);
+  const digestTime = Date.UTC(2026, 8, 2, 15);
+  const mixed = validPayload();
+  const good = validPayload();
+  good.selection = "good";
+  good.reasons = [];
+  good.note = "";
+  const off = validPayload();
+  off.selection = "off";
+  off.reasons = ["style"];
+  for (const payload of [mixed, good, off]) {
+    await submit(payload, storage, {
+      handlerOptions: {
+        now: () => recordTime,
+        sendDiscord: async () => false,
+      },
+    });
+  }
+  const messages = [];
+  const handler = createFeedbackDigestHandler(storage, {
+    cronSecret: "test-cron-secret",
+    now: () => digestTime,
+    sendDiscord: async (content) => {
+      assert.equal(
+        storage.objects.has(
+          `${FEEDBACK_DIGEST_BLOB_PREFIX}2026-09-01.json`,
+        ),
+        true,
+      );
+      messages.push(content);
+      return true;
+    },
+  });
+  const request = {
+    method: "GET",
+    headers: { authorization: "Bearer test-cron-secret" },
+  };
+  const first = response();
+  await handler(request, first);
+  assert.equal(first.statusCode, 200);
+  assert.deepEqual(first.body, {
+    date: "2026-09-01",
+    record_count: 3,
+    sent: true,
+  });
+  assert.equal(messages.length, 1);
+  assert.deepEqual(storage.lists, [{
+    prefix: `${FEEDBACK_DIGEST_INPUT_PREFIX}2026-09-01/`,
+    limit: 1000,
+    cursor: undefined,
+  }]);
+  assert.match(messages[0], /Total: \*\*3\*\* \(Good 1, Mixed 1, Off 1\)/);
+  assert.doesNotMatch(messages[0], /Close overall/);
+  assert.doesNotMatch(messages[0], /Take My Breath/);
+  assert.doesNotMatch(messages[0], /1111111111111111/);
+  assert.equal(
+    storage.objects.has(
+      `${FEEDBACK_DIGEST_BLOB_PREFIX}2026-09-01.json`,
+    ),
+    true,
+  );
+  const retry = response();
+  await handler(request, retry);
+  assert.equal(retry.statusCode, 200);
+  assert.deepEqual(retry.body, {
+    date: "2026-09-01",
+    sent: false,
+    already_processed: true,
+  });
+  assert.equal(messages.length, 1);
+});
+
+test("daily digest rejects unauthorized calls before reading storage", async () => {
+  let listed = false;
+  const storage = {
+    async list() {
+      listed = true;
+      throw new Error("must not list");
+    },
+  };
+  const handler = createFeedbackDigestHandler(storage, {
+    cronSecret: "test-cron-secret",
+    sendDiscord: async () => true,
+  });
+  const res = response();
+  await handler(
+    { method: "GET", headers: { authorization: "Bearer wrong-secret" } },
+    res,
+  );
+  assert.equal(res.statusCode, 401);
+  assert.deepEqual(res.body, { error: "unauthorized" });
+  assert.equal(listed, false);
+});
+
+test("daily digest remains retryable when Discord delivery fails", async () => {
+  const storage = new MemoryStorage();
+  await submit(validPayload(), storage, {
+    handlerOptions: {
+      now: () => Date.UTC(2026, 8, 1, 12),
+      sendDiscord: async () => false,
+    },
+  });
+  const logs = [];
+  const handler = createFeedbackDigestHandler(storage, {
+    cronSecret: "test-cron-secret",
+    now: () => Date.UTC(2026, 8, 2, 15),
+    sendDiscord: async () => {
+      throw new Error("offline");
+    },
+    logger: { error: (message) => logs.push(message) },
+  });
+  const res = response();
+  await handler(
+    {
+      method: "GET",
+      headers: { authorization: "Bearer test-cron-secret" },
+    },
+    res,
+  );
+  assert.equal(res.statusCode, 502);
+  assert.deepEqual(res.body, { error: "digest failed" });
+  assert.deepEqual(logs, ["Soundalike feedback digest failed."]);
+  assert.equal(
+    storage.objects.has(
+      `${FEEDBACK_DIGEST_BLOB_PREFIX}2026-09-01.json`,
+    ),
+    false,
+  );
 });
 
 test("inbox validates private paths and bytes and only flags retention", async () => {
@@ -538,4 +859,15 @@ test("Vercel routes feedback through the shared bounded ratings function", () =>
     )?.destination,
     "/api/ratings?__soundalike_handler=spicetify-feedback",
   );
+  assert.deepEqual(config.functions["api/ratings.js"], { maxDuration: 60 });
+  assert.equal(config.functions["api/feedback-digest.js"], undefined);
+  assert.equal(
+    config.rewrites.find(
+      (rewrite) => rewrite.source === "/api/feedback-digest",
+    )?.destination,
+    "/api/ratings?__soundalike_handler=feedback-digest",
+  );
+  assert.deepEqual(config.crons, [
+    { path: "/api/feedback-digest", schedule: "0 15 * * *" },
+  ]);
 });

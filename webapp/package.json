@@ -18,6 +18,7 @@
     "feedback:inbox": "node tools/spicetify-feedback-inbox.js"
   },
   "dependencies": {
-    "@vercel/blob": "2.6.1"
+    "@vercel/blob": "2.6.1",
+    "@vercel/functions": "3.9.5"
   }
 }
