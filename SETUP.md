@@ -1,10 +1,10 @@
-# Setup guide — connecting your accounts
+# Setup guide: connecting your accounts
 
 The offline recommender (`soundalike similar` / `profile` / `stats`) needs **no setup**.
 This guide is only for the **live** features that use your real Spotify taste and the
 Last.fm similarity engine.
 
-Your secrets go in a local `.env` file, which is git-ignored — they never get committed.
+Your secrets go in a local `.env` file. Git ignores this file, so it is not committed.
 
 ```bash
 cp .env.example .env      # Windows PowerShell: Copy-Item .env.example .env
@@ -14,8 +14,8 @@ cp .env.example .env      # Windows PowerShell: Copy-Item .env.example .env
 
 ## 1. Spotify (required for `login`, `whoami`, `pull`, `recommend`)
 
-You need a free Spotify **app** to get a Client ID. This does **not** share your password —
-you'll approve access in your browser via OAuth.
+You need a free Spotify **app** to get a Client ID. This does **not** share your
+password. You approve access in your browser through OAuth.
 
 1. Go to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and log in.
 2. Click **Create app**.
@@ -27,7 +27,7 @@ you'll approve access in your browser via OAuth.
    - **Which API/SDKs are you planning to use?** check **Web API**.
    - Accept the terms and **Save**.
 3. Open the app's **Settings** and copy the **Client ID**.
-   (No Client Secret is needed — PKCE doesn't use one.)
+   (No Client Secret is needed because PKCE does not use one.)
 4. Put it in your `.env`:
    ```
    SPOTIFY_CLIENT_ID=paste_your_client_id_here
@@ -73,15 +73,15 @@ The Last.fm engine finds similar tracks for *any* song, not just the bundled dat
 
 ## Troubleshooting
 
-- **`Error: SPOTIFY_CLIENT_ID is not set`** — you haven't created `.env` or the value is blank.
-- **`INVALID_CLIENT: Invalid redirect URI`** — the redirect URI in the dashboard doesn't match
+- **`Error: SPOTIFY_CLIENT_ID is not set`:** you have not created `.env`, or the value is blank.
+- **`INVALID_CLIENT: Invalid redirect URI`:** the redirect URI in the dashboard does not match
   `SPOTIFY_REDIRECT_URI` exactly. Fix one to match the other.
-- **`Spotify API 403: Forbidden` when using `--playlist`** — your account isn't on the app's
+- **`Spotify API 403: Forbidden` when using `--playlist`:** your account is not on the app's
   allowlist. Open the app → **Settings → User Management** → add your Spotify account's name and
   email, then run `soundalike login` again. (Reading tracks works without this; only writes need it.)
-- **Browser opens but nothing happens** — make sure port `8888` is free, or change both the
+- **Browser opens but nothing happens:** make sure port `8888` is free, or change both the
   dashboard redirect URI and `.env` to another port (e.g. `http://127.0.0.1:9090/callback`).
-- **`recommend --engine content` finds few matches** — expected: the bundled dataset is ~855
+- **`recommend --engine content` finds few matches:** this is expected because the bundled dataset is ~855
   songs. Use `--engine lastfm` for full coverage.
-- **Re-authorize from scratch** — delete `~/.soundalike/spotify_token.json` and run
+- **Re-authorize from scratch:** delete `~/.soundalike/spotify_token.json` and run
   `soundalike login` again.

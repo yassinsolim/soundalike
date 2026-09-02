@@ -1,4 +1,4 @@
-# V3 similarity research — closed without promotion
+# V3 similarity research: closed without promotion
 
 V3 did not clear its final independent gate. The production and rollback path
 remains `dual_sonic64_guardrail`, and V2 remains archived at `/evaluate-v2`.

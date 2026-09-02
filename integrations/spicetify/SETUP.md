@@ -6,8 +6,8 @@ If you installed Soundalike from Marketplace, start with the
 [extension guide](README.md); normal use requires none of the setup below.
 
 Add a **“Find soundalikes”** item to the right-click menu of any track in the
-Spotify desktop app. Select it and a page shows songs that genuinely *sound*
-like the selected track — powered by precomputed audio embeddings, not tags.
+Spotify desktop app. Select it to open a page of songs that sound like the
+selected track. Results come from precomputed audio embeddings rather than tags.
 Double-click a verified result or use its left-side play button to play it
 immediately. Right-click it to find soundalikes again or use Spotify's native
 playlist, queue, radio, artist, album, credits, and sharing actions.
@@ -59,20 +59,19 @@ local server.
 
 ---
 
-## Option A — the web app (zero client patching)
+## Option A: the web app (no client patching)
 
 Open <https://soundalike.yassin.app> for the no-install hosted app. If you
 prepared the optional local companion, `soundalike serve` instead opens the
 local app at <http://127.0.0.1:8787>.
 
-Then either type `Title — Artist`, or — the frictionless way — in Spotify
-**right-click a song → Share → Copy Song Link** and paste it. You get instant
-soundalikes with an “Open in Spotify” button on each. This works with the
-Microsoft-Store build of Spotify too.
+Type `Title - Artist`, or use Spotify to **right-click a song → Share → Copy
+Song Link** and paste it. Each result has an **Open in Spotify** button. This
+also works with the Microsoft Store build of Spotify.
 
 ---
 
-## Option B — Spicetify (true in-app right-click)
+## Option B: Spicetify (in-app right-click)
 
 Spicetify patches the Spotify **desktop** client to add custom menu items.
 Windows users need standalone Spotify from <https://www.spotify.com/download>;

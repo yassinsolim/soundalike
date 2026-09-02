@@ -1,4 +1,4 @@
-# Deploying soundalike as a hosted web app (Vercel)
+# Deploying Soundalike as a hosted web app (Vercel)
 
 This directory is a **self-contained Vercel deployment**: a static frontend,
 small Python recommendation functions, and one Node ratings-ingest function. The
@@ -14,10 +14,11 @@ can host it on a subdomain like
 
 ---
 
-## Can this really run on Vercel? (the honest version)
+## Vercel limits
 
-**The full model can't** — embedding an *arbitrary* song needs PyTorch (~2.9 GB),
-which is ~12× over Vercel's 250 MB serverless limit. **But it doesn't need to.**
+**The full model cannot run there.** Embedding an *arbitrary* song needs PyTorch
+(~2.9 GB), which is about 12 times over Vercel's 250 MB serverless limit. The
+hosted catalog does not need to embed songs during a request.
 
 Every song in the 272,853-row release already has precomputed neural, vibe,
 EfficientNet PCA64, and CLAP PCA64 embeddings. Ranking is pure numpy (whiten →
@@ -27,13 +28,14 @@ the desktop recommender so results are **byte-identical**.
 
 | | Hosted (Vercel) | Desktop (`soundalike serve`) |
 |---|---|---|
-| Recommend from a library song (272,853) | ✅ numpy | ✅ |
-| Recommend from *any* song (on-the-fly neural embedding) | ❌ needs torch | ✅ |
-| Save to Spotify playlist | ✅ (browser → Spotify) | ✅ |
+| Recommend from a library song (272,853) | Yes, with numpy | Yes |
+| Recommend from *any* song (on-the-fly neural embedding) | No, needs PyTorch | Yes |
+| Save to Spotify playlist | Yes, through the browser | Yes |
 | Cost / maintenance | free, serverless | your machine |
 
-So: **host the library demo on Vercel; keep the desktop app for arbitrary songs.**
-The release catalogue contains 272,853 songs; misses are reported honestly.
+Vercel hosts the catalog app, while the desktop app handles arbitrary songs.
+The release catalog contains 272,853 songs and reports tracks outside that
+catalog as missing.
 
 ---
 
@@ -128,7 +130,7 @@ available for compatibility but is not the normal interactive path.
 
 ```
 webapp/
-  index.html          # the whole UI (static) — search, results, Spotify login, save
+  index.html          # the whole static UI: search, results, Spotify login, save
   search.js           # abortable autocomplete, prefix reuse, and idle prewarming
   build_search_catalog.py
   api/
@@ -189,11 +191,12 @@ count together in `api/_search.py`. Custom catalogs may instead set both
 3. Deploy. You'll get `https://<project>.vercel.app`.
 4. **Custom domain:** Project → Settings → Domains → add `soundalike.yassin.app`
    (Vercel shows the CNAME to add at your DNS provider). Your existing
-   `yassin.app` / `os.yassin.app` / `strafe.yassin.app` projects are untouched —
+   `yassin.app` / `os.yassin.app` / `strafe.yassin.app` projects are untouched;
    this is just another subdomain pointing at a different project.
 
-That's the whole recommendation app. **No Spotify setup is needed** for search +
-recommendations — only for the optional "Save as playlist".
+That is the complete recommendation app. **No Spotify setup is needed** for
+search and recommendations. Spotify setup is only needed for the optional
+"Save as playlist" feature.
 
 ## Private ratings inboxes
 
@@ -208,7 +211,7 @@ excerpts. The excerpt is a recurrence heuristic, not a verified chorus classifie
 Tasks prioritize disagreements among three frozen methods without using current
 submitted ratings, include two repeated anchors, and allow adaptive stopping after 12
 unique comparisons. All 80 unique study tracks have distinct artists, and every
-track and artist exposed by earlier evaluator packs—including V5—is excluded.
+track and artist exposed by earlier evaluator packs, including V5, is excluded.
 The consumed, inconclusive V5 application is byte-preserved at `/evaluate-v5`
 with its original `soundalike-strict-v5-ranking-v1` state, `/api/ratings-v5`
 receipt behavior, and private analysis namespace. Strict V4 is preserved at
@@ -224,10 +227,11 @@ eight pages scans, migrates, or deletes another study's state.
 
 All evaluators submit only after the listener checks the consent box and presses
 the explicit submit button. Neither submits on autosave, page unload, playback,
-or export. JSON export/import remains a manual fallback. In V4, V5, and V6, attribution appears
-only after a complete A–D ranking is saved or the task is skipped. For pacing V3, attribution and
+or export. JSON export/import remains a manual fallback. In V4, V5, and V6,
+attribution appears only after a complete A-to-D ranking is saved or the task
+is skipped. For pacing V3, attribution and
 license links appear only after the list's overall
-0–10 score and all five required result scores are complete. Optional mismatch reasons
+0 to 10 score and all five required result scores are complete. Optional mismatch reasons
 use a closed enum and no free text. Public packs contain no method identity or private
 unblinding document. V5 and V6 classify three separate positions for every plausible vocal
 reserve track, requires all three decisions to agree, rejects vocal/instrumental
@@ -387,15 +391,14 @@ validation.
 
 ---
 
-## The "log in with Spotify, without giving us your password" part
+## Spotify OAuth flow
 
-Your instinct was exactly right — and it's a standard, safe flow called **OAuth
-2.0 Authorization Code + PKCE**. Here's what actually happens when someone clicks
+This uses **OAuth 2.0 Authorization Code + PKCE**. When someone clicks
 **Log in with Spotify**:
 
 1. We send them to **accounts.spotify.com** (Spotify's own site).
 2. If they're **already logged in** on spotify.com, Spotify just shows a small
-   *"soundalike wants to create playlists — Agree?"* screen. If they're **not**,
+   *"Soundalike wants to create playlists. Agree?"* screen. If they are **not**,
    Spotify shows its own login page first.
 3. They approve **on Spotify's site** and get redirected back to us with a
    one-time `code`, which the browser exchanges for a scoped **access token**.
@@ -403,12 +406,11 @@ Your instinct was exactly right — and it's a standard, safe flow called **OAut
    touches our server (the frontend is static; there's no server to touch). Vercel
    never sees it.
 
-**The user never gives us their password.** Credentials only ever go to Spotify;
-we only ever receive a token limited to `playlist-modify-*`. That's the whole
-point of OAuth, and it's what "Login with Spotify" buttons everywhere do.
+**The user never gives Soundalike their password.** Credentials only go to
+Spotify. The browser receives a token limited to `playlist-modify-*`.
 
-Because it's PKCE (a *public* client), there is **no client secret** — nothing
-secret ships in the frontend. A Spotify **Client ID is not a secret** (it's
+Because it uses PKCE (a *public* client), there is **no client secret**. No
+secret is included in the frontend. A Spotify **Client ID is not a secret** (it is
 visible in the OAuth URL by design).
 
 ### Enabling it
@@ -421,33 +423,33 @@ visible in the OAuth URL by design).
    ```js
    const SPOTIFY_CLIENT_ID = "your_client_id_here";
    ```
-   (Safe to commit — it's public. Leave it empty to ship a recommend-only demo
+   (The Client ID is public and safe to commit. Leave it empty to ship a recommendation-only demo
    with no login.)
 
-### The one real limitation (be aware)
+### Spotify Development Mode limits
 Spotify apps start in **Development Mode**, which only lets **up to 5 Spotify
 accounts that you manually add** (Dashboard → *User Management*) log in and save
-playlists. This is why the desktop "Save playlist" returned 403 earlier — your own
+playlists. This is why the desktop "Save playlist" returned 403 earlier: your own
 account just needs to be added there.
 
 For the *general public* to log in and save, Spotify requires **Extended Quota
-Mode** — and **as of May 15 2025 they only accept applications from organizations,
+Mode**. **As of May 15, 2025, Spotify only accepts applications from organizations,
 not individuals** (a registered business, a launched service with ≥250k monthly
 active users, applied via a company email, ~6-week review). For a personal project
 that's effectively unavailable. So realistically:
 
-- **Recommendations: truly public** (no login, works for everyone). ✅
+- **Recommendations:** public, with no login required.
 - **One-click Save-to-playlist: you + up to 4 accounts you allowlist** (5 total).
   Public one-click save isn't attainable for a solo dev under Spotify's policy.
 - **Everyone else** gets a no-login **"Copy list"** button (paste into a new Spotify
-  playlist) and an **Open in Spotify** link on every result. ✅
+  playlist) and an **Open in Spotify** link on every result.
 
 If you want *any* visitor to get a real playlist without logging in, the only route
 is an **owner-account model**: store your own refresh token as a server-side secret
 and have a serverless function create public playlists in your account, returning a
 shareable link. It sidesteps the 5-user cap (visitors are listeners, not API users)
-but every playlist lives under your account — a deliberate tradeoff, not enabled by
-default.
+but every playlist lives under your account. Soundalike does not enable this
+behavior by default.
 
 ---
 
