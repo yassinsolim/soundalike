@@ -21,11 +21,15 @@ export const MAX_FEEDBACK_BODY_BYTES = 32 * 1024;
 export const MAX_FEEDBACK_STORED_BYTES = 40 * 1024;
 
 const SURVEY_VERSION = "spicetify-match-feedback-v1";
+const MOBILE_SELECTION_POLICY = "mobile-top-20-model-quality-v1";
 const SELECTION_POLICIES = new Set([
   "top-20-strict-language-related-artist-v1",
   "top-20-strict-language-related-artist-model-quality-v1",
+  MOBILE_SELECTION_POLICY,
 ]);
 const LANGUAGE_POLICY = "spotify-lyrics-strict-v2";
+const MOBILE_LANGUAGE_POLICY = "none";
+const LANGUAGE_POLICIES = new Set([LANGUAGE_POLICY, MOBILE_LANGUAGE_POLICY]);
 const HEX_32 = /^[a-f0-9]{32}$/;
 const INDEX_VERSION = /^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/;
 const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
@@ -38,7 +42,7 @@ const METHODS = new Set([
   "unknown",
 ]);
 const API_VERSIONS = new Set(["4", "legacy", "local", "unknown"]);
-const SOURCES = new Set(["hosted", "local"]);
+const SOURCES = new Set(["hosted", "local", "mobile"]);
 const SELECTIONS = new Set(["good", "mixed", "off"]);
 const REASONS = new Set([
   "style",
@@ -137,9 +141,13 @@ export function validateFeedbackPayload(value) {
     typeof value.index_version !== "string" ||
     !INDEX_VERSION.test(value.index_version) ||
     !API_VERSIONS.has(value.api_version) ||
-    value.language_policy !== LANGUAGE_POLICY ||
+    !LANGUAGE_POLICIES.has(value.language_policy) ||
     !SELECTION_POLICIES.has(value.selection_policy) ||
     !SOURCES.has(value.source) ||
+    (value.source === "mobile") !==
+      (value.language_policy === MOBILE_LANGUAGE_POLICY) ||
+    (value.source === "mobile") !==
+      (value.selection_policy === MOBILE_SELECTION_POLICY) ||
     (value.source === "local") !== (value.api_version === "local") ||
     !SELECTIONS.has(value.selection) ||
     !hasExactKeys(value.seed, TRACK_KEYS)
@@ -199,7 +207,7 @@ export function validateFeedbackPayload(value) {
     method: value.method,
     index_version: value.index_version,
     api_version: value.api_version,
-    language_policy: LANGUAGE_POLICY,
+    language_policy: value.language_policy,
     selection_policy: value.selection_policy,
     source: value.source,
     selection: value.selection,

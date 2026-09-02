@@ -21,6 +21,7 @@ import {
   MAX_FEEDBACK_STORED_BYTES,
   createFeedbackHandler,
   parseFeedbackStoredRecordBytes,
+  validateFeedbackPayload,
 } from "../server/spicetify-feedback.js";
 import {
   FEEDBACK_DIGEST_BLOB_PREFIX,
@@ -55,6 +56,42 @@ function validPayload() {
 function clone(value) {
   return structuredClone(value);
 }
+
+function mobilePayload() {
+  const payload = validPayload();
+  payload.source = "mobile";
+  payload.language_policy = "none";
+  payload.selection_policy = "mobile-top-20-model-quality-v1";
+  return payload;
+}
+
+test("accepts mobile feedback with its own language and selection policy", () => {
+  const accepted = validateFeedbackPayload(mobilePayload());
+  assert.notEqual(accepted, null);
+  assert.equal(accepted.source, "mobile");
+  assert.equal(accepted.language_policy, "none");
+  assert.equal(accepted.selection_policy, "mobile-top-20-model-quality-v1");
+});
+
+test("rejects mobile and desktop policy fields crossing over", () => {
+  const mobileWithDesktopLanguage = mobilePayload();
+  mobileWithDesktopLanguage.language_policy = "spotify-lyrics-strict-v2";
+  assert.equal(validateFeedbackPayload(mobileWithDesktopLanguage), null);
+
+  const mobileWithDesktopSelection = mobilePayload();
+  mobileWithDesktopSelection.selection_policy =
+    "top-20-strict-language-related-artist-v1";
+  assert.equal(validateFeedbackPayload(mobileWithDesktopSelection), null);
+
+  const desktopClaimingNoLanguage = validPayload();
+  desktopClaimingNoLanguage.language_policy = "none";
+  assert.equal(validateFeedbackPayload(desktopClaimingNoLanguage), null);
+
+  const desktopWithMobileSelection = validPayload();
+  desktopWithMobileSelection.selection_policy =
+    "mobile-top-20-model-quality-v1";
+  assert.equal(validateFeedbackPayload(desktopWithMobileSelection), null);
+});
 
 function response() {
   return {
