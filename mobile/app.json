@@ -9,13 +9,17 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0b0b0d",
     "primaryColor": "#1db954",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.yassin.soundalike",
       "buildNumber": "1",
       "infoPlist": {
-        "LSApplicationQueriesSchemes": ["spotify"],
+        "LSApplicationQueriesSchemes": [
+          "spotify"
+        ],
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -43,10 +47,20 @@
             "NSExtensionActivationSupportsWebPageWithMaxCount": 1,
             "NSExtensionActivationSupportsText": true
           },
-          "androidIntentFilters": ["text/*"]
+          "androidIntentFilters": [
+            "text/*"
+          ]
         }
       ],
-      "expo-image"
+      "expo-image",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0b0b0d",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180
+        }
+      ]
     ]
   }
 }
