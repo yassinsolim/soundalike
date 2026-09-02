@@ -62,6 +62,20 @@ password.
 
 ![Soundalike web app](docs/soundalike-results.png)
 
+### On a phone
+
+Spotify does not allow anything to modify its mobile apps, so there is no mobile
+equivalent of the Spicetify extension. There is a companion app instead. You
+share a track from Spotify, pick Soundalike, and get the same twenty matches.
+Tapping a result opens it back in Spotify.
+
+It does not ask you to sign in and it has no Spotify credentials in it. It reads
+the public page for the track you shared and searches the same catalog as the
+website.
+
+The app is not on the App Store or Google Play yet. To build and run it now, see
+the [mobile guide](mobile/README.md).
+
 ### As a local app or command-line tool
 
 Clone the repository and create a virtual environment:
@@ -161,6 +175,12 @@ Good/Mixed/Off selection, seed title and artist, selected reasons, number of
 displayed results, and a short receipt. Optional notes, anonymous nonces, and
 the displayed result list are not sent to Discord.
 
+The mobile companion app has no Spotify sign-in at all. When you share a track
+it reads that track's public Spotify page for the title, artist, and cover, then
+sends only the title and artist to the recommendation service. It does not read
+your library, history, or playlists. Its feedback survey follows the same rules
+as the extension.
+
 ## How recommendations are built
 
 The production ranker uses two compact audio representations:
@@ -254,6 +274,13 @@ npm --prefix webapp install
 npm --prefix webapp test
 ```
 
+Run the mobile tests:
+
+```bash
+npm --prefix mobile install
+npm --prefix mobile test
+```
+
 Keep changes focused and add tests for behavior changes. For a large feature or
 ranking experiment, open an issue first so the approach and evaluation plan can
 be discussed before implementation.
@@ -264,6 +291,7 @@ The main directories are:
 src/soundalike/          Python package, CLI, audio tools, and ranking code
 webapp/                  Hosted app, API handlers, evaluator, and Node tests
 integrations/spicetify/  Spotify extension, signed updater, and setup guides
+mobile/                  iOS and Android companion app
 deploy/homelab/          Always-on service, monitoring, deployment, and rollback
 benchmarks/              Frozen evaluation inputs
 docs/                    Research notes, results, and the case study
