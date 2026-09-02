@@ -241,7 +241,7 @@ test("preserves byte-locked v17 assets and isolates routes and state", () => {
   );
   assert.equal(routes["/evaluate-v2"], "/evaluate-v2/index.html");
   assert.equal(routes["/evaluate-v1"], "/evaluate-v1/index.html");
-  assert.equal(config.functions["api/ratings.js"].maxDuration, 15);
+  assert.equal(config.functions["api/ratings.js"].maxDuration, 60);
   assert.equal(config.functions["api/ratings-v2.js"].maxDuration, 15);
 });
 
