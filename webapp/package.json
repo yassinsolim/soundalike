@@ -2,6 +2,9 @@
   "name": "soundalike-webapp",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "test": "node --test",
     "ratings:inbox": "node tools/ratings-inbox.js",
@@ -18,6 +21,7 @@
     "feedback:inbox": "node tools/spicetify-feedback-inbox.js"
   },
   "dependencies": {
-    "@vercel/blob": "2.6.1"
+    "@vercel/blob": "2.6.1",
+    "@vercel/functions": "3.9.5"
   }
 }

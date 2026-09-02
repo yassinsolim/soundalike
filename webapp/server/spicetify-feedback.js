@@ -1,14 +1,22 @@
 import {
   BlobNotFoundError,
+  get as blobGet,
   head as blobHead,
   put as blobPut,
 } from "@vercel/blob";
+import { waitUntil as vercelWaitUntil } from "@vercel/functions";
 import { createHash } from "node:crypto";
 import { TextDecoder } from "node:util";
 
 import { canonical, strictJsonParse } from "../api/ratings.js";
+import {
+  createDiscordWebhookSender,
+  formatFeedbackNotification,
+} from "./discord-feedback.js";
 
 export const FEEDBACK_BLOB_PREFIX = "spicetify-feedback/match-quality-v1/";
+export const FEEDBACK_DIGEST_INPUT_PREFIX =
+  "spicetify-feedback/digest-input-v1/";
 export const MAX_FEEDBACK_BODY_BYTES = 32 * 1024;
 export const MAX_FEEDBACK_STORED_BYTES = 40 * 1024;
 
@@ -357,7 +365,7 @@ async function exists(storage, pathname) {
 }
 
 async function persist(storage, pathname, body) {
-  if (await exists(storage, pathname)) return;
+  if (await exists(storage, pathname)) return false;
   try {
     await storage.put(pathname, body, {
       access: "private",
@@ -365,15 +373,67 @@ async function persist(storage, pathname, body) {
       allowOverwrite: false,
       contentType: "application/json",
     });
+    return true;
   } catch (error) {
-    if (await exists(storage, pathname)) return;
+    if (await exists(storage, pathname)) return false;
     throw new Error("storage unavailable", { cause: error });
   }
 }
 
+async function readPersisted(storage, pathname) {
+  const result = await storage.get(pathname, {
+    access: "private",
+    useCache: false,
+  });
+  if (
+    !result ||
+    result.statusCode !== 200 ||
+    !result.stream ||
+    result.blob?.pathname !== pathname ||
+    !Number.isInteger(result.blob?.size) ||
+    result.blob.size < 2 ||
+    result.blob.size > MAX_FEEDBACK_STORED_BYTES ||
+    result.blob?.contentType !== "application/json"
+  ) {
+    throw new Error("A private feedback object could not be downloaded");
+  }
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of result.stream) {
+    const bytes = Buffer.from(chunk);
+    size += bytes.length;
+    if (size > MAX_FEEDBACK_STORED_BYTES) {
+      throw new Error("A private feedback object exceeds the expected size");
+    }
+    chunks.push(bytes);
+  }
+  const body = Buffer.concat(chunks);
+  if (body.length !== result.blob.size) {
+    throw new Error("A private feedback object changed during download");
+  }
+  return parseFeedbackStoredRecordBytes(body, pathname);
+}
+
+async function persistDigestInput(storage, stored, pathname, receiptHash) {
+  const date = stored.received_at.slice(0, 10);
+  const indexPath =
+    `${FEEDBACK_DIGEST_INPUT_PREFIX}${date}/${receiptHash}.json`;
+  const index = {
+    date,
+    record_path: pathname,
+    schema_version: 1,
+  };
+  return persist(storage, indexPath, `${canonical(index)}\n`);
+}
+
 export function createFeedbackHandler(
-  storage = { head: blobHead, put: blobPut },
+  storage = { get: blobGet, head: blobHead, put: blobPut },
+  options = {},
 ) {
+  const sendDiscord = options.sendDiscord ?? createDiscordWebhookSender();
+  const logger = options.logger ?? console;
+  const now = options.now ?? (() => Date.now());
+  const waitUntil = options.waitUntil ?? vercelWaitUntil;
   return async function spicetifyFeedbackHandler(request, response) {
     if (request.method === "OPTIONS") return sendEmpty(response, 204);
     if (request.method !== "POST") {
@@ -408,16 +468,49 @@ export function createFeedbackHandler(
     const pathname = `${FEEDBACK_BLOB_PREFIX}${receiptHash}.json`;
     const stored = {
       ...accepted,
-      received_at: new Date().toISOString(),
+      received_at: new Date(now()).toISOString(),
       canonical_payload_sha256: receiptHash,
     };
     if (!validateFeedbackStoredRecord(stored, pathname)) {
       return send(response, 500, { error: "internal validation failed" });
     }
+    let created;
+    let indexed;
     try {
-      await persist(storage, pathname, `${canonical(stored)}\n`);
+      created = await persist(storage, pathname, `${canonical(stored)}\n`);
+      const persisted = created
+        ? { document: stored }
+        : await readPersisted(storage, pathname);
+      indexed = await persistDigestInput(
+        storage,
+        persisted.document,
+        pathname,
+        receiptHash,
+      );
     } catch {
       return send(response, 503, { error: "storage unavailable" });
+    }
+    if (created || indexed) {
+      const notification = (async () => {
+        try {
+          await sendDiscord(
+            formatFeedbackNotification({
+              selection: accepted.selection,
+              reasons: [...accepted.reasons],
+              seed: { ...accepted.seed },
+              result_count: accepted.displayed_results.length,
+              receipt: receiptHash.slice(0, 12),
+            }),
+          );
+        } catch {
+          logger.error("Soundalike feedback Discord notification failed.");
+        }
+      })();
+      try {
+        waitUntil(notification);
+      } catch {
+        logger.error("Soundalike feedback notification scheduling failed.");
+      }
     }
     return send(response, 200, { receipt_sha256: receiptHash });
   };
