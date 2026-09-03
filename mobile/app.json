@@ -40,7 +40,7 @@
       [
         "expo-share-intent",
         {
-          "iosShareExtensionName": "Soundalike",
+          "iosShareExtensionName": "Soundalike Share",
           "iosActivationRules": {
             "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
             "NSExtensionActivationSupportsWebPageWithMaxCount": 1,
@@ -68,7 +68,7 @@
             "ios": {
               "appExtensions": [
                 {
-                  "targetName": "Soundalike",
+                  "targetName": "SoundalikeShare",
                   "bundleIdentifier": "app.yassin.soundalike.share-extension",
                   "entitlements": {
                     "com.apple.security.application-groups": [
