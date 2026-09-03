@@ -1,0 +1,33 @@
+# EAS uploads the whole repository, not just the app folder, but the only thing
+# it ever builds is mobile/. Everything else is left out so a build does not
+# carry the 71 MB audio index and the 12 MB model checkpoint that the app never
+# reads. Without this an upload is about 182 MB instead of under one.
+#
+# This file replaces .gitignore for EAS uploads, so anything that must stay out
+# of a build has to be listed here too.
+#
+# The negation below has no trailing slash on purpose. Written as "!mobile/",
+# the bare path "mobile" stays ignored, EAS prunes the directory before it ever
+# looks inside, and the upload comes out empty.
+
+/*
+!/mobile
+
+# Installed and generated folders inside the app.
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+mobile/ios/
+mobile/android/
+
+# Signing material and secrets, in case any ever lands in the app folder.
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+.env
+.env.local
+*.env.local
