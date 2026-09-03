@@ -2,6 +2,7 @@
   "expo": {
     "name": "Soundalike",
     "slug": "soundalike",
+    "owner": "yassinsolim",
     "scheme": "soundalike",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -15,7 +16,6 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.yassin.soundalike",
-      "buildNumber": "1",
       "infoPlist": {
         "LSApplicationQueriesSchemes": [
           "spotify"
@@ -25,7 +25,6 @@
     },
     "android": {
       "package": "app.yassin.soundalike",
-      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#0b0b0d",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -41,7 +40,7 @@
       [
         "expo-share-intent",
         {
-          "iosShareExtensionName": "Soundalike",
+          "iosShareExtensionName": "Soundalike Share",
           "iosActivationRules": {
             "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
             "NSExtensionActivationSupportsWebPageWithMaxCount": 1,
@@ -61,6 +60,28 @@
           "imageWidth": 180
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "build": {
+          "experimental": {
+            "ios": {
+              "appExtensions": [
+                {
+                  "targetName": "SoundalikeShare",
+                  "bundleIdentifier": "app.yassin.soundalike.share-extension",
+                  "entitlements": {
+                    "com.apple.security.application-groups": [
+                      "group.app.yassin.soundalike"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "projectId": "49a6dbd9-1110-4a0a-9279-ee337e6820bc"
+      }
+    }
   }
 }

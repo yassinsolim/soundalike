@@ -108,6 +108,11 @@ placeholder Apple and Google identifiers in `eas.json` first.
 Do not commit the `ios/` and `android/` folders. They are generated, they are
 already ignored, and EAS recreates them on every build.
 
+The `.easignore` at the repository root matters here. EAS uploads the whole
+repository, not just this folder, and the repository carries a 71 MB audio index
+and a 12 MB model checkpoint that the app never reads. Without that file every
+build uploads about 182 MB instead of a couple of megabytes.
+
 ## How a shared link becomes results
 
 1. The share text is scanned for a Spotify track id. Short `spotify.link` URLs
