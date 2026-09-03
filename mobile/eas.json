@@ -19,6 +19,12 @@
         "simulator": false
       }
     },
+    "simulator": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      }
+    },
     "production": {
       "distribution": "store",
       "channel": "production",
