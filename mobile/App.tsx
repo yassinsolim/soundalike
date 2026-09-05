@@ -32,7 +32,7 @@ const SHARE_INTENT_DISABLED =
 type Screen =
   | { name: "search" }
   | { name: "choose"; shared: SharedTrack; matches: CatalogTrack[] }
-  | { name: "results"; set: RecommendationSet; artworkUrl?: string };
+  | { name: "results"; set: RecommendationSet; artworkUrl?: string; runId: number };
 
 function Soundalike() {
   const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntentContext();
@@ -40,6 +40,7 @@ function Soundalike() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const work = useRef<AbortController | null>(null);
+  const runs = useRef(0);
 
   useEffect(() => () => work.current?.abort(), []);
 
@@ -52,7 +53,10 @@ function Soundalike() {
       setBusy("Finding soundalikes");
       try {
         const set = await fetchRecommendations(track.title, track.artist, next.signal);
-        if (!next.signal.aborted) setScreen({ name: "results", set, artworkUrl });
+        if (!next.signal.aborted) {
+          runs.current += 1;
+          setScreen({ name: "results", set, artworkUrl, runId: runs.current });
+        }
       } catch (caught) {
         if (next.signal.aborted) return;
         setError(
@@ -152,6 +156,7 @@ function Soundalike() {
 
         {screen.name === "results" ? (
           <ResultsScreen
+            key={screen.runId}
             set={screen.set}
             seedArtworkUrl={screen.artworkUrl}
             onBack={goBack}

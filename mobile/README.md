@@ -162,6 +162,42 @@ Steps 1 through 3 are the part most likely to need attention over time, since
 they depend on pages Spotify controls. They live in `src/lib/resolve.ts` and are
 covered by tests.
 
+## Known limitations
+
+**Tapping a result needs the Spotify app.** Results come from the Soundalike
+catalog, which has no Spotify track ids in it, so the app opens a Spotify search
+for the title and artist rather than a direct link. With Spotify installed that
+lands in the app and works. Without it, the fallback is the web player, and a
+logged out web player ignores the search entirely and shows its generic landing
+page. Getting real track links would mean asking every listener to sign in to
+Spotify, which is the one thing this app is built to avoid.
+
+**The share sheet says "Soundalike", not "Soundalike Share".** The extension
+sets its own display name, but recent iOS shows the containing app's name
+instead. That is the better label anyway, so it is left alone. Worth knowing if
+you are testing and looking for the longer string.
+
+## Testing on a simulator
+
+An iOS simulator build needs no Apple account and no signing:
+
+```bash
+npx eas-cli build --platform ios --profile simulator
+```
+
+Download the resulting archive, then:
+
+```bash
+tar -xzf <archive>.tar.gz
+open -a Simulator
+xcrun simctl install booted Soundalike.app
+xcrun simctl launch booted app.yassin.soundalike
+```
+
+Spotify is not installed on a simulator, so open a Spotify link in Safari and
+share from there. On recent iOS the share button lives inside Safari's "..."
+menu rather than the toolbar.
+
 ## Layout
 
 ```
