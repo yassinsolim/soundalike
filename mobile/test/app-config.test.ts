@@ -28,10 +28,16 @@ type AppExtension = {
 
 const expo = appConfig.expo as unknown as {
   name: string;
+  slug: string;
   ios: { bundleIdentifier: string };
   plugins: unknown[];
+  updates?: { url?: string };
+  runtimeVersion?: { policy?: string };
   extra: {
-    eas: { build: { experimental: { ios: { appExtensions: AppExtension[] } } } };
+    eas: {
+      projectId: string;
+      build: { experimental: { ios: { appExtensions: AppExtension[] } } };
+    };
   };
 };
 
@@ -76,5 +82,28 @@ describe("share extension config", () => {
     expect(rules.NSExtensionActivationSupportsWebURLWithMaxCount).toBe(1);
     expect(rules.NSExtensionActivationSupportsWebPageWithMaxCount).toBe(1);
     expect(rules.NSExtensionActivationSupportsText).toBe(true);
+  });
+});
+
+/**
+ * Over-the-air updates replace the JavaScript in an installed app without a
+ * store release, so a bad configuration here is not a build failure, it is a
+ * crash on launch for people who already installed the app.
+ *
+ * The runtime version policy is the guard against that. Under the "appVersion"
+ * policy a runtime version is just the version string, so adding a native
+ * module without remembering to bump the version would let an update reach a
+ * binary whose native code cannot run it. The "fingerprint" policy derives the
+ * runtime version from the native project itself, including every autolinked
+ * module and every config plugin, so an incompatible update cannot be
+ * delivered at all.
+ */
+describe("over the air update config", () => {
+  test("updates point at this project and nowhere else", () => {
+    expect(expo.updates?.url).toBe(`https://u.expo.dev/${expo.extra.eas.projectId}`);
+  });
+
+  test("the runtime version is derived from the native project", () => {
+    expect(expo.runtimeVersion?.policy).toBe("fingerprint");
   });
 });

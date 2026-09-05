@@ -31,6 +31,38 @@ recommendation service for matches.
 - It does not know who you are. Feedback is anonymous and carries only the seed
   track, the results you were shown, and the reasons you picked.
 
+## Updates
+
+The app can update its own JavaScript without going through a store release, so
+a bad match or a broken screen can be fixed in minutes instead of waiting days
+for review. This uses EAS Update, which is run by Expo.
+
+On launch the app asks Expo whether a newer bundle exists. That request carries
+the platform it is running on, a runtime version, and the IP address any web
+request would carry. It does not carry an account, a device identifier, or
+anything about what you have been listening to. Nothing is uploaded.
+
+The check happens in the background and never blocks startup. If an update is
+found it is downloaded quietly and applied the next time the app is opened, so
+a slow or missing network just means you keep running the version you already
+have.
+
+The runtime version uses the `fingerprint` policy, which derives it from the
+native project itself, including every autolinked module and config plugin. A
+JavaScript update can only reach a build whose native code actually matches it,
+so adding a native dependency cannot accidentally push a bundle that crashes on
+launch for people who already installed the app.
+
+To publish one:
+
+```bash
+npx eas-cli update --branch preview --message "what changed"
+```
+
+Only JavaScript and assets can be shipped this way. Anything that changes native
+code, which includes adding a dependency or touching the share extension, needs
+a new build.
+
 ## Running it locally
 
 You need Node 20 or newer.

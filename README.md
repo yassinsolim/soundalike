@@ -181,6 +181,13 @@ sends only the title and artist to the recommendation service. It does not read
 your library, history, or playlists. Its feedback survey follows the same rules
 as the extension.
 
+The mobile app can also update its own JavaScript without a store release, so
+fixes can ship in minutes rather than days. That check runs in the background at
+launch, goes to Expo's update service, and carries the platform, a runtime
+version, and the IP address any web request would carry. It does not carry an
+account, a device identifier, or anything about your listening. Details are in
+the [mobile guide](mobile/README.md).
+
 ## How recommendations are built
 
 The production ranker uses two compact audio representations:

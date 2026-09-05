@@ -18,6 +18,7 @@
       "bundleIdentifier": "app.yassin.soundalike",
       "infoPlist": {
         "LSApplicationQueriesSchemes": [
+          "spotify",
           "spotify"
         ],
         "ITSAppUsesNonExemptEncryption": false
@@ -82,6 +83,12 @@
         },
         "projectId": "49a6dbd9-1110-4a0a-9279-ee337e6820bc"
       }
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/49a6dbd9-1110-4a0a-9279-ee337e6820bc"
     }
   }
 }
