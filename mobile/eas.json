@@ -23,7 +23,8 @@
       "distribution": "internal",
       "ios": {
         "simulator": true
-      }
+      },
+      "channel": "simulator"
     },
     "production": {
       "distribution": "store",
