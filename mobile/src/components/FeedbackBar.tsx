@@ -15,7 +15,14 @@ const CHOICES: { id: FeedbackSelection; label: string }[] = [
   { id: "off", label: "Off" },
 ];
 
-export function FeedbackBar({ set }: { set: RecommendationSet }) {
+export function FeedbackBar({
+  set,
+  onExpand,
+}: {
+  set: RecommendationSet;
+  /** Fires when the reason chips appear, so the list can reveal them. */
+  onExpand?: () => void;
+}) {
   const [selection, setSelection] = useState<FeedbackSelection | null>(null);
   const [reasons, setReasons] = useState<FeedbackReason[]>([]);
   const [state, setState] = useState<"idle" | "sending" | "sent" | "failed">("idle");
@@ -62,7 +69,11 @@ export function FeedbackBar({ set }: { set: RecommendationSet }) {
               onPress={() => {
                 setSelection(choice.id);
                 setReasons([]);
-                if (choice.id === "good") void send("good", []);
+                if (choice.id === "good") {
+                  void send("good", []);
+                  return;
+                }
+                onExpand?.();
               }}
             >
               <Text style={[styles.chipText, active && styles.chipTextActive]}>

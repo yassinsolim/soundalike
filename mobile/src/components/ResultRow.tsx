@@ -32,14 +32,19 @@ export function ResultRow({ result, coverUrl, onPress }: Props) {
         )}
       </View>
       <View style={styles.labels}>
-        <Text style={styles.title} numberOfLines={1}>
+        <Text style={styles.title} numberOfLines={2}>
           {result.title}
         </Text>
         <Text style={styles.artist} numberOfLines={1}>
           {result.artist}
         </Text>
       </View>
-      {result.bpm ? <Text style={styles.bpm}>{result.bpm}</Text> : null}
+      {result.bpm ? (
+        <View style={styles.tempo}>
+          <Text style={styles.bpm}>{result.bpm}</Text>
+          <Text style={styles.bpmUnit}>BPM</Text>
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -64,13 +69,18 @@ const styles = StyleSheet.create({
   art: { width: 48, height: 48 },
   artPlaceholder: { backgroundColor: theme.surfaceHigh },
   labels: { flex: 1, minWidth: 0 },
-  title: { color: theme.text, fontSize: 15, fontWeight: "600" },
+  title: { color: theme.text, fontSize: 15, fontWeight: "600", lineHeight: 20 },
   artist: { color: theme.muted, fontSize: 13, marginTop: 2 },
+  tempo: { minWidth: 34, alignItems: "flex-end" },
   bpm: {
-    color: theme.faint,
-    fontSize: 12,
+    color: theme.muted,
+    fontSize: 13,
     fontVariant: ["tabular-nums"],
-    minWidth: 34,
-    textAlign: "right",
+  },
+  bpmUnit: {
+    color: theme.faint,
+    fontSize: 9,
+    letterSpacing: 0.5,
+    marginTop: 1,
   },
 });
