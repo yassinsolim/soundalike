@@ -185,18 +185,34 @@ def test_version_penalty_uses_title_metadata_not_artist_names():
         assert hosted_penalty(title, artist) == expected
 
 
+
+
+
 def test_version_penalty_is_disabled_for_unmodified_baseline(tmp_path):
     from _reco import WebRecommender
+    from soundalike.ml.deepvibe import DeepVibeIndex
 
-    path, _ = _synthetic_index(tmp_path, seed=12)
-    baseline = WebRecommender(str(path), enhance=False)
-    enhanced = WebRecommender(str(path), enhance=True)
-
-    assert not np.any(baseline._version_penalty)
-    assert np.array_equal(
-        enhanced._version_penalty, enhanced._version_penalty_policy
+    vibe = np.zeros((3, 29), dtype=np.float32)
+    vibe[:, 0] = [120, 121, 120.99]
+    index = DeepVibeIndex(
+        np.array([1, 2, 3]),
+        np.array(["Seed Song", "Echoes", "Echoes (Remix)"], dtype=object),
+        np.array(["Seed Artist", "Artist A", "Artist B"], dtype=object),
+        np.eye(3, dtype=np.float32), vibe,
     )
+    path = tmp_path / "version-penalty.npz"
+    index.save(path)
+    options = dict(
+        n=2, alpha=0.0, diversity=0.0, max_per_artist=0,
+        quality_filter=False, genre_rerank=False,
+    )
+    baseline = WebRecommender(str(path), enhance=False).recommend(0, **options)
+    enhanced = WebRecommender(str(path), enhance=True).recommend(0, **options)
 
+    # The remix is slightly closer in vibe. Only the enabled version penalty
+    # should move the original ahead of it; filtering and reranking are off.
+    assert [item["deezer_id"] for item in baseline["results"]] == [3, 2]
+    assert [item["deezer_id"] for item in enhanced["results"]] == [2, 3]
 
 
 def test_model_quality_family_collapse_and_audio_penalties_match_hosted(tmp_path):
@@ -482,22 +498,32 @@ def test_spicetify_v4_endpoint_accepts_only_the_strict_policy(monkeypatch):
     ]
 
 
+
+
 def test_enhanced_recommender_differs_from_baseline(tmp_path):
-    """Enhanced mode must produce different (scene-improved) results from baseline."""
     from _reco import WebRecommender
+    from soundalike.ml.deepvibe import DeepVibeIndex
 
-    path, _ = _synthetic_index(tmp_path, n_artists=60, per=5, dim=48)
-    web_base = WebRecommender(str(path), enhance=False)
-    web_enh = WebRecommender(str(path), enhance=True)
+    vibe = np.zeros((4, 29), dtype=np.float32)
+    vibe[:, 0] = [120, 120.1, 121, 123]
+    index = DeepVibeIndex(
+        np.array([1, 2, 3, 4]),
+        np.array(["Anchor", "Closest (Karaoke)", "Other Song", "Distant Song"],
+                 dtype=object),
+        np.array(["Artist A", "Artist B", "Artist C", "Artist D"], dtype=object),
+        np.eye(4, dtype=np.float32), vibe,
+    )
+    path = tmp_path / "enhanced-filter.npz"
+    index.save(path)
+    options = dict(n=2, alpha=0.0, diversity=0.0, max_per_artist=0,
+                   genre_rerank=False)
+    baseline = WebRecommender(str(path), enhance=False).recommend(0, **options)
+    enhanced = WebRecommender(str(path), enhance=True).recommend(0, **options)
 
-    # With clustering in synthetic data, enhancements should shift the ranking.
-    # At minimum the recommender runs without error.
-    for row in (0, 100, 200):
-        base_out = web_base.recommend(row, n=10)
-        enh_out = web_enh.recommend(row, n=10)
-        assert base_out["ok"] and enh_out["ok"]
-        assert len(base_out["results"]) > 0 and len(enh_out["results"]) > 0
-        assert base_out["retrieval_mode"] == "legacy_no_sonic_seed"
+    # The closest derivative survives the unmodified baseline but must be
+    # replaced by a supported candidate when enhancements are enabled.
+    assert [item["deezer_id"] for item in baseline["results"]] == [2, 3]
+    assert [item["deezer_id"] for item in enhanced["results"]] == [3, 4]
 
 
 def test_enhanced_web_recommender_matches_canonical(tmp_path):
@@ -585,6 +611,35 @@ def test_dual_sonic_hosted_matches_canonical_and_preserves_guardrails(tmp_path):
     assert web_result["results"][:5] == legacy_head
     assert web_result["method"] == "dual_sonic64_guardrail"
     assert web_result["index_version"] == "2026.07.11-dual-sonic64"
+
+
+def test_dual_queries_keep_seed_and_alpha_state_local(tmp_path):
+    """Reusing a loaded recommender must not reuse another request's ranking."""
+    from _reco import WebRecommender
+    from soundalike.ml.deepvibe import DeepVibeIndex, DeepVibeRecommender
+    from soundalike.audio.vibe import VibeFeatures
+
+    path, idx = _synthetic_index(tmp_path, seed=44, dual=True)
+    hosted = WebRecommender(str(path), enhance=True)
+    desktop = DeepVibeRecommender(DeepVibeIndex.load(path), enhance=True)
+    responses = []
+    for row, alpha in ((0, 0.0), (0, 1.0), (111, 0.0), (0, 0.0)):
+        desktop.alpha = alpha
+        response = hosted.recommend(row, n=20, alpha=alpha)
+        expected = desktop.recommend(
+            idx.neural[row], VibeFeatures.from_vector(idx.vibe[row]), n=20,
+            exclude_ids={int(idx.track_ids[row])},
+            exclude_artist=None, seed_title=str(idx.titles[row]),
+            diversity=.15, max_per_artist=1, seed_row=row,
+        )
+        assert [(item["title"], item["artist"]) for item in response["results"]] == [
+            (item.title, item.artist) for item in expected
+        ]
+        responses.append(response)
+
+    assert responses[0] == responses[-1]
+    assert responses[0]["results"] != responses[1]["results"]
+    assert responses[0]["results"] != responses[2]["results"]
 
 
 def test_dual_tail_priors_cannot_bypass_audio_candidate_gate(tmp_path):

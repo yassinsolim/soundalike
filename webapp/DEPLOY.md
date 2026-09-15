@@ -22,8 +22,15 @@ which is ~12× over Vercel's 250 MB serverless limit. **But it doesn't need to.*
 Every song in the 272,853-row release already has precomputed neural, vibe,
 EfficientNet PCA64, and CLAP PCA64 embeddings. Ranking is pure numpy (whiten →
 cosine → guarded candidate union). The hosted app therefore needs only
-numpy plus the 299 MB release index. `tests/test_webapp.py` pins the numpy path to
-the desktop recommender so results are **byte-identical**.
+numpy plus the 299 MB release index. `tests/test_webapp.py` checks hosted
+recommendation ordering against the desktop recommender.
+
+The hosted query computes legacy scores and their ordering once, then shares
+them between the guarded top-five and baseline top-ten passes. Each pass keeps
+its own filtering and reranking. This reuse is local to one request; changing
+the seed or alpha does not reuse a previous request's scores. The shared arrays
+are released before tail retrieval. It saves computation without shrinking the
+resident feature matrices or changing the recommendation policy.
 
 | | Hosted (Vercel) | Desktop (`soundalike serve`) |
 |---|---|---|

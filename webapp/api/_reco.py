@@ -566,6 +566,7 @@ class WebRecommender:
         ``related_boost`` is retained only for API compatibility and defaults
         to False because the manual graph was retired for leakage.
         """
+        ranking = self._rank_legacy(row, alpha)
         if (
             self._sonic is not None
             and self._clap is not None
@@ -573,13 +574,14 @@ class WebRecommender:
             and self._wiki_specific is not None
         ):
             guarded = self._recommend_legacy(
-                row, 5, alpha, diversity, max_per_artist,
+                row, 5, ranking, diversity, max_per_artist,
                 True, True, genre_gamma,
             )
             baseline = self._recommend_legacy(
-                row, 10, alpha, diversity, max_per_artist,
+                row, 10, ranking, diversity, max_per_artist,
                 True, False, genre_gamma,
             )
+            del ranking
             tail = self._recommend_dual_tail(row, max(n, 50))
             results: List[Dict] = []
             used_ids = set()
@@ -605,9 +607,10 @@ class WebRecommender:
             return guarded
         if self._sonic is not None:
             legacy = self._recommend_legacy(
-                row, 5, alpha, diversity, max_per_artist,
+                row, 5, ranking, diversity, max_per_artist,
                 quality_filter, genre_rerank, genre_gamma,
             )
+            del ranking
             tail = self._recommend_sonic_tail(
                 row, max(n, 50), alpha, quality_filter, genre_rerank, genre_gamma
             )
@@ -632,7 +635,7 @@ class WebRecommender:
             legacy["ranking_policy"] = self.ranking_policy
             return legacy
         result = self._recommend_legacy(
-            row, n, alpha, diversity, max_per_artist,
+            row, n, ranking, diversity, max_per_artist,
             quality_filter, genre_rerank, genre_gamma,
         )
         self.last_retrieval_mode = "legacy_no_sonic_seed"
@@ -700,11 +703,10 @@ class WebRecommender:
             ),
         } for i in chosen]
 
-    def _recommend_legacy(
-        self, row: int, n: int, alpha: Optional[float], diversity: float,
-        max_per_artist: int, quality_filter: bool, genre_rerank: bool,
-        genre_gamma: float,
-    ) -> Dict:
+    def _rank_legacy(
+        self, row: int, alpha: Optional[float],
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Compute query-local scores shared by both guardrail passes."""
         a = self.alpha if alpha is None else float(alpha)
         qn = self._neural[row]
         neural_sim = self._neural @ qn
@@ -713,15 +715,25 @@ class WebRecommender:
         blended = a * self._z(neural_sim) + (1 - a) * self._z(vibe_sim)
         blended = blended - self._version_penalty
 
-        seed_artist_raw = str(self.artists[row])
-        seed_id = int(self.track_ids[row])
-        seed_title = str(self.titles[row])
-
         # Re-normalise to [0,1] so downstream comparisons stay meaningful.
         bl_min, bl_max = blended.min(), blended.max()
         blended = (blended - bl_min) / (bl_max - bl_min + 1e-9)
 
         order = np.argsort(blended)[::-1]
+        return neural_sim, vibe_sim, blended, order
+
+    def _recommend_legacy(
+        self, row: int, n: int,
+        ranking: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+        diversity: float, max_per_artist: int, quality_filter: bool,
+        genre_rerank: bool, genre_gamma: float,
+    ) -> Dict:
+        neural_sim, vibe_sim, blended, order = ranking
+        qn = self._neural[row]
+
+        seed_artist_raw = str(self.artists[row])
+        seed_id = int(self.track_ids[row])
+        seed_title = str(self.titles[row])
 
         if quality_filter and hasattr(self, '_qmask') and self._qmask is not None:
             qmask = self._qmask
