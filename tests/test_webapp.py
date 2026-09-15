@@ -80,6 +80,27 @@ def test_old_and_sonic_index_roundtrip_compatibility(tmp_path):
     assert np.array_equal(loaded.sonic, old.sonic)
 
 
+def test_cached_audio_scores_preserve_source_and_query_views():
+    from _reco import WebRecommender
+
+    # Cross a scoring block boundary and retain zero rows. Float32 inputs
+    # expose accidental in-place normalization through np.asarray views.
+    matrix = np.zeros((16385, 2), dtype=np.float32)
+    matrix[0] = (3, 0)
+    matrix[1] = (0, 4)
+    matrix[-1] = (6, 8)
+    original = matrix.copy()
+    unit = WebRecommender._unit_rows(matrix)
+    expected = np.zeros(len(matrix), dtype=np.float32)
+    expected[[0, 1, -1]] = (0.6, 0.8, 1.0)
+
+    first = WebRecommender._audio_cosine(unit, matrix[-1])
+    second = WebRecommender._audio_cosine(unit, matrix[-1])
+    np.testing.assert_allclose(first, expected, rtol=1e-7, atol=0)
+    np.testing.assert_array_equal(second, first)
+    np.testing.assert_array_equal(matrix, original)
+
+
 def test_web_recommender_matches_canonical(tmp_path):
     """Baseline (no enhancements) must exactly match the canonical numpy recommender."""
     import os

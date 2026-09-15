@@ -66,6 +66,15 @@ def test_release_verification_refuses_a_changed_requirement_checksum(tmp_path):
         updater.verify_release(release, commit, lambda _command: f"{commit}\n")
 
 
+def test_release_verification_refuses_a_changed_metadata_helper(tmp_path):
+    updater = _module("update")
+    commit = "b" * 40
+    release = _release(updater, tmp_path, commit)
+    (release / "webapp/api/_compact.py").write_text("changed helper\n", encoding="utf-8")
+    with pytest.raises(updater.UpdateError):
+        updater.verify_release(release, commit, lambda _command: f"{commit}\n")
+
+
 @pytest.mark.skipif(os.name != "posix", reason="atomic symlinks require the Linux deployment host")
 def test_successful_switch_is_atomic_and_preserves_previous_release(tmp_path):
     updater = _module("update")

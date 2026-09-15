@@ -36,6 +36,7 @@ REQUIRED_RUNTIME_FILES = {
     "deploy/homelab/update.py",
     "deploy/homelab/server.py",
     "deploy/homelab/soundalike.service",
+    "webapp/api/_compact.py",
     "webapp/api/_reco.py",
     "webapp/api/_search.py",
     "webapp/api/spicetify_recommend.py",

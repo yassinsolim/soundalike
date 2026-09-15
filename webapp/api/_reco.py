@@ -20,9 +20,12 @@ import threading
 import unicodedata
 import urllib.request
 from difflib import SequenceMatcher
+from functools import lru_cache
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
+
+from _compact import CompactStrings
 
 from _search import (
     SearchCatalog,
@@ -108,6 +111,15 @@ _CONTEXT_TITLE_JUNK_RE = re.compile(
 )
 
 
+@lru_cache(maxsize=1 << 17)
+def _title_key(value: str) -> str:
+    """Cache the unchanged title-normalization policy across candidates."""
+    value = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode()
+    value = _PAREN.sub(" ", value.casefold())
+    value = _DASH_SUFFIX.sub("", value)
+    return " ".join(value.split())
+
+
 class _TitleQualityFilter:
     """Self-contained hosted copy; keeps Vercel independent of the torch package."""
 
@@ -128,22 +140,20 @@ class _TitleQualityFilter:
         ], dtype=bool)
 
     def seed_title_in_result(self, seed_title: str, result_title: str) -> bool:
-        def title_key(value: str) -> str:
-            value = self._plain(value).casefold()
-            value = _PAREN.sub(" ", value)
-            value = _DASH_SUFFIX.sub("", value)
-            return " ".join(value.split())
-
-        seed = title_key(seed_title)
-        result = title_key(result_title)
+        seed = _title_key(str(seed_title))
+        result = _title_key(str(result_title))
         if not seed or not result:
             return False
         if seed == result or seed in result or result in seed:
             return True
-        return (
-            min(len(seed), len(result)) >= 8
-            and SequenceMatcher(None, seed, result).ratio() >= 0.90
-        )
+        if min(len(seed), len(result)) < 8:
+            return False
+        # Both quick ratios are upper bounds on ratio(), so rejection here
+        # cannot discard a pair that reaches the existing similarity threshold.
+        matcher = SequenceMatcher(None, seed, result)
+        if matcher.real_quick_ratio() < 0.90 or matcher.quick_ratio() < 0.90:
+            return False
+        return matcher.ratio() >= 0.90
 
 
 def _version_penalty(title, artist=""):
@@ -254,8 +264,9 @@ class WebRecommender:
                  acc_cache_dir: Optional[str] = None):
         d = np.load(path, allow_pickle=False)
         self.track_ids = d["track_ids"]
-        self.titles = d["titles"].astype(str)
-        self.artists = d["artists"].astype(str)
+        # Pack only resident metadata. The checksummed release NPZ is unchanged.
+        self.titles = CompactStrings.from_strings(d["titles"])
+        self.artists = CompactStrings.from_strings(d["artists"])
         self.feature_names = [str(x) for x in d["feature_names"]]
         neural = d["neural"].astype(np.float32)
         vibe = d["vibe"].astype(np.float32)
@@ -298,6 +309,12 @@ class WebRecommender:
             x /= np.linalg.norm(x, axis=1, keepdims=True) + 1e-9
             neural[i:i + CH] = x
         self._neural = neural
+        self._sonic_unit = (
+            self._unit_rows(self._sonic) if self._sonic is not None else None
+        )
+        self._clap_unit = (
+            self._unit_rows(self._clap) if self._clap is not None else None
+        )
         del d
         import gc
         gc.collect()
@@ -503,17 +520,28 @@ class WebRecommender:
         return scores
 
     @staticmethod
-    def _compact_cosine(matrix: np.ndarray, query: np.ndarray) -> np.ndarray:
-        query = np.asarray(query, dtype=np.float32)
-        if query.shape != (matrix.shape[1],):
+    def _unit_rows(matrix: np.ndarray) -> np.ndarray:
+        """Normalize once without modifying the source or its seed vectors."""
+        unit = np.empty(matrix.shape, dtype=np.float32)
+        for start in range(0, len(matrix), 16384):
+            stop = min(start + 16384, len(matrix))
+            block = unit[start:stop]
+            np.copyto(block, matrix[start:stop])
+            block /= np.maximum(np.linalg.norm(block, axis=1, keepdims=True), 1e-9)
+        return unit
+
+    @staticmethod
+    def _audio_cosine(unit: np.ndarray, query: np.ndarray) -> np.ndarray:
+        query = np.array(query, dtype=np.float32)
+        if query.shape != (unit.shape[1],):
             raise ValueError("query dimension does not match compact index")
         query /= max(float(np.linalg.norm(query)), 1e-9)
-        scores = np.empty(len(matrix), dtype=np.float32)
+        scores = np.empty(len(unit), dtype=np.float32)
+        # Keep the original GEMV block boundaries as well as its row norms.
+        # A larger matrix call can select different floating-point kernels.
         for start in range(0, len(scores), 16384):
             stop = min(start + 16384, len(scores))
-            block = np.asarray(matrix[start:stop], dtype=np.float32)
-            block /= np.maximum(np.linalg.norm(block, axis=1, keepdims=True), 1e-9)
-            scores[start:stop] = block @ query
+            np.matmul(unit[start:stop], query, out=scores[start:stop])
         return scores
 
     def recommend(self, row: int, n: int = 20, alpha: Optional[float] = None,
@@ -622,12 +650,8 @@ class WebRecommender:
             or self._wiki_specific is None
         ):
             raise ValueError("Dual-Sonic64 tail requires all release arrays")
-        efficientnet = self._compact_cosine(
-            self._sonic, np.asarray(self._sonic[row], dtype=np.float32)
-        )
-        clap = self._compact_cosine(
-            self._clap, np.asarray(self._clap[row], dtype=np.float32)
-        )
+        efficientnet = self._audio_cosine(self._sonic_unit, self._sonic[row])
+        clap = self._audio_cosine(self._clap_unit, self._clap[row])
         audio_score = (
             0.25 * self._z(efficientnet)
             + 0.75 * self._z(clap)
