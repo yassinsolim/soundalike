@@ -218,6 +218,78 @@ The full-track MTG-Jamendo work is research tooling. It is not used to acquire
 Spotify audio, and it is not presented as the production commercial-catalog
 model.
 
+### Any-song (beta)
+
+[`/anysong`](https://soundalike.yassin.app/anysong) matches any Deezer track, even
+one outside the catalog, by melody, samples and overall sound, embedding unseen
+songs live on a GPU. Architecture, index builds and deployment are described in
+[docs/ANYSONG.md](docs/ANYSONG.md), and measured accuracy in
+[docs/ANYSONG_EVAL.md](docs/ANYSONG_EVAL.md); the research behind it follows.
+
+The served index holds 269,278 catalog tracks. On held-out benchmarks, at least one tab shows a correct song in
+its top 10 for 71% of cover queries and 51% of Gen Alpha songs, but only 16% of sample pairs and 16% of "sounds
+like" claims. Unseen songs embedded live score the same as catalog songs.
+
+The experimental [`soundalike.anysong`](src/soundalike/anysong/) package compares
+MuQ-MuLan, CLAP, MuQ, MERT and MAEST with dedicated SampleID/CLEWS adapters.
+General acoustic similarity, shared melodies and sampled recordings are
+different retrieval tasks; none of these candidates is yet a proven production
+replacement. Preview-based comparisons can miss a relationship when its shared
+segment is outside the preview.
+
+Use an isolated environment with the appropriate CUDA PyTorch build, then
+install `.[anysong,dev]`. Transformers is pinned to 4.57.6 because these upstream
+encoders depend on its 4.x hidden-state APIs. SampleID and CLEWS additionally
+need their upstream repositories/checkpoints; configure `SOUNDALIKE_EXT`,
+`SAMPLEID_CKPT` and `CLEWS_CKPT` as appropriate. Verify checkpoint checksums and
+respect each model's upstream code and weights licenses, including
+non-commercial restrictions. Do not commit audio or model weights.
+
+```sh
+python -m soundalike.anysong.embed_run --model muq_mulan \
+  --ids available_ids.txt --previews previews --out embeddings --batch 8
+python -m soundalike.anysong.evaluate --emb embeddings --bench benchmark \
+  --model muq_mulan --view track --prep raw center \
+  --corpus available_ids.txt --require-complete --splits development \
+  --out development.jsonl
+```
+
+Freeze benchmark labels and the available-audio ID list before comparing models.
+The runner prefetches at most one audio batch ahead of inference and writes resumable atomic shards;
+it fails explicitly on memory errors, invalid embeddings or failed decodes.
+CLAP skips unused CPU fusion features while retaining its original int16
+quantization and unfused GPU frontend. MAEST uses a batched torch frontend that
+matches the upstream window, FFT precision/rounding, mel filters, padding and
+normalization; parity tests cover silence, impulses and different signal levels.
+Benchmark batch sizes by throughput rather than VRAM occupancy: larger batches
+do not always help. MuQ requires FP32 inference, so start with a small batch.
+Evaluation reports
+missing-query/positive coverage and breaks score ties deterministically.
+`--require-complete` prevents comparing incomplete corpus extractions.
+Select models/configurations on `development` only; reserve `held_out`,
+`validation` and the Gen Alpha `test` group for subsequent reporting.
+V4 results include separate evidence-category groups: covers, samples and weak
+claims must not be interpreted as general pure-sonic similarity. Audit track
+overlap across splits before training; relation-level splits do not guarantee
+unseen recordings in held-out evaluation.
+Bulk preview acquisition is resumable: transient failures remain retryable,
+missing/truncated cache files are fetched again, and failed downloads produce a
+nonzero exit status instead of being silently classified as unavailable songs.
+An optional `--artist-map track_artists.json` (JSON track ID to integer artist ID)
+refreshes preview metadata in artist batches. Only exact requested track IDs are
+downloaded; missing artists, absent tracks and empty batch previews fall back to
+individual lookups, so batching never changes the requested corpus. Expired
+preview URLs are not reused from old manifests. Metadata and audio queues are
+bounded, and all metadata requests share the same `--rate` limiter, including
+fallbacks and retries. Progress reports audio Mbps and batch coverage. A fast
+Internet connection alone cannot overcome a one-metadata-request-per-track limit.
+The displayed ETA uses the current average: the final individual-lookup phase
+can be slower than the batched phase.
+Truncated HTTP responses are retried rather than aborting an entire run.
+Preview requests have a separate `--preview-rate` ceiling (16 requests/second
+by default); HTTP 429 responses pause all affected workers and honor
+`Retry-After`, rather than letting concurrent retries hammer the provider.
+
 ## Known limitations
 
 - The hosted catalog is large but finite. A Spotify track can exist without
