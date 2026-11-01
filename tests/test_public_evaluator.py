@@ -360,6 +360,7 @@ def test_vercel_routes_and_security_headers_cover_evaluator():
         "/api/spicetify-feedback": (
             "/api/ratings?__soundalike_handler=spicetify-feedback"
         ),
+        "/api/feedback-digest": "/api/ratings?__soundalike_handler=feedback-digest",
         "/evaluate": "/evaluate/index.html",
         "/evaluate/": "/evaluate/index.html",
         "/evaluate-v5": "/evaluate-v5/index.html",
@@ -376,6 +377,8 @@ def test_vercel_routes_and_security_headers_cover_evaluator():
         "/evaluate-semantic-v2/": "/evaluate-semantic-v2/index.html",
         "/evaluate-v1": "/evaluate-v1/index.html",
         "/evaluate-v1/": "/evaluate-v1/index.html",
+        "/anysong": "/anysong/index.html",
+        "/anysong/": "/anysong/index.html",
     }
     routes = {
         item["source"]: {header["key"]: header["value"] for header in item["headers"]}
