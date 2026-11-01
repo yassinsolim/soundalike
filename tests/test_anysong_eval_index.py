@@ -68,6 +68,30 @@ def test_any_tab_uses_the_best_channel_per_query():
     assert rep["any_tab"]["t/test"]["rr"] == pytest.approx(1 / min(firsts))
 
 
+def test_best_list_is_evaluated_as_the_api_fuses_it(monkeypatch):
+    ids, m = random_index(seed=1, name="melody")
+    _, s = random_index(seed=2, name="samples")
+    _, sonic = random_index(seed=3, name="sonic")
+    keys = ei.SongKeys({})
+    t = int(ids[0])
+    orders = {}
+    for name, ix in (("melody", m), ("samples", s)):
+        row = ix.scores(ix.stored_query(t))
+        orders[name] = [keys.get(x) for x, _ in ix.top(row, ei.FETCH, [t])]
+    pos = [int(x) for x in ids[1:] if keys.get(int(x)) not in (orders["melody"][0], orders["samples"][0])][5:9]
+    q = ev.Query("t", "k", "test", t, frozenset(pos))
+    rep = ei.evaluate_indexes({"melody": m, "samples": s, "sonic": sonic}, [q], keys, log=lambda x: None)
+    rank = {key: r for r, (key, _, _) in enumerate(ei.fuse(orders), 1)}
+    want = sorted(rank[keys.get(p)] for p in pos)
+    assert rep["best"]["t/test"]["median_first"] == want[0]
+    assert rep["best"]["t/test"]["ap"] == pytest.approx(np.mean(np.arange(1, 5) / np.array(want)), abs=1e-5)
+    # positives outside every served list rank after all of the catalog's songs
+    monkeypatch.setattr(ei, "FETCH", 1)
+    shallow = ei.evaluate_indexes({"melody": m, "samples": s}, [q], keys, log=lambda x: None)["best"]["t/test"]
+    assert shallow["hr@20"] == 0.0 and shallow["median_first"] == len(ids)
+    assert ei.evaluate_indexes({"sonic": sonic}, [q], keys, log=lambda x: None)["best"] == {}
+
+
 @pytest.mark.parametrize("prep,mode", [("raw", "maxsim"), ("none", "bpwr")])
 def test_exact_check_is_perfect_when_every_row_is_reranked(tmp_path, prep, mode):
     ch = channel(prep=prep, mode=mode)
