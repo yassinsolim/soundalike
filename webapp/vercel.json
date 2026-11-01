@@ -39,7 +39,9 @@
     { "source": "/evaluate-semantic-v1", "destination": "/evaluate-semantic-v1/index.html" },
     { "source": "/evaluate-semantic-v1/", "destination": "/evaluate-semantic-v1/index.html" },
     { "source": "/evaluate-v1", "destination": "/evaluate-v1/index.html" },
-    { "source": "/evaluate-v1/", "destination": "/evaluate-v1/index.html" }
+    { "source": "/evaluate-v1/", "destination": "/evaluate-v1/index.html" },
+    { "source": "/anysong", "destination": "/anysong/index.html" },
+    { "source": "/anysong/", "destination": "/anysong/index.html" }
   ],
   "headers": [
     {
@@ -50,6 +52,20 @@
         { "key": "Referrer-Policy", "value": "no-referrer" },
         { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
         { "key": "X-Frame-Options", "value": "DENY" }
+      ]
+    },
+    {
+      "source": "/anysong",
+      "headers": [
+        { "key": "Content-Security-Policy", "value": "default-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; frame-ancestors 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: https://dzcdn.net https://*.dzcdn.net; media-src https://dzcdn.net https://*.dzcdn.net; connect-src 'self'" },
+        { "key": "Cache-Control", "value": "no-cache" }
+      ]
+    },
+    {
+      "source": "/anysong/(.*)",
+      "headers": [
+        { "key": "Content-Security-Policy", "value": "default-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; frame-ancestors 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: https://dzcdn.net https://*.dzcdn.net; media-src https://dzcdn.net https://*.dzcdn.net; connect-src 'self'" },
+        { "key": "Cache-Control", "value": "no-cache" }
       ]
     },
     {

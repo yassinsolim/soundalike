@@ -56,12 +56,12 @@ class _ActionParser(HTMLParser):
             self.current_link["text"].append(data)
 
 
-def test_homepage_promotes_spicetify_and_evaluator_with_native_links():
+def test_homepage_promotes_spicetify_evaluator_and_anysong_with_native_links():
     parser = _ActionParser()
     parser.feed(HTML)
 
     assert parser.navigation_label == "Soundalike actions"
-    assert len(parser.links) == 2
+    assert len(parser.links) == 3
     links = {
         " ".join(link["text"]).strip(): link["attrs"] for link in parser.links
     }
@@ -78,6 +78,11 @@ def test_homepage_promotes_spicetify_and_evaluator_with_native_links():
     assert spotify["target"] == "_blank"
     assert "noopener" in spotify["rel"].split()
     assert evaluator["href"] == "/evaluate"
+    anysong = next(
+        attrs for text, attrs in links.items() if "Try any song" in text
+    )
+    assert anysong["href"] == "/anysong"
+    assert "target" not in anysong
 
 
 def test_homepage_search_accessibility_and_wiring_remain_present():
