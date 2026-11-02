@@ -6,29 +6,33 @@ If you installed Soundalike from Marketplace, start with the
 [extension guide](README.md); normal use requires none of the setup below.
 
 Add a **“Find soundalikes”** item to the right-click menu of any track in the
-Spotify desktop app. Select it to open a page of songs that sound like the
-selected track. Results come from precomputed audio embeddings rather than tags.
+Spotify desktop app. Select it to open a page of matches for the selected
+track: **Best matches**, songs that share a melody, sample, or loop with it,
+and one tab away **Sounds like**, songs with the same overall sound. Results
+come from audio embeddings rather than tags.
 Double-click a verified result or use its left-side play button to play it
 immediately. Right-click it to find soundalikes again or use Spotify's native
 playlist, queue, radio, artist, album, credits, and sharing actions.
 
-![Soundalike results inside Spotify](../../docs/spicetify-results.png)
+![Soundalike best matches inside Spotify](../../docs/spicetify-results.png)
 
 There are two ways to use Soundalike. Pick based on your Spotify install:
 
 | | Hosted web app | Spicetify (in-app right-click) |
 |---|---|---|
 | Setup | none | patch Spotify, then select **Install** in Marketplace |
-| Included library | 272,853 tracks | 272,853 tracks; optional local companion for any song |
+| Included library | 272,853 tracks; any Deezer song on [`/anysong`](https://soundalike.yassin.app/anysong) | Best matches for any song with a Deezer preview; Sounds like for 272,853 tracks, or any song with the optional local companion |
 | Supported Spotify app | any app or browser | patchable desktop app; not Windows Store or Linux Snap |
 | Trigger | type or paste a song | right-click a track |
 
 ## Optional: prepare the local companion
 
 **Skip this section for the normal Marketplace installation.** The extension
-automatically uses the hosted 272,853-track library when no local engine is
-running. Install the companion only if you want queries to remain on your
-machine or want on-the-fly analysis for a track outside the hosted library.
+automatically uses the hosted services when no local engine is running.
+Install the companion only if you want Sounds like queries to remain on your
+machine or want on-the-fly Sounds like analysis for a track outside the hosted
+library. Best matches only run on the hosted matcher, so while the companion
+is running the extension asks before each Best matches search.
 
 Install [Python 3.9 or newer](https://www.python.org/downloads/) and Git, then
 create an isolated environment from the repository root.
@@ -82,6 +86,10 @@ cannot be patched.
 
 Before installing Spicetify, open the desktop Spotify app once, sign in, and
 then close it. This creates the application and `prefs` paths Spicetify needs.
+
+Spotify 1.3.5 and newer need Spicetify 2.46.1 or newer. Older Spicetify
+releases can't draw extension menu items on those builds, so Soundalike skips
+its menu item there and shows an update notice instead.
 
 ### 1. Install Spicetify
 
@@ -246,19 +254,22 @@ curl --fail http://127.0.0.1:8787/health
 ```
 
 With or without the local engine, right-click any song in Spotify →
-**Find soundalikes**. A normal Spotify page opens with the seed artwork and recommendation
-titles. Spotify album covers, verified artist names, album names, and measured
-BPM fill in progressively. Double-click a row or use its left-side play button
-to play that exact Spotify track without leaving the page; a single click does
-not start playback. Spotify's Back and Forward buttons preserve the result
-list while you navigate elsewhere. Confident Spotify lyrics-language labels
-gate English to English, French to French, and so on. Results with no language
-label remain as fallbacks for instrumentals and incomplete lyrics catalogs.
-Right-click a row for Spotify's normal track menu, including **Add to
-playlist**, **Add to queue**, **Go to song radio**, artist/album navigation,
-credits, and sharing. If Spotify cannot confidently resolve a recommendation,
-the row keeps the safe Spotify-search fallback instead. The header identifies
-whether the result came from the **HOSTED LIBRARY** or **LOCAL ENGINE**.
+**Find soundalikes**. A normal Spotify page opens on **Best matches**, with
+**Sounds like** one tab away; with a healthy local engine it opens on
+**Sounds like** instead. Spotify album covers, verified artist names, album
+names, and, in Sounds like, measured BPM fill in progressively. Double-click a
+row or use its left-side play button to play that exact Spotify track without
+leaving the page; a single click does not start playback. Spotify's Back and
+Forward buttons preserve the result list while you navigate elsewhere. In
+Sounds like, confident Spotify lyrics-language labels gate English to English,
+French to French, and so on. Results with no language label remain as
+fallbacks for instrumentals and incomplete lyrics catalogs. Right-click a row
+for Spotify's normal track menu, including **Add to playlist**, **Add to
+queue**, **Go to song radio**, artist/album navigation, credits, and sharing.
+If Spotify cannot confidently resolve a recommendation, the row keeps the safe
+Spotify-search fallback instead. The header names the list and whether it came
+from the **HOSTED LIBRARY** or the **LOCAL ENGINE**; Best matches always come
+from the hosted library.
 
 The extension installation is persistent: Spicetify remembers `soundalike.js`
 and loads it whenever patched Spotify starts. The hosted library requires no
@@ -391,13 +402,17 @@ systemctl --user daemon-reload
 On every supported platform, the extension reads the clicked track's title,
 artist, and artwork through Spotify's already-authenticated internal GraphQL
 client. It probes `http://127.0.0.1:8787` first. If the optional companion is
-healthy, the title and artist stay on your machine. Otherwise, only that title
-and artist are sent to `https://soundalike-api.yassin.app`, or to
-`https://soundalike.yassin.app` if the primary service is unavailable. Spotify
-credentials, tokens, library data, and artwork are never sent. No separate
-Soundalike Spotify login is required. Language labels are read from Spotify's
-already-authenticated lyrics service inside the desktop client and are not sent
-to Soundalike.
+healthy, the Sounds like search stays on your machine, and the Best matches
+tab asks before sending the title and artist to the hosted matcher. A Best
+matches list saved from an earlier search shows without asking. Otherwise,
+only that title and artist are sent: to `https://soundalike-api.yassin.app`
+for Sounds like (or `https://soundalike.yassin.app` if the primary service is
+unavailable) and to `https://soundalike.yassin.app/api/anysong/similar` for
+Best matches, which may look the song up on Deezer and analyze its public
+30-second preview. Spotify credentials, tokens, library data, and artwork are
+never sent. No separate Soundalike Spotify login is required. Language labels
+are read from Spotify's already-authenticated lyrics service inside the
+desktop client and are not sent to Soundalike.
 
 ### Troubleshooting and updates
 
@@ -409,6 +424,14 @@ to Soundalike.
 - **Spotify shows an error after leaving Soundalike:** update Soundalike in
   Marketplace and fully restart Spotify. Current releases render in an
   extension-owned overlay and never remove Spotify's React-owned page nodes.
+- **Right-click menus open empty, or Spotify says “Find soundalikes is off”:**
+  Spicetify releases before 2.46.1 can't draw extension menu items on Spotify
+  1.3.5 or newer, and one registered item leaves the whole menu empty.
+  Soundalike skips its item on that combination. Run `spicetify update`; it
+  updates Spicetify and runs `spicetify backup apply` for you. Confirm
+  `spicetify --version` prints 2.46.1 or newer, then fully restart Spotify. If
+  you installed Spicetify with a package manager, update it there and run
+  `spicetify backup apply`.
 - **No “Find soundalikes” menu item:** confirm the file exists at
   `%APPDATA%\spicetify\Extensions\soundalike.js` on Windows or
   `~/.config/spicetify/Extensions/soundalike.js` on macOS/Linux, then run
@@ -425,9 +448,10 @@ to Soundalike.
   run `spicetify backup apply`, and fully restart Spotify. Soundalike preserves
   direct playback if the client's internal native-menu components are
   unavailable.
-- **A track is not in the hosted library:** the one-click path covers 272,853
-  tracks. Use the optional local companion for on-the-fly analysis of other
-  songs.
+- **A track is not in the hosted library:** Sounds like covers 272,853
+  tracks. Best matches analyze other songs live when Deezer has a 30-second
+  preview of them. Use the optional local companion for on-the-fly Sounds like
+  analysis of other songs.
 - **Hosted service unavailable:** reload Spotify and retry. If you installed
   the local companion, verify `/health`; if auto-start is enabled, check its
   status and log using step 4.
@@ -444,20 +468,32 @@ to Soundalike.
 ```
 right-click track ─▶ Spotify title + artist
                          │
-          local engine healthy? ─ yes ─▶ local cached/on-the-fly embedding
-                         │ no
-                         └─────────────▶ hosted 272,853-track library
-                                               │
-                     rank audio+vibe similarity ─▶ verified Spotify track URI
-                                               │
-                 play / double-click ─▶ play now │ right-click ─▶ native track menu
+          ┌──────────────┴──────────────┐
+          ▼                             ▼
+   Best matches (default)          Sounds like
+   hosted any-song matcher         local engine healthy? ─ yes ─▶ local embedding
+   melody + samples, fused           │ no
+   (asks first while the             └─▶ hosted 272,853-track library
+    local engine is healthy)             audio+vibe similarity
+          └──────────────┬──────────────┘
+                         ▼
+             verified Spotify track URI
+                         │
+   play / double-click ─▶ play now │ right-click ─▶ native track menu
 ```
 
-The extension normally uses an always-on hosted recommendation service and
-falls back to the Vercel deployment if that service is unavailable. It quietly
-asks the Vercel function to warm after Spotify becomes idle. A fallback request
-can still take up to about 30 seconds while the checksum-pinned 299 MB index
-initializes. Successful recommendations, Spotify metadata, and language labels
-remain in a bounded local cache for seven days, and cacheable hosted responses
-avoid recomputing the same seed. The optional local companion downloads and
-loads the same production index once and keeps it warm between right-clicks.
+Best matches come from the any-song matcher, which looks the song up by title
+and artist. A song in its 269,278-track index answers from stored embeddings;
+any other song with a Deezer preview is downloaded and analyzed live on a GPU,
+which takes a few seconds. The extension retries twice when the matcher is
+busy and gives up after 30 seconds.
+
+For Sounds like, the extension normally uses an always-on hosted
+recommendation service and falls back to the Vercel deployment if that service
+is unavailable. It quietly asks the Vercel function to warm after Spotify
+becomes idle. A fallback request can still take up to about 30 seconds while
+the checksum-pinned 299 MB index initializes. Both successful lists, Spotify
+metadata, and language labels remain in a bounded local cache for seven days,
+and cacheable hosted responses avoid recomputing the same seed. The optional
+local companion downloads and loads the same production index once and keeps
+it warm between right-clicks.

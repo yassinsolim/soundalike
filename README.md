@@ -14,14 +14,16 @@ recommender built around audio similarity. It compares precomputed audio
 representations and measured features such as tempo, dynamics, and bass
 balance. It does not use your listening history as a ranking signal.
 
-The public web app and Spicetify extension use a catalog of 272,853 tracks.
+The public web app and Spicetify extension open on **Best matches**, songs that
+share a melody, sample, or loop with yours from a 269,278-track index, and keep
+the original **Sounds like** list from a 272,853-track catalog one tab away.
 The repository also includes a local app, command-line tools, smaller bundled
 indexes, and the research code used to test new ranking ideas.
 
 I am still improving the recommendations. If you try it, specific examples of
 great or poor matches are always useful.
 
-![Soundalike results inside Spotify](docs/spicetify-results.png)
+![Soundalike best matches inside Spotify](docs/spicetify-results.png)
 
 ## Choose how you want to use it
 
@@ -35,8 +37,9 @@ This is the easiest way to use Soundalike regularly.
 4. Restart Spotify if Marketplace asks you to.
 5. Right-click a track and select **Find soundalikes**.
 
-Results open on their own Spotify page. You can play a result, open its album,
-use Spotify's normal track menu, or search for another set of matches.
+Results open on their own Spotify page, starting with **Best matches**; the
+**Sounds like** tab has the original list. You can play a result, open its
+album, use Spotify's normal track menu, or search for another set of matches.
 
 Marketplace installs receive signed runtime updates when Spotify starts. The
 loader verifies the release signature, immutable commit URL, SHA-256 hash, and
@@ -48,12 +51,21 @@ If you installed Soundalike before the signed updater was introduced, or if
 it once more, and restart Spotify. Later runtime updates should not require
 another reinstall.
 
+Spotify 1.3.5 and newer need Spicetify 2.46.1 or newer. Older Spicetify
+releases empty every right-click menu once an extension adds an item, so on
+those versions Soundalike leaves the menu alone and asks you to run
+`spicetify update`.
+
 See the [Spicetify guide](integrations/spicetify/README.md) for privacy details,
 manual installation, supported Spotify builds, and troubleshooting.
 
 ### In a browser
 
 Open <https://soundalike.yassin.app>.
+
+Pick a song from the search suggestions. Results open on **Best matches**, with
+**Sounds like** one tab away. The suggestions come from the catalog;
+[`/anysong`](https://soundalike.yassin.app/anysong) accepts any song on Deezer.
 
 You do not need an account to search the hosted catalog. Spotify login is
 optional and is only used when you ask the site to save a playlist. Spotify

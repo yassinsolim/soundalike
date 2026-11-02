@@ -17,7 +17,9 @@ The page opens on **Best matches**, one list that merges the melody and samples 
 a song scores `sum(1 / (5 + rank))` over the two channels' song lists, and is shown as the release found by the
 channel that ranked it higher. On held-out benchmarks it finds covers as well as the melody tab and samples better
 than the samples tab ([ANYSONG_EVAL.md](ANYSONG_EVAL.md#best-matches)). The channel tabs remain for browsing one
-relation.
+relation. The same list is the default view on the main page and in the
+[Spicetify extension](../integrations/spicetify/README.md), which name the song by title and artist instead of a
+Deezer id.
 
 ## Architecture
 
@@ -34,17 +36,30 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   followed by one list per channel. Each channel ranks its top 200 rows and keeps one release per song; `best` fuses
   those song lists (`FUSE_K`, `FUSE_WEIGHTS`), and each of its items carries `ranks`, its 1-based position in each
   fused channel's list. Its `score` is the fused score.
+- `/similar?title=&artist=&k=` (used by the main page and Spotify, which have no Deezer id) resolves the name first.
+  Songs match by song key (primary artist plus title without bracketed, dashed or feat. tags), and among a song's
+  releases one with the same version words (`deezer.version_words`: live, remix, acoustic, edit, sped up, ...) wins,
+  so "Song" is never seeded with "Song (X Remix)" when the original exists, while "Song - Remastered" may use "Song".
+  A catalog release with the requested version answers without any Deezer request (only indexed releases count:
+  the rest usually had no preview). Otherwise the first of 10 Deezer search hits with a preview and that version is
+  ranked live; failing that, the song's best indexed release (untagged first, then lowest id) or else its first
+  search hit stands in, and no release at all is a 404. `query.id`
+  and `query.title` in the response name the resolved track. The service sends `Access-Control-Allow-Origin: *`
+  (`--cors-origin`) so the Spotify desktop client can read these public, credential-free GET responses.
 - [`anysong/serve.py`](../src/soundalike/anysong/serve.py) holds the two-stage index: a PCA projection of every
   window in VRAM ranks candidates, then the full-dimensional windows (memory-mapped `full.npy`) rerank them.
   A catalog song is queried with its stored windows (no audio work); an unseen song is downloaded, decoded and run
   through all three encoders, and the result is cached in memory.
 - Rate limits are token buckets per client: `/similar` 20/min (burst 5), `/search` 60/min (burst 15). Cached
-  `/similar` results are free. Clients are keyed by `--client-ip-header` (`CF-Connecting-IP`) with IPv6 grouped
-  per /64; only enable that flag while the port is reachable solely through the proxy chain. Excess concurrent
-  live work returns 503 (`--max-pending`), which the page retries with backoff.
+  `/similar` results are free, and a name lookup the catalog cannot answer spends one `/search` request (when that
+  budget is spent, a song with another catalog release uses it instead of failing). Clients are
+  keyed by `--client-ip-header` (`CF-Connecting-IP`) with IPv6 grouped per /64; only enable that flag while the
+  port is reachable solely through the proxy chain. Excess concurrent live work returns 503 (`--max-pending`),
+  which the page retries with backoff.
 
-Errors are `{ok:false, error}` with 400 (bad parameters), 404 (unknown track / no preview), 422 (undecodable
-preview), 429 (rate limit), 502 (Deezer), 503 (busy) or 504 (timed out waiting for an identical request).
+Errors are `{ok:false, error}` with 400 (bad parameters), 404 (unknown track or song / no preview), 422
+(undecodable preview), 429 (rate limit), 502 (Deezer), 503 (busy) or 504 (timed out waiting for an identical
+request).
 
 ## Building an index
 

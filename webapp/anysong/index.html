@@ -299,7 +299,7 @@ function render(seed, d) {
     `<section class="seed" aria-label="Selected song">` +
       `<div class="cover">${seed.cover ? `<img alt="" src="${esc(seed.cover)}">` : ""}</div>` +
       `<div class="info"><h2>${esc(seed.title)}</h2><div class="art">${esc(seed.artist)}</div><div class="tags">` +
-        `<span class="tag${live ? " live" : ""}">${live ? "heard live just now" : "in our library"}</span>` +
+        `<span class="tag${live ? " live" : ""}">${live ? (d.cached ? "heard live earlier" : "heard live just now") : "in our library"}</span>` +
         (ms ? `<span class="tag">matched in ${(ms / 1000).toFixed(1)} s</span>` : "") +
       `</div></div>` +
       `<div class="actions"><button class="pv" type="button" data-id="${seed.id}" aria-label="Preview ${esc(seed.title)}">▶</button>` +

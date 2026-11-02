@@ -103,8 +103,17 @@ def test_homepage_search_accessibility_and_wiring_remain_present():
 def test_marketplace_description_pins_the_immutable_update_bootstrap():
     manifest = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["description"] == (
-        "Find same-language audio matches in Spotify with native playback and "
-        "optional anonymous feedback."
+        "Find songs that sound alike in Spotify: best matches by melody and "
+        "samples, plus same-language sound matches with native playback."
     )
     assert manifest["main"] == "integrations/spicetify/bootstrap.js"
     assert manifest["branch"] == "38ca29ca9ec760dc40e58a567ca6aaff632ae306"
+
+
+def test_marketplace_card_tracks_current_docs_on_main():
+    manifest = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))
+    raw_main = "https://raw.githubusercontent.com/yassinsolim/soundalike/main/"
+    assert manifest["readme"] == raw_main + "integrations/spicetify/README.md"
+    assert manifest["preview"] == raw_main + "docs/spicetify-results.png"
+    for field in ("readme", "preview"):
+        assert (ROOT / manifest[field].removeprefix(raw_main)).is_file()

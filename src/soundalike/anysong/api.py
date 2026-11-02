@@ -8,6 +8,8 @@ GET endpoints (JSON):
 - ``/api/anysong/search?q=<text>&limit=10``  Deezer track search; ``in_catalog`` marks indexed tracks
 - ``/api/anysong/similar?id=<deezer id>&k=20&dedupe=1``  top matches per channel, plus ``best``: the melody and
   samples lists fused into one ranking (``fuse``)
+- ``/api/anysong/similar?title=<title>&artist=<artist>&k=20``  the same for a song named by title and artist
+  (``AnySong.resolve``): the catalog release of that song, else the first matching Deezer search hit
 
 Indexed tracks are ranked from their stored windows. Any other track has its 30 s preview fetched and
 embedded live on the GPU, so it never has to be in the catalog. Standard library HTTP only: bind to
@@ -26,6 +28,7 @@ import tempfile
 import threading
 import time
 import traceback
+import unicodedata
 from collections import OrderedDict
 from collections.abc import Callable, Hashable, Iterator
 from concurrent.futures import Future
@@ -38,12 +41,15 @@ from urllib.parse import parse_qs, urlsplit
 
 import numpy as np
 
+from .deezer import version_words
+
 FETCH = 200  # per-channel depth ranked before de-duplication
 K_MAX = 50
 # "best" list: reciprocal-rank fusion of the channels' song lists, score = sum(w / (FUSE_K + rank)).
 # Chosen on development splits only; see docs/ANYSONG_EVAL.md.
 FUSE_K = 5
 FUSE_WEIGHTS = {"melody": 1.0, "samples": 1.0}
+RESOLVE_LIMIT = 10  # Deezer search depth for a title and artist that are not in the catalog
 _PARENS = re.compile(r"[\(\[][^\)\]]*[\)\]]")
 _DASH_SUFFIX = re.compile(r"\s+-\s+.*$")
 _FEAT = re.compile(r"\s(?:feat\.?|ft\.?|featuring)\s.*$")
@@ -167,6 +173,18 @@ class TokenBucket:
                 del self._buckets[c]
 
 
+def _text_param(value: str, name: str) -> str:
+    value = " ".join(unicodedata.normalize("NFC", value).split())
+    if not value or len(value) > 200:
+        raise ApiError(400, f"{name} must be 1-200 characters")
+    return value
+
+
+def _identity(artist: str, title: str) -> tuple[str, str]:
+    """``song_key`` of NFC text, so composed and decomposed accents name the same song."""
+    return song_key(unicodedata.normalize("NFC", artist), unicodedata.normalize("NFC", title))
+
+
 def _card(track: dict) -> dict:
     album, artist = track.get("album") or {}, track.get("artist") or {}
     return {"id": track["id"], "title": track.get("title") or "", "artist": artist.get("name") or "",
@@ -192,6 +210,18 @@ class AnySong:
         self._flight: dict[int, Future] = {}
         self._lock = threading.Lock()
         self.served = {"catalog": 0, "live": 0, "cached": 0}
+        # Song identity -> indexed catalog releases, for clients that only know a title and artist: titles without
+        # version tags first ("One More Time" before "One More Time (Unplugged)"), then low ids. Releases without
+        # windows usually had no preview, so the Deezer search decides about those.
+        entries = []
+        for tid, (artist, title) in meta.items():
+            if title and engine.indexed(tid):
+                key = _identity(artist, title)
+                entries.append((key[1] != _norm(unicodedata.normalize("NFC", title).casefold()), tid, key))
+        releases: dict[tuple[str, str], list[int]] = {}
+        for _, tid, key in sorted(entries):
+            releases.setdefault(key, []).append(tid)
+        self.by_key: dict[tuple[str, str], tuple[int, ...]] = {key: tuple(ids) for key, ids in releases.items()}
 
     def _count(self, kind: str) -> None:
         with self._lock:
@@ -221,6 +251,39 @@ class AnySong:
             cards = [_card(t) for t in found]
             self.searches.put(key, cards)
         return {"query": q, "tracks": [c | {"in_catalog": self.engine.indexed(c["id"])} for c in cards]}
+
+    def resolve(self, artist: str, title: str, on_search: Callable[[], None] | None = None) -> int:
+        """Deezer id of the recording named by ``artist`` and ``title``.
+
+        Songs match by ``song_key``. Among a song's releases, one with the same ``version_words`` wins, so
+        "Song - Live" asks for a live recording, while "Song" or "Song - Remastered" will not be served by a remix.
+        An indexed catalog release answers without any Deezer request. Otherwise ``on_search`` runs (the caller's
+        search rate limit) and the first Deezer search hit with a preview and that version wins. Failing that, the
+        song's best indexed release, then its first search hit, stands in.
+        """
+        artist, title = _text_param(artist, "artist"), _text_param(title, "title")
+        key, version = _identity(artist, title), version_words(title)
+        known = self.by_key.get(key, ())
+        for tid in known:
+            if version_words(self.meta[tid][1]) == version:
+                return tid
+        try:
+            if on_search is not None:
+                on_search()
+            cards = self.search(f"{artist} {title}"[:200], RESOLVE_LIMIT)["tracks"]
+        except ApiError:
+            if known:
+                return known[0]
+            raise
+        same = [c for c in cards if c["has_preview"] and _identity(c["artist"], c["title"]) == key]
+        for card in same:
+            if version_words(card["title"]) == version:
+                return card["id"]
+        if known:
+            return known[0]
+        if same:
+            return same[0]["id"]
+        raise ApiError(404, "song not found")
 
     def cached(self, track_id: int) -> bool:
         return self.results.get(track_id) is not None
@@ -404,9 +467,13 @@ class Handler(BaseHTTPRequestHandler):
                 q = (params.get("q") or [""])[0]
                 return self._send(200, svc.search(q, _int_param(params, "limit", 10, 1, 25)), max_age=300)
             if url.path == "/api/anysong/similar":
-                tid = _int_param(params, "id", None, 1, 2**53)
                 k = _int_param(params, "k", 20, 1, K_MAX)
                 dedupe = _int_param(params, "dedupe", 1, 0, 1) == 1
+                if "id" not in params and ("title" in params or "artist" in params):
+                    tid = svc.resolve((params.get("artist") or [""])[0], (params.get("title") or [""])[0],
+                                      lambda: self._limit("/api/anysong/search"))
+                else:
+                    tid = _int_param(params, "id", None, 1, 2**53)
                 if not svc.cached(tid):  # only new rankings cost GPU time and Deezer requests
                     self._limit(url.path)
                 return self._send(200, svc.similar(tid, k, dedupe), max_age=3600)
