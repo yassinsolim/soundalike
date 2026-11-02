@@ -226,9 +226,11 @@ songs live on a GPU. Architecture, index builds and deployment are described in
 [docs/ANYSONG.md](docs/ANYSONG.md), and measured accuracy in
 [docs/ANYSONG_EVAL.md](docs/ANYSONG_EVAL.md); the research behind it follows.
 
-The served index holds 269,278 catalog tracks. On held-out benchmarks, at least one tab shows a correct song in
-its top 10 for 71% of cover queries and 51% of Gen Alpha songs, but only 16% of sample pairs and 16% of "sounds
-like" claims. Unseen songs embedded live score the same as catalog songs.
+The served index holds 269,278 catalog tracks. The page opens on a **Best matches** list that fuses the melody and
+samples rankings. On held-out benchmarks its top 10 holds a correct song for 67% of cover queries, 44% of Gen Alpha
+songs and 15–19% of sample pairs, which is the melody tab's cover accuracy with almost twice its sample hits. "Sounds
+like" claims stay hard: about 11% in the fused list and 16–17% when all three tabs are checked. Unseen songs
+embedded live score the same as catalog songs.
 
 The experimental [`soundalike.anysong`](src/soundalike/anysong/) package compares
 MuQ-MuLan, CLAP, MuQ, MERT and MAEST with dedicated SampleID/CLEWS adapters.

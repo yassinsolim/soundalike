@@ -7,6 +7,8 @@ raw      every catalog row, as ``evaluate``: other releases of the query or of a
 songs    the API view: rows collapsed to one entry per song (``api.song_key``) and the query's own song
          removed; a positive song counts as found when any of its releases is.
 any_tab  a positive song in the top k of any channel (the page shows three tabs of 20).
+best     the API's fused "best" list: each channel's top ``api.FETCH`` rows as songs, combined by
+         ``api.fuse``. Positives outside the fused list count as misses.
 
 Also reported: exact brute force vs two-stage agreement on a sample (``--exact``), hubness over random
 catalog queries (``--hubs``) and named example rankings (``--examples``).
@@ -28,7 +30,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from .api import song_key
+from .api import FETCH, FUSE_WEIGHTS, fuse, song_key
 from .evaluate import Query, load_benchmarks, score_block
 from .serve import CHANNELS, ChannelIndex, Engine, TwoStageIndex, load_meta
 
@@ -39,6 +41,8 @@ HEADLINE = {
     "sonic": ("v4_pure_sonic/held_out", "v4_pure_sonic/validation"),
     "any_tab": ("genalpha/test", "v4/held_out", "v4/validation", "mb_covers/held_out", "mb_samples/held_out",
                 "sampleid/held_out"),
+    "best": ("genalpha/test", "mb_covers/held_out", "mb_samples/held_out", "mb_samples_rev/held_out",
+             "sampleid/held_out", "v4/held_out", "v4/validation"),
 }
 METRICS = ("ap", "rr", "hr@1", "hr@10", "hr@20", "p@10", "r@100")
 
@@ -126,9 +130,12 @@ def evaluate_indexes(indexes: dict[str, ChannelIndex | TwoStageIndex], queries: 
         by_id[q.q].append(q)
     report: dict = {"channels": {}, "coverage": {}}
     firsts: dict[tuple[int, str], dict[str, int | None]] = defaultdict(dict)
+    served: dict[int, dict[str, list[int]]] = defaultdict(dict)
+    indexed: set[int] = set()
     for name, ix in indexes.items():
         t0 = time.perf_counter()
         rowkey = keys.rows(ix.ids, ix.id_tensor.device)
+        indexed.update(rowkey.unique().tolist())
         raw: dict[str, list] = defaultdict(list)
         songs: dict[str, list] = defaultdict(list)
         cov: dict[str, Counter] = defaultdict(Counter)
@@ -144,6 +151,8 @@ def evaluate_indexes(indexes: dict[str, ChannelIndex | TwoStageIndex], queries: 
                 row[ix.pos[t]] = -torch.inf
                 qkey = keys.get(t)
                 best = song_best(row, rowkey, qkey)
+                if name in FUSE_WEIGHTS:
+                    served[t][name] = served_songs(ix, row, t, keys, qkey)
                 for q in by_id[t]:
                     key = f"{q.bench}/{q.split}"
                     rr = ix.rank_of(row, q.pos, [t])
@@ -176,7 +185,33 @@ def evaluate_indexes(indexes: dict[str, ChannelIndex | TwoStageIndex], queries: 
             tabs[key].append({"rr": 1.0 / best, "hr@1": float(best <= 1), "hr@10": float(best <= 10),
                               "hr@20": float(best <= TAB_K), "first": float(best)})
     report["any_tab"] = {k: aggregate(v) for k, v in sorted(tabs.items())}
+    fused_rows: dict[str, list] = defaultdict(list)
+    need = [n for n in FUSE_WEIGHTS if n in indexes]
+    for t, per in served.items():
+        if not need or any(n not in per for n in need):
+            continue
+        qkey = keys.get(t)
+        pos = {key: r for r, (key, _, _) in enumerate(fuse(per), 1)}
+        for q in by_id[t]:
+            present = ({keys.get(p) for p in q.pos if p != t} - {qkey}) & indexed
+            if present:
+                # positives outside the served list rank last
+                fused_rows[f"{q.bench}/{q.split}"].append(
+                    metrics(np.sort(np.array([pos.get(p, len(indexed)) for p in present]))))
+    report["best"] = {k: aggregate(v) for k, v in sorted(fused_rows.items())}
     return report
+
+
+def served_songs(ix: ChannelIndex | TwoStageIndex, row: torch.Tensor, t: int, keys: SongKeys, qkey: int
+                 ) -> list[int]:
+    """Song keys of the API's per-channel list: top ``FETCH`` rows, one per song, the query's song removed."""
+    order, seen = [], {qkey}
+    for tid, _ in ix.top(row, FETCH, [t]):
+        sk = keys.get(tid)
+        if sk not in seen:
+            seen.add(sk)
+            order.append(sk)
+    return order
 
 
 @torch.inference_mode()
@@ -265,19 +300,20 @@ def examples(indexes: dict[str, ChannelIndex | TwoStageIndex], ids: list[int], k
 def headline(report: dict, baseline: dict | None = None) -> str:
     lines = []
     for name, benches in HEADLINE.items():
-        src = report["any_tab"] if name == "any_tab" else report["channels"].get(name, {})
+        flat = name in ("any_tab", "best")
+        src = report.get(name, {}) if flat else report["channels"].get(name, {})
         for key in benches:
             m = src.get(key, {})
-            m = m.get("songs", m) if name != "any_tab" else m
+            m = m if flat else m.get("songs", m)
             if not m.get("n"):
                 continue
             line = (f"{name:8s} {key:28s} n={m['n']:<5d} " + (f"AP={m['ap']:.3f} " if "ap" in m else "")
                     + f"HR@1={m['hr@1']:.3f} HR@10={m['hr@10']:.3f} HR@20={m['hr@20']:.3f} "
                     f"median_first={m['median_first']:g}")
             if baseline:
-                b = baseline["any_tab"] if name == "any_tab" else baseline["channels"].get(name, {})
+                b = baseline.get(name, {}) if flat else baseline["channels"].get(name, {})
                 bm = b.get(key, {})
-                bm = bm.get("songs", bm) if name != "any_tab" else bm
+                bm = bm if flat else bm.get("songs", bm)
                 if bm.get("n"):
                     line += f"   | baseline HR@10={bm['hr@10']:.3f}" + (f" AP={bm['ap']:.3f}" if "ap" in bm else "")
             lines.append(line)

@@ -134,6 +134,41 @@ def test_results_are_cached_across_k_and_dedupe(svc):
     assert svc.health()["served"] == {"catalog": 1, "live": 0, "cached": 1}
 
 
+def test_fuse_sums_weighted_reciprocal_ranks():
+    fused = api.fuse({"melody": ["a", "b", "c"], "samples": ["c", "d"], "sonic": ["e"]},
+                     {"melody": 1.0, "samples": 1.0}, k=1)
+    # c: 1/4 + 1/2; a: 1/2; b and d tie at 1/3 with the same best rank, so first appearance wins
+    assert [key for key, _, _ in fused] == ["c", "a", "b", "d"]
+    assert fused[0][1] == pytest.approx(0.75) and fused[0][2] == {"melody": 3, "samples": 1}
+    assert api.fuse({"melody": ["a"], "samples": ["b"]}, {"melody": 1.0, "samples": 2.0}, k=1)[0][0] == "b"
+    assert api.fuse({"sonic": ["e"]}) == []
+
+
+def test_best_list_fuses_the_song_views(svc):
+    res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog"},
+           "raw": {"melody": [(2, 0.99), (3, 0.9), (5, 0.8), (7, 0.7)],
+                   "samples": [(7, 0.5), (6, 0.4), (3, 0.3)]},
+           "timings_ms": {}}
+    r = svc._view(res, k=10, dedupe=True, cached=False)
+    assert list(r["results"]) == ["best", "melody", "samples"]
+    best = r["results"]["best"]
+    # 3 and 7 tie (1st and 3rd in each list) and beat 2nd + 2nd for any k; 6 is a live version of 5, so song 5
+    # is 2nd in both lists
+    assert [x["id"] for x in best] == [3, 7, 5]
+    k = api.FUSE_K
+    assert best[1] == {"id": 7, "score": round(1 / (k + 1) + 1 / (k + 3), 5), "artist": "Third",
+                       "title": "Third Song", "ranks": {"melody": 3, "samples": 1}}
+    assert best[2]["ranks"] == {"melody": 2, "samples": 2} and best[2]["title"] == "Different Song"
+    assert [x["id"] for x in svc._view(res, k=2, dedupe=True, cached=False)["results"]["best"]] == [3, 7]
+    assert [x["id"] for x in r["results"]["samples"]] == [7, 6, 3]
+
+
+def test_no_best_list_without_fused_channels(svc):
+    res = {"query": {"id": 1, "artist": "A", "title": "B", "source": "catalog"}, "raw": {"sonic": [(3, 0.9)]},
+           "timings_ms": {}}
+    assert list(svc._view(res, k=5, dedupe=True, cached=False)["results"]) == ["sonic"]
+
+
 def test_unseen_track_is_fetched_embedded_and_excluded(svc, tmp_path):
     r = svc.similar(99, k=10)
     assert r["query"]["source"] == "live" and r["query"]["cover"] == "http://c/99.jpg"
