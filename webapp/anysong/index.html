@@ -69,6 +69,7 @@ li.row:hover,li.row.playing{background:var(--card)}
 .t{display:block;max-width:100%;padding:0;border:0;background:none;color:var(--txt);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;cursor:pointer}
 .t:hover{color:var(--grn);text-decoration:underline}
 .a{color:var(--mut);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.why{opacity:.8;font-size:12px}
 .bar{width:92px;height:6px;flex:none;background:#0e1319;border-radius:6px;overflow:hidden}
 .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--vio),var(--grn))}
 .pv{width:44px;height:44px;flex:none;border-radius:50%;border:1px solid var(--line);background:var(--card2);color:var(--txt);cursor:pointer;font-size:13px;display:grid;place-items:center}
@@ -108,6 +109,7 @@ li.row .btn{padding:8px 10px}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
 const CHANNELS = [
+  {key: "best", label: "Best matches", blurb: "The melody and samples lists combined into one ranking. Each match shows where it placed in those lists."},
   {key: "melody", label: "Same melody", blurb: "Covers, interpolations and songs that reuse the tune."},
   {key: "samples", label: "Samples & loops", blurb: "Songs that may share a sample, a loop or a chopped-up section."},
   {key: "sonic", label: "Sounds like", blurb: "A similar overall sound: production, instruments and mood."},
@@ -127,7 +129,7 @@ audio.preload = "none";
 const cards = new Map();       // track id -> {id, title, artist, cover, has_preview}
 const suggestions = new Map(); // lower-cased query -> search results
 let acItems = [], acSel = -1, acTimer = 0, acCtl = null;
-let loadSeq = 0, current = null, tab = "melody", results = {};
+let loadSeq = 0, current = null, tab = "best", results = {};
 let playingId = null;
 
 function safeImg(url) {
@@ -292,6 +294,7 @@ function render(seed, d) {
   const live = d.query?.source === "live";
   const ms = d.cached ? null : d.timings_ms?.total;
   results = d.results || {};
+  if (tab === "best" && !results.best) tab = "melody";
   out.innerHTML =
     `<section class="seed" aria-label="Selected song">` +
       `<div class="cover">${seed.cover ? `<img alt="" src="${esc(seed.cover)}">` : ""}</div>` +
@@ -349,10 +352,12 @@ function renderList() {
   list.innerHTML = rows.map((x, i) => {
     const w = hi > lo ? Math.round(25 + 75 * (x.score - lo) / (hi - lo)) : 100;
     const title = x.title || `Deezer track ${x.id}`;
+    const why = x.ranks && typeof x.ranks === "object"
+      ? Object.entries(x.ranks).filter(([, r]) => Number.isInteger(r)).map(([c, r]) => `${esc(c)} #${r}`).join(" · ") : "";
     return `<li class="row" data-id="${x.id}">` +
       `<button class="pv" type="button" data-id="${x.id}" aria-label="Preview ${esc(title)} by ${esc(x.artist)}">▶</button>` +
       `<div class="rank">${i + 1}</div>` +
-      `<div class="meta"><button class="t" type="button" data-id="${x.id}" title="Find songs like this">${esc(title)}</button><div class="a">${esc(x.artist)}</div></div>` +
+      `<div class="meta"><button class="t" type="button" data-id="${x.id}" title="Find songs like this">${esc(title)}</button><div class="a">${esc(x.artist)}${why ? `<span class="why"> · ${why}</span>` : ""}</div></div>` +
       `<div class="bar" aria-hidden="true"><i style="width:${w}%"></i></div>` +
       `<a class="btn" href="https://www.deezer.com/track/${x.id}" target="_blank" rel="noopener" aria-label="Open ${esc(title)} on Deezer">Deezer ↗</a>` +
     `</li>`;

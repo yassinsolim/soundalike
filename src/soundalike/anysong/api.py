@@ -6,7 +6,8 @@ GET endpoints (JSON):
 
 - ``/healthz``
 - ``/api/anysong/search?q=<text>&limit=10``  Deezer track search; ``in_catalog`` marks indexed tracks
-- ``/api/anysong/similar?id=<deezer id>&k=20&dedupe=1``  top matches per channel
+- ``/api/anysong/similar?id=<deezer id>&k=20&dedupe=1``  top matches per channel, plus ``best``: the melody and
+  samples lists fused into one ranking (``fuse``)
 
 Indexed tracks are ranked from their stored windows. Any other track has its 30 s preview fetched and
 embedded live on the GPU, so it never has to be in the catalog. Standard library HTTP only: bind to
@@ -39,6 +40,10 @@ import numpy as np
 
 FETCH = 200  # per-channel depth ranked before de-duplication
 K_MAX = 50
+# "best" list: reciprocal-rank fusion of the channels' song lists, score = sum(w / (FUSE_K + rank)).
+# Chosen on development splits only; see docs/ANYSONG_EVAL.md.
+FUSE_K = 5
+FUSE_WEIGHTS = {"melody": 1.0, "samples": 1.0}
 _PARENS = re.compile(r"[\(\[][^\)\]]*[\)\]]")
 _DASH_SUFFIX = re.compile(r"\s+-\s+.*$")
 _FEAT = re.compile(r"\s(?:feat\.?|ft\.?|featuring)\s.*$")
@@ -62,6 +67,26 @@ def song_key(artist: str, title: str) -> tuple[str, str]:
     core = _norm(_FEAT.sub("", _DASH_SUFFIX.sub("", _PARENS.sub(" ", t))))
     a = _norm(_ARTIST_SPLIT.split(artist.casefold())[0])
     return a, core or _norm(t)
+
+
+def fuse(orders: dict[str, list[Hashable]], weights: dict[str, float] | None = None, k: int = FUSE_K
+         ) -> list[tuple[Hashable, float, dict[str, int]]]:
+    """Reciprocal-rank fusion of per-channel orders of distinct keys.
+
+    Returns ``(key, score, {channel: 1-based rank})`` best first; ties go to the better single-channel rank,
+    then to first appearance (channels in ``orders`` order).
+    """
+    weights = FUSE_WEIGHTS if weights is None else weights
+    score: dict[Hashable, float] = {}
+    ranks: dict[Hashable, dict[str, int]] = {}
+    for ch, order in orders.items():
+        w = weights.get(ch, 0.0)
+        if not w:
+            continue
+        for r, key in enumerate(order, 1):
+            score[key] = score.get(key, 0.0) + w / (k + r)
+            ranks.setdefault(key, {})[ch] = r
+    return sorted(((key, s, ranks[key]) for key, s in score.items()), key=lambda x: (-x[1], min(x[2].values())))
 
 
 class LRU:
@@ -295,20 +320,26 @@ class AnySong:
     def _view(self, res: dict, k: int, dedupe: bool, cached: bool) -> dict:
         q = res["query"]
         qkey = song_key(q["artist"], q["title"]) if q.get("title") else None
-        out = {}
+        out: dict[str, list[dict]] = {}
+        songs: dict[str, dict[Hashable, dict]] = {}
         for channel, rows in res["raw"].items():
-            seen, items = set(), []
+            order: dict[Hashable, dict] = {}
             for tid, score in rows:
                 artist, title = self.meta.get(tid, (None, None))
+                key: Hashable = ("id", tid)
                 if dedupe and title is not None:
                     key = song_key(artist, title)
-                    if key == qkey or key in seen:
+                    if key == qkey or key in order:
                         continue
-                    seen.add(key)
-                items.append({"id": tid, "score": round(float(score), 4), "artist": artist, "title": title})
-                if len(items) == k:
-                    break
-            out[channel] = items
+                order[key] = {"id": tid, "score": round(float(score), 4), "artist": artist, "title": title}
+            songs[channel] = order
+            out[channel] = list(order.values())[:k]
+        best = []
+        for key, score, ranks in fuse({ch: list(order) for ch, order in songs.items()})[:k]:
+            # shown as the release the strongest channel found
+            ch = min(ranks, key=lambda c: ranks[c])
+            best.append(songs[ch][key] | {"score": round(score, 5), "ranks": ranks})
+        out = {"best": best, **out} if best else out
         return {"ok": True, "query": q, "results": out, "timings_ms": res["timings_ms"], "cached": cached}
 
 

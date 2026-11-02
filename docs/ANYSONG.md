@@ -13,6 +13,12 @@ and embedded live on a GPU; everything else is a lookup.
 Scores are only comparable within one channel and one query; the page shows relative bars, not percentages.
 Everything runs on 30-second Deezer previews, so a relationship outside the preview can be missed.
 
+The page opens on **Best matches**, one list that merges the melody and samples lists by reciprocal-rank fusion:
+a song scores `sum(1 / (5 + rank))` over the two channels' song lists, and is shown as the release found by the
+channel that ranked it higher. On held-out benchmarks it finds covers as well as the melody tab and samples better
+than the samples tab ([ANYSONG_EVAL.md](ANYSONG_EVAL.md#best-matches)). The channel tabs remain for browsing one
+relation.
+
 ## Architecture
 
 ```
@@ -24,7 +30,10 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   [`vercel.json`](../webapp/vercel.json): same-origin `connect-src`, images and audio from `*.dzcdn.net` only).
   Previews are resolved through the existing `/api/preview`.
 - [`anysong/api.py`](../src/soundalike/anysong/api.py) serves `GET /api/anysong/search?q=&limit=` (Deezer search
-  plus `in_catalog`), `GET /api/anysong/similar?id=&k=` and `GET /healthz`.
+  plus `in_catalog`), `GET /api/anysong/similar?id=&k=` and `GET /healthz`. `/similar` returns `results.best`
+  followed by one list per channel. Each channel ranks its top 200 rows and keeps one release per song; `best` fuses
+  those song lists (`FUSE_K`, `FUSE_WEIGHTS`), and each of its items carries `ranks`, its 1-based position in each
+  fused channel's list. Its `score` is the fused score.
 - [`anysong/serve.py`](../src/soundalike/anysong/serve.py) holds the two-stage index: a PCA projection of every
   window in VRAM ranks candidates, then the full-dimensional windows (memory-mapped `full.npy`) rerank them.
   A catalog song is queried with its stored windows (no audio work); an unseen song is downloaded, decoded and run
@@ -69,7 +78,8 @@ dense cluster that the penalty would push down. The reasons are in [ANYSONG_EVAL
 Checks before serving an index:
 
 - `python -m soundalike.anysong.eval_index --index index_full --meta catalog_meta.npz --bench bench --exact 256
-  --hubs 2000 --out eval.json` scores every benchmark split per channel and as the page's "any tab". It also
+  --hubs 2000 --out eval.json` scores every benchmark split per channel, as the page's "any tab" and as the fused
+  `best` list. It also
   compares the two-stage ranking with brute force (`--exact`) and measures hubness (`--hubs`). Choose settings
   on `development` splits; report `held_out`/`test`/`validation`.
 - `python -m soundalike.anysong.serve_check --index <dir> --previews <dir> --bench <dir> --out report.json`

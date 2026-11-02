@@ -34,6 +34,8 @@ shows, so a remaster of the query does not count as a hit.
 - **HR@k**: share of queries whose first correct song is in the top k.
 - **Any tab**: the best rank of the first correct song over the three channels. Each channel is a separate tab on
   the page, so this is the chance that at least one tab shows a correct song in its top k.
+- **Best list**: the fused *Best matches* list exactly as the API builds it from each channel's served rows. A
+  correct song outside every fused list counts as ranked after all indexed songs.
 - **Exact check**: the two-stage index (PCA candidates, then full-dimensional rerank) against brute force over
   every window, on random and benchmark queries. It confirms the fast path loses nothing.
 - **Hubness**: for random catalog queries, how many distinct songs appear in anyone's top 10 (coverage), the
@@ -176,6 +178,61 @@ queries:
 
 With the penalty off, samples and sound skew is 3.97 and 3.79. On the 25k index the most frequent song (the radio
 show) was in 1–2% of lists; here no song reaches 0.3%.
+
+## Best matches
+
+The page used to open on the melody tab, so a sampled song only appeared if the visitor thought to switch tabs.
+It now opens on **Best matches**, one list fused from the melody and samples lists with reciprocal-rank fusion
+([Cormack et al., 2009](https://dl.acm.org/doi/10.1145/1571941.1572114)). Each channel serves its top 200 rows, one
+release per song. A song scores `sum(w / (k + rank))` over those lists, and the page shows which place it took in
+each.
+
+**Choosing the settings.** All choices were made on `development` splits: highest macro HR@10, with configurations
+within 0.01 of the best (about one v4 query) counted as tied and ranked by macro AP. The grid covered k ∈ {1, 2, 3, 5,
+10, 20, 60}, eleven melody/samples/sound weightings, and melody hub α ∈ {0, 0.25, 0.5}. The same setting won at every
+α: **k = 5, melody 1, samples 1, sound 0**. Adding the sound list makes things worse: at k = 20, weight 0.5 lowered
+development covers AP by 0.022 and HR@1 by 0.031 (both significant) and reverse-samples AP by 0.006, and its only
+gain was one v4 query.
+
+**Held-out results**, 269k index as served. A `*` marks the better value where a paired bootstrap (2,000 resamples)
+puts the 95% interval of the difference away from zero.
+
+| benchmark | n | Best matches HR@1 / HR@10 / AP | channel built for it, alone | melody tab (old default) HR@10 |
+| --- | --- | --- | --- | --- |
+| Gen Alpha (test) | 59 | 0.186 / 0.441 / 0.019 | melody 0.220 / 0.458 / 0.034\* | 0.458 |
+| covers (held_out) | 1,170 | 0.549 / 0.673 / 0.513 | melody 0.542 / 0.677 / 0.517 | 0.677 |
+| samples (held_out) | 747 | 0.064 / 0.145\* / 0.095 | samples 0.082 / 0.127 / 0.099 | 0.080 |
+| samples, reverse (held_out) | 695 | 0.076 / 0.157\* / 0.101 | samples 0.081 / 0.132 / 0.097 | 0.091 |
+| SampleID pairs (held_out) | 43 | 0.070 / 0.186 / 0.119 | samples 0.116 / 0.140 / 0.130 | 0.093 |
+| v4 "sounds like" (held_out) | 19 | 0.000 / 0.105 / 0.039 | | 0.000 |
+| v4 "sounds like" (validation) | 35 | 0.029 / 0.114 / 0.049 | | 0.057 |
+
+One list now does each specialist's job. Covers match the melody tab on every measure, and sample pairs reach the
+top 10 more often than on the samples tab itself, because a sample match that the melody channel also ranks
+moves up. Against the old default view, the top 10 holds a correct song for almost twice as many sample queries
+(0.145 vs 0.080, 0.157 vs 0.091) at no measurable cost on covers. Gen Alpha's first hit is about as early as on the
+melody tab (HR@10 0.441 vs 0.458, not significant). Its AP falls because AP counts all 64 other members, and sample
+matches take some of the slots that deeper members held. Checking all three tabs (the "any tab" table above) still
+finds more: 0.709 for covers, 0.508 for Gen Alpha and 0.162 for samples.
+
+Two settings were checked on held-out data after the choice:
+
+- **k.** k = 20, the common default, has the same Gen Alpha and samples numbers, but its covers HR@1 is lower (0.528
+  vs 0.549\*), for slightly higher covers HR@10 (0.680 vs 0.673\*). A small k lets one channel's confident first
+  place stand.
+- **Melody hub penalty.** Inside the fused list, α = 0.25 raises covers HR@10 by 0.013\* and lowers Gen Alpha HR@10
+  from 0.441 to 0.390 (3 of 59 songs); α = 0.5 lowers it to 0.339\*. Melody stays at 0.
+
+### What did not help: query expansion
+
+Query expansion re-scores each candidate by mixing its similarity to the query with its average similarity to the
+query's top n results (n ∈ {1, 2, 3, 5, 8}, mixing weight λ ∈ {0.5, 1, 2}, 20 variants per channel). On development
+splits it added at most 0.005 to melody covers AP over the hub-penalised baseline, and every variant lowered HR@10 (by
+0.003 to 0.040). Every samples variant lowered both AP and HR@10. For sound, AP rose by up to 0.026 with HR@10
+unchanged, measured on only 31 queries. It is not used.
+
+The tooling for these studies (re-ranking, fusion sweep and paired bootstrap) lives outside the package; `eval_index`
+reports the shipped `best` list directly.
 
 ## Serving on the RTX 2070 SUPER
 
