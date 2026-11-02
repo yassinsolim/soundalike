@@ -271,6 +271,109 @@ def test_search_upstream_failure(svc):
     assert err.value.status == 502
 
 
+NEW_SONG = {99: {"id": 99, "title": "Brand New Song (Live)", "artist": {"name": "New Artist"},
+                 "album": {"title": "Fresh", "cover_medium": "http://c/99.jpg"}, "duration": 30, "preview": "u"}}
+ORIGINAL = {99: {"id": 99, "title": "Mutations", "artist": {"name": "Nil\u00fcfer Yanya"}, "album": {}, "duration": 30,
+                 "preview": "u"}}
+
+
+def test_resolve_finds_the_requested_version_in_the_catalog_without_deezer(svc):
+    calls = []
+    assert svc.resolve("Daft Punk", "One More Time - Radio Edit", lambda: calls.append(1)) == 2
+    assert svc.resolve("  daft  PUNK feat. Someone ", "One More Time - Remastered") == 1  # same recording
+    assert svc.resolve("Daft Punk", "One More Time (feat. Romanthony)") == 1
+    assert svc.resolve("Some Choir", "One More Time") == 3
+    assert svc.resolve("Other Artist", "Different Song - Live") == 6
+    assert calls == [] and svc.deezer.searches == 0
+
+
+def test_resolve_prefers_indexed_releases_then_untagged_titles(tmp_path):
+    svc = api.AnySong(FakeEngine(ids=(2, 3, 4, 5, 6, 7)), FakeDeezer(tmp_path), META)
+    assert svc.resolve("Daft Punk", "One More Time") == 4  # 1 has metadata but no windows; 2 is a radio edit
+    meta = {1: ("A", "Song (Unplugged)"), 2: ("A", "Song - Remastered"), 3: ("A", "Song"), 4: ("A feat. B", "Song")}
+    assert api.AnySong(FakeEngine(), FakeDeezer(tmp_path), meta).resolve("A", "Song - Remastered 2009") == 3
+    assert api.AnySong(FakeEngine(ids=(1, 2)), FakeDeezer(tmp_path), meta).resolve("A", "Song") == 1
+
+
+def test_resolve_leaves_releases_without_windows_to_the_deezer_search(tmp_path):
+    meta = {1: ("A", "Song"), 2: ("A", "Song (Club Remix)")}
+    tracks = {99: {"id": 99, "title": "Song", "artist": {"name": "A"}, "album": {}, "duration": 30, "preview": "u"}}
+    assert api.AnySong(FakeEngine(ids=(2,)), FakeDeezer(tmp_path, tracks=tracks), meta).resolve("A", "Song") == 99
+    assert api.AnySong(FakeEngine(ids=(2,)), FakeDeezer(tmp_path), meta).resolve("A", "Song") == 2
+    with pytest.raises(api.ApiError) as err:
+        api.AnySong(FakeEngine(ids=()), FakeDeezer(tmp_path), meta).resolve("A", "Song")
+    assert err.value.status == 404
+
+
+def test_resolve_searches_deezer_for_a_version_the_catalog_lacks(tmp_path):
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path, tracks=ORIGINAL),
+                      {7: ("Nil\u00fcfer Yanya", "Mutations (Empress Of Remix)")})
+    calls = []
+    assert svc.resolve("Nil\u00fcfer Yanya", "Mutations", lambda: calls.append(1)) == 99  # the original, not the remix
+    assert svc.resolve("Nil\u00fcfer Yanya", "Mutations - Empress Of Remix", lambda: calls.append(1)) == 7
+    assert calls == [1] and svc.deezer.searches == 1
+
+
+def test_resolve_settles_for_another_version_of_the_song(tmp_path):
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META)  # Deezer's only hit is a live "One More Time"
+    assert svc.resolve("Daft Punk", "One More Time - Live") == 99
+    assert svc.resolve("Daft Punk", "One More Time - Acoustic") == 1  # neither has it: the catalog's best release
+
+    def limited():
+        raise api.ApiError(429, "too many requests")
+
+    assert svc.resolve("Daft Punk", "One More Time (Live at Wembley)", limited) == 1
+    svc.deezer.fail = True
+    assert svc.resolve("Daft Punk", "One More Time (Live in Paris)") == 1
+    assert svc.deezer.searches == 3
+
+
+def test_resolve_matches_accents_in_either_unicode_form(tmp_path):
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), {7: ("Rose\u0301", "APT.")})
+    assert svc.resolve("ROS\u00c9", "APT.") == 7 and svc.deezer.searches == 0
+
+
+def test_resolve_falls_back_to_a_deezer_search_hit_of_the_same_song(tmp_path):
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path, tracks=NEW_SONG), META)
+    calls = []
+    assert svc.resolve("New Artist feat. Guest", "Brand New Song", lambda: calls.append(1)) == 99
+    assert calls == [1] and svc.deezer.searches == 1
+    assert svc.similar(99)["query"]["source"] == "live" and svc.deezer.lookups == 0
+
+
+@pytest.mark.parametrize("artist,title", [
+    ("Daft Punk", "Unknown Song"),  # the hit is another song
+    ("Other Artist", "Different Song"),  # the hit has no preview
+])
+def test_resolve_rejects_search_hits_of_other_songs_or_without_previews(tmp_path, artist, title):
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), {})
+    with pytest.raises(api.ApiError) as err:
+        svc.resolve(artist, title)
+    assert err.value.status == 404 and svc.deezer.searches == 1
+
+
+@pytest.mark.parametrize("artist,title", [("", "x"), ("x", "   "), ("x" * 201, "y"), ("x", "y" * 201)])
+def test_resolve_validates_names_before_any_lookup(svc, artist, title):
+    with pytest.raises(api.ApiError) as err:
+        svc.resolve(artist, title, lambda: pytest.fail("rate limit consulted"))
+    assert err.value.status == 400 and svc.deezer.searches == 0
+
+
+def test_resolve_search_limit_and_upstream_failure(tmp_path):
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path, tracks=NEW_SONG), META)
+
+    def limited():
+        raise api.ApiError(429, "too many requests")
+
+    with pytest.raises(api.ApiError) as err:
+        svc.resolve("New Artist", "Brand New Song", limited)
+    assert err.value.status == 429 and svc.deezer.searches == 0
+    svc.deezer.fail = True
+    with pytest.raises(api.ApiError) as err:
+        svc.resolve("New Artist", "Brand New Song")
+    assert err.value.status == 502
+
+
 def test_lru_evicts_and_expires():
     now = [0.0]
     c = api.LRU(2, ttl=10, clock=lambda: now[0])
@@ -343,6 +446,14 @@ def test_http_routes(server):
     code, _, body = get(server, "/api/anysong/search?q=one%20more%20time&limit=1")
     assert code == 200 and [t["id"] for t in body["tracks"]] == [99]
 
+    code, headers, body = get(server, "/api/anysong/similar?title=One%20More%20Time%20-%20Remastered"
+                                      "&artist=Daft%20Punk&k=2")
+    assert code == 200 and body["query"]["id"] == 1 and [x["id"] for x in body["results"]["best"]] == [3, 5]
+    assert headers["Cache-Control"] == "public, max-age=3600"
+
+    code, _, body = get(server, "/api/anysong/similar?id=7&title=One%20More%20Time&artist=Daft%20Punk")
+    assert code == 200 and body["query"]["id"] == 7  # an explicit id wins over names
+
 
 @pytest.mark.parametrize("path,status", [
     ("/nope", 404),
@@ -352,6 +463,10 @@ def test_http_routes(server):
     ("/api/anysong/similar?id=1&k=51", 400),
     ("/api/anysong/similar?id=1&dedupe=2", 400),
     ("/api/anysong/similar?id=12345", 404),
+    ("/api/anysong/similar?title=One%20More%20Time", 400),
+    ("/api/anysong/similar?artist=Daft%20Punk&title=", 400),
+    ("/api/anysong/similar?title=One%20More%20Time&artist=Daft%20Punk&k=0", 400),
+    ("/api/anysong/similar?title=Unknown%20Song&artist=Nobody", 404),
     ("/api/anysong/search?q=", 400),
     ("/api/anysong/search?q=a&limit=26", 400),
     ("/api/anysong/similar?" + "&".join(f"a{i}=1" for i in range(9)), 400),
@@ -377,6 +492,20 @@ def test_http_rate_limit_groups_ipv6_by_64_and_falls_back_to_peer(server):
     assert get(server, "/api/anysong/similar?id=5", {"CF-Connecting-IP": "2001:db8:7:8::1"})[0] == 200
     codes = [get(server, f"/api/anysong/similar?id={i}", {"CF-Connecting-IP": "garbage"})[0] for i in (2, 4, 6)]
     assert codes[-1] == 429  # unparseable header -> keyed by the peer address, not a fresh bucket per value
+
+
+def test_http_name_lookups_spend_the_search_budget_only_on_catalog_misses(tmp_path):
+    srv = api.Server(("127.0.0.1", 0), api.AnySong(FakeEngine(), FakeDeezer(tmp_path, tracks=NEW_SONG), META),
+                     search_per_min=4, similar_per_min=600)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        miss = "/api/anysong/similar?title=Another%20Song&artist=Nobody"
+        assert [get(srv, miss)[0] for _ in range(2)] == [404, 429]  # search_per_min=4 -> burst of 1
+        assert get(srv, "/api/anysong/similar?title=Third%20Song&artist=Third")[0] == 200
+        assert srv.service.deezer.searches == 1
+    finally:
+        srv.shutdown()
+        srv.server_close()
 
 
 def test_http_internal_errors_are_generic(server, capsys):

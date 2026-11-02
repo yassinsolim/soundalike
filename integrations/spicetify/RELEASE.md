@@ -47,3 +47,11 @@ Commit the bootstrap first. In a separate follow-up commit, point
 self-referential bootstrap pin and gives Marketplace a permanent bootstrap
 artifact. Existing users need one final Marketplace reinstall to receive a new
 bootstrap; signed runtime releases thereafter are automatic.
+
+## Marketplace card
+
+Only `main` resolves against the pinned `branch`. `readme` and `preview` are
+absolute `main` URLs, so the Marketplace card and README page follow the
+current docs without moving the bootstrap pin. Marketplace reads
+`manifest.json` from the default branch, so card text changes reach new
+visitors on merge; an installed copy keeps its stored card until reinstalled.

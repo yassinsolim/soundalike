@@ -47,6 +47,7 @@ async function waitFor(predicate, timeoutMs = 500) {
 
 function loadExtension(fetchImpl, options = {}) {
   let handler;
+  let registeredMenuItems = 0;
   let currentPage;
   const notifications = [];
   const history = [];
@@ -56,6 +57,33 @@ function loadExtension(fetchImpl, options = {}) {
   const logs = [];
   const historyListeners = [];
   const storage = options.storage || new Map();
+  const bestRequests = [];
+  const tabFocus = [];
+  const tabs = ["best", "sounds"].map((view) => ({
+    dataset: { view },
+    onclick: null,
+    onkeydown: null,
+    focus() {
+      tabFocus.push(view);
+      context.document.activeElement = this;
+    },
+  }));
+  const offerButton = { onclick: null };
+  // Best matches are offline unless a test opts in, so the older tests keep
+  // exercising the Sounds like flow they were written for.
+  function fetchWithBestMatches(url, init) {
+    if (String(url).startsWith("https://soundalike.yassin.app/api/anysong/")) {
+      bestRequests.push(String(url));
+      return options.bestFetch
+        ? options.bestFetch(String(url), init)
+        : Promise.reject(new TypeError("Best matches are offline in this test"));
+    }
+    return fetchImpl(url, init);
+  }
+  const scaledSetTimeout = options.timerScale
+    ? (callback, ms = 0, ...args) =>
+      setTimeout(callback, Math.round(ms * options.timerScale), ...args)
+    : setTimeout;
   const rows = (options.results || []).map((_, index) => ({
     dataset: { index: String(index) },
     hidden: index >= 20,
@@ -127,11 +155,14 @@ function loadExtension(fetchImpl, options = {}) {
       ".sa-feedback-status": feedback.status,
     };
     if (controls[selector]) return controls[selector];
+    const tab = selector.match(/^\.sa-tab\[data-view="(\w+)"\]$/);
+    if (tab) return tabs.find((item) => item.dataset.view === tab[1]) || null;
     const match = selector.match(/data-index="(\d+)"/);
     return match ? rows[Number(match[1])] : null;
   }
   function queryAllPage(selector) {
     if (selector === ".sa-row") return rows;
+    if (selector === ".sa-tab") return tabs;
     if (selector === 'input[name="sa-feedback-rating"]') {
       return feedback.ratings;
     }
@@ -160,10 +191,19 @@ function loadExtension(fetchImpl, options = {}) {
         if (this.className === "sa-results-host") currentPage = undefined;
       },
       querySelector(selector) {
+        if (selector === ".sa-best-offer") {
+          return this.innerHTML.includes('class="sa-best-offer"')
+            ? offerButton
+            : null;
+        }
         return queryPage(selector);
       },
       querySelectorAll(selector) {
         return queryAllPage(selector);
+      },
+      contains(node) {
+        return this.className === "sa-results-host" &&
+          (tabs.includes(node) || node === offerButton);
       },
     };
   }
@@ -249,8 +289,8 @@ function loadExtension(fetchImpl, options = {}) {
     URLSearchParams,
     clearTimeout,
     crypto: webcrypto,
-    fetch: fetchImpl,
-    setTimeout,
+    fetch: fetchWithBestMatches,
+    setTimeout: scaledSetTimeout,
     console: {
       error() {},
       log(...values) {
@@ -259,6 +299,7 @@ function loadExtension(fetchImpl, options = {}) {
       warn() {},
     },
     document: {
+      activeElement: null,
       body,
       createElement(tag) {
         if (tag !== "div") return {};
@@ -319,9 +360,14 @@ function loadExtension(fetchImpl, options = {}) {
         constructor(_label, callback) {
           handler = callback;
         }
-        register() {}
+        register() {
+          registeredMenuItems += 1;
+        }
       },
     },
+    ...(options.spicetifyVersion === undefined
+      ? {}
+      : { Config: { version: options.spicetifyVersion } }),
     GraphQL: {
       Definitions: definitions,
       async Request(definition, variables) {
@@ -434,6 +480,9 @@ function loadExtension(fetchImpl, options = {}) {
         },
       },
       Registry: registry,
+      ...(options.spotifyVersion === undefined
+        ? {}
+        : { version: options.spotifyVersion }),
     },
     Player: {
       async playUri(uri) {
@@ -496,6 +545,20 @@ function loadExtension(fetchImpl, options = {}) {
     languageLoading,
     feedback,
     rows,
+    bestRequests,
+    tabs,
+    tabFocus,
+    offerButton,
+    get activeElement() {
+      return context.document.activeElement;
+    },
+    get registeredMenuItems() {
+      return registeredMenuItems;
+    },
+    historyListeners,
+    focusOn(node) {
+      context.document.activeElement = node;
+    },
     get currentPage() {
       return currentPage;
     },
@@ -594,6 +657,7 @@ test("prefers a healthy local companion over the hosted library", async () => {
     "http://127.0.0.1:8787/health",
     "http://127.0.0.1:8787/api/recommend",
   ]);
+  assert.deepEqual(app.bestRequests, []);
   assert.match(page.innerHTML, /LOCAL ENGINE/);
   assert.equal(
     app.notifications.some(([message]) => message.includes("first request after idle")),
@@ -1891,4 +1955,748 @@ test("feedback markup is inline and exposes accessible form semantics", () => {
     /class="sa-feedback-status" role="status" aria-live="polite"/,
   );
   assert.equal(extensionSource.includes("dialog"), false);
+});
+
+const bestSeedQuery = {
+  id: 908604612,
+  title: "Blinding Lights",
+  artist: "The Weeknd",
+  source: "catalog",
+};
+
+const bestFixture = [
+  {
+    title: "Save Your Tears",
+    artist: "The Weeknd",
+    ranks: { melody: 1, samples: 3, "<b>": 2, sonic: 0 },
+  },
+  { title: "Chanson Proche", artist: "Artiste Deux", ranks: { samples: 2 } },
+  { title: " ", artist: "Nobody", ranks: { melody: 4 } },
+];
+
+const soundsFixture = [
+  { title: "Take My Breath", artist: "The Weeknd", bpm: 121.7 },
+];
+
+const bestCacheKey = "best:anysong-best-rrf-v1:spotify:track:test";
+
+function bestMatchesBody(best = bestFixture, overrides = {}) {
+  return {
+    ok: true,
+    cached: false,
+    query: bestSeedQuery,
+    results: { best, melody: [], samples: [], sonic: [] },
+    timings_ms: { total: 2345 },
+    ...overrides,
+  };
+}
+
+function spotifyTrackFixture(title, artist, id) {
+  return {
+    __typename: "Track",
+    name: title,
+    uri: `spotify:track:${id}`,
+    albumOfTrack: {
+      name: `${title} (Single)`,
+      uri: `spotify:album:${id}`,
+      coverArt: {
+        sources: [{ url: `https://i.scdn.co/image/${id}`, width: 300 }],
+      },
+    },
+    artists: {
+      items: [{ uri: `spotify:artist:${id}`, profile: { name: artist } }],
+    },
+  };
+}
+
+// Both lists succeed unless a test overrides them. Every track has a known
+// lyrics language, so no lookup waits for a retry.
+function loadBestMatchesExtension({
+  bestFetch = async () => response(200, bestMatchesBody()),
+  soundsResponse = async () =>
+    response(200, { ...recommendation, results: soundsFixture }),
+  localCompanion = false,
+  ...options
+} = {}) {
+  const urls = [];
+  const app = loadExtension(async (url) => {
+    urls.push(url);
+    if (url.endsWith("/health")) {
+      if (localCompanion) return response(200, { ok: true });
+      throw new TypeError("connection refused");
+    }
+    return soundsResponse(url);
+  }, {
+    results: bestFixture,
+    spotifyTracks: {
+      "Save Your Tears The Weeknd":
+        spotifyTrackFixture("Save Your Tears", "The Weeknd", "best0"),
+      "Chanson Proche Artiste Deux":
+        spotifyTrackFixture("Chanson Proche", "Artiste Deux", "best1"),
+      "Take My Breath The Weeknd":
+        spotifyTrackFixture("Take My Breath", "The Weeknd", "sounds0"),
+    },
+    languageByTrackId: { test: "en", best0: "en", best1: "fr", sounds0: "en" },
+    bestFetch,
+    ...options,
+  });
+  return Object.assign(app, { urls });
+}
+
+function hasLog(app, text) {
+  return app.logs.some((line) => line.includes(text));
+}
+
+function errorNotifications(app) {
+  return app.notifications.filter(([, isError]) => isError === true);
+}
+
+const noPreview = () => response(404, { ok: false, error: "not found" });
+const hostedMiss = async () => response(422, {
+  ok: false,
+  error: "This track is not in the hosted library.",
+});
+
+test("opens on Best matches with Sounds like one tab away", async () => {
+  const app = loadBestMatchesExtension();
+
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  await waitFor(() =>
+    app.urls.some((url) => url.includes("/api/spicetify_recommend")));
+
+  assert.equal(app.bestRequests.length, 1);
+  const bestUrl = new URL(app.bestRequests[0]);
+  assert.equal(
+    `${bestUrl.origin}${bestUrl.pathname}`,
+    "https://soundalike.yassin.app/api/anysong/similar",
+  );
+  assert.equal(bestUrl.searchParams.get("title"), "Blinding Lights");
+  assert.equal(bestUrl.searchParams.get("artist"), "The Weeknd");
+  assert.equal(bestUrl.searchParams.get("k"), "20");
+  assert.equal(
+    app.urls.filter((url) => url.includes("/api/spicetify_recommend")).length,
+    1,
+  );
+  assert.deepEqual(app.history, ["/soundalike"]);
+  assert.deepEqual(errorNotifications(app), []);
+
+  const html = app.currentPage.innerHTML;
+  assert.match(html, /<div class="sa-kicker">BEST MATCHES · HOSTED LIBRARY<\/div>/);
+  assert.match(html, /class="sa-panel sa-view-best"/);
+  assert.match(html, /id="sa-tab-best"[^>]*aria-selected="true" tabindex="0"/);
+  assert.match(html, /id="sa-tab-sounds"[^>]*aria-selected="false" tabindex="-1"/);
+  assert.match(html, /<span class="sa-tag">Melody \+ samples<\/span>/);
+  assert.match(html, /<span class="sa-tag">In our library<\/span>/);
+  assert.match(html, /<span class="sa-tag">Matched in 2\.3 s<\/span>/);
+  assert.doesNotMatch(html, /Matched to/);
+  assert.match(html, /<span class="sa-why"> · melody #1 · samples #3<\/span>/);
+  assert.doesNotMatch(html, /&lt;b&gt;/);
+  assert.equal((html.match(/<div class="sa-row"/g) || []).length, 2);
+  assert.doesNotMatch(html, /<div class="sa-row"[^>]* hidden>/);
+  assert.doesNotMatch(html, /<div class="sa-bpm">BPM<\/div>/);
+  assert.doesNotMatch(html, /<section class="sa-feedback"/);
+
+  const why = findElement(
+    app.rows[0].tree,
+    (node) => node.props?.className === "sa-why",
+  );
+  assert.equal(why.props.children, " · melody #1 · samples #3");
+  assert.equal(
+    findElement(app.rows[0].tree, (node) => node.props?.className === "sa-bpm"),
+    null,
+  );
+  assert.equal(app.rows[0].dataset.uri, "spotify:track:best0");
+  // Best matches skip the lyrics-language gate.
+  assert.equal(app.rows[1].hidden, false);
+  assert.equal(app.rows[1].dataset.uri, "spotify:track:best1");
+  assert.equal(app.feedback.panel.dataset.ready, undefined);
+  assert.equal(app.feedback.panel.hidden, true);
+});
+
+test("switches result lists with tabs and arrow keys and keeps the choice", async () => {
+  const app = loadBestMatchesExtension();
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+
+  app.tabs[1].onclick();
+  await waitFor(() => app.feedback.panel.dataset.ready === "true");
+  const html = app.currentPage.innerHTML;
+  assert.match(html, /<div class="sa-kicker">SOUNDS LIKE · HOSTED LIBRARY<\/div>/);
+  assert.match(html, /class="sa-panel sa-view-sounds"/);
+  assert.match(html, /id="sa-tab-sounds"[^>]*aria-selected="true"/);
+  assert.match(html, /Dual-Sonic64/);
+  assert.match(html, /<div class="sa-bpm">BPM<\/div>/);
+  assert.match(html, /<section class="sa-feedback"/);
+  assert.doesNotMatch(html, /Showing Sounds like instead/);
+  assert.equal(app.feedback.panel.hidden, false);
+  assert.equal(app.rows[0].dataset.uri, "spotify:track:sounds0");
+  assert.notEqual(
+    findElement(app.rows[0].tree, (node) => node.props?.className === "sa-bpm"),
+    null,
+  );
+  assert.deepEqual(app.tabFocus, ["sounds"]);
+
+  const handledKeys = [];
+  const press = (tab, key) => {
+    app.tabs[tab].onkeydown({
+      key,
+      preventDefault() {
+        handledKeys.push(key);
+      },
+    });
+  };
+  const view = () =>
+    app.currentPage.innerHTML.match(/class="sa-panel sa-view-(\w+)"/)[1];
+  press(1, "ArrowLeft");
+  assert.equal(view(), "best");
+  assert.equal(app.rows[0].dataset.uri, "spotify:track:best0");
+  press(0, "End");
+  assert.equal(view(), "sounds");
+  press(1, "Home");
+  assert.equal(view(), "best");
+  press(0, "ArrowRight");
+  assert.equal(view(), "sounds");
+  press(1, "a");
+  assert.equal(view(), "sounds");
+  assert.deepEqual(handledKeys, ["ArrowLeft", "End", "Home", "ArrowRight"]);
+  assert.deepEqual(
+    app.tabFocus,
+    ["sounds", "best", "sounds", "best", "sounds"],
+  );
+
+  app.navigate("/album/elsewhere");
+  assert.equal(app.currentPage, undefined);
+  app.navigate("/soundalike");
+  await waitFor(() => app.currentPage !== undefined);
+  assert.equal(view(), "sounds");
+  assert.deepEqual(app.history, ["/soundalike", "/album/elsewhere", "/soundalike"]);
+});
+
+test("falls back to Sounds like when a song has no Deezer preview", async () => {
+  const app = loadBestMatchesExtension({ bestFetch: async () => noPreview() });
+
+  await app.run();
+  await waitFor(() => app.feedback.panel.dataset.ready === "true");
+
+  assert.equal(app.bestRequests.length, 1);
+  assert.deepEqual(errorNotifications(app), []);
+  let html = app.currentPage.innerHTML;
+  assert.match(html, /<div class="sa-kicker">SOUNDS LIKE · HOSTED LIBRARY<\/div>/);
+  assert.match(html, /class="sa-panel sa-view-sounds"/);
+  assert.match(
+    html,
+    /<p class="sa-note">This song isn't on Deezer with a preview, so it has no best matches\. Showing Sounds like instead\.<\/p>/,
+  );
+  assert.equal(app.feedback.panel.hidden, false);
+
+  app.tabs[0].onclick();
+  html = app.currentPage.innerHTML;
+  assert.match(html, /class="sa-panel sa-view-best"/);
+  assert.match(
+    html,
+    /<div class="sa-state sa-state-error" role="alert">This song isn't on Deezer with a preview, so it has no best matches\.<\/div>/,
+  );
+  assert.doesNotMatch(html, /<div class="sa-row"/);
+
+  app.tabs[1].onclick();
+  assert.doesNotMatch(app.currentPage.innerHTML, /Showing Sounds like instead/);
+});
+
+test("reports both failures once without opening an empty page", async () => {
+  const app = loadBestMatchesExtension({
+    bestFetch: async () => noPreview(),
+    soundsResponse: hostedMiss,
+  });
+
+  const page = await app.run();
+
+  assert.equal(page, undefined);
+  assert.deepEqual(app.history, []);
+  const errors = errorNotifications(app);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0][0], /not in the hosted library/);
+  assert.match(errors[0][0], /isn't on Deezer with a preview/);
+});
+
+test("keeps Best matches open when the hosted library misses the song", async () => {
+  const app = loadBestMatchesExtension({ soundsResponse: hostedMiss });
+
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+
+  assert.match(app.currentPage.innerHTML, /class="sa-panel sa-view-best"/);
+  app.tabs[1].onclick();
+  await waitFor(() => /role="alert"/.test(app.currentPage.innerHTML));
+  const html = app.currentPage.innerHTML;
+  assert.match(html, /<div class="sa-kicker">SOUNDS LIKE<\/div>/);
+  assert.match(
+    html,
+    /<div class="sa-state sa-state-error" role="alert">[^<]*not in the hosted library[^<]*<\/div>/,
+  );
+  assert.doesNotMatch(html, /<section class="sa-feedback"/);
+  assert.deepEqual(errorNotifications(app), []);
+});
+
+test("shows Sounds like loading until its list arrives", async () => {
+  const gate = deferred();
+  const app = loadBestMatchesExtension({
+    soundsResponse: async () => {
+      await gate.promise;
+      return response(200, { ...recommendation, results: soundsFixture });
+    },
+  });
+
+  await app.run();
+  assert.match(app.currentPage.innerHTML, /class="sa-panel sa-view-best"/);
+  app.tabs[1].onclick();
+  assert.match(app.currentPage.innerHTML, /<div class="sa-kicker">SOUNDS LIKE<\/div>/);
+  assert.match(
+    app.currentPage.innerHTML,
+    /<div class="sa-state" role="status">Finding songs that sound alike…<\/div>/,
+  );
+
+  gate.resolve();
+  await waitFor(() => app.feedback.panel.dataset.ready === "true");
+  assert.match(app.currentPage.innerHTML, /Dual-Sonic64/);
+  assert.equal(app.rows[0].dataset.uri, "spotify:track:sounds0");
+});
+
+test("opens with Best matches loading once Sounds like has waited", async () => {
+  const gate = deferred();
+  const app = loadBestMatchesExtension({
+    timerScale: 0.01,
+    bestFetch: async () => {
+      await gate.promise;
+      return response(200, bestMatchesBody(bestFixture, {
+        query: { ...bestSeedQuery, title: "Blinding Lights - Live" },
+      }));
+    },
+  });
+
+  await app.run();
+  let html = app.currentPage.innerHTML;
+  assert.match(html, /class="sa-panel sa-view-best"/);
+  assert.match(
+    html,
+    /<div class="sa-state" role="status">Listening for best matches… songs outside the library take a few seconds\.<\/div>/,
+  );
+  assert.equal(app.rows[0].tree, undefined);
+
+  gate.resolve();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  html = app.currentPage.innerHTML;
+  assert.match(html, /<span class="sa-tag">Melody \+ samples<\/span>/);
+  assert.match(html, /Matched to “Blinding Lights - Live” by The Weeknd\./);
+  assert.equal(app.rows[0].dataset.uri, "spotify:track:best0");
+});
+
+test("switches to Sounds like when slow Best matches fail", async () => {
+  const gate = deferred();
+  const app = loadBestMatchesExtension({
+    timerScale: 0.01,
+    bestFetch: async () => {
+      await gate.promise;
+      return noPreview();
+    },
+  });
+
+  await app.run();
+  assert.match(app.currentPage.innerHTML, /class="sa-panel sa-view-best"/);
+  gate.resolve();
+  await waitFor(() => app.feedback.panel.dataset.ready === "true");
+
+  const html = app.currentPage.innerHTML;
+  assert.match(html, /class="sa-panel sa-view-sounds"/);
+  assert.match(html, /no best matches\. Showing Sounds like instead\./);
+  assert.equal(app.feedback.panel.hidden, false);
+});
+
+test("keeps a chosen list when Best matches fail later", async () => {
+  const gate = deferred();
+  const app = loadBestMatchesExtension({
+    timerScale: 0.01,
+    bestFetch: async () => {
+      await gate.promise;
+      return noPreview();
+    },
+  });
+
+  await app.run();
+  app.tabs[0].onclick();
+  assert.deepEqual(app.tabFocus, ["best"]);
+  gate.resolve();
+  await waitFor(() => /role="alert"/.test(app.currentPage.innerHTML));
+
+  const html = app.currentPage.innerHTML;
+  assert.match(html, /class="sa-panel sa-view-best"/);
+  assert.match(html, /isn't on Deezer with a preview/);
+  assert.doesNotMatch(html, /Showing Sounds like instead/);
+});
+
+test("retries a busy matcher before falling back to Sounds like", async () => {
+  let calls = 0;
+  const recovered = loadBestMatchesExtension({
+    timerScale: 0.01,
+    bestFetch: async () => (++calls === 1
+      ? response(503, { ok: false, error: "busy" })
+      : response(200, bestMatchesBody(bestFixture, { cached: true }))),
+  });
+  await recovered.run();
+  await waitFor(() => hasLog(recovered, "Best matches metadata settled"));
+  assert.equal(recovered.bestRequests.length, 2);
+  let html = recovered.currentPage.innerHTML;
+  assert.match(html, /class="sa-panel sa-view-best"/);
+  assert.match(html, /<span class="sa-tag">In our library<\/span>/);
+  assert.doesNotMatch(html, /Matched in/);
+
+  const busy = loadBestMatchesExtension({
+    timerScale: 0.01,
+    bestFetch: async () => response(503, { ok: false, error: "busy" }),
+  });
+  await busy.run();
+  await waitFor(() =>
+    /Showing Sounds like instead/.test(busy.currentPage?.innerHTML || ""));
+  assert.equal(busy.bestRequests.length, 3);
+  html = busy.currentPage.innerHTML;
+  assert.match(
+    html,
+    /The matcher is busy right now\. Try again in a moment\. Showing Sounds like instead\./,
+  );
+});
+
+test("restores cached Best matches without asking the matcher again", async () => {
+  const storage = new Map();
+  const first = loadBestMatchesExtension({
+    storage,
+    bestFetch: async () => response(200, bestMatchesBody(bestFixture, {
+      query: { ...bestSeedQuery, source: "live" },
+    })),
+  });
+  await first.run();
+  await waitFor(() => hasLog(first, "Best matches metadata settled"));
+  let html = first.currentPage.innerHTML;
+  assert.match(html, /<span class="sa-tag">Heard live just now<\/span>/);
+  assert.match(html, /<span class="sa-tag">Matched in 2\.3 s<\/span>/);
+
+  const saved = () => {
+    const raw = storage.get("soundalike:spicetify-cache:v9");
+    return raw ? JSON.parse(raw) : null;
+  };
+  await waitFor(() =>
+    Boolean(
+      saved()?.recommendations?.[bestCacheKey] &&
+      saved().spotifyTracks?.["result:chanson proche::artiste deux"],
+    ), 1000);
+  assert.ok(storage.get("soundalike:spicetify-cache:v9").length < 10000);
+  const entry = saved().recommendations[bestCacheKey].value;
+  assert.deepEqual(
+    Object.keys(entry).sort(),
+    ["query", "results", "serverCached", "totalMs"],
+  );
+  assert.deepEqual(
+    entry.query,
+    { title: "Blinding Lights", artist: "The Weeknd", source: "live" },
+  );
+  assert.equal(entry.results.length, 2);
+  assert.deepEqual(entry.results[0], {
+    title: "Save Your Tears",
+    artist: "The Weeknd",
+    matchNote: "melody #1 · samples #3",
+  });
+
+  const second = loadBestMatchesExtension({
+    storage,
+    bestFetch: async () => response(500, { ok: false }),
+  });
+  await second.run();
+  await waitFor(() => hasLog(second, "Best matches metadata settled"));
+
+  assert.deepEqual(second.bestRequests, []);
+  assert.deepEqual(second.urls.filter((url) => !url.endsWith("/health")), []);
+  assert.deepEqual(second.graphqlRequests, []);
+  assert.deepEqual(second.cosmosRequests, []);
+  html = second.currentPage.innerHTML;
+  assert.match(html, /<span class="sa-tag">Heard live earlier<\/span>/);
+  assert.doesNotMatch(html, /Matched in/);
+  assert.equal(second.rows[1].dataset.uri, "spotify:track:best1");
+});
+
+test("ignores an older search that finishes after a newer one opened", async () => {
+  const soundsGate = deferred();
+  const bestGate = deferred();
+  const app = loadBestMatchesExtension({
+    seedTrack: {
+      name: "Song A",
+      firstArtist: { items: [{ profile: { name: "Artist A" } }] },
+    },
+    languageByTrackId: {
+      test: "en",
+      other: "en",
+      best0: "en",
+      best1: "fr",
+      sounds0: "en",
+    },
+    soundsResponse: async (url) => {
+      if (url.includes("Song+A")) await soundsGate.promise;
+      return response(200, { ...recommendation, results: soundsFixture });
+    },
+    bestFetch: async (url) => {
+      if (url.includes("title=Song+A")) await bestGate.promise;
+      return response(200, bestMatchesBody());
+    },
+  });
+
+  const older = app.run("spotify:track:test");
+  await waitFor(() => app.bestRequests.some((url) => url.includes("title=Song+A")));
+  await app.run("spotify:track:other");
+  const page = app.currentPage;
+  assert.match(page.innerHTML, /<div class="sa-seed-title">Blinding Lights<\/div>/);
+  assert.deepEqual(app.history, ["/soundalike"]);
+
+  soundsGate.resolve();
+  bestGate.resolve();
+  await older;
+  await new Promise((resolve) => setTimeout(resolve, 20));
+
+  assert.deepEqual(app.history, ["/soundalike"]);
+  assert.equal(app.currentPage, page);
+  assert.doesNotMatch(app.currentPage.innerHTML, /Song A/);
+  assert.deepEqual(errorNotifications(app), []);
+});
+
+test("keeps a dismissed survey closed when switching lists", async () => {
+  const app = loadBestMatchesExtension({ bestFetch: async () => noPreview() });
+  await app.run();
+  await waitFor(() => app.feedback.panel.dataset.ready === "true");
+  assert.equal(app.feedback.panel.hidden, false);
+
+  app.feedback.dismiss.onclick();
+  assert.equal(app.feedback.panel.hidden, true);
+  // The harness reuses one panel; a real re-render creates a fresh one.
+  app.feedback.panel.dataset = {};
+  const settledCount = () =>
+    app.logs.filter((line) => line.includes("Spotify metadata settled")).length;
+  const before = settledCount();
+  app.tabs[0].onclick();
+  app.tabs[1].onclick();
+  await waitFor(() => settledCount() > before);
+
+  assert.equal(app.feedback.panel.dataset.ready, undefined);
+  assert.equal(app.feedback.panel.hidden, true);
+});
+
+const localMiss = async () => response(200, {
+  ok: false,
+  error: "The local engine couldn't analyze this song.",
+});
+
+test("asks before sending a local companion search to Best matches", async () => {
+  const app = loadBestMatchesExtension({ localCompanion: true });
+  await app.run();
+  await waitFor(() => app.feedback.panel.dataset.ready === "true");
+
+  assert.deepEqual(app.bestRequests, []);
+  assert.deepEqual(
+    app.urls.filter((url) => !url.endsWith("/health")),
+    ["http://127.0.0.1:8787/api/recommend"],
+  );
+  let html = app.currentPage.innerHTML;
+  assert.match(html, /<div class="sa-kicker">SOUNDS LIKE · LOCAL ENGINE<\/div>/);
+  assert.match(html, /id="sa-tab-sounds"[^>]*aria-selected="true"/);
+  assert.doesNotMatch(html, /<p class="sa-note">/);
+
+  app.tabs[0].onclick();
+  html = app.currentPage.innerHTML;
+  assert.match(html, /class="sa-panel sa-view-best"/);
+  assert.match(html, /Your local companion keeps searches on this computer\./);
+  assert.match(
+    html,
+    /<button class="sa-best-offer" type="button">Get best matches<\/button>/,
+  );
+  assert.deepEqual(app.bestRequests, []);
+
+  app.offerButton.onclick();
+  assert.match(app.currentPage.innerHTML, /Listening for best matches/);
+  assert.deepEqual(app.tabFocus, ["best", "best"]);
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+
+  assert.equal(app.bestRequests.length, 1);
+  const bestUrl = new URL(app.bestRequests[0]);
+  assert.equal(bestUrl.searchParams.get("title"), "Blinding Lights");
+  assert.equal(bestUrl.searchParams.get("artist"), "The Weeknd");
+  html = app.currentPage.innerHTML;
+  assert.doesNotMatch(html, /<button class="sa-best-offer"/);
+  assert.match(html, /<span class="sa-why"> · melody #1 · samples #3<\/span>/);
+  assert.equal(app.rows[0].dataset.uri, "spotify:track:best0");
+  assert.deepEqual(errorNotifications(app), []);
+});
+
+test("keeps the Best matches tab open when an offered search fails", async () => {
+  const app = loadBestMatchesExtension({
+    localCompanion: true,
+    bestFetch: async () => noPreview(),
+  });
+  await app.run();
+  await waitFor(() => app.feedback.panel.dataset.ready === "true");
+
+  app.tabs[0].onclick();
+  app.offerButton.onclick();
+  await waitFor(() => /role="alert"/.test(app.currentPage.innerHTML));
+
+  const html = app.currentPage.innerHTML;
+  assert.match(html, /class="sa-panel sa-view-best"/);
+  assert.match(html, /This song isn't on Deezer with a preview/);
+  assert.equal(app.bestRequests.length, 1);
+  assert.deepEqual(errorNotifications(app), []);
+});
+
+test("shows saved Best matches to a local companion without asking", async () => {
+  const storage = new Map();
+  const first = loadBestMatchesExtension({ storage });
+  await first.run();
+  await waitFor(() => hasLog(first, "Best matches metadata settled"));
+  await waitFor(() =>
+    Boolean(
+      JSON.parse(storage.get("soundalike:spicetify-cache:v9") || "{}")
+        .recommendations?.[bestCacheKey],
+    ), 1000);
+
+  const second = loadBestMatchesExtension({ storage, localCompanion: true });
+  await second.run();
+  await waitFor(() => second.feedback.panel.dataset.ready === "true");
+  second.tabs[0].onclick();
+  await waitFor(() => hasLog(second, "Best matches metadata settled"));
+
+  assert.deepEqual(second.bestRequests, []);
+  const html = second.currentPage.innerHTML;
+  assert.doesNotMatch(html, /<button class="sa-best-offer"/);
+  assert.match(html, /<span class="sa-tag">In our library<\/span>/);
+  assert.equal(second.rows[0].dataset.uri, "spotify:track:best0");
+});
+
+test("offers Best matches when the local companion finds no Sounds like list", async () => {
+  const app = loadBestMatchesExtension({
+    localCompanion: true,
+    soundsResponse: localMiss,
+  });
+  const page = await app.run();
+
+  assert.notEqual(page, undefined);
+  assert.deepEqual(app.bestRequests, []);
+  assert.deepEqual(errorNotifications(app), []);
+  assert.match(page.innerHTML, /class="sa-panel sa-view-best"/);
+  assert.match(
+    page.innerHTML,
+    /<p class="sa-note">The local engine couldn't analyze this song\.<\/p>/,
+  );
+  assert.match(
+    page.innerHTML,
+    /<button class="sa-best-offer" type="button">Get best matches<\/button>/,
+  );
+
+  app.offerButton.onclick();
+  assert.deepEqual(app.tabFocus, ["best"]);
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  assert.equal(app.bestRequests.length, 1);
+  assert.doesNotMatch(app.currentPage.innerHTML, /<p class="sa-note">/);
+  assert.equal(app.activeElement, app.tabs[0]);
+});
+
+test("keeps keyboard focus on the tabs while a list arrives", async () => {
+  const app = loadBestMatchesExtension({ localCompanion: true });
+  await app.run();
+  await waitFor(() => app.feedback.panel.dataset.ready === "true");
+
+  app.tabs[0].onclick();
+  app.focusOn(app.offerButton);
+  app.offerButton.onclick();
+  assert.equal(app.activeElement, app.tabs[0]);
+  assert.deepEqual(app.tabFocus, ["best", "best"]);
+
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  assert.equal(app.rows[0].dataset.uri, "spotify:track:best0");
+  assert.equal(app.activeElement, app.tabs[0]);
+  assert.deepEqual(app.tabFocus, ["best", "best", "best"]);
+});
+
+test("leaves focus outside the page alone when a list arrives", async () => {
+  const gate = deferred();
+  const app = loadBestMatchesExtension({
+    timerScale: 0.01,
+    bestFetch: async () => {
+      await gate.promise;
+      return response(200, bestMatchesBody());
+    },
+  });
+  await app.run();
+  assert.match(app.currentPage.innerHTML, /Listening for best matches/);
+
+  const searchBox = { id: "spotify-search" };
+  app.focusOn(searchBox);
+  gate.resolve();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  assert.equal(app.rows[0].dataset.uri, "spotify:track:best0");
+  assert.equal(app.activeElement, searchBox);
+  assert.deepEqual(app.tabFocus, []);
+});
+
+function loadVersionedExtension(spicetifyVersion, spotifyVersion) {
+  const urls = [];
+  const app = loadExtension(async (url) => {
+    urls.push(url);
+    return response(200, { ok: false });
+  }, { spicetifyVersion, spotifyVersion });
+  return { app, urls };
+}
+
+test("stays off where old Spicetify would empty Spotify's right-click menu", async () => {
+  for (const [spicetifyVersion, spotifyVersion] of [
+    ["2.45.3", "1.3.5.3058"],
+    ["2.46.0", "1.3.5.3058"],
+    ["2.45.9", "1.3.6.100.g1234abcd"],
+    ["1.2.0", "1.4.0.1"],
+    ["v2.40.0", "2.0.0.1"],
+  ]) {
+    const { app, urls } = loadVersionedExtension(spicetifyVersion, spotifyVersion);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const label = `${spicetifyVersion} on ${spotifyVersion}`;
+    assert.equal(app.registeredMenuItems, 0, label);
+    assert.equal(app.historyListeners.length, 0, label);
+    assert.deepEqual(urls, [], label);
+    assert.equal(app.notifications.length, 1, label);
+    const [message, isError, timeout] = app.notifications[0];
+    assert.equal(
+      message,
+      `Find soundalikes is off: Spicetify ${spicetifyVersion} can't add ` +
+        'right-click items on this Spotify version. Run "spicetify update" ' +
+        "to turn it on.",
+      label,
+    );
+    assert.equal(isError, false, label);
+    assert.equal(timeout, 10000, label);
+  }
+});
+
+test("adds the menu item when Spicetify can draw it or the versions are unknown", async () => {
+  for (const [spicetifyVersion, spotifyVersion] of [
+    ["2.46.1", "1.3.5.3058"],
+    ["2.46.4", "1.3.7.1234.gabcdef01"],
+    ["3.0.0-rc.1", "1.3.6.100"],
+    ["2.45.3", "1.3.4.479"],
+    ["2.45.3", "1.2.99.1"],
+    ["2.45.3", "0.9.9"],
+    [undefined, "1.3.5.3058"],
+    ["Dev", "1.3.5.3058"],
+    ["2.45.3", undefined],
+    ["2.45.3", "unknown"],
+  ]) {
+    const { app, urls } = loadVersionedExtension(spicetifyVersion, spotifyVersion);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const label = `${spicetifyVersion} on ${spotifyVersion}`;
+    assert.equal(app.registeredMenuItems, 1, label);
+    assert.equal(app.historyListeners.length, 1, label);
+    assert.deepEqual(urls, ["http://127.0.0.1:8787/health"], label);
+    assert.deepEqual(app.notifications, [], label);
+  }
 });

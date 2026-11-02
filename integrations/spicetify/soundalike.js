@@ -1,13 +1,15 @@
 // soundalike — Spicetify extension
 // Adds a right-click "Find soundalikes" item to any track in the Spotify
-// desktop client. It prefers the optional local soundalike server and otherwise
-// uses the hosted library, then shows the results on a navigable Spotify page.
+// desktop client. Results open on a navigable Spotify page with two lists:
+// "Best matches" (the hosted any-song ranking, shown by default) and
+// "Sounds like" (the optional local soundalike server, otherwise the hosted
+// library).
 //
 // Install (requires a patchable desktop Spotify app): follow this directory's
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.1.1";
+  const RUNTIME_SEMANTIC_VERSION = "2.2.0";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -27,7 +29,8 @@
     "soundalike:spicetify-cache:v7",
   ];
   const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-  const MAX_RECOMMENDATION_CACHE_SIZE = 50;
+  // Best matches and Sounds like entries share this bucket.
+  const MAX_RECOMMENDATION_CACHE_SIZE = 100;
   const MAX_SPOTIFY_CACHE_SIZE = 500;
   const HOSTED_API_VERSION = "4";
   const LANGUAGE_POLICY = "spotify-lyrics-strict-v2";
@@ -44,6 +47,27 @@
   const SPOTIFY_TRACK_SEARCH_HASH =
     "59ee4a659c32e9ad894a71308207594a65ba67bb6b632b183abe97303a51fa55";
   const RESULTS_PATH = "/soundalike";
+  const BEST_MATCHES_ENDPOINT = `${FALLBACK_HOSTED_SERVER}/api/anysong/similar`;
+  const BEST_MATCHES_POLICY = "anysong-best-rrf-v1";
+  const BEST_MATCHES_TIMEOUT_MS = 30000;
+  const BEST_MATCHES_RETRIES = 2;
+  const BEST_MATCHES_RETRY_DELAY_MS = 1500;
+  // How long a ready Sounds like list waits for a slower Best matches list
+  // before the page opens with Best matches still loading.
+  const BEST_MATCHES_PATIENCE_MS = 4000;
+  const RESULT_VIEWS = [
+    ["best", "Best matches"],
+    ["sounds", "Sounds like"],
+  ];
+  const BEST_MATCHES_BLURB =
+    "The melody and samples lists combined into one ranking. Each match " +
+    "shows where it placed in those lists.";
+  const BEST_MATCHES_OFFER =
+    "Your local companion keeps searches on this computer. Best matches only " +
+    "run on the hosted matcher, so getting them sends this song's title and " +
+    "artist to soundalike.yassin.app.";
+  const SOUNDS_LIKE_BLURB =
+    "Songs with the same overall sound: low end, dynamics and tone.";
   const FEEDBACK_ENDPOINT =
     `${FALLBACK_HOSTED_SERVER}/api/spicetify-feedback`;
   const FEEDBACK_INSTALL_KEY = "soundalike:feedback-install:v1";
@@ -54,6 +78,11 @@
     "sonic64_stable_head",
     "legacy_no_sonic_seed",
   ]);
+  // Spicetify releases before 2.46.1 can't draw extension menu items on
+  // Spotify 1.3.5 or newer: once any item is registered, every right-click
+  // menu opens empty.
+  const MENU_FIXED_SPICETIFY_VERSION = [2, 46, 1];
+  const MENU_BREAKING_SPOTIFY_VERSION = [1, 3, 5];
   let localStatus = { available: false, checkedAt: 0 };
   let pendingLocalProbe;
   let nativeContextChain;
@@ -62,6 +91,7 @@
   let activePage = null;
   let routeMountTimer;
   let cacheSaveTimer;
+  let searchSequence = 0;
   const pendingRecommendations = new Map();
   const pendingSpotifyTracks = new Map();
   const pendingRelatedArtists = new Map();
@@ -119,6 +149,10 @@
 
   function elapsedMs(startedAt) {
     return Math.max(0, Math.round(nowMs() - startedAt));
+  }
+
+  function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   function feedbackInstallNonce() {
@@ -221,11 +255,12 @@
     };
   }
 
-  function setupFeedbackPrompt(page, data, displayed) {
+  function setupFeedbackPrompt(page, data, displayed, session = null) {
     const panel = page.querySelector(".sa-feedback");
     if (
       !panel ||
       panel.dataset?.ready === "true" ||
+      session?.feedbackClosed ||
       !displayed.length ||
       feedbackIsSuppressed()
     ) {
@@ -280,6 +315,11 @@
       note: () => String(note?.value || "").trim(),
     };
     let sending = false;
+    // Re-rendering the page (tab switches, navigating back) must not re-ask a
+    // question that was already answered or put away for this search.
+    const close = () => {
+      if (session) session.feedbackClosed = true;
+    };
 
     const sync = () => {
       const selection = selectedRating();
@@ -326,6 +366,7 @@
     }
     dismiss.onclick = () => {
       if (sending) return;
+      close();
       const saved = recordFeedbackDismissal();
       if (saved.dismissals > 1 && saved.showAgain === null) {
         question.hidden = true;
@@ -371,6 +412,7 @@
         if (!response.ok || !/^[a-f0-9]{64}$/.test(receipt?.receipt_sha256 || "")) {
           throw new Error("feedback receipt was not accepted");
         }
+        close();
         ratings.forEach((input) => {
           input.disabled = true;
         });
@@ -595,30 +637,165 @@
     };
   }
 
-  async function findSoundalikes(uris) {
-    const startedAt = nowMs();
-    const id = uris[0].split(":track:")[1];
-    Spicetify.showNotification("Finding soundalikes…");
-    let data;
-    let seedTrack;
-    let relatedArtistsPromise = Promise.resolve(new Set());
-    let seedReadyAt = startedAt;
-    try {
-      const seedUri = `spotify:track:${id}`;
-      seedTrack = readCacheEntry("spotifyTracks", seedUri);
-      if (!seedTrack) {
-        const metadata = await Spicetify.GraphQL.Request(
-          Spicetify.GraphQL.Definitions.getTrack,
-          { uri: seedUri }
+  function bestMatchesMessage(status) {
+    if (status === 400) return "Best matches need both a title and an artist.";
+    if (status === 404) {
+      return "This song isn't on Deezer with a preview, so it has no best matches.";
+    }
+    if (status === 429) {
+      return "You're going a bit fast. Wait a few seconds and try again.";
+    }
+    if (status === 503) return "The matcher is busy right now. Try again in a moment.";
+    if (status === 504) return "That took too long. Try again.";
+    if (status === 502) return "Deezer didn't respond. Try again in a moment.";
+    if (status === 422) return "We couldn't decode this song's preview.";
+    return "Best matches are unavailable right now. Try again in a moment.";
+  }
+
+  function bestMatchesError(status, message = bestMatchesMessage(status)) {
+    const error = new Error(message);
+    error.status = status;
+    return error;
+  }
+
+  // Keeps only what the page shows, so cached lists stay small.
+  function compactBestMatches(body) {
+    const query = body?.query || {};
+    const best = Array.isArray(body?.results?.best) ? body.results.best : [];
+    const results = best
+      .map((item) => ({
+        title: String(item?.title || "").trim(),
+        artist: String(item?.artist || "").trim(),
+        matchNote: item?.ranks && typeof item.ranks === "object"
+          ? Object.entries(item.ranks)
+            .filter(([list, rank]) =>
+              /^[a-z]{1,24}$/.test(list) && Number.isInteger(rank) && rank > 0
+            )
+            .map(([list, rank]) => `${list} #${rank}`)
+            .join(" · ")
+          : "",
+      }))
+      .filter((item) => item.title && item.artist)
+      .slice(0, DISPLAY_RESULT_COUNT);
+    const total = Number(body?.timings_ms?.total);
+    return {
+      query: {
+        title: String(query.title || ""),
+        artist: String(query.artist || ""),
+        source: query.source === "live" ? "live" : "catalog",
+      },
+      results,
+      totalMs: Number.isFinite(total) && total > 0 ? Math.round(total) : 0,
+      serverCached: body?.cached === true,
+    };
+  }
+
+  async function requestBestMatchesUncached(title, artist) {
+    const params = new URLSearchParams({
+      title,
+      artist,
+      k: String(DISPLAY_RESULT_COUNT),
+    });
+    for (let attempt = 0; ; attempt++) {
+      let response;
+      try {
+        response = await fetchWithTimeout(
+          `${BEST_MATCHES_ENDPOINT}?${params}`,
+          { cache: "default" },
+          BEST_MATCHES_TIMEOUT_MS
         );
-        seedTrack = metadata?.data?.trackUnion;
-        if (seedTrack) writeCacheEntry("spotifyTracks", seedUri, compactSpotifyTrack(seedTrack));
+      } catch (error) {
+        throw bestMatchesError(error?.name === "AbortError" ? 504 : 0);
       }
-      const artist = seedTrack?.firstArtist?.items?.[0]?.profile?.name;
-      if (!seedTrack?.name || !artist) {
-        throw new Error("Spotify did not return track metadata.");
+      let body = null;
+      try {
+        body = await response.json();
+      } catch {
+        body = null;
       }
-      seedReadyAt = nowMs();
+      // 503 means every analysis slot is taken; a short wait usually frees one.
+      if (response.status === 503 && attempt < BEST_MATCHES_RETRIES) {
+        await delay(BEST_MATCHES_RETRY_DELAY_MS * (attempt + 1));
+        continue;
+      }
+      if (!response.ok || !body?.ok) {
+        throw bestMatchesError(response.ok ? 0 : response.status);
+      }
+      const data = compactBestMatches(body);
+      if (!data.results.length) {
+        throw bestMatchesError(0, "No best matches came back for this song.");
+      }
+      return data;
+    }
+  }
+
+  function bestMatchesCacheId(seedUri) {
+    return `best:${BEST_MATCHES_POLICY}:${seedUri}`;
+  }
+
+  function savedBestMatches(seedUri) {
+    const cached = readCacheEntry("recommendations", bestMatchesCacheId(seedUri));
+    return Array.isArray(cached?.results) && cached.results.length
+      ? { data: cached, cached: true }
+      : null;
+  }
+
+  async function requestBestMatches(title, artist, seedUri) {
+    const saved = savedBestMatches(seedUri);
+    if (saved) return saved;
+    const cacheId = bestMatchesCacheId(seedUri);
+    if (pendingRecommendations.has(cacheId)) {
+      return pendingRecommendations.get(cacheId);
+    }
+    const request = requestBestMatchesUncached(title, artist)
+      .then((data) => {
+        writeCacheEntry("recommendations", cacheId, data);
+        return { data, cached: false };
+      })
+      .finally(() => pendingRecommendations.delete(cacheId));
+    pendingRecommendations.set(cacheId, request);
+    return request;
+  }
+
+  async function loadSeedTrack(seedUri) {
+    const cached = readCacheEntry("spotifyTracks", seedUri);
+    if (cached) return cached;
+    const metadata = await Spicetify.GraphQL.Request(
+      Spicetify.GraphQL.Definitions.getTrack,
+      { uri: seedUri }
+    );
+    const seedTrack = metadata?.data?.trackUnion;
+    if (seedTrack) writeCacheEntry("spotifyTracks", seedUri, compactSpotifyTrack(seedTrack));
+    return seedTrack;
+  }
+
+  function seedArtistName(track) {
+    return track?.firstArtist?.items?.[0]?.profile?.name || "";
+  }
+
+  function seedArtistNames(track) {
+    const names = [
+      ...(track?.firstArtist?.items || []),
+      ...(track?.otherArtists?.items || []),
+    ]
+      .map((artist) => artist?.profile?.name)
+      .filter(Boolean);
+    return [...new Set(names)];
+  }
+
+  function soundsLikeError(notification, message) {
+    const error = new Error(message);
+    error.notification = notification;
+    return error;
+  }
+
+  // The original single-list search: language check, related artists and the
+  // local or hosted recommender. It now feeds the "Sounds like" view.
+  async function requestSoundsLike(seedTrack, artist, seedUri) {
+    let data;
+    let relatedArtistsPromise = Promise.resolve(new Set());
+    let languageSeed = seedTrack;
+    try {
       const cachedLanguageState = languageStateFromTrack(seedTrack);
       const languagePromise = cachedLanguageState
         ? Promise.resolve(cachedLanguageState)
@@ -636,13 +813,13 @@
       if (seedLanguageState.status === "error") {
         throw new Error("Spotify lyrics-language check failed. Please retry.");
       }
-      seedTrack = {
+      languageSeed = {
         ...seedTrack,
         uri: seedTrack.uri || seedUri,
         soundalikeLanguage: seedLanguageState.language,
         soundalikeLanguageStatus: seedLanguageState.status,
       };
-      writeCacheEntry("spotifyTracks", seedUri, compactSpotifyTrack(seedTrack));
+      writeCacheEntry("spotifyTracks", seedUri, compactSpotifyTrack(languageSeed));
       data = recommendation.data;
       if (data && typeof data === "object") {
         data.__soundalikeSource = recommendation.source;
@@ -650,23 +827,208 @@
           (recommendation.source === "local" ? "local" : "unknown");
       }
     } catch (e) {
-      Spicetify.showNotification(
-        `soundalike failed: ${e?.message || "recommendation service unavailable"}`, true);
-      return;
+      const message = e?.message || "recommendation service unavailable";
+      throw soundsLikeError(`soundalike failed: ${message}`, message);
     }
     if (!data || !data.ok) {
-      Spicetify.showNotification((data && data.error) || "No match found.", true);
+      const message = (data && data.error) || "No match found.";
+      throw soundsLikeError(message, message);
+    }
+    return {
+      data,
+      seedLanguage: languageSeed.soundalikeLanguage || null,
+      relatedArtistsPromise,
+    };
+  }
+
+  function settledRequest(promise) {
+    const request = { done: false, ok: false, value: undefined, error: undefined };
+    request.promise = Promise.resolve(promise).then(
+      (value) => {
+        Object.assign(request, { done: true, ok: true, value });
+      },
+      (error) => {
+        Object.assign(request, { done: true, ok: false, error });
+      }
+    );
+    return request;
+  }
+
+  function pendingResultList() {
+    return { status: "pending", tracks: [] };
+  }
+
+  function applyBestOutcome(state, request) {
+    state.best = request.ok
+      ? {
+          status: "ready",
+          data: request.value.data,
+          cached: request.value.cached === true,
+          tracks: [],
+        }
+      : {
+          status: "error",
+          error: request.error?.message || bestMatchesMessage(0),
+          tracks: [],
+        };
+  }
+
+  function applySoundsOutcome(state, request) {
+    state.sounds = request.ok
+      ? {
+          status: "ready",
+          data: request.value.data,
+          seedLanguage: request.value.seedLanguage,
+          relatedArtistsPromise: request.value.relatedArtistsPromise,
+          tracks: [],
+          feedbackClosed: false,
+        }
+      : {
+          status: "error",
+          error: request.error?.message || "No match found.",
+          tracks: [],
+        };
+  }
+
+  async function findSoundalikes(uris) {
+    const startedAt = nowMs();
+    const searchId = ++searchSequence;
+    const id = uris[0].split(":track:")[1];
+    const seedUri = `spotify:track:${id}`;
+    Spicetify.showNotification("Finding soundalikes…");
+    let seedTrack;
+    let artist;
+    try {
+      seedTrack = await loadSeedTrack(seedUri);
+      artist = seedArtistName(seedTrack);
+      if (!seedTrack?.name || !artist) {
+        throw new Error("Spotify did not return track metadata.");
+      }
+    } catch (e) {
+      if (searchId === searchSequence) {
+        Spicetify.showNotification(
+          `soundalike failed: ${e?.message || "recommendation service unavailable"}`, true);
+      }
+      return;
+    }
+    const seedReadyAt = nowMs();
+    // The local companion keeps searches on this computer, but Best matches
+    // only run on the hosted matcher, so its users opt in for each search.
+    const askFirst = await localServerReady();
+    const best = askFirst
+      ? null
+      : settledRequest(requestBestMatches(seedTrack.name, artist, seedUri));
+    const sounds = settledRequest(requestSoundsLike(seedTrack, artist, seedUri));
+    if (best) {
+      // Best matches is the default view. Open as soon as it settles, or once
+      // Sounds like is ready and Best matches has had a few more seconds.
+      let patienceTimer;
+      const patience = new Promise((resolve) => {
+        sounds.promise.then(() => {
+          if (best.done) resolve();
+          else if (!sounds.ok) best.promise.then(resolve);
+          else patienceTimer = setTimeout(resolve, BEST_MATCHES_PATIENCE_MS);
+        });
+      });
+      await Promise.race([best.promise, patience]);
+      clearTimeout(patienceTimer);
+      if (best.done && !best.ok) await sounds.promise;
+    } else {
+      await sounds.promise;
+    }
+    if (searchId !== searchSequence) return;
+    if (best?.done && !best.ok && !sounds.ok) {
+      Spicetify.showNotification(
+        `${sounds.error?.notification || sounds.error?.message || "No match found."} ` +
+        `${best.error?.message || bestMatchesMessage(0)}`,
+        true
+      );
       return;
     }
     const initialReadyMs = elapsedMs(startedAt);
+    // Hosted searches fall back to Sounds like when Best matches failed; local
+    // ones open on Sounds like unless it failed and the Best offer is all left.
+    const showSounds = best ? best.done && !best.ok : sounds.ok;
+    const state = {
+      searchId,
+      seedTrack,
+      seedUri,
+      view: showSounds ? "sounds" : "best",
+      viewChosen: false,
+      timing: { startedAt, initialReadyMs },
+      best: best ? pendingResultList() : offeredBestList(seedUri),
+      sounds: pendingResultList(),
+    };
+    if (best?.done) applyBestOutcome(state, best);
+    if (sounds.done) applySoundsOutcome(state, sounds);
     console.log(
       `[soundalike] results page ready in ${initialReadyMs} ms ` +
       `(seed metadata ${Math.max(0, Math.round(seedReadyAt - startedAt))} ms).`
     );
-    showResultsPage(data, seedTrack, relatedArtistsPromise, {
-      startedAt,
-      initialReadyMs,
-    });
+    showResultsPage(state);
+    if (best && !best.done) {
+      best.promise.then(() => settleResultsView(searchId, "best", best));
+    }
+    if (!sounds.done) {
+      sounds.promise.then(() => settleResultsView(searchId, "sounds", sounds));
+    }
+  }
+
+  // A Best matches list saved by an earlier search needs no request, so it
+  // shows straight away; otherwise the tab offers to ask the hosted matcher.
+  function offeredBestList(seedUri) {
+    const saved = savedBestMatches(seedUri);
+    return saved
+      ? { status: "ready", data: saved.data, cached: true, tracks: [] }
+      : { status: "offer", tracks: [] };
+  }
+
+  function requestOfferedBestMatches() {
+    const state = resultsState;
+    if (!state || state.best.status !== "offer") return;
+    const { searchId, seedTrack, seedUri } = state;
+    state.best = pendingResultList();
+    const request = settledRequest(
+      requestBestMatches(seedTrack.name, seedArtistName(seedTrack), seedUri)
+    );
+    request.promise.then(() => settleResultsView(searchId, "best", request));
+    refreshResultsPage(true);
+  }
+
+  // Applies a list that finished after the page opened.
+  function settleResultsView(searchId, kind, request) {
+    const state = resultsState;
+    if (!state || state.searchId !== searchId) return;
+    if (kind === "best") applyBestOutcome(state, request);
+    else applySoundsOutcome(state, request);
+    if (
+      kind === "best" &&
+      state.best.status === "error" &&
+      state.view === "best" &&
+      !state.viewChosen &&
+      state.sounds.status === "ready"
+    ) {
+      state.view = "sounds";
+      refreshResultsPage();
+      return;
+    }
+    if (state.view === kind) refreshResultsPage();
+  }
+
+  // Rebuilding the page would drop focus inside it to the body, so it moves to
+  // the selected tab. Focus elsewhere in Spotify stays where it is.
+  function refreshResultsPage(focusTab = false) {
+    if (!activePage?.container) return;
+    if (Spicetify.Platform.History.location?.pathname !== RESULTS_PATH) return;
+    const focused = document.activeElement;
+    const keepFocus = focusTab || Boolean(focused && activePage.host?.contains?.(focused));
+    renderResultsPage(activePage.container);
+    if (keepFocus) focusSelectedTab();
+  }
+
+  function focusSelectedTab() {
+    const view = resultsState?.view;
+    activePage?.view?.querySelector?.(`.sa-tab[data-view="${view}"]`)?.focus?.();
   }
 
   function languageStateFromTrack(track) {
@@ -1241,16 +1603,24 @@
     );
   }
 
-  function renderResultRow(row, result, index, track = null, rank = index + 1) {
+  function renderResultRow(
+    row,
+    result,
+    index,
+    track = null,
+    rank = index + 1,
+    { bpm = true } = {}
+  ) {
     const artist = spotifyArtists(track, result.artist);
     const image = track ? artworkUrl(track) : "";
+    const matchNote = result.matchNote ? ` · ${result.matchNote}` : "";
     row.dataset.q = `${result.title} ${result.artist}`;
     if (track?.uri) row.dataset.uri = track.uri;
 
     const React = Spicetify.React;
     if (!(React?.createElement && Spicetify.ReactDOM?.createRoot)) {
       const artistNode = row.querySelector(".sa-artist");
-      if (artistNode) artistNode.textContent = artist;
+      if (artistNode) artistNode.textContent = `${artist}${matchNote}`;
       if (image) {
         const img = document.createElement("img");
         img.src = image;
@@ -1320,7 +1690,14 @@
         "div",
         { className: "sa-meta" },
         React.createElement("div", { className: "sa-title" }, result.title),
-        React.createElement("div", { className: "sa-artist" }, artist)
+        matchNote
+          ? React.createElement(
+            "div",
+            { className: "sa-artist" },
+            artist,
+            React.createElement("span", { className: "sa-why" }, matchNote)
+          )
+          : React.createElement("div", { className: "sa-artist" }, artist)
       ),
       React.createElement(
         "div",
@@ -1346,7 +1723,9 @@
           );
         })()
       ),
-      React.createElement("div", { className: "sa-bpm" }, formatBpm(result.bpm))
+      bpm
+        ? React.createElement("div", { className: "sa-bpm" }, formatBpm(result.bpm))
+        : null
     );
     const menu = nativeTrackMenu(track);
     const interactiveRow = menu
@@ -1428,11 +1807,12 @@
     });
     const loading = page.querySelector(".sa-language-loading");
     if (loading) loading.hidden = true;
-    if (page === activePage?.view && resultsState?.data) {
+    if (page === activePage?.view && resultsState?.sounds?.data) {
       setupFeedbackPrompt(
         page,
-        resultsState.data,
-        displayed.map(({ index }) => results[index])
+        resultsState.sounds.data,
+        displayed.map(({ index }) => results[index]),
+        resultsState.sounds
       );
     }
     const status = page.querySelector(".sa-language-status");
@@ -1539,129 +1919,53 @@
     );
   }
 
-  function buildResultsPage(data, seedTrack, tracks, seedLanguage) {
-    const s = data.seed, v = data.vibe;
-    const wrap = document.createElement("div");
-    const seedImage = artworkUrl(seedTrack);
-    const source = data.__soundalikeSource === "local"
-      ? "LOCAL ENGINE"
-      : "HOSTED LIBRARY";
-    wrap.className = "sa-results";
+  function revealBestRow(page, results, tracks, index) {
+    const row = page.querySelector(`.sa-row[data-index="${index}"]`);
+    if (!row || page !== activePage?.view) return;
+    renderResultRow(row, results[index], index, tracks[index] || null, index + 1, {
+      bpm: false,
+    });
+    row.hidden = false;
+  }
 
-    const languageStatus = seedLanguage
-      ? `${languageName(seedLanguage)} lyrics · checking quality head`
-      : "Checking Spotify metadata and artist context";
-    const modelLabel = data.method === "dual_sonic64_guardrail"
-      ? "Dual-Sonic64"
-      : "Production model";
-    const tags = [
-      modelLabel,
-      "V5 strict + artist context",
-      v.tempo,
-      v.dynamics,
-      v.low_end,
-      v.tone,
-    ]
-      .map((t) => `<span class="sa-tag">${esc(t)}</span>`)
-      .join("") +
-      `<span class="sa-tag sa-language-status">${esc(languageStatus)}</span>`;
-    const rows = data.results
-      .map(
-        (x, i) => `
-      <div class="sa-row" data-index="${i}" data-q="${esc(x.title + " " + x.artist)}" hidden>
-        <div class="sa-rank">${i + 1}</div>
-        <div class="sa-cover" aria-hidden="true"><span>♫</span></div>
-        <div class="sa-meta">
-          <div class="sa-title">${esc(x.title)}</div>
-          <div class="sa-artist">${esc(x.artist)}</div>
-        </div>
-        <div class="sa-open">›</div>
-      </div>`
-      )
-      .join("");
-
-    wrap.innerHTML = `
-      <style>
-        .sa-results{box-sizing:border-box;min-height:100%;padding:32px clamp(24px,5vw,64px) 56px;font:14px var(--encore-body-font-stack,system-ui,sans-serif);color:var(--spice-text,#fff)}
-        .sa-seed{display:flex;align-items:center;gap:18px;margin:0 0 18px}
-        .sa-seed img,.sa-seed-fallback{width:96px;height:96px;border-radius:6px;object-fit:cover;background:#282828;box-shadow:0 8px 24px rgba(0,0,0,.35)}
-        .sa-seed-fallback{display:grid;place-items:center;color:#b3b3b3;font-size:22px}
-        .sa-kicker{color:var(--spice-subtext,#b3b3b3);font-size:12px;margin-bottom:2px}
-        .sa-seed-title{font-size:clamp(24px,4vw,40px);font-weight:800;line-height:1.1}
-        .sa-seed-artist{color:var(--spice-subtext,#b3b3b3);margin-top:2px}
-        .sa-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
-        .sa-tag{background:rgba(255,255,255,.08);border-radius:999px;padding:4px 9px;color:var(--spice-subtext,#b3b3b3);font-size:12px}
-        .sa-list{display:flex;flex-direction:column;padding-right:4px}
-        .sa-language-loading{padding:18px 6px;color:var(--spice-subtext,#b3b3b3)}
-        .sa-list-head,.sa-row-content{display:grid;grid-template-columns:32px 44px minmax(180px,1.6fr) minmax(120px,1fr) 64px;align-items:center;column-gap:12px}
-        .sa-list-head{height:28px;color:var(--spice-subtext,#b3b3b3);font-size:12px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:4px}
-        .sa-row{border-radius:6px}
-        .sa-row-content{min-height:56px;padding:4px 6px;border-radius:6px;cursor:pointer;outline:none}
-        .sa-row-content:hover,.sa-row-content:focus-visible{background:rgba(255,255,255,.1)}
-        .sa-leading{width:32px;height:32px;display:grid;place-items:center}
-        .sa-rank{grid-area:1/1;text-align:center;color:var(--spice-subtext,#b3b3b3);font-variant-numeric:tabular-nums}
-        .sa-cover{width:44px;height:44px;border-radius:4px;background:#282828;display:grid;place-items:center;color:#727272;overflow:hidden}
-        .sa-cover img{width:100%;height:100%;object-fit:cover}
-        .sa-meta{min-width:0}
-        .sa-title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .sa-artist{color:var(--spice-subtext,#b3b3b3);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
-        .sa-album{min-width:0;color:var(--spice-subtext,#b3b3b3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .sa-album-link{color:inherit;text-decoration:none}
-        .sa-album-link:hover,.sa-album-link:focus-visible{color:var(--spice-text,#fff);text-decoration:underline;outline:none}
-        .sa-bpm{color:var(--spice-subtext,#b3b3b3);font-variant-numeric:tabular-nums;text-align:right}
-        .sa-play{grid-area:1/1;display:none;width:30px;height:30px;border:0;border-radius:50%;background:transparent;color:var(--spice-text,#fff);font-size:15px;cursor:pointer}
-        .sa-row-content:hover .sa-rank,.sa-row-content:focus-within .sa-rank{display:none}
-        .sa-row-content:hover .sa-play,.sa-play:focus-visible{display:grid;place-items:center}
-        .sa-play:hover,.sa-play:focus-visible{background:var(--spice-button,#1ed760);color:#000;outline:none}
-        .sa-row-content:hover .sa-title,.sa-row-content:focus-visible .sa-title{color:var(--spice-text,#fff)}
-        .sa-menu-loading{padding:8px 12px;color:var(--spice-subtext,#b3b3b3);white-space:nowrap}
-        .sa-feedback{max-width:680px;margin:24px 0 0;padding:16px;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:rgba(255,255,255,.04)}
-        .sa-feedback[hidden],.sa-feedback-details[hidden],.sa-feedback-question[hidden],.sa-feedback-actions[hidden],.sa-feedback-preference[hidden]{display:none}
-        .sa-feedback fieldset{border:0;margin:0;padding:0}
-        .sa-feedback legend{font-weight:700;margin-bottom:10px}
-        .sa-feedback-options,.sa-feedback-reasons,.sa-feedback-actions{display:flex;flex-wrap:wrap;gap:8px}
-        .sa-feedback-choice,.sa-feedback-reason{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:7px 11px;border:1px solid rgba(255,255,255,.16);border-radius:999px;cursor:pointer}
-        .sa-feedback-choice:focus-within,.sa-feedback-reason:focus-within{outline:2px solid var(--spice-button,#1ed760);outline-offset:2px}
-        .sa-feedback-details{margin-top:14px}
-        .sa-feedback-reasons{margin-bottom:12px}
-        .sa-feedback-note-label{display:block;font-weight:600;margin-bottom:6px}
-        .sa-feedback-note{box-sizing:border-box;width:100%;min-height:72px;resize:vertical;padding:9px 10px;border:1px solid rgba(255,255,255,.18);border-radius:6px;background:var(--spice-card,#242424);color:var(--spice-text,#fff);font:inherit}
-        .sa-feedback-help{display:flex;justify-content:space-between;gap:12px;color:var(--spice-subtext,#b3b3b3);font-size:12px;margin-top:4px}
-        .sa-feedback-actions{align-items:center;margin-top:14px}
-        .sa-feedback-actions button{min-height:36px;border-radius:999px;padding:7px 14px;font:inherit;font-weight:700;cursor:pointer}
-        .sa-feedback-send{border:0;background:var(--spice-button,#1ed760);color:#000}
-        .sa-feedback-send:disabled{cursor:not-allowed;opacity:.55}
-        .sa-feedback-dismiss{border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--spice-text,#fff)}
-        .sa-feedback-preference p{font-weight:700;margin:0 0 10px}
-        .sa-feedback-preference-actions{display:flex;gap:8px}
-        .sa-feedback-preference button{min-height:36px;border-radius:999px;padding:7px 14px;font:inherit;font-weight:700;cursor:pointer}
-        .sa-feedback-keep-showing{border:0;background:var(--spice-button,#1ed760);color:#000}
-        .sa-feedback-stop-showing{border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--spice-text,#fff)}
-        .sa-feedback-status{min-height:20px;color:var(--spice-subtext,#b3b3b3)}
-        .sa-feedback-success{color:var(--spice-button,#1ed760)}
-        .sa-feedback-error{color:#f29d9d}
-        @media(max-width:760px){
-          .sa-list-head,.sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 56px}
-          .sa-album,.sa-list-head .sa-album-head{display:none}
-          .sa-feedback-help{display:block}
+  // Best matches arrive already ranked, so Spotify only adds artwork, album
+  // and playback. The lyrics-language gate and feedback belong to Sounds like.
+  async function hydrateBestRows(results, page, tracks, timing) {
+    const startedAt = nowMs();
+    if (!Spicetify.GraphQL.Definitions.searchModalResults) {
+      console.warn("[soundalike] Spotify artwork lookup is unavailable in this client.");
+      return;
+    }
+    let cursor = 0;
+    async function worker() {
+      while (cursor < results.length) {
+        const index = cursor++;
+        if (!(index in tracks)) {
+          try {
+            tracks[index] = await findSpotifyTrack(results[index]);
+          } catch (error) {
+            tracks[index] = null;
+            console.warn(
+              `[soundalike] Spotify metadata lookup failed for ${results[index].title}`,
+              error
+            );
+          }
         }
-      </style>
-      <div class="sa-seed">
-        ${seedImage
-          ? `<img src="${esc(seedImage)}" alt="">`
-          : `<div class="sa-seed-fallback" aria-hidden="true">♫</div>`}
-        <div>
-          <div class="sa-kicker">SOUNDS LIKE · ${source}</div>
-          <div class="sa-seed-title">${esc(s.title)}</div>
-          <div class="sa-seed-artist">${esc(s.artist)}</div>
-        </div>
-      </div>
-      <div class="sa-tags">${tags}</div>
-      <div class="sa-list-head"><div>#</div><div></div><div>Title</div><div class="sa-album-head">Album</div><div class="sa-bpm">BPM</div></div>
-      <div class="sa-list">
-        <div class="sa-language-loading">Checking Spotify language and artist context before showing results…</div>
-        ${rows}
-      </div>
+        revealBestRow(page, results, tracks, index);
+      }
+    }
+    const workerCount = Math.min(SPOTIFY_ENRICH_WORKERS, results.length);
+    await Promise.all(Array.from({ length: workerCount }, worker));
+    const enriched = results.filter((_, index) => tracks[index]).length;
+    console.log(
+      `[soundalike] Best matches metadata settled in ${elapsedMs(startedAt)} ms ` +
+      `(${enriched}/${results.length} rows, ` +
+      `${timing ? `${elapsedMs(timing.startedAt)} ms total` : "total unavailable"}).`
+    );
+  }
+
+  function feedbackMarkup() {
+    return `
       <section class="sa-feedback" hidden aria-labelledby="sa-feedback-question">
         <fieldset class="sa-feedback-question">
           <legend id="sa-feedback-question">How close were these matches?</legend>
@@ -1702,12 +2006,309 @@
           <span class="sa-feedback-status" role="status" aria-live="polite"></span>
         </div>
       </section>`;
+  }
 
-    wrap.querySelectorAll(".sa-row").forEach((row, index) => {
-      row.hidden = Boolean(seedLanguage);
-      renderResultRow(row, data.results[index], index, tracks[index] || null);
+  function resultTabsMarkup(state) {
+    const tabs = RESULT_VIEWS.map(([view, label]) => {
+      const selected = state.view === view;
+      return `<button class="sa-tab" type="button" role="tab" id="sa-tab-${view}" ` +
+        `data-view="${view}" aria-controls="sa-panel" aria-selected="${selected}" ` +
+        `tabindex="${selected ? 0 : -1}">${esc(label)}</button>`;
+    });
+    return `<div class="sa-tabs" role="tablist" aria-label="Result lists">${tabs.join("")}</div>`;
+  }
+
+  function tagsMarkup(tags) {
+    return tags
+      .filter(Boolean)
+      .map((tag) => `<span class="sa-tag">${esc(tag)}</span>`)
+      .join("");
+  }
+
+  function listStateMarkup(list, pendingText) {
+    if (list.status === "error") {
+      return `<div class="sa-state sa-state-error" role="alert">${esc(list.error)}</div>`;
+    }
+    return `<div class="sa-state" role="status">${esc(pendingText)}</div>`;
+  }
+
+  // True when a service's song is the same one the user picked in Spotify.
+  function sameSeedSong(title, artist, seedTitle, seedArtists) {
+    if (normalizeLabel(title) !== normalizeLabel(seedTitle)) return false;
+    const label = ` ${normalizeLabel(artist)} `;
+    return seedArtists.some((name) => {
+      const seed = normalizeLabel(name);
+      return Boolean(seed) && label.includes(` ${seed} `);
+    });
+  }
+
+  function resultRowsMarkup(results, { hidden, notes }) {
+    return results
+      .map(
+        (x, i) => `
+      <div class="sa-row" data-index="${i}" data-q="${esc(x.title + " " + x.artist)}"${hidden ? " hidden" : ""}>
+        <div class="sa-rank">${i + 1}</div>
+        <div class="sa-cover" aria-hidden="true"><span>♫</span></div>
+        <div class="sa-meta">
+          <div class="sa-title">${esc(x.title)}</div>
+          <div class="sa-artist">${esc(x.artist)}${notes && x.matchNote
+            ? `<span class="sa-why"> · ${esc(x.matchNote)}</span>`
+            : ""}</div>
+        </div>
+        <div class="sa-open">›</div>
+      </div>`
+      )
+      .join("");
+  }
+
+  function bestPanelMarkup(state, seedArtists) {
+    const best = state.best;
+    let blurb = BEST_MATCHES_BLURB;
+    if (best.status === "offer") {
+      const note = !state.viewChosen && state.sounds.status === "error"
+        ? `<p class="sa-note">${esc(state.sounds.error)}</p>`
+        : "";
+      return `<p class="sa-blurb">${esc(blurb)}</p>${note}
+      <div class="sa-offer">
+        <p>${esc(BEST_MATCHES_OFFER)}</p>
+        <button class="sa-best-offer" type="button">Get best matches</button>
+      </div>`;
+    }
+    if (best.status !== "ready") {
+      return `<p class="sa-blurb">${esc(blurb)}</p>` + listStateMarkup(
+        best,
+        "Listening for best matches… songs outside the library take a few seconds."
+      );
+    }
+    const { query, results, totalMs } = best.data;
+    if (
+      query.title &&
+      query.artist &&
+      !sameSeedSong(query.title, query.artist, state.seedTrack?.name, seedArtists)
+    ) {
+      blurb += ` Matched to “${query.title}” by ${query.artist}.`;
+    }
+    const cached = best.cached || best.data.serverCached;
+    const tags = tagsMarkup([
+      "Melody + samples",
+      query.source !== "live"
+        ? "In our library"
+        : cached ? "Heard live earlier" : "Heard live just now",
+      !cached && totalMs > 0 ? `Matched in ${(totalMs / 1000).toFixed(1)} s` : "",
+    ]);
+    return `<p class="sa-blurb">${esc(blurb)}</p>
+      <div class="sa-tags">${tags}</div>
+      <div class="sa-list-head"><div>#</div><div></div><div>Title</div><div class="sa-album-head">Album</div></div>
+      <div class="sa-list">${resultRowsMarkup(results, { hidden: false, notes: true })}
+      </div>`;
+  }
+
+  function soundsPanelMarkup(state, seedArtists) {
+    const sounds = state.sounds;
+    let blurb = SOUNDS_LIKE_BLURB;
+    const note = state.view === "sounds" &&
+      !state.viewChosen &&
+      state.best.status === "error"
+      ? `<p class="sa-note">${esc(`${state.best.error} Showing Sounds like instead.`)}</p>`
+      : "";
+    if (sounds.status !== "ready") {
+      return `<p class="sa-blurb">${esc(blurb)}</p>${note}` +
+        listStateMarkup(sounds, "Finding songs that sound alike…");
+    }
+    const data = sounds.data;
+    const s = data.seed || {}, v = data.vibe || {};
+    if (
+      s.title &&
+      !sameSeedSong(s.title, s.artist, state.seedTrack?.name, seedArtists)
+    ) {
+      blurb += ` Based on “${s.title}” by ${s.artist}, the closest song in that library.`;
+    }
+    const languageStatus = sounds.seedLanguage
+      ? `${languageName(sounds.seedLanguage)} lyrics · checking quality head`
+      : "Checking Spotify metadata and artist context";
+    const modelLabel = data.method === "dual_sonic64_guardrail"
+      ? "Dual-Sonic64"
+      : "Production model";
+    const tags = tagsMarkup([
+      modelLabel,
+      "V5 strict + artist context",
+      v.tempo,
+      v.dynamics,
+      v.low_end,
+      v.tone,
+    ]) + `<span class="sa-tag sa-language-status">${esc(languageStatus)}</span>`;
+    return `<p class="sa-blurb">${esc(blurb)}</p>${note}
+      <div class="sa-tags">${tags}</div>
+      <div class="sa-list-head"><div>#</div><div></div><div>Title</div><div class="sa-album-head">Album</div><div class="sa-bpm">BPM</div></div>
+      <div class="sa-list">
+        <div class="sa-language-loading">Checking Spotify language and artist context before showing results…</div>
+        ${resultRowsMarkup(data.results, { hidden: true, notes: false })}
+      </div>${feedbackMarkup()}`;
+  }
+
+  function buildResultsPage(state) {
+    const wrap = document.createElement("div");
+    const view = state.view === "sounds" ? "sounds" : "best";
+    const seedTrack = state.seedTrack;
+    const seedImage = artworkUrl(seedTrack);
+    const seedArtists = seedArtistNames(seedTrack);
+    const sounds = state.sounds;
+    let kicker = "BEST MATCHES · HOSTED LIBRARY";
+    if (view === "sounds") {
+      kicker = sounds.status === "ready"
+        ? `SOUNDS LIKE · ${sounds.data.__soundalikeSource === "local"
+          ? "LOCAL ENGINE"
+          : "HOSTED LIBRARY"}`
+        : "SOUNDS LIKE";
+    }
+    wrap.className = "sa-results";
+
+    wrap.innerHTML = `
+      <style>
+        .sa-results{box-sizing:border-box;min-height:100%;padding:32px clamp(24px,5vw,64px) 56px;font:14px var(--encore-body-font-stack,system-ui,sans-serif);color:var(--spice-text,#fff)}
+        .sa-seed{display:flex;align-items:center;gap:18px;margin:0 0 18px}
+        .sa-seed img,.sa-seed-fallback{width:96px;height:96px;border-radius:6px;object-fit:cover;background:#282828;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+        .sa-seed-fallback{display:grid;place-items:center;color:#b3b3b3;font-size:22px}
+        .sa-kicker{color:var(--spice-subtext,#b3b3b3);font-size:12px;margin-bottom:2px}
+        .sa-seed-title{font-size:clamp(24px,4vw,40px);font-weight:800;line-height:1.1}
+        .sa-seed-artist{color:var(--spice-subtext,#b3b3b3);margin-top:2px}
+        .sa-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+        .sa-tag{background:rgba(255,255,255,.08);border-radius:999px;padding:4px 9px;color:var(--spice-subtext,#b3b3b3);font-size:12px}
+        .sa-list{display:flex;flex-direction:column;padding-right:4px}
+        .sa-language-loading{padding:18px 6px;color:var(--spice-subtext,#b3b3b3)}
+        .sa-list-head,.sa-row-content{display:grid;grid-template-columns:32px 44px minmax(180px,1.6fr) minmax(120px,1fr) 64px;align-items:center;column-gap:12px}
+        .sa-list-head{height:28px;color:var(--spice-subtext,#b3b3b3);font-size:12px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:4px}
+        .sa-row{border-radius:6px}
+        .sa-row-content{min-height:56px;padding:4px 6px;border-radius:6px;cursor:pointer;outline:none}
+        .sa-row-content:hover,.sa-row-content:focus-visible{background:rgba(255,255,255,.1)}
+        .sa-leading{width:32px;height:32px;display:grid;place-items:center}
+        .sa-rank{grid-area:1/1;text-align:center;color:var(--spice-subtext,#b3b3b3);font-variant-numeric:tabular-nums}
+        .sa-cover{width:44px;height:44px;border-radius:4px;background:#282828;display:grid;place-items:center;color:#727272;overflow:hidden}
+        .sa-cover img{width:100%;height:100%;object-fit:cover}
+        .sa-meta{min-width:0}
+        .sa-title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .sa-artist{color:var(--spice-subtext,#b3b3b3);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+        .sa-album{min-width:0;color:var(--spice-subtext,#b3b3b3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .sa-album .sa-album-link{color:inherit;text-decoration:none}
+        .sa-album .sa-album-link:hover,.sa-album .sa-album-link:focus-visible{color:var(--spice-text,#fff);text-decoration:underline;outline:none}
+        .sa-bpm{color:var(--spice-subtext,#b3b3b3);font-variant-numeric:tabular-nums;text-align:right}
+        .sa-play{grid-area:1/1;display:none;width:30px;height:30px;border:0;border-radius:50%;background:transparent;color:var(--spice-text,#fff);font-size:15px;cursor:pointer}
+        .sa-row-content:hover .sa-rank,.sa-row-content:focus-within .sa-rank{display:none}
+        .sa-row-content:hover .sa-play,.sa-play:focus-visible{display:grid;place-items:center}
+        .sa-play:hover,.sa-play:focus-visible{background:var(--spice-button,#1ed760);color:#000;outline:none}
+        .sa-row-content:hover .sa-title,.sa-row-content:focus-visible .sa-title{color:var(--spice-text,#fff)}
+        .sa-menu-loading{padding:8px 12px;color:var(--spice-subtext,#b3b3b3);white-space:nowrap}
+        .sa-feedback{max-width:680px;margin:24px 0 0;padding:16px;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:rgba(255,255,255,.04)}
+        .sa-feedback[hidden],.sa-feedback-details[hidden],.sa-feedback-question[hidden],.sa-feedback-actions[hidden],.sa-feedback-preference[hidden]{display:none}
+        .sa-feedback fieldset{border:0;margin:0;padding:0}
+        .sa-feedback legend{font-weight:700;margin-bottom:10px}
+        .sa-feedback-options,.sa-feedback-reasons,.sa-feedback-actions{display:flex;flex-wrap:wrap;gap:8px}
+        .sa-feedback-choice,.sa-feedback-reason{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:7px 11px;border:1px solid rgba(255,255,255,.16);border-radius:999px;cursor:pointer}
+        .sa-feedback-choice:focus-within,.sa-feedback-reason:focus-within{outline:2px solid var(--spice-button,#1ed760);outline-offset:2px}
+        .sa-feedback-details{margin-top:14px}
+        .sa-feedback-reasons{margin-bottom:12px}
+        .sa-feedback-note-label{display:block;font-weight:600;margin-bottom:6px}
+        .sa-feedback-note{box-sizing:border-box;width:100%;min-height:72px;resize:vertical;padding:9px 10px;border:1px solid rgba(255,255,255,.18);border-radius:6px;background:var(--spice-card,#242424);color:var(--spice-text,#fff);font:inherit}
+        .sa-feedback-help{display:flex;justify-content:space-between;gap:12px;color:var(--spice-subtext,#b3b3b3);font-size:12px;margin-top:4px}
+        .sa-feedback-actions{align-items:center;margin-top:14px}
+        .sa-feedback-actions button{min-height:36px;border-radius:999px;padding:7px 14px;font:inherit;font-weight:700;cursor:pointer}
+        .sa-feedback-send{border:0;background:var(--spice-button,#1ed760);color:#000}
+        .sa-feedback-send:disabled{cursor:not-allowed;opacity:.55}
+        .sa-feedback-dismiss{border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--spice-text,#fff)}
+        .sa-feedback-preference p{font-weight:700;margin:0 0 10px}
+        .sa-feedback-preference-actions{display:flex;gap:8px}
+        .sa-feedback-preference button{min-height:36px;border-radius:999px;padding:7px 14px;font:inherit;font-weight:700;cursor:pointer}
+        .sa-feedback-keep-showing{border:0;background:var(--spice-button,#1ed760);color:#000}
+        .sa-feedback-stop-showing{border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--spice-text,#fff)}
+        .sa-feedback-status{min-height:20px;color:var(--spice-subtext,#b3b3b3)}
+        .sa-feedback-success{color:var(--spice-button,#1ed760)}
+        .sa-feedback-error{color:#f29d9d}
+        .sa-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+        .sa-tab{min-height:32px;padding:6px 14px;border:0;border-radius:999px;background:rgba(255,255,255,.08);color:var(--spice-text,#fff);font:inherit;font-weight:600;cursor:pointer}
+        .sa-tab:hover{background:rgba(255,255,255,.14)}
+        .sa-tab[aria-selected="true"]{background:var(--spice-text,#fff);color:var(--spice-main,#121212)}
+        .sa-tab:focus-visible{outline:2px solid var(--spice-button,#1ed760);outline-offset:2px}
+        .sa-blurb{max-width:680px;margin:0 0 10px;color:var(--spice-subtext,#b3b3b3)}
+        .sa-note{max-width:680px;margin:0 0 12px;color:var(--spice-text,#fff)}
+        .sa-why{color:var(--spice-subtext,#b3b3b3)}
+        .sa-state{padding:18px 6px;color:var(--spice-subtext,#b3b3b3)}
+        .sa-state-error{color:#f29d9d}
+        .sa-offer{max-width:680px;padding:16px;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:rgba(255,255,255,.04)}
+        .sa-offer p{margin:0 0 12px;color:var(--spice-subtext,#b3b3b3)}
+        .sa-best-offer{min-height:36px;border:0;border-radius:999px;padding:7px 14px;background:var(--spice-button,#1ed760);color:#000;font:inherit;font-weight:700;cursor:pointer}
+        .sa-best-offer:focus-visible{outline:2px solid var(--spice-text,#fff);outline-offset:2px}
+        .sa-view-best .sa-list-head,.sa-view-best .sa-row-content{grid-template-columns:32px 44px minmax(180px,1.6fr) minmax(120px,1fr)}
+        @media(max-width:760px){
+          .sa-list-head,.sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 56px}
+          .sa-view-best .sa-list-head,.sa-view-best .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr)}
+          .sa-album,.sa-list-head .sa-album-head{display:none}
+          .sa-feedback-help{display:block}
+        }
+      </style>
+      <div class="sa-seed">
+        ${seedImage
+          ? `<img src="${esc(seedImage)}" alt="">`
+          : `<div class="sa-seed-fallback" aria-hidden="true">♫</div>`}
+        <div>
+          <div class="sa-kicker">${esc(kicker)}</div>
+          <div class="sa-seed-title">${esc(seedTrack?.name)}</div>
+          <div class="sa-seed-artist">${esc(seedArtists.join(", "))}</div>
+        </div>
+      </div>
+      ${resultTabsMarkup(state)}
+      <div class="sa-panel sa-view-${view}" id="sa-panel" role="tabpanel" aria-labelledby="sa-tab-${view}">
+        ${view === "best"
+          ? bestPanelMarkup(state, seedArtists)
+          : soundsPanelMarkup(state, seedArtists)}
+      </div>`;
+
+    const list = view === "best" ? state.best : sounds;
+    const results = list.status === "ready" ? list.data.results : [];
+    wrap.querySelectorAll(".sa-row").forEach((row) => {
+      const index = Number(row.dataset?.index);
+      const result = results[index];
+      if (!result) return;
+      if (view === "best") {
+        row.hidden = false;
+        renderResultRow(row, result, index, list.tracks[index] || null, index + 1, {
+          bpm: false,
+        });
+        return;
+      }
+      row.hidden = Boolean(list.seedLanguage);
+      renderResultRow(row, result, index, list.tracks[index] || null);
     });
     return wrap;
+  }
+
+  function selectResultsView(view, focus = false) {
+    const state = resultsState;
+    if (!state || !RESULT_VIEWS.some(([key]) => key === view)) return;
+    state.viewChosen = true;
+    if (state.view !== view) {
+      state.view = view;
+      refreshResultsPage(focus);
+    } else if (focus) {
+      focusSelectedTab();
+    }
+  }
+
+  function bindResultTabs(page) {
+    const tabs = Array.from(page.querySelectorAll(".sa-tab") || []);
+    tabs.forEach((tab, index) => {
+      tab.onclick = () => selectResultsView(tab.dataset.view, true);
+      tab.onkeydown = (event) => {
+        let next = null;
+        if (event.key === "ArrowRight") next = tabs[(index + 1) % tabs.length];
+        else if (event.key === "ArrowLeft") {
+          next = tabs[(index - 1 + tabs.length) % tabs.length];
+        } else if (event.key === "Home") next = tabs[0];
+        else if (event.key === "End") next = tabs[tabs.length - 1];
+        if (!next) return;
+        event.preventDefault?.();
+        selectResultsView(next.dataset.view, true);
+      };
+    });
   }
 
   function teardownResultsPage() {
@@ -1757,22 +2358,34 @@
   function renderResultsPage(container) {
     if (!resultsState || !container || !document.body) return;
     teardownResultsPage();
-    const view = buildResultsPage(
-      resultsState.data,
-      resultsState.seedTrack,
-      resultsState.tracks,
-      resultsState.seedLanguage
-    );
-    const mounted = createResultsHost(container, view);
-    activePage = { container, view, ...mounted };
+    const state = resultsState;
+    const page = buildResultsPage(state);
+    const mounted = createResultsHost(container, page);
+    activePage = { container, view: page, ...mounted };
     nativeContextChain = undefined;
+    bindResultTabs(page);
+    const offer = page.querySelector(".sa-best-offer");
+    if (offer) offer.onclick = requestOfferedBestMatches;
+    if (state.view === "best") {
+      if (state.best.status !== "ready") return;
+      hydrateBestRows(
+        state.best.data.results,
+        page,
+        state.best.tracks,
+        state.timing
+      ).catch((error) => {
+        console.error("[soundalike] Best matches enrichment failed", error);
+      });
+      return;
+    }
+    if (state.sounds.status !== "ready") return;
     hydrateSpotifyRows(
-      resultsState.data.results,
-      view,
-      resultsState.tracks,
-      resultsState.seedLanguage,
-      resultsState.relatedArtistsPromise,
-      resultsState.timing
+      state.sounds.data.results,
+      page,
+      state.sounds.tracks,
+      state.sounds.seedLanguage,
+      state.sounds.relatedArtistsPromise,
+      state.timing
     ).catch((error) => {
       console.error("[soundalike] Spotify result enrichment failed", error);
     });
@@ -1805,15 +2418,8 @@
     scheduleResultsRoute();
   }
 
-  function showResultsPage(data, seedTrack, relatedArtistsPromise, timing) {
-    resultsState = {
-      data,
-      seedTrack,
-      seedLanguage: seedTrack?.soundalikeLanguage || null,
-      relatedArtistsPromise,
-      timing,
-      tracks: [],
-    };
+  function showResultsPage(state) {
+    resultsState = state;
     Spicetify.Platform.History.push({
       pathname: RESULTS_PATH,
       state: { soundalike: true },
@@ -1824,6 +2430,49 @@
   function esc(str) {
     return String(str || "").replace(/[&<>"]/g, (c) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+
+  function versionParts(version) {
+    const match = /^v?(\d+)\.(\d+)\.(\d+)/.exec(String(version ?? "").trim());
+    return match ? match.slice(1).map(Number) : null;
+  }
+
+  function versionAtLeast(parts, minimum) {
+    for (let index = 0; index < minimum.length; index += 1) {
+      if (parts[index] !== minimum[index]) return parts[index] > minimum[index];
+    }
+    return true;
+  }
+
+  // Only the known-broken pairing is skipped. Unknown or unreadable versions
+  // keep the menu item.
+  function menuBlockedBySpicetify() {
+    const spicetify = versionParts(Spicetify.Config?.version);
+    const spotify = versionParts(Spicetify.Platform?.version);
+    return Boolean(
+      spicetify &&
+      spotify &&
+      !versionAtLeast(spicetify, MENU_FIXED_SPICETIFY_VERSION) &&
+      versionAtLeast(spotify, MENU_BREAKING_SPOTIFY_VERSION)
+    );
+  }
+
+  if (menuBlockedBySpicetify()) {
+    // Leave Spotify's own menu working and explain the fix instead.
+    Spicetify.showNotification(
+      `Find soundalikes is off: Spicetify ${Spicetify.Config.version} can't ` +
+        `add right-click items on this Spotify version. Run "spicetify update" ` +
+        "to turn it on.",
+      false,
+      10000
+    );
+    console.warn(
+      `[soundalike] Spicetify ${Spicetify.Config.version} empties every ` +
+        `right-click menu on Spotify ${Spicetify.Platform.version} once an ` +
+        "extension item is registered, so Find soundalikes was not added. " +
+        'Run "spicetify update".'
+    );
+    return;
   }
 
   Spicetify.Platform.History.listen(onHistoryChange);

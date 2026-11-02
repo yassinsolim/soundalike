@@ -1,22 +1,25 @@
 # Soundalike
 
 Find tracks that sound like the song you are playing, directly
-inside Spotify. Soundalike compares precomputed audio embeddings instead of
-using genres, popularity, or listening-history recommendations.
+inside Spotify. Soundalike compares audio embeddings instead of using genres,
+popularity, or listening-history recommendations. Results open on **Best
+matches**, songs that share a melody, sample, or loop with yours. The **Sounds
+like** tab keeps the original list of songs with the same overall sound.
 
-![Soundalike results inside Spotify](../../docs/spicetify-results.png)
+![Soundalike best matches inside Spotify](../../docs/spicetify-results.png)
 
 ## Use it
 
 1. Install **Soundalike** from Marketplace.
 2. Right-click any track in Spotify.
-3. Select **Find soundalikes**.
+3. Select **Find soundalikes**. Results open on **Best matches**; select
+   **Sounds like** to switch lists.
 4. Double-click a result or use its left-side play button. Right-click it for
    Spotify's normal track actions.
 
 That is all normal use requires. There is no Soundalike account, Python
 installation, terminal command, or local server to configure. The extension
-automatically uses the hosted 272,853-track recommendation library.
+automatically uses Soundalike's hosted services.
 
 ### Marketplace updates
 
@@ -33,15 +36,47 @@ copies cannot update themselves. After that final reinstall, runtime updates
 are automatic. Manual installs remain manual; use the current file and run
 `spicetify apply` when updating.
 
+## Best matches and Sounds like
+
+Results come in two lists. Switch between them with the tabs, or with the arrow,
+Home, and End keys. Spotify's Back and Forward buttons keep the list you chose.
+
+- **Best matches** (the default) combines two rankings from Soundalike's
+  any-song matcher: songs with the same melody (covers, interpolations, and
+  reused tunes) and songs that share a sample or loop. Each row shows where it
+  placed in those rankings, such as "melody #1 · samples #3". The matcher
+  searches a 269,278-track index and works for any song with a 30-second
+  Deezer preview, including songs outside the index, which take a few seconds
+  to analyze. Tags say whether your song was **In our library**, **Heard live
+  just now**, or **Heard live earlier**. If the matcher used a song with a
+  different title or artist, the list names it.
+- **Sounds like** is the original list: songs with the same overall sound (low
+  end, dynamics, and tone) from the 272,853-track recommendation library. BPM,
+  the language filter, related-artist ordering, and the feedback prompt apply
+  only to this list.
+
+Both lists load at once. If Sounds like is ready first, the page waits up to
+four more seconds for Best matches, then opens with Best matches still
+loading. If Best matches fail, for example because Deezer has no preview of
+the song, the page shows Sounds like with a note, unless you already picked a
+tab. If both lists fail, a notification explains why.
+
+With a healthy [local companion](SETUP.md), results open on Sounds like, which
+stays on your computer. Best matches only run on the hosted matcher, so their
+tab asks before sending the song's title and artist. A Best matches list saved
+from an earlier search shows without asking.
+
 ## Spotify-native results
 
 - Results open on a normal Spotify page, so the Back and Forward buttons work
   and the list stays visible while music plays.
 - Results use a playlist-style layout with album artwork, verified artist
-  names, clickable album names, and measured BPM.
-- For a seed with a known Spotify lyrics language, only candidates with that
-  exact known language are shown (English with English, French with French,
-  and so on). The gate examines only the model's original top 20: it never
+  names, clickable album names, and, in Sounds like, measured BPM.
+- In Sounds like, for a seed with a known Spotify lyrics language, only
+  candidates with that exact known language are shown (English with English,
+  French with French, and so on). Best matches are not language-filtered,
+  because covers and samples often cross languages. The gate examines only
+  the model's original top 20: it never
   promotes a weak lower-ranked song merely because that song has language
   metadata. Each candidate stays hidden until its own check finishes; verified
   exact-language rows appear progressively and are never later removed for a
@@ -58,7 +93,7 @@ are automatic. Manual installs remain manual; use the current file and run
   remix/version variants are softly penalized so originals stay ahead, and
   global notability can only reorder the top 1,000 audio-qualified tail
   candidates at 25% strength.
-- If Spotify has no language for the seed, Soundalike preserves the normal
+- If Spotify has no language for the seed, Sounds like preserves the normal
   ranking. Lyrics metadata alone cannot safely distinguish an instrumental
   from a metadata failure.
 - The play button on a verified result plays that exact Spotify track
@@ -70,12 +105,13 @@ are automatic. Manual installs remain manual; use the current file and run
 - If Spotify cannot confidently match a recommendation, Soundalike safely
   searches Spotify's full Songs results before falling back to a Spotify search
   page. It never plays a low-confidence match.
-- Successful recommendations and resolved Spotify metadata are cached locally
-  for seven days, so reopening the same track avoids repeating the expensive
+- Both successful lists and resolved Spotify metadata are cached locally for
+  seven days, so reopening the same track avoids repeating the expensive
   recommendation and catalog lookups. Unresolved Spotify searches and failed
   language checks are not cached, so a temporary miss can recover.
-- Once language filtering and final ordering settle, a compact inline prompt
-  may ask **How close were these matches?** Choose **Good**, **Mixed**, or
+- Once the Sounds like list's language filtering and final ordering settle, a
+  compact inline prompt may ask **How close were these matches?** A prompt you
+  close stays closed when you switch tabs. Choose **Good**, **Mixed**, or
   **Off**. Mixed and Off reveal up to two optional reason chips and an optional
   280-character note; the note explicitly warns against personal information.
   Nothing is sent until **Send feedback** is pressed, and failures remain
@@ -87,10 +123,15 @@ are automatic. Manual installs remain manual; use the current file and run
 ## Privacy
 
 Soundalike sends the selected track's title and artist to
-`https://soundalike-api.yassin.app` to retrieve recommendations. If that
+`https://soundalike-api.yassin.app` to retrieve the Sounds like list. If that
 service is unavailable, it sends the same title and artist to
-`https://soundalike.yassin.app` as a fallback. It never sends your Spotify
-password, access token, library, listening history, or artwork. Language
+`https://soundalike.yassin.app` as a fallback. For Best matches, it sends the
+title and artist to `https://soundalike.yassin.app/api/anysong/similar`, which
+may look the song up on Deezer and analyze Deezer's public 30-second preview.
+The matcher keeps recent results in memory so repeat searches are fast. With a
+healthy local companion, Sounds like stays on your computer and Best matches
+ask first. Soundalike never sends audio, your Spotify password, access token,
+library, listening history, or artwork. Language
 labels and related-artist context come directly from Spotify inside the
 already-authenticated desktop client and are not sent to Soundalike. No
 separate Spotify login is required.
@@ -112,13 +153,19 @@ the displayed result list are not sent to Discord.
 
 ## Good to know
 
-- Soundalike normally uses an always-on recommendation service. It quietly
+- Sounds like normally uses an always-on recommendation service. It quietly
   prewarms the Vercel fallback after Spotify starts; if the primary service is
   unavailable, the first fallback request after idle can take up to about 30
   seconds. Repeated tracks use the local cache, and hosted responses can be
   reused by the CDN.
-- The hosted library currently covers 272,853 tracks.
-- Production ranking continues to use the independently validated
+- The Sounds like library currently covers 272,853 tracks, and the Best
+  matches index 269,278.
+- Best matches hear only Deezer's 30-second preview, so a melody or sample
+  outside that clip can be missed.
+- The matcher allows about 20 new searches a minute. Past that, Best matches
+  say **You're going a bit fast**; wait a few seconds and try again. Lists
+  saved on your computer don't count.
+- Sounds like ranking continues to use the independently validated
   `dual_sonic64_guardrail` model. The `v=4` value in an extension request is
   the strict Spotify-lyrics policy contract, not a V4 recommendation model.
   It invalidates permissive cached results. If the always-on service has not
@@ -133,14 +180,18 @@ the displayed result list are not sent to Discord.
 - Spotify availability and Soundalike library coverage are different. The
   extension can now resolve recommendations through Spotify's full Songs
   search, but a Spotify seed that is absent from the 272,853-track embedding
-  index still cannot be analyzed by the hosted model.
+  index still cannot be analyzed by the hosted Sounds like model. Best matches
+  still analyze it live when Deezer has a preview of it.
 - If **Find soundalikes** does not appear immediately after installation,
   fully quit and reopen Spotify.
+- Spotify 1.3.5 and newer need Spicetify 2.46.1 or newer. If Spotify says
+  **Find soundalikes is off**, or right-click menus open empty, run
+  `spicetify update`; it updates Spicetify and applies it again.
 - If a Spotify update breaks Spicetify features, update Spicetify and run
   `spicetify backup apply`.
 
-Want private local queries, on-the-fly analysis for tracks outside the hosted
-library, or a manual installation? See the
+Want private local Sounds like queries, local analysis for tracks outside the
+hosted library, or a manual installation? See the
 [advanced setup guide](SETUP.md).
 
 Not using Spicetify? Try the [hosted web app](https://soundalike.yassin.app).
