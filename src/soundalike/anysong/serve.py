@@ -7,6 +7,11 @@ benchmarks only (see ``evaluate``):
 - ``samples`` SampleID, 8x6.125 s chunks, centred cosine MaxSim (shared samples)
 - ``sonic``   MuQ-MuLan, 3x10 s windows, cosine MaxSim (general sound-alike; weakest evidence)
 
+Optional channel (``ALL_CHANNELS``, needs a built index, see ``sounds``):
+
+- ``sounds``  the MuQ-MuLan windows through a small projection head trained on related-artist pairs, cosine
+  MaxSim (the "Sounds like" list)
+
     python -m soundalike.anysong.serve --index /opt/soundalike/index/research --audio song.mp3 \
         --meta /data/catalog_meta.npz
 """
@@ -18,7 +23,7 @@ import json
 import os
 import sys
 import time
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
@@ -35,7 +40,7 @@ from .evaluate import l2, load_keys, score_block, window_scores
 class Channel:
     name: str
     model: str
-    prep: str  # none | raw | center, as in evaluate.prep_features
+    prep: str  # none | raw | center, as in evaluate.prep_features; head = raw, then a projection head
     mode: str  # window scoring mode understood by evaluate.score_block
 
 
@@ -44,9 +49,37 @@ CHANNELS: dict[str, Channel] = {c.name: c for c in (
     Channel("samples", "sampleid", "center", "maxsim"),
     Channel("sonic", "muq_mulan", "raw", "maxsim"),
 )}
+# Channels a server can add by name; they only exist as built indexes (``<index>/<name>/meta.json``).
+ALL_CHANNELS: dict[str, Channel] = CHANNELS | {"sounds": Channel("sounds", "muq_mulan", "head", "maxsim")}
 
 
-def prep_windows(x: torch.Tensor, prep: str, mu: torch.Tensor | None = None) -> torch.Tensor:
+class Head:
+    """Residual projection ``x + W2 gelu(W1 x + b1) + b2`` of prepared windows (the ``head`` prep).
+
+    Weights load from ``head.npz`` (no pickles); ``sounds`` converts the trained head and documents its training.
+    """
+
+    KEYS = ("inp_w", "inp_b", "out_w", "out_b")
+
+    def __init__(self, inp_w: torch.Tensor, inp_b: torch.Tensor, out_w: torch.Tensor, out_b: torch.Tensor):
+        hidden, dim = inp_w.shape
+        if tuple(inp_b.shape) != (hidden,) or tuple(out_w.shape) != (dim, hidden) or tuple(out_b.shape) != (dim,):
+            raise ValueError("inconsistent projection head weights")
+        self.inp_w, self.inp_b, self.out_w, self.out_b = (t.float() for t in (inp_w, inp_b, out_w, out_b))
+        self.dim = dim
+
+    @classmethod
+    def load(cls, path: Path | str, device: str | torch.device = "cpu") -> Head:
+        with np.load(path, allow_pickle=False) as z:
+            return cls(*(torch.from_numpy(z[k].astype(np.float32)).to(device) for k in cls.KEYS))
+
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        x = x.float()
+        return x + torch.nn.functional.gelu(x @ self.inp_w.T + self.inp_b) @ self.out_w.T + self.out_b
+
+
+def prep_windows(x: torch.Tensor, prep: str, mu: torch.Tensor | None = None, head: Head | None = None
+                 ) -> torch.Tensor:
     if prep == "none":
         return x
     if prep == "raw":
@@ -55,6 +88,10 @@ def prep_windows(x: torch.Tensor, prep: str, mu: torch.Tensor | None = None) -> 
         if mu is None:
             raise ValueError("center prep needs the index mean")
         return l2(x - mu)
+    if prep == "head":
+        if head is None:
+            raise ValueError("head prep needs the projection head")
+        return l2(head(l2(x)))
     raise ValueError(prep)
 
 
@@ -109,15 +146,18 @@ class _Ranked:
 class ChannelIndex(_Ranked):
     """Prepared window embeddings of one channel, stored fp16 and scored exactly in fp32 chunks."""
 
-    def __init__(self, channel: Channel, ids: np.ndarray, feats: torch.Tensor, mu: torch.Tensor | None):
+    def __init__(self, channel: Channel, ids: np.ndarray, feats: torch.Tensor, mu: torch.Tensor | None,
+                 head: Head | None = None):
         if feats.dim() != 3 or len(ids) != len(feats):
             raise ValueError("expected [N, W, D] window features matching ids")
-        self.channel, self.feats, self.mu = channel, feats, mu
+        if channel.prep == "head" and head is None:
+            raise ValueError("head prep needs the projection head")
+        self.channel, self.feats, self.mu, self.head = channel, feats, mu, head
         self._set_ids(ids, feats.device)
 
     @classmethod
     def from_windows(cls, channel: Channel, ids: np.ndarray, win: np.ndarray, device: str = "cpu",
-                     chunk: int = 4096) -> ChannelIndex:
+                     chunk: int = 4096, head: Head | None = None) -> ChannelIndex:
         mu = None
         if channel.prep == "center":
             total = np.zeros(win.shape[-1], np.float64)
@@ -127,18 +167,20 @@ class ChannelIndex(_Ranked):
         feats = torch.empty(win.shape, dtype=torch.float16, device=device)
         for s in range(0, len(win), chunk):
             x = torch.from_numpy(np.ascontiguousarray(win[s:s + chunk])).to(device).float()
-            feats[s:s + chunk] = prep_windows(x, channel.prep, mu).half()
-        return cls(channel, ids, feats, mu)
+            feats[s:s + chunk] = prep_windows(x, channel.prep, mu, head).half()
+        return cls(channel, ids, feats, mu, head)
 
     @classmethod
     def load(cls, emb_dir: Path, channel: Channel, device: str = "cpu") -> ChannelIndex:
+        if channel.prep == "head":
+            raise ValueError(f"the {channel.name} channel needs a built index (<index>/{channel.name}/meta.json)")
         st = load_keys(Path(emb_dir) / channel.model, ["win"])
         return cls.from_windows(channel, st["ids"], st["win"], device)
 
     def prep_query(self, win: np.ndarray | torch.Tensor) -> torch.Tensor:
         """Raw query windows [W, D] or [B, W, D] -> prepared fp32 tensor on the index device."""
         x = torch.as_tensor(win).to(self.feats.device).float()
-        return prep_windows(x, self.channel.prep, self.mu)
+        return prep_windows(x, self.channel.prep, self.mu, self.head)
 
     def stored_query(self, track_id: int) -> torch.Tensor:
         return self.feats[self.pos[int(track_id)]].float()
@@ -216,18 +258,21 @@ class TwoStageIndex(_Ranked):
 
     def __init__(self, channel: Channel, ids: np.ndarray, proj: torch.Tensor, basis: torch.Tensor,
                  norms: torch.Tensor, full: np.ndarray, mu: torch.Tensor | None, candidates: int = 1000,
-                 hub: torch.Tensor | None = None, hub_alpha: float = 0.0):
+                 hub: torch.Tensor | None = None, hub_alpha: float = 0.0, head: Head | None = None):
         n, w = len(ids), full.shape[1]
         if proj.shape[:2] != (n, w) or tuple(norms.shape) != (n, w) or len(full) != n \
                 or basis.shape != (full.shape[2], proj.shape[2]):
             raise ValueError("inconsistent two-stage index arrays")
         if channel.prep == "center" and mu is None:
             raise ValueError("center prep needs the index mean")
+        if channel.prep == "head" and (head is None or head.dim != full.shape[2]):
+            raise ValueError("head prep needs a projection head of the window dimension")
         if candidates < 1:
             raise ValueError("candidates must be positive")
         if hub_alpha and (hub is None or tuple(hub.shape) != (n,)):
             raise ValueError("a hub penalty needs one value per track")
         self.channel, self.proj, self.basis, self.norms, self.full, self.mu = channel, proj, basis, norms, full, mu
+        self.head = head
         self.candidates, self.device = candidates, proj.device
         self.hub_alpha = float(hub_alpha)
         self.penalty = (self.hub_alpha * hub.to(proj.device).float()) if self.hub_alpha else None
@@ -248,15 +293,16 @@ class TwoStageIndex(_Ranked):
         if alpha and not (path / "hub.npy").exists():
             raise FileNotFoundError(f"{path / 'hub.npy'} is missing; run hub_build or use hub_alpha=0")
         hub = torch.from_numpy(np.load(path / "hub.npy").astype(np.float32)) if alpha else None
+        head = Head.load(path / "head.npz", device) if channel.prep == "head" else None
         return cls(channel, np.load(path / "ids.npy"), _to_device(np.load(path / "proj.npy", mmap_mode="r"), device),
                    torch.from_numpy(np.load(path / "basis.npy")).to(device),
                    torch.from_numpy(np.load(path / "norms.npy")).to(device),
                    RowFile(path / "full.npy", read_threads), mu, candidates or meta.get("candidates", 1000),
-                   hub, alpha)
+                   hub, alpha, head)
 
     def prep_query(self, win: np.ndarray | torch.Tensor) -> torch.Tensor:
         x = torch.as_tensor(win).to(self.device).float()
-        return prep_windows(x, self.channel.prep, self.mu)
+        return prep_windows(x, self.channel.prep, self.mu, self.head)
 
     def _full(self, rows: np.ndarray) -> torch.Tensor:
         return torch.from_numpy(np.asarray(self.full[rows])).to(self.device).float()
@@ -313,7 +359,7 @@ class Engine:
                  hub_alpha: float | None = None):
         self.device = device
         self.drop_text_tower = drop_text_tower
-        self.channels = [CHANNELS[c] for c in channels]
+        self.channels = [ALL_CHANNELS[c] for c in channels]
         self.load_secs: dict[str, float] = {}
         self.indexes: dict[str, ChannelIndex | TwoStageIndex] = {}
         for ch in self.channels:
@@ -352,10 +398,15 @@ class Engine:
         return clips, {"decode": (time.perf_counter() - t) * 1000}
 
     def embed_clips(self, clips: dict[int, np.ndarray]) -> tuple[dict[str, np.ndarray], dict[str, float]]:
-        """Raw window embeddings per channel for decoded clips, plus GPU timings in ms."""
+        """Raw window embeddings per channel for decoded clips, plus GPU timings in ms. Channels that share a model
+        (``sonic`` and ``sounds``) share one embedding."""
         timings: dict[str, float] = {}
         out: dict[str, np.ndarray] = {}
+        by_model: dict[str, np.ndarray] = {}
         for ch in self.channels:
+            if ch.model in by_model:
+                out[ch.name] = by_model[ch.model]
+                continue
             emb = self.embedder(ch.model)
             _sync(self.device)
             t = time.perf_counter()
@@ -364,7 +415,7 @@ class Engine:
             timings[f"embed_{ch.model}"] = (time.perf_counter() - t) * 1000
             if not np.isfinite(win.astype(np.float32)).all():
                 raise ValueError(f"{ch.model} produced non-finite embeddings")
-            out[ch.name] = win
+            out[ch.name] = by_model[ch.model] = win
         return out, timings
 
     def embed(self, path: str | Path) -> tuple[dict[str, np.ndarray], dict[str, float]]:
@@ -372,15 +423,17 @@ class Engine:
         wins, t_embed = self.embed_clips(clips)
         return wins, t_decode | t_embed
 
-    def search_windows(self, wins: dict[str, np.ndarray], k: int = 20,
+    def search_windows(self, wins: dict[str, np.ndarray], k: int | Mapping[str, int] = 20,
                        exclude: Iterable[int] = ()) -> tuple[dict[str, list[tuple[int, float]]], dict[str, float]]:
+        """``k`` is one depth for every channel or a depth per channel name."""
         results, timings = {}, {}
         exclude = list(exclude)
         for ch in self.channels:
             idx = self.indexes[ch.name]
             _sync(self.device)
             t = time.perf_counter()
-            results[ch.name] = idx.top(idx.scores(idx.prep_query(wins[ch.name])), k, exclude)
+            depth = k[ch.name] if isinstance(k, Mapping) else k
+            results[ch.name] = idx.top(idx.scores(idx.prep_query(wins[ch.name])), depth, exclude)
             _sync(self.device)
             timings[f"search_{ch.name}"] = (time.perf_counter() - t) * 1000
         return results, timings
@@ -394,18 +447,19 @@ class Engine:
     def indexed(self, track_id: int) -> bool:
         return all(int(track_id) in ix.pos for ix in self.indexes.values())
 
-    def search_stored(self, track_id: int, k: int = 20, exclude: Iterable[int] = ()
+    def search_stored(self, track_id: int, k: int | Mapping[str, int] = 20, exclude: Iterable[int] = ()
                       ) -> tuple[dict[str, list[tuple[int, float]]], dict[str, float]]:
         """Rank an indexed track from its stored fp16 windows instead of re-embedding its preview (live
         embeddings match the stored ones up to fp16 rounding; see ``serve_check``). The track itself is
-        excluded."""
+        excluded. ``k`` is one depth for every channel or a depth per channel name."""
         results, timings = {}, {}
         exclude = [int(track_id), *exclude]
         for ch in self.channels:
             idx = self.indexes[ch.name]
             _sync(self.device)
             t = time.perf_counter()
-            results[ch.name] = idx.top(idx.scores(idx.stored_query(track_id)), k, exclude)
+            depth = k[ch.name] if isinstance(k, Mapping) else k
+            results[ch.name] = idx.top(idx.scores(idx.stored_query(track_id)), depth, exclude)
             _sync(self.device)
             timings[f"search_{ch.name}"] = (time.perf_counter() - t) * 1000
         return results, timings
@@ -423,7 +477,7 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--index", required=True,
                    help="index_build output (<channel>/meta.json) or a directory with <model>/part-*.npz shards")
     p.add_argument("--audio", nargs="+", required=True)
-    p.add_argument("--channels", nargs="+", default=list(CHANNELS), choices=list(CHANNELS))
+    p.add_argument("--channels", nargs="+", default=list(CHANNELS), choices=list(ALL_CHANNELS))
     p.add_argument("--k", type=int, default=10)
     p.add_argument("--candidates", type=int, default=None,
                    help="exact re-rank depth for built indexes (default: per-channel value from meta.json)")

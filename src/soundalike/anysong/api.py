@@ -8,7 +8,11 @@ GET endpoints (JSON):
 - ``/api/anysong/search?q=<text>&limit=10``  Deezer track search; ``in_catalog`` marks indexed tracks
 - ``/api/anysong/similar?id=<deezer id>&k=20&dedupe=1``  top matches per channel, plus ``best``: the melody and
   samples lists fused into one ranking (``fuse``). With a scene table (``--scene``) the fused list also weighs the
-  artist scene (same artist, related artists, region, genre; ``scene.scene_fuse``); ``scene=0`` turns that off
+  artist scene (same artist, related artists, region, genre; ``scene.scene_fuse``); ``scene=0`` turns that off.
+  With the ``sounds`` channel (``--channels ... sounds``), ``sounds`` is the "Sounds like" list (``sounds``): the
+  projected MuQ-MuLan matches re-ranked with the scene, one song per artist. With language labels
+  (``--languages``), ``lang=same`` (the default) hides confidently other-language songs from ``best`` and
+  ``sounds``; ``lang=all`` keeps them
 - ``/api/anysong/similar?title=<title>&artist=<artist>&k=20``  the same for a song named by title and artist
   (``AnySong.resolve``): the catalog release of that song, else the first matching Deezer search hit
 
@@ -42,10 +46,12 @@ from urllib.parse import parse_qs, urlsplit
 
 import numpy as np
 
+from . import sounds
 from .deezer import version_words
-from .scene import SceneParams, SceneTable, scene_fuse
+from .scene import SceneParams, SceneTable, affinity, scene_fuse
 
 FETCH = 200  # per-channel depth ranked before de-duplication
+BEST_CHANNELS = ("melody", "samples", "sonic")  # lists the best ranking reads (sonic only through the scene layer)
 K_MAX = 50
 # "best" list: reciprocal-rank fusion of the channels' song lists, score = sum(w / (FUSE_K + rank)).
 # Chosen on development splits only; see docs/ANYSONG_EVAL.md.
@@ -340,7 +346,7 @@ class AnySong:
                 query = {"id": track_id, "artist": artist, "title": title, "source": "catalog"}
                 timings: dict[str, float] = {}
                 with self._gpu(timings):
-                    raw, t = self.engine.search_stored(track_id, FETCH)
+                    raw, t = self.engine.search_stored(track_id, self._depth())
             else:
                 query, raw, timings, t = self._live(track_id)
             self._count(query["source"])
@@ -351,6 +357,12 @@ class AnySong:
                     "timings_ms": {k: round(v, 1) for k, v in timings.items()}}
         finally:
             self.pending.release()
+
+    def _depth(self) -> int | dict[str, int]:
+        """Rows ranked per channel: ``FETCH``, and deeper for ``sounds`` so its list re-ranks ``sounds.POOL`` songs."""
+        if "sounds" not in self.engine.indexes:
+            return FETCH
+        return {name: sounds.DEPTH if name == "sounds" else FETCH for name in self.engine.indexes}
 
     def _scene_context(self, query: dict, timings: dict[str, float]) -> list[int]:
         """Set the query's Deezer artist id; fetch Deezer's related artists when the scene table lacks that list.
@@ -441,7 +453,7 @@ class AnySong:
         timings |= t_decode
         with self._gpu(timings):
             wins, t_embed = self.engine.embed_clips(clips)
-            raw, t_search = self.engine.search_windows(wins, FETCH, [track_id])
+            raw, t_search = self.engine.search_windows(wins, self._depth(), [track_id])
         return query, raw, timings | t_embed, t_search
 
     def _view(self, res: dict, k: int, dedupe: bool, cached: bool, lang_mode: str = "same",
@@ -481,6 +493,7 @@ class AnySong:
             scene_state = "on" if profile is not None else "unknown_artist"
 
         def rank(view: dict[str, dict[Hashable, dict]]) -> list:
+            view = {channel: order for channel, order in view.items() if channel in BEST_CHANNELS}
             orders = {channel: list(order) for channel, order in view.items()}
             if scene_state == "off":
                 return fuse(orders)
@@ -510,8 +523,44 @@ class AnySong:
             channel = min(ranks, key=lambda name: ranks[name])
             best.append(filtered[channel][key] | {"score": round(score, 5), "ranks": ranks})
         query = q | {"language": language, "language_mode": lang_mode, "hidden": hidden, "scene": scene_state}
+        if "sounds" in songs:
+            out["sounds"], query["hidden_sounds"] = self._sounds(songs["sounds"], profile, language, lang_mode, k)
         out = {"best": best, **out} if best else out
         return {"ok": True, "query": query, "results": out, "timings_ms": res["timings_ms"], "cached": cached}
+
+    def _sounds(self, order: dict[Hashable, dict], profile, language: str, lang_mode: str, k: int
+                ) -> tuple[list[dict], int]:
+        """The "Sounds like" list and its count of other-language songs in the unfiltered top ``k``.
+
+        The sounds channel's first ``sounds.POOL`` songs are re-ranked by z(score) + scene affinity (affinity 0
+        without a scene profile), confidently other-language songs are dropped in same-language mode, and each
+        artist keeps one song. Scores are positional, ``1 / (FUSE_K + position)``.
+        """
+        pool = list(order.values())[:sounds.POOL]
+        artist_ids = [self.scene.artist(int(item["id"])) if self.scene is not None else None for item in pool]
+        aff = [affinity(profile, self.scene.stored(a), a, self.scene_params) if profile is not None and a else 0.0
+               for a in artist_ids]
+        ranked = [(pool[i], artist_ids[i]) for i in sounds.order([item["score"] for item in pool], aff)]
+
+        def top(rows: list) -> list[dict]:
+            groups = []
+            for item, artist_id in rows:
+                if self.scene is not None:
+                    groups.append(("artist", artist_id) if artist_id else ("track", item["id"]))
+                else:
+                    groups.append(("name", item["artist"].casefold()) if item["artist"] else ("track", item["id"]))
+            return [rows[i][0] for i in sounds.cap(groups, k)]
+
+        shown = top(ranked)
+        hidden = 0
+        if language != "unknown" and self.languages is not None:
+            def keep(item: dict) -> bool:
+                return self.languages.language(int(item["id"])) in {"unknown", language}
+
+            hidden = sum(1 for item in shown if not keep(item))
+            if lang_mode == "same":
+                shown = top([(item, artist_id) for item, artist_id in ranked if keep(item)])
+        return [item | {"score": round(1.0 / (FUSE_K + i), 5)} for i, item in enumerate(shown, 1)], hidden
 
 
 def _int_param(params: dict[str, list[str]], name: str, default: int | None, lo: int, hi: int) -> int:
@@ -625,7 +674,7 @@ def main(argv: list[str] | None = None) -> None:
     import torch
 
     from .deezer import Deezer
-    from .serve import CHANNELS, Engine, load_meta
+    from .serve import ALL_CHANNELS, CHANNELS, Engine, load_meta
 
     p = argparse.ArgumentParser(prog="anysong-api")
     p.add_argument("--index", required=True, help="index_build output or a shard directory (see serve)")
@@ -634,7 +683,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--scene", type=Path, default=None, help="scene table from anysong.scene (metadata for Best)")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=8790)
-    p.add_argument("--channels", nargs="+", default=list(CHANNELS), choices=list(CHANNELS))
+    p.add_argument("--channels", nargs="+", default=list(CHANNELS), choices=list(ALL_CHANNELS),
+                   help="add 'sounds' for the Sounds like list (needs <index>/sounds, see anysong.sounds)")
     p.add_argument("--candidates", type=int, default=None)
     p.add_argument("--hub-alpha", type=float, default=None,
                    help="CSLS hub penalty weight (default: as recorded by hub_build; 0 disables)")
