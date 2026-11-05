@@ -7,6 +7,9 @@ import numpy as np
 import pytest
 
 from soundalike.anysong import api
+from soundalike.anysong.languages import LanguageTable, decide, top_languages
+from soundalike.anysong.scene import SceneParams
+from soundalike.anysong.scene import build as build_scene
 
 META = {
     1: ("Daft Punk", "One More Time"),
@@ -74,12 +77,20 @@ class FakeDeezer:
         self.fail = False
         self.searches = 0
         self.lookups = 0
+        self.related = {}
+        self.related_calls = []
 
     def track(self, tid):
         self.lookups += 1
         if self.fail:
             raise RuntimeError("down")
         return self.tracks.get(tid, {})
+
+    def related_artists(self, artist_id):
+        self.related_calls.append(artist_id)
+        if self.fail:
+            raise RuntimeError("down")
+        return self.related.get(artist_id, [])
 
     def fetch_preview(self, tid, meta=None):
         if not (meta or {}).get("preview"):
@@ -101,6 +112,36 @@ def svc(tmp_path):
     return api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META)
 
 
+class FakeLanguages:
+    def __init__(self, track_languages, artist_languages=None):
+        self.track_languages = track_languages
+        self.artist_languages = artist_languages or {}
+
+    def language(self, track_id):
+        return self.track_languages.get(track_id, "unknown")
+
+    def artist_language(self, artist):
+        return self.artist_languages.get(artist.casefold(), "unknown") if artist else "unknown"
+
+
+def test_language_decision_and_table_lookup(tmp_path):
+    probs = np.asarray([[0.90, 0.06, 0.04], [0.74, 0.20, 0.06]], dtype=np.float32)
+    indices, values = top_languages(probs)
+    assert indices.tolist() == [[0, 1, 2], [0, 1, 2]]
+    assert decide(indices, values).tolist() == [0, -1]
+
+    path = tmp_path / "languages.npz"
+    np.savez(path, ids=np.asarray([7, 1, 9]), vocab=np.asarray(["en", "fr"]),
+             top_idx=np.asarray([[0, 1], [0, 1], [1, 0]], dtype=np.uint8),
+             top_prob=np.asarray([[0.95, 0.04], [0.96, 0.03], [0.94, 0.05]], dtype=np.float32),
+             meta=np.asarray("{}"))
+    table = LanguageTable.load(path, artist_names={1: "Artist A", 7: "Artist A", 9: "Artist B"})
+    assert table.languages([1, 7, 9, 100]) == ["en", "en", "fr", "unknown"]
+    assert table.artist_language("artist a") == "en"
+    assert table.artist_language("Artist B") == "unknown"
+    assert table.labelled(9) and not table.labelled(100)
+
+
 @pytest.mark.parametrize("artist,title,expected", [
     ("Daft Punk", "One More Time (Radio Edit)", ("daft punk", "one more time")),
     ("Daft Punk feat. Romanthony", "One More Time - 2021 Remaster", ("daft punk", "one more time")),
@@ -115,7 +156,8 @@ def test_song_key_drops_version_tags(artist, title, expected):
 def test_catalog_track_uses_stored_windows_and_hides_same_song_versions(svc):
     r = svc.similar(1, k=10)
     assert svc.engine.calls == [("stored", 1, api.FETCH)]
-    assert r["query"] == {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog"}
+    assert r["query"] == {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog",
+                          "language": "unknown", "language_mode": "same", "hidden": 0, "scene": "off"}
     # 2 and 4 are other releases of the query; 6 is a live version of 5. The cover by another artist stays.
     assert [x["id"] for x in r["results"]["melody"]] == [3, 5, 7]
     assert r["results"]["melody"][0] == {"id": 3, "score": 0.9, "artist": "Some Choir", "title": "One More Time"}
@@ -163,10 +205,111 @@ def test_best_list_fuses_the_song_views(svc):
     assert [x["id"] for x in r["results"]["samples"]] == [7, 6, 3]
 
 
+def test_language_gate_filters_only_best_and_keeps_unknown(svc):
+    svc.languages = FakeLanguages({1: "en", 2: "fr", 3: "en", 5: "unknown", 6: "unknown", 7: "de"})
+    res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog"},
+           "raw": {"melody": [(2, 0.99), (3, 0.9), (5, 0.8), (7, 0.7)],
+                   "samples": [(7, 0.5), (6, 0.4), (3, 0.3)]},
+           "timings_ms": {}}
+
+    filtered = svc._view(res, k=3, dedupe=True, cached=False)
+    assert filtered["query"]["language"] == "en"
+    assert filtered["query"]["language_mode"] == "same"
+    assert filtered["query"]["hidden"] == 1
+    assert [item["id"] for item in filtered["results"]["best"]] == [3, 6]
+    assert [item["id"] for item in filtered["results"]["melody"]] == [3, 5, 7]
+    assert [item["id"] for item in filtered["results"]["samples"]] == [7, 6, 3]
+
+    all_languages = svc._view(res, k=3, dedupe=True, cached=False, lang_mode="all")
+    assert [item["id"] for item in all_languages["results"]["best"]] == [3, 7, 5]
+    assert all_languages["query"]["hidden"] == 1
+
+
+def test_unknown_seed_language_fails_open(svc):
+    svc.languages = FakeLanguages({1: "unknown", 3: "en", 7: "fr"})
+    res = {"query": {"id": 1, "artist": "Unknown Artist", "title": "Seed", "source": "catalog"},
+           "raw": {"melody": [(3, 0.9), (7, 0.8)]}, "timings_ms": {}}
+    result = svc._view(res, k=10, dedupe=True, cached=False)
+    assert result["query"]["language"] == "unknown"
+    assert result["query"]["hidden"] == 0
+    assert [item["id"] for item in result["results"]["best"]] == [3, 7]
+
+
+def test_artist_language_fallback_filters_unseen_seed(svc):
+    svc.languages = FakeLanguages({1: "unknown", 3: "en", 7: "fr"}, {"daft punk": "en"})
+    res = {"query": {"id": 1, "artist": "Daft Punk", "title": "Seed", "source": "live"},
+           "raw": {"melody": [(3, 0.9), (7, 0.8)]}, "timings_ms": {}}
+    result = svc._view(res, k=10, dedupe=True, cached=False)
+    assert result["query"]["language"] == "en"
+    assert [item["id"] for item in result["results"]["best"]] == [3]
+
+
 def test_no_best_list_without_fused_channels(svc):
     res = {"query": {"id": 1, "artist": "A", "title": "B", "source": "catalog"}, "raw": {"sonic": [(3, 0.9)]},
            "timings_ms": {}}
     assert list(svc._view(res, k=5, dedupe=True, cached=False)["results"]) == ["sonic"]
+
+
+def _scene_table():
+    # Daft Punk (100) and Third (300) list each other; Other Artist (200) is a US act; Some Choir (400) has no data.
+    tracks = {1: 100, 2: 100, 3: 400, 4: 100, 5: 200, 6: 200, 7: 300}
+    related = {100: [300, 500], 300: [100, 500], 200: [600, 601]}
+    return build_scene(tracks, related, {100: ["FR"], 300: ["FR"], 500: ["FR"], 200: ["US"]}, {})
+
+
+def test_scene_layer_lifts_related_artists_and_can_be_turned_off(tmp_path):
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, scene=_scene_table(),
+                      scene_params=SceneParams(pattern=""))  # the audio continuation alone, without slots
+    r = svc.similar(1, k=10)
+    assert r["query"]["scene"] == "on" and r["query"]["artist_id"] == 100
+    assert [x["id"] for x in r["results"]["best"]] == [7, 3, 5]  # audio order is 3, 5, 7
+    assert [x["id"] for x in svc.similar(1, k=10, scene=False)["results"]["best"]] == [3, 5, 7]
+    assert svc.similar(1, k=10, scene=False)["query"]["scene"] == "off"
+    assert svc.deezer.related_calls == []  # the table has Daft Punk's own related list
+    assert svc.health()["scene"] == {"tracks": 7, "artists": 7}
+    svc.scene_params = SceneParams()  # shipped slots: a three-song audio head stays on top
+    assert [x["id"] for x in svc.similar(1, k=10)["results"]["best"]] == [3, 5, 7]
+
+
+def test_scene_layer_adds_sonic_matches_only_for_the_artist_scene(tmp_path):
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, scene=_scene_table(),
+                      scene_params=SceneParams(sonic=1.0, pattern=""))
+    res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog", "artist_id": 100},
+           "raw": {"melody": [(3, 0.9), (5, 0.8)], "samples": [(3, 0.5)], "sonic": [(5, 0.7), (7, 0.6)]},
+           "related": [], "timings_ms": {}}
+    best = svc._view(res, k=10, dedupe=True, cached=False)["results"]["best"]
+    assert [x["id"] for x in best] == [3, 5, 7]
+    assert best[2]["ranks"] == {"sonic": 2}  # Third's song is only in the sonic list; Other Artist adds nothing
+    svc.scene_params = SceneParams(pattern="")  # no sonic term and no scene lane: audio songs only
+    assert [x["id"] for x in svc._view(res, k=10, dedupe=True, cached=False)["results"]["best"]] == [3, 5]
+    svc.scene_params = SceneParams()  # shipped: the scene lane admits the sonic-only scene neighbour
+    best = svc._view(res, k=10, dedupe=True, cached=False)["results"]["best"]
+    assert [x["id"] for x in best] == [3, 5, 7] and best[2]["ranks"] == {"sonic": 2}
+
+
+def test_unseen_artist_uses_live_related_artists_once_and_fails_open(tmp_path):
+    deezer = FakeDeezer(tmp_path)
+    deezer.tracks[98] = {"id": 98, "title": "New Song", "artist": {"id": 999, "name": "New Artist"},
+                         "album": {}, "duration": 30, "preview": "u"}
+    deezer.related[999] = [300, 500]
+    svc = api.AnySong(FakeEngine(), deezer, META, scene=_scene_table(), scene_params=SceneParams(pattern=""))
+    r = svc.similar(98, k=10)
+    assert r["query"]["artist_id"] == 999 and r["query"]["scene"] == "on" and "related" in r["timings_ms"]
+    # New Artist's live related list (Third, 500) makes Daft Punk and Third scene neighbours; audio: 2, 3, 5, 7
+    assert [x["id"] for x in r["results"]["best"]] == [2, 7, 3, 5]
+    assert svc._related_jobs == {}  # the background lookup was consumed
+    svc.results = api.LRU(8)
+    svc.similar(98, k=10)
+    assert deezer.related_calls == [999]  # cached per artist
+
+    down = FakeDeezer(tmp_path)
+    down.tracks[98] = deezer.tracks[98]
+    svc = api.AnySong(FakeEngine(), down, META, scene=_scene_table())
+    svc.known.put(98, down.tracks[98])  # the track lookup succeeds; only the related-artist call fails
+    down.fail = True
+    r = svc.similar(98, k=10)
+    assert r["query"]["scene"] == "unknown_artist" and r["query"]["artist_id"] == 999
+    assert [x["id"] for x in r["results"]["best"]] == [2, 3, 5, 7]
 
 
 def test_unseen_track_is_fetched_embedded_and_excluded(svc, tmp_path):
@@ -453,6 +596,11 @@ def test_http_routes(server):
 
     code, _, body = get(server, "/api/anysong/similar?id=7&title=One%20More%20Time&artist=Daft%20Punk")
     assert code == 200 and body["query"]["id"] == 7  # an explicit id wins over names
+
+    code, _, body = get(server, "/api/anysong/similar?id=1&lang=all")
+    assert code == 200 and body["query"]["language_mode"] == "all"
+    code, _, body = get(server, "/api/anysong/similar?id=1&lang=invalid")
+    assert code == 400 and body["error"] == "lang must be 'same' or 'all'"
 
 
 @pytest.mark.parametrize("path,status", [

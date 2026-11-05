@@ -242,7 +242,10 @@ The served index holds 269,278 catalog tracks. The page opens on a **Best matche
 samples rankings. On held-out benchmarks its top 10 holds a correct song for 67% of cover queries, 44% of Gen Alpha
 songs and 15–19% of sample pairs, which is the melody tab's cover accuracy with almost twice its sample hits. "Sounds
 like" claims stay hard: about 11% in the fused list and 16–17% when all three tabs are checked. Unseen songs
-embedded live score the same as catalog songs.
+embedded live score the same as catalog songs. Best matches also weighs the artist's scene: after the strongest audio
+matches, one slot in three goes to an audio match by a related artist from the same scene (Deezer related artists,
+Wikidata regions). On 799 unseen test artists, the share of other-artist results that ListenBrainz lists as similar
+artists rose from 12% to 21%, while covers, samples and Gen Alpha stayed within their regression limits.
 
 The experimental [`soundalike.anysong`](src/soundalike/anysong/) package compares
 MuQ-MuLan, CLAP, MuQ, MERT and MAEST with dedicated SampleID/CLEWS adapters.

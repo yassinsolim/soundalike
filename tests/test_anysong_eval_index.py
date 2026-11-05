@@ -136,3 +136,79 @@ def test_hubness_accounts_for_every_slot():
     assert sum(h["count"] for h in ei.hubness(ix, sample, ei.SongKeys({}), k=5, show=100)["hubs"]) == 12 * 5
     assert rep["songs"] == 30 and 0 < rep["coverage"] <= 1 and rep["top100_share"] == 1.0
     assert rep["hubs"][0]["count"] >= rep["hubs"][-1]["count"]
+
+
+def test_language_gate_filters_each_channel_before_best_fusion():
+    meta = {
+        100: ("Seed Artist", "Seed"),
+        101: ("English Artist", "English match"),
+        102: ("French Artist", "French match"),
+        103: ("Unknown Artist", "Unknown match"),
+    }
+    keys = ei.SongKeys(meta)
+    song_ids = {track_id: keys.get(track_id) for track_id in meta}
+
+    languages = ei.LanguageTable(
+        np.array([100, 101, 102, 103]), np.array([0, 0, 1, -1], dtype=np.int16), ("en", "fr"), {}, {}
+    )
+
+    query = ev.Query("test", "language", "held_out", 100, frozenset({101, 102, 103}))
+    orders = {"melody": [song_ids[102], song_ids[101], song_ids[103]],
+              "samples": [song_ids[102], song_ids[101], song_ids[103]]}
+    track_orders = {
+        channel: [(song_ids[track_id], track_id) for track_id in (102, 101, 103)]
+        for channel in orders
+    }
+    report, stats = ei.language_gate_report(
+        [query], {100: orders}, {100: track_orders}, set(keys.of.values()), keys,
+        languages, ["melody", "samples"],
+    )
+
+    assert report["test/held_out"]["ap"] == pytest.approx((1 + 1 + 0.75) / 3, abs=1e-5)
+    assert stats["known_seed_queries"] == 1
+    assert stats["total_other_language_in_top20"] == 1
+    assert stats["mean_other_language_in_unfiltered_top20"] == 1.0
+
+
+def test_evaluate_indexes_includes_language_filtered_best_metrics():
+    ids, melody = random_index(seed=11, name="melody")
+    _, samples = random_index(seed=12, name="samples")
+    meta = {int(track_id): (f"Artist {track_id}", f"Song {track_id}") for track_id in ids}
+    keys = ei.SongKeys(meta)
+    query = ev.Query("test", "integration", "held_out", int(ids[0]), frozenset({int(ids[8]), int(ids[12])}))
+    languages = ei.LanguageTable(ids.copy(), np.zeros(len(ids), dtype=np.int16), ("en",), {}, {})
+
+    report = ei.evaluate_indexes(
+        {"melody": melody, "samples": samples}, [query], keys, log=lambda _: None, languages=languages
+    )
+
+    assert report["language_gate"]["known_seed_queries"] == 1
+    assert report["best_same_language"]["test/held_out"] == report["best"]["test/held_out"]
+
+
+def test_scene_best_matches_plain_best_without_affinity_and_moves_with_it():
+    from soundalike.anysong.scene import SceneParams, build
+
+    ids, melody = random_index(seed=21, name="melody")
+    _, samples = random_index(seed=22, name="samples")
+    _, sonic = random_index(seed=23, name="sonic")
+    meta = {int(t): (f"Artist {t}", f"Song {t}") for t in ids}
+    keys = ei.SongKeys(meta)
+    seed, pos = int(ids[0]), int(ids[30])
+    query = ev.Query("test", "scene", "held_out", seed, frozenset({pos}))
+    indexes = {"melody": melody, "samples": samples, "sonic": sonic}
+    # Every track has its own artist; the seed's artist lists the positive's artist as related.
+    table = build({int(t): int(t) for t in ids}, {seed: [pos]}, {}, {})
+    off = SceneParams(boost=0.0, sonic=0.0, pattern="", max_same=10**6, max_other=10**6)
+    report = ei.evaluate_indexes(indexes, [query], keys, log=lambda _: None, scene=table, scene_params=off)
+    assert report["best_scene"] == report["best"]
+    boosted = ei.evaluate_indexes(indexes, [query], keys, log=lambda _: None, scene=table,
+                                  scene_params=SceneParams(boost=50.0, sonic=50.0, pattern=""))
+    assert boosted["best_scene"]["test/held_out"]["median_first"] == 1
+    assert report["best"]["test/held_out"]["median_first"] > 1
+    slotted = ei.evaluate_indexes(indexes, [query], keys, log=lambda _: None, scene=table,
+                                  scene_params=SceneParams(melody_evidence=9.0, samples_evidence=9.0))
+    assert slotted["best_scene"]["test/held_out"]["median_first"] <= 6  # first slots after a three-song head
+    # these synthetic cosines all clear the real melody threshold, so every top-10 song is head evidence
+    everything = ei.evaluate_indexes(indexes, [query], keys, log=lambda _: None, scene=table)["best_scene"]
+    assert everything["test/held_out"]["median_first"] == 11

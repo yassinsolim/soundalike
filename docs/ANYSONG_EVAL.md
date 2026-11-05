@@ -36,6 +36,10 @@ shows, so a remaster of the query does not count as a hit.
   the page, so this is the chance that at least one tab shows a correct song in its top k.
 - **Best list**: the fused *Best matches* list exactly as the API builds it from each channel's served rows. A
   correct song outside every fused list counts as ranked after all indexed songs.
+- **Best, same language**: when evaluated with `--languages`, confidently different-language candidates are
+  removed from each channel before fusion, as in the API. Unknown candidates remain; unknown seed languages fail
+  open, with the same conservative artist-majority fallback as serving. The report includes the resulting Best
+  metrics and the mean number of other-language songs in the unfiltered top 20 for labeled seeds.
 - **Exact check**: the two-stage index (PCA candidates, then full-dimensional rerank) against brute force over
   every window, on random and benchmark queries. It confirms the fast path loses nothing.
 - **Hubness**: for random catalog queries, how many distinct songs appear in anyone's top 10 (coverage), the
@@ -223,6 +227,32 @@ Two settings were checked on held-out data after the choice:
 - **Melody hub penalty.** Inside the fused list, α = 0.25 raises covers HR@10 by 0.013\* and lowers Gen Alpha HR@10
   from 0.441 to 0.390 (3 of 59 songs); α = 0.5 lowers it to 0.339\*. Melody stays at 0.
 
+### Language gate impact
+
+The full language table labels all 269,278 tracks in each served channel. On the full index, across 2,837
+`held_out`, `test` and `validation` queries, 2,550 seeds had a known language (including the artist-majority
+fallback). Of those, 1,971 had at least one confidently different-language song in the unfiltered Best top 20;
+there were 8,213 such results total, or 3.22 per known-language seed. The other 287 seeds failed open.
+
+The table compares the shipped Best ranking with the same ranking after filtering each channel before fusion.
+Unknown candidates remain visible. These are point estimates, not paired-bootstrap significance tests; the small
+Gen Alpha and v4 groups are especially directional.
+
+| benchmark (split) | n | Best before: HR@1 / HR@10 / AP | Same-language: HR@1 / HR@10 / AP |
+| --- | ---: | --- | --- |
+| Gen Alpha (test) | 59 | 0.186 / 0.441 / 0.019 | 0.153 / 0.407 / 0.015 |
+| covers (held_out) | 1,170 | 0.549 / 0.673 / 0.513 | 0.565 / 0.685 / 0.527 |
+| samples (held_out) | 747 | 0.064 / 0.145 / 0.095 | 0.064 / 0.142 / 0.094 |
+| samples, reverse (held_out) | 695 | 0.076 / 0.157 / 0.101 | 0.075 / 0.153 / 0.099 |
+| SampleID pairs (held_out) | 43 | 0.070 / 0.186 / 0.119 | 0.093 / 0.186 / 0.130 |
+| v4 "sounds like" (held_out) | 19 | 0.000 / 0.105 / 0.039 | 0.000 / 0.053 / 0.029 |
+| v4 "sounds like" (validation) | 35 | 0.029 / 0.114 / 0.049 | 0.029 / 0.086 / 0.044 |
+
+The gate removes many unrelated-language results without materially changing sample retrieval in these aggregate
+metrics. Covers improve in this sample, while Gen Alpha and v4 sound-alike retrieval lose some cross-language
+matches. Those losses are expected trade-offs, not proof that every hidden result is irrelevant; `lang=all` restores
+the original ranking. The gate is not enabled on the homelab yet (see [Scene layer](#scene-layer-2026-11-04)).
+
 ### What did not help: query expansion
 
 Query expansion re-scores each candidate by mixing its similarity to the query with its average similarity to the
@@ -233,6 +263,397 @@ unchanged, measured on only 31 queries. It is not used.
 
 The tooling for these studies (re-ranking, fusion sweep and paired bootstrap) lives outside the package; `eval_index`
 reports the shipped `best` list directly.
+
+### Research follow-up: retrieval and reranking (2026-11-02)
+
+**Decision: keep the existing Best ranking.** A bounded study tested 22 alternative configurations against the
+full 269,278-track catalog. None cleared the development gate. These are negative research results, not a new
+model release; the website, Spicetify release and production inference were not changed by this study. The
+language gate above is a separate preference/filtering change, not evidence of better audio similarity.
+
+#### Protocol and sources
+
+- Capture top-800 candidates per channel for 2,634 distinct development query tracks. Candidate scores are
+  full-dimensional reranks inside the existing two-stage search, not a new exhaustive scan of every catalog
+  window. Preserve song deduplication, self-exclusion, hub penalties and deterministic tie ordering.
+- Evaluate **all-language Best**. The four equally weighted families are covers (1,066 query records), samples
+  (806), reverse samples (721), and v4 (25). Queries may occur in multiple families. Do not count the v4
+  pure-sonic subset a second time in the macro.
+- Fix the selection rule before examining results: no family may lose more than 1 percentage point of HR@10
+  or AP; require at least 1 percentage point of macro HR@10 or AP gain. Rank qualifying candidates by macro
+  HR@10, then AP. The same gate applies to all follow-up experiments.
+- [Bruch et al., fusion functions](https://arxiv.org/abs/2210.11934) motivates score-aware fusion. Test min-max
+  and distribution-based normalization, melody weights 0.25/0.5/0.75, complementary sample weights, and sonic
+  weights 0/0.25: 12 configurations. Text-retrieval gains are not assumed to transfer to music.
+- [Riou et al., SampleID](https://arxiv.org/abs/2510.11507) motivates mean top-k chunk matching and denser
+  windows. Test top-2/top-5 pooling within captured candidates, plus 16 rather than 8 query windows
+  (hop 24,500 rather than 49,000 samples). Keep the checkpoint and catalog windows unchanged. The paper's
+  full-track experiments are not directly comparable with this preview-only, much larger catalog.
+- [Artetxe and Schwenk, margin-based mining](https://arxiv.org/abs/1811.01136) motivates dividing sample cosine
+  by mean query/candidate neighborhood density. This only reorders the existing sample top-800 and uses
+  indexed query density; an unseen-query equivalent was not validated.
+- Also test a histogram-gradient-boosted reranker using 24 audio/score/rank features, with no song ID, artist
+  ID or benchmark identity as model features. Five-fold cross-validation keeps connected query/positive song
+  groups together. Train on positives, hard negatives and sampled candidates, and evaluate out-of-fold
+  predictions at four blend strengths. Queries lacking a captured positive remain in evaluation.
+
+#### Development results
+
+All values are point estimates, not significance-tested gains. The normalization row gives separate ranges
+across its 12 configurations, not one model's paired result.
+
+| configuration | macro HR@10 | macro AP |
+| --- | --- | --- |
+| existing Best baseline | 0.278790 | 0.190335 |
+| RRF depth 800 instead of 200 | 0.278558 | 0.191148 |
+| normalized-score fusion (12 variants) | 0.185575-0.276645 | 0.123998-0.186575 |
+| sample top-2 pooling | 0.280375 | 0.191300 |
+| sample top-5 pooling | 0.278978 | 0.190653 |
+| learned ranking, 25% blend | 0.278868 | 0.195150 |
+| learned ranking, 50% blend | 0.275755 | 0.198748 |
+| learned ranking, 75% blend | 0.265858 | 0.199295 |
+| learned ranking, 100% | 0.250650 | 0.197400 |
+| sample density-ratio margin | 0.278790 | 0.190365 |
+| 16 query windows, max pooling | 0.279560 | 0.191700 |
+| 16 query windows, top-2 pooling | 0.280450 | 0.192120 |
+
+Doubling query windows with top-2 pooling improves macro HR@10 by only **0.166 percentage points** and AP by
+**0.179 percentage points**. Stronger learned reranking trades away hit rate for AP, without meeting the
+minimum macro gain. No candidate was promoted, no final learned model was saved, and no new candidate
+comparisons on reporting splits were run after these failures.
+
+The candidate oracle measures whether a known positive is anywhere in the melody/sample candidate union,
+regardless of its final rank:
+
+| development family | depth 200 | depth 800 |
+| --- | --- | --- |
+| covers | 80.0% | 85.1% |
+| samples | 25.4% | 32.6% |
+| reverse samples | 28.0% | 38.3% |
+| v4 | 40.0% | 56.0% |
+
+There is ranking headroom, but even at depth 800 most sample queries have no known positive available for
+reranking. That is a candidate-retrieval limitation, not proof that the positive is absent from the catalog.
+Which misses are caused by preview coverage versus representation quality still needs a case-by-case audit.
+
+#### Cost, integrity and next evidence
+
+The dense-query run on the **RTX 5080** processed all 2,634 previews in 271.3 seconds. With batches of four,
+median batch time divided by query count was 33.8 ms for embedding and 39.4 ms for sample search. Peak
+PyTorch-allocated memory was 3,417 MiB with the sample model/index only. These are **batched throughput
+measurements, not API latency or proof that the full three-model service fits unchanged on the 2070 SUPER**.
+Before capture, four sparse replay queries matched stored windows at cosine >= 0.9999996 and had 100%
+top-200 set overlap. All dense queries completed; decoder output contained only empty-ID3-tag warnings.
+
+The research harness's two unit tests pass. Final checks confirm matching baseline metrics across all four
+reports, aligned query IDs, 800 distinct non-self candidates per dense query, finite scores, and matching
+recorded source/input/checkpoint hashes. Provenance includes index metadata and ID arrays, not fresh hashes
+of every large full-dimensional index array.
+
+Existing reporting sets are regression suites already inspected in earlier work, not untouched tests. A
+song-key overlap audit found 1 shared key for covers, 53 for samples and reverse samples, and 0 for v4 between
+development and reporting partitions. Any future trained candidate should also report a clean sensitivity
+subset excluding queries whose query or positives intersect development keys. Confidence intervals should
+resample connected song groups, not assume related query rows are independent. Gen Alpha is effectively one
+such group. Unjudged candidates used as training negatives may contain legitimate relationships.
+
+The stronger next experiments need better evidence rather than more fusion-weight tuning:
+
+1. Audit missed known pairs to separate missing shared material in the previews from embedding failures.
+   Test longer or multiple excerpts only where authorized audio is available.
+2. Collect disjoint human judgments of melody, rhythm, voice and timbre resemblance, including hard negatives.
+   Relationship labels such as covers and samples do not fully measure perceptual similarity.
+3. [MATCHA](https://arxiv.org/abs/2609.00987) offers 300 triplets and 1,105 perceptual annotations from 83 experts.
+   Its [datasheet](https://github.com/roserbatlleroca/matcha/blob/main/metadata/MATCHA_datasheet.md) restricts access
+   to the exact commercial audio excerpts. No MATCHA score was computed: arbitrary Deezer previews are not
+   interchangeable with its curated excerpts.
+
+Reproducibility artifacts remain outside the package in the research workspace:
+`fusion_research_20261102.py`, `learned_fusion_20261102.py`, `margin_research_20261102.py`, and
+`dense_query_research_20261102.py`. The `fusion-research-20261102` directory retains frozen candidate captures,
+`development.json`, `learned_development.json`, `margin_development.json`, `dense_development.json`, and
+`research_summary.json`. The summary records all 22 gate decisions and hashes of the four reports; the
+original `selected.json` still selects the baseline. No production rollout is implied by these local artifacts.
+
+### Miss audit: catalog coverage versus preview/model scores
+
+The next diagnostic compared each labeled positive to the entire indexed song identity set and then scored its
+stored full-dimensional windows directly against the query's stored windows. This used 3,334 unique
+query/positive-song pairs from the same four development families. It downloaded no audio and made no model or
+index changes.
+
+**Catalog coverage was not the main failure:** every one of the 3,334 labeled positive song identities had at
+least one track in the frozen 269,278-track index. This does not establish that the specific MusicBrainz
+recording or the relevant passage occurs in the 30-second preview.
+
+For each channel, the table classifies each labeled query/positive pair by its best same-song full-window
+score and compares that score with the captured top-800 candidate tail. Scores include the same hub penalty
+as serving. `201–800` and `Top 200` are ranks after track-to-song de-duplication.
+
+| channel | Top 200 | 201–800 | Below exact top-800 boundary | Above boundary but absent (possible shortlist miss) |
+| --- | ---: | ---: | ---: | ---: |
+| melody | 1,359 | 175 | 1,800 | 0 |
+| samples | 948 | 270 | 2,114 | 2 |
+| sonic | 451 | 249 | 2,634 | 0 |
+
+Across the melody/sample channels used by Best, **1,478 of 3,334** positive pairs were outside both top-800
+candidate lists: 362 covers, 573 sample relations, 532 reverse-sample relations and 11 v4 sound-alike pairs.
+Another 61 pairs appeared only in the sonic list, which Best currently does not use. Most misses therefore
+already have low similarity under the available preview embeddings; only two sample pairs look like possible
+two-stage shortlist misses. Direct stored-vector scoring is not an exhaustive independent re-embedding, but
+its candidate-score parity check differed by less than 0.0002 for every positive pair present in the captures.
+
+This narrows the failure to **preview/model representation**, rather than missing catalog rows or a broad
+approximate-search bug. It cannot tell whether a sample or resemblance falls outside the available excerpt,
+whether the preview is a poor recording, or whether the embedding fails to recognize audible material. Those
+cases require authorized longer audio or human listening.
+
+The denser 16-window query experiment barely changed candidate coverage. Query-level share with any known
+positive in the melody/sample candidates at track depth 200 was:
+
+| family | 8-window baseline | 16-window + top-2 pooling |
+| --- | ---: | ---: |
+| covers | 80.0% | 80.4% |
+| samples | 25.4% | 26.3% |
+| reverse samples | 28.0% | 28.6% |
+| v4 | 40.0% | 40.0% |
+
+At depth 800, the corresponding changes were 85.1→85.1%, 32.6→33.4%, 38.3→38.4%, and 56.0→56.0%. These are
+development point estimates with no significance claim and do not clear the previously fixed gain threshold.
+
+The user declined further blind preview rating, so the generated pilot worksheet and its answer key were
+discarded before any ratings were collected. Follow-up work should focus on a valid full-audio data source and
+model evaluation, not more manual preview comparisons.
+
+### Full-length audio source feasibility (2026-11-02)
+
+**Spotify/Spicetify is not a supported path for model audio.** Spotify's
+[Web Playback SDK](https://developer.spotify.com/documentation/web-playback-sdk) streams and controls a local
+Spotify Connect player and exposes playback metadata; its documented
+[player reference](https://developer.spotify.com/documentation/web-playback-sdk/reference) has no waveform or
+PCM access. More importantly, the current [Spotify Developer Policy](https://developer.spotify.com/policy)
+prohibits analyzing Spotify Content, using it to train machine-learning models, and building products
+integrated with streams/content from another service (sections III.5, III.13 and III.14). Do not capture the
+Spotify stream, hook private Spicetify internals to extract it, or send it to Soundalike. Spicetify can’t turn
+Premium playback into an authorized training corpus.
+
+**Jamendo has full-track streams, but its API is not a corpus-download license.** Its
+[track API](https://developer.jamendo.com/v3.0/tracks) returns stream/download URLs and per-track
+`audiodownload_allowed`; tracks have individual Creative Commons licenses. The published
+[API terms](https://devportal.jamendo.com/api_terms_of_use) limit API use to non-commercial purposes unless
+licensed otherwise and prohibit applications designed to cache content or provide offline access. A persistent
+local index or training archive is therefore not a safe use of the API as-is. The terms page is dated 2013;
+confirm current terms and obtain explicit permission before building any corpus.
+
+**There are research datasets with full-length, openly licensed audio, but they are not the missing mainstream
+recordings or sound-alike labels:**
+
+- [MTG-Jamendo](https://github.com/MTG/mtg-jamendo-dataset) documents over 55,000 full tracks under Creative
+  Commons licenses. Its raw audio archive is listed at 508 GB; the mood/theme subset is 152 GB. Labels are
+  primarily uploader-provided genre, instrument and mood/theme tags—not verified cover/sample/sound-alike
+  pairs. The exact license still needs to be respected per track and for any derivative model.
+- [FMA](https://github.com/mdeff/fma) documents 106,574 Creative-Commons-licensed tracks, including a
+  full-length archive listed at 879 GB. Its metadata and tags support music-analysis research, not a
+  relationship-labeled sound-alike benchmark.
+
+Those archives could support an independently scoped research model, but likely will not improve retrieval
+for the commercial songs already in this catalog without a relevant training objective and evaluation set.
+No archive has been downloaded. Do not start a 150–880 GB download just because the disk has capacity.
+
+The practical route for testing longer excerpts of the target songs is a separate, local-file workflow using
+audio the user is authorized to analyze (for example, purchased files or their own recordings), with explicit
+rights checks and no Spotify stream extraction. That can distinguish excerpt coverage from representation
+quality for those particular songs. It does not create blanket rights to train on or redistribute them. A
+Spotify UI integration should not be used to pass Spotify audio into this workflow.
+
+## Scene layer (2026-11-04)
+
+**Why.** For *8PM* by Nemzzz (UK rap), the Best top 20 held three songs by UK-scene artists: Skiifall at 9, DigDat
+at 16 and another Nemzzz song at 20. The rest was US rap. Three causes were measured:
+
+- **Unbalanced catalog.** YoungBoy Never Broke Again has 608 served tracks, Chief Keef 615, Future 448 and
+  Lil Durk 343. Nemzzz has 28, Central Cee 79 and Headie One 37. Audio similarity that ignores region fills
+  slots by base rate.
+- **Best looks for shared material, not shared scene.** On 800 catalog seeds, only 9.8 % of its top-10 songs
+  are in the seed's sounds top 200 at all.
+- **The relationship benchmarks pull the other way.**
+  - Of the cover positives that Best already places in the top 10, 54 % are by artists with no scene
+    connection to the query artist (33–34 % for samples).
+  - Sample positives have lower scene affinity than the songs competing with them.
+
+So likely covers and samples have to be protected using audio evidence; metadata cannot tell them apart. An
+earlier attempt trained the encoder to separate artists, and it hurt cross-artist recommendations
+([CASE_STUDY §6](CASE_STUDY.md#external-validation-and-rollback)). This layer only reorders the audio candidates.
+
+**Sources.**
+
+| source | use | coverage | terms |
+| --- | --- | --- | --- |
+| Deezer `/track/{id}` | primary artist of each catalog track | all 269,278 served tracks | personal, non-commercial ([terms](https://developers.deezer.com/termsofuse)) |
+| Deezer `/artist/{id}/related` | related-artist graph, up to 20 per artist | 20,054 catalog artists; other artists looked up live | as above |
+| Wikidata, via P2722 (Deezer artist id) | citizenship, origin, formation and birth countries; genres | region (stated or inferred) for 46,301 of 65,844 artists, genres for 41,915 | CC0 |
+| ListenBrainz similar artists | validation only, never a feature | 491 of 799 test seeds | Creative Commons dumps |
+| Spotify | not used | | its [Developer Policy](https://developer.spotify.com/policy) forbids analysing content or training models on it |
+
+**Two findings shaped the features.**
+
+- **Citizenship is not scene.** 4,175 artists have one stated country and a clear neighbourhood majority. For
+  13.7 % of them, the stated country differs from their neighbours' (7.6 % of rap artists). 21 Savage is
+  British by birth, but 94 % of his graph neighbours are American. Region is therefore 70 % the neighbours'
+  stated countries and 30 % the artist's own.
+- **Audio does not reveal region.** MuQ-MuLan zero-shot text prompts separate UK from US rap barely better than
+  chance: ROC AUC 0.62 per track, 0.68 per artist and 0.49 for a "UK drill" prompt. No prompt-based tags are used.
+
+**What failed.** The table below uses development data: frozen top-800 captures of 2,634 relationship queries.
+Changes are in percentage points. The first four rows are research simulations.
+
+| design | covers HR@1 / HR@10 / AP | verdict |
+| --- | --- | --- |
+| affinity multiplies the audio score (plus a sounds term), no protection | −7.79 / −0.47 / −4.78 | fails |
+| scene as a third RRF list (weight 0.5) | −5.44 / +0.28 / −2.63 | fails |
+| additive scene bonus | −1.97 / −0.19 / −0.84 | fails on HR@1 and AP |
+| fixed three-song head, then scene slots | 0 / +0.38 / −0.14 | fails: samples HR@10 −0.87, v4 −1 query |
+| multiplicative boost with standout protection, winner of the preregistered sweep | passed | rejected at confirmation: same-language held-out covers HR@10 −0.77 and AP −0.54, Gen Alpha −2 queries |
+| the same, re-screened in both language modes | passed | rejected at confirmation: same-language held-out covers AP −0.56 [−1.06, −0.10] |
+
+**Shipped design.** It follows the research report's recommendation to treat the page as two intents,
+relationship search and scene browsing. Each intent gets reserved slots, instead of everything being blended into
+one score, much as intent-aware diversification does
+([Agrawal et al., 2009](https://doi.org/10.1145/1498759.1498766);
+[Santos et al., 2010](https://doi.org/10.1145/1772690.1772780)). Two findings from the literature support the
+inputs: relational artist data beats audio for finding artist neighbourhoods
+([Korzeniowski et al., 2021](https://arxiv.org/abs/2107.14541)), and recommenders can amplify the dominance of US
+music ([Lesota et al., 2022](https://archives.ismir.net/ismir2022/paper/000034.pdf)).
+
+1. **Affinity** of a candidate to the seed's artist:
+   - 0.6 for the same artist;
+   - otherwise min(1, 4 × graph + 0.3 × region).
+
+   Here, graph is the overlap of the two artists' closed neighbourhoods in the symmetrised related-artist graph,
+   |N(a) ∩ N(b)| / √(|N(a)| |N(b)|). Region is the probability that both artists belong to the same country's
+   scene. Genre is stored but weighted 0.
+
+   The research prototype used personalised PageRank instead. In a comparison on development seeds, PageRank and
+   the overlap passed the same gates; PageRank had slightly higher ListenBrainz agreement (0.239 vs 0.224) and
+   slightly lower agreement beyond Deezer's list (0.141 vs 0.146). The overlap needs no graph walk, so a related list fetched
+   live for an unseen artist can be used directly.
+2. **Head.** The first three songs of the audio ranking stay. The head extends to the last top-10 song whose
+   melody score is at least −1.476 or whose samples score is at least 0.302.
+   - On development labels, these thresholds have 30 % precision for a labelled cover or sample (recall 50 %
+     and 21 %).
+   - The head stays at three songs for 86 % of covers queries and 54 % of samples queries.
+   - It reaches eight or more songs for 63 % of the UK-rap seeds.
+3. **Continuation.** The remaining songs are ordered by audio score × (1 + 2 × affinity). A song whose melody or
+   samples score stands 3 or more standard deviations above its list's mean is lifted as if its affinity were 1,
+   so no scene neighbour can pass it.
+4. **Scene lane.** Songs with affinity above 0, ordered by affinity × (audio + sounds RRF score).
+5. **Slots.** After the head, slots repeat continuation, continuation, lane (A-A-S). Each artist is capped at two
+   songs in the top 20.
+
+**Selection.** A preregistration fixed the following before any sweep:
+
+- **Development gates.** Covers, samples and reverse samples may lose at most 0.5 pp of HR@10 and of AP, and
+  1 pp of HR@1. v4 may lose at most one query.
+- **Objective.** ListenBrainz agreement on 800 artist-disjoint development seeds (one per artist), with guards on
+  same-artist crowding and artist diversity.
+- **Confirmation.** Run once on 799 test seeds and the reporting splits; Gen Alpha may lose at most one query.
+
+These deviations are disclosed:
+
+- Standout protection and region inferred from neighbours were added after diagnostics on partly collected data.
+- The held-out and test splits were consulted for three configurations: the two rejected above and this one.
+- The slotted design comes from the research report, which used development data only.
+- The final values were chosen from a 12-variant development grid by a rule fixed before the run: pass both
+  language-mode gates and the guards, then maximise development ListenBrainz agreement. The grid was graph 1, 2
+  or 4 × region 0.3 or 0.6 × same-artist 0.6 or 1.0. All 12 passed, and neighbouring settings differ by less
+  than the seed-bootstrap noise (about ±0.013).
+- A third sweep over standout windows (65 variants) was superseded by the slotted design before any confirmation.
+- Confirmation ran twice with the same parameters. The first run used incomplete metadata and lost one Gen Alpha
+  query with all languages and four in same-language mode. The second used the complete table; the results below
+  come from it.
+
+**Relationship benchmarks.** Full index, official `eval_index --scene`; the research harness agrees exactly. HR@1
+is unchanged in every family. The served mode is all languages.
+
+| benchmark | n | Best: HR@10 / AP | with scene layer | same-language Best | same-language with scene |
+| --- | ---: | --- | --- | --- | --- |
+| Gen Alpha (test) | 59 | 0.441 / 0.019 | 0.458 / 0.018 | 0.407 / 0.015 | 0.373 / 0.014 |
+| covers (held_out) | 1,170 | 0.673 / 0.513 | 0.682 / 0.514 | 0.685 / 0.527 | 0.688 / 0.528 |
+| samples (held_out) | 747 | 0.145 / 0.095 | 0.143 / 0.094 | 0.142 / 0.094 | 0.141 / 0.094 |
+| samples, reverse (held_out) | 695 | 0.157 / 0.101 | 0.153 / 0.100 | 0.153 / 0.099 | 0.150 / 0.098 |
+| SampleID pairs (held_out) | 43 | 0.186 / 0.119 | 0.186 / 0.118 | 0.186 / 0.130 | 0.186 / 0.130 |
+| v4 "sounds like" (held_out) | 19 | 0.105 / 0.039 | 0.158 / 0.048 | 0.053 / 0.029 | 0.105 / 0.040 |
+| v4 "sounds like" (validation) | 35 | 0.114 / 0.049 | 0.114 / 0.053 | 0.086 / 0.044 | 0.086 / 0.048 |
+
+A paired cluster bootstrap over connected query/positive groups (2,000 resamples) gives these changes with all
+languages:
+
+| family | HR@10 change, pp | AP change, pp |
+| --- | --- | --- |
+| covers | +0.94 [−0.09, +2.10] | +0.09 [−0.05, +0.26] |
+| samples | −0.13 [−0.81, +0.54] | −0.06 [−0.13, +0.00] |
+| reverse samples | −0.43 [−1.01, 0.00] | −0.07 [−0.13, −0.02] |
+| SampleID pairs | 0 | −0.02 [−0.07, +0.03] |
+
+The reverse-samples AP loss is real but small (0.0007), within the limit. On development splits, HR@10 changed by
++0.8 pp for covers, −0.1 for samples, 0 for reverse samples and 0 for v4. In same-language mode, the development
+changes were +0.8, −0.2 and −0.4.
+
+**Scene quality.** Top 10 of Best on artist-disjoint seeds (one per artist), with a paired seed bootstrap of 2,000
+resamples. ListenBrainz rows cover only seeds whose artist has ListenBrainz neighbours: 470 development, 491 test
+and 53 UK-rap seeds.
+
+| measure | development (800) | test (799) | UK rap (75) |
+| --- | --- | --- | --- |
+| other-artist results that ListenBrainz lists as similar | 0.127 → 0.205 | 0.123 → 0.208 (+0.085 [0.077, 0.094]) | 0.122 → 0.157 (+0.035 [0.013, 0.057]) |
+| the same, excluding artists on Deezer's related list | 0.098 → 0.147 | 0.093 → 0.144 (+0.051 [0.043, 0.059]) | 0.087 → 0.119 (+0.032 [0.012, 0.056]) |
+| other-artist results from the seed's scene country | 0.355 → 0.430 | 0.359 → 0.443 (+0.084 [0.077, 0.092]) | 0.231 → 0.305 (+0.074 [0.050, 0.103]) |
+| seeds with another song by the same artist | 0.261 → 0.365 | 0.254 → 0.343 (+0.089 [0.069, 0.110]) | 0.173 → 0.240 |
+| seeds with four or more songs by the same artist | 0.013 → 0 | 0.015 → 0 | 0.027 → 0 |
+| distinct artists | 9.56 → 9.51 | 9.57 → 9.50 | 9.44 → 9.47 |
+| songs also in the sounds top 200 | 0.098 → 0.194 | 0.105 → 0.204 (+0.099 [0.092, 0.106]) | 0.076 → 0.137 |
+
+Read these rows with three caveats:
+
+- **Circularity.** ListenBrainz and Deezer's related lists both come from listening data, and they overlap
+  heavily: a third of Deezer's 20 related artists are in ListenBrainz's top 20, against 0.1 % for random
+  artists. The first row therefore partly re-measures the feature; the second row excludes that overlap.
+- **Sounds-list share.** The gain in the last row is partly by construction, since the lane orders songs by
+  audio plus sounds score.
+- **UK-rap stratum.** It was chosen by name and Wikidata labels, and only about half of it is UK rap in the
+  strict sense. Its top 10 changes less than its top 20: rap seeds have many strong melody and sample matches,
+  and those lengthen the head.
+
+**8PM.** Frozen capture; scene country is inferred from the graph.
+
+- **More UK scene.** UK-scene artists in the top 20 went from 3 to 12, and other Nemzzz songs from one (#20) to
+  two (#14, #16).
+- **New entries** include Kidwild (#6), Central Cee (#9 and #12), AntsLive (#11), Headie One (#13), Krillz (#17)
+  and Blanco (#20).
+- **Dropped out:** songs by Eminem, Snoop Dogg, JAY-Z, Metro Boomin, Tee Grizzley and the French rapper Myth
+  Syzer, among others.
+- **The top five are still US songs.** DJ Khaled, Spiff TV and Lil Durk form the audio head. 42 Dugg and Future
+  stand out in the samples list (z ≈ 3.5), so they are protected as possible samples. In rap, such standouts are
+  often shared drum sounds rather than samples.
+
+**Latency.** On the local RTX 5080, a catalog seed answered in about 97 ms with the layer on.
+
+- An artist whose related list is not in the table costs one Deezer request: 365–560 ms when measured blocking.
+- That request now runs in the background while the preview downloads. For two artists not in the table
+  (Bugzy Malone, Pa Salieu), the ranking waited 0 ms for it.
+- The table is 5.1 MB.
+
+**Limitations.**
+
+- **Gen Alpha with the language gate.** In same-language mode, the layer loses two of 59 Gen Alpha queries
+  (0.407 → 0.373), more than the one-query limit. With all languages, the served mode, Gen Alpha gains one.
+  Before `--languages` and `--scene` are enabled together, the head needs re-tuning and a new confirmation.
+- **Flow is not measured.** The graph reflects it only through listening habits.
+- **Snapshot.** The table should be rebuilt about monthly, because related lists drift and new artists appear.
+  Unseen artists are covered by the live lookup.
+- **Licensing.** Deezer's terms limit use to personal, non-commercial applications. In research, a CC0-only
+  variant (Wikidata country and genre, no Deezer graph) matched the graph variant on agreement beyond Deezer's
+  list. It did nothing for 8PM, because Nemzzz and most UK drill artists have no Wikidata item.
 
 ## Serving on the RTX 2070 SUPER
 
@@ -319,3 +740,5 @@ falls outside one of the two 30-second previews, or the resemblance is a groove 
 - **Gen Alpha was seen once.** It was looked at when choosing the melody hub setting (see
   [Hub penalty](#hub-penalty)), so it is not fully blind for that one decision.
 - **Known pairs are demonstrations.** They were picked by hand to be recognisable, not sampled.
+- **Scene metrics are partly circular.** ListenBrainz and Deezer's related lists both come from listening data, so
+  agreement partly re-measures the feature; see [Scene layer](#scene-layer-2026-11-04).

@@ -9,6 +9,8 @@ songs    the API view: rows collapsed to one entry per song (``api.song_key``) a
 any_tab  a positive song in the top k of any channel (the page shows three tabs of 20).
 best     the API's fused "best" list: each channel's top ``api.FETCH`` rows as songs, combined by
          ``api.fuse``. Positives outside the fused list count as misses.
+best_scene  with ``--scene``: the same lists (plus sonic) combined by ``scene.scene_fuse``, the Best list with
+         the artist-scene layer, as served with ``api --scene``; ``best_scene_same_language`` with ``--languages``.
 
 Also reported: exact brute force vs two-stage agreement on a sample (``--exact``), hubness over random
 catalog queries (``--hubs``) and named example rankings (``--examples``).
@@ -26,6 +28,7 @@ import sys
 import time
 from collections import Counter, defaultdict
 from pathlib import Path
+from typing import Literal, overload
 
 import numpy as np
 import torch
@@ -33,6 +36,8 @@ import torch
 from .api import FETCH, FUSE_WEIGHTS, fuse, song_key
 from .evaluate import Query, load_benchmarks, score_block
 from .serve import CHANNELS, ChannelIndex, Engine, TwoStageIndex, load_meta
+from .languages import LanguageTable, UNKNOWN
+from .scene import SceneParams, SceneTable, scene_fuse
 
 TAB_K = 20
 HEADLINE = {
@@ -124,13 +129,16 @@ def stored_batch(ix: ChannelIndex | TwoStageIndex, ids: list[int]) -> torch.Tens
 
 @torch.inference_mode()
 def evaluate_indexes(indexes: dict[str, ChannelIndex | TwoStageIndex], queries: list[Query], keys: SongKeys,
-                     batch: int = 32, log=print) -> dict:
+                     batch: int = 32, log=print, languages: LanguageTable | None = None,
+                     scene: SceneTable | None = None, scene_params: SceneParams | None = None) -> dict:
     by_id: dict[int, list[Query]] = defaultdict(list)
     for q in queries:
         by_id[q.q].append(q)
     report: dict = {"channels": {}, "coverage": {}}
     firsts: dict[tuple[int, str], dict[str, int | None]] = defaultdict(dict)
     served: dict[int, dict[str, list[int]]] = defaultdict(dict)
+    served_ids: dict[int, dict[str, list[tuple[int, int]]]] = defaultdict(dict)
+    served_scores: dict[int, dict[str, list[float]]] = defaultdict(dict)
     indexed: set[int] = set()
     for name, ix in indexes.items():
         t0 = time.perf_counter()
@@ -151,8 +159,14 @@ def evaluate_indexes(indexes: dict[str, ChannelIndex | TwoStageIndex], queries: 
                 row[ix.pos[t]] = -torch.inf
                 qkey = keys.get(t)
                 best = song_best(row, rowkey, qkey)
-                if name in FUSE_WEIGHTS:
-                    served[t][name] = served_songs(ix, row, t, keys, qkey)
+                if name in FUSE_WEIGHTS or (scene is not None and name == "sonic"):
+                    if languages is None and scene is None:
+                        served[t][name] = served_songs(ix, row, t, keys, qkey)
+                    else:
+                        scored = served_scored(ix, row, t, keys, qkey)
+                        served_ids[t][name] = [(song, tid) for song, tid, _ in scored]
+                        served_scores[t][name] = [score for _, _, score in scored]
+                        served[t][name] = [song for song, _, _ in scored]
                 for q in by_id[t]:
                     key = f"{q.bench}/{q.split}"
                     rr = ix.rank_of(row, q.pos, [t])
@@ -195,22 +209,159 @@ def evaluate_indexes(indexes: dict[str, ChannelIndex | TwoStageIndex], queries: 
         for q in by_id[t]:
             present = ({keys.get(p) for p in q.pos if p != t} - {qkey}) & indexed
             if present:
-                # positives outside the served list rank last
                 fused_rows[f"{q.bench}/{q.split}"].append(
                     metrics(np.sort(np.array([pos.get(p, len(indexed)) for p in present]))))
     report["best"] = {k: aggregate(v) for k, v in sorted(fused_rows.items())}
+    if languages is not None:
+        report["best_same_language"], report["language_gate"] = language_gate_report(
+            queries, served, served_ids, indexed, keys, languages, need)
+    if scene is not None:
+        report |= scene_report(queries, served_ids, served_scores, indexed, keys, scene,
+                               scene_params or SceneParams(), languages, need)
     return report
 
 
-def served_songs(ix: ChannelIndex | TwoStageIndex, row: torch.Tensor, t: int, keys: SongKeys, qkey: int
-                 ) -> list[int]:
-    """Song keys of the API's per-channel list: top ``FETCH`` rows, one per song, the query's song removed."""
+def scene_report(queries: list[Query], served_ids: dict[int, dict[str, list[tuple[int, int]]]],
+                 served_scores: dict[int, dict[str, list[float]]], indexed: set[int], keys: SongKeys,
+                 scene: SceneTable, params: SceneParams, languages: LanguageTable | None,
+                 required_channels: list[str]) -> dict[str, dict]:
+    """Best list with the scene layer (``scene.scene_fuse``), all languages and, with labels, the language gate."""
+    by_id: dict[int, list[Query]] = defaultdict(list)
+    for query in queries:
+        by_id[query.q].append(query)
+    rows: dict[str, dict[str, list]] = {"all": defaultdict(list), "same": defaultdict(list)}
+    for track_id, channel_tracks in served_ids.items():
+        if any(channel not in channel_tracks for channel in required_channels):
+            continue
+        artists: dict[int, int | None] = {}
+        for items in channel_tracks.values():
+            for song, candidate_id in items:
+                artists.setdefault(song, scene.artist(candidate_id))
+        profile = scene.profile(scene.artist(track_id))
+        keep = {channel: [True] * len(items) for channel, items in channel_tracks.items()}
+        modes = {"all": keep}
+        if languages is not None:
+            seed = languages.language(track_id)
+            if seed == UNKNOWN:
+                seed = languages.artist_language(keys.meta.get(track_id, (None, None))[0])
+            modes["same"] = keep if seed == UNKNOWN else {
+                channel: [languages.language(candidate_id) in {UNKNOWN, seed} for _, candidate_id in items]
+                for channel, items in channel_tracks.items()}
+        query_key = keys.get(track_id)
+        for mode, mask in modes.items():
+            orders = {channel: [song for (song, _), ok in zip(items, mask[channel]) if ok]
+                      for channel, items in channel_tracks.items()}
+            scores = {channel: [s for s, ok in zip(served_scores[track_id][channel], mask[channel]) if ok]
+                      for channel in channel_tracks}
+            positions = {key: rank for rank, (key, _, _) in
+                         enumerate(scene_fuse(orders, artists, profile, scene, params, scores=scores), 1)}
+            for query in by_id[track_id]:
+                present = ({keys.get(p) for p in query.pos if p != track_id} - {query_key}) & indexed
+                if present:
+                    rows[mode][f"{query.bench}/{query.split}"].append(
+                        metrics(np.sort(np.array([positions.get(song, len(indexed)) for song in present]))))
+    out = {"best_scene": {name: aggregate(values) for name, values in sorted(rows["all"].items())}}
+    if languages is not None:
+        out["best_scene_same_language"] = {name: aggregate(values) for name, values in sorted(rows["same"].items())}
+    return out
+
+
+def language_gate_report(queries: list[Query], served: dict[int, dict[str, list[int]]],
+                         served_ids: dict[int, dict[str, list[tuple[int, int]]]], indexed: set[int],
+                         keys: SongKeys, languages: LanguageTable, required_channels: list[str]
+                         ) -> tuple[dict[str, dict], dict[str, int | float | None]]:
+    by_id: dict[int, list[Query]] = defaultdict(list)
+    for query in queries:
+        by_id[query.q].append(query)
+
+    rows: dict[str, list] = defaultdict(list)
+    hidden_counts: list[int] = []
+    known_seed_queries = 0
+    unknown_seed_queries = 0
+    for track_id, channel_tracks in served_ids.items():
+        if any(channel not in channel_tracks for channel in required_channels):
+            continue
+        artist = keys.meta.get(track_id, (None, None))[0]
+        seed_language = languages.language(track_id)
+        if seed_language == UNKNOWN:
+            seed_language = languages.artist_language(artist)
+
+        hidden = 0
+        if seed_language != UNKNOWN:
+            for key, _, _ in fuse(served[track_id])[:TAB_K]:
+                representative_id = next(
+                    (candidate_id for channel in channel_tracks
+                     for song, candidate_id in channel_tracks[channel] if song == key),
+                    None,
+                )
+                if representative_id is not None and languages.language(representative_id) not in {
+                    UNKNOWN, seed_language
+                }:
+                    hidden += 1
+
+        if seed_language == UNKNOWN:
+            filtered_orders = served[track_id]
+        else:
+            filtered_orders = {
+                channel: [song for song, candidate_id in items
+                          if languages.language(candidate_id) in {UNKNOWN, seed_language}]
+                for channel, items in channel_tracks.items()
+            }
+        positions = {key: rank for rank, (key, _, _) in enumerate(fuse(filtered_orders), 1)}
+        query_key = keys.get(track_id)
+        for query in by_id[track_id]:
+            if seed_language == UNKNOWN:
+                unknown_seed_queries += 1
+            else:
+                known_seed_queries += 1
+                hidden_counts.append(hidden)
+            present = ({keys.get(positive) for positive in query.pos if positive != track_id} - {query_key}) & indexed
+            if present:
+                rows[f"{query.bench}/{query.split}"].append(
+                    metrics(np.sort(np.array([positions.get(song, len(indexed)) for song in present]))))
+
+    report = {name: aggregate(values) for name, values in sorted(rows.items())}
+    stats: dict[str, int | float | None] = {
+        "known_seed_queries": known_seed_queries,
+        "unknown_seed_queries": unknown_seed_queries,
+        "queries_with_other_language_in_top20": sum(count > 0 for count in hidden_counts),
+        "total_other_language_in_top20": sum(hidden_counts),
+        "mean_other_language_in_unfiltered_top20": round(float(np.mean(hidden_counts)), 5)
+        if hidden_counts else None,
+    }
+    return report, stats
+
+
+def served_scored(ix: ChannelIndex | TwoStageIndex, row: torch.Tensor, t: int, keys: SongKeys, qkey: int
+                  ) -> list[tuple[int, int, float]]:
+    """The API's per-channel song list with each representative track ID and its score as the API rounds it."""
+    order, seen = [], {qkey}
+    for tid, score in ix.top(row, FETCH, [t]):
+        sk = keys.get(tid)
+        if sk not in seen:
+            seen.add(sk)
+            order.append((sk, tid, round(float(score), 4)))
+    return order
+
+
+@overload
+def served_songs(ix: ChannelIndex | TwoStageIndex, row: torch.Tensor, t: int, keys: SongKeys, qkey: int,
+                 with_track_ids: Literal[False] = False) -> list[int]: ...
+
+
+@overload
+def served_songs(ix: ChannelIndex | TwoStageIndex, row: torch.Tensor, t: int, keys: SongKeys, qkey: int,
+                 with_track_ids: Literal[True]) -> list[tuple[int, int]]: ...
+
+def served_songs(ix: ChannelIndex | TwoStageIndex, row: torch.Tensor, t: int, keys: SongKeys, qkey: int,
+                 with_track_ids: bool = False) -> list[int] | list[tuple[int, int]]:
+    """Return the API's per-channel song list, optionally retaining each representative track ID."""
     order, seen = [], {qkey}
     for tid, _ in ix.top(row, FETCH, [t]):
         sk = keys.get(tid)
         if sk not in seen:
             seen.add(sk)
-            order.append(sk)
+            order.append((sk, tid) if with_track_ids else sk)
     return order
 
 
@@ -324,6 +475,9 @@ def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser(prog="eval_index")
     p.add_argument("--index", required=True)
     p.add_argument("--meta", type=Path, required=True, help="catalog_meta.npz (song identity for the API view)")
+    p.add_argument("--languages", type=Path, default=None, help="optional language labels for Best-list evaluation")
+    p.add_argument("--scene", type=Path, default=None, help="optional scene table: also report the scene-layer Best")
+    p.add_argument("--scene-params", default=None, help="JSON overrides of scene.SceneParams (default: shipped)")
     p.add_argument("--bench", type=Path, required=True)
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--channels", nargs="+", default=list(CHANNELS), choices=list(CHANNELS))
@@ -344,7 +498,12 @@ def main(argv: list[str] | None = None) -> None:
     rng = random.Random(args.seed)
     log = lambda m: print(f"[{time.strftime('%H:%M:%S')}] {m}", flush=True)  # noqa: E731
 
-    keys = SongKeys(load_meta(args.meta))
+    meta = load_meta(args.meta)
+    keys = SongKeys(meta)
+    languages = LanguageTable.load(
+        args.languages,
+        artist_names={track_id: artist for track_id, (artist, _) in meta.items()},
+    ) if args.languages else None
     queries, _ = load_benchmarks(args.bench)
     queries = [q for q in queries if q.split in args.splits and (not args.benches or q.bench in args.benches)]
     if args.max_per_bench:
@@ -361,7 +520,12 @@ def main(argv: list[str] | None = None) -> None:
                     "hub_alpha": {k: getattr(v, "hub_alpha", None) for k, v in eng.indexes.items()},
                     "queries": len(queries)}
     log(f"index {report['index_sizes']} hub_alpha={report['hub_alpha']} queries={len(queries)}")
-    report |= evaluate_indexes(eng.indexes, queries, keys, args.batch, log)
+    scene = SceneTable.load(args.scene) if args.scene else None
+    scene_params = SceneParams(**json.loads(args.scene_params)) if args.scene_params else SceneParams()
+    if scene is not None:
+        report["scene_params"] = vars(scene_params)
+    report |= evaluate_indexes(eng.indexes, queries, keys, args.batch, log, languages=languages,
+                               scene=scene, scene_params=scene_params)
     bench_ids = sorted({q.q for q in queries})
     if args.exact:
         report["exact_check"] = {}
@@ -383,6 +547,13 @@ def main(argv: list[str] | None = None) -> None:
     args.out.write_text(json.dumps(report, indent=1, ensure_ascii=False), encoding="utf-8")
     baseline = json.loads(args.baseline.read_text(encoding="utf-8")) if args.baseline else None
     print(headline(report, baseline), flush=True)
+    if "language_gate" in report:
+        print(f"language gate: {report['language_gate']}", flush=True)
+        for name, result in report["best_same_language"].items():
+            print(f"best_same_language {name}: {result}", flush=True)
+    for section in ("best_scene", "best_scene_same_language"):
+        for name, result in report.get(section, {}).items():
+            print(f"{section} {name}: {result}", flush=True)
     for name, r in report.get("exact_check", {}).items():
         print(f"exact {name}: {r}", flush=True)
     for name, r in report.get("hubness", {}).items():
