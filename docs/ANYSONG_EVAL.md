@@ -672,8 +672,8 @@ run-to-run range seen before release; GPU memory stayed at 6.2 GB.
   (0.407 → 0.390), within the limit; with all languages, the served mode, it gains one. Enabling `--languages`
   as well would still put same-language Gen Alpha three queries below today's served Best (0.441), two of them
   from the language gate itself.
-- **Famous cross-scene pairs can still drop.** With the top-3 rule, Got To Give It Up → Blurred Lines stays at
-  #20 in Best (#5 in the samples tab).
+- **Famous cross-scene pairs can still drop.** With the top-3 rule, Got To Give It Up → Blurred Lines falls from
+  #10 to #19 in Best (#5 in the samples tab).
 - **Flow is not measured.** The graph reflects it only through listening habits.
 - **Snapshot.** The table should be rebuilt about monthly, because related lists drift and new artists appear.
   Unseen artists are covered by the live lookup.
@@ -755,6 +755,13 @@ Top-1 hits went from 3 to 1, top-10 hits from 5 to 6, and top-50 hits stayed at 
 11 times more songs, true matches slip a few places, and newly indexed songs let two new pairs land. Most
 famous interpolations and lawsuits remain out of reach. Likely reasons, not checked case by case: the shared hook
 falls outside one of the two 30-second previews, or the resemblance is a groove rather than shared audio.
+
+With the [scene layer](#scene-layer-2026-11-04), the any-tab counts are unchanged (1, 6 and 7). Best's own top 10
+holds the expected song for 5 of the 24 pairs, against 6 without the layer:
+
+- **Got To Give It Up → Blurred Lines** falls from #10 to #19 (#5 in the samples tab).
+- **The other pairs keep their places.** The first release, before the top-3 rule, had also dropped Cupid's Gen
+  Alpha match from #5 to #11.
 
 ## Limitations
 
