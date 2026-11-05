@@ -35,7 +35,7 @@ import torch
 
 from .api import FETCH, FUSE_WEIGHTS, fuse, song_key
 from .evaluate import Query, load_benchmarks, score_block
-from .serve import CHANNELS, ChannelIndex, Engine, TwoStageIndex, load_meta
+from .serve import ALL_CHANNELS, CHANNELS, ChannelIndex, Engine, TwoStageIndex, load_meta
 from .languages import LanguageTable, UNKNOWN
 from .scene import SceneParams, SceneTable, scene_fuse
 
@@ -480,7 +480,7 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--scene-params", default=None, help="JSON overrides of scene.SceneParams (default: shipped)")
     p.add_argument("--bench", type=Path, required=True)
     p.add_argument("--out", type=Path, required=True)
-    p.add_argument("--channels", nargs="+", default=list(CHANNELS), choices=list(CHANNELS))
+    p.add_argument("--channels", nargs="+", default=list(CHANNELS), choices=list(ALL_CHANNELS))
     p.add_argument("--benches", nargs="*", default=None, help="benchmark names to keep (default all)")
     p.add_argument("--splits", nargs="+", default=["development", "test", "held_out", "validation"])
     p.add_argument("--max-per-bench", type=int, default=0, help="seeded sample per bench/split (0 = all)")
