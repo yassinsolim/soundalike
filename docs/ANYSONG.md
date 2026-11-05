@@ -19,7 +19,24 @@ channel that ranked it higher. On held-out benchmarks it finds covers as well as
 than the samples tab ([ANYSONG_EVAL.md](ANYSONG_EVAL.md#best-matches)). The channel tabs remain for browsing one
 relation. The same list is the default view on the main page and in the
 [Spicetify extension](../integrations/spicetify/README.md), which name the song by title and artist instead of a
-Deezer id.
+Deezer id. The API can also hide confidently detected other-language songs from Best matches (`--languages`, see
+[Language labels](#language-labels)); instrumental or uncertain songs remain visible, `lang=all` restores the
+unfiltered ranking, and the individual melody, samples and sounds tabs are never filtered. For a live seed outside
+the catalog, the API uses a conservative majority-language prior from indexed songs by that artist; if it cannot
+establish a language, it fails open. The homelab does not enable it yet; its measured trade-offs are in
+[ANYSONG_EVAL.md](ANYSONG_EVAL.md#language-gate-impact).
+
+Best matches also weighs the **artist scene** ([`scene.py`](../src/soundalike/anysong/scene.py)). Audio still decides
+which songs can appear; the scene layer only arranges them. A candidate's affinity to the seed's artist combines the
+same artist, closeness in Deezer's related-artist graph and a shared regional scene (Wikidata countries, mostly
+those of the artist's graph neighbours). The first songs of the audio ranking stay on top: at least three, and
+further down to the last top-10 song that is among the first three of the melody or samples tab or whose score
+there is strong enough to suggest a cover or sample (usually six songs or more).
+After that, two audio slots alternate with one **scene slot**: a scene neighbour that also has audio evidence in
+some channel (the sounds list counts here). The audio slots lift scene neighbours too, but never past a song whose
+melody or samples score clearly stands out. One artist can place at most two songs in the top 20. Without metadata
+for the seed's artist the ranking is the plain fusion. The selection, safeguards and results are in
+[ANYSONG_EVAL.md](ANYSONG_EVAL.md#scene-layer-2026-11-04).
 
 ## Architecture
 
@@ -32,10 +49,20 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   [`vercel.json`](../webapp/vercel.json): same-origin `connect-src`, images and audio from `*.dzcdn.net` only).
   Previews are resolved through the existing `/api/preview`.
 - [`anysong/api.py`](../src/soundalike/anysong/api.py) serves `GET /api/anysong/search?q=&limit=` (Deezer search
-  plus `in_catalog`), `GET /api/anysong/similar?id=&k=` and `GET /healthz`. `/similar` returns `results.best`
-  followed by one list per channel. Each channel ranks its top 200 rows and keeps one release per song; `best` fuses
+  plus `in_catalog`), `GET /api/anysong/similar?id=&k=&lang=same|all&scene=1|0` and `GET /healthz`. With
+  `--languages`, `lang=same` is the default and `lang=all` bypasses the Best-matches-only filter; without it, `lang`
+  has no effect. `/similar` returns `results.best` followed by one
+  unfiltered list per channel. Each channel ranks its top 200 rows and keeps one release per song; `best` fuses
   those song lists (`FUSE_K`, `FUSE_WEIGHTS`), and each of its items carries `ranks`, its 1-based position in each
-  fused channel's list. Its `score` is the fused score.
+  fused channel's list. Its `score` is the fused score. When `--languages` is configured, `query.language` reports
+  the seed language (or `unknown`), `query.language_mode` reports `same` or `all`, and `query.hidden` counts
+  confidently different-language songs among the unfiltered top k. Unknown candidate labels stay in the list; an
+  unknown seed language disables filtering. With `--scene`, `query.scene` is `on`, `unknown_artist` (no metadata
+  for the seed's artist: plain fusion) or `off` (`scene=0`, or no table), `query.artist_id` is the seed's Deezer
+  artist, and a Best item's `ranks` include `sonic` when the sounds list placed it. In a scene list `score` is
+  positional (`1 / (5 + position)`), because slots rather than summed scores decide the order. A live seed whose
+  artist's related-artist list is not in the table costs one cached Deezer request (`/artist/{id}/related`), made in
+  the background while the preview downloads; if it fails, the API uses what the table knows.
 - `/similar?title=&artist=&k=` (used by the main page and Spotify, which have no Deezer id) resolves the name first.
   Songs match by song key (primary artist plus title without bracketed, dashed or feat. tags), and among a song's
   releases one with the same version words (`deezer.version_words`: live, remix, acoustic, edit, sped up, ...) wins,
@@ -96,7 +123,11 @@ Checks before serving an index:
   --hubs 2000 --out eval.json` scores every benchmark split per channel, as the page's "any tab" and as the fused
   `best` list. It also
   compares the two-stage ranking with brute force (`--exact`) and measures hubness (`--hubs`). Choose settings
-  on `development` splits; report `held_out`/`test`/`validation`.
+  on `development` splits; report `held_out`/`test`/`validation`. Add `--languages languages.npz` to also report
+  `best_same_language` beside unfiltered `best`; `language_gate` records labeled-seed coverage and the number of
+  other-language results in the unfiltered top 20. Add `--scene scene.npz` to also report `best_scene` (and
+  `best_scene_same_language`), the Best list as served with the scene layer; `--scene-params` overrides its
+  settings as JSON.
 - `python -m soundalike.anysong.serve_check --index <dir> --previews <dir> --bench <dir> --out report.json`
   re-embeds a sample of indexed tracks live to check parity with the offline index, and reports VRAM, latency
   and benchmark recall.
@@ -107,11 +138,65 @@ Checks before serving an index:
 On the 8 GB 2070 SUPER, stop the API before running `serve_check` or `robustness`. The full 269k index fits:
 5.4 GB of VRAM loaded, 6.3 GB peak. If a bigger index does not fit, lower `samples` to 256.
 
+## Language labels
+
+`python -m soundalike.anysong.languages` labels cached catalog previews with the pinned Whisper large-v3-turbo
+revision used by the V4 language probe. It saves resumable `part-*.npz` shards before producing `languages.npz`;
+the compact final file keeps the top five language probabilities per ID so the calibrated confidence/margin
+thresholds can be reapplied without decoding audio. The serving thresholds are confidence ≥ 0.8 and margin ≥ 0.5.
+Use `--fp16-accumulation` only on supported RTX 40/50 GPUs; it is faster but can change a marginal `unknown` to a
+language decision. Decode failures are recorded and make the run fail rather than producing a success-shaped,
+partially labelled catalog.
+
+Example, with the project environment and local Whisper files available:
+
+```powershell
+python -m soundalike.anysong.languages `
+  --ids C:/anysong/index/melody/ids.npy `
+  --previews C:/anysong/previews `
+  --out C:/anysong/languages `
+  --model-dir C:/models/whisper-large-v3-turbo `
+  --fp16-accumulation
+```
+
+Catalog seeds use their own label. A live seed outside the catalog uses a conservative artist-majority prior
+(≥2 confidently labelled recordings and ≥80% agreement); if no prior is available, the filter fails open. The
+Best list alone is filtered, preserving uncertain candidates; the three channel lists are unchanged. `lang=all`
+returns the same unfiltered Best ranking and still reports the other-language count in `query.hidden`.
+
+## Scene table
+
+The scene layer reads one table, `scene.npz`: each catalog track's primary Deezer artist, a symmetric related-artist
+graph, and per-artist country and genre weights. Build it from collected sources:
+
+```sh
+python -m soundalike.anysong.scene_sources --ids index_full/samples/ids.npy \
+  --catalog-artists catalog_artist_ids.json --out scene_data
+python -m soundalike.anysong.scene --data scene_data --catalog-artists catalog_artist_ids.json --out scene.npz
+```
+
+`scene_sources` is resumable. It looks up artists for catalog tracks without one (Deezer `/track/{id}`), Deezer's
+related-artist list for every catalog artist (`/artist/{id}/related`, up to 20 each), and Wikidata (CC0) facts
+for catalog and related artists via the Deezer artist id property P2722: citizenship, origin, formation and
+birth countries, and genres with their parent genres. It keeps to 5 Deezer requests per second by default
+(Deezer allows about 10 per IP and the live API shares the address) and sends one Wikidata query at a time. Deezer's
+API terms limit use to personal, non-commercial applications, as for the rest of this project.
+
+`scene` symmetrises the graph (an artist's neighbourhood is the artist, its related artists and the artists that
+list it). An artist's region is 70 % the stated countries of its graph neighbours and 30 % its own, because
+citizenship or birthplace alone misplaces artists (21 Savage, born in London, belongs to the Atlanta scene).
+Artists without stated countries or genres inherit their neighbours' at 80 % weight when at least two neighbours
+know them. Genres are IDF-weighted and include Wikidata parent genres at half weight; they are stored but weighted 0
+in the shipped setting. ListenBrainz co-listening is used only to validate the layer, never as a feature.
+Rebuild the table about monthly: related lists drift and new artists appear (artists missing from the table are
+looked up live).
+
 ## Deployment (homelab)
 
 GPU host CT 409 (`/opt/soundalike`): `src/`, `venv/`, checkpoints under `ckpt/`, upstream code under `ext/`,
-offline Hugging Face cache in `hf/`, indexes under `index/` with `index/current` → the live index and
-`index/catalog_meta.npz` for titles. The service is
+offline Hugging Face cache in `hf/`, indexes under `index/` with `index/current` → the live index,
+`index/catalog_meta.npz` for titles, `index/languages.npz` for language labels (`--languages`, not enabled yet) and
+`index/scene.npz` for the scene layer (`--scene`). The service is
 [`deploy/homelab/soundalike-anysong.service`](../deploy/homelab/soundalike-anysong.service) (user `anysong`,
 `MemoryMax=6G`, enabled at boot; startup loads and warms the models and index, about 22 s with the full 269k-track
 index). The process itself uses about 1.5 GB of RAM; the rest of the cap is page cache for the memory-mapped

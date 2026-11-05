@@ -7,7 +7,8 @@ GET endpoints (JSON):
 - ``/healthz``
 - ``/api/anysong/search?q=<text>&limit=10``  Deezer track search; ``in_catalog`` marks indexed tracks
 - ``/api/anysong/similar?id=<deezer id>&k=20&dedupe=1``  top matches per channel, plus ``best``: the melody and
-  samples lists fused into one ranking (``fuse``)
+  samples lists fused into one ranking (``fuse``). With a scene table (``--scene``) the fused list also weighs the
+  artist scene (same artist, related artists, region, genre; ``scene.scene_fuse``); ``scene=0`` turns that off
 - ``/api/anysong/similar?title=<title>&artist=<artist>&k=20``  the same for a song named by title and artist
   (``AnySong.resolve``): the catalog release of that song, else the first matching Deezer search hit
 
@@ -30,8 +31,8 @@ import time
 import traceback
 import unicodedata
 from collections import OrderedDict
-from collections.abc import Callable, Hashable, Iterator
-from concurrent.futures import Future
+from collections.abc import Callable, Hashable, Iterator, Mapping, Sequence
+from concurrent.futures import Future, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -42,6 +43,7 @@ from urllib.parse import parse_qs, urlsplit
 import numpy as np
 
 from .deezer import version_words
+from .scene import SceneParams, SceneTable, scene_fuse
 
 FETCH = 200  # per-channel depth ranked before de-duplication
 K_MAX = 50
@@ -75,7 +77,7 @@ def song_key(artist: str, title: str) -> tuple[str, str]:
     return a, core or _norm(t)
 
 
-def fuse(orders: dict[str, list[Hashable]], weights: dict[str, float] | None = None, k: int = FUSE_K
+def fuse(orders: Mapping[str, Sequence[Hashable]], weights: dict[str, float] | None = None, k: int = FUSE_K
          ) -> list[tuple[Hashable, float, dict[str, int]]]:
     """Reciprocal-rank fusion of per-channel orders of distinct keys.
 
@@ -197,8 +199,16 @@ class AnySong:
 
     def __init__(self, engine, deezer, meta: dict[int, tuple[str, str]], cache_size: int = 2048,
                  max_pending: int = 8, search_ttl: float = 3600.0, keep_previews: bool = False,
-                 follower_timeout: float = 180.0, known_ttl: float = 600.0):
+                 follower_timeout: float = 180.0, known_ttl: float = 600.0, languages=None,
+                 scene: SceneTable | None = None, scene_params: SceneParams | None = None,
+                 related_ttl: float = 86400.0):
         self.engine, self.deezer, self.meta, self.keep_previews = engine, deezer, meta, keep_previews
+        self.languages = languages
+        self.scene, self.scene_params = scene, scene_params or SceneParams()
+        # Deezer related artists for query artists whose own list is not in the scene table (e.g. unseen artists).
+        self.related = LRU(cache_size, ttl=related_ttl)
+        self._related_jobs: dict[int, Future] = {}
+        self._background = ThreadPoolExecutor(max_workers=2, thread_name_prefix="anysong-related")
         self.gpu = threading.Lock()
         self.pending = threading.BoundedSemaphore(max_pending)
         self.results = LRU(cache_size)
@@ -230,9 +240,11 @@ class AnySong:
     def health(self) -> dict:
         with self._lock:
             served = dict(self.served)
+        scene = None if self.scene is None else {"tracks": int((self.scene.track_artist > 0).sum()),
+                                                 "artists": len(self.scene.artist_ids)}
         return {"ok": True, "device": self.engine.device,
                 "channels": {name: len(ix) for name, ix in self.engine.indexes.items()},
-                "cached_results": len(self.results), "served": served}
+                "cached_results": len(self.results), "served": served, "scene": scene}
 
     def search(self, q: str, limit: int = 10) -> dict:
         q = " ".join(q.split())
@@ -288,23 +300,24 @@ class AnySong:
     def cached(self, track_id: int) -> bool:
         return self.results.get(track_id) is not None
 
-    def similar(self, track_id: int, k: int = 20, dedupe: bool = True) -> dict:
+    def similar(self, track_id: int, k: int = 20, dedupe: bool = True, lang_mode: str = "same",
+                scene: bool = True) -> dict:
         res = self.results.get(track_id)
         if res is not None:
             self._count("cached")
-            return self._view(res, k, dedupe, cached=True)
+            return self._view(res, k, dedupe, cached=True, lang_mode=lang_mode, scene=scene)
         with self._lock:
             fut = self._flight.get(track_id)
             owner = fut is None
             if owner:
                 fut = self._flight[track_id] = Future()
-        if not owner:  # the same track is already being ranked: share that result
+        if not owner:
             try:
                 res = fut.result(timeout=self.follower_timeout)
             except FutureTimeout:
                 raise ApiError(504, "timed out waiting for the result") from None
             self._count("cached")
-            return self._view(res, k, dedupe, cached=True)
+            return self._view(res, k, dedupe, cached=True, lang_mode=lang_mode, scene=scene)
         try:
             res = self._compute(track_id)
             self.results.put(track_id, res)
@@ -315,7 +328,7 @@ class AnySong:
         finally:
             with self._lock:
                 self._flight.pop(track_id, None)
-        return self._view(res, k, dedupe, cached=False)
+        return self._view(res, k, dedupe, cached=False, lang_mode=lang_mode, scene=scene)
 
     def _compute(self, track_id: int) -> dict:
         if not self.pending.acquire(blocking=False):
@@ -332,10 +345,57 @@ class AnySong:
                 query, raw, timings, t = self._live(track_id)
             self._count(query["source"])
             timings |= t
+            related = self._scene_context(query, timings)
             timings["total"] = (time.perf_counter() - t0) * 1000
-            return {"query": query, "raw": raw, "timings_ms": {k: round(v, 1) for k, v in timings.items()}}
+            return {"query": query, "raw": raw, "related": related,
+                    "timings_ms": {k: round(v, 1) for k, v in timings.items()}}
         finally:
             self.pending.release()
+
+    def _scene_context(self, query: dict, timings: dict[str, float]) -> list[int]:
+        """Set the query's Deezer artist id; fetch Deezer's related artists when the scene table lacks that list.
+
+        A live query's list is usually fetched already (``_start_related``, during the preview download). Fails open:
+        without a related list the scene layer uses whatever the table knows about the artist.
+        """
+        if self.scene is None:
+            return []
+        artist_id = query.get("artist_id") or self.scene.artist(int(query["id"]))
+        if not artist_id:
+            return []
+        query["artist_id"] = int(artist_id)
+        if self.scene.has_related(artist_id):
+            return []
+        with self._lock:
+            job = self._related_jobs.pop(artist_id, None)
+        related = self.related.get(artist_id)
+        if related is None:
+            t = time.perf_counter()
+            try:
+                related = job.result(timeout=30) if job is not None else self._fetch_related(artist_id)
+            except (RuntimeError, ValueError, OSError, FutureTimeout):
+                return []
+            finally:
+                timings["related"] = (time.perf_counter() - t) * 1000  # time spent waiting for Deezer
+        elif job is not None:
+            timings["related"] = 0.0  # fetched during the preview download
+        return list(related)
+
+    def _fetch_related(self, artist_id: int) -> list[int]:
+        related = self.deezer.related_artists(artist_id)
+        self.related.put(artist_id, related)
+        return related
+
+    def _start_related(self, artist_id: int | None) -> None:
+        """Start fetching a live seed artist's related list while its preview is downloaded and embedded."""
+        if self.scene is None or not artist_id or self.scene.has_related(artist_id) \
+                or self.related.get(artist_id) is not None:
+            return
+        with self._lock:
+            if len(self._related_jobs) > 256:  # jobs of live queries that failed before using them
+                self._related_jobs = {a: job for a, job in self._related_jobs.items() if not job.done()}
+            if artist_id not in self._related_jobs:
+                self._related_jobs[artist_id] = self._background.submit(self._fetch_related, artist_id)
 
     @contextmanager
     def _gpu(self, timings: dict[str, float]) -> Iterator[None]:
@@ -359,6 +419,10 @@ class AnySong:
         card = _card(info)
         query = {"id": track_id, "artist": card["artist"], "title": card["title"], "cover": card["cover"],
                  "source": "live"}
+        artist_id = (info.get("artist") or {}).get("id")
+        if type(artist_id) is int and artist_id > 0:
+            query["artist_id"] = artist_id
+            self._start_related(artist_id)
         t = time.perf_counter()
         try:
             path = self.deezer.fetch_preview(track_id, info)
@@ -380,7 +444,8 @@ class AnySong:
             raw, t_search = self.engine.search_windows(wins, FETCH, [track_id])
         return query, raw, timings | t_embed, t_search
 
-    def _view(self, res: dict, k: int, dedupe: bool, cached: bool) -> dict:
+    def _view(self, res: dict, k: int, dedupe: bool, cached: bool, lang_mode: str = "same",
+              scene: bool = True) -> dict:
         q = res["query"]
         qkey = song_key(q["artist"], q["title"]) if q.get("title") else None
         out: dict[str, list[dict]] = {}
@@ -397,13 +462,56 @@ class AnySong:
                 order[key] = {"id": tid, "score": round(float(score), 4), "artist": artist, "title": title}
             songs[channel] = order
             out[channel] = list(order.values())[:k]
+
+        language = "unknown"
+        if self.languages is not None:
+            language = self.languages.language(int(q["id"]))
+            if language == "unknown":
+                language = self.languages.artist_language(q.get("artist"))
+
+        scene_state = "off"
+        artists: dict[Hashable, int | None] = {}
+        profile = None
+        if self.scene is not None and scene:
+            for order in songs.values():
+                for key, item in order.items():
+                    if key not in artists:
+                        artists[key] = self.scene.artist(int(item["id"]))
+            profile = self.scene.profile(q.get("artist_id"), res.get("related"))
+            scene_state = "on" if profile is not None else "unknown_artist"
+
+        def rank(view: dict[str, dict[Hashable, dict]]) -> list:
+            orders = {channel: list(order) for channel, order in view.items()}
+            if scene_state == "off":
+                return fuse(orders)
+            scores = {channel: [item["score"] for item in order.values()] for channel, order in view.items()}
+            return scene_fuse(orders, artists, profile, self.scene, self.scene_params, scores=scores)
+
+        all_fused = rank(songs)
+        hidden = 0
+        filtered = songs
+        if language != "unknown" and self.languages is not None:
+            def keep(item: dict) -> bool:
+                candidate = self.languages.language(int(item["id"]))
+                return candidate in {"unknown", language}
+
+            hidden = sum(
+                1
+                for key, _, _ in all_fused[:k]
+                if not keep(next(songs[channel][key] for channel in songs if key in songs[channel]))
+            )
+            if lang_mode == "same":
+                filtered = {
+                    channel: {key: item for key, item in order.items() if keep(item)}
+                    for channel, order in songs.items()
+                }
         best = []
-        for key, score, ranks in fuse({ch: list(order) for ch, order in songs.items()})[:k]:
-            # shown as the release the strongest channel found
-            ch = min(ranks, key=lambda c: ranks[c])
-            best.append(songs[ch][key] | {"score": round(score, 5), "ranks": ranks})
+        for key, score, ranks in rank(filtered)[:k]:
+            channel = min(ranks, key=lambda name: ranks[name])
+            best.append(filtered[channel][key] | {"score": round(score, 5), "ranks": ranks})
+        query = q | {"language": language, "language_mode": lang_mode, "hidden": hidden, "scene": scene_state}
         out = {"best": best, **out} if best else out
-        return {"ok": True, "query": q, "results": out, "timings_ms": res["timings_ms"], "cached": cached}
+        return {"ok": True, "query": query, "results": out, "timings_ms": res["timings_ms"], "cached": cached}
 
 
 def _int_param(params: dict[str, list[str]], name: str, default: int | None, lo: int, hi: int) -> int:
@@ -469,6 +577,10 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/api/anysong/similar":
                 k = _int_param(params, "k", 20, 1, K_MAX)
                 dedupe = _int_param(params, "dedupe", 1, 0, 1) == 1
+                lang_mode = (params.get("lang") or ["same"])[0]
+                if lang_mode not in {"same", "all"}:
+                    raise ApiError(400, "lang must be 'same' or 'all'")
+                scene = _int_param(params, "scene", 1, 0, 1) == 1
                 if "id" not in params and ("title" in params or "artist" in params):
                     tid = svc.resolve((params.get("artist") or [""])[0], (params.get("title") or [""])[0],
                                       lambda: self._limit("/api/anysong/search"))
@@ -476,7 +588,7 @@ class Handler(BaseHTTPRequestHandler):
                     tid = _int_param(params, "id", None, 1, 2**53)
                 if not svc.cached(tid):  # only new rankings cost GPU time and Deezer requests
                     self._limit(url.path)
-                return self._send(200, svc.similar(tid, k, dedupe), max_age=3600)
+                return self._send(200, svc.similar(tid, k, dedupe, lang_mode, scene), max_age=3600)
             raise ApiError(404, "not found")
         except ApiError as exc:
             self._send(exc.status, {"ok": False, "error": exc.message})
@@ -518,6 +630,8 @@ def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser(prog="anysong-api")
     p.add_argument("--index", required=True, help="index_build output or a shard directory (see serve)")
     p.add_argument("--meta", type=Path, default=None, help="catalog_meta npz with track_ids/artists/titles")
+    p.add_argument("--languages", type=Path, default=None, help="language labels from anysong.languages")
+    p.add_argument("--scene", type=Path, default=None, help="scene table from anysong.scene (metadata for Best)")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=8790)
     p.add_argument("--channels", nargs="+", default=list(CHANNELS), choices=list(CHANNELS))
@@ -540,7 +654,18 @@ def main(argv: list[str] | None = None) -> None:
     engine = Engine(args.index, args.channels, args.device, candidates=args.candidates, hub_alpha=args.hub_alpha)
     engine.warm()
     warm = _warmup(engine)
-    service = AnySong(engine, Deezer(scratch), load_meta(args.meta), args.cache_size, args.max_pending)
+    meta = load_meta(args.meta)
+    languages = None
+    if args.languages is not None:
+        from .languages import LanguageTable
+
+        languages = LanguageTable.load(
+            args.languages,
+            artist_names={track_id: artist for track_id, (artist, _) in meta.items()},
+        )
+    scene = SceneTable.load(args.scene) if args.scene is not None else None
+    service = AnySong(engine, Deezer(scratch), meta, args.cache_size, args.max_pending,
+                      languages=languages, scene=scene)
     server = Server((args.host, args.port), service, args.search_per_min, args.similar_per_min,
                     args.cors_origin, args.client_ip_header)
     sizes = {name: len(ix) for name, ix in engine.indexes.items()}
