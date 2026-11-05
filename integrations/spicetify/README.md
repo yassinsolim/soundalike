@@ -47,13 +47,16 @@ Home, and End keys. Spotify's Back and Forward buttons keep the list you chose.
   placed in those rankings, such as "melody #1 · samples #3". The matcher
   searches a 269,278-track index and works for any song with a 30-second
   Deezer preview, including songs outside the index, which take a few seconds
-  to analyze. Tags say whether your song was **In our library**, **Heard live
-  just now**, or **Heard live earlier**. If the matcher used a song with a
-  different title or artist, the list names it.
+  to analyze. Other-language songs are hidden when the seed language is known;
+  uncertain and instrumental results stay visible. Use **Show all languages**
+  to restore cross-language matches. If the seed language cannot be established,
+  no language filter is applied. Tags say whether your song was **In our library**,
+  **Heard live just now**, or **Heard live earlier**. If the matcher used a song
+  with a different title or artist, the list names it.
 - **Sounds like** is the original list: songs with the same overall sound (low
   end, dynamics, and tone) from the 272,853-track recommendation library. BPM,
-  the language filter, related-artist ordering, and the feedback prompt apply
-  only to this list.
+  Spotify lyrics-language filtering, related-artist ordering, and the feedback
+  prompt apply only to this list.
 
 Both lists load at once. If Sounds like is ready first, the page waits up to
 four more seconds for Best matches, then opens with Best matches still
@@ -74,8 +77,11 @@ from an earlier search shows without asking.
   names, clickable album names, and, in Sounds like, measured BPM.
 - In Sounds like, for a seed with a known Spotify lyrics language, only
   candidates with that exact known language are shown (English with English,
-  French with French, and so on). Best matches are not language-filtered,
-  because covers and samples often cross languages. The gate examines only
+  French with French, and so on). Best matches use the server's audio-derived
+  language gate: confidently different-language songs are hidden by default,
+  uncertain/instrumental rows remain, and **Show all languages** restores the
+  unfiltered list. The individual melody, samples, and sounds tabs are not
+  filtered, so cross-language covers and samples remain explorable. The Sounds-like gate examines only
   the model's original top 20: it never
   promotes a weak lower-ranked song merely because that song has language
   metadata. Each candidate stays hidden until its own check finishes; verified

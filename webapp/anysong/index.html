@@ -60,6 +60,10 @@ h1{font-size:24px;margin:0;letter-spacing:-.02em}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 4px}
 .tab{background:transparent;border:1px solid var(--line);color:var(--mut);border-radius:999px;min-height:44px;padding:8px 14px;cursor:pointer;font-size:13.5px;font-weight:600}
 .tab[aria-selected=true]{background:var(--card2);border-color:var(--grn);color:var(--txt)}
+.language-filter{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;margin:10px 2px;color:var(--mut);font-size:13px}
+.language-filter[hidden]{display:none}
+.language-filter button{background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:999px;min-height:38px;padding:7px 12px;cursor:pointer;font-size:12.5px}
+.language-filter button:hover{border-color:var(--grn)}
 .blurb{color:var(--mut);font-size:13px;margin:8px 2px 10px}
 ol{list-style:none;margin:0;padding:0}
 li.row{display:flex;align-items:center;gap:14px;padding:9px 12px;border-radius:12px}
@@ -109,7 +113,7 @@ li.row .btn{padding:8px 10px}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
 const CHANNELS = [
-  {key: "best", label: "Best matches", blurb: "The melody and samples lists combined into one ranking. Each match shows where it placed in those lists."},
+  {key: "best", label: "Best matches", blurb: "Likely covers, samples and shared melodies first, then similar-sounding songs by related artists from the same scene."},
   {key: "melody", label: "Same melody", blurb: "Covers, interpolations and songs that reuse the tune."},
   {key: "samples", label: "Samples & loops", blurb: "Songs that may share a sample, a loop or a chopped-up section."},
   {key: "sonic", label: "Sounds like", blurb: "A similar overall sound: production, instruments and mood."},
@@ -129,7 +133,8 @@ audio.preload = "none";
 const cards = new Map();       // track id -> {id, title, artist, cover, has_preview}
 const suggestions = new Map(); // lower-cased query -> search results
 let acItems = [], acSel = -1, acTimer = 0, acCtl = null;
-let loadSeq = 0, current = null, tab = "best", results = {};
+let loadSeq = 0, current = null, tab = "best", results = {}, language = {};
+let showAllLanguages = false, focusLanguage = false;
 let playingId = null;
 
 function safeImg(url) {
@@ -253,6 +258,9 @@ function setState(html, cls = "") {
 
 async function load(id, attempt = 0) {
   const seq = ++loadSeq;
+  if (current !== id) showAllLanguages = focusLanguage = false;
+  const refocus = focusLanguage;
+  focusLanguage = false;
   current = id;
   stopPreview();
   const known = cards.get(id);
@@ -261,13 +269,17 @@ async function load(id, attempt = 0) {
     if (seq === loadSeq) setState(`<span class="spin"></span>New to us: analysing the preview live on our GPU…`);
   }, 1600);
   try {
-    const r = await fetch(`/api/anysong/similar?id=${id}&k=20`);
+    const mode = showAllLanguages ? "all" : "same";
+    const r = await fetch(`/api/anysong/similar?id=${id}&k=20&lang=${mode}`);
     let d = {};
     try { d = await r.json(); } catch {}
     if (seq !== loadSeq) return;
     if (r.status === 503 && attempt < 3) {
       await new Promise(res => setTimeout(res, 1500 * (attempt + 1)));
-      if (seq === loadSeq) load(id, attempt + 1);
+      if (seq === loadSeq) {
+        focusLanguage = refocus;
+        load(id, attempt + 1);
+      }
       return;
     }
     if (!r.ok || !d.ok) return setState(esc(errorText(r.status, d.error)), "err");
@@ -276,7 +288,7 @@ async function load(id, attempt = 0) {
                   cover: safeImg(q.cover || known?.cover || "")};
     cards.set(id, {...known, ...seed, has_preview: true});
     if (document.activeElement !== input) input.value = seed.title ? `${seed.title} — ${seed.artist}` : "";
-    render(seed, d);
+    render(seed, d, refocus);
     if (!seed.cover) fetchPreview(id).then(p => {
       const img = safeImg(p?.cover || ""), el = $(".seed .cover");
       if (!img || seq !== loadSeq || !el) return;
@@ -290,11 +302,21 @@ async function load(id, attempt = 0) {
   }
 }
 
-function render(seed, d) {
+function languageName(code) {
+  const names = {de: "German", en: "English", es: "Spanish", fr: "French", ja: "Japanese",
+                 ko: "Korean", pt: "Portuguese", zh: "Chinese"};
+  if (names[code]) return names[code];
+  try { return new Intl.DisplayNames(["en"], {type: "language"}).of(code); } catch {}
+  return code?.toUpperCase() || "Unknown";
+}
+
+function render(seed, d, refocus = false) {
   const live = d.query?.source === "live";
   const ms = d.cached ? null : d.timings_ms?.total;
   results = d.results || {};
   if (tab === "best" && !results.best) tab = "melody";
+  language = {code: d.query?.language || "unknown", hidden: d.query?.hidden};
+  showAllLanguages = d.query?.language_mode === "all";
   out.innerHTML =
     `<section class="seed" aria-label="Selected song">` +
       `<div class="cover">${seed.cover ? `<img alt="" src="${esc(seed.cover)}">` : ""}</div>` +
@@ -308,8 +330,16 @@ function render(seed, d) {
     `</section>` +
     `<div class="tabs" role="tablist" aria-label="Kind of match">` +
       CHANNELS.map(c => `<button class="tab" type="button" role="tab" id="tab-${c.key}" data-tab="${c.key}" aria-controls="list" aria-selected="${c.key === tab}" tabindex="${c.key === tab ? 0 : -1}">${c.label}</button>`).join("") +
-    `</div><p class="blurb" id="blurb"></p><ol id="list" role="tabpanel"></ol>`;
+    `</div><div class="language-filter" id="language" role="status" hidden><span id="language-status"></span>` +
+      `<button id="language-toggle" type="button" aria-pressed="false" hidden></button></div>` +
+    `<p class="blurb" id="blurb"></p><ol id="list" role="tabpanel"></ol>`;
   renderList();
+  $("#language-toggle").onclick = () => {
+    showAllLanguages = !showAllLanguages;
+    focusLanguage = true;
+    load(seed.id);
+  };
+  if (refocus && !$("#language").hidden && !$("#language-toggle").hidden) $("#language-toggle").focus();
   $("#share").onclick = share;
   out.querySelector(".seed .pv").onclick = e => togglePreview(seed.id, e.currentTarget);
   const tabs = [...out.querySelectorAll(".tab")];
@@ -341,6 +371,7 @@ function renderList() {
   if (!list) return;
   list.dataset.tab = tab;
   $("#blurb").textContent = CHANNELS.find(c => c.key === tab).blurb;
+  renderLanguage(tab === "best");
   list.setAttribute("aria-labelledby", `tab-${tab}`);
   const rows = (results[tab] || []).filter(x => ID_RE.test(String(x.id)));
   if (!rows.length) {
@@ -372,6 +403,23 @@ function renderList() {
     open(x.id);
   });
   syncPlaying();
+}
+
+// Only Best matches are language-filtered; the channel lists, Sounds like included, stay unfiltered.
+function renderLanguage(shown) {
+  const box = $("#language");
+  if (!box) return;
+  box.hidden = !shown;
+  if (!shown) return;
+  const unknown = language.code === "unknown";
+  const n = Math.max(0, Number(language.hidden) || 0);
+  $("#language-status").textContent = unknown ? "Language uncertain; showing all languages." :
+    `${languageName(language.code)} · ${n ? `${n} other-language ${n === 1 ? "match" : "matches"} ` +
+      `${showAllLanguages ? "in" : "hidden from"} the top 20` : "no other-language matches in the top 20"}`;
+  const button = $("#language-toggle");
+  button.hidden = unknown;
+  button.setAttribute("aria-pressed", String(showAllLanguages));
+  button.textContent = showAllLanguages ? "Show same language" : "Show all languages";
 }
 
 async function share() {

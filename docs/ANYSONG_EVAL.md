@@ -251,7 +251,8 @@ Gen Alpha and v4 groups are especially directional.
 The gate removes many unrelated-language results without materially changing sample retrieval in these aggregate
 metrics. Covers improve in this sample, while Gen Alpha and v4 sound-alike retrieval lose some cross-language
 matches. Those losses are expected trade-offs, not proof that every hidden result is irrelevant; `lang=all` restores
-the original ranking. The gate is not enabled on the homelab yet (see [Scene layer](#scene-layer-2026-11-04)).
+the original ranking. Since 2026-11-05 the homelab serves the filtered list by default, together with the
+[scene layer](#scene-layer-2026-11-04).
 
 ### What did not help: query expansion
 
@@ -592,7 +593,8 @@ These deviations are disclosed:
   agreement +0.085; and two lost Gen Alpha queries in same-language mode.
 
 **Relationship benchmarks.** Shipped setting (top-3 rule), full index, official `eval_index --scene`; the research
-harness agrees exactly. HR@1 is unchanged in every family. The served mode is all languages.
+harness agrees exactly. HR@1 is unchanged in every family. At release the served mode was all languages; since the
+language filter went on (2026-11-05), the same-language columns describe what is served.
 
 | benchmark | n | Best: HR@10 / AP | with scene layer | same-language Best | same-language with scene |
 | --- | ---: | --- | --- | --- | --- |
@@ -643,8 +645,8 @@ Read these rows with three caveats:
   strict sense. Its top 10 changes less than its top 20: rap seeds have many strong melody and sample matches,
   and those lengthen the head.
 
-**8PM.** Frozen capture of the shipped setting; scene country is inferred from the graph. The live API returned the
-same list.
+**8PM.** Frozen capture of the shipped setting, all languages; scene country is inferred from the graph. The live API
+returned the same list before the language filter went on.
 
 - **More UK scene.** UK-scene artists in the top 20 went from 3 to 12, and other Nemzzz songs from one (#20) to
   two (#13, #14).
@@ -669,9 +671,9 @@ run-to-run range seen before release; GPU memory stayed at 6.2 GB.
 **Limitations.**
 
 - **Gen Alpha with the language gate.** In same-language mode, the layer loses one of 59 Gen Alpha queries
-  (0.407 → 0.390), within the limit; with all languages, the served mode, it gains one. Enabling `--languages`
-  as well would still put same-language Gen Alpha three queries below today's served Best (0.441), two of them
-  from the language gate itself.
+  (0.407 → 0.390), within the limit; with all languages it gains one. Since 2026-11-05 the served list is
+  same-language, so Gen Alpha's served HR@10 is 0.390, four queries below the all-language list with the layer
+  (0.458); most of that gap is the language gate itself. **Show all languages** restores the all-language list.
 - **Famous cross-scene pairs can still drop.** With the top-3 rule, Got To Give It Up → Blurred Lines falls from
   #10 to #19 in Best (#5 in the samples tab).
 - **Flow is not measured.** The graph reflects it only through listening habits.
@@ -680,6 +682,97 @@ run-to-run range seen before release; GPU memory stayed at 6.2 GB.
 - **Licensing.** Deezer's terms limit use to personal, non-commercial applications. In research, a CC0-only
   variant (Wikidata country and genre, no Deezer graph) matched the graph variant on agreement beyond Deezer's
   list. It did nothing for 8PM, because Nemzzz and most UK drill artists have no Wikidata item.
+
+## Sounds like v2 and query stems (2026-11-05): not served
+
+A follow-up study asked what would most improve the results people see. Every experiment used development data; the
+two strongest candidates then got one confirmation each under rules written before the run. **Both failed and are
+not served.** The research workspace (`improve-research-20261104`) holds the scripts and results; the Sounds like v2
+code is on the `exp/sounds-v2` branch.
+
+**Where the gap is.** Top 10 for 800 artist-disjoint development seeds (one per artist), other-artist results only:
+
+| list | ListenBrainz lists the artist as similar | the same, beyond Deezer's related list | shares a Wikidata genre | confidently another language |
+| --- | ---: | ---: | ---: | ---: |
+| melody tab | 0.103 | 0.083 | 0.219 | 0.201 |
+| samples tab | 0.147 | 0.114 | 0.298 | 0.173 |
+| sounds tab (MuQ-MuLan) | 0.211 | 0.162 | 0.385 | 0.150 |
+| Best | 0.127 | 0.098 | 0.265 | 0.179 |
+| Best with the scene layer | 0.205 | 0.147 | 0.340 | 0.147 |
+| random songs | 0.012 | 0.010 | 0.063 | 0.203 |
+
+For a typical song the catalog holds no cover or sample, so 80 % of Best's top-10 slots carry no calibrated
+cover/sample evidence, and the sounds tab agrees better with listeners and genres. Audio evidence cannot pick the
+intent song by song: the evidence thresholds fire for 52 % of random seeds against 59 % of cover queries, gating Best
+on them cost covers HR@10 19–37 pp on development data, and sounds slots inside Best cost 0.75–4 pp. The two intents
+stay in separate lists.
+
+**Sounds like v2.** The candidate list works like this:
+
+- MuQ-MuLan windows pass through a small residual network (512 → 1,024 → 512). It was trained for about 30 s with a
+  contrastive loss on pairs of songs by Deezer-related artists.
+- Training excluded every scene seed's artist and every benchmark track. The model was chosen on 600 held-out
+  training artists, and ListenBrainz was never a training signal.
+- The top 200 songs by cosine MaxSim are re-ranked by z(score) + 1 × scene affinity.
+- Other-language songs are dropped and each artist keeps one song.
+
+On development seeds it raised ListenBrainz agreement from 0.191 (sounds tab) to 0.315, agreement beyond Deezer's
+list from 0.147 to 0.245, and genre agreement from 0.367 to 0.467, with other-language results at 0 %. A network
+trained only on Wikidata genres also raised agreement beyond Deezer's list (+0.025), so the gain is not just a copy
+of Deezer's graph. On 446 MagnaTagATune odd-one-out triplets (human judgments, other audio) it matched raw MuQ-MuLan
+(0.744 vs 0.752). The production implementation reproduced the research list (ListenBrainz 0.3147 vs 0.3146).
+
+One-time confirmation on the 799 test seeds, against Spicetify's current Sounds like list:
+
+| pre-registered check | result | verdict |
+| --- | --- | --- |
+| agreement beyond Deezer's list ≥ +0.05, CI above 0 | +0.114 [0.095, 0.133] | pass |
+| genre agreement ≥ +0.05, CI above 0 | +0.147 [0.122, 0.173] | pass |
+| other-language results ≤ 2 % | 0 % | pass |
+| distinct artists ≥ 9.5 | 9.99 | pass |
+| MagnaTagATune at most 2 pp below raw MuQ-MuLan | −0.8 pp | pass |
+| catalog coverage at most 0.5 pp below raw MuQ-MuLan | 7.59 % vs 7.56 % | pass |
+| v4 pure-sonic targets in the top 50, at most one fewer than the sounds tab | 1 of 44 vs 7 of 44 | **fail** |
+
+With the language filter applied to both lists, v2 still beat the website's sounds tab: ListenBrainz +0.091
+[0.076, 0.106], genre +0.081 [0.061, 0.101]. But the pairs that critics and listeners cite as sounding alike often
+cross scenes and eras, and the projection loses them before any re-rank (7 → 2 of the 44 in the top 50). It also
+did not help the case that started this work: 8PM's projected top 200 holds only 15 UK-scene songs, and v2's top 20
+has two other-artist UK-scene songs, against four for the sounds tab and seven for Spicetify's list. v2 is not
+served, and the test seeds and v4 pairs are now spent for sounds-like lists.
+
+**Query stems in the samples channel.** Hybrid Demucs (`HDEMUCS_HIGH_MUSDB_PLUS`) separates the query preview. Its
+instrumental stem (drums, bass and other) is embedded with SampleID as served and searched against the unchanged
+samples index. The samples list becomes the union of the mixture and instrumental lists, ordered by the larger
+per-query z-score, and Best and the scene layer read that list. Vocal stems hurt covers and were dropped.
+
+- **Samples channel alone** (260 development queries, full catalog): forward-sample HR@10 0.115 → 0.150
+  (+3.5 pp [0.8, 6.2]).
+- **Inside Best with the scene layer** (development): it passed the strict gate in both language modes. Samples
+  HR@10 rose by +1.61 pp [0.50, 2.80] with all languages and +1.36 pp [0.24, 2.61] in same-language mode.
+
+The one-time held-out confirmation had to pass in both modes:
+
+| mode | samples HR@10 / AP, pp | covers HR@10 / AP, pp | Gen Alpha hits in the top 10 (59) | verdict |
+| --- | --- | --- | --- | --- |
+| all languages | +1.34 [0.26, 2.45] / +0.60 [0.17, 1.06] | −0.17 / −0.18 | 27 → 26 | pass |
+| same language | +1.34 [0.27, 2.46] / +0.68 [0.22, 1.15] | −0.09 / −0.49 [−0.85, −0.13] | 23 → 21 | **fail** |
+
+The served list is same-language, so stems are not served. Serving them would mean precomputing instrumental
+windows for the catalog (about 15 GPU-hours on the RTX 5080, 8.8 GB) and separating unseen songs live, which needed
+about 1.2–1.4 GB of extra VRAM on the 5080; that is not measured on the 2070.
+
+**Other findings (development).**
+
+- **Encoders.** None beats MuQ-MuLan on the MagnaTagATune triplets: LAION-CLAP 0.772, MuQ-MuLan 0.752–0.767, MAEST
+  0.746, MERT 0.652.
+- **Longer audio.** Each doubling of the excerpt adds only about 3.5 pp of samples candidate recall (6–12 pp for
+  covers). The terms of other preview sources (Apple, SoundCloud, Spotify) forbid this use.
+- **Rap flow.** Beat-relative vocal-onset features separate UK from US rap (AUC 0.73–0.79) but add only 0.01 over
+  MuQ-MuLan.
+- **Junk uploads.** Derivative uploads (sped up, nightcore, karaoke, "type beat") fill 0.4 % of top-10 slots.
+- **Feedback.** It exists only for the legacy Spicetify Sounds view, as list-level ratings: not enough to train a
+  ranker.
 
 ## Serving on the RTX 2070 SUPER
 

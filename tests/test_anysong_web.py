@@ -56,3 +56,26 @@ def test_anysong_footer_links_evaluation_in_new_tab_safely():
     assert link.group(1).startswith("https://github.com/yassinsolim/soundalike/")
     assert 'target="_blank"' in link.group(2)
     assert 'rel="noopener"' in link.group(2)
+
+
+def test_anysong_best_language_switch_leaves_channels_unfiltered():
+    assert "/api/anysong/similar?id=${id}&k=20&lang=${mode}" in PAGE
+    assert 'const mode = showAllLanguages ? "all" : "same";' in PAGE
+    assert 'id="language" role="status" hidden' in PAGE
+    assert '<button id="language-toggle" type="button" aria-pressed="false" hidden>' in PAGE
+    assert '"Show all languages"' in PAGE and '"Show same language"' in PAGE
+    assert "d.query?.hidden" in PAGE
+    # Only Best is filtered; display:flex would otherwise beat the hidden attribute.
+    assert 'renderLanguage(tab === "best");' in PAGE
+    assert ".language-filter[hidden]{display:none}" in PAGE
+    # Sounds like keeps the sound channel and the tab key in shared links.
+    assert '{key: "sonic", label: "Sounds like", blurb: "A similar overall sound' in PAGE
+    assert "results.sounds" not in PAGE and "hidden_sounds" not in PAGE
+
+
+def test_anysong_best_caption_puts_covers_first_then_the_scene():
+    assert (
+        '{key: "best", label: "Best matches", blurb: "Likely covers, samples and shared '
+        'melodies first, then similar-sounding songs by related artists from the same '
+        'scene."}'
+    ) in PAGE
