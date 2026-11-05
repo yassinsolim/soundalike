@@ -153,7 +153,7 @@
       key: "best",
       label: "Best matches",
       blurb:
-        "The melody and samples lists combined into one ranking. Each match shows where it placed in those lists.",
+        "Likely covers, samples and shared melodies first, then similar-sounding songs by related artists from the same scene.",
     },
     {
       key: "sounds",
@@ -184,11 +184,12 @@
   const spotifySearchUrl = (title, artist) =>
     `https://open.spotify.com/search/${encodeURIComponent(`${title} ${artist}`.trim())}`;
 
-  async function fetchBestMatches(item, isCurrent) {
+  async function fetchBestMatches(item, isCurrent, lang) {
     const params = new URLSearchParams({
       title: item.title,
       artist: item.artist,
       k: "20",
+      lang,
     });
     for (let attempt = 0; ; attempt += 1) {
       const requestController = new AbortController();
@@ -342,6 +343,66 @@
       : "▶ = 30-second preview.";
   }
 
+  function languageName(code) {
+    try {
+      return new Intl.DisplayNames(["en"], { type: "language" }).of(code);
+    } catch {
+      return code.toUpperCase();
+    }
+  }
+
+  // Best matches hide confidently other-language songs unless the listener
+  // asks for all languages. Sounds like is not filtered.
+  function renderLanguage(picked) {
+    const box = document.querySelector("#language");
+    const button = document.querySelector("#language-toggle");
+    if (!box || !button) return;
+    box.hidden = picked.tab !== "best" || picked.best.status === "failed";
+    if (box.hidden) return;
+    if (picked.best.status !== "ready") {
+      button.setAttribute("aria-pressed", String(picked.lang === "all"));
+      button.textContent = picked.lang === "all" ? "Show same language" : "Show all languages";
+      return;
+    }
+    const query = picked.best.body.query || {};
+    const code = query.language || "unknown";
+    const all = query.language_mode === "all";
+    const hidden = Math.max(0, Number(query.hidden) || 0);
+    document.querySelector("#language-status").textContent =
+      code === "unknown"
+        ? "Language uncertain; showing all languages."
+        : `${languageName(code)} · ${
+            hidden
+              ? `${hidden} other-language ${hidden === 1 ? "match" : "matches"} ${
+                  all ? "in" : "hidden from"
+                } the top 20`
+              : "no other-language matches in the top 20"
+          }`;
+    button.hidden = code === "unknown";
+    button.setAttribute("aria-pressed", String(all));
+    button.textContent = all ? "Show same language" : "Show all languages";
+  }
+
+  function toggleLanguage(picked) {
+    if (picked.best.status !== "ready") return;
+    picked.lang = (picked.best.body.query || {}).language_mode === "all" ? "same" : "all";
+    const sequence = ++picked.languageSequence;
+    picked.best = { status: "pending" };
+    renderTab(picked);
+    const isCurrent = () =>
+      shownPick === picked && picked.languageSequence === sequence;
+    fetchBestMatches(picked.item, isCurrent, picked.lang)
+      .then(
+        body => ({ status: "ready", body }),
+        error => ({ status: "failed", error })
+      )
+      .then(entry => {
+        if (picked.languageSequence !== sequence) return;
+        picked.best = entry;
+        renderTab(picked);
+      });
+  }
+
   function markPlaying(list) {
     if (playingId == null || audio.paused) return;
     list.querySelectorAll(".pv").forEach(button => {
@@ -376,6 +437,7 @@
       .map(tag => `<span class="tag">${esc(tag)}</span>`)
       .join("");
     document.querySelector("#matchblurb").textContent = blurbText(picked);
+    renderLanguage(picked);
     if (entry.status === "pending") {
       list.innerHTML = '<li class="state"><span class="spin"></span> matching…</li>';
     } else if (entry.status === "failed") {
@@ -427,9 +489,11 @@
             `<button class="tab" type="button" role="tab" id="tab-${tab.key}" data-tab="${tab.key}" aria-controls="matches" aria-selected="false" tabindex="-1">${tab.label}</button>`
         )
         .join("")}</div>` +
+      '<div class="language-filter" id="language" role="status" hidden><span id="language-status"></span><button id="language-toggle" type="button" aria-pressed="false" hidden></button></div>' +
       '<p class="blurb" id="matchblurb"></p><ol id="matches" role="tabpanel"></ol>';
     document.querySelector("#copy").onclick = copyList;
     document.querySelector("#share").onclick = shareLink;
+    document.querySelector("#language-toggle").onclick = () => toggleLanguage(picked);
     const tabs = [...out.querySelectorAll(".tab")];
     tabs.forEach((button, index) => {
       button.onclick = () => selectTab(picked, button.dataset.tab);
@@ -471,6 +535,8 @@
       item,
       tab: "best",
       seed: null,
+      lang: "same",
+      languageSequence: 0,
       best: { status: "pending" },
       sounds: { status: "pending" },
     };
@@ -486,7 +552,7 @@
     const bestDone = settle(
       "best",
       item.artist
-        ? fetchBestMatches(item, isCurrent)
+        ? fetchBestMatches(item, isCurrent, picked.lang)
         : Promise.reject(new RequestError(400, ""))
     );
     const soundsDone = settle("sounds", requestSoundsLike(item));

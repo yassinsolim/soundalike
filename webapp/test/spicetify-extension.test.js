@@ -69,6 +69,7 @@ function loadExtension(fetchImpl, options = {}) {
     },
   }));
   const offerButton = { onclick: null };
+  const languageToggleButton = { onclick: null };
   // Best matches are offline unless a test opts in, so the older tests keep
   // exercising the Sounds like flow they were written for.
   function fetchWithBestMatches(url, init) {
@@ -140,6 +141,7 @@ function loadExtension(fetchImpl, options = {}) {
   function queryPage(selector) {
     if (selector === ".sa-language-status") return languageStatus;
     if (selector === ".sa-language-loading") return languageLoading;
+    if (selector === ".sa-language-toggle") return languageToggleButton;
     const controls = {
       ".sa-feedback": feedback.panel,
       ".sa-feedback-details": feedback.details,
@@ -194,6 +196,11 @@ function loadExtension(fetchImpl, options = {}) {
         if (selector === ".sa-best-offer") {
           return this.innerHTML.includes('class="sa-best-offer"')
             ? offerButton
+            : null;
+        }
+        if (selector === ".sa-language-toggle") {
+          return this.innerHTML.includes('class="sa-language-toggle"')
+            ? languageToggleButton
             : null;
         }
         return queryPage(selector);
@@ -1978,7 +1985,7 @@ const soundsFixture = [
   { title: "Take My Breath", artist: "The Weeknd", bpm: 121.7 },
 ];
 
-const bestCacheKey = "best:anysong-best-rrf-v1:spotify:track:test";
+const bestCacheKey = "best:anysong-best-rrf-language-v1:same:spotify:track:test";
 
 function bestMatchesBody(best = bestFixture, overrides = {}) {
   return {
@@ -2074,6 +2081,7 @@ test("opens on Best matches with Sounds like one tab away", async () => {
   assert.equal(bestUrl.searchParams.get("title"), "Blinding Lights");
   assert.equal(bestUrl.searchParams.get("artist"), "The Weeknd");
   assert.equal(bestUrl.searchParams.get("k"), "20");
+  assert.equal(bestUrl.searchParams.get("lang"), "same");
   assert.equal(
     app.urls.filter((url) => url.includes("/api/spicetify_recommend")).length,
     1,
@@ -2112,6 +2120,103 @@ test("opens on Best matches with Sounds like one tab away", async () => {
   assert.equal(app.rows[1].dataset.uri, "spotify:track:best1");
   assert.equal(app.feedback.panel.dataset.ready, undefined);
   assert.equal(app.feedback.panel.hidden, true);
+});
+
+test("Best matches language switch requests and caches all-language results separately", async () => {
+  const app = loadBestMatchesExtension({
+    bestFetch: async (url) => {
+      const langMode = new URL(url).searchParams.get("lang");
+      return response(200, bestMatchesBody(bestFixture, {
+        query: { ...bestSeedQuery, language: "en", language_mode: langMode, hidden: 2 },
+      }));
+    },
+  });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  assert.match(
+    app.currentPage.innerHTML,
+    /English · 2 other-language matches hidden from the top 20/,
+  );
+  const toggle = app.currentPage.querySelector(".sa-language-toggle");
+  assert.ok(toggle);
+  toggle.onclick();
+  await waitFor(() => app.bestRequests.length === 2 &&
+    app.currentPage.innerHTML.includes("Use same-language matches"));
+  assert.equal(new URL(app.bestRequests[1]).searchParams.get("lang"), "all");
+  assert.match(app.currentPage.innerHTML, /English · 2 other-language matches in the top 20/);
+});
+
+test("switching back to same-language Best matches reuses the saved list", async () => {
+  const storage = new Map();
+  const app = loadBestMatchesExtension({
+    storage,
+    bestFetch: async (url) => {
+      const langMode = new URL(url).searchParams.get("lang");
+      return response(200, bestMatchesBody(bestFixture, {
+        query: { ...bestSeedQuery, language: "en", language_mode: langMode, hidden: 1 },
+      }));
+    },
+  });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  const toggle = app.currentPage.querySelector(".sa-language-toggle");
+  toggle.onclick();
+  await waitFor(() => app.currentPage.innerHTML.includes("Use same-language matches"));
+  assert.match(app.currentPage.innerHTML, /English · 1 other-language match in the top 20/);
+  toggle.onclick();
+  await waitFor(() =>
+    app.currentPage.innerHTML.includes('aria-pressed="false">Show all languages'));
+  assert.match(
+    app.currentPage.innerHTML,
+    /English · 1 other-language match hidden from the top 20/,
+  );
+  assert.deepEqual(
+    app.bestRequests.map((url) => new URL(url).searchParams.get("lang")),
+    ["same", "all"],
+  );
+  await waitFor(() => {
+    const saved = JSON.parse(storage.get("soundalike:spicetify-cache:v9") || "{}");
+    return Boolean(
+      saved.recommendations?.[bestCacheKey] &&
+      saved.recommendations?.[bestCacheKey.replace(":same:", ":all:")],
+    );
+  }, 1000);
+});
+
+test("leaves Sounds like unfiltered and without the language switch", async () => {
+  const app = loadBestMatchesExtension({
+    bestFetch: async () => response(200, bestMatchesBody(bestFixture, {
+      query: { ...bestSeedQuery, language: "en", language_mode: "same", hidden: 2 },
+    })),
+  });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  assert.match(app.currentPage.innerHTML, /<div class="sa-language-filter" role="status">/);
+
+  app.tabs[1].onclick();
+  await waitFor(() => app.feedback.panel.dataset.ready === "true");
+  const html = app.currentPage.innerHTML;
+  assert.match(html, /class="sa-panel sa-view-sounds"/);
+  assert.match(html, /Dual-Sonic64/);
+  assert.doesNotMatch(html, /<div class="sa-language-filter"/);
+  assert.equal(app.currentPage.querySelector(".sa-language-toggle"), null);
+  assert.equal(app.bestRequests.length, 1);
+});
+
+test("shows all languages without a switch when the seed language is unknown", async () => {
+  const app = loadBestMatchesExtension({
+    bestFetch: async () => response(200, bestMatchesBody(bestFixture, {
+      query: { ...bestSeedQuery, language: "unknown", language_mode: "same", hidden: 0 },
+    })),
+  });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  const html = app.currentPage.innerHTML;
+  assert.match(
+    html,
+    /<div class="sa-language-filter" role="status"><span>Language uncertain; showing all languages\.<\/span><\/div>/,
+  );
+  assert.equal(app.currentPage.querySelector(".sa-language-toggle"), null);
 });
 
 test("switches result lists with tabs and arrow keys and keeps the choice", async () => {
@@ -2396,7 +2501,8 @@ test("restores cached Best matches without asking the matcher again", async () =
   );
   assert.deepEqual(
     entry.query,
-    { title: "Blinding Lights", artist: "The Weeknd", source: "live" },
+    { title: "Blinding Lights", artist: "The Weeknd", source: "live",
+      language: "unknown", languageMode: "same", hidden: 0 },
   );
   assert.equal(entry.results.length, 2);
   assert.deepEqual(entry.results[0], {

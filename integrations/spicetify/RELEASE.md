@@ -30,8 +30,8 @@ the already verified SHA-256.
    node integrations/spicetify/tools/sign-release.cjs `
      --runtime-file integrations/spicetify/soundalike.js `
      --runtime-url "https://raw.githubusercontent.com/yassinsolim/soundalike/$env:RUNTIME_COMMIT/integrations/spicetify/soundalike.js" `
-     --version 2.0.0 `
-     --sequence 2 `
+     --version 2.3.0 `
+     --sequence 6 `
      --out integrations/spicetify/releases/stable.json
    ```
 

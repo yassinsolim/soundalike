@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -98,6 +99,19 @@ def test_homepage_search_accessibility_and_wiring_remain_present():
     assert '$("#q").addEventListener("input",onType)' in HTML
     assert 'fetch("/api/search?q="' in HTML
     assert 'fetch("/api/recommend"' in HTML
+
+
+def test_homepage_best_language_switch_is_accessible_and_best_only():
+    script = (ROOT / "webapp" / "search.js").read_text(encoding="utf-8")
+    assert ".language-filter[hidden]{display:none}" in HTML
+    assert re.search(r'k: "20",\s*lang,', script)
+    assert "fetchBestMatches(item, isCurrent, picked.lang)" in script
+    assert '<div class="language-filter" id="language" role="status" hidden>' in script
+    assert (
+        '<button id="language-toggle" type="button" aria-pressed="false" hidden>'
+    ) in script
+    assert 'box.hidden = picked.tab !== "best" || picked.best.status === "failed";' in script
+    assert "results.sounds" not in script and "hidden_sounds" not in script
 
 
 def test_marketplace_description_pins_the_immutable_update_bootstrap():
