@@ -166,6 +166,12 @@ class Deezer:
             raise ValueError(f"Invalid track metadata for artist {artist_id}")
         return data
 
+    def related_artists(self, artist_id: int, limit: int = 50) -> list[int]:
+        """Deezer's related-artist list (most related first; Deezer currently returns up to 20)."""
+        response = self._get(f"artist/{int(artist_id)}/related", {"limit": limit})
+        data = response.get("data", []) if isinstance(response, dict) else []
+        return [int(item["id"]) for item in data if isinstance(item, dict) and type(item.get("id")) is int]
+
     def track_by_isrc(self, isrc: str) -> dict:
         return self._get(f"track/isrc:{isrc.strip().upper()}")
 
