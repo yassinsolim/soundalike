@@ -11,9 +11,9 @@ and a candidate artist combines:
 - genre overlap: cosine of IDF-weighted Wikidata genres plus their parents, inferred from neighbours when missing.
 
 Ranking (``scene_fuse``): the audio fusion's first songs stay on top as a head, extended over songs with calibrated
-cover/sample evidence; after it, slots alternate between the audio continuation (audio score lifted by affinity;
-standout cover/sample matches are protected) and a scene lane ordered by affinity times audio evidence, followed
-by per-artist caps. Without metadata for the query's artist the ranking equals ``api.fuse`` (plus caps when
+cover/sample evidence or a top-3 place in the melody or samples list; after it, slots alternate between the audio
+continuation (audio score lifted by affinity; standout cover/sample matches are protected) and a scene lane ordered
+by affinity times audio evidence, followed by per-artist caps. Without metadata for the query's artist the ranking equals ``api.fuse`` (plus caps when
 candidate artists are known). The design follows the two-intent slotting recommended by the research report in
 docs/ANYSONG_EVAL.md, which also records the selection and safeguards.
 """
@@ -53,6 +53,7 @@ class SceneParams:
     head_scan: int = 10  # the head extends to the last of these with cover/sample evidence
     melody_evidence: float = -1.476  # melody score with ~30 % precision for a labelled cover (development data)
     samples_evidence: float = 0.302  # samples score with ~30 % precision for a labelled sample (development data)
+    rank_evidence: int = 3  # a song this high in the melody or samples list also counts as evidence (0 = off)
     max_same: int = 2  # songs by the query's artist allowed in the capped head of the list
     max_other: int = 2  # songs by any other single artist allowed in the capped head
     window: int = 20  # length of the capped head
@@ -231,7 +232,8 @@ def scene_fuse(orders: Mapping[str, Sequence[Hashable]], artists: Mapping[Hashab
 
     1. Head: the first ``head_min`` songs of the audio fusion stay in place, extended down to the last song of its
        first ``head_scan`` whose melody or samples score reaches the calibrated cover/sample evidence thresholds
-       (``scores``: per channel, aligned with ``orders``).
+       (``scores``: per channel, aligned with ``orders``) or that is among the first ``rank_evidence`` songs of the
+       melody or samples list.
     2. Continuation: the remaining songs by audio score * (1 + boost * A); a song whose melody or samples score stands
        out by ``protect`` standard deviations is lifted as if A = 1, so scene neighbours cannot pass a likely cover.
     3. Scene lane: songs with A > 0 by A * (audio + sonic RRF); every lane song has audio evidence in some channel.
@@ -278,6 +280,7 @@ def scene_fuse(orders: Mapping[str, Sequence[Hashable]], artists: Mapping[Hashab
             for key, value in zip(orders.get(channel, ()), (scores or {}).get(channel, ())):
                 if value >= threshold:
                     evidence.add(key)
+            evidence.update(list(orders.get(channel, ()))[:params.rank_evidence])
         hits = [i for i, key in enumerate(baseline[:params.head_scan]) if key in evidence]
         head = baseline[:max(params.head_min, hits[-1] + 1 if hits else 0)]
         used = set(head)

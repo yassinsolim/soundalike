@@ -207,7 +207,8 @@ def test_scene_best_matches_plain_best_without_affinity_and_moves_with_it():
     assert boosted["best_scene"]["test/held_out"]["median_first"] == 1
     assert report["best"]["test/held_out"]["median_first"] > 1
     slotted = ei.evaluate_indexes(indexes, [query], keys, log=lambda _: None, scene=table,
-                                  scene_params=SceneParams(melody_evidence=9.0, samples_evidence=9.0))
+                                  scene_params=SceneParams(melody_evidence=9.0, samples_evidence=9.0,
+                                                           rank_evidence=0))
     assert slotted["best_scene"]["test/held_out"]["median_first"] <= 6  # first slots after a three-song head
     # these synthetic cosines all clear the real melody threshold, so every top-10 song is head evidence
     everything = ei.evaluate_indexes(indexes, [query], keys, log=lambda _: None, scene=table)["best_scene"]

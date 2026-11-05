@@ -537,12 +537,14 @@ music ([Lesota et al., 2022](https://archives.ismir.net/ismir2022/paper/000034.p
    the overlap passed the same gates; PageRank had slightly higher ListenBrainz agreement (0.239 vs 0.224) and
    slightly lower agreement beyond Deezer's list (0.141 vs 0.146). The overlap needs no graph walk, so a related list fetched
    live for an unseen artist can be used directly.
-2. **Head.** The first three songs of the audio ranking stay. The head extends to the last top-10 song whose
-   melody score is at least −1.476 or whose samples score is at least 0.302.
-   - On development labels, these thresholds have 30 % precision for a labelled cover or sample (recall 50 %
-     and 21 %).
-   - The head stays at three songs for 86 % of covers queries and 54 % of samples queries.
-   - It reaches eight or more songs for 63 % of the UK-rap seeds.
+2. **Head.** The first three songs of the audio ranking stay. The head extends to the last top-10 song that is
+   among the first three songs of the melody or samples list, or whose melody score is at least −1.476 or samples
+   score at least 0.302.
+   - On development labels, these score thresholds have 30 % precision for a labelled cover or sample (recall
+     50 % and 21 %).
+   - The list-rank rule was added after release (see Selection). Since the fused top six usually interleaves the
+     two lists' top three, the head is six songs or more for 88 % of development relationship queries and 97 % of
+     scene seeds; for the UK-rap seeds its median is nine.
 3. **Continuation.** The remaining songs are ordered by audio score × (1 + 2 × affinity). A song whose melody or
    samples score stands 3 or more standard deviations above its list's mean is lifted as if its affinity were 1,
    so no scene neighbour can pass it.
@@ -569,35 +571,52 @@ These deviations are disclosed:
   than the seed-bootstrap noise (about ±0.013).
 - A third sweep over standout windows (65 variants) was superseded by the slotted design before any confirmation.
 - Confirmation ran twice with the same parameters. The first run used incomplete metadata and lost one Gen Alpha
-  query with all languages and four in same-language mode. The second used the complete table; the results below
-  come from it.
+  query with all languages and four in same-language mode. The second used the complete table, and that version
+  was released.
+- **Adjusted after release.** A live check of 24 hand-picked famous pairs (see [Known pairs](#known-pairs)) found
+  two that the release pushed out of Best's top 10 while their own tabs still ranked them high: Cupid → its Gen
+  Alpha match fell from #5 to #11 (melody #3), and Got To Give It Up → Blurred Lines from #10 to #20 (samples
+  #5). K-pop and Motown neighbours had passed them, because their scores sat just below the evidence thresholds.
+  On development data, also counting a song's place in its list as evidence traded scene gain for fewer
+  displaced relationship hits:
 
-**Relationship benchmarks.** Full index, official `eval_index --scene`; the research harness agrees exactly. HR@1
-is unchanged in every family. The served mode is all languages.
+  | head evidence | covers top-10 hits lost / gained | samples | reverse samples | ListenBrainz agreement | 8PM UK-scene songs in top 20 |
+  | --- | --- | --- | --- | --- | --- |
+  | scores only (first release) | 6 / 14 | 2 / 1 | 3 / 3 | 0.205 | 12 |
+  | scores or a list's top 3 (shipped) | 5 / 11 | 2 / 0 | 2 / 3 | 0.188 | 12 |
+  | scores or a list's top 5 | 2 / 0 | 1 / 0 | 1 / 0 | 0.131 | 11 |
+
+  Baseline ListenBrainz agreement is 0.127. The project owner chose the top 3, which brings Cupid's match back but
+  not Blurred Lines. The held-out and test splits were then evaluated once more, a fourth look. The first release
+  measured, with all languages: covers HR@10 +0.94 pp, samples −0.13, reverse samples −0.43; test ListenBrainz
+  agreement +0.085; and two lost Gen Alpha queries in same-language mode.
+
+**Relationship benchmarks.** Shipped setting (top-3 rule), full index, official `eval_index --scene`; the research
+harness agrees exactly. HR@1 is unchanged in every family. The served mode is all languages.
 
 | benchmark | n | Best: HR@10 / AP | with scene layer | same-language Best | same-language with scene |
 | --- | ---: | --- | --- | --- | --- |
-| Gen Alpha (test) | 59 | 0.441 / 0.019 | 0.458 / 0.018 | 0.407 / 0.015 | 0.373 / 0.014 |
-| covers (held_out) | 1,170 | 0.673 / 0.513 | 0.682 / 0.514 | 0.685 / 0.527 | 0.688 / 0.528 |
-| samples (held_out) | 747 | 0.145 / 0.095 | 0.143 / 0.094 | 0.142 / 0.094 | 0.141 / 0.094 |
-| samples, reverse (held_out) | 695 | 0.157 / 0.101 | 0.153 / 0.100 | 0.153 / 0.099 | 0.150 / 0.098 |
+| Gen Alpha (test) | 59 | 0.441 / 0.019 | 0.458 / 0.018 | 0.407 / 0.015 | 0.390 / 0.014 |
+| covers (held_out) | 1,170 | 0.673 / 0.513 | 0.681 / 0.513 | 0.685 / 0.527 | 0.688 / 0.527 |
+| samples (held_out) | 747 | 0.145 / 0.095 | 0.142 / 0.094 | 0.142 / 0.094 | 0.139 / 0.094 |
+| samples, reverse (held_out) | 695 | 0.157 / 0.101 | 0.154 / 0.100 | 0.153 / 0.099 | 0.151 / 0.099 |
 | SampleID pairs (held_out) | 43 | 0.186 / 0.119 | 0.186 / 0.118 | 0.186 / 0.130 | 0.186 / 0.130 |
-| v4 "sounds like" (held_out) | 19 | 0.105 / 0.039 | 0.158 / 0.048 | 0.053 / 0.029 | 0.105 / 0.040 |
-| v4 "sounds like" (validation) | 35 | 0.114 / 0.049 | 0.114 / 0.053 | 0.086 / 0.044 | 0.086 / 0.048 |
+| v4 "sounds like" (held_out) | 19 | 0.105 / 0.039 | 0.158 / 0.048 | 0.053 / 0.029 | 0.105 / 0.038 |
+| v4 "sounds like" (validation) | 35 | 0.114 / 0.049 | 0.114 / 0.054 | 0.086 / 0.044 | 0.114 / 0.048 |
 
 A paired cluster bootstrap over connected query/positive groups (2,000 resamples) gives these changes with all
 languages:
 
 | family | HR@10 change, pp | AP change, pp |
 | --- | --- | --- |
-| covers | +0.94 [−0.09, +2.10] | +0.09 [−0.05, +0.26] |
-| samples | −0.13 [−0.81, +0.54] | −0.06 [−0.13, +0.00] |
-| reverse samples | −0.43 [−1.01, 0.00] | −0.07 [−0.13, −0.02] |
-| SampleID pairs | 0 | −0.02 [−0.07, +0.03] |
+| covers | +0.85 [−0.08, +1.88] | +0.06 [−0.04, +0.19] |
+| samples | −0.27 [−0.94, +0.40] | −0.05 [−0.12, +0.01] |
+| reverse samples | −0.29 [−0.72, 0.00] | −0.03 [−0.08, +0.01] |
+| SampleID pairs | 0 | −0.02 [−0.07, +0.02] |
 
-The reverse-samples AP loss is real but small (0.0007), within the limit. On development splits, HR@10 changed by
-+0.8 pp for covers, −0.1 for samples, 0 for reverse samples and 0 for v4. In same-language mode, the development
-changes were +0.8, −0.2 and −0.4.
+Every interval includes zero, reverse-samples HR@10 only just. On development splits, HR@10 changed by +0.56 pp
+for covers, −0.25 for samples, +0.14 for reverse samples and 0 for v4. In same-language mode, the development
+changes were +0.47, −0.37 and −0.28, and Gen Alpha lost one query, within the limit.
 
 **Scene quality.** Top 10 of Best on artist-disjoint seeds (one per artist), with a paired seed bootstrap of 2,000
 resamples. ListenBrainz rows cover only seeds whose artist has ListenBrainz neighbours: 470 development, 491 test
@@ -605,13 +624,13 @@ and 53 UK-rap seeds.
 
 | measure | development (800) | test (799) | UK rap (75) |
 | --- | --- | --- | --- |
-| other-artist results that ListenBrainz lists as similar | 0.127 → 0.205 | 0.123 → 0.208 (+0.085 [0.077, 0.094]) | 0.122 → 0.157 (+0.035 [0.013, 0.057]) |
-| the same, excluding artists on Deezer's related list | 0.098 → 0.147 | 0.093 → 0.144 (+0.051 [0.043, 0.059]) | 0.087 → 0.119 (+0.032 [0.012, 0.056]) |
-| other-artist results from the seed's scene country | 0.355 → 0.430 | 0.359 → 0.443 (+0.084 [0.077, 0.092]) | 0.231 → 0.305 (+0.074 [0.050, 0.103]) |
-| seeds with another song by the same artist | 0.261 → 0.365 | 0.254 → 0.343 (+0.089 [0.069, 0.110]) | 0.173 → 0.240 |
+| other-artist results that ListenBrainz lists as similar | 0.127 → 0.188 | 0.123 → 0.192 (+0.069 [0.062, 0.076]) | 0.122 → 0.150 (+0.028 [0.009, 0.048]) |
+| the same, excluding artists on Deezer's related list | 0.098 → 0.135 | 0.093 → 0.134 (+0.041 [0.034, 0.048]) | 0.087 → 0.114 (+0.027 [0.010, 0.047]) |
+| other-artist results from the seed's scene country | 0.355 → 0.416 | 0.359 → 0.428 (+0.070 [0.063, 0.076]) | 0.231 → 0.292 (+0.061 [0.040, 0.084]) |
+| seeds with another song by the same artist | 0.261 → 0.349 | 0.254 → 0.317 (+0.063 [0.044, 0.080]) | 0.173 → 0.227 |
 | seeds with four or more songs by the same artist | 0.013 → 0 | 0.015 → 0 | 0.027 → 0 |
-| distinct artists | 9.56 → 9.51 | 9.57 → 9.50 | 9.44 → 9.47 |
-| songs also in the sounds top 200 | 0.098 → 0.194 | 0.105 → 0.204 (+0.099 [0.092, 0.106]) | 0.076 → 0.137 |
+| distinct artists | 9.56 → 9.56 | 9.57 → 9.54 | 9.44 → 9.49 |
+| songs also in the sounds top 200 | 0.098 → 0.161 | 0.105 → 0.168 (+0.064 [0.058, 0.069]) | 0.076 → 0.111 |
 
 Read these rows with three caveats:
 
@@ -624,19 +643,23 @@ Read these rows with three caveats:
   strict sense. Its top 10 changes less than its top 20: rap seeds have many strong melody and sample matches,
   and those lengthen the head.
 
-**8PM.** Frozen capture; scene country is inferred from the graph.
+**8PM.** Frozen capture of the shipped setting; scene country is inferred from the graph. The live API returned the
+same list.
 
 - **More UK scene.** UK-scene artists in the top 20 went from 3 to 12, and other Nemzzz songs from one (#20) to
-  two (#14, #16).
-- **New entries** include Kidwild (#6), Central Cee (#9 and #12), AntsLive (#11), Headie One (#13), Krillz (#17)
+  two (#13, #14).
+- **New entries** include Kidwild (#9), AntsLive (#10), Headie One (#11), Central Cee (#12 and #15), Krillz (#17)
   and Blanco (#20).
 - **Dropped out:** songs by Eminem, Snoop Dogg, JAY-Z, Metro Boomin, Tee Grizzley and the French rapper Myth
   Syzer, among others.
-- **The top five are still US songs.** DJ Khaled, Spiff TV and Lil Durk form the audio head. 42 Dugg and Future
-  stand out in the samples list (z ≈ 3.5), so they are protected as possible samples. In rap, such standouts are
-  often shared drum sounds rather than samples.
+- **The top six are still US songs.** Each is among the first three of the melody or samples list, so they form
+  the protected head (DJ Khaled, Spiff TV, Lil Durk, 21 Savage, 42 Dugg, Future). Lil Man J follows at #7 because
+  he stands out in the samples list (z ≈ 3). In rap, such strong sample scores are often shared drum sounds rather
+  than samples.
 
-**Latency.** On the local RTX 5080, a catalog seed answered in about 97 ms with the layer on.
+**Latency.** On the local RTX 5080, a catalog seed answered in about 97 ms with the layer on. On the RTX 2070 SUPER
+after release, six spot checks answered in 0.17–0.37 s for catalog songs and 0.73 s for an unseen song, within the
+run-to-run range seen before release; GPU memory stayed at 6.2 GB.
 
 - An artist whose related list is not in the table costs one Deezer request: 365–560 ms when measured blocking.
 - That request now runs in the background while the preview downloads. For two artists not in the table
@@ -645,9 +668,12 @@ Read these rows with three caveats:
 
 **Limitations.**
 
-- **Gen Alpha with the language gate.** In same-language mode, the layer loses two of 59 Gen Alpha queries
-  (0.407 → 0.373), more than the one-query limit. With all languages, the served mode, Gen Alpha gains one.
-  Before `--languages` and `--scene` are enabled together, the head needs re-tuning and a new confirmation.
+- **Gen Alpha with the language gate.** In same-language mode, the layer loses one of 59 Gen Alpha queries
+  (0.407 → 0.390), within the limit; with all languages, the served mode, it gains one. Enabling `--languages`
+  as well would still put same-language Gen Alpha three queries below today's served Best (0.441), two of them
+  from the language gate itself.
+- **Famous cross-scene pairs can still drop.** With the top-3 rule, Got To Give It Up → Blurred Lines stays at
+  #20 in Best (#5 in the samples tab).
 - **Flow is not measured.** The graph reflects it only through listening habits.
 - **Snapshot.** The table should be rebuilt about monthly, because related lists drift and new artists appear.
   Unseen artists are covered by the live lookup.

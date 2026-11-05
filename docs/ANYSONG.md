@@ -23,14 +23,15 @@ Deezer id. The API can also hide confidently detected other-language songs from 
 [Language labels](#language-labels)); instrumental or uncertain songs remain visible, `lang=all` restores the
 unfiltered ranking, and the individual melody, samples and sounds tabs are never filtered. For a live seed outside
 the catalog, the API uses a conservative majority-language prior from indexed songs by that artist; if it cannot
-establish a language, it fails open. The homelab does not enable it yet: combined with the scene layer below it
-loses more Gen Alpha matches than the evaluation allows ([ANYSONG_EVAL.md](ANYSONG_EVAL.md#scene-layer-2026-11-04)).
+establish a language, it fails open. The homelab does not enable it yet; its measured trade-offs are in
+[ANYSONG_EVAL.md](ANYSONG_EVAL.md#language-gate-impact).
 
 Best matches also weighs the **artist scene** ([`scene.py`](../src/soundalike/anysong/scene.py)). Audio still decides
 which songs can appear; the scene layer only arranges them. A candidate's affinity to the seed's artist combines the
 same artist, closeness in Deezer's related-artist graph and a shared regional scene (Wikidata countries, mostly
 those of the artist's graph neighbours). The first songs of the audio ranking stay on top: at least three, and
-further down to the last top-10 song whose melody or samples score is strong enough to suggest a cover or sample.
+further down to the last top-10 song that is among the first three of the melody or samples tab or whose score
+there is strong enough to suggest a cover or sample (usually six songs or more).
 After that, two audio slots alternate with one **scene slot**: a scene neighbour that also has audio evidence in
 some channel (the sounds list counts here). The audio slots lift scene neighbours too, but never past a song whose
 melody or samples score clearly stands out. One artist can place at most two songs in the top 20. Without metadata

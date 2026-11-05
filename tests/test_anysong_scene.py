@@ -109,6 +109,20 @@ def test_slots_keep_the_audio_head_and_interleave_the_scene_lane(table):
     assert [k for k, _, _ in scene_fuse(orders, artists, None, table, SceneParams(), scores=flat)] == plain
 
 
+def test_a_channel_top3_song_extends_the_head(table):
+    melody, samples = ["m0", "m1", "m2", "m3", "m4", "uk"], ["s0", "s1", "s2", "s3"]
+    orders = {"melody": melody, "samples": samples, "sonic": ["uk_sonic"]}
+    artists = {**{x: 0 for x in melody + samples}, "uk": 11, "uk_sonic": 11}
+    q = table.profile(10)
+    flat = {"melody": [-2.0] * len(melody), "samples": [0.1] * len(samples)}  # below both score thresholds
+    baseline = [k for k, _, _ in api.fuse({"melody": melody, "samples": samples})]
+    assert baseline[:6] == ["m0", "s0", "m1", "s1", "m2", "s2"]
+    # s2 is third in the samples list, so the head reaches it and no scene song moves above it
+    assert [k for k, _, _ in scene_fuse(orders, artists, q, table, SceneParams(), scores=flat)][:6] == baseline[:6]
+    shallow = [k for k, _, _ in scene_fuse(orders, artists, q, table, SceneParams(rank_evidence=0), scores=flat)]
+    assert shallow[:3] == baseline[:3] and shallow[3:6] == ["uk", "s1", "uk_sonic"]
+
+
 def test_artist_caps_defer_extra_songs_without_dropping_them(table):
     orders = {"melody": ["a1", "a2", "a3", "b1", "b2", "b3", "c1"], "samples": [], "sonic": []}
     artists = {"a1": 10, "a2": 10, "a3": 10, "b1": 11, "b2": 11, "b3": 11, "c1": 12}
