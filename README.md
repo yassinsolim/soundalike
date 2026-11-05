@@ -245,7 +245,8 @@ like" claims stay hard: about 11% in the fused list and 16–17% when all three 
 embedded live score the same as catalog songs. Best matches also weighs the artist's scene: after the strongest audio
 matches, one slot in three goes to an audio match by a related artist from the same scene (Deezer related artists,
 Wikidata regions). On 799 unseen test artists, the share of other-artist results that ListenBrainz lists as similar
-artists rose from 12% to 19%, while covers, samples and Gen Alpha stayed within their regression limits.
+artists rose from 12% to 19%, while covers, samples and Gen Alpha stayed within their regression limits. Songs in
+another language than yours are hidden from Best matches by default; **Show all languages** brings them back.
 
 The experimental [`soundalike.anysong`](src/soundalike/anysong/) package compares
 MuQ-MuLan, CLAP, MuQ, MERT and MAEST with dedicated SampleID/CLEWS adapters.

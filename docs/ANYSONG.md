@@ -19,12 +19,12 @@ channel that ranked it higher. On held-out benchmarks it finds covers as well as
 than the samples tab ([ANYSONG_EVAL.md](ANYSONG_EVAL.md#best-matches)). The channel tabs remain for browsing one
 relation. The same list is the default view on the main page and in the
 [Spicetify extension](../integrations/spicetify/README.md), which name the song by title and artist instead of a
-Deezer id. The API can also hide confidently detected other-language songs from Best matches (`--languages`, see
-[Language labels](#language-labels)); instrumental or uncertain songs remain visible, `lang=all` restores the
-unfiltered ranking, and the individual melody, samples and sounds tabs are never filtered. For a live seed outside
-the catalog, the API uses a conservative majority-language prior from indexed songs by that artist; if it cannot
-establish a language, it fails open. The homelab does not enable it yet; its measured trade-offs are in
-[ANYSONG_EVAL.md](ANYSONG_EVAL.md#language-gate-impact).
+Deezer id. Best matches hides confidently detected other-language songs by default (`--languages`, see
+[Language labels](#language-labels)); instrumental or uncertain songs remain visible, a **Show all languages** switch
+(`lang=all`) restores the unfiltered ranking, and the individual melody, samples and sounds tabs are never filtered.
+For a live seed outside the catalog, the API uses a conservative majority-language prior from indexed songs by that
+artist; if it cannot establish a language, it fails open. The filter costs some cross-language matches; the measured
+trade-offs are in [ANYSONG_EVAL.md](ANYSONG_EVAL.md#language-gate-impact).
 
 Best matches also weighs the **artist scene** ([`scene.py`](../src/soundalike/anysong/scene.py)). Audio still decides
 which songs can appear; the scene layer only arranges them. A candidate's affinity to the seed's artist combines the
@@ -195,7 +195,7 @@ looked up live).
 
 GPU host CT 409 (`/opt/soundalike`): `src/`, `venv/`, checkpoints under `ckpt/`, upstream code under `ext/`,
 offline Hugging Face cache in `hf/`, indexes under `index/` with `index/current` → the live index,
-`index/catalog_meta.npz` for titles, `index/languages.npz` for language labels (`--languages`, not enabled yet) and
+`index/catalog_meta.npz` for titles, `index/languages.npz` for language labels (`--languages`) and
 `index/scene.npz` for the scene layer (`--scene`). The service is
 [`deploy/homelab/soundalike-anysong.service`](../deploy/homelab/soundalike-anysong.service) (user `anysong`,
 `MemoryMax=6G`, enabled at boot; startup loads and warms the models and index, about 22 s with the full 269k-track

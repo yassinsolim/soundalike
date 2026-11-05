@@ -9,7 +9,7 @@
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.2.0";
+  const RUNTIME_SEMANTIC_VERSION = "2.3.0";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -48,7 +48,7 @@
     "59ee4a659c32e9ad894a71308207594a65ba67bb6b632b183abe97303a51fa55";
   const RESULTS_PATH = "/soundalike";
   const BEST_MATCHES_ENDPOINT = `${FALLBACK_HOSTED_SERVER}/api/anysong/similar`;
-  const BEST_MATCHES_POLICY = "anysong-best-rrf-v1";
+  const BEST_MATCHES_POLICY = "anysong-best-rrf-language-v1";
   const BEST_MATCHES_TIMEOUT_MS = 30000;
   const BEST_MATCHES_RETRIES = 2;
   const BEST_MATCHES_RETRY_DELAY_MS = 1500;
@@ -60,8 +60,8 @@
     ["sounds", "Sounds like"],
   ];
   const BEST_MATCHES_BLURB =
-    "The melody and samples lists combined into one ranking. Each match " +
-    "shows where it placed in those lists.";
+    "Likely covers, samples and shared melodies first, then similar-sounding " +
+    "songs by related artists from the same scene.";
   const BEST_MATCHES_OFFER =
     "Your local companion keeps searches on this computer. Best matches only " +
     "run on the hosted matcher, so getting them sends this song's title and " +
@@ -683,6 +683,9 @@
         title: String(query.title || ""),
         artist: String(query.artist || ""),
         source: query.source === "live" ? "live" : "catalog",
+        language: String(query.language || "unknown"),
+        languageMode: query.language_mode === "all" ? "all" : "same",
+        hidden: Number.isFinite(Number(query.hidden)) ? Math.max(0, Number(query.hidden)) : 0,
       },
       results,
       totalMs: Number.isFinite(total) && total > 0 ? Math.round(total) : 0,
@@ -690,11 +693,12 @@
     };
   }
 
-  async function requestBestMatchesUncached(title, artist) {
+  async function requestBestMatchesUncached(title, artist, langMode = "same") {
     const params = new URLSearchParams({
       title,
       artist,
       k: String(DISPLAY_RESULT_COUNT),
+      lang: langMode,
     });
     for (let attempt = 0; ; attempt++) {
       let response;
@@ -729,25 +733,25 @@
     }
   }
 
-  function bestMatchesCacheId(seedUri) {
-    return `best:${BEST_MATCHES_POLICY}:${seedUri}`;
+  function bestMatchesCacheId(seedUri, langMode = "same") {
+    return `best:${BEST_MATCHES_POLICY}:${langMode}:${seedUri}`;
   }
 
-  function savedBestMatches(seedUri) {
-    const cached = readCacheEntry("recommendations", bestMatchesCacheId(seedUri));
+  function savedBestMatches(seedUri, langMode = "same") {
+    const cached = readCacheEntry("recommendations", bestMatchesCacheId(seedUri, langMode));
     return Array.isArray(cached?.results) && cached.results.length
       ? { data: cached, cached: true }
       : null;
   }
 
-  async function requestBestMatches(title, artist, seedUri) {
-    const saved = savedBestMatches(seedUri);
+  async function requestBestMatches(title, artist, seedUri, langMode = "same") {
+    const saved = savedBestMatches(seedUri, langMode);
     if (saved) return saved;
-    const cacheId = bestMatchesCacheId(seedUri);
+    const cacheId = bestMatchesCacheId(seedUri, langMode);
     if (pendingRecommendations.has(cacheId)) {
       return pendingRecommendations.get(cacheId);
     }
-    const request = requestBestMatchesUncached(title, artist)
+    const request = requestBestMatchesUncached(title, artist, langMode)
       .then((data) => {
         writeCacheEntry("recommendations", cacheId, data);
         return { data, cached: false };
@@ -955,6 +959,7 @@
       seedUri,
       view: showSounds ? "sounds" : "best",
       viewChosen: false,
+      showAllLanguages: false,
       timing: { startedAt, initialReadyMs },
       best: best ? pendingResultList() : offeredBestList(seedUri),
       sounds: pendingResultList(),
@@ -989,10 +994,28 @@
     const { searchId, seedTrack, seedUri } = state;
     state.best = pendingResultList();
     const request = settledRequest(
-      requestBestMatches(seedTrack.name, seedArtistName(seedTrack), seedUri)
+      requestBestMatches(seedTrack.name, seedArtistName(seedTrack), seedUri,
+        state.showAllLanguages ? "all" : "same")
     );
     request.promise.then(() => settleResultsView(searchId, "best", request));
     refreshResultsPage(true);
+  }
+
+  function toggleBestLanguageMode() {
+    const state = resultsState;
+    if (!state || state.best.status !== "ready") return;
+    state.showAllLanguages = !state.showAllLanguages;
+    state.viewChosen = true;
+    const { searchId, seedTrack, seedUri } = state;
+    state.best = pendingResultList();
+    refreshResultsPage(true);
+    const request = settledRequest(requestBestMatches(
+      seedTrack.name,
+      seedArtistName(seedTrack),
+      seedUri,
+      state.showAllLanguages ? "all" : "same"
+    ));
+    request.promise.then(() => settleResultsView(searchId, "best", request));
   }
 
   // Applies a list that finished after the page opened.
@@ -1741,7 +1764,12 @@
       pl: "Polish", pt: "Portuguese", ru: "Russian", sv: "Swedish",
       tr: "Turkish", uk: "Ukrainian", zh: "Chinese",
     };
-    return names[code] || code?.toUpperCase() || "Unknown";
+    if (names[code]) return names[code];
+    try {
+      return new Intl.DisplayNames(["en"], { type: "language" }).of(code);
+    } catch {
+      return code?.toUpperCase() || "Unknown";
+    }
   }
 
   function trackMatchesRelatedArtist(track, relatedArtistUris) {
@@ -2089,6 +2117,16 @@
       blurb += ` Matched to “${query.title}” by ${query.artist}.`;
     }
     const cached = best.cached || best.data.serverCached;
+    const hidden = Math.max(0, Number(query.hidden) || 0);
+    const allLanguages = query.languageMode === "all";
+    const languageStatus = query.language === "unknown"
+      ? "Language uncertain; showing all languages."
+      : `${languageName(query.language)} · ${hidden
+        ? `${hidden} other-language ${hidden === 1 ? "match" : "matches"} ` +
+          `${allLanguages ? "in" : "hidden from"} the top ${DISPLAY_RESULT_COUNT}`
+        : `no other-language matches in the top ${DISPLAY_RESULT_COUNT}`}`;
+    const languageControl = query.language === "unknown" ? "" :
+      `<button class="sa-language-toggle" type="button" aria-pressed="${allLanguages}">${allLanguages ? "Use same-language matches" : "Show all languages"}</button>`;
     const tags = tagsMarkup([
       "Melody + samples",
       query.source !== "live"
@@ -2098,6 +2136,7 @@
     ]);
     return `<p class="sa-blurb">${esc(blurb)}</p>
       <div class="sa-tags">${tags}</div>
+      <div class="sa-language-filter" role="status"><span>${esc(languageStatus)}</span>${languageControl}</div>
       <div class="sa-list-head"><div>#</div><div></div><div>Title</div><div class="sa-album-head">Album</div></div>
       <div class="sa-list">${resultRowsMarkup(results, { hidden: false, notes: true })}
       </div>`;
@@ -2228,6 +2267,10 @@
         .sa-tab:hover{background:rgba(255,255,255,.14)}
         .sa-tab[aria-selected="true"]{background:var(--spice-text,#fff);color:var(--spice-main,#121212)}
         .sa-tab:focus-visible{outline:2px solid var(--spice-button,#1ed760);outline-offset:2px}
+        .sa-language-filter{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;color:var(--spice-subtext,#b3b3b3);font-size:13px}
+        .sa-language-toggle{min-height:32px;border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:5px 12px;background:transparent;color:var(--spice-text,#fff);font:inherit;font-weight:600;cursor:pointer}
+        .sa-language-toggle:hover{border-color:var(--spice-button,#1ed760)}
+        .sa-language-toggle:focus-visible{outline:2px solid var(--spice-button,#1ed760);outline-offset:2px}
         .sa-blurb{max-width:680px;margin:0 0 10px;color:var(--spice-subtext,#b3b3b3)}
         .sa-note{max-width:680px;margin:0 0 12px;color:var(--spice-text,#fff)}
         .sa-why{color:var(--spice-subtext,#b3b3b3)}
@@ -2366,6 +2409,8 @@
     bindResultTabs(page);
     const offer = page.querySelector(".sa-best-offer");
     if (offer) offer.onclick = requestOfferedBestMatches;
+    const languageToggle = page.querySelector(".sa-language-toggle");
+    if (languageToggle) languageToggle.onclick = toggleBestLanguageMode;
     if (state.view === "best") {
       if (state.best.status !== "ready") return;
       hydrateBestRows(
