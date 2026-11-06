@@ -8,7 +8,9 @@ GET endpoints (JSON):
 - ``/api/anysong/search?q=<text>&limit=10``  Deezer track search; ``in_catalog`` marks indexed tracks
 - ``/api/anysong/similar?id=<deezer id>&k=20&dedupe=1``  top matches per channel, plus ``best``: the melody and
   samples lists fused into one ranking (``fuse``). With a scene table (``--scene``) the fused list also weighs the
-  artist scene (same artist, related artists, region, genre; ``scene.scene_fuse``); ``scene=0`` turns that off
+  artist scene (same artist, related artists, region, genre; ``scene.scene_fuse``); ``scene=0`` turns that off.
+  With a tempo table (``--tempo``), ``vibe`` is the Same vibe list: Best matches that share the seed's tempo and
+  sound, one song per artist (``samevibe``)
 - ``/api/anysong/similar?title=<title>&artist=<artist>&k=20``  the same for a song named by title and artist
   (``AnySong.resolve``): the catalog release of that song, else the first matching Deezer search hit
 
@@ -42,8 +44,10 @@ from urllib.parse import parse_qs, urlsplit
 
 import numpy as np
 
+from . import samevibe
 from .deezer import version_words
 from .scene import SceneParams, SceneTable, scene_fuse
+from .tempo import TempoTable, decode22
 
 FETCH = 200  # per-channel depth ranked before de-duplication
 K_MAX = 50
@@ -201,10 +205,15 @@ class AnySong:
                  max_pending: int = 8, search_ttl: float = 3600.0, keep_previews: bool = False,
                  follower_timeout: float = 180.0, known_ttl: float = 600.0, languages=None,
                  scene: SceneTable | None = None, scene_params: SceneParams | None = None,
-                 related_ttl: float = 86400.0):
+                 related_ttl: float = 86400.0, tempo: TempoTable | None = None, tracker=None,
+                 vibe_params: samevibe.SameVibeParams | None = None):
         self.engine, self.deezer, self.meta, self.keep_previews = engine, deezer, meta, keep_previews
         self.languages = languages
         self.scene, self.scene_params = scene, scene_params or SceneParams()
+        # Same vibe needs catalog tempos and the sonic channel; ``tracker`` estimates the tempo of unseen seeds.
+        self.tempo, self.tracker = tempo, tracker
+        self.vibe_params = vibe_params or samevibe.SameVibeParams()
+        self.vibe = tempo is not None and "sonic" in engine.indexes
         # Deezer related artists for query artists whose own list is not in the scene table (e.g. unseen artists).
         self.related = LRU(cache_size, ttl=related_ttl)
         self._related_jobs: dict[int, Future] = {}
@@ -242,9 +251,10 @@ class AnySong:
             served = dict(self.served)
         scene = None if self.scene is None else {"tracks": int((self.scene.track_artist > 0).sum()),
                                                  "artists": len(self.scene.artist_ids)}
+        tempo = None if not self.vibe else {"tracks": len(self.tempo.by_id), "live": self.tracker is not None}
         return {"ok": True, "device": self.engine.device,
                 "channels": {name: len(ix) for name, ix in self.engine.indexes.items()},
-                "cached_results": len(self.results), "served": served, "scene": scene}
+                "cached_results": len(self.results), "served": served, "scene": scene, "tempo": tempo}
 
     def search(self, q: str, limit: int = 10) -> dict:
         q = " ".join(q.split())
@@ -341,16 +351,29 @@ class AnySong:
                 timings: dict[str, float] = {}
                 with self._gpu(timings):
                     raw, t = self.engine.search_stored(track_id, FETCH)
+                    vibe = self._vibe_inputs(raw, t, query_track=track_id) if self.vibe else None
+                if vibe is not None:
+                    vibe["bpm"] = self.tempo.bpm(track_id)
             else:
-                query, raw, timings, t = self._live(track_id)
+                query, raw, timings, t, vibe = self._live(track_id)
             self._count(query["source"])
             timings |= t
             related = self._scene_context(query, timings)
             timings["total"] = (time.perf_counter() - t0) * 1000
-            return {"query": query, "raw": raw, "related": related,
+            return {"query": query, "raw": raw, "related": related, "vibe": vibe,
                     "timings_ms": {k: round(v, 1) for k, v in timings.items()}}
         finally:
             self.pending.release()
+
+    def _vibe_inputs(self, raw: dict, timings: dict[str, float], windows=None, query_track: int | None = None) -> dict:
+        """Served MuQ-MuLan scores against the seed for every track in the channel lists (Same vibe's sound gate):
+        the sonic list's own scores, and exact scores for the melody and samples tracks it does not hold."""
+        t = time.perf_counter()
+        muq = {int(tid): float(score) for tid, score in raw.get("sonic", ())}
+        others = {int(tid) for channel, rows in raw.items() if channel != "sonic" for tid, _ in rows} - set(muq)
+        muq |= self.engine.score_tracks("sonic", others, windows=windows, query_track=query_track)
+        timings["vibe_scores"] = (time.perf_counter() - t) * 1000
+        return {"muq": muq, "bpm": None}
 
     def _scene_context(self, query: dict, timings: dict[str, float]) -> list[int]:
         """Set the query's Deezer artist id; fetch Deezer's related artists when the scene table lacks that list.
@@ -431,18 +454,34 @@ class AnySong:
         if path is None:
             raise ApiError(404, "no preview available for this track")
         timings["fetch"] = (time.perf_counter() - t) * 1000
+        clip22 = None
         try:
             clips, t_decode = self.engine.decode(path)
+            if self.vibe and self.tracker is not None:
+                t = time.perf_counter()
+                try:
+                    clip22 = decode22(path)
+                except Exception:  # noqa: BLE001 - an unknown seed tempo lets every song pass the tempo gate
+                    clip22 = None
+                timings["decode_tempo"] = (time.perf_counter() - t) * 1000
         except Exception as exc:
             raise ApiError(422, "could not decode the preview") from exc
         finally:
             if not self.keep_previews:
                 Path(path).unlink(missing_ok=True)
         timings |= t_decode
+        vibe = None
         with self._gpu(timings):
             wins, t_embed = self.engine.embed_clips(clips)
             raw, t_search = self.engine.search_windows(wins, FETCH, [track_id])
-        return query, raw, timings | t_embed, t_search
+            if self.vibe:
+                vibe = self._vibe_inputs(raw, t_search, windows=wins["sonic"])
+                if clip22 is not None:
+                    t = time.perf_counter()
+                    bpm = self.tracker.tempo(clip22)[0]
+                    vibe["bpm"] = bpm if np.isfinite(bpm) else None
+                    t_search["tempo"] = (time.perf_counter() - t) * 1000
+        return query, raw, timings | t_embed, t_search, vibe
 
     def _view(self, res: dict, k: int, dedupe: bool, cached: bool, lang_mode: str = "same",
               scene: bool = True) -> dict:
@@ -505,13 +544,40 @@ class AnySong:
                     channel: {key: item for key, item in order.items() if keep(item)}
                     for channel, order in songs.items()
                 }
+        fused = rank(filtered)
         best = []
-        for key, score, ranks in rank(filtered)[:k]:
+        for key, score, ranks in fused[:k]:
             channel = min(ranks, key=lambda name: ranks[name])
             best.append(filtered[channel][key] | {"score": round(score, 5), "ranks": ranks})
         query = q | {"language": language, "language_mode": lang_mode, "hidden": hidden, "scene": scene_state}
-        out = {"best": best, **out} if best else out
-        return {"ok": True, "query": query, "results": out, "timings_ms": res["timings_ms"], "cached": cached}
+        vibe = []
+        if res.get("vibe") is not None and "sonic" in filtered:
+            vibe = self._same_vibe(res["vibe"], filtered, [key for key, _, _ in fused], language, lang_mode, k)
+            bpm = res["vibe"]["bpm"]
+            query["bpm"] = round(bpm, 1) if bpm else None
+        lists = {"best": best} if best else {}
+        if vibe:
+            lists["vibe"] = vibe
+        return {"ok": True, "query": query, "results": lists | out, "timings_ms": res["timings_ms"],
+                "cached": cached}
+
+    def _same_vibe(self, inputs: dict, view: dict[str, dict[Hashable, dict]], best_order: list, language: str,
+                   lang_mode: str, k: int) -> list[dict]:
+        """Same vibe list (``samevibe.same_vibe``); each song is read from its representative track."""
+        rep: dict[Hashable, dict] = {}
+        for channel in samevibe.CHANNEL_ORDER:
+            for key, item in view.get(channel, {}).items():
+                rep.setdefault(key, item)
+        cands = {}
+        for key, item in rep.items():
+            tid = int(item["id"])
+            cands[key] = samevibe.Candidate(
+                track_id=tid, bpm=self.tempo.bpm(tid), muq=inputs["muq"].get(tid, -np.inf),
+                artist_id=(self.scene.artist(tid) or 0) if self.scene is not None else 0,
+                language=self.languages.language(tid) if self.languages is not None else "unknown")
+        keys = samevibe.same_vibe(best_order, list(view["sonic"]), cands, inputs["bpm"], language, lang_mode,
+                                  self.vibe_params)
+        return [rep[key] | {"score": round(1.0 / (FUSE_K + i), 5)} for i, key in enumerate(keys[:k], 1)]
 
 
 def _int_param(params: dict[str, list[str]], name: str, default: int | None, lo: int, hi: int) -> int:
@@ -632,6 +698,10 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--meta", type=Path, default=None, help="catalog_meta npz with track_ids/artists/titles")
     p.add_argument("--languages", type=Path, default=None, help="language labels from anysong.languages")
     p.add_argument("--scene", type=Path, default=None, help="scene table from anysong.scene (metadata for Best)")
+    p.add_argument("--tempo", type=Path, default=None,
+                   help="catalog tempo table from anysong.tempo; enables the Same vibe list")
+    p.add_argument("--tempo-model", default=None,
+                   help="Beat This! checkpoint for the tempo of unseen seeds (without it their tempo is unknown)")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=8790)
     p.add_argument("--channels", nargs="+", default=list(CHANNELS), choices=list(CHANNELS))
@@ -664,8 +734,15 @@ def main(argv: list[str] | None = None) -> None:
             artist_names={track_id: artist for track_id, (artist, _) in meta.items()},
         )
     scene = SceneTable.load(args.scene) if args.scene is not None else None
+    tempo = TempoTable.load(args.tempo) if args.tempo is not None else None
+    tracker = None
+    if tempo is not None and args.tempo_model:
+        from .tempo import Tracker
+
+        tracker = Tracker(args.tempo_model, args.device)
+        tracker.tempo(np.zeros(30 * 22050, np.float32))  # warm-up
     service = AnySong(engine, Deezer(scratch), meta, args.cache_size, args.max_pending,
-                      languages=languages, scene=scene)
+                      languages=languages, scene=scene, tempo=tempo, tracker=tracker)
     server = Server((args.host, args.port), service, args.search_per_min, args.similar_per_min,
                     args.cors_origin, args.client_ip_header)
     sizes = {name: len(ix) for name, ix in engine.indexes.items()}

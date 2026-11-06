@@ -144,6 +144,14 @@ class ChannelIndex(_Ranked):
         return self.feats[self.pos[int(track_id)]].float()
 
     @torch.inference_mode()
+    def score_rows(self, q: torch.Tensor, rows: np.ndarray) -> torch.Tensor:
+        """Exact scores of one prepared query [W, D] against the given rows."""
+        if not len(rows):
+            return torch.empty(0, device=self.feats.device)
+        return score_block(q[None], self.feats[torch.as_tensor(rows, device=self.feats.device)].float(),
+                           self.channel.mode)[0]
+
+    @torch.inference_mode()
     def scores(self, q: torch.Tensor, chunk: int = 2048) -> torch.Tensor:
         """Prepared queries [W, D] or [B, W, D] -> similarities [N] or [B, N] (higher is closer)."""
         single = q.dim() == 2
@@ -263,6 +271,16 @@ class TwoStageIndex(_Ranked):
 
     def stored_query(self, track_id: int) -> torch.Tensor:
         return self._full(np.array([self.pos[int(track_id)]]))[0]
+
+    @torch.inference_mode()
+    def score_rows(self, q: torch.Tensor, rows: np.ndarray) -> torch.Tensor:
+        """Exact scores (hub penalty included, as ``scores`` gives its candidates) of one prepared query [W, D]
+        against the given rows, sorted ascending for sequential reads."""
+        exact = torch.cat([score_block(q[None], self._full(rows[s:s + 2048]), self.channel.mode)[0]
+                           for s in range(0, len(rows), 2048)]) if len(rows) else torch.empty(0, device=self.device)
+        if self.penalty is not None and len(rows):
+            exact -= self.penalty[torch.as_tensor(rows, device=self.device)]
+        return exact
 
     @torch.inference_mode()
     def stage1(self, q: torch.Tensor, chunk: int = 8192) -> torch.Tensor:
@@ -393,6 +411,16 @@ class Engine:
 
     def indexed(self, track_id: int) -> bool:
         return all(int(track_id) in ix.pos for ix in self.indexes.values())
+
+    def score_tracks(self, channel: str, track_ids: Iterable[int], windows: np.ndarray | None = None,
+                     query_track: int | None = None) -> dict[int, float]:
+        """Exact scores of the indexed ``track_ids`` in one channel, against live ``windows`` (raw, as embedded) or
+        the stored windows of ``query_track``; ids outside the index are left out."""
+        idx = self.indexes[channel]
+        q = idx.prep_query(windows) if windows is not None else idx.stored_query(int(query_track))
+        rows = np.array(sorted({idx.pos[int(t)] for t in track_ids if int(t) in idx.pos}), dtype=np.int64)
+        values = idx.score_rows(q, rows).tolist()
+        return {int(idx.ids[r]): float(v) for r, v in zip(rows, values)}
 
     def search_stored(self, track_id: int, k: int = 20, exclude: Iterable[int] = ()
                       ) -> tuple[dict[str, list[tuple[int, float]]], dict[str, float]]:

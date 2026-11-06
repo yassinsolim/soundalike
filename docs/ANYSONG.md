@@ -38,6 +38,13 @@ melody or samples score clearly stands out. One artist can place at most two son
 for the seed's artist the ranking is the plain fusion. The selection, safeguards and results are in
 [ANYSONG_EVAL.md](ANYSONG_EVAL.md#scene-layer-2026-11-04).
 
+Next to Best matches, **Same vibe** ([`samevibe.py`](../src/soundalike/anysong/samevibe.py)) lists songs a listener
+hears as belonging together. It keeps the Best candidates that share the seed's tempo (the same, double or half,
+within 6 %) and its overall sound, fills up from the sounds list, and takes one song per artist. Best stays the list
+for covers, samples and shared melodies, which often cross genres. On 1,000 fresh test artists, Same vibe had fewer
+genre-incoherent results than the Sounds like tab (39 % vs 50 %) and more ListenBrainz-similar artists
+([ANYSONG_EVAL.md](ANYSONG_EVAL.md#same-vibe-2026-11-06)).
+
 ## Architecture
 
 ```
@@ -62,7 +69,11 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   artist, and a Best item's `ranks` include `sonic` when the sounds list placed it. In a scene list `score` is
   positional (`1 / (5 + position)`), because slots rather than summed scores decide the order. A live seed whose
   artist's related-artist list is not in the table costs one cached Deezer request (`/artist/{id}/related`), made in
-  the background while the preview downloads; if it fails, the API uses what the table knows.
+  the background while the preview downloads; if it fails, the API uses what the table knows. With `--tempo`
+  (a catalog tempo table) the results also hold `vibe`, the Same vibe list (items like `best` without `ranks`,
+  positional `score`, language-filtered like `best`), and `query.bpm` gives the seed's tempo (`null` when unknown).
+  `--tempo-model` points to the Beat This! checkpoint that estimates the tempo of seeds outside the catalog; without
+  it their tempo is unknown and only the sound gate applies.
 - `/similar?title=&artist=&k=` (used by the main page and Spotify, which have no Deezer id) resolves the name first.
   Songs match by song key (primary artist plus title without bracketed, dashed or feat. tags), and among a song's
   releases one with the same version words (`deezer.version_words`: live, remix, acoustic, edit, sped up, ...) wins,
@@ -191,12 +202,28 @@ in the shipped setting. ListenBrainz co-listening is used only to validate the l
 Rebuild the table about monthly: related lists drift and new artists appear (artists missing from the table are
 looked up live).
 
+## Tempo table
+
+Same vibe compares tempos from [Beat This!](https://github.com/CPJKU/beat_this) (`final0`, MIT licence for code
+and weights; `pip install beat-this==1.1.0`). `anysong.tempo` decodes each preview with soundfile, resamples to
+22,050 Hz with soxr, tracks beats on one 30-second chunk in fp16 and stores `60 / median(inter-beat interval)` (NaN
+when fewer than four beats are found):
+
+```sh
+python -m soundalike.anysong.tempo --ids index_full/samples/ids.npy --previews previews \
+  --model ckpt/beat_this/final0.ckpt --out tempo.npz
+```
+
+The full catalog took 0.7 GPU-hours on the RTX 5080; 266,945 of 269,278 tracks have a tempo. The API runs the same
+model on the previews of seeds outside the catalog (`--tempo-model`).
+
 ## Deployment (homelab)
 
 GPU host CT 409 (`/opt/soundalike`): `src/`, `venv/`, checkpoints under `ckpt/`, upstream code under `ext/`,
 offline Hugging Face cache in `hf/`, indexes under `index/` with `index/current` → the live index,
-`index/catalog_meta.npz` for titles, `index/languages.npz` for language labels (`--languages`) and
-`index/scene.npz` for the scene layer (`--scene`). The service is
+`index/catalog_meta.npz` for titles, `index/languages.npz` for language labels (`--languages`),
+`index/scene.npz` for the scene layer (`--scene`), and `index/tempo.npz` plus `ckpt/beat_this/final0.ckpt` for Same
+vibe (`--tempo`, `--tempo-model`; about 160 MiB of VRAM, and 30 ms of GPU time per unseen seed). The service is
 [`deploy/homelab/soundalike-anysong.service`](../deploy/homelab/soundalike-anysong.service) (user `anysong`,
 `MemoryMax=6G`, enabled at boot; startup loads and warms the models and index, about 22 s with the full 269k-track
 index). The process itself uses about 1.5 GB of RAM; the rest of the cap is page cache for the memory-mapped

@@ -774,6 +774,124 @@ about 1.2–1.4 GB of extra VRAM on the 5080; that is not measured on the 2070.
 - **Feedback.** It exists only for the legacy Spicetify Sounds view, as list-level ratings: not enough to train a
   ranker.
 
+## Same vibe (2026-11-06)
+
+**Why.** Two Best lists that "made no sense" to a listener:
+
+- **Joy Crookes – *Feet Don't Fail Me Now* (UK soul)** opened with Offset – *Prada Myself*.
+- **Childish Gambino – *Heartbeat*** opened with Stegosaurus Rex, Deichkind and an Armin van Buuren remix.
+
+A third list had a great first match: deep dispatch – *Something on My Mind* → Rivo – *Stay Here (Jos & Eli
+Remix)*.
+
+On 800 development seeds, 55 % of Best's other-artist top-10 results were "incoherent": they share no Wikidata genre
+with the seed and ListenBrainz does not list the artist as similar. The incoherent results sit mostly in the protected
+head:
+
+| result | incoherent |
+| --- | ---: |
+| in the protected head | 62 % |
+| everywhere else | 39 % |
+| in the seed's sounds top 200 | 26 % |
+| found by both melody and samples | 38 % |
+| found by only one of the two | 56 % |
+
+Strong cover or sample evidence goes with incoherence, because real covers and samples often cross genres. Agreement
+with the sound goes with coherence. The great example is a two-channel match: samples #1 and melody #26, at 125 vs
+130 BPM.
+
+**What did not help (development data).** The study is in the research workspace (`patterns-research-20261106`):
+
+- **"Sheet music."** Transcribed chords, melody and bass were matched by key-free chord n-grams, melodic intervals and
+  chord DTW. Ranking each cover's positive among 4,000 random decoys:
+  - chord n-grams reach the top 10 for 24–28 % of covers, against 81 % for the melody channel (CLEWS);
+  - transcribed melodies reach 4.5 %;
+  - adding the symbolic score to CLEWS + SampleID lowers hit rates;
+  - it recovers 5 of 133 covers that CLEWS misses, none high enough for a catalog-scale top 10;
+  - extraction would cost about 17 GPU-hours for the catalog.
+- **Shazam-style fingerprints.** These were local implementations of Wang's landmarks
+  ([2003](https://www.ee.columbia.edu/~dpwe/papers/Wang03-shazam.pdf)) and of a pitch- and tempo-tolerant matcher in
+  the style of [Panako](https://github.com/JorenSix/Panako). They match identical audio only:
+  - sample pairs in the top 10: 4–5 %, against 27–30 % for SampleID;
+  - SampleID already ranks every fingerprint hit in its top 10 but one, which it has at #14.
+- **Changing Best.**
+  - Stricter head evidence (a list's top-3 or threshold song must also stand out with z ≥ 2 within its top 20):
+    −4.7 pp incoherence on development data.
+  - Protecting only the evidenced songs themselves (E2): −8.0 pp incoherence on development data.
+  - E2 was confirmed once on 1,000 fresh seeds: incoherence 0.516 → 0.433 [Δ CI −0.095, −0.073].
+  - E2 **failed** the held-out relationship rule: same-language covers HR@10 −1.11 pp [−1.78, −0.51] and AP −1.04 pp,
+    against a 1.0 pp limit. Best is unchanged. The held-out relationship sets have now been used once more.
+- **Gating Best itself by tempo and sound.** Incoherence fell 0.567 → 0.405 on 200 seeds, but covers HR@1 fell 30 pp:
+  the two intents conflict in one list. So the gate became a separate list.
+
+**Definition.** Same vibe ([`samevibe.py`](../src/soundalike/anysong/samevibe.py)) builds its list from:
+
+1. **Best's first 100 songs as served,** keeping, in Best order, the songs that pass two gates:
+   - **Tempo:** the same tempo, double or half, within 6 %. An unknown tempo passes.
+   - **Sound:** the song is in the seed's sounds list, or its MuQ-MuLan score (maxsim minus the hub penalty) is at
+     least τ = 0.378. τ is the median 800th sounds score of the development seeds.
+2. **Fill:** first the sounds list's tempo-compatible songs, then the rest of the sounds list, then the rest of Best.
+
+Rules that apply throughout:
+- One song per artist.
+- The language filter works as in Best.
+- Tempos come from Beat This! ([Foscarin et al., 2024](https://github.com/CPJKU/beat_this), MIT licence): a catalog
+  table, and the same model live for unseen songs.
+- Each song's tempo, score, artist and language are read from its first-channel track.
+
+**Selection.** Six variants were fixed before running: pool 50 or 100; sound gate "either", score only or list only;
+tempo tolerance 4, 6 or 8 %. All six met the guards on 800 development seeds: at least 9.5 distinct artists, at most
+2 % other-language songs, and a full list for at least 95 % of seeds. The rule picked the lowest incoherence:
+
+| list | incoherent |
+| --- | ---: |
+| pool 100, "either", 6 % (selected) | 0.400 |
+| the other five variants | 0.411–0.446 |
+| Sounds like | 0.530 |
+| Best | 0.554 |
+
+**Confirmation.** It ran once, on 1,000 fresh seeds: one song per artist, artists in no earlier seed or training set,
+and ListenBrainz data collected for them. Served same-language mode; Sounds like with one song per artist and the
+language filter:
+
+| list | incoherent | ListenBrainz-similar | beyond Deezer's list | shared genre | in sounds top 200 | tempo-compatible |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| **Same vibe** | **0.390** | **0.320** | **0.251** | **0.492** | 0.785 | 0.983 |
+| Sounds like | 0.499 | 0.212 | 0.164 | 0.414 | 1.000 | 0.749 |
+| Best | 0.516 | 0.220 | 0.166 | 0.403 | 0.184 | 0.434 |
+
+Both pre-registered conditions held:
+- incoherence lower than Sounds like: −0.108 [−0.126, −0.091];
+- ListenBrainz agreement beyond Deezer's lists not lower: +0.087 [+0.074, +0.102].
+
+Neither Wikidata nor ListenBrainz feeds Same vibe's gates. Best's pool does pass through the scene layer, which uses
+Deezer's related artists and Wikidata countries, so agreement beyond Deezer's lists is the cleanest of these checks.
+
+The 25 v4 development pairs are directional only:
+
+| list | v4 pairs in the top 10 |
+| --- | ---: |
+| Same vibe | 2 |
+| Sounds like | 1 |
+| Best | 3 |
+
+By design, matches like Rivo, which sound different but share material, stay in Best and not in Same vibe.
+
+**Parity and serving.**
+- **Parity:** the API reproduced the research Same vibe list and Best list for all 800 development seeds in both
+  language modes (1,600 lists each).
+- **Catalog seeds:** each needs exact MuQ-MuLan scores for up to 400 candidates (about 2 ms on the RTX 5080) and a
+  tempo lookup in a 1.8 MB table.
+- **Unseen seeds on the RTX 2070 SUPER:**
+  - the tempo costs 31 ms of GPU time plus 72 ms of decoding (median of 40 previews);
+  - the model holds 158 MiB of VRAM;
+  - all 40 tempos match the table.
+
+**Limitations.**
+- τ belongs to the 2026-11-01 index and must be recomputed when the index changes.
+- Same vibe reads Best's order, so a change to Best needs a new confirmation.
+- "Incoherent" is a proxy built from genre tags and co-listening, not listening tests.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
