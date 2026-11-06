@@ -6,12 +6,14 @@ If you installed Soundalike from Marketplace, start with the
 [extension guide](README.md); normal use requires none of the setup below.
 
 Add a **“Find soundalikes”** item to the right-click menu of any track in the
-Spotify desktop app. Select it to open a page of matches for the selected
+Spotify desktop app, including the song playing in the player bar. Select it to
+open a page of matches for the selected
 track: **Best matches**, songs that share a melody, sample, or loop with it,
 and one tab away **Sounds like**, songs with the same overall sound. Results
 come from audio embeddings rather than tags.
 Double-click a verified result or use its left-side play button to play it
-immediately. Right-click it to find soundalikes again or use Spotify's native
+immediately; the rest of the list follows in the order shown, without creating
+a playlist. Right-click it to find soundalikes again or use Spotify's native
 playlist, queue, radio, artist, album, credits, and sharing actions.
 
 ![Soundalike best matches inside Spotify](../../docs/spicetify-results.png)
@@ -259,7 +261,9 @@ With or without the local engine, right-click any song in Spotify →
 **Sounds like** instead. Spotify album covers, verified artist names, album
 names, and, in Sounds like, measured BPM fill in progressively. Double-click a
 row or use its left-side play button to play that exact Spotify track without
-leaving the page; a single click does not start playback. Spotify's Back and
+leaving the page; the songs below it follow in the order shown, as one list
+that is never saved as a playlist. A single click does not start playback.
+Spotify's Back and
 Forward buttons preserve the result list while you navigate elsewhere. In
 Sounds like, confident Spotify lyrics-language labels gate English to English,
 French to French, and so on. Results with no language label remain as
@@ -439,6 +443,10 @@ desktop client and are not sent to Soundalike.
   restart Spotify. The extension waits for both the context-menu and React JSX
   APIs before registering; older copies that only waited for `ContextMenu` can
   fail during Spotify startup with a `ReactJSX` error.
+- **“Find soundalikes” is missing only from the player bar's song menu:**
+  Spicetify 2.46.4 and earlier give that menu no song, so extension items
+  don't appear there. Soundalike 2.5.0 and newer add their item to it
+  themselves; restart Spotify to load the current version.
 - **Titles appear but covers stay blank:** Spotify's catalog lookup is still
   loading or did not find a confident title-and-artist match. Recommendations
   remain usable through Spotify search; confirm Spotify is online, then reopen
@@ -479,7 +487,7 @@ right-click track ─▶ Spotify title + artist
                          ▼
              verified Spotify track URI
                          │
-   play / double-click ─▶ play now │ right-click ─▶ native track menu
+   play / double-click ─▶ play the list from here │ right-click ─▶ native track menu
 ```
 
 Best matches come from the any-song matcher, which looks the song up by title

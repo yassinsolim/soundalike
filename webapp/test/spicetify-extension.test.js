@@ -52,6 +52,12 @@ function loadExtension(fetchImpl, options = {}) {
   const notifications = [];
   const history = [];
   const played = [];
+  const contextPlays = [];
+  const playerState = { context: null, item: null };
+  const queuedSongs = [];
+  const queueState = [];
+  const nowPlayingMenuItems = [];
+  const songChangeListeners = [];
   const graphqlRequests = [];
   const cosmosRequests = [];
   const logs = [];
@@ -87,14 +93,27 @@ function loadExtension(fetchImpl, options = {}) {
     ? (callback, ms = 0, ...args) =>
       setTimeout(callback, Math.round(ms * options.timerScale), ...args)
     : setTimeout;
-  const rows = (options.results || []).map((_, index) => ({
-    dataset: { index: String(index) },
-    hidden: index >= 20,
-    style: {},
-    querySelector() {
-      return null;
-    },
-  }));
+  const rows = (options.results || []).map((_, index) => {
+    const classes = new Set();
+    return {
+      dataset: { index: String(index) },
+      hidden: index >= 20,
+      style: {},
+      classList: {
+        toggle(name, force = !classes.has(name)) {
+          if (force) classes.add(name);
+          else classes.delete(name);
+          return force;
+        },
+        contains(name) {
+          return classes.has(name);
+        },
+      },
+      querySelector() {
+        return null;
+      },
+    };
+  });
   const languageStatus = { textContent: "" };
   const languageLoading = { hidden: false };
   function control(value = "") {
@@ -366,6 +385,15 @@ function loadExtension(fetchImpl, options = {}) {
     definitions.queryArtistRelated = queryArtistRelated;
   }
   const languageAttempts = new Map();
+  const player = {
+    data: options.playingTrackUri ? { item: { uri: options.playingTrackUri } } : null,
+    addEventListener(type, callback) {
+      if (type === "songchange") songChangeListeners.push(callback);
+    },
+    async playUri(uri) {
+      played.push(uri);
+    },
+  };
   context.Spicetify = {
     ContextMenu: {
       Item: class {
@@ -377,6 +405,25 @@ function loadExtension(fetchImpl, options = {}) {
         }
       },
     },
+    // Spicetify 2.46's low-level menu items, which see each menu's raw props.
+    ...(options.contextMenuV2 ? {
+      ContextMenuV2: {
+        Item: class {
+          constructor(config) {
+            this.config = config;
+          }
+          register() {
+            nowPlayingMenuItems.push(this.config);
+          }
+        },
+        parseProps(props) {
+          if (!props) return undefined;
+          const uri = props.uri ?? props.item?.uri ?? props.reference?.uri;
+          const uris = props.uris ?? (uri ? [uri] : undefined);
+          return uris ? [uris, undefined, props.contextUri ?? props.context?.uri] : undefined;
+        },
+      },
+    } : {}),
     ...(options.spicetifyVersion === undefined
       ? {}
       : { Config: { version: options.spicetifyVersion } }),
@@ -495,12 +542,34 @@ function loadExtension(fetchImpl, options = {}) {
       ...(options.spotifyVersion === undefined
         ? {}
         : { version: options.spotifyVersion }),
+      ...(options.playerApi ? {
+        PlayerAPI: {
+          async play(playContext, origin, playOptions) {
+            contextPlays.push({ context: playContext, origin, options: playOptions });
+            if (options.playerApi === "fails") {
+              throw new Error("Command failed with reasons 'not_playing_context'");
+            }
+            playerState.context = { uri: playContext.uri };
+            playerState.item = { uri: playOptions?.skipTo?.uri };
+          },
+          getState() {
+            return playerState;
+          },
+          getQueue() {
+            return { queued: queueState };
+          },
+          async addToQueue(items) {
+            queuedSongs.push(items);
+            // Spotify shows queued songs a moment later, and can drop songs
+            // queued just as a song starts.
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            if (options.dropFirstQueueAdd && queuedSongs.length === 1) return;
+            queueState.push(...items);
+          },
+        },
+      } : {}),
     },
-    Player: {
-      async playUri(uri) {
-        played.push(uri);
-      },
-    },
+    Player: player,
     LocalStorage: {
       get(key) {
         return storage.get(key) ?? null;
@@ -549,6 +618,12 @@ function loadExtension(fetchImpl, options = {}) {
     history,
     notifications,
     played,
+    contextPlays,
+    playerState,
+    queuedSongs,
+    nowPlayingMenuItems,
+    player,
+    songChangeListeners,
     graphqlRequests,
     cosmosRequests,
     logs,
@@ -1522,6 +1597,7 @@ test("prioritizes related artists only inside the original quality head", async 
     },
     spotifyTracks,
     languageByTrackId,
+    playerApi: true,
     relatedArtists: [{
       id: "related",
       uri: "spotify:artist:related",
@@ -1543,6 +1619,19 @@ test("prioritizes related artists only inside the original quality head", async 
   assert.equal(app.rows[0].style.order, "2");
   assert.equal(app.rows[20].hidden, true);
   assert.match(app.languageStatus.textContent, /1 related prioritized/);
+
+  // Playing a row follows the order on screen, not the model order.
+  await findElement(
+    app.rows[0].tree,
+    (node) => node.props?.className === "sa-row-content",
+  ).props.onDoubleClick();
+  const [play] = JSON.parse(JSON.stringify(app.contextPlays));
+  assert.deepEqual(
+    play.context.pages[0].items.map((item) => item.uri),
+    [1, 0, ...Array.from({ length: 18 }, (_, index) => index + 2)]
+      .map((index) => `spotify:track:result${index}`),
+  );
+  assert.deepEqual(play.options, { skipTo: { index: 1, uri: "spotify:track:result0" } });
 });
 
 test("reuses persisted recommendations and Spotify metadata on repeated tracks", async () => {
@@ -3006,7 +3095,7 @@ function loadVersionedExtension(spicetifyVersion, spotifyVersion) {
   const app = loadExtension(async (url) => {
     urls.push(url);
     return response(200, { ok: false });
-  }, { spicetifyVersion, spotifyVersion });
+  }, { spicetifyVersion, spotifyVersion, contextMenuV2: true });
   return { app, urls };
 }
 
@@ -3022,7 +3111,9 @@ test("stays off where old Spicetify would empty Spotify's right-click menu", asy
     await new Promise((resolve) => setTimeout(resolve, 0));
     const label = `${spicetifyVersion} on ${spotifyVersion}`;
     assert.equal(app.registeredMenuItems, 0, label);
+    assert.equal(app.nowPlayingMenuItems.length, 0, label);
     assert.equal(app.historyListeners.length, 0, label);
+    assert.equal(app.songChangeListeners.length, 0, label);
     assert.deepEqual(urls, [], label);
     assert.equal(app.notifications.length, 1, label);
     const [message, isError, timeout] = app.notifications[0];
@@ -3055,8 +3146,285 @@ test("adds the menu item when Spicetify can draw it or the versions are unknown"
     await new Promise((resolve) => setTimeout(resolve, 0));
     const label = `${spicetifyVersion} on ${spotifyVersion}`;
     assert.equal(app.registeredMenuItems, 1, label);
+    assert.equal(app.nowPlayingMenuItems.length, 1, label);
     assert.equal(app.historyListeners.length, 1, label);
+    assert.equal(app.songChangeListeners.length, 1, label);
     assert.deepEqual(urls, ["http://127.0.0.1:8787/health"], label);
     assert.deepEqual(app.notifications, [], label);
   }
+});
+
+const plain = (value) => JSON.parse(JSON.stringify(value));
+const rowContent = (row) =>
+  findElement(row.tree, (node) => node.props?.className === "sa-row-content");
+
+test("plays Best matches on in the shown order from the chosen row", async () => {
+  const app = loadBestMatchesExtension({ playerApi: true });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+
+  await rowContent(app.rows[1]).props.onDoubleClick();
+  assert.deepEqual(plain(app.contextPlays), [{
+    context: {
+      uri: "spotify:app:soundalike",
+      pages: [{
+        items: [{ uri: "spotify:track:best0" }, { uri: "spotify:track:best1" }],
+      }],
+    },
+    origin: { featureIdentifier: "soundalike" },
+    options: { skipTo: { index: 1, uri: "spotify:track:best1" } },
+  }]);
+
+  const playButton = findElement(
+    app.rows[0].tree,
+    (node) => node.props?.className === "sa-play",
+  );
+  await playButton.props.onClick({ stopPropagation() {} });
+  await waitFor(() => app.contextPlays.length === 2);
+  assert.deepEqual(
+    plain(app.contextPlays[1].options),
+    { skipTo: { index: 0, uri: "spotify:track:best0" } },
+  );
+  assert.deepEqual(app.played, []);
+  assert.deepEqual(errorNotifications(app), []);
+});
+
+test("plays the Same vibe list from its own tab", async () => {
+  const app = loadBestMatchesExtension({ bestFetch: vibeFetch, playerApi: true });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  app.tab("vibe").onclick();
+  await waitFor(() => hasLog(app, "Same vibe metadata settled"));
+
+  await rowContent(app.rows[1]).props.onDoubleClick();
+  assert.deepEqual(plain(app.contextPlays), [{
+    context: {
+      uri: "spotify:app:soundalike",
+      pages: [{
+        items: [{ uri: "spotify:track:sounds0" }, { uri: "spotify:track:best1" }],
+      }],
+    },
+    origin: { featureIdentifier: "soundalike" },
+    options: { skipTo: { index: 1, uri: "spotify:track:best1" } },
+  }]);
+});
+
+test("leaves hidden, unmatched and repeated songs out of the played list", async () => {
+  const app = loadBestMatchesExtension({ playerApi: true });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  assert.equal(app.rows[2].dataset.uri, undefined, "row 2 has no Spotify match");
+
+  // A second row resolving to the same Spotify song plays only once.
+  app.rows[2].dataset.uri = "spotify:track:best0";
+  await rowContent(app.rows[1]).props.onDoubleClick();
+  assert.deepEqual(
+    plain(app.contextPlays[0].context.pages[0].items),
+    [{ uri: "spotify:track:best0" }, { uri: "spotify:track:best1" }],
+  );
+
+  app.rows[0].hidden = true;
+  app.rows[2].hidden = true;
+  await rowContent(app.rows[1]).props.onDoubleClick();
+  assert.deepEqual(plain(app.contextPlays[1]), {
+    context: {
+      uri: "spotify:app:soundalike",
+      pages: [{ items: [{ uri: "spotify:track:best1" }] }],
+    },
+    origin: { featureIdentifier: "soundalike" },
+    options: { skipTo: { index: 0, uri: "spotify:track:best1" } },
+  });
+});
+
+test("plays the song alone when Spotify refuses the list", async () => {
+  const app = loadBestMatchesExtension({ playerApi: "fails" });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+
+  await rowContent(app.rows[1]).props.onDoubleClick();
+  assert.equal(app.contextPlays.length, 1);
+  assert.deepEqual(app.played, ["spotify:track:best1"]);
+  assert.deepEqual(errorNotifications(app), []);
+});
+
+// Three Best matches; the third is still being matched to Spotify until
+// `gate` resolves.
+function loadLateMatchExtension(options = {}) {
+  const slowSearch = "Late Song Slow Artist";
+  const gate = deferred();
+  const app = loadBestMatchesExtension({
+    playerApi: true,
+    timerScale: 0.01,
+    bestFetch: async () => response(200, bestMatchesBody([
+      { title: "Save Your Tears", artist: "The Weeknd", ranks: { melody: 1 } },
+      { title: "Chanson Proche", artist: "Artiste Deux", ranks: { samples: 1 } },
+      { title: "Late Song", artist: "Slow Artist", ranks: { melody: 2 } },
+    ])),
+    spotifyTracks: {
+      "Save Your Tears The Weeknd":
+        spotifyTrackFixture("Save Your Tears", "The Weeknd", "best0"),
+      "Chanson Proche Artiste Deux":
+        spotifyTrackFixture("Chanson Proche", "Artiste Deux", "best1"),
+      [slowSearch]: spotifyTrackFixture("Late Song", "Slow Artist", "late0"),
+    },
+    async beforeGraphqlRequest(_definition, variables) {
+      if (variables?.searchTerm === slowSearch) await gate.promise;
+    },
+    ...options,
+  });
+  return Object.assign(app, { gate });
+}
+
+async function playBeforeLastRowMatches(app) {
+  await app.run();
+  await waitFor(() => app.rows[1].dataset.uri === "spotify:track:best1");
+  await rowContent(app.rows[0]).props.onDoubleClick();
+  app.gate.resolve();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  assert.equal(app.rows[2].dataset.uri, "spotify:track:late0");
+}
+
+const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+test("starts the list at once and queues rows matched later after its last song", async () => {
+  const app = loadLateMatchExtension();
+  await playBeforeLastRowMatches(app);
+  assert.deepEqual(plain(app.contextPlays), [{
+    context: {
+      uri: "spotify:app:soundalike",
+      pages: [{
+        items: [{ uri: "spotify:track:best0" }, { uri: "spotify:track:best1" }],
+      }],
+    },
+    origin: { featureIdentifier: "soundalike" },
+    options: { skipTo: { index: 0, uri: "spotify:track:best0" } },
+  }], "playback starts without waiting for the row still matching");
+  await pause(80);
+  assert.deepEqual(app.queuedSongs, [], "the list still has songs to play first");
+
+  // Another context reaching the same song leaves the queue alone.
+  app.playerState.context = { uri: "spotify:playlist:elsewhere" };
+  app.playerState.item = { uri: "spotify:track:best1" };
+  app.songChangeListeners[0]();
+  await pause(80);
+  assert.deepEqual(app.queuedSongs, []);
+
+  // So does skipping past the list's last song before the queue settles.
+  app.playerState.context = { uri: "spotify:app:soundalike" };
+  app.songChangeListeners[0]();
+  app.playerState.item = { uri: "spotify:track:autoplay" };
+  await pause(80);
+  assert.deepEqual(app.queuedSongs, []);
+
+  app.playerState.item = { uri: "spotify:track:best1" };
+  app.songChangeListeners[0]();
+  app.songChangeListeners[0]();
+  await waitFor(() => app.queuedSongs.length === 1);
+  assert.deepEqual(plain(app.queuedSongs), [[{ uri: "spotify:track:late0" }]]);
+  await pause(80);
+  app.songChangeListeners[0]();
+  await pause(80);
+  assert.equal(app.queuedSongs.length, 1, "late songs are queued once");
+});
+
+test("queues late rows again once when Spotify drops them", async () => {
+  const app = loadLateMatchExtension({ dropFirstQueueAdd: true });
+  await playBeforeLastRowMatches(app);
+  app.playerState.item = { uri: "spotify:track:best1" };
+  app.songChangeListeners[0]();
+  await waitFor(() => app.queuedSongs.length === 2);
+  assert.deepEqual(plain(app.queuedSongs), [
+    [{ uri: "spotify:track:late0" }],
+    [{ uri: "spotify:track:late0" }],
+  ]);
+  await pause(80);
+  app.songChangeListeners[0]();
+  await pause(80);
+  assert.equal(app.queuedSongs.length, 2, "one retry at most");
+});
+
+test("queues nothing when every shown row was in the list", async () => {
+  const app = loadBestMatchesExtension({ playerApi: true });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+
+  await rowContent(app.rows[0]).props.onDoubleClick();
+  app.playerState.item = { uri: "spotify:track:best1" };
+  app.songChangeListeners[0]();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.deepEqual(app.queuedSongs, []);
+});
+
+test("marks the row of the song that is playing", async () => {
+  const app = loadBestMatchesExtension({ playingTrackUri: "spotify:track:best1" });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  const playing = () =>
+    app.rows.map((row) => row.classList.contains("sa-row-playing"));
+  assert.deepEqual(playing(), [false, true, false]);
+  assert.match(
+    app.currentPage.innerHTML,
+    /\.sa-row\.sa-row-playing \.sa-title,\.sa-row\.sa-row-playing \.sa-rank\{color:var\(--spice-button,#1ed760\)\}/,
+  );
+
+  assert.equal(app.songChangeListeners.length, 1);
+  app.player.data = { item: { uri: "spotify:track:best0" } };
+  app.songChangeListeners[0]();
+  assert.deepEqual(playing(), [true, false, false]);
+  app.player.data = { item: { uri: "spotify:episode:podcast" } };
+  app.songChangeListeners[0]();
+  assert.deepEqual(playing(), [false, false, false]);
+});
+
+test("adds Find soundalikes to the player bar's song menu, which names no song", async () => {
+  const app = loadExtension(async (url) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    return response(200, recommendation);
+  }, { contextMenuV2: true, playingTrackUri: "spotify:track:test" });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(app.registeredMenuItems, 1);
+  assert.equal(app.nowPlayingMenuItems.length, 1);
+  const [item] = app.nowPlayingMenuItems;
+  assert.equal(item.children, "Find soundalikes");
+  assert.equal(item.leadingIcon, "enhance");
+  // Menus that name their song keep the main item, including the player bar
+  // once Spicetify passes its song.
+  assert.equal(item.shouldAdd({ uri: "spotify:track:other" }), false);
+  assert.equal(
+    item.shouldAdd({ canToggleCanvas: true, item: { uri: "spotify:track:test" } }),
+    false,
+  );
+  // Menus about no song at all stay untouched.
+  assert.equal(item.shouldAdd({}), false);
+  assert.equal(item.shouldAdd(undefined), false);
+  // A podcast, or nothing, in the player bar is not a song.
+  app.player.data = { item: { uri: "spotify:episode:podcast" } };
+  assert.equal(item.shouldAdd({ canToggleCanvas: false }), false);
+  app.player.data = null;
+  assert.equal(item.shouldAdd({ canToggleCanvas: false }), false);
+
+  app.player.data = { item: { uri: "spotify:track:test" } };
+  assert.equal(item.shouldAdd({ canToggleCanvas: false }), true);
+  // Clicks on other menus' contexts do nothing.
+  item.onClick({ props: { uri: "spotify:track:other" } });
+  item.onClick(undefined);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.deepEqual(app.history, []);
+  item.onClick({ props: { canToggleCanvas: false }, trigger: "right-click" });
+  await waitFor(() => app.history.includes("/soundalike"));
+  assert.ok(app.graphqlRequests.some(
+    ({ definition, variables }) =>
+      definition?.name === "getTrack" && variables?.uri === "spotify:track:test",
+  ));
+});
+
+test("keeps the main menu item when Spicetify has no low-level menu items", async () => {
+  const app = loadExtension(async (url) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    return response(200, recommendation);
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(app.registeredMenuItems, 1);
+  assert.equal(app.nowPlayingMenuItems.length, 0);
 });
