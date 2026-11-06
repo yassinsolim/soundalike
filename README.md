@@ -15,8 +15,10 @@ representations and measured features such as tempo, dynamics, and bass
 balance. It does not use your listening history as a ranking signal.
 
 The public web app and Spicetify extension open on **Best matches**, songs that
-share a melody, sample, or loop with yours from a 269,278-track index, and keep
-the original **Sounds like** list from a 272,853-track catalog one tab away.
+share a melody, sample, or loop with yours from a 269,278-track index. **Same vibe**,
+one tab away, keeps the matches that also share your song's tempo and overall
+sound, one song per artist, and the original **Sounds like** list from a
+272,853-track catalog stays available too.
 The repository also includes a local app, command-line tools, smaller bundled
 indexes, and the research code used to test new ranking ideas.
 
@@ -64,7 +66,7 @@ manual installation, supported Spotify builds, and troubleshooting.
 Open <https://soundalike.yassin.app>.
 
 Pick a song from the search suggestions. Results open on **Best matches**, with
-**Sounds like** one tab away. The suggestions come from the catalog;
+**Same vibe** and **Sounds like** one tab away. The suggestions come from the catalog;
 [`/anysong`](https://soundalike.yassin.app/anysong) accepts any song on Deezer.
 
 You do not need an account to search the hosted catalog. Spotify login is
@@ -247,6 +249,8 @@ matches, one slot in three goes to an audio match by a related artist from the s
 Wikidata regions). On 799 unseen test artists, the share of other-artist results that ListenBrainz lists as similar
 artists rose from 12% to 19%, while covers, samples and Gen Alpha stayed within their regression limits. Songs in
 another language than yours are hidden from Best matches by default; **Show all languages** brings them back.
+**Same vibe** keeps the Best candidates that share the seed's tempo and sound (one per artist). On 1,000 fresh test
+artists, 39% of its results had no genre or listener link to the seed, against 50% for the Sounds like tab.
 
 The experimental [`soundalike.anysong`](src/soundalike/anysong/) package compares
 MuQ-MuLan, CLAP, MuQ, MERT and MAEST with dedicated SampleID/CLEWS adapters.

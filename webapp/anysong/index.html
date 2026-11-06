@@ -114,6 +114,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
 const CHANNELS = [
   {key: "best", label: "Best matches", blurb: "Likely covers, samples and shared melodies first, then similar-sounding songs by related artists from the same scene."},
+  {key: "vibe", label: "Same vibe", blurb: "Songs from these matches that share this song's tempo and overall sound, one per artist."},
   {key: "melody", label: "Same melody", blurb: "Covers, interpolations and songs that reuse the tune."},
   {key: "samples", label: "Samples & loops", blurb: "Songs that may share a sample, a loop or a chopped-up section."},
   {key: "sonic", label: "Sounds like", blurb: "A similar overall sound: production, instruments and mood."},
@@ -310,10 +311,15 @@ function languageName(code) {
   return code?.toUpperCase() || "Unknown";
 }
 
+// Servers without Same vibe send no vibe list, so its tab is left out.
+const hasVibe = () => Array.isArray(results.vibe) && results.vibe.length > 0;
+
 function render(seed, d, refocus = false) {
   const live = d.query?.source === "live";
   const ms = d.cached ? null : d.timings_ms?.total;
+  const bpm = typeof d.query?.bpm === "number" ? Math.round(d.query.bpm) : 0;
   results = d.results || {};
+  if (tab === "vibe" && !hasVibe()) tab = "best";
   if (tab === "best" && !results.best) tab = "melody";
   language = {code: d.query?.language || "unknown", hidden: d.query?.hidden};
   showAllLanguages = d.query?.language_mode === "all";
@@ -322,6 +328,7 @@ function render(seed, d, refocus = false) {
       `<div class="cover">${seed.cover ? `<img alt="" src="${esc(seed.cover)}">` : ""}</div>` +
       `<div class="info"><h2>${esc(seed.title)}</h2><div class="art">${esc(seed.artist)}</div><div class="tags">` +
         `<span class="tag${live ? " live" : ""}">${live ? (d.cached ? "heard live earlier" : "heard live just now") : "in our library"}</span>` +
+        (bpm > 0 ? `<span class="tag">${bpm} BPM</span>` : "") +
         (ms ? `<span class="tag">matched in ${(ms / 1000).toFixed(1)} s</span>` : "") +
       `</div></div>` +
       `<div class="actions"><button class="pv" type="button" data-id="${seed.id}" aria-label="Preview ${esc(seed.title)}">▶</button>` +
@@ -329,7 +336,7 @@ function render(seed, d, refocus = false) {
         `<a class="btn" href="https://www.deezer.com/track/${seed.id}" target="_blank" rel="noopener">Deezer ↗</a></div>` +
     `</section>` +
     `<div class="tabs" role="tablist" aria-label="Kind of match">` +
-      CHANNELS.map(c => `<button class="tab" type="button" role="tab" id="tab-${c.key}" data-tab="${c.key}" aria-controls="list" aria-selected="${c.key === tab}" tabindex="${c.key === tab ? 0 : -1}">${c.label}</button>`).join("") +
+      CHANNELS.filter(c => c.key !== "vibe" || hasVibe()).map(c => `<button class="tab" type="button" role="tab" id="tab-${c.key}" data-tab="${c.key}" aria-controls="list" aria-selected="${c.key === tab}" tabindex="${c.key === tab ? 0 : -1}">${c.label}</button>`).join("") +
     `</div><div class="language-filter" id="language" role="status" hidden><span id="language-status"></span>` +
       `<button id="language-toggle" type="button" aria-pressed="false" hidden></button></div>` +
     `<p class="blurb" id="blurb"></p><ol id="list" role="tabpanel"></ol>`;
@@ -371,7 +378,7 @@ function renderList() {
   if (!list) return;
   list.dataset.tab = tab;
   $("#blurb").textContent = CHANNELS.find(c => c.key === tab).blurb;
-  renderLanguage(tab === "best");
+  renderLanguage(tab === "best" || tab === "vibe");
   list.setAttribute("aria-labelledby", `tab-${tab}`);
   const rows = (results[tab] || []).filter(x => ID_RE.test(String(x.id)));
   if (!rows.length) {
@@ -405,7 +412,8 @@ function renderList() {
   syncPlaying();
 }
 
-// Only Best matches are language-filtered; the channel lists, Sounds like included, stay unfiltered.
+// Only Best matches and Same vibe are language-filtered; the channel lists, Sounds like included, stay
+// unfiltered. The hidden count is Best's own, so Same vibe only says whether other languages are left out.
 function renderLanguage(shown) {
   const box = $("#language");
   if (!box) return;
@@ -414,6 +422,7 @@ function renderLanguage(shown) {
   const unknown = language.code === "unknown";
   const n = Math.max(0, Number(language.hidden) || 0);
   $("#language-status").textContent = unknown ? "Language uncertain; showing all languages." :
+    tab === "vibe" ? `${languageName(language.code)} · ${showAllLanguages ? "all languages" : "other languages left out"}` :
     `${languageName(language.code)} · ${n ? `${n} other-language ${n === 1 ? "match" : "matches"} ` +
       `${showAllLanguages ? "in" : "hidden from"} the top 20` : "no other-language matches in the top 20"}`;
   const button = $("#language-toggle");

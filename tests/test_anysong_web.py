@@ -58,16 +58,18 @@ def test_anysong_footer_links_evaluation_in_new_tab_safely():
     assert 'rel="noopener"' in link.group(2)
 
 
-def test_anysong_best_language_switch_leaves_channels_unfiltered():
+def test_anysong_language_switch_covers_best_and_same_vibe_only():
     assert "/api/anysong/similar?id=${id}&k=20&lang=${mode}" in PAGE
     assert 'const mode = showAllLanguages ? "all" : "same";' in PAGE
     assert 'id="language" role="status" hidden' in PAGE
     assert '<button id="language-toggle" type="button" aria-pressed="false" hidden>' in PAGE
     assert '"Show all languages"' in PAGE and '"Show same language"' in PAGE
     assert "d.query?.hidden" in PAGE
-    # Only Best is filtered; display:flex would otherwise beat the hidden attribute.
-    assert 'renderLanguage(tab === "best");' in PAGE
+    # Best and Same vibe are filtered; display:flex would otherwise beat the hidden attribute.
+    assert 'renderLanguage(tab === "best" || tab === "vibe");' in PAGE
     assert ".language-filter[hidden]{display:none}" in PAGE
+    # Same vibe has no hidden count of its own, so it only says what it leaves out.
+    assert '"all languages" : "other languages left out"' in PAGE
     # Sounds like keeps the sound channel and the tab key in shared links.
     assert '{key: "sonic", label: "Sounds like", blurb: "A similar overall sound' in PAGE
     assert "results.sounds" not in PAGE and "hidden_sounds" not in PAGE
@@ -79,3 +81,25 @@ def test_anysong_best_caption_puts_covers_first_then_the_scene():
         'melodies first, then similar-sounding songs by related artists from the same '
         'scene."}'
     ) in PAGE
+
+
+def test_anysong_same_vibe_tab_follows_best_and_needs_a_vibe_list():
+    keys = re.findall(r'\{key: "(\w+)", label: "([^"]+)"', PAGE)
+    assert keys == [
+        ("best", "Best matches"),
+        ("vibe", "Same vibe"),
+        ("melody", "Same melody"),
+        ("samples", "Samples & loops"),
+        ("sonic", "Sounds like"),
+    ]
+    assert (
+        '{key: "vibe", label: "Same vibe", blurb: "Songs from these matches that share '
+        "this song's tempo and overall sound, one per artist.\"}"
+    ) in PAGE
+    # Older servers send no vibe list: the tab is left out and its links open Best.
+    assert "const hasVibe = () => Array.isArray(results.vibe) && results.vibe.length > 0;" in PAGE
+    assert 'CHANNELS.filter(c => c.key !== "vibe" || hasVibe())' in PAGE
+    assert 'if (tab === "vibe" && !hasVibe()) tab = "best";' in PAGE
+    # The seed's tempo is a rounded tag, only when the server knows it.
+    assert 'typeof d.query?.bpm === "number" ? Math.round(d.query.bpm) : 0' in PAGE
+    assert '(bpm > 0 ? `<span class="tag">${bpm} BPM</span>` : "")' in PAGE

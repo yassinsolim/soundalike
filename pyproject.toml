@@ -52,6 +52,7 @@ anysong = [
     "muq==0.1.0",
     "laion-clap==1.1.5",
     "omegaconf>=2.3",
+    "beat-this==1.1.0",
 ]
 # Full-track MTG-Jamendo research extraction. PyAV is exact-pinned because
 # decoder behavior and bundled FFmpeg capabilities are part of the artifact

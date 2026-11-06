@@ -38,8 +38,9 @@ are automatic. Manual installs remain manual; use the current file and run
 
 ## Best matches and Sounds like
 
-Results come in two lists. Switch between them with the tabs, or with the arrow,
-Home, and End keys. Spotify's Back and Forward buttons keep the list you chose.
+Results come in up to three lists. Switch between them with the tabs, or with
+the arrow, Home, and End keys. Spotify's Back and Forward buttons keep the list
+you chose.
 
 - **Best matches** (the default) combines two rankings from Soundalike's
   any-song matcher: songs with the same melody (covers, interpolations, and
@@ -53,6 +54,11 @@ Home, and End keys. Spotify's Back and Forward buttons keep the list you chose.
   no language filter is applied. Tags say whether your song was **In our library**,
   **Heard live just now**, or **Heard live earlier**. If the matcher used a song
   with a different title or artist, the list names it.
+- **Same vibe** comes from the same hosted response as Best matches: songs from
+  those matches that share your song's tempo and overall sound, topped up with
+  similar-sounding songs, one per artist. It follows the same **Show all
+  languages** switch. The tab only appears when the hosted matcher sends this
+  list, and not with the local companion.
 - **Sounds like** is the original list: songs with the same overall sound (low
   end, dynamics, and tone) from the 272,853-track recommendation library. BPM,
   Spotify lyrics-language filtering, related-artist ordering, and the feedback

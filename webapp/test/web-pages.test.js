@@ -368,7 +368,7 @@ async function waitFor(predicate, timeoutMs = 1000) {
 
 const AMANGA_ID = 2206566227;
 
-function anysongBody({ lang = "same", language = "en", hidden = 2 } = {}) {
+function anysongBody({ lang = "same", language = "en", hidden = 2, vibe = true, bpm = 121.6 } = {}) {
   return {
     ok: true,
     query: {
@@ -380,6 +380,7 @@ function anysongBody({ lang = "same", language = "en", hidden = 2 } = {}) {
       language_mode: lang,
       hidden,
       scene: "on",
+      ...(vibe ? { bpm } : {}),
     },
     results: {
       best: [
@@ -388,6 +389,14 @@ function anysongBody({ lang = "same", language = "en", hidden = 2 } = {}) {
           ? { id: 12, title: "Ngiyakhuluma", artist: "Mduduzi", score: 0.1, ranks: { samples: 1 } }
           : { id: 13, title: "Sunshine", artist: "Robert Glasper", score: 0.1, ranks: { samples: 1 } },
       ],
+      ...(vibe ? {
+        vibe: [
+          { id: 71, title: "Deep Vibe", artist: "Black Coffee", score: 0.16667 },
+          lang === "all"
+            ? { id: 72, title: "Wena", artist: "Mduduzi", score: 0.14286 }
+            : { id: 73, title: "Kitchen Floor", artist: "Moodymann", score: 0.14286 },
+        ],
+      } : {}),
       melody: [{ id: 21, title: "Melody Match", artist: "Someone", score: 0.9 }],
       samples: [{ id: 31, title: "Sample Match", artist: "Someone Else", score: 0.8 }],
       sonic: [{ id: 41, title: "Gumbaya Chords", artist: "Mdu a.k.a TRP", score: 0.7 }],
@@ -501,7 +510,99 @@ test("any-song shows all languages without a switch for an uncertain seed", asyn
   assert.equal(page.document.querySelector("#language-toggle").hidden, true);
 });
 
-function mainBestBody({ lang = "same", language = "en", hidden = 1 } = {}) {
+const VIBE_CAPTION =
+  "Songs from these matches that share this song's tempo and overall sound, one per artist.";
+
+test("any-song Same vibe sits next to Best matches and opens from a share link", async () => {
+  const page = loadAnysong({ hash: `#id=${AMANGA_ID}&tab=vibe` });
+  await waitFor(() => page.document.querySelector("#list li.row"));
+
+  assert.deepEqual(page.texts(".tab"),
+    ["Best matches", "Same vibe", "Same melody", "Samples & loops", "Sounds like"]);
+  assert.equal(page.document.querySelector("#tab-vibe").getAttribute("aria-selected"), "true");
+  assert.equal(page.document.querySelector("#tab-best").getAttribute("aria-selected"), "false");
+  assert.equal(page.text("#blurb"), VIBE_CAPTION);
+  assert.deepEqual(page.texts("#list .t"), ["Deep Vibe", "Kitchen Floor"]);
+  assert.deepEqual(page.texts("#list .why"), []);
+  assert.deepEqual(page.texts(".seed .tag"), ["in our library", "122 BPM"]);
+  assert.equal(page.document.querySelector("#language").hidden, false);
+  assert.equal(page.text("#language-status"), "English · other languages left out");
+  const toggle = page.document.querySelector("#language-toggle");
+  assert.equal(toggle.hidden, false);
+  assert.equal(toggle.textContent, "Show all languages");
+  assert.equal(toggle.getAttribute("aria-pressed"), "false");
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=vibe`);
+  assert.equal(page.similar().length, 1);
+  assert.deepEqual(page.errors, []);
+
+  page.document.querySelector("#tab-best").click();
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=best`);
+  assert.equal(page.text("#blurb"), BEST_CAPTION);
+  page.document.querySelector("#tab-best").onkeydown({ key: "ArrowRight" });
+  assert.equal(page.document.querySelector("#tab-vibe").getAttribute("aria-selected"), "true");
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=vibe`);
+});
+
+test("any-song language switch on Same vibe is shared with Best matches", async () => {
+  const page = loadAnysong({ hash: `#id=${AMANGA_ID}&tab=vibe` });
+  await waitFor(() => page.document.querySelector("#list li.row"));
+
+  page.document.querySelector("#language-toggle").click();
+  await waitFor(() => page.text("#language-status") === "English · all languages");
+  assert.equal(page.similar()[1].get("lang"), "all");
+  const toggle = page.document.querySelector("#language-toggle");
+  assert.equal(toggle.textContent, "Show same language");
+  assert.equal(toggle.getAttribute("aria-pressed"), "true");
+  assert.equal(page.document.activeElement, toggle);
+  assert.equal(page.document.querySelector("#tab-vibe").getAttribute("aria-selected"), "true");
+  assert.deepEqual(page.texts("#list .t"), ["Deep Vibe", "Wena"]);
+
+  page.document.querySelector("#tab-best").click();
+  assert.equal(
+    page.text("#language-status"),
+    "English · 2 other-language matches in the top 20",
+  );
+  assert.equal(page.document.querySelector("#language-toggle").getAttribute("aria-pressed"), "true");
+  assert.deepEqual(page.texts("#list .t"), ["Bar A Thym", "Ngiyakhuluma"]);
+  assert.equal(page.similar().length, 2);
+});
+
+test("any-song hides Same vibe and the tempo when the server has neither", async () => {
+  const page = loadAnysong({
+    hash: `#id=${AMANGA_ID}&tab=vibe`,
+    body: ({ lang }) => anysongBody({ lang, vibe: false }),
+  });
+  await waitFor(() => page.document.querySelector("#list li.row"));
+
+  assert.ok(!page.document.querySelector("#tab-vibe"), "Same vibe tab is left out");
+  assert.deepEqual(page.texts(".tab"),
+    ["Best matches", "Same melody", "Samples & loops", "Sounds like"]);
+  assert.equal(page.document.querySelector("#tab-best").getAttribute("aria-selected"), "true");
+  assert.equal(page.text("#blurb"), BEST_CAPTION);
+  assert.deepEqual(page.texts(".seed .tag"), ["in our library"]);
+  assert.equal(
+    page.text("#language-status"),
+    "English · 2 other-language matches hidden from the top 20",
+  );
+  page.document.querySelector("#tab-best").onkeydown({ key: "ArrowRight" });
+  assert.equal(page.document.querySelector("#tab-melody").getAttribute("aria-selected"), "true");
+  assert.deepEqual(page.errors, []);
+});
+
+test("any-song Same vibe shows all languages without a switch for an uncertain seed", async () => {
+  const page = loadAnysong({
+    hash: `#id=${AMANGA_ID}&tab=vibe`,
+    body: ({ lang }) => anysongBody({ lang, language: "unknown", hidden: 0, bpm: null }),
+  });
+  await waitFor(() => page.document.querySelector("#list li.row"));
+
+  assert.equal(page.document.querySelector("#tab-vibe").getAttribute("aria-selected"), "true");
+  assert.equal(page.text("#language-status"), "Language uncertain; showing all languages.");
+  assert.equal(page.document.querySelector("#language-toggle").hidden, true);
+  assert.deepEqual(page.texts(".seed .tag"), ["in our library"]);
+});
+
+function mainBestBody({ lang = "same", language = "en", hidden = 1, vibe = true } = {}) {
   return {
     ok: true,
     query: {
@@ -513,6 +614,7 @@ function mainBestBody({ lang = "same", language = "en", hidden = 1 } = {}) {
       language_mode: lang,
       hidden,
       scene: "on",
+      ...(vibe ? { bpm: 140.2 } : {}),
     },
     results: {
       best: [
@@ -521,6 +623,14 @@ function mainBestBody({ lang = "same", language = "en", hidden = 1 } = {}) {
           ? { id: 52, title: "Airforce Negras", artist: "Spiff TV", score: 0.1, ranks: { samples: 2 } }
           : { id: 53, title: "AHHH HA", artist: "Lil Durk", score: 0.1, ranks: { samples: 1 } },
       ],
+      ...(vibe ? {
+        vibe: [
+          { id: 81, title: "Kept Going", artist: "Unknown T", score: 0.16667 },
+          lang === "all"
+            ? { id: 82, title: "Booba Vibe", artist: "Booba", score: 0.14286 }
+            : { id: 83, title: "Ain't It Different", artist: "Headie One", score: 0.14286 },
+        ],
+      } : {}),
       melody: [],
       samples: [],
       sonic: [],
@@ -621,6 +731,7 @@ test("main page falls back to Sounds like without the switch when Best fails", a
   await page.context.pick(PICK);
 
   assert.equal(page.document.querySelector("#tab-sounds").getAttribute("aria-selected"), "true");
+  assert.equal(page.document.querySelector("#tab-vibe").hidden, true);
   assert.equal(page.document.querySelector("#language").hidden, true);
   assert.deepEqual(page.texts("#matches .t"), ["Library Match"]);
 });
@@ -633,4 +744,111 @@ test("main page shows all languages without a switch for an uncertain seed", asy
 
   assert.equal(page.text("#language-status"), "Language uncertain; showing all languages.");
   assert.equal(page.document.querySelector("#language-toggle").hidden, true);
+
+  page.document.querySelector("#tab-vibe").click();
+  assert.equal(page.text("#language-status"), "Language uncertain; showing all languages.");
+  assert.equal(page.document.querySelector("#language-toggle").hidden, true);
+});
+
+test("main page offers Same vibe next to Best matches from the same response", async () => {
+  const page = loadMain();
+  await page.context.pick(PICK);
+
+  assert.deepEqual(page.texts("#out .tab"), ["Best matches", "Same vibe", "Sounds like"]);
+  const vibeTab = page.document.querySelector("#tab-vibe");
+  assert.equal(vibeTab.hidden, false);
+  assert.equal(vibeTab.getAttribute("aria-selected"), "false");
+  assert.deepEqual(page.texts("#seedtags .tag"), ["in our library"]);
+
+  vibeTab.click();
+  assert.equal(vibeTab.getAttribute("aria-selected"), "true");
+  assert.equal(page.document.querySelector("#matches").getAttribute("aria-labelledby"), "tab-vibe");
+  assert.equal(page.text("#matchblurb"), VIBE_CAPTION);
+  assert.deepEqual(page.texts("#matches .t"), ["Kept Going", "Ain't It Different"]);
+  assert.deepEqual(page.texts("#matches .why"), []);
+  assert.deepEqual(page.texts("#seedtags .tag"), ["in our library", "140 BPM"]);
+  assert.equal(page.document.querySelector("#language").hidden, false);
+  assert.equal(page.text("#language-status"), "English · other languages left out");
+  const toggle = page.document.querySelector("#language-toggle");
+  assert.equal(toggle.hidden, false);
+  assert.equal(toggle.textContent, "Show all languages");
+  assert.equal(
+    page.text("#foot"),
+    "Same vibe comes from the same matcher as Best matches. ▶ = 30-second preview.",
+  );
+  assert.equal(page.similar().length, 1);
+  assert.deepEqual(page.errors, []);
+
+  vibeTab.onkeydown({ key: "ArrowRight", preventDefault() {} });
+  assert.equal(page.document.querySelector("#tab-sounds").getAttribute("aria-selected"), "true");
+  assert.equal(page.document.querySelector("#language").hidden, true);
+  page.document.querySelector("#tab-sounds").onkeydown({ key: "ArrowLeft", preventDefault() {} });
+  assert.equal(vibeTab.getAttribute("aria-selected"), "true");
+});
+
+test("main page language switch on Same vibe reloads the shared response", async () => {
+  const page = loadMain();
+  await page.context.pick(PICK);
+  page.document.querySelector("#tab-vibe").click();
+  const toggle = page.document.querySelector("#language-toggle");
+  toggle.focus();
+  toggle.click();
+
+  assert.equal(toggle.textContent, "Show same language");
+  assert.match(page.text("#matches"), /matching…/);
+  await waitFor(() => page.text("#language-status") === "English · all languages");
+  assert.equal(page.similar()[1].get("lang"), "all");
+  assert.equal(toggle.getAttribute("aria-pressed"), "true");
+  assert.equal(page.document.activeElement, toggle);
+  assert.equal(page.document.querySelector("#tab-vibe").getAttribute("aria-selected"), "true");
+  assert.deepEqual(page.texts("#matches .t"), ["Kept Going", "Booba Vibe"]);
+
+  page.document.querySelector("#tab-best").click();
+  assert.equal(
+    page.text("#language-status"),
+    "English · 1 other-language match in the top 20",
+  );
+  assert.equal(toggle.getAttribute("aria-pressed"), "true");
+  assert.deepEqual(page.texts("#matches .t"), ["n.h.i.e.", "Airforce Negras"]);
+  assert.equal(page.similar().length, 2);
+  assert.equal(
+    page.requests.filter((url) => url.includes("/api/spicetify_recommend")).length,
+    1,
+  );
+});
+
+test("main page hides Same vibe when the server sends no vibe list", async () => {
+  const page = loadMain({
+    best: (params) => json(200, mainBestBody({ lang: params.get("lang"), vibe: false })),
+  });
+  await page.context.pick(PICK);
+
+  assert.equal(page.document.querySelector("#tab-vibe").hidden, true);
+  assert.equal(page.document.querySelector("#tab-best").getAttribute("aria-selected"), "true");
+  assert.equal(
+    page.text("#language-status"),
+    "English · 1 other-language match hidden from the top 20",
+  );
+  page.document.querySelector("#tab-best").onkeydown({ key: "ArrowRight", preventDefault() {} });
+  assert.equal(page.document.querySelector("#tab-sounds").getAttribute("aria-selected"), "true");
+  page.document.querySelector("#tab-sounds").onkeydown({ key: "ArrowLeft", preventDefault() {} });
+  assert.equal(page.document.querySelector("#tab-best").getAttribute("aria-selected"), "true");
+  assert.deepEqual(page.errors, []);
+});
+
+test("main page returns to Best matches when a reload brings no Same vibe list", async () => {
+  const page = loadMain({
+    best: (params) => {
+      const lang = params.get("lang");
+      return json(200, mainBestBody({ lang, vibe: lang !== "all" }));
+    },
+  });
+  await page.context.pick(PICK);
+  page.document.querySelector("#tab-vibe").click();
+  page.document.querySelector("#language-toggle").click();
+
+  await waitFor(() => page.text("#language-status") === "English · 1 other-language match in the top 20");
+  assert.equal(page.document.querySelector("#tab-vibe").hidden, true);
+  assert.equal(page.document.querySelector("#tab-best").getAttribute("aria-selected"), "true");
+  assert.deepEqual(page.texts("#matches .t"), ["n.h.i.e.", "Airforce Negras"]);
 });
