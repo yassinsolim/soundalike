@@ -11,11 +11,13 @@ like** tab keeps the original list of songs with the same overall sound.
 ## Use it
 
 1. Install **Soundalike** from Marketplace.
-2. Right-click any track in Spotify.
+2. Right-click any track in Spotify, including the song playing in the player
+   bar.
 3. Select **Find soundalikes**. Results open on **Best matches**; select
    **Sounds like** to switch lists.
-4. Double-click a result or use its left-side play button. Right-click it for
-   Spotify's normal track actions.
+4. Double-click a result or use its left-side play button. The list then plays
+   on in the order shown, like a playlist that is never saved. Right-click a
+   result for Spotify's normal track actions.
 
 That is all normal use requires. There is no Soundalike account, Python
 installation, terminal command, or local server to configure. The extension
@@ -111,6 +113,16 @@ from an earlier search shows without asking.
 - The play button on a verified result plays that exact Spotify track
   immediately without closing or leaving the page. Double-clicking anywhere
   on the row does the same; a single click does not interrupt playback.
+- Playback continues down the list you are viewing, in the order shown, like
+  Spotify's song radio: the next row plays next, and Previous goes back up the
+  list. Hidden rows and rows without a verified Spotify track are skipped, and
+  no playlist is created. Rows still being matched to Spotify when you press
+  play join the queue, in order, once the list reaches its last song. The row
+  of the song that is playing is highlighted.
+- **Find soundalikes** is also in the menu of the song in the player bar.
+  Spicetify 2.46.4 and earlier pass that menu no song, so extension items are
+  normally missing there; Soundalike adds its item itself and uses the song
+  that is playing.
 - Right-clicking a result opens Spotify's native menu with **Find soundalikes**
   again, plus playlists, queueing, song radio, artist and album navigation,
   credits, and sharing.

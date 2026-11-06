@@ -37,11 +37,14 @@ This is the easiest way to use Soundalike regularly.
 2. Open Marketplace in Spotify.
 3. Search for **Soundalike** under Extensions and install it.
 4. Restart Spotify if Marketplace asks you to.
-5. Right-click a track and select **Find soundalikes**.
+5. Right-click a track, including the one playing in the player bar, and select
+   **Find soundalikes**.
 
 Results open on their own Spotify page, starting with **Best matches**; the
-**Sounds like** tab has the original list. You can play a result, open its
-album, use Spotify's normal track menu, or search for another set of matches.
+**Sounds like** tab has the original list. You can play a result, and the
+songs after it follow in the order shown without creating a playlist. You can
+also open a result's album, use Spotify's normal track menu, or search for
+another set of matches.
 
 Marketplace installs receive signed runtime updates when Spotify starts. The
 loader verifies the release signature, immutable commit URL, SHA-256 hash, and
