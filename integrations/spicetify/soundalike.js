@@ -4,13 +4,14 @@
 // lists: "Best matches" (the hosted any-song ranking, shown by default),
 // "Same vibe" (from the same hosted response; not shown with the local
 // companion) and "Sounds like" (the optional local soundalike server,
-// otherwise the hosted library).
+// otherwise the hosted library). Playing a result plays the shown list on in
+// order, like a playlist that is never saved.
 //
 // Install (requires a patchable desktop Spotify app): follow this directory's
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.4.0";
+  const RUNTIME_SEMANTIC_VERSION = "2.5.0";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -48,6 +49,11 @@
   const SPOTIFY_TRACK_SEARCH_HASH =
     "59ee4a659c32e9ad894a71308207594a65ba67bb6b632b183abe97303a51fa55";
   const RESULTS_PATH = "/soundalike";
+  // Spotify links this app URI to RESULTS_PATH. Results play as one context
+  // under it, so the next song is the next row.
+  const RESULTS_CONTEXT_URI = "spotify:app:soundalike";
+  // Spotify drops songs queued just as a song starts playing.
+  const LATE_QUEUE_DELAY_MS = 1500;
   const BEST_MATCHES_ENDPOINT = `${FALLBACK_HOSTED_SERVER}/api/anysong/similar`;
   const BEST_MATCHES_POLICY = "anysong-best-rrf-language-vibe-v1";
   const BEST_MATCHES_TIMEOUT_MS = 30000;
@@ -94,6 +100,8 @@
   let warnedAboutNativeMenus = false;
   let resultsState = null;
   let activePage = null;
+  // Rows matched after their list started playing: { last, uris }.
+  let lateMatches = null;
   let routeMountTimer;
   let cacheSaveTimer;
   let searchSequence = 0;
@@ -1636,8 +1644,107 @@
     return Number.isFinite(bpm) && bpm > 0 ? String(Math.round(bpm)) : "\u2014";
   }
 
+  function playingTrackUri() {
+    const data = Spicetify.Player?.data;
+    return data?.item?.uri || data?.track?.uri || null;
+  }
+
+  // Like Spotify's own lists, the page marks the song that is playing.
+  function markPlayingRows(page = activePage?.view) {
+    const uri = playingTrackUri();
+    page?.querySelectorAll?.(".sa-row").forEach((row) => {
+      row.classList?.toggle?.("sa-row-playing", Boolean(uri) && row.dataset?.uri === uri);
+    });
+  }
+
+  // The Spotify songs the page shows, in its order, each once.
+  function shownResultUris(page = activePage?.view) {
+    const rows = Array.from(page?.querySelectorAll?.(".sa-row") || [])
+      .map((row, position) => ({
+        uri: row.dataset?.uri,
+        hidden: row.hidden,
+        order: Number(row.style?.order) || Number(row.dataset?.index) + 1 || 0,
+        position,
+      }))
+      .filter((row) => row.uri && !row.hidden);
+    rows.sort((left, right) => left.order - right.order || left.position - right.position);
+    return [...new Set(rows.map((row) => row.uri))];
+  }
+
+  // Plays the shown songs from this one as an unsaved list, so the next row
+  // plays next, the way Spotify's song radio does. False when it can't.
+  async function playShownResults(uri) {
+    const player = Spicetify.Platform?.PlayerAPI;
+    const uris = shownResultUris();
+    const index = uris.indexOf(uri);
+    if (typeof player?.play !== "function" || index < 0) return false;
+    lateMatches = null;
+    await player.play(
+      {
+        uri: RESULTS_CONTEXT_URI,
+        pages: [{ items: uris.map((item) => ({ uri: item })) }],
+      },
+      { featureIdentifier: "soundalike" },
+      { skipTo: { index, uri } }
+    );
+    followLateMatches(uris);
+    return true;
+  }
+
+  // A started list can't grow, so rows matched to a Spotify song after it
+  // started are queued, in page order, once the list's last song plays.
+  function followLateMatches(played) {
+    const page = activePage;
+    if (!page?.settled) return;
+    const late = { last: played.at(-1), uris: [] };
+    lateMatches = late;
+    page.settled.then(() => {
+      if (lateMatches !== late) return;
+      late.uris = shownResultUris(page.view).filter((uri) => !played.includes(uri));
+      if (late.uris.length) void queueLateMatches();
+      else lateMatches = null;
+    });
+  }
+
+  function playingLastLateSong(late, player) {
+    const state = player.getState?.();
+    return state?.context?.uri === RESULTS_CONTEXT_URI && state.item?.uri === late.last;
+  }
+
+  // Waits for the list's last song to settle in, queues the late songs, and
+  // queues them again once if Spotify dropped them.
+  async function queueLateMatches() {
+    const late = lateMatches;
+    const player = Spicetify.Platform?.PlayerAPI;
+    if (!late?.uris.length || late.queueing || typeof player?.addToQueue !== "function") return;
+    if (!playingLastLateSong(late, player)) return;
+    late.queueing = true;
+    try {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        await delay(LATE_QUEUE_DELAY_MS);
+        if (lateMatches !== late || !playingLastLateSong(late, player)) return;
+        const queued = new Set((player.getQueue?.()?.queued || []).map((item) => item.uri));
+        if (late.uris.every((uri) => queued.has(uri))) break;
+        await player.addToQueue(late.uris.map((uri) => ({ uri })));
+      }
+      lateMatches = null;
+    } catch (error) {
+      console.warn("[soundalike] Songs matched after the list started could not be queued.", error);
+    } finally {
+      late.queueing = false;
+    }
+  }
+
   async function activateResult(result, track) {
     if (track?.uri && typeof Spicetify.Player?.playUri === "function") {
+      try {
+        if (await playShownResults(track.uri)) return;
+      } catch (error) {
+        console.warn(
+          "[soundalike] Spotify would not play the results as a list; playing the song alone.",
+          error
+        );
+      }
       try {
         await Spicetify.Player.playUri(track.uri);
       } catch (error) {
@@ -1664,6 +1771,10 @@
     const matchNote = result.matchNote ? ` · ${result.matchNote}` : "";
     row.dataset.q = `${result.title} ${result.artist}`;
     if (track?.uri) row.dataset.uri = track.uri;
+    row.classList?.toggle?.(
+      "sa-row-playing",
+      Boolean(track?.uri) && track.uri === playingTrackUri()
+    );
 
     const React = Spicetify.React;
     if (!(React?.createElement && Spicetify.ReactDOM?.createRoot)) {
@@ -2313,6 +2424,7 @@
         .sa-row-content:hover .sa-play,.sa-play:focus-visible{display:grid;place-items:center}
         .sa-play:hover,.sa-play:focus-visible{background:var(--spice-button,#1ed760);color:#000;outline:none}
         .sa-row-content:hover .sa-title,.sa-row-content:focus-visible .sa-title{color:var(--spice-text,#fff)}
+        .sa-row.sa-row-playing .sa-title,.sa-row.sa-row-playing .sa-rank{color:var(--spice-button,#1ed760)}
         .sa-menu-loading{padding:8px 12px;color:var(--spice-subtext,#b3b3b3);white-space:nowrap}
         .sa-feedback{max-width:680px;margin:24px 0 0;padding:16px;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:rgba(255,255,255,.04)}
         .sa-feedback[hidden],.sa-feedback-details[hidden],.sa-feedback-question[hidden],.sa-feedback-actions[hidden],.sa-feedback-preference[hidden]{display:none}
@@ -2497,7 +2609,7 @@
       if (state.best.status !== "ready") return;
       const vibe = view === "vibe";
       const label = vibe ? "Same vibe" : "Best matches";
-      hydrateBestRows(
+      activePage.settled = hydrateBestRows(
         vibe ? state.best.data.vibe : state.best.data.results,
         page,
         vibe ? state.best.vibeTracks : state.best.tracks,
@@ -2509,7 +2621,7 @@
       return;
     }
     if (state.sounds.status !== "ready") return;
-    hydrateSpotifyRows(
+    activePage.settled = hydrateSpotifyRows(
       state.sounds.data.results,
       page,
       state.sounds.tracks,
@@ -2587,6 +2699,40 @@
     );
   }
 
+  // Spotify's now-playing song menus (the player bar title) carry only
+  // canToggleCanvas, and Spicetify up to 2.46.4 passes them no song, so the
+  // main item can't appear there (spicetify/cli#4039). These menus are always
+  // about the song that is playing. Once Spicetify passes the song, the main
+  // item covers them and this one stays out.
+  function nowPlayingMenuTrack(props) {
+    if (!props || typeof props !== "object" || !Object.hasOwn(props, "canToggleCanvas")) {
+      return null;
+    }
+    if (Spicetify.ContextMenuV2.parseProps(props)) return null;
+    const uri = playingTrackUri();
+    return typeof uri === "string" && uri.startsWith("spotify:track:") ? uri : null;
+  }
+
+  function registerNowPlayingMenuItem() {
+    const menus = Spicetify.ContextMenuV2;
+    if (typeof menus?.Item !== "function" || typeof menus.parseProps !== "function") return;
+    try {
+      window.__soundalikeNowPlayingMenuItem = new menus.Item({
+        children: "Find soundalikes",
+        leadingIcon: "enhance",
+        shouldAdd: (props) => Boolean(nowPlayingMenuTrack(props)),
+        // Spicetify hands the clicked menu's context ({ props, ... }).
+        onClick: (context) => {
+          const uri = nowPlayingMenuTrack(context?.props);
+          if (uri) findSoundalikes([uri]);
+        },
+      });
+      window.__soundalikeNowPlayingMenuItem.register();
+    } catch (error) {
+      console.warn("[soundalike] Find soundalikes could not join the player bar menu.", error);
+    }
+  }
+
   if (menuBlockedBySpicetify()) {
     // Leave Spotify's own menu working and explain the fix instead.
     Spicetify.showNotification(
@@ -2606,6 +2752,10 @@
   }
 
   Spicetify.Platform.History.listen(onHistoryChange);
+  Spicetify.Player?.addEventListener?.("songchange", () => {
+    markPlayingRows();
+    void queueLateMatches();
+  });
 
   window.__soundalikeContextMenuItem = new Spicetify.ContextMenu.Item(
     "Find soundalikes",
@@ -2614,6 +2764,7 @@
     "enhance" // Spicetify built-in icon
   );
   window.__soundalikeContextMenuItem.register();
+  registerNowPlayingMenuItem();
   void localServerReady();
 
   function prewarmFallbackRecommender() {
