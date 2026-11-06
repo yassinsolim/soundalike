@@ -148,12 +148,19 @@
 
   const bestMatchesTimeoutMs = 30000;
   const bestMatchesRetries = 2;
+  // Best matches and Same vibe come from one any-song response.
   const resultTabs = [
     {
       key: "best",
       label: "Best matches",
       blurb:
         "Likely covers, samples and shared melodies first, then similar-sounding songs by related artists from the same scene.",
+    },
+    {
+      key: "vibe",
+      label: "Same vibe",
+      blurb:
+        "Songs from these matches that share this song's tempo and overall sound, one per artist.",
     },
     {
       key: "sounds",
@@ -250,8 +257,8 @@
     return "Best matches are unavailable right now. Try again in a moment.";
   }
 
-  function bestRows(body) {
-    const rows = ((body.results || {}).best || []).filter(x =>
+  function anysongRows(body, list) {
+    const rows = ((body.results || {})[list] || []).filter(x =>
       Number.isInteger(x.id)
     );
     const scores = rows.map(x => Number(x.score) || 0);
@@ -272,7 +279,7 @@
         title,
         artist,
         why,
-        // RRF scores are only comparable within one list, so bars are relative to it.
+        // Scores are only comparable within one list, so bars are relative to it.
         width:
           high > low
             ? Math.round(25 + (75 * (scores[index] - low)) / (high - low))
@@ -305,16 +312,20 @@
     `<div class="bar"><i style="width:${x.width}%"></i></div>` +
     `<a class="play" href="${esc(x.url)}" target="_blank" rel="noopener">Open in Spotify ▸</a></li>`;
 
+  const entryFor = picked => picked[picked.tab === "vibe" ? "best" : picked.tab];
+
   function seedTags(picked) {
-    const entry = picked[picked.tab];
+    const entry = entryFor(picked);
     if (entry.status !== "ready") return [];
-    if (picked.tab === "best") {
+    if (picked.tab !== "sounds") {
       const query = entry.body.query || {};
       const total = (entry.body.timings_ms || {}).total;
+      const bpm = typeof query.bpm === "number" ? Math.round(query.bpm) : 0;
       return [
         query.source !== "live"
           ? "in our library"
           : entry.body.cached ? "heard live earlier" : "heard live just now",
+        picked.tab === "vibe" && bpm > 0 ? `${bpm} BPM` : "",
         !entry.body.cached && total ? `matched in ${(total / 1000).toFixed(1)} s` : "",
       ].filter(Boolean);
     }
@@ -324,7 +335,7 @@
 
   function blurbText(picked) {
     const tab = resultTabs.find(candidate => candidate.key === picked.tab);
-    const entry = picked[picked.tab];
+    const entry = entryFor(picked);
     const seed = entry.status === "ready" && entry.body.seed;
     if (picked.tab === "sounds" && seed && songKey(seed) !== songKey(picked.seed)) {
       return `${tab.blurb} Based on “${seed.title}” by ${seed.artist}, the closest song in that library.`;
@@ -333,9 +344,12 @@
   }
 
   function footText(picked) {
-    const entry = picked[picked.tab];
+    const entry = entryFor(picked);
     if (picked.tab === "best") {
       return "Best matches combine the melody and samples rankings. ▶ = 30-second preview.";
+    }
+    if (picked.tab === "vibe") {
+      return "Same vibe comes from the same matcher as Best matches. ▶ = 30-second preview.";
     }
     const size = entry.status === "ready" && Number(entry.body.library_size);
     return size
@@ -351,13 +365,15 @@
     }
   }
 
-  // Best matches hide confidently other-language songs unless the listener
-  // asks for all languages. Sounds like is not filtered.
+  // Best matches and Same vibe hide confidently other-language songs unless
+  // the listener asks for all languages. Sounds like is not filtered. The
+  // hidden count is Best's own, so Same vibe only says what it leaves out.
   function renderLanguage(picked) {
     const box = document.querySelector("#language");
     const button = document.querySelector("#language-toggle");
     if (!box || !button) return;
-    box.hidden = picked.tab !== "best" || picked.best.status === "failed";
+    box.hidden =
+      (picked.tab !== "best" && picked.tab !== "vibe") || picked.best.status === "failed";
     if (box.hidden) return;
     if (picked.best.status !== "ready") {
       button.setAttribute("aria-pressed", String(picked.lang === "all"));
@@ -371,13 +387,15 @@
     document.querySelector("#language-status").textContent =
       code === "unknown"
         ? "Language uncertain; showing all languages."
-        : `${languageName(code)} · ${
-            hidden
-              ? `${hidden} other-language ${hidden === 1 ? "match" : "matches"} ${
-                  all ? "in" : "hidden from"
-                } the top 20`
-              : "no other-language matches in the top 20"
-          }`;
+        : picked.tab === "vibe"
+          ? `${languageName(code)} · ${all ? "all languages" : "other languages left out"}`
+          : `${languageName(code)} · ${
+              hidden
+                ? `${hidden} other-language ${hidden === 1 ? "match" : "matches"} ${
+                    all ? "in" : "hidden from"
+                  } the top 20`
+                : "no other-language matches in the top 20"
+            }`;
     button.hidden = code === "unknown";
     button.setAttribute("aria-pressed", String(all));
     button.textContent = all ? "Show same language" : "Show all languages";
@@ -422,13 +440,40 @@
     save.disabled = !count;
   }
 
+  function markTabs(picked) {
+    document.querySelectorAll("#out .tab").forEach(button => {
+      const selected = button.dataset.tab === picked.tab;
+      button.setAttribute("aria-selected", String(selected));
+      button.tabIndex = selected ? 0 : -1;
+    });
+  }
+
+  // Servers without Same vibe send no vibe list, so its tab stays hidden. A
+  // language switch keeps the tab while the list reloads.
+  function syncVibeTab(picked) {
+    if (picked.best.status === "ready") {
+      const vibe = (picked.best.body.results || {}).vibe;
+      picked.hasVibe = Array.isArray(vibe) && vibe.length > 0;
+    }
+    const button = document.querySelector("#tab-vibe");
+    if (button) button.hidden = !picked.hasVibe;
+    if (picked.tab === "vibe" && !picked.hasVibe) {
+      picked.tab = "best";
+      markTabs(picked);
+    }
+  }
+
   function renderTab(picked) {
     const list = document.querySelector("#matches");
     if (shownPick !== picked || !list) return;
-    const entry = picked[picked.tab];
+    syncVibeTab(picked);
+    const entry = entryFor(picked);
     let rows = [];
     if (entry.status === "ready") {
-      rows = picked.tab === "best" ? bestRows(entry.body) : soundsRows(entry.body);
+      rows =
+        picked.tab === "sounds"
+          ? soundsRows(entry.body)
+          : anysongRows(entry.body, picked.tab);
     }
     lastResults = rows;
     list.dataset.tab = picked.tab;
@@ -442,7 +487,7 @@
       list.innerHTML = '<li class="state"><span class="spin"></span> matching…</li>';
     } else if (entry.status === "failed") {
       const message =
-        picked.tab === "best" ? bestErrorText(entry.error) : entry.error.message;
+        picked.tab === "sounds" ? entry.error.message : bestErrorText(entry.error);
       list.innerHTML = `<li class="state err">${esc(message)}</li>`;
     } else if (!rows.length) {
       list.innerHTML = '<li class="state">No matches in this list.</li>';
@@ -462,11 +507,7 @@
       return;
     }
     picked.tab = key;
-    document.querySelectorAll("#out .tab").forEach(button => {
-      const selected = button.dataset.tab === key;
-      button.setAttribute("aria-selected", String(selected));
-      button.tabIndex = selected ? 0 : -1;
-    });
+    markTabs(picked);
     renderTab(picked);
   }
 
@@ -495,13 +536,14 @@
     document.querySelector("#share").onclick = shareLink;
     document.querySelector("#language-toggle").onclick = () => toggleLanguage(picked);
     const tabs = [...out.querySelectorAll(".tab")];
-    tabs.forEach((button, index) => {
+    tabs.forEach(button => {
       button.onclick = () => selectTab(picked, button.dataset.tab);
       button.onkeydown = event => {
         if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
         event.preventDefault();
-        const step = event.key === "ArrowRight" ? 1 : tabs.length - 1;
-        const next = tabs[(index + step) % tabs.length];
+        const shown = tabs.filter(tab => !tab.hidden);
+        const step = event.key === "ArrowRight" ? 1 : shown.length - 1;
+        const next = shown[(shown.indexOf(button) + step) % shown.length];
         next.focus();
         selectTab(picked, next.dataset.tab);
       };
@@ -537,6 +579,7 @@
       seed: null,
       lang: "same",
       languageSequence: 0,
+      hasVibe: false,
       best: { status: "pending" },
       sounds: { status: "pending" },
     };

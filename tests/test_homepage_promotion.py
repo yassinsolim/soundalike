@@ -101,7 +101,7 @@ def test_homepage_search_accessibility_and_wiring_remain_present():
     assert 'fetch("/api/recommend"' in HTML
 
 
-def test_homepage_best_language_switch_is_accessible_and_best_only():
+def test_homepage_language_switch_is_accessible_and_covers_best_and_same_vibe():
     script = (ROOT / "webapp" / "search.js").read_text(encoding="utf-8")
     assert ".language-filter[hidden]{display:none}" in HTML
     assert re.search(r'k: "20",\s*lang,', script)
@@ -110,8 +110,27 @@ def test_homepage_best_language_switch_is_accessible_and_best_only():
     assert (
         '<button id="language-toggle" type="button" aria-pressed="false" hidden>'
     ) in script
-    assert 'box.hidden = picked.tab !== "best" || picked.best.status === "failed";' in script
+    assert re.search(
+        r'box\.hidden =\s*\(picked\.tab !== "best" && picked\.tab !== "vibe"\) \|\| '
+        r'picked\.best\.status === "failed";',
+        script,
+    )
+    assert '"all languages" : "other languages left out"' in script
     assert "results.sounds" not in script and "hidden_sounds" not in script
+
+
+def test_homepage_same_vibe_tab_reads_the_best_matches_response():
+    script = (ROOT / "webapp" / "search.js").read_text(encoding="utf-8")
+    keys = re.findall(r'key: "(\w+)",\s*label: "([^"]+)"', script)
+    assert keys == [("best", "Best matches"), ("vibe", "Same vibe"), ("sounds", "Sounds like")]
+    assert (
+        "\"Songs from these matches that share this song's tempo and overall sound, "
+        'one per artist."'
+    ) in script
+    assert 'picked[picked.tab === "vibe" ? "best" : picked.tab]' in script
+    # Servers without Same vibe send no vibe list; the tab stays hidden.
+    assert "picked.hasVibe = Array.isArray(vibe) && vibe.length > 0;" in script
+    assert "if (button) button.hidden = !picked.hasVibe;" in script
 
 
 def test_marketplace_description_pins_the_immutable_update_bootstrap():
