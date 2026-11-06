@@ -148,7 +148,8 @@ def test_unseen_seed_tempo_comes_from_the_tracker(tmp_path, monkeypatch):
     monkeypatch.setattr(api, "decode22", lambda path: np.zeros(22050, np.float32))
     svc = api.AnySong(LiveEngine(raw, {2: 0.1, 5: 0.6}), LiveDeezer(tmp_path), META, tempo=table, tracker=Tracker())
     r = svc.similar(99, k=10)
-    assert r["query"]["source"] == "live" and r["query"]["bpm"] == 60.0 and "tempo" in r["timings_ms"]
+    assert r["query"]["source"] == "live" and r["query"]["bpm"] == 60.0
+    assert {"decode_tempo", "tempo"} <= r["timings_ms"].keys()
     assert [x["id"] for x in r["results"]["vibe"]] == [5, 7, 2]
     monkeypatch.setattr(api, "decode22", lambda path: (_ for _ in ()).throw(RuntimeError("bad")))
     svc = api.AnySong(LiveEngine(raw, {2: 0.1, 5: 0.6}), LiveDeezer(tmp_path), META, tempo=table, tracker=Tracker())

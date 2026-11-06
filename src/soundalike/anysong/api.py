@@ -458,10 +458,12 @@ class AnySong:
         try:
             clips, t_decode = self.engine.decode(path)
             if self.vibe and self.tracker is not None:
+                t = time.perf_counter()
                 try:
                     clip22 = decode22(path)
                 except Exception:  # noqa: BLE001 - an unknown seed tempo lets every song pass the tempo gate
                     clip22 = None
+                timings["decode_tempo"] = (time.perf_counter() - t) * 1000
         except Exception as exc:
             raise ApiError(422, "could not decode the preview") from exc
         finally:
