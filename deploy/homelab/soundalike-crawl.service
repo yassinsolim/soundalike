@@ -11,9 +11,12 @@ Environment=PYTHONUNBUFFERED=1
 # The crawler runs from its own copy of the package so API deploys never change it mid-crawl.
 Environment=PYTHONPATH=/opt/soundalike/crawl-src
 # Resumable: a restart continues from the SQLite state; the run exits 0 once --target new songs are saved.
+# The state database lives on the NVMe rootfs (StateDirectory): its small random writes would otherwise compete with
+# preview writes and reads on the bulk HDD. Previews and exports stay on /data.
 ExecStart=/opt/soundalike/venv/bin/python -m soundalike.anysong.crawl run \
     --scene /opt/soundalike/index/scene.npz --meta /opt/soundalike/index/catalog_meta.npz \
-    --db /data/crawl/crawl.sqlite --previews /data/previews --target 730000
+    --db /var/lib/soundalike-crawl/crawl.sqlite --previews /data/previews --target 730000
+StateDirectory=soundalike-crawl
 Restart=on-failure
 RestartSec=60
 KillSignal=SIGTERM

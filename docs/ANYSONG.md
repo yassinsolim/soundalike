@@ -109,9 +109,9 @@ the scene table, and downloads their previews into the same cache as the catalog
 
 ```sh
 python -m soundalike.anysong.crawl run --scene index/scene.npz --meta index/catalog_meta.npz \
-  --db /data/crawl/crawl.sqlite --previews /data/previews --target 730000
-python -m soundalike.anysong.crawl status --db /data/crawl/crawl.sqlite
-python -m soundalike.anysong.crawl export --db /data/crawl/crawl.sqlite --out /data/crawl/export
+  --db /var/lib/soundalike-crawl/crawl.sqlite --previews /data/previews --target 730000
+python -m soundalike.anysong.crawl status --db /var/lib/soundalike-crawl/crawl.sqlite
+python -m soundalike.anysong.crawl export --db /var/lib/soundalike-crawl/crawl.sqlite --out /data/crawl/export
 ```
 
 Catalog artists are crawled first: they get topped up with popular songs the catalog lacks, and their related
@@ -286,9 +286,11 @@ Public routing lives on CT 408: `"proxy_paths": {"/api/anysong/*": "192.168.1.47
 
 Catalog growth runs on the same host as
 [`deploy/homelab/soundalike-crawl.service`](../deploy/homelab/soundalike-crawl.service), from its own copy of the
-package in `/opt/soundalike/crawl-src` so API deploys never change it mid-crawl. The state is in
-`/data/crawl/crawl.sqlite`, previews go to `/data/previews` on the bulk HDD, and progress is in the journal or
-`crawl status`.
+package in `/opt/soundalike/crawl-src` so API deploys never change it mid-crawl. Previews go to `/data/previews` on
+the bulk HDD. The state database is `/var/lib/soundalike-crawl/crawl.sqlite` on the NVMe rootfs: on the HDD, its
+small random writes made up more than half of the disk's write operations (57 writes/s before the move, 23 after, at
+the same write volume), which left little room for reading previews while the crawl ran. Progress is in the
+journal or `crawl status`.
 
 ## Limitations
 
