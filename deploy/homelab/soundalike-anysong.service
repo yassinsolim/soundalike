@@ -31,6 +31,7 @@ ExecStart=/opt/soundalike/venv/bin/python -m soundalike.anysong.api \
     --languages /opt/soundalike/index/languages.npz \
     --scene /opt/soundalike/index/scene.npz \
     --tempo /opt/soundalike/index/tempo.npz --tempo-model /opt/soundalike/ckpt/beat_this/final0.ckpt \
+    --learn-queue /var/lib/anysong/learn-queue.jsonl \
     --host ${ANYSONG_HOST} --port ${ANYSONG_PORT} --client-ip-header CF-Connecting-IP --cors-origin "*"
 Restart=always
 RestartSec=5

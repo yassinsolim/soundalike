@@ -366,6 +366,37 @@ def test_keep_previews_option(tmp_path):
     assert (tmp_path / "99.mp3").exists()
 
 
+def test_learn_queue_records_live_songs_once_without_request_details(tmp_path):
+    deezer = FakeDeezer(tmp_path)
+    deezer.tracks[98] = {"id": 98, "title": "New Song", "artist": {"id": 555, "name": "New Artist"},
+                         "album": {}, "preview": "u"}
+    queue = api.LearnQueue(tmp_path / "learn" / "queue.jsonl", clock=lambda: 1_794_000_000)
+    (tmp_path / "learn").mkdir()
+    svc = api.AnySong(FakeEngine(), deezer, META, learn=queue)
+    svc.similar(1)  # catalog song: nothing to learn
+    svc.similar(98)
+    svc.results = api.LRU(16)  # a later request computes the same song again
+    svc.similar(98)
+    svc.similar(99)
+    with pytest.raises(api.ApiError):
+        svc.similar(42)  # unknown track: not answered, not queued
+    lines = [json.loads(line) for line in (tmp_path / "learn" / "queue.jsonl").read_text().splitlines()]
+    assert lines == [{"id": 98, "artist_id": 555, "day": "2026-11-06"}, {"id": 99, "artist_id": None, "day": "2026-11-06"}]
+
+
+def test_learn_queue_caps_each_day_and_never_fails_a_request(tmp_path):
+    now = [1_794_000_000.0]
+    queue = api.LearnQueue(tmp_path / "queue.jsonl", per_day=2, clock=lambda: now[0])
+    assert [queue.add(t, 1) for t in (1, 2, 3)] == [True, True, False]
+    now[0] += 86_400
+    assert queue.add(3, 1) and not queue.add(3, 1)
+    assert [json.loads(x)["id"] for x in (tmp_path / "queue.jsonl").read_text().splitlines()] == [1, 2, 3]
+    broken = api.LearnQueue(tmp_path / "missing-dir" / "queue.jsonl")
+    assert broken.add(7, 1) is False
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, learn=broken)
+    assert svc.similar(99)["query"]["source"] == "live"
+
+
 @pytest.mark.parametrize("setup,status", [
     (lambda s: None, 404),  # unknown track id
     (lambda s: s.deezer.tracks.__setitem__(42, {"id": 42, "title": "x", "preview": ""}), 404),

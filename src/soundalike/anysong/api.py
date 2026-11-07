@@ -18,6 +18,10 @@ GET endpoints (JSON):
 Indexed tracks are ranked from their stored windows. Any other track has its 30 s preview fetched and
 embedded live on the GPU, so it never has to be in the catalog. Standard library HTTP only: bind to
 localhost and put a reverse proxy in front for TLS and public exposure.
+
+With ``--learn-queue``, each song answered live (so not yet in the catalog) is appended to that file as its Deezer
+track id, artist id and UTC day, nothing about who asked (``LearnQueue``); ``anysong.crawl`` reads it to grow the
+catalog toward what people look up.
 """
 
 from __future__ import annotations
@@ -132,6 +136,42 @@ class LRU:
                 self._data.popitem(last=False)
 
 
+class LearnQueue:
+    """Append-only queue of songs answered live, for growing the catalog (read by ``anysong.crawl``).
+
+    A line is ``{"id": <Deezer track id>, "artist_id": <Deezer artist id or null>, "day": "YYYY-MM-DD"}`` (UTC). No
+    address, header, title or time of day is written. Each song is written once per process and at most ``per_day``
+    lines a day. A failed write never fails the request.
+    """
+
+    def __init__(self, path: Path | str, per_day: int = 5000, remember: int = 200_000,
+                 clock: Callable[[], float] = time.time):
+        self.path, self.per_day, self.remember, self.clock = Path(path), per_day, remember, clock
+        self._seen: set[int] = set()
+        self._day: str | None = None
+        self._count = 0
+        self._lock = threading.Lock()
+
+    def add(self, track_id: int, artist_id: int | None) -> bool:
+        day = time.strftime("%Y-%m-%d", time.gmtime(self.clock()))
+        line = json.dumps({"id": int(track_id), "artist_id": int(artist_id) if artist_id else None, "day": day})
+        with self._lock:
+            if day != self._day:
+                self._day, self._count = day, 0
+            if int(track_id) in self._seen or self._count >= self.per_day:
+                return False
+            try:
+                with self.path.open("a", encoding="utf-8") as fh:
+                    fh.write(line + "\n")
+            except OSError:
+                return False
+            if len(self._seen) >= self.remember:
+                self._seen.clear()
+            self._seen.add(int(track_id))
+            self._count += 1
+            return True
+
+
 def client_key(address: str) -> str | None:
     """Rate-limit key for a client address, or None if it is not an IP.
 
@@ -207,9 +247,10 @@ class AnySong:
                  follower_timeout: float = 180.0, known_ttl: float = 600.0, languages=None,
                  scene: SceneTable | None = None, scene_params: SceneParams | None = None,
                  related_ttl: float = 86400.0, tempo: TempoTable | None = None, tracker=None,
-                 vibe_params: samevibe.SameVibeParams | None = None):
+                 vibe_params: samevibe.SameVibeParams | None = None, learn: LearnQueue | None = None):
         self.engine, self.deezer, self.meta, self.keep_previews = engine, deezer, meta, keep_previews
         self.languages = languages
+        self.learn = learn
         self.scene, self.scene_params = scene, scene_params or SceneParams()
         # Same vibe needs catalog tempos and the sonic channel; ``tracker`` estimates the tempo of unseen seeds.
         self.tempo, self.tracker = tempo, tracker
@@ -357,6 +398,8 @@ class AnySong:
                     vibe["bpm"] = self.tempo.bpm(track_id)
             else:
                 query, raw, timings, t, vibe = self._live(track_id)
+                if self.learn is not None:
+                    self.learn.add(track_id, query.get("artist_id"))
             self._count(query["source"])
             timings |= t
             related = self._scene_context(query, timings)
@@ -739,6 +782,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--similar-per-min", type=float, default=20)
     p.add_argument("--max-pending", type=int, default=8)
     p.add_argument("--cache-size", type=int, default=4096)
+    p.add_argument("--learn-queue", type=Path, default=None,
+                   help="append songs answered live (Deezer track and artist ids, UTC day) for anysong.crawl")
     args = p.parse_args(argv)
 
     scratch = args.preview_dir or Path(tempfile.mkdtemp(prefix="anysong-"))
@@ -764,7 +809,8 @@ def main(argv: list[str] | None = None) -> None:
         tracker = Tracker(args.tempo_model, args.device)
         tracker.tempo(np.zeros(30 * 22050, np.float32))  # warm-up
     service = AnySong(engine, Deezer(scratch), meta, args.cache_size, args.max_pending,
-                      languages=languages, scene=scene, tempo=tempo, tracker=tracker)
+                      languages=languages, scene=scene, tempo=tempo, tracker=tracker,
+                      learn=LearnQueue(args.learn_queue) if args.learn_queue else None)
     server = Server((args.host, args.port), service, args.search_per_min, args.similar_per_min,
                     args.cors_origin, args.client_ip_header)
     sizes = {name: len(ix) for name, ix in engine.indexes.items()}
