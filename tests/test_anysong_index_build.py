@@ -1,3 +1,4 @@
+import gc
 import json
 
 import numpy as np
@@ -104,6 +105,64 @@ def test_build_rejects_bad_projection_dim(tmp_path):
     write_shards(tmp_path / "emb" / "fake", n=4, d=8)
     with pytest.raises(ValueError, match="projection dim"):
         index_build.build_channel(channel(), tmp_path / "emb", tmp_path / "ix", 9, None, "cpu")
+
+
+@pytest.mark.parametrize("bits", [8, 4])
+@pytest.mark.parametrize("prep,mode", [("raw", "maxsim"), ("center", "maxsim"), ("none", "bpwr")])
+def test_quantized_projection_decodes_within_half_a_step_and_reranks_exactly(tmp_path, prep, mode, bits):
+    ch = channel(prep, mode)
+    ids, win = write_shards(tmp_path / "emb" / "fake", n=120, d=16, dup=False, rank=6)
+    meta = index_build.build_channel(ch, tmp_path / "emb", tmp_path / "ix", 8, None, "cpu", bits=bits)
+    index_build.build_channel(ch, tmp_path / "emb", tmp_path / "ix16", 8, None, "cpu")
+    assert meta["proj_bits"] == bits
+    proj = np.load(tmp_path / "ix" / "proj.npy")
+    assert proj.dtype == (np.int8 if bits == 8 else np.uint8) and proj.shape == (len(ids), 3, 8 if bits == 8 else 4)
+    two = serve.TwoStageIndex.load(tmp_path / "ix", ch, candidates=len(ids))
+    assert two.proj_bits == bits and tuple(two.proj_scale.shape) == (len(ids), 3)
+    decoded = two._proj_rows(0, len(ids)) * two.proj_scale[..., None]
+    assert decoded.abs().amax(-1).allclose(two.proj_scale * (2 ** (bits - 1) - 1))
+    reference = torch.from_numpy(np.load(tmp_path / "ix16" / "proj.npy")).float()
+    assert ((decoded - reference).abs() <= two.proj_scale[..., None] / 2 + 1e-3 * reference.abs() + 1e-6).all()
+    brute = serve.ChannelIndex.load(tmp_path / "emb", ch)
+    q = torch.stack([brute.stored_query(int(ids[3])), brute.prep_query(win[8].astype(np.float32) + 0.3)])
+    plain = serve.TwoStageIndex(ch, two.ids, decoded, two.basis, two.norms, two.full, two.mu, len(ids))
+    assert torch.allclose(two.stage1(q, chunk=7), plain.stage1(q), atol=1e-4)
+    assert torch.allclose(two.scores(q), brute.scores(q), atol=1e-5)
+
+
+def test_quantized_builds_reject_bad_settings_and_fp16_rebuilds_drop_the_scale(tmp_path):
+    write_shards(tmp_path / "emb" / "fake", n=12, d=8)
+    with pytest.raises(ValueError, match="even dimension"):
+        index_build.build_channel(channel(), tmp_path / "emb", tmp_path / "ix", 3, None, "cpu", bits=4)
+    with pytest.raises(ValueError, match="4, 8 or 16"):
+        index_build.build_channel(channel(), tmp_path / "emb", tmp_path / "ix", 4, None, "cpu", bits=5)
+    index_build.build_channel(channel(), tmp_path / "emb", tmp_path / "ix", 4, None, "cpu", bits=8)
+    two = serve.TwoStageIndex.load(tmp_path / "ix", channel())
+    with pytest.raises(ValueError, match="one scale per window"):
+        serve.TwoStageIndex(two.channel, two.ids, two.proj, two.basis, two.norms, two.full, two.mu)
+    del two  # releases the memory map of full.npy, which Windows will not replace while it is open
+    gc.collect()
+    index_build.build_channel(channel(), tmp_path / "emb", tmp_path / "ix", 4, None, "cpu")
+    assert not (tmp_path / "ix" / "proj_scale.npy").exists()
+    assert serve.TwoStageIndex.load(tmp_path / "ix", channel()).proj_bits == 16
+
+
+def test_main_builds_quantized_channels_and_hub_scores_use_them(tmp_path):
+    from soundalike.anysong import hub_build
+
+    sonic = serve.CHANNELS["sonic"]
+    ids, _ = write_shards(tmp_path / "emb" / sonic.model, n=40, d=8)
+    np.savez(tmp_path / "meta.npz", track_ids=ids, artists=np.array([f"A{k % 7}" for k in range(40)]),
+             titles=np.array([f"Song {k}" for k in range(40)]))
+    index_build.main(["--emb", str(tmp_path / "emb"), "--out", str(tmp_path / "ix"), "--dims", "sonic=4",
+                      "--proj-bits", "sonic=4", "--device", "cpu"])
+    assert json.loads((tmp_path / "ix" / "sonic" / "meta.json").read_text())["proj_bits"] == 4
+    hub = hub_build.build(tmp_path / "ix", "sonic", tmp_path / "meta.npz", k=3, device="cpu")
+    assert np.isfinite(np.load(tmp_path / "ix" / "sonic" / "hub.npy")).all() and hub["alpha"] == 0.5
+    assert serve.TwoStageIndex.load(tmp_path / "ix" / "sonic", sonic).penalty is not None
+    with pytest.raises(SystemExit):
+        index_build.main(["--emb", str(tmp_path / "emb"), "--out", str(tmp_path / "ix2"), "--dims", "sonic=4",
+                          "--proj-bits", "sonic=3", "--device", "cpu"])
 
 
 def test_max_song_tracks_drops_only_crowded_songs(tmp_path):

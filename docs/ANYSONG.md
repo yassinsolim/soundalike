@@ -147,7 +147,8 @@ python -m soundalike.anysong.index_build --emb emb_full --out index_full \
   --meta catalog_meta.npz --max-song-tracks 100
 ```
 
-Each channel directory holds `basis.npy`, `proj.npy` (fp16), `full.npy`, `ids.npy`, `norms.npy` and `meta.json`
+Each channel directory holds `basis.npy`, `proj.npy` (fp16, or int8 / packed 4-bit with `proj_scale.npy`),
+`full.npy`, `ids.npy`, `norms.npy` and `meta.json`
 (retained PCA energy, candidate counts). `--max-song-tracks` leaves out any song key (as the API groups
 results) with more than that many tracks. In the frozen catalog this removes only 2,031 *A State Of Trance*
 radio-show segments, which otherwise surface as one "song" in many unrelated result lists (see
@@ -183,7 +184,22 @@ Checks before serving an index:
   query, and checks whether the original song still ranks first.
 
 On the 8 GB 2070 SUPER, stop the API before running `serve_check` or `robustness`. The full 269k index fits:
-5.4 GB of VRAM loaded, 6.3 GB peak. If a bigger index does not fit, lower `samples` to 256.
+5.4 GB of VRAM loaded, 6.3 GB peak.
+
+Stage 1 is the part that has to fit in VRAM: about 3.9 GB of the API's footprint is models and working memory, so
+the projections get roughly 3.8 GB. In fp16 at the default dimensions they take 8.4 GB per million tracks, so a
+bigger catalog stores them as integers with one scale per window:
+
+```sh
+python -m soundalike.anysong.index_build ... --dims melody=256 samples=384 sonic=128 \
+  --proj-bits melody=8 samples=4 sonic=8
+```
+
+That is 2.7 GB per million tracks (melody 0.77, samples 1.54, sound 0.38), plus 0.06 GB of scales. On the live
+269k index, compared with an exact brute-force search over 300 test queries per channel, the served top 10 and
+top 20 were identical in every channel. At top 100, one melody query and one sound query differed by one song
+([ANYSONG_EVAL.md](ANYSONG_EVAL.md#compressed-stage-1-2026-11-07)). Re-run that comparison at the new size before
+serving it.
 
 ## Language labels
 

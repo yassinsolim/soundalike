@@ -948,6 +948,45 @@ full index before it went live.
   sound; search 37, 109 and 20 ms; 517 ms in total (p95 555 ms). Through the API, a catalog song answers in
   about 170 ms and an unseen song in 610–670 ms.
 
+### Compressed stage 1 (2026-11-07)
+
+A catalog of about a million tracks does not fit the 2070's stage 1 in fp16. The API process holds 6,162 MiB, of
+which the 269k projections are 2.19 GB, so models and working memory take about 3.9 GB of the 8 GB. At the default
+dimensions, fp16 projections need 8.45 GB per million tracks. The test: 300 random catalog tracks per channel were
+searched with a compressed stage 1 and the live re-rank (default candidate depth, hub penalty as served). Each
+served top-k was compared with an exact brute-force ranking of all 269,278 tracks; the numbers are the share of the
+exact top-k found.
+
+| channel | stage 1 | GB per 1M tracks | top 10 | top 20 | top 100 | worst query, top 10 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| melody | fp16, 256 dims (live) | 1.54 | 1.000 | 1.000 | 1.000 | 1.0 |
+| melody | int8, per-dimension scale, clipped at the 99.99th percentile | 0.77 | 0.997 | 0.997 | 0.999 | **0.0** |
+| melody | int8, per-dimension scale, no clipping | 0.77 | 1.000 | 1.000 | 0.997 | 1.0 |
+| melody | int8, per-window scale | 0.77 | 1.000 | 1.000 | 1.000 | 1.0 |
+| samples | fp16, 384 dims (live) | 6.14 | 1.000 | 1.000 | 1.000 | 1.0 |
+| samples | int8, 256 dims | 2.05 | 1.000 | 1.000 | 1.000 | 1.0 |
+| samples | int4, 384 dims, per-window scale | 1.54 | 1.000 | 1.000 | 1.000 | 1.0 |
+| samples | int8, 128 dims | 1.02 | 0.996 | 0.995 | 0.979 | 0.8 |
+| sound | fp16, 128 dims (live) | 0.77 | 1.000 | 1.000 | 1.000 | 1.0 |
+| sound | int8, per-window scale | 0.38 | 1.000 | 1.000 | 1.000 | 1.0 |
+| sound | int4, per-dimension scale, clipped at the 99.9th percentile | 0.19 | 0.986 | 0.980 | 0.961 | 0.5 |
+
+- **Clipping:** clipping the scale at a percentile lost one melody query's entire top 10. A few extreme melody tracks
+  (the hub table's minimum is −16,705) carry their information in the outlying values.
+- **Per-window scaling:** an unclipped per-dimension scale avoids that loss, but those same tracks stretch it and
+  coarsen everyone else: 12 % relative error against 1.2 % with one scale per window.
+- **4-bit:** fine for samples, whose 8×8 window pairs leave a wide margin. With a per-dimension scale it lost
+  matches in sound, whose scores sit in a narrow band; sound stays at 8 bits (4-bit with a per-window scale was not
+  tried there).
+- **Served setting:** melody int8 at 256 dimensions, samples int4 at 384, sound int8 at 128, built by `index_build
+  --proj-bits` and served by `TwoStageIndex`:
+  - 2.69 GB per million tracks, plus 0.06 GB of window scales.
+  - Through that code, the top 10 and top 20 were identical to brute force for all 300 queries in every channel.
+  - At top 100, one melody query and one sound query differed by one song. The difference was the same at double
+    the candidate depth, so it was not a missed candidate.
+- **Caveat:** this was measured on 269k tracks, where neighbourhoods are sparser than in a bigger catalog. Repeat
+  the comparison at the new size before serving it.
+
 ### Robustness
 
 200 random catalog previews, each edited and embedded live like an unseen query. A hit means the original song
