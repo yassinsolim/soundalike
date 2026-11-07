@@ -677,6 +677,7 @@ test("main page Best matches ask for one language and offer the switch", async (
   assert.equal(params.get("title"), "8PM");
   assert.equal(params.get("artist"), "Nemzzz");
   assert.equal(params.get("lang"), "same");
+  assert.equal(params.get("policy"), "best-vibe-sounds-v1");
   assert.equal(page.document.querySelector("#tab-best").getAttribute("aria-selected"), "true");
   assert.equal(page.document.querySelector("#language").hidden, false);
   assert.equal(
@@ -711,7 +712,7 @@ test("main page language switch reloads only Best matches", async () => {
   );
 });
 
-test("main page Sounds like stays on the library list without the switch", async () => {
+test("main page Sounds like uses the library list when the response has none", async () => {
   const page = loadMain();
   await page.context.pick(PICK);
 
@@ -734,6 +735,50 @@ test("main page falls back to Sounds like without the switch when Best fails", a
   assert.equal(page.document.querySelector("#tab-vibe").hidden, true);
   assert.equal(page.document.querySelector("#language").hidden, true);
   assert.deepEqual(page.texts("#matches .t"), ["Library Match"]);
+});
+
+function mainSoundsBody({ lang = "same" } = {}) {
+  const body = mainBestBody({ lang });
+  body.results.sounds = [
+    { id: 91, title: "Sounds Match", artist: "Kidwild", score: 0.82, bpm: 141 },
+    lang === "all"
+      ? { id: 92, title: "Autre Son", artist: "Ninho", score: 0.8, bpm: null }
+      : { id: 93, title: "Close Sound", artist: "AntsLive", score: 0.8, bpm: 70.1 },
+  ];
+  return body;
+}
+
+test("main page Sounds like comes with Best matches and shares the switch", async () => {
+  const page = loadMain({
+    best: (params) => json(200, mainSoundsBody({ lang: params.get("lang") })),
+  });
+  await page.context.pick(PICK);
+  const libraryAsked = () =>
+    page.requests.filter((url) => url.includes("/api/spicetify_recommend")).length;
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(libraryAsked(), 0);
+
+  page.document.querySelector("#tab-sounds").click();
+  assert.deepEqual(page.texts("#matches .t"), ["Sounds Match", "Close Sound"]);
+  assert.equal(
+    page.text("#matchblurb"),
+    "Songs with the same overall sound: instruments, production and mood.",
+  );
+  assert.deepEqual(page.texts("#seedtags .tag"), ["in our library", "140 BPM"]);
+  assert.equal(page.document.querySelector("#language").hidden, false);
+  assert.equal(page.text("#language-status"), "English · other languages left out");
+  assert.equal(
+    page.text("#foot"),
+    "Sounds like comes from the same matcher as Best matches. ▶ = 30-second preview.",
+  );
+
+  page.document.querySelector("#language-toggle").click();
+  await waitFor(() => page.text("#language-status") === "English · all languages");
+  assert.equal(page.similar()[1].get("lang"), "all");
+  assert.equal(page.document.querySelector("#tab-sounds").getAttribute("aria-selected"), "true");
+  assert.deepEqual(page.texts("#matches .t"), ["Sounds Match", "Autre Son"]);
+  assert.equal(libraryAsked(), 0);
+  assert.deepEqual(page.errors, []);
 });
 
 test("main page shows all languages without a switch for an uncertain seed", async () => {

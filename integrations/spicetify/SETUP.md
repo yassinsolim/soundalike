@@ -23,7 +23,7 @@ There are two ways to use Soundalike. Pick based on your Spotify install:
 | | Hosted web app | Spicetify (in-app right-click) |
 |---|---|---|
 | Setup | none | patch Spotify, then select **Install** in Marketplace |
-| Included library | 272,853 tracks; any Deezer song on [`/anysong`](https://soundalike.yassin.app/anysong) | Best matches for any song with a Deezer preview; Sounds like for 272,853 tracks, or any song with the optional local companion |
+| Included library | 272,853 tracks; any Deezer song on [`/anysong`](https://soundalike.yassin.app/anysong) | Best matches, Same vibe, and Sounds like for any song with a Deezer preview; with the optional local companion, Sounds like for any song on your computer |
 | Supported Spotify app | any app or browser | patchable desktop app; not Windows Store or Linux Snap |
 | Trigger | type or paste a song | right-click a track |
 
@@ -32,8 +32,7 @@ There are two ways to use Soundalike. Pick based on your Spotify install:
 **Skip this section for the normal Marketplace installation.** The extension
 automatically uses the hosted services when no local engine is running.
 Install the companion only if you want Sounds like queries to remain on your
-machine or want on-the-fly Sounds like analysis for a track outside the hosted
-library. Best matches only run on the hosted matcher, so while the companion
+machine. Best matches only run on the hosted matcher, so while the companion
 is running the extension asks before each Best matches search.
 
 Install [Python 3.9 or newer](https://www.python.org/downloads/) and Git, then
@@ -265,8 +264,9 @@ leaving the page; the songs below it follow in the order shown, as one list
 that is never saved as a playlist. A single click does not start playback.
 Spotify's Back and
 Forward buttons preserve the result list while you navigate elsewhere. In
-Sounds like, confident Spotify lyrics-language labels gate English to English,
-French to French, and so on. Results with no language label remain as
+the local engine's Sounds like, confident Spotify lyrics-language labels gate
+English to English, French to French, and so on (the hosted lists use the
+matcher's own language filter). Results with no language label remain as
 fallbacks for instrumentals and incomplete lyrics catalogs. Right-click a row
 for Spotify's normal track menu, including **Add to playlist**, **Add to
 queue**, **Go to song radio**, artist/album navigation, credits, and sharing.
@@ -409,11 +409,12 @@ client. It probes `http://127.0.0.1:8787` first. If the optional companion is
 healthy, the Sounds like search stays on your machine, and the Best matches
 tab asks before sending the title and artist to the hosted matcher. A Best
 matches list saved from an earlier search shows without asking. Otherwise,
-only that title and artist are sent: to `https://soundalike-api.yassin.app`
-for Sounds like (or `https://soundalike.yassin.app` if the primary service is
-unavailable) and to `https://soundalike.yassin.app/api/anysong/similar` for
-Best matches, which may look the song up on Deezer and analyze its public
-30-second preview. Spotify credentials, tokens, library data, and artwork are
+only that title and artist are sent to
+`https://soundalike.yassin.app/api/anysong/similar` for Best matches, Same
+vibe, and Sounds like, which may look the song up on Deezer and analyze its
+public 30-second preview. Only when that matcher can't answer are they sent to
+the older Sounds like service at `https://soundalike-api.yassin.app` (or
+`https://soundalike.yassin.app` if that is unavailable). Spotify credentials, tokens, library data, and artwork are
 never sent. No separate Soundalike Spotify login is required. Language labels
 are read from Spotify's already-authenticated lyrics service inside the
 desktop client and are not sent to Soundalike.
@@ -456,10 +457,11 @@ desktop client and are not sent to Soundalike.
   run `spicetify backup apply`, and fully restart Spotify. Soundalike preserves
   direct playback if the client's internal native-menu components are
   unavailable.
-- **A track is not in the hosted library:** Sounds like covers 272,853
-  tracks. Best matches analyze other songs live when Deezer has a 30-second
-  preview of them. Use the optional local companion for on-the-fly Sounds like
-  analysis of other songs.
+- **A track is not in the hosted library:** every hosted tab now works for any
+  song with a 30-second Deezer preview, analyzed live in a few seconds. A
+  "not in the hosted library" message comes from the older Sounds like service,
+  which only answers when the matcher can't; update Soundalike (restart
+  Spotify) if you see it for a song that has a Deezer preview.
 - **Hosted service unavailable:** reload Spotify and retry. If you installed
   the local companion, verify `/health`; if auto-start is enabled, check its
   status and log using step 4.
@@ -478,11 +480,13 @@ right-click track ─▶ Spotify title + artist
                          │
           ┌──────────────┴──────────────┐
           ▼                             ▼
-   Best matches (default)          Sounds like
-   hosted any-song matcher         local engine healthy? ─ yes ─▶ local embedding
-   melody + samples, fused           │ no
-   (asks first while the             └─▶ hosted 272,853-track library
-    local engine is healthy)             audio+vibe similarity
+   hosted any-song matcher         local engine healthy?
+   (asks first while the local     └─ yes ─▶ Sounds like: local embedding
+    engine is healthy)
+   Best matches (default): melody + samples, fused
+   Same vibe: tempo + sound
+   Sounds like: MuQ-MuLan sound (the older 272,853-track
+   service answers only if the matcher can't)
           └──────────────┬──────────────┘
                          ▼
              verified Spotify track URI
@@ -490,17 +494,18 @@ right-click track ─▶ Spotify title + artist
    play / double-click ─▶ play the list from here │ right-click ─▶ native track menu
 ```
 
-Best matches come from the any-song matcher, which looks the song up by title
-and artist. A song in its 269,278-track index answers from stored embeddings;
-any other song with a Deezer preview is downloaded and analyzed live on a GPU,
-which takes a few seconds. The extension retries twice when the matcher is
-busy and gives up after 30 seconds.
+Best matches, Same vibe, and Sounds like come from the any-song matcher, which
+looks the song up by title and artist. A song in its 269,278-track index
+answers from stored embeddings; any other song with a Deezer preview is
+downloaded and analyzed live on a GPU, which takes a few seconds. The
+extension retries twice when the matcher is busy and gives up after 30
+seconds.
 
-For Sounds like, the extension normally uses an always-on hosted
-recommendation service and falls back to the Vercel deployment if that service
-is unavailable. It quietly asks the Vercel function to warm after Spotify
-becomes idle. A fallback request can still take up to about 30 seconds while
-the checksum-pinned 299 MB index initializes. Both successful lists, Spotify
+If the matcher can't answer, Sounds like falls back to the older hosted
+recommendation service, which in turn falls back to the Vercel deployment. It
+quietly asks the Vercel function to warm after Spotify becomes idle. A
+fallback request can still take up to about 30 seconds while the
+checksum-pinned 299 MB index initializes. Both successful lists, Spotify
 metadata, and language labels remain in a bounded local cache for seven days,
 and cacheable hosted responses avoid recomputing the same seed. The optional
 local companion downloads and loads the same production index once and keeps

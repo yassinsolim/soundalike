@@ -892,6 +892,44 @@ By design, matches like Rivo, which sound different but share material, stay in 
 - Same vibe reads Best's order, so a change to Best needs a new confirmation.
 - "Incoherent" is a proxy built from genre tags and co-listening, not listening tests.
 
+## Sounds like on the GPU engine (2026-11-06)
+
+**Why.** Spotify's and the main page's Sounds like tab still came from the older `dual_sonic64_guardrail`
+service. That service only answers for songs inside its fixed 272,853-track library, so a song outside it
+(Shoreline Mafia – *HEAT STICK*, Vegyn – *The Path Less Travelled*) got "isn't in the hosted library" while Best
+matches and Same vibe analysed the same song live. Listeners also found Same vibe's songs closer in sound than that
+tab's.
+
+**What.** `/similar` now also returns `sounds`: the sonic (MuQ-MuLan) channel's songs in order, language-filtered like
+Best, one song per artist, each with its catalog tempo. Both clients show it as Sounds like. The older service only
+answers when the matcher can't (and the local companion keeps its own list). This is the "website sounds tab" list
+that was measured in the Sounds like v2 study, and there it beat the older list on development and on held-out
+seeds. One song per artist and other-artist results only, top 10:
+
+| list | seeds | ListenBrainz | beyond Deezer's list | shares a genre | other language |
+| --- | --- | ---: | ---: | ---: | ---: |
+| older Sounds like | 800 development | 0.167 | 0.126 | 0.309 | 16.8 % |
+| GPU sound list | 800 development | 0.191 | 0.147 | 0.367 | 15.3 % |
+| older Sounds like, language gate | 800 development | 0.189 | 0.142 | 0.330 | 0 % |
+| GPU sound list, language gate (as served) | 800 development | 0.214 | 0.163 | 0.389 | 0 % |
+| older Sounds like | 799 held-out | 0.156 | 0.124 | 0.313 | 17.2 % |
+| GPU sound list | 799 held-out | 0.191 | 0.151 | 0.353 | 15.4 % |
+| older Sounds like, language gate | 799 held-out | 0.177 | 0.141 | 0.335 | 0 % |
+| GPU sound list, language gate (as served) | 799 held-out | 0.211 | 0.169 | 0.380 | 0 % |
+
+The held-out numbers come from the Sounds like v2 confirmation run, which measured both lists as comparators; this
+switch was not its pre-registered question, so they are evidence rather than a confirmation. Same vibe is a different
+list (Best's candidates gated by tempo and sound); on its own fresh-seed test it scored higher still (ListenBrainz
+0.320).
+
+**Parity.** The production list (`api.AnySong` on the full index with the language, scene and tempo tables)
+reproduced the research list's development metrics exactly: ListenBrainz 0.214, beyond Deezer's list 0.163, genre
+0.389, other language 0 on the 800 development seeds. Lists average 19.8 songs (a seed whose language is rare in the
+catalog can get fewer), and 99.5 % of their top-10 rows carry a tempo.
+
+**Limitations.** The list has no feedback prompt yet (that prompt and its server still accept only the older
+methods). It recommends only from the 269,278-track catalog, like the other hosted lists.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the

@@ -17,8 +17,9 @@ balance. It does not use your listening history as a ranking signal.
 The public web app and Spicetify extension open on **Best matches**, songs that
 share a melody, sample, or loop with yours from a 269,278-track index. **Same vibe**,
 one tab away, keeps the matches that also share your song's tempo and overall
-sound, one song per artist, and the original **Sounds like** list from a
-272,853-track catalog stays available too.
+sound, one song per artist, and **Sounds like** lists the songs with the closest
+overall sound. All three come from the same GPU matcher, so they work for any
+song with a Deezer preview.
 The repository also includes a local app, command-line tools, smaller bundled
 indexes, and the research code used to test new ranking ideas.
 
@@ -40,8 +41,8 @@ This is the easiest way to use Soundalike regularly.
 5. Right-click a track, including the one playing in the player bar, and select
    **Find soundalikes**.
 
-Results open on their own Spotify page, starting with **Best matches**; the
-**Sounds like** tab has the original list. You can play a result, and the
+Results open on their own Spotify page, starting with **Best matches**, with
+**Same vibe** and **Sounds like** one tab away. You can play a result, and the
 songs after it follow in the order shown without creating a playlist. You can
 also open a result's album, use Spotify's normal track menu, or search for
 another set of matches.
