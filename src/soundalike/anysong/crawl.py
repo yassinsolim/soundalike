@@ -1,10 +1,10 @@
 """Grow the any-song catalog along Deezer's related-artist graph.
 
     python -m soundalike.anysong.crawl run --scene /opt/soundalike/index/scene.npz \
-        --meta /opt/soundalike/index/catalog_meta.npz --db /data/crawl/crawl.sqlite \
+        --meta /opt/soundalike/index/catalog_meta.npz --db /var/lib/soundalike-crawl/crawl.sqlite \
         --previews /data/previews --target 730000
-    python -m soundalike.anysong.crawl status --db /data/crawl/crawl.sqlite
-    python -m soundalike.anysong.crawl export --db /data/crawl/crawl.sqlite --out /data/crawl/export
+    python -m soundalike.anysong.crawl status --db /var/lib/soundalike-crawl/crawl.sqlite
+    python -m soundalike.anysong.crawl export --db /var/lib/soundalike-crawl/crawl.sqlite --out /data/crawl/export
 
 The scene table supplies the starting point: the catalog's artists and every artist their related lists link to.
 Catalog artists are crawled first; that tops them up with popular songs the catalog lacks, and their related lists
