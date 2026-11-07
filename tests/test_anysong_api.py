@@ -10,6 +10,7 @@ from soundalike.anysong import api
 from soundalike.anysong.languages import LanguageTable, decide, top_languages
 from soundalike.anysong.scene import SceneParams
 from soundalike.anysong.scene import build as build_scene
+from soundalike.anysong.tempo import TempoTable
 
 META = {
     1: ("Daft Punk", "One More Time"),
@@ -247,7 +248,28 @@ def test_artist_language_fallback_filters_unseen_seed(svc):
 def test_no_best_list_without_fused_channels(svc):
     res = {"query": {"id": 1, "artist": "A", "title": "B", "source": "catalog"}, "raw": {"sonic": [(3, 0.9)]},
            "timings_ms": {}}
-    assert list(svc._view(res, k=5, dedupe=True, cached=False)["results"]) == ["sonic"]
+    assert list(svc._view(res, k=5, dedupe=True, cached=False)["results"]) == ["sounds", "sonic"]
+
+
+def test_sounds_list_filters_language_keeps_one_song_per_artist_and_adds_tempo(tmp_path):
+    meta = META | {8: ("Other Artist & Friend", "Another Song")}
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), meta,
+                      languages=FakeLanguages({1: "en", 3: "fr", 5: "en", 8: "en", 7: "unknown"}),
+                      tempo=TempoTable(np.array([5, 7]), np.array([128.04, np.nan], np.float32)))
+    res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog"},
+           "raw": {"sonic": [(2, 0.99), (3, 0.9), (5, 0.8), (6, 0.75), (8, 0.7), (7, 0.6)]}, "timings_ms": {}}
+
+    def sounds(**kw):
+        lists = svc._view(res, dedupe=True, cached=False, scene=False, **kw)["results"]
+        return [(x["id"], x["bpm"]) for x in lists["sounds"]]
+
+    # 2 is the seed's radio edit and 6 a live take of 5, so both are the same songs; Some Choir (3) sings French.
+    assert sounds(k=10) == [(5, 128.0), (8, None), (7, None)]
+    assert sounds(k=10, lang_mode="all") == [(3, None), (5, 128.0), (8, None), (7, None)]
+    assert sounds(k=2) == [(5, 128.0), (8, None)]
+    # With the scene table, one Deezer artist id covers differently credited tracks.
+    svc.scene = build_scene({3: 400, 5: 200, 7: 300, 8: 200}, {}, {}, {})
+    assert sounds(k=10) == [(5, 128.0), (7, None)]
 
 
 def _scene_table():

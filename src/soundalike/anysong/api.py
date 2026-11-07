@@ -10,7 +10,8 @@ GET endpoints (JSON):
   samples lists fused into one ranking (``fuse``). With a scene table (``--scene``) the fused list also weighs the
   artist scene (same artist, related artists, region, genre; ``scene.scene_fuse``); ``scene=0`` turns that off.
   With a tempo table (``--tempo``), ``vibe`` is the Same vibe list: Best matches that share the seed's tempo and
-  sound, one song per artist (``samevibe``)
+  sound, one song per artist (``samevibe``). ``sounds`` is the Sounds like list: the sonic channel with Best's
+  language filter, one song per artist, each with its catalog ``bpm`` when known
 - ``/api/anysong/similar?title=<title>&artist=<artist>&k=20``  the same for a song named by title and artist
   (``AnySong.resolve``): the catalog release of that song, else the first matching Deezer search hit
 
@@ -555,11 +556,32 @@ class AnySong:
             vibe = self._same_vibe(res["vibe"], filtered, [key for key, _, _ in fused], language, lang_mode, k)
             bpm = res["vibe"]["bpm"]
             query["bpm"] = round(bpm, 1) if bpm else None
+        sounds = self._sounds(filtered, k)
         lists = {"best": best} if best else {}
         if vibe:
             lists["vibe"] = vibe
+        if sounds:
+            lists["sounds"] = sounds
         return {"ok": True, "query": query, "results": lists | out, "timings_ms": res["timings_ms"],
                 "cached": cached}
+
+    def _sounds(self, view: dict[str, dict[Hashable, dict]], k: int) -> list[dict]:
+        """The Sounds like list: the sonic channel as filtered for Best (no seed song and, in same-language mode,
+        no confidently other-language song), one song per artist, each with its catalog tempo when known."""
+        seen: set[Hashable] = set()
+        sounds = []
+        for item in view.get("sonic", {}).values():
+            tid = int(item["id"])
+            artist_id = self.scene.artist(tid) if self.scene is not None else None
+            artist: Hashable = ("id", artist_id) if artist_id else ("name", (item["artist"] or "").casefold() or tid)
+            if artist in seen:
+                continue
+            seen.add(artist)
+            bpm = self.tempo.bpm(tid) if self.tempo is not None else None
+            sounds.append(item | {"bpm": round(bpm, 1) if bpm else None})
+            if len(sounds) == k:
+                break
+        return sounds
 
     def _same_vibe(self, inputs: dict, view: dict[str, dict[Hashable, dict]], best_order: list, language: str,
                    lang_mode: str, k: int) -> list[dict]:

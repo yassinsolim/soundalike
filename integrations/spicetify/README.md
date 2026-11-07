@@ -3,8 +3,9 @@
 Find tracks that sound like the song you are playing, directly
 inside Spotify. Soundalike compares audio embeddings instead of using genres,
 popularity, or listening-history recommendations. Results open on **Best
-matches**, songs that share a melody, sample, or loop with yours. The **Sounds
-like** tab keeps the original list of songs with the same overall sound.
+matches**, songs that share a melody, sample, or loop with yours. The **Same
+vibe** and **Sounds like** tabs list songs with the same feel and the same
+overall sound.
 
 ![Soundalike best matches inside Spotify](../../docs/spicetify-results.png)
 
@@ -61,21 +62,26 @@ you chose.
   similar-sounding songs, one per artist. It follows the same **Show all
   languages** switch. The tab only appears when the hosted matcher sends this
   list, and not with the local companion.
-- **Sounds like** is the original list: songs with the same overall sound (low
-  end, dynamics, and tone) from the 272,853-track recommendation library. BPM,
-  Spotify lyrics-language filtering, related-artist ordering, and the feedback
-  prompt apply only to this list.
+- **Sounds like** comes from the same hosted response too: songs with the same
+  overall sound (instruments, production, and mood) by Soundalike's MuQ-MuLan
+  model, one per artist, with each song's BPM. It also follows the **Show all
+  languages** switch, and like the other two lists it works for any song with a
+  Deezer preview. Until November 2026 this tab used an older model that only
+  knew a fixed 272,853-track library; that service now only answers when the
+  hosted matcher can't, and for the local companion.
 
-Both lists load at once. If Sounds like is ready first, the page waits up to
-four more seconds for Best matches, then opens with Best matches still
-loading. If Best matches fail, for example because Deezer has no preview of
-the song, the page shows Sounds like with a note, unless you already picked a
-tab. If both lists fail, a notification explains why.
+The page opens as soon as the hosted matcher answers, or after four seconds
+with the lists still loading. If Best matches fail, for example because Deezer
+has no preview of the song, the older Sounds like service is asked instead and
+the page shows its list with a note, unless you already picked a tab. If both
+fail, a notification explains why.
 
 With a healthy [local companion](SETUP.md), results open on Sounds like, which
-stays on your computer. Best matches only run on the hosted matcher, so their
-tab asks before sending the song's title and artist. A Best matches list saved
-from an earlier search shows without asking.
+stays on your computer: it comes from the companion's own engine, with BPM,
+Spotify lyrics-language filtering, related-artist ordering, and the feedback
+prompt. Best matches only run on the hosted matcher, so their tab asks before
+sending the song's title and artist. A Best matches list saved from an earlier
+search shows without asking.
 
 ## Spotify-native results
 
@@ -83,10 +89,12 @@ from an earlier search shows without asking.
   and the list stays visible while music plays.
 - Results use a playlist-style layout with album artwork, verified artist
   names, clickable album names, and, in Sounds like, measured BPM.
-- In Sounds like, for a seed with a known Spotify lyrics language, only
+- In the companion's Sounds like list (and the older service's fallback list),
+  for a seed with a known Spotify lyrics language, only
   candidates with that exact known language are shown (English with English,
-  French with French, and so on). Best matches use the server's audio-derived
-  language gate: confidently different-language songs are hidden by default,
+  French with French, and so on). Best matches, Same vibe, and hosted Sounds
+  like use the server's audio-derived language gate instead: confidently
+  different-language songs are hidden by default,
   uncertain/instrumental rows remain, and **Show all languages** restores the
   unfiltered list. The individual melody, samples, and sounds tabs are not
   filtered, so cross-language covers and samples remain explorable. The Sounds-like gate examines only
@@ -107,7 +115,7 @@ from an earlier search shows without asking.
   remix/version variants are softly penalized so originals stay ahead, and
   global notability can only reorder the top 1,000 audio-qualified tail
   candidates at 25% strength.
-- If Spotify has no language for the seed, Sounds like preserves the normal
+- If Spotify has no language for the seed, that list preserves the normal
   ranking. Lyrics metadata alone cannot safely distinguish an instrumental
   from a metadata failure.
 - The play button on a verified result plays that exact Spotify track
@@ -133,7 +141,8 @@ from an earlier search shows without asking.
   seven days, so reopening the same track avoids repeating the expensive
   recommendation and catalog lookups. Unresolved Spotify searches and failed
   language checks are not cached, so a temporary miss can recover.
-- Once the Sounds like list's language filtering and final ordering settle, a
+- Once the companion's (or fallback) Sounds like list's language filtering and
+  final ordering settle, a
   compact inline prompt may ask **How close were these matches?** A prompt you
   close stays closed when you switch tabs. Choose **Good**, **Mixed**, or
   **Off**. Mixed and Off reveal up to two optional reason chips and an optional
@@ -146,12 +155,12 @@ from an earlier search shows without asking.
 
 ## Privacy
 
-Soundalike sends the selected track's title and artist to
-`https://soundalike-api.yassin.app` to retrieve the Sounds like list. If that
-service is unavailable, it sends the same title and artist to
-`https://soundalike.yassin.app` as a fallback. For Best matches, it sends the
-title and artist to `https://soundalike.yassin.app/api/anysong/similar`, which
-may look the song up on Deezer and analyze Deezer's public 30-second preview.
+For Best matches, Same vibe, and Sounds like, Soundalike sends the selected
+track's title and artist to `https://soundalike.yassin.app/api/anysong/similar`,
+which may look the song up on Deezer and analyze Deezer's public 30-second
+preview. Only when that matcher can't answer does it send the same title and
+artist to the older Sounds like service at `https://soundalike-api.yassin.app`
+(then `https://soundalike.yassin.app` as a fallback).
 The matcher keeps recent results in memory so repeat searches are fast. With a
 healthy local companion, Sounds like stays on your computer and Best matches
 ask first. Soundalike never sends audio, your Spotify password, access token,
@@ -177,21 +186,22 @@ the displayed result list are not sent to Discord.
 
 ## Good to know
 
-- Sounds like normally uses an always-on recommendation service. It quietly
-  prewarms the Vercel fallback after Spotify starts; if the primary service is
-  unavailable, the first fallback request after idle can take up to about 30
-  seconds. Repeated tracks use the local cache, and hosted responses can be
-  reused by the CDN.
-- The Sounds like library currently covers 272,853 tracks, and the Best
-  matches index 269,278.
+- Hosted Sounds like comes from the same GPU matcher as Best matches. The older
+  Sounds like service it replaced is only asked when that matcher can't answer;
+  it quietly prewarms its Vercel fallback after Spotify starts, and if its
+  primary service is unavailable, the first fallback request after idle can
+  take up to about 30 seconds. Repeated tracks use the local cache, and hosted
+  responses can be reused by the CDN.
+- The matcher picks its Best matches, Same vibe, and Sounds like results from
+  a 269,278-track catalog; the older Sounds like library covers 272,853 tracks.
 - Best matches hear only Deezer's 30-second preview, so a melody or sample
   outside that clip can be missed.
 - The matcher allows about 20 new searches a minute. Past that, Best matches
   say **You're going a bit fast**; wait a few seconds and try again. Lists
   saved on your computer don't count.
-- Sounds like ranking continues to use the independently validated
-  `dual_sonic64_guardrail` model. The `v=4` value in an extension request is
-  the strict Spotify-lyrics policy contract, not a V4 recommendation model.
+- The companion's and the fallback Sounds like ranking use the independently
+  validated `dual_sonic64_guardrail` model. The `v=4` value in their requests
+  is the strict Spotify-lyrics policy contract, not a V4 recommendation model.
   It invalidates permissive cached results. If the always-on service has not
   received that contract yet, the extension goes directly to the current
   Vercel ranker instead of accepting an older compatibility ranking.

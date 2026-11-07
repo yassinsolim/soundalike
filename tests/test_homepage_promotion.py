@@ -111,15 +111,15 @@ def test_homepage_language_switch_is_accessible_and_covers_best_and_same_vibe():
         '<button id="language-toggle" type="button" aria-pressed="false" hidden>'
     ) in script
     assert re.search(
-        r'box\.hidden =\s*\(picked\.tab !== "best" && picked\.tab !== "vibe"\) \|\| '
+        r'box\.hidden =\s*\(picked\.tab !== "best" && !fromBest\(picked\)\) \|\| '
         r'picked\.best\.status === "failed";',
         script,
     )
     assert '"all languages" : "other languages left out"' in script
-    assert "results.sounds" not in script and "hidden_sounds" not in script
+    assert "hidden_sounds" not in script
 
 
-def test_homepage_same_vibe_tab_reads_the_best_matches_response():
+def test_homepage_same_vibe_and_sounds_like_read_the_best_matches_response():
     script = (ROOT / "webapp" / "search.js").read_text(encoding="utf-8")
     keys = re.findall(r'key: "(\w+)",\s*label: "([^"]+)"', script)
     assert keys == [("best", "Best matches"), ("vibe", "Same vibe"), ("sounds", "Sounds like")]
@@ -127,10 +127,20 @@ def test_homepage_same_vibe_tab_reads_the_best_matches_response():
         "\"Songs from these matches that share this song's tempo and overall sound, "
         'one per artist."'
     ) in script
-    assert 'picked[picked.tab === "vibe" ? "best" : picked.tab]' in script
+    assert re.search(
+        r'const fromBest = picked =>\s*picked\.tab === "vibe" \|\| '
+        r'\(picked\.tab === "sounds" && picked\.soundsFromBest\);',
+        script,
+    )
+    assert 'const entryFor = picked => picked[fromBest(picked) ? "best" : picked.tab];' in script
     # Servers without Same vibe send no vibe list; the tab stays hidden.
     assert "picked.hasVibe = Array.isArray(vibe) && vibe.length > 0;" in script
     assert "if (button) button.hidden = !picked.hasVibe;" in script
+    # The library's Sounds like is asked only when the response carries no sounds list.
+    assert re.search(
+        r'hasSoundsList\(picked\.best\) \? undefined : settle\("sounds", requestSoundsLike\(item\)\)',
+        script,
+    )
 
 
 def test_marketplace_description_pins_the_immutable_update_bootstrap():
