@@ -218,17 +218,25 @@ class TwoStageIndex(_Ranked):
     ``candidates`` exactly from memory-mapped full windows. Tracks outside the candidate set keep their
     stage-1 estimate shifted below every exact score, so ranks past ``candidates`` are approximate.
 
+    Projections are fp16, or integers with one scale per window (``proj_scale``): int8, or uint8 holding two
+    4-bit values per byte (``index_build.quantize_windows``).
+
     With a hub penalty (``hub_build``), every score is lowered by ``alpha * h(track)`` before candidates are
     picked, where ``h`` is the track's mean top-k song similarity: CSLS, which demotes tracks close to everything.
     """
 
     def __init__(self, channel: Channel, ids: np.ndarray, proj: torch.Tensor, basis: torch.Tensor,
                  norms: torch.Tensor, full: np.ndarray, mu: torch.Tensor | None, candidates: int = 1000,
-                 hub: torch.Tensor | None = None, hub_alpha: float = 0.0):
+                 hub: torch.Tensor | None = None, hub_alpha: float = 0.0, proj_scale: torch.Tensor | None = None):
         n, w = len(ids), full.shape[1]
+        self.proj_bits = {torch.int8: 8, torch.uint8: 4}.get(proj.dtype, 16)
+        stored_dim = proj.shape[2] * 2 if self.proj_bits == 4 else proj.shape[2]
         if proj.shape[:2] != (n, w) or tuple(norms.shape) != (n, w) or len(full) != n \
-                or basis.shape != (full.shape[2], proj.shape[2]):
+                or basis.shape != (full.shape[2], stored_dim):
             raise ValueError("inconsistent two-stage index arrays")
+        if (self.proj_bits < 16) != (proj_scale is not None) or \
+                (proj_scale is not None and tuple(proj_scale.shape) != (n, w)):
+            raise ValueError("quantized projections need one scale per window (and fp16 ones none)")
         if channel.prep == "center" and mu is None:
             raise ValueError("center prep needs the index mean")
         if candidates < 1:
@@ -236,6 +244,7 @@ class TwoStageIndex(_Ranked):
         if hub_alpha and (hub is None or tuple(hub.shape) != (n,)):
             raise ValueError("a hub penalty needs one value per track")
         self.channel, self.proj, self.basis, self.norms, self.full, self.mu = channel, proj, basis, norms, full, mu
+        self.proj_scale = proj_scale.to(proj.device).float() if proj_scale is not None else None
         self.candidates, self.device = candidates, proj.device
         self.hub_alpha = float(hub_alpha)
         self.penalty = (self.hub_alpha * hub.to(proj.device).float()) if self.hub_alpha else None
@@ -256,11 +265,12 @@ class TwoStageIndex(_Ranked):
         if alpha and not (path / "hub.npy").exists():
             raise FileNotFoundError(f"{path / 'hub.npy'} is missing; run hub_build or use hub_alpha=0")
         hub = torch.from_numpy(np.load(path / "hub.npy").astype(np.float32)) if alpha else None
+        scale = torch.from_numpy(np.load(path / "proj_scale.npy")) if (path / "proj_scale.npy").exists() else None
         return cls(channel, np.load(path / "ids.npy"), _to_device(np.load(path / "proj.npy", mmap_mode="r"), device),
                    torch.from_numpy(np.load(path / "basis.npy")).to(device),
                    torch.from_numpy(np.load(path / "norms.npy")).to(device),
                    RowFile(path / "full.npy", read_threads), mu, candidates or meta.get("candidates", 1000),
-                   hub, alpha)
+                   hub, alpha, scale)
 
     def prep_query(self, win: np.ndarray | torch.Tensor) -> torch.Tensor:
         x = torch.as_tensor(win).to(self.device).float()
@@ -282,13 +292,22 @@ class TwoStageIndex(_Ranked):
             exact -= self.penalty[torch.as_tensor(rows, device=self.device)]
         return exact
 
+    def _proj_rows(self, a: int, b: int) -> torch.Tensor:
+        """Stage-1 projections of rows a..b as fp32 (quantized integers before their per-window scale)."""
+        p = self.proj[a:b]
+        if self.proj_bits == 4:
+            p = torch.stack(((p & 15).to(torch.int8) - 8, (p >> 4).to(torch.int8) - 8), -1).flatten(-2)
+        return p.float()
+
     @torch.inference_mode()
     def stage1(self, q: torch.Tensor, chunk: int = 8192) -> torch.Tensor:
         """Prepared queries [B, W, D] -> approximate scores [B, N]."""
         qp, qn, dim = q @ self.basis, (q ** 2).sum(-1), q.shape[-1]
         out = torch.empty(len(q), len(self), device=self.device)
         for s in range(0, len(self), chunk):
-            sims = torch.einsum("bwd,nvd->bnwv", qp, self.proj[s:s + chunk].float())
+            sims = torch.einsum("bwd,nvd->bnwv", qp, self._proj_rows(s, s + chunk))
+            if self.proj_scale is not None:
+                sims *= self.proj_scale[s:s + chunk][None, :, None, :]
             out[:, s:s + chunk] = window_scores(sims, self.channel.mode, qn, self.norms[s:s + chunk], dim)
         return out
 
