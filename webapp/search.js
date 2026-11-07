@@ -148,7 +148,10 @@
 
   const bestMatchesTimeoutMs = 30000;
   const bestMatchesRetries = 2;
-  // Best matches and Same vibe come from one any-song response.
+  const bestMatchesPolicy = "best-vibe-sounds-v1";
+  // Best matches, Same vibe and Sounds like come from one any-song response;
+  // the older library service answers Sounds like only when it has none.
+  const legacySoundsBlurb = "Songs with the same overall sound: low end, dynamics and tone.";
   const resultTabs = [
     {
       key: "best",
@@ -165,7 +168,7 @@
     {
       key: "sounds",
       label: "Sounds like",
-      blurb: "Songs with the same overall sound: low end, dynamics and tone.",
+      blurb: "Songs with the same overall sound: instruments, production and mood.",
     },
   ];
   let pickSequence = 0;
@@ -192,11 +195,13 @@
     `https://open.spotify.com/search/${encodeURIComponent(`${title} ${artist}`.trim())}`;
 
   async function fetchBestMatches(item, isCurrent, lang) {
+    // The policy keeps HTTP-cached responses from before a format change out.
     const params = new URLSearchParams({
       title: item.title,
       artist: item.artist,
       k: "20",
       lang,
+      policy: bestMatchesPolicy,
     });
     for (let attempt = 0; ; attempt += 1) {
       const requestController = new AbortController();
@@ -312,12 +317,21 @@
     `<div class="bar"><i style="width:${x.width}%"></i></div>` +
     `<a class="play" href="${esc(x.url)}" target="_blank" rel="noopener">Open in Spotify ▸</a></li>`;
 
-  const entryFor = picked => picked[picked.tab === "vibe" ? "best" : picked.tab];
+  // Lists that come from the any-song response read the Best matches entry.
+  const fromBest = picked =>
+    picked.tab === "vibe" || (picked.tab === "sounds" && picked.soundsFromBest);
+
+  const entryFor = picked => picked[fromBest(picked) ? "best" : picked.tab];
+
+  const hasSoundsList = entry =>
+    entry.status === "ready" &&
+    Array.isArray((entry.body.results || {}).sounds) &&
+    entry.body.results.sounds.length > 0;
 
   function seedTags(picked) {
     const entry = entryFor(picked);
     if (entry.status !== "ready") return [];
-    if (picked.tab !== "sounds") {
+    if (picked.tab !== "sounds" || picked.soundsFromBest) {
       const query = entry.body.query || {};
       const total = (entry.body.timings_ms || {}).total;
       const bpm = typeof query.bpm === "number" ? Math.round(query.bpm) : 0;
@@ -325,7 +339,7 @@
         query.source !== "live"
           ? "in our library"
           : entry.body.cached ? "heard live earlier" : "heard live just now",
-        picked.tab === "vibe" && bpm > 0 ? `${bpm} BPM` : "",
+        picked.tab !== "best" && bpm > 0 ? `${bpm} BPM` : "",
         !entry.body.cached && total ? `matched in ${(total / 1000).toFixed(1)} s` : "",
       ].filter(Boolean);
     }
@@ -335,12 +349,13 @@
 
   function blurbText(picked) {
     const tab = resultTabs.find(candidate => candidate.key === picked.tab);
+    if (picked.tab !== "sounds" || picked.soundsFromBest) return tab.blurb;
     const entry = entryFor(picked);
     const seed = entry.status === "ready" && entry.body.seed;
-    if (picked.tab === "sounds" && seed && songKey(seed) !== songKey(picked.seed)) {
-      return `${tab.blurb} Based on “${seed.title}” by ${seed.artist}, the closest song in that library.`;
+    if (seed && songKey(seed) !== songKey(picked.seed)) {
+      return `${legacySoundsBlurb} Based on “${seed.title}” by ${seed.artist}, the closest song in that library.`;
     }
-    return tab.blurb;
+    return legacySoundsBlurb;
   }
 
   function footText(picked) {
@@ -350,6 +365,9 @@
     }
     if (picked.tab === "vibe") {
       return "Same vibe comes from the same matcher as Best matches. ▶ = 30-second preview.";
+    }
+    if (picked.soundsFromBest) {
+      return "Sounds like comes from the same matcher as Best matches. ▶ = 30-second preview.";
     }
     const size = entry.status === "ready" && Number(entry.body.library_size);
     return size
@@ -365,15 +383,16 @@
     }
   }
 
-  // Best matches and Same vibe hide confidently other-language songs unless
-  // the listener asks for all languages. Sounds like is not filtered. The
-  // hidden count is Best's own, so Same vibe only says what it leaves out.
+  // Best matches, Same vibe and the any-song Sounds like hide confidently
+  // other-language songs unless the listener asks for all languages. The
+  // library's Sounds like is not filtered. The hidden count is Best's own, so
+  // the other two only say what they leave out.
   function renderLanguage(picked) {
     const box = document.querySelector("#language");
     const button = document.querySelector("#language-toggle");
     if (!box || !button) return;
     box.hidden =
-      (picked.tab !== "best" && picked.tab !== "vibe") || picked.best.status === "failed";
+      (picked.tab !== "best" && !fromBest(picked)) || picked.best.status === "failed";
     if (box.hidden) return;
     if (picked.best.status !== "ready") {
       button.setAttribute("aria-pressed", String(picked.lang === "all"));
@@ -387,7 +406,7 @@
     document.querySelector("#language-status").textContent =
       code === "unknown"
         ? "Language uncertain; showing all languages."
-        : picked.tab === "vibe"
+        : picked.tab !== "best"
           ? `${languageName(code)} · ${all ? "all languages" : "other languages left out"}`
           : `${languageName(code)} · ${
               hidden
@@ -449,11 +468,13 @@
   }
 
   // Servers without Same vibe send no vibe list, so its tab stays hidden. A
-  // language switch keeps the tab while the list reloads.
+  // language switch keeps the tab while the list reloads. Once the response
+  // carries Sounds like, that tab reads it too.
   function syncVibeTab(picked) {
     if (picked.best.status === "ready") {
       const vibe = (picked.best.body.results || {}).vibe;
       picked.hasVibe = Array.isArray(vibe) && vibe.length > 0;
+      if (hasSoundsList(picked.best)) picked.soundsFromBest = true;
     }
     const button = document.querySelector("#tab-vibe");
     if (button) button.hidden = !picked.hasVibe;
@@ -468,12 +489,10 @@
     if (shownPick !== picked || !list) return;
     syncVibeTab(picked);
     const entry = entryFor(picked);
+    const library = picked.tab === "sounds" && !picked.soundsFromBest;
     let rows = [];
     if (entry.status === "ready") {
-      rows =
-        picked.tab === "sounds"
-          ? soundsRows(entry.body)
-          : anysongRows(entry.body, picked.tab);
+      rows = library ? soundsRows(entry.body) : anysongRows(entry.body, picked.tab);
     }
     lastResults = rows;
     list.dataset.tab = picked.tab;
@@ -486,8 +505,7 @@
     if (entry.status === "pending") {
       list.innerHTML = '<li class="state"><span class="spin"></span> matching…</li>';
     } else if (entry.status === "failed") {
-      const message =
-        picked.tab === "sounds" ? entry.error.message : bestErrorText(entry.error);
+      const message = library ? entry.error.message : bestErrorText(entry.error);
       list.innerHTML = `<li class="state err">${esc(message)}</li>`;
     } else if (!rows.length) {
       list.innerHTML = '<li class="state">No matches in this list.</li>';
@@ -580,6 +598,7 @@
       lang: "same",
       languageSequence: 0,
       hasVibe: false,
+      soundsFromBest: false,
       best: { status: "pending" },
       sounds: { status: "pending" },
     };
@@ -598,7 +617,9 @@
         ? fetchBestMatches(item, isCurrent, picked.lang)
         : Promise.reject(new RequestError(400, ""))
     );
-    const soundsDone = settle("sounds", requestSoundsLike(item));
+    const soundsDone = bestDone.then(() =>
+      hasSoundsList(picked.best) ? undefined : settle("sounds", requestSoundsLike(item))
+    );
     try {
       await bestDone;
       if (!isCurrent()) return;

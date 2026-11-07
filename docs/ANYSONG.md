@@ -73,7 +73,10 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   (a catalog tempo table) the results also hold `vibe`, the Same vibe list (items like `best` without `ranks`,
   positional `score`, language-filtered like `best`), and `query.bpm` gives the seed's tempo (`null` when unknown).
   `--tempo-model` points to the Beat This! checkpoint that estimates the tempo of seeds outside the catalog; without
-  it their tempo is unknown and only the sound gate applies.
+  it their tempo is unknown and only the sound gate applies. Whenever the sonic channel is served, `sounds` is the
+  Sounds like list that the main page and Spotify show: the sonic channel's songs in order, language-filtered like
+  `best`, one song per artist (the scene table's Deezer artist, else the artist name), each with its sonic `score`
+  and its catalog `bpm` (`null` when unknown or without `--tempo`).
 - `/similar?title=&artist=&k=` (used by the main page and Spotify, which have no Deezer id) resolves the name first.
   Songs match by song key (primary artist plus title without bracketed, dashed or feat. tags), and among a song's
   releases one with the same version words (`deezer.version_words`: live, remix, acoustic, edit, sped up, ...) wins,

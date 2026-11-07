@@ -2,16 +2,16 @@
 // Adds a right-click "Find soundalikes" item to any track in the Spotify
 // desktop client. Results open on a navigable Spotify page with up to three
 // lists: "Best matches" (the hosted any-song ranking, shown by default),
-// "Same vibe" (from the same hosted response; not shown with the local
-// companion) and "Sounds like" (the optional local soundalike server,
-// otherwise the hosted library). Playing a result plays the shown list on in
+// "Same vibe" and "Sounds like" (both from the same hosted response; with the
+// local companion, Sounds like comes from the local soundalike server and
+// Same vibe is not shown). Playing a result plays the shown list on in
 // order, like a playlist that is never saved.
 //
 // Install (requires a patchable desktop Spotify app): follow this directory's
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.5.0";
+  const RUNTIME_SEMANTIC_VERSION = "2.6.0";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -55,7 +55,7 @@
   // Spotify drops songs queued just as a song starts playing.
   const LATE_QUEUE_DELAY_MS = 1500;
   const BEST_MATCHES_ENDPOINT = `${FALLBACK_HOSTED_SERVER}/api/anysong/similar`;
-  const BEST_MATCHES_POLICY = "anysong-best-rrf-language-vibe-v1";
+  const BEST_MATCHES_POLICY = "anysong-best-rrf-language-vibe-sounds-v2";
   const BEST_MATCHES_TIMEOUT_MS = 30000;
   const BEST_MATCHES_RETRIES = 2;
   const BEST_MATCHES_RETRY_DELAY_MS = 1500;
@@ -79,6 +79,9 @@
     "artist to soundalike.yassin.app.";
   const SOUNDS_LIKE_BLURB =
     "Songs with the same overall sound: low end, dynamics and tone.";
+  // The hosted Sounds like list comes from the GPU engine's MuQ-MuLan model.
+  const HOSTED_SOUNDS_LIKE_BLURB =
+    "Songs with the same overall sound: instruments, production and mood.";
   const FEEDBACK_ENDPOINT =
     `${FALLBACK_HOSTED_SERVER}/api/spicetify-feedback`;
   const FEEDBACK_INSTALL_KEY = "soundalike:feedback-install:v1";
@@ -698,6 +701,15 @@
       }))
       .filter((item) => item.title && item.artist)
       .slice(0, DISPLAY_RESULT_COUNT);
+    // The hosted Sounds like list; servers before it send none.
+    const sounds = (Array.isArray(body?.results?.sounds) ? body.results.sounds : [])
+      .map((item) => ({
+        title: String(item?.title || "").trim(),
+        artist: String(item?.artist || "").trim(),
+        bpm: Number.isFinite(item?.bpm) && item.bpm > 0 ? item.bpm : null,
+      }))
+      .filter((item) => item.title && item.artist)
+      .slice(0, DISPLAY_RESULT_COUNT);
     const total = Number(body?.timings_ms?.total);
     return {
       query: {
@@ -711,17 +723,20 @@
       },
       results,
       vibe,
+      sounds,
       totalMs: Number.isFinite(total) && total > 0 ? Math.round(total) : 0,
       serverCached: body?.cached === true,
     };
   }
 
   async function requestBestMatchesUncached(title, artist, langMode = "same") {
+    // The policy keeps HTTP-cached responses from before a format change out.
     const params = new URLSearchParams({
       title,
       artist,
       k: String(DISPLAY_RESULT_COUNT),
       lang: langMode,
+      policy: BEST_MATCHES_POLICY,
     });
     for (let attempt = 0; ; attempt++) {
       let response;
@@ -868,6 +883,16 @@
     };
   }
 
+  // Hosted Sounds like comes with Best matches from the GPU engine. The older
+  // Sounds like service answers only when that response has no sounds list,
+  // for example because the engine couldn't get the song. Null means the
+  // Best matches response has the list.
+  async function soundsAfterBest(best, seedTrack, artist, seedUri) {
+    await best.promise;
+    if (best.ok && best.value.data.sounds?.length) return null;
+    return requestSoundsLike(seedTrack, artist, seedUri);
+  }
+
   function settledRequest(promise) {
     const request = { done: false, ok: false, value: undefined, error: undefined };
     request.promise = Promise.resolve(promise).then(
@@ -893,6 +918,7 @@
           cached: request.value.cached === true,
           tracks: [],
           vibeTracks: [],
+          soundsTracks: [],
         }
       : {
           status: "error",
@@ -902,10 +928,14 @@
     // Same vibe is hosted-only. A failed language reload keeps the tab it had.
     if (request.ok) {
       state.hasVibe = !state.companion && Boolean(request.value.data.vibe?.length);
+      // Once the hosted response carries Sounds like, the tab stays on it.
+      if (!state.companion && request.value.data.sounds?.length) state.soundsFromBest = true;
     }
   }
 
   function applySoundsOutcome(state, request) {
+    // Hosted Sounds like came with Best matches, so there is no separate list.
+    if (request.ok && !request.value) return;
     state.sounds = request.ok
       ? {
           status: "ready",
@@ -950,17 +980,15 @@
     const best = askFirst
       ? null
       : settledRequest(requestBestMatches(seedTrack.name, artist, seedUri));
-    const sounds = settledRequest(requestSoundsLike(seedTrack, artist, seedUri));
+    const sounds = settledRequest(best
+      ? soundsAfterBest(best, seedTrack, artist, seedUri)
+      : requestSoundsLike(seedTrack, artist, seedUri));
     if (best) {
-      // Best matches is the default view. Open as soon as it settles, or once
-      // Sounds like is ready and Best matches has had a few more seconds.
+      // Best matches is the default view. Open as soon as it settles, or after
+      // a few seconds with it still loading.
       let patienceTimer;
       const patience = new Promise((resolve) => {
-        sounds.promise.then(() => {
-          if (best.done) resolve();
-          else if (!sounds.ok) best.promise.then(resolve);
-          else patienceTimer = setTimeout(resolve, BEST_MATCHES_PATIENCE_MS);
-        });
+        patienceTimer = setTimeout(resolve, BEST_MATCHES_PATIENCE_MS);
       });
       await Promise.race([best.promise, patience]);
       clearTimeout(patienceTimer);
@@ -990,6 +1018,7 @@
       showAllLanguages: false,
       companion: askFirst,
       hasVibe: false,
+      soundsFromBest: false,
       timing: { startedAt, initialReadyMs },
       best: best ? pendingResultList() : offeredBestList(seedUri),
       sounds: pendingResultList(),
@@ -1054,8 +1083,8 @@
     if (!state || state.searchId !== searchId) return;
     if (kind === "best") applyBestOutcome(state, request);
     else applySoundsOutcome(state, request);
+    // Failed Best matches give way to a Sounds like list, whichever came first.
     if (
-      kind === "best" &&
       state.best.status === "error" &&
       state.view === "best" &&
       !state.viewChosen &&
@@ -1066,7 +1095,8 @@
       return;
     }
     if (state.view === "vibe" && !state.hasVibe) state.view = "best";
-    if (state.view === kind || (kind === "best" && state.view === "vibe")) {
+    const fromBest = state.view === "vibe" || (state.view === "sounds" && state.soundsFromBest);
+    if (state.view === kind || (kind === "best" && fromBest)) {
       refreshResultsPage();
     }
   }
@@ -2083,19 +2113,24 @@
     );
   }
 
-  function revealBestRow(page, results, tracks, index) {
+  function revealBestRow(page, results, tracks, index, bpm = false) {
     const row = page.querySelector(`.sa-row[data-index="${index}"]`);
     if (!row || page !== activePage?.view) return;
-    renderResultRow(row, results[index], index, tracks[index] || null, index + 1, {
-      bpm: false,
-    });
+    renderResultRow(row, results[index], index, tracks[index] || null, index + 1, { bpm });
     row.hidden = false;
   }
 
-  // Best matches and Same vibe arrive already ranked, so Spotify only adds
-  // artwork, album and playback. The lyrics-language gate and feedback belong
-  // to Sounds like.
-  async function hydrateBestRows(results, page, tracks, timing, label = "Best matches") {
+  // Best matches, Same vibe and hosted Sounds like arrive already ranked, so
+  // Spotify only adds artwork, album and playback. The lyrics-language gate
+  // and feedback belong to the companion's Sounds like list.
+  async function hydrateBestRows(
+    results,
+    page,
+    tracks,
+    timing,
+    label = "Best matches",
+    { bpm = false } = {}
+  ) {
     const startedAt = nowMs();
     if (!Spicetify.GraphQL.Definitions.searchModalResults) {
       console.warn("[soundalike] Spotify artwork lookup is unavailable in this client.");
@@ -2116,7 +2151,7 @@
             );
           }
         }
-        revealBestRow(page, results, tracks, index);
+        revealBestRow(page, results, tracks, index, bpm);
       }
     }
     const workerCount = Math.min(SPOTIFY_ENRICH_WORKERS, results.length);
@@ -2324,7 +2359,40 @@
       </div>`;
   }
 
+  // Hosted Sounds like comes with Best matches, so it shares their language
+  // switch; its rows keep the BPM column.
+  function hostedSoundsPanelMarkup(state, seedArtists) {
+    const best = state.best;
+    if (best.status !== "ready") {
+      return `<p class="sa-blurb">${esc(HOSTED_SOUNDS_LIKE_BLURB)}</p>` +
+        listStateMarkup(best, "Finding songs that sound alike…");
+    }
+    const { query, sounds } = best.data;
+    if (!sounds?.length) {
+      return `<p class="sa-blurb">${esc(HOSTED_SOUNDS_LIKE_BLURB)}</p>` + listStateMarkup(
+        { status: "error", error: "No sound-alike songs came back for this song." },
+        ""
+      );
+    }
+    const blurb = HOSTED_SOUNDS_LIKE_BLURB + matchedToNote(state, query, seedArtists);
+    const tags = tagsMarkup([
+      "Overall sound",
+      query.bpm ? `${Math.round(query.bpm)} BPM` : "",
+      ...sourceTags(best),
+    ]);
+    const languageStatus = query.languageMode === "all"
+      ? "all languages"
+      : "other languages left out";
+    return `<p class="sa-blurb">${esc(blurb)}</p>
+      <div class="sa-tags">${tags}</div>
+      ${languageFilterMarkup(query, languageStatus)}
+      <div class="sa-list-head"><div>#</div><div></div><div>Title</div><div class="sa-album-head">Album</div><div class="sa-bpm">BPM</div></div>
+      <div class="sa-list">${resultRowsMarkup(sounds, { hidden: false, notes: false })}
+      </div>`;
+  }
+
   function soundsPanelMarkup(state, seedArtists) {
+    if (state.soundsFromBest) return hostedSoundsPanelMarkup(state, seedArtists);
     const sounds = state.sounds;
     let blurb = SOUNDS_LIKE_BLURB;
     const note = state.view === "sounds" &&
@@ -2371,6 +2439,30 @@
     return resultViews(state).some(([key]) => key === state.view) ? state.view : "best";
   }
 
+  // The list a view shows. Best matches, Same vibe and hosted Sounds like all
+  // come from the Best matches response; only the companion's Sounds like (or
+  // the older hosted service, as a fallback) has its own.
+  function viewList(state, view) {
+    const best = state.best;
+    if (view === "sounds" && !state.soundsFromBest) {
+      const sounds = state.sounds;
+      return { list: sounds, results: sounds.data?.results, tracks: sounds.tracks, separate: true };
+    }
+    if (view === "vibe") {
+      return { list: best, results: best.data?.vibe, tracks: (best.vibeTracks ||= []), label: "Same vibe" };
+    }
+    if (view === "sounds") {
+      return {
+        list: best,
+        results: best.data?.sounds,
+        tracks: (best.soundsTracks ||= []),
+        label: "Sounds like",
+        bpm: true,
+      };
+    }
+    return { list: best, results: best.data?.results, tracks: best.tracks, label: "Best matches" };
+  }
+
   function buildResultsPage(state) {
     const wrap = document.createElement("div");
     const view = shownView(state);
@@ -2382,11 +2474,13 @@
       ? "SAME VIBE · HOSTED LIBRARY"
       : "BEST MATCHES · HOSTED LIBRARY";
     if (view === "sounds") {
-      kicker = sounds.status === "ready"
-        ? `SOUNDS LIKE · ${sounds.data.__soundalikeSource === "local"
-          ? "LOCAL ENGINE"
-          : "HOSTED LIBRARY"}`
-        : "SOUNDS LIKE";
+      kicker = state.soundsFromBest
+        ? "SOUNDS LIKE · HOSTED LIBRARY"
+        : sounds.status === "ready"
+          ? `SOUNDS LIKE · ${sounds.data.__soundalikeSource === "local"
+            ? "LOCAL ENGINE"
+            : "HOSTED LIBRARY"}`
+          : "SOUNDS LIKE";
     }
     wrap.className = "sa-results";
 
@@ -2496,22 +2590,21 @@
             : soundsPanelMarkup(state, seedArtists)}
       </div>`;
 
-    const list = view === "sounds" ? sounds : state.best;
-    const ready = list.status === "ready";
-    const results = !ready ? [] : view === "vibe" ? list.data.vibe : list.data.results;
-    const tracks = (view === "vibe" ? list.vibeTracks : list.tracks) || [];
+    const shown = viewList(state, view);
+    const results = (shown.list.status === "ready" && shown.results) || [];
+    const tracks = shown.tracks || [];
     wrap.querySelectorAll(".sa-row").forEach((row) => {
       const index = Number(row.dataset?.index);
       const result = results[index];
       if (!result) return;
-      if (view !== "sounds") {
+      if (!shown.separate) {
         row.hidden = false;
         renderResultRow(row, result, index, tracks[index] || null, index + 1, {
-          bpm: false,
+          bpm: Boolean(shown.bpm),
         });
         return;
       }
-      row.hidden = Boolean(list.seedLanguage);
+      row.hidden = Boolean(shown.list.seedLanguage);
       renderResultRow(row, result, index, tracks[index] || null);
     });
     return wrap;
@@ -2605,16 +2698,17 @@
     const languageToggle = page.querySelector(".sa-language-toggle");
     if (languageToggle) languageToggle.onclick = toggleBestLanguageMode;
     const view = shownView(state);
-    if (view !== "sounds") {
+    const shown = viewList(state, view);
+    if (!shown.separate) {
       if (state.best.status !== "ready") return;
-      const vibe = view === "vibe";
-      const label = vibe ? "Same vibe" : "Best matches";
+      const { label } = shown;
       activePage.settled = hydrateBestRows(
-        vibe ? state.best.data.vibe : state.best.data.results,
+        shown.results || [],
         page,
-        vibe ? state.best.vibeTracks : state.best.tracks,
+        shown.tracks,
         state.timing,
-        label
+        label,
+        { bpm: Boolean(shown.bpm) }
       ).catch((error) => {
         console.error(`[soundalike] ${label} enrichment failed`, error);
       });

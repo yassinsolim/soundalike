@@ -2,13 +2,13 @@
   "payload": {
     "schema": 1,
     "channel": "stable",
-    "sequence": 8,
+    "sequence": 9,
     "runtime": {
-      "version": "2.5.0",
-      "url": "https://raw.githubusercontent.com/yassinsolim/soundalike/97c1695e243a046bd8c11483d2fd3f01037097c1/integrations/spicetify/soundalike.js",
-      "sha256": "76e72468694b4d2895d85c5dccfe5ae3f789e6a0984ed7192997177659dc28c7",
-      "sri": "sha256-duckaGlLTSiV2FxdzP5a4/eJ5qCYTtcZKZcXdlncKMc="
+      "version": "2.6.0",
+      "url": "https://raw.githubusercontent.com/yassinsolim/soundalike/dc71c1cfac95a3ce062007e129f8b1448e2660a9/integrations/spicetify/soundalike.js",
+      "sha256": "058110968af660d6df8ba2044337a4f6df5045a590f01f6e706d59f6ca0e292f",
+      "sri": "sha256-BYEQlor2YNbfi6IEQzek9t9QRaWQ8B9ucG1Z9soOKS8="
     }
   },
-  "signature": "xM6CTNBzWgVqFvC3O9OqaA2NUcdzDgvuWVE8WNAE7ss3jEScZs3fLEmiu5ka0TDcOgTvRwOkcgH+jaSV7yuHBg=="
+  "signature": "q1R85gQIGlNtFAHR76uJKdkzAcwIebREXI5LokrO4R0yk+PgdGq9EVW/qg6z0OSSCwjivl0+9pVh/gOK7+OZDQ=="
 }
