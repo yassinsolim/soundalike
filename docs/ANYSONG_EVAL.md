@@ -930,6 +930,54 @@ catalog can get fewer), and 99.5 % of their top-10 rows carry a tempo.
 **Limitations.** The list has no feedback prompt yet (that prompt and its server still accept only the older
 methods). It recommends only from the 269,278-track catalog, like the other hosted lists.
 
+## Catalog growth to about 1M tracks (pre-registered 2026-11-07)
+
+**Status.** These rules were committed before the grown index existed and before any of its results were seen.
+Results are appended below this section unchanged.
+
+**Change under test.** About 730,000 songs added by `anysong.crawl` (popular songs of the catalog's artists, then
+related artists, most-followed first) and embedded with the catalog's models and settings. Parity on 256 catalog
+songs re-embedded through the same pipeline: SampleID and MuQ-MuLan bit-identical, CLEWS window cosine
+≥ 0.9999997, language top-1 100 %, tempo within 0.5 BPM for 252 of 254. The index uses the compressed stage 1
+above. Both conditions are served by the same API code with the same settings; only the catalog differs.
+
+**Labels.** ListenBrainz similar-artist hits, Deezer related lists, Wikidata genres and the language table are
+rebuilt to cover the grown catalog, and both conditions are scored with those same labels. Without that, every new
+artist would count as a miss: a recommended artist only matches ListenBrainz by MusicBrainz ID or by name among
+catalog artists.
+
+**Seeds.** The 799 held-out seeds decide; the 800 development seeds are for diagnosing and fixing problems. No
+setting is tuned on held-out seeds.
+
+**Must pass (all), else not deployed:**
+
+1. **Lists users see.** Best matches, Same vibe and Sounds like as served (language gate on, top 10, other-artist
+   songs, one per artist), paired by seed, grown minus current:
+   - ListenBrainz hit rate: the 95 % paired-bootstrap interval of the difference has its lower bound at −0.010 or
+     above.
+   - Shares a genre: the mean difference is −0.02 or above.
+   - Other-language rows: up by no more than 1 point.
+   - Derivative uploads (karaoke, sped-up, slowed, tribute and the like, as in the research filters): up by no more
+     than 1 point.
+2. **Relationship benchmarks.** Any-tab HR@10 may drop by at most 0.03 on covers (held-out), samples (held-out) and
+   samples reverse (held-out), and by at most 0.10 on Gen Alpha (test, 59 queries). More decoys can only push
+   labelled matches down. When the catalog grew from 25k to 271k, covers lost 0.063 and Gen Alpha 0.238.
+3. **Exactness.** Against a brute-force exact search, the served top 20 is identical for at least 99 % of 300
+   random tracks per channel.
+4. **Serving on the RTX 2070 SUPER.**
+   - Peak VRAM of the API process at most 7.6 GB of 8.
+   - p95 latency for an unseen song through the API at most 1.0 s.
+   - Startup under 2 minutes.
+   - `serve_check` parity: re-embedded catalog tracks rank themselves first.
+
+If rule 1 passes and only rule 2 fails, the release waits for a decision with the evidence: how many lost hits
+were displaced by unlabelled versions of the same work (same normalized title, different artist).
+
+**Reported, not gated:**
+- Share of each held-out seed's ListenBrainz-similar artists present in the catalog (coverage).
+- Share of top-10 rows that are new songs.
+- The same list metrics on development seeds.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
