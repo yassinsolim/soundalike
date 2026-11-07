@@ -102,6 +102,39 @@ Errors are `{ok:false, error}` with 400 (bad parameters), 404 (unknown track or 
 (undecodable preview), 429 (rate limit), 502 (Deezer), 503 (busy) or 504 (timed out waiting for an identical
 request).
 
+## Growing the catalog
+
+[`anysong.crawl`](../src/soundalike/anysong/crawl.py) adds songs along Deezer's related-artist graph, starting from
+the scene table, and downloads their previews into the same cache as the catalog's:
+
+```sh
+python -m soundalike.anysong.crawl run --scene index/scene.npz --meta index/catalog_meta.npz \
+  --db /data/crawl/crawl.sqlite --previews /data/previews --target 730000
+python -m soundalike.anysong.crawl status --db /data/crawl/crawl.sqlite
+python -m soundalike.anysong.crawl export --db /data/crawl/crawl.sqlite --out /data/crawl/export
+```
+
+Catalog artists are crawled first: they get topped up with popular songs the catalog lacks, and their related
+lists bring fan counts for the artists around them. The rest of the frontier goes most-followed first, skipping
+artists with fewer than 100 fans. Ordering by link count instead fills up on dense scenes; in a test, 10 of the
+first 15 artists were classical performers who all list each other. An artist ends up with up to 8 songs at 100
+fans, 12 at 1,000, 16 at 10,000 and up to 25, counting those already in the catalog, taken from its own top songs.
+A song needs a playable preview, one to fifteen
+minutes of audio and a Deezer rank of at least 10,000. Karaoke, tribute, sped-up, slowed, 8D, nightcore,
+frequency, instrumental and a cappella uploads are left out, and so are karaoke and sleep or study-music
+channels. Live, edit, version and remaster variants count as the original song (remixes stay separate), and a
+catalogue-numbered classical work is kept for its first performer only.
+
+Each artist costs two API requests (4 per second by default, of Deezer's ~10 per IP, leaving room for the live
+API). Signed preview links expire in about fifteen minutes, so previews download straight away. The preview CDN
+rate-limits each IP at roughly ten downloads a second, so the pace adapts: it starts at 12 per second, slows by a
+fifth after each burst of HTTP 429s, and recovers while quiet. At about 470 KB per preview, 730k songs take
+roughly a day and 340 GB. Everything is in SQLite, so stopping and rerunning resumes; failed downloads are retried.
+
+`export` writes the new songs as `catalog_meta.npz` (same layout as the API's) and `ids.txt` for `embed_run`.
+It also writes `deezer_tracks.jsonl` and `deezer_related.jsonl` (related lists with names and fan counts for
+every crawled artist), which go into the scene data folder before the next `scene` build.
+
 ## Building an index
 
 Extract window embeddings for the frozen catalog with
@@ -250,6 +283,12 @@ Public routing lives on CT 408: `"proxy_paths": {"/api/anysong/*": "192.168.1.47
 `/etc/web/sites.json`, applied with `web-caddy-gen`. The API then listens on the LAN address
 (`ANYSONG_HOST=192.168.1.47`), and the Proxmox firewall for CT 409 only admits port 8790 from CT 408, which keeps
 `CF-Connecting-IP` trustworthy. The page itself ships with the normal `main` deploy.
+
+Catalog growth runs on the same host as
+[`deploy/homelab/soundalike-crawl.service`](../deploy/homelab/soundalike-crawl.service), from its own copy of the
+package in `/opt/soundalike/crawl-src` so API deploys never change it mid-crawl. The state is in
+`/data/crawl/crawl.sqlite`, previews go to `/data/previews` on the bulk HDD, and progress is in the journal or
+`crawl status`.
 
 ## Limitations
 
