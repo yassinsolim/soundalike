@@ -174,6 +174,10 @@ For a hosted recommendation, Soundalike receives:
 - the seed title and artist;
 - the requested result count and ranking options.
 
+When the seed isn't in the hosted catalog yet, the server notes its Deezer
+track and artist IDs and the date, nothing about who asked, so the catalog can
+grow toward songs people look up.
+
 The extension does not send your Spotify password, access token, library,
 listening history, or artwork. Lyrics-language and related-artist lookups happen
 inside your authenticated Spotify client.

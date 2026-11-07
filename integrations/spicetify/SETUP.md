@@ -417,7 +417,10 @@ the older Sounds like service at `https://soundalike-api.yassin.app` (or
 `https://soundalike.yassin.app` if that is unavailable). Spotify credentials, tokens, library data, and artwork are
 never sent. No separate Soundalike Spotify login is required. Language labels
 are read from Spotify's already-authenticated lyrics service inside the
-desktop client and are not sent to Soundalike.
+desktop client and are not sent to Soundalike. When the matcher analyzes a song
+that isn't in its catalog yet, it notes that song's Deezer track and artist IDs
+and the date so the catalog can grow toward songs people look up; nothing about
+who asked is kept.
 
 ### Troubleshooting and updates
 
@@ -497,7 +500,9 @@ right-click track ─▶ Spotify title + artist
 Best matches, Same vibe, and Sounds like come from the any-song matcher, which
 looks the song up by title and artist. A song in its 269,278-track index
 answers from stored embeddings; any other song with a Deezer preview is
-downloaded and analyzed live on a GPU, which takes a few seconds. The
+downloaded and analyzed live on a GPU, which takes a few seconds, and is
+queued (by its Deezer IDs only) for the catalog crawl, so it and its artist's
+neighbours join the index at the next rebuild. The
 extension retries twice when the matcher is busy and gives up after 30
 seconds.
 

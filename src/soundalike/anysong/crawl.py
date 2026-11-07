@@ -28,6 +28,13 @@ rate limiting and recovers by a tenth per quiet half minute. Failed downloads ge
 Everything is recorded in SQLite: stop it (SIGTERM or Ctrl-C) and rerun the same command to resume; previews that
 were still pending get fresh links.
 
+Learning as it goes: with ``--learn-queue`` (the file ``anysong.api --learn-queue`` writes: songs people looked up
+that the catalog lacks), the crawl reads new lines every ``--learn-every`` seconds. Each looked-up song is added
+itself (same filters except the rank minimum), and its artist goes ahead of everything else, or, if that artist is
+already crawled, its related artists do. Crawling a looked-up artist then queues its own related artists next, so the
+song's neighbourhood follows. With ``--keep-learning`` the crawl does not exit at ``--target`` or at the frontier's
+end; it keeps waiting for looked-up songs.
+
 ``export`` writes ``catalog_meta.npz`` (the API's track_ids/artists/titles layout), ``ids.txt``, and the scene
 builder's ``deezer_tracks.jsonl`` and ``deezer_related.jsonl`` for the new songs and every artist whose related
 list was fetched.
@@ -225,6 +232,11 @@ class CrawlDB:
         self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.execute("PRAGMA synchronous=NORMAL")
         self.conn.executescript(SCHEMA)
+        with self.conn:
+            for table, column in (("artists", "priority"), ("tracks", "learned")):
+                if column not in {row[1] for row in self.conn.execute(f"PRAGMA table_info({table})")}:
+                    self.conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} INTEGER NOT NULL DEFAULT 0")
+            self.conn.execute("CREATE INDEX IF NOT EXISTS artists_priority ON artists (priority) WHERE priority > 0")
 
     def setting(self, key: str) -> str | None:
         row = self.conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
@@ -263,20 +275,28 @@ class CrawlDB:
                 keys.add(work)
         return keys
 
-    def next_artist(self, min_fans: int, exclude: Collection[int] = ()) -> tuple[int, str | None, int, int] | None:
-        """Catalog artists first, then the most-followed frontier artist; ``exclude`` holds those in flight."""
+    def next_artist(self, min_fans: int, exclude: Collection[int] = (), learn_only: bool = False
+                    ) -> tuple[int, str | None, int, int, int] | None:
+        """Learned artists first (seeds, then their neighbours), then catalog artists, then the most-followed frontier
+        artist; ``exclude`` holds those in flight. ``learn_only`` returns learned artists only."""
         limit = len(exclude) + 1
-        rows = self.conn.execute("SELECT id, name, hop, fans FROM artists WHERE status = 'frontier' AND hop = 0 "
-                                 "ORDER BY id LIMIT ?", (limit,)).fetchall()
-        rows += self.conn.execute(
-            "SELECT id, name, hop, fans FROM artists WHERE status = 'frontier' AND hop > 0 AND (fans >= ? OR fans < 0) "
-            "ORDER BY fans DESC, links DESC, id LIMIT ?", (min_fans, limit)).fetchall()
+        rows = self.conn.execute(
+            "SELECT id, name, hop, fans, priority FROM artists WHERE priority > 0 AND status = 'frontier' "
+            "AND (priority > 1 OR fans >= ? OR fans < 0) ORDER BY priority DESC, fans DESC, id LIMIT ?",
+            (min_fans, limit)).fetchall()
+        if not learn_only:
+            rows += self.conn.execute(
+                "SELECT id, name, hop, fans, priority FROM artists WHERE status = 'frontier' AND hop = 0 "
+                "ORDER BY id LIMIT ?", (limit,)).fetchall()
+            rows += self.conn.execute(
+                "SELECT id, name, hop, fans, priority FROM artists WHERE status = 'frontier' AND hop > 0 "
+                "AND (fans >= ? OR fans < 0) ORDER BY fans DESC, links DESC, id LIMIT ?", (min_fans, limit)).fetchall()
         return next((row for row in rows if row[0] not in exclude), None)
 
     def count(self, table: str, where: str = "1", params: Sequence = ()) -> int:
         return self.conn.execute(f"SELECT COUNT(*) FROM {table} WHERE {where}", params).fetchone()[0]
 
-    def _link(self, artist_id: int, hop: int, related: Sequence[dict]) -> None:
+    def _link(self, artist_id: int, hop: int, related: Sequence[dict], boost: int = 0) -> None:
         for position, item in enumerate(related):
             rel_id = int(item["id"])
             if rel_id == artist_id:
@@ -286,19 +306,21 @@ class CrawlDB:
             fans = item.get("nb_fan")
             fans = fans if type(fans) is int and fans >= 0 else -1
             self.conn.execute(
-                "INSERT INTO artists (id, name, hop, links, fans, status) VALUES (?, ?, ?, ?, ?, 'frontier') "
+                "INSERT INTO artists (id, name, hop, links, fans, status, priority) VALUES (?, ?, ?, ?, ?, 'frontier', ?) "
                 "ON CONFLICT (id) DO UPDATE SET links = links + excluded.links, "
                 "fans = CASE WHEN excluded.fans >= 0 THEN excluded.fans ELSE fans END, "
-                "name = COALESCE(name, excluded.name), hop = MIN(hop, excluded.hop)",
-                (rel_id, item.get("name"), hop + 1, new_edge, fans))
+                "name = COALESCE(name, excluded.name), hop = MIN(hop, excluded.hop), "
+                "priority = MAX(priority, excluded.priority)",
+                (rel_id, item.get("name"), hop + 1, new_edge, fans, boost))
         self.conn.execute("UPDATE artists SET linked = 1 WHERE id = ?", (artist_id,))
 
     def record_artist(self, artist_id: int, hop: int, name: str | None, status: str, picked: Sequence[dict],
-                      related: Sequence[dict]) -> None:
+                      related: Sequence[dict], boost: int = 0) -> None:
+        """Store a crawled artist; with ``boost``, its related artists are queued as learned neighbours."""
         now = time.time()
         with self.conn:
             if status == "done":
-                self._link(artist_id, hop, related)
+                self._link(artist_id, hop, related, boost)
             self.conn.executemany(
                 "INSERT OR IGNORE INTO tracks (id, artist_id, artist, title, song_key, rank, duration, album_id, "
                 "added_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -306,6 +328,29 @@ class CrawlDB:
                   t["album_id"], now) for t in picked])
             self.conn.execute("UPDATE artists SET name = COALESCE(?, name), status = ?, songs = ?, crawled_at = ?, "
                               "error = NULL WHERE id = ?", (name, status, len(picked), now, artist_id))
+
+    def has_track(self, track_id: int) -> bool:
+        return self.conn.execute("SELECT 1 FROM tracks WHERE id = ?", (int(track_id),)).fetchone() is not None
+
+    def learn_artist(self, artist_id: int, name: str | None, min_fans: int) -> None:
+        """Queue a looked-up song's artist ahead of the bulk crawl (or, if already crawled, its neighbours)."""
+        with self.conn:
+            self.conn.execute(
+                "INSERT INTO artists (id, name, hop, status, priority) VALUES (?, ?, 0, 'frontier', 2) "
+                "ON CONFLICT (id) DO UPDATE SET name = COALESCE(name, excluded.name), priority = MAX(priority, 2)",
+                (int(artist_id), name))
+            if self.conn.execute("SELECT status FROM artists WHERE id = ?", (int(artist_id),)).fetchone()[0] == "done":
+                self.conn.execute(
+                    "UPDATE artists SET priority = MAX(priority, 1) WHERE status = 'frontier' AND (fans >= ? OR fans < 0) "
+                    "AND id IN (SELECT rel_id FROM related WHERE artist_id = ?)", (min_fans, int(artist_id)))
+
+    def add_learned(self, track: dict) -> None:
+        with self.conn:
+            self.conn.execute(
+                "INSERT OR IGNORE INTO tracks (id, artist_id, artist, title, song_key, rank, duration, album_id, "
+                "added_at, learned) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)",
+                (track["id"], track["artist_id"], track["artist"], track["title"], track["key"], track["rank"],
+                 track["duration"], track["album_id"], time.time()))
 
     def artist_failed(self, artist_id: int, error: str, max_attempts: int) -> None:
         """Set a failed artist aside ('retry') until the next pause or the frontier's end; 'error' when spent."""
@@ -401,7 +446,7 @@ class Crawler:
             return top, None, name
         return top, self.dz.related(artist_id), name
 
-    def _record(self, artist_id: int, hop: int, fans: int, fetched: tuple) -> list[dict]:
+    def _record(self, artist_id: int, hop: int, fans: int, fetched: tuple, priority: int = 0) -> list[dict]:
         top, related, name = fetched
         self.stats["api"] += 1 if related is None else 2
         if related is None:
@@ -410,9 +455,56 @@ class Crawler:
             return []
         cap = max(0, song_cap(fans, self.args.per_artist) - self.existing.get(artist_id, 0))
         picked = pick_tracks(artist_id, top, self.taken, self.catalog_ids, cap, self.args.min_rank)
-        self.db.record_artist(artist_id, hop, name, "done", picked, related)
+        self.db.record_artist(artist_id, hop, name, "done", picked, related, boost=1 if priority >= 2 else 0)
         self.stats["artists"] += 1
+        self.stats["learned_artists"] += priority > 0
         return picked
+
+    def _ingest(self, pool: ThreadPoolExecutor) -> int:
+        """Read new learn-queue lines: add each looked-up song itself and queue its artist ahead of the bulk crawl.
+
+        Progress is a byte offset in ``settings``; a Deezer failure stops the pass so the rest is read next time."""
+        path = Path(self.args.learn_queue)
+        if not path.exists():
+            return 0
+        offset = int(self.db.setting("learn_offset") or 0)
+        if path.stat().st_size < offset:  # the queue was replaced
+            offset = 0
+        with path.open("rb") as fh:
+            fh.seek(offset)
+            data = fh.read()
+        added, consumed = 0, 0
+        for raw in data.splitlines(keepends=True):
+            if not raw.endswith(b"\n"):
+                break  # a line still being written
+            try:
+                row = json.loads(raw)
+                tid, aid = int(row["id"]), row.get("artist_id")
+            except (ValueError, KeyError, TypeError):
+                consumed += len(raw)
+                continue
+            if tid not in self.catalog_ids and not self.db.has_track(tid):
+                try:
+                    info = self.dz.track(tid)
+                    self.stats["api"] += 1
+                except (OSError, RuntimeError, ValueError) as exc:
+                    self.log(f"learn: lookup of {tid} failed, retrying next pass: {exc}")
+                    break
+                artist = info.get("artist") if isinstance(info, dict) else None
+                aid = artist.get("id") if isinstance(artist, dict) and type(artist.get("id")) is int else aid
+                picked = pick_tracks(aid, [info], self.taken, self.catalog_ids, 1, 0) if aid else []
+                if picked and not junk_artist(picked[0]["artist"]):
+                    self.db.add_learned(picked[0])
+                    self.selected += 1
+                    added += 1
+                    self._submit(pool, picked[0]["id"], {"preview": picked[0]["preview"]})
+            if type(aid) is int and aid > 0:
+                self.db.learn_artist(aid, None, self.args.min_fans)
+            consumed += len(raw)
+        if consumed:
+            self.db.set_setting("learn_offset", str(offset + consumed))
+            self.stats["learned_songs"] += added
+        return added
 
     def _progress(self, started: float, final: bool = False) -> None:
         db, elapsed = self.db, max(time.time() - started, 1e-6)
@@ -427,7 +519,8 @@ class Crawler:
                 f"{self.args.target} selected, {saved} saved ({gigabytes:.1f} GB), {self.stats['no_preview']} "
                 f"without preview, {self.stats['error']} failed, {len(self.pending)} pending | "
                 f"{rate:.1f} previews/s (pacing {self.pacing.rate:.1f}/s, {self.pacing.slowdowns} slowdowns), "
-                f"{self.stats['api'] / elapsed:.1f} API/s | ETA {eta}")
+                f"{self.stats['api'] / elapsed:.1f} API/s | learned {self.stats['learned_songs']} songs, "
+                f"{self.stats['learned_artists']} artists | ETA {eta}")
         self.log(line)
         self.db.set_setting("progress", json.dumps({"at": time.time(), "line": line}))
 
@@ -470,18 +563,25 @@ class Crawler:
         inflight: dict[int, tuple[Future, tuple]] = {}
         try:
             self._fetch_again(pool, resume)
-            crawled = 0
+            crawled, learn_only, next_ingest = 0, False, 0.0
             while not self.stop.is_set():
                 self._drain()
+                if args.learn_queue and time.time() >= next_ingest:
+                    if self._ingest(pool):
+                        self.log(f"learn: {self.stats['learned_songs']} looked-up songs added so far")
+                    next_ingest = time.time() + args.learn_every
                 if time.time() - last_log >= args.log_every:
                     self._progress(started)
                     last_log = time.time()
                 if len(self.pending) >= args.max_pending:
                     self._drain(block=1.0)
                     continue
-                if self.selected >= args.target:
-                    reason = "target reached"
-                    break
+                if not learn_only and self.selected >= args.target:
+                    if not args.keep_learning:
+                        reason = "target reached"
+                        break
+                    learn_only = True
+                    self.log("target reached; from now on only looked-up songs and their artists are crawled")
                 if args.max_artists and crawled >= args.max_artists:
                     reason = "artist limit reached"
                     break
@@ -490,20 +590,27 @@ class Crawler:
                     break
                 window = min(args.fetchers, args.max_artists - crawled) if args.max_artists else args.fetchers
                 while len(inflight) < window:
-                    nxt = self.db.next_artist(args.min_fans, inflight)
+                    nxt = self.db.next_artist(args.min_fans, inflight, learn_only)
                     if nxt is None:
                         break
                     inflight[nxt[0]] = (fetchers.submit(self._fetch, nxt[0], nxt[1]), nxt)
                 if not inflight:
                     if self.db.requeue_failed():
                         continue
-                    reason = "frontier exhausted"
-                    break
+                    if not args.keep_learning:
+                        reason = "frontier exhausted"
+                        break
+                    if not learn_only:
+                        learn_only = True
+                        self.log("frontier exhausted; from now on only looked-up songs and their artists are crawled")
+                    self._drain(block=1.0)
+                    self.stop.wait(max(0.0, min(30.0, next_ingest - time.time())))
+                    continue
                 done, _ = wait([future for future, _ in inflight.values()], timeout=1.0, return_when=FIRST_COMPLETED)
                 for artist_id in [a for a, (future, _) in inflight.items() if future in done]:
-                    future, (_, _, hop, fans) = inflight.pop(artist_id)
+                    future, (_, _, hop, fans, priority) = inflight.pop(artist_id)
                     try:
-                        picked = self._record(artist_id, hop, fans, future.result())
+                        picked = self._record(artist_id, hop, fans, future.result(), priority)
                         self.failures = 0
                     except (OSError, RuntimeError, ValueError, KeyError, TypeError) as exc:
                         self.db.artist_failed(artist_id, str(exc), args.max_attempts)
@@ -540,12 +647,15 @@ def status(db_path: Path) -> dict:
     tracks = dict(db.conn.execute("SELECT status, COUNT(*) FROM tracks GROUP BY status").fetchall())
     hops = dict(db.conn.execute("SELECT hop, COUNT(*) FROM artists WHERE status = 'done' GROUP BY hop").fetchall())
     size = db.conn.execute("SELECT COALESCE(SUM(bytes), 0) FROM tracks").fetchone()[0]
+    learned = {"songs": dict(db.conn.execute("SELECT status, COUNT(*) FROM tracks WHERE learned = 1 GROUP BY status")),
+               "artists_waiting": db.count("artists", "priority > 1 AND status = 'frontier'"),
+               "queue_offset": int(db.setting("learn_offset") or 0)}
     recent = [name for (name,) in db.conn.execute(
         "SELECT name FROM artists WHERE status = 'done' ORDER BY crawled_at DESC LIMIT 8")]
     progress = json.loads(db.setting("progress") or "{}")
     db.conn.close()
     return {"artists": artists, "crawled_by_hop": hops, "tracks": tracks, "gigabytes": round(size / 1e9, 2),
-            "recent_artists": recent, "last_progress": progress.get("line"),
+            "learned": learned, "recent_artists": recent, "last_progress": progress.get("line"),
             "last_progress_age_s": round(time.time() - progress["at"]) if progress.get("at") else None}
 
 
@@ -598,6 +708,11 @@ def main(argv: list[str] | None = None) -> None:
     run.add_argument("--max-artists", type=int, default=0, help="stop after this many artists (0: no limit)")
     run.add_argument("--log-every", type=float, default=60.0)
     run.add_argument("--stop-timeout", type=float, default=90.0, help="seconds to finish downloads when stopping")
+    run.add_argument("--learn-queue", type=Path, default=None,
+                     help="songs looked up live (anysong.api --learn-queue): added with their artists ahead of the rest")
+    run.add_argument("--learn-every", type=float, default=600.0, help="seconds between reads of the learn queue")
+    run.add_argument("--keep-learning", action="store_true",
+                     help="after the target or the frontier's end, keep running for looked-up songs only")
     st = sub.add_parser("status")
     st.add_argument("--db", type=Path, required=True)
     ex = sub.add_parser("export")

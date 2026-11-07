@@ -35,8 +35,10 @@ RELATED = {
 }
 
 
-def fake_client(top=TOP, related=RELATED, fail_top=(), fail_preview=None, no_preview=()):
+def fake_client(top=TOP, related=RELATED, fail_top=(), fail_preview=None, no_preview=(), tracks=None,
+                fail_lookup=()):
     calls, fail_top, fail_preview = [], set(fail_top), Counter(fail_preview or {})
+    tracks, fail_lookup = tracks or {}, set(fail_lookup)
 
     class FakeDeezer:
         def __init__(self, cache_dir, **kwargs):
@@ -52,6 +54,13 @@ def fake_client(top=TOP, related=RELATED, fail_top=(), fail_preview=None, no_pre
         def related(self, artist_id, limit=50):
             calls.append(("related", artist_id))
             return related.get(artist_id, [])
+
+        def track(self, track_id):
+            calls.append(("track", track_id))
+            if track_id in fail_lookup:
+                fail_lookup.discard(track_id)
+                raise RuntimeError("lookup outage")
+            return tracks.get(track_id, {})
 
         def preview_path(self, tid):
             return self.cache / f"{tid % 1000:03d}" / f"{tid}.mp3"
@@ -78,7 +87,8 @@ def setup(tmp_path, **overrides):
     values = dict(scene=tmp_path / "scene.npz", meta=tmp_path / "meta.npz", db=tmp_path / "crawl.sqlite",
                   previews=tmp_path / "previews", target=1000, per_artist=25, min_rank=1000, min_fans=100, rate=1.0,
                   fetchers=1, preview_rate=50.0, workers=2, max_pending=8, max_attempts=3, min_free_gb=0.0,
-                  max_artists=0, log_every=3600.0, stop_timeout=5.0)
+                  max_artists=0, log_every=3600.0, stop_timeout=5.0, learn_queue=None, learn_every=600.0,
+                  keep_learning=False)
     values.update(overrides)
     return argparse.Namespace(**values)
 
@@ -188,8 +198,8 @@ def test_seed_queues_catalog_artists_then_the_artists_their_related_lists_link_t
         rows = conn.execute("SELECT id, hop, links, fans, status FROM artists ORDER BY id").fetchall()
     assert rows == [(1, 0, 0, -1, "frontier"), (2, 0, 0, -1, "frontier"), (3, 1, 2, -1, "frontier"),
                     (4, 1, 1, -1, "frontier")]
-    assert db.next_artist(100) == (1, None, 0, -1)
-    assert db.next_artist(100, exclude={1, 2}) == (3, None, 1, -1)
+    assert db.next_artist(100) == (1, None, 0, -1, 0)
+    assert db.next_artist(100, exclude={1, 2}) == (3, None, 1, -1, 0)
 
 
 def test_crawl_tops_up_catalog_artists_takes_popular_artists_next_resumes_and_exports(tmp_path):
@@ -273,3 +283,93 @@ def test_song_cap_counts_the_songs_an_artist_already_has_in_the_catalog(tmp_path
     tracks = statuses(args.db, "tracks")
     assert 111 not in tracks
     assert {301, 303} <= set(tracks) and 304 not in tracks
+
+
+LEARNED = {701: song(701, 7, "Seven", "Searched Song", rank=50), 702: song(702, 7, "Seven", "Seven Hit")}
+LEARN_TOP = {**TOP, 7: [LEARNED[702]], 8: [song(801, 8, "Eight", "Eight Hit")]}
+LEARN_RELATED = {**RELATED, 7: [{"id": 8, "name": "Eight", "nb_fan": 500}, {"id": 9, "name": "Nine", "nb_fan": 10}]}
+
+
+def write_queue(path, rows, partial=None):
+    text = "".join(json.dumps(r) + "\n" for r in rows) + (partial or "")
+    path.write_text(text, encoding="utf-8")
+    return len(text.encode()) - len((partial or "").encode())
+
+
+def test_looked_up_songs_and_their_artists_go_first_then_their_neighbours(tmp_path):
+    queue = tmp_path / "learn.jsonl"
+    complete = "".join(line + "\n" for line in (json.dumps({"id": 701, "artist_id": 7, "day": "2026-11-07"}),
+                                                "not json",
+                                                json.dumps({"id": 100, "artist_id": 1, "day": "2026-11-07"})))
+    queue.write_bytes((complete + '{"id": 70').encode())  # the API is still writing the last line
+    args = setup(tmp_path, learn_queue=queue)
+    client, calls = fake_client(top=LEARN_TOP, related=LEARN_RELATED, tracks=LEARNED)
+    assert run(args, client)[0] == "frontier exhausted"
+    assert [c[1] for c in calls if c[0] == "track"] == [701]  # catalog song 100 needs no lookup
+    # Seed artists (1 via its catalog song, 7 via the new song), then their neighbours by fans (3, 8, 4; Nine has
+    # too few fans), then the bulk crawl (catalog artist 2, then Five).
+    assert [c[1] for c in calls if c[0] == "top"] == [1, 7, 3, 8, 4, 2, 5]
+    tracks = statuses(args.db, "tracks")
+    assert tracks[701] == "ok" and tracks[702] == "ok" and tracks[801] == "ok" and 9 not in tracks
+    with CrawlDB(args.db, readonly=True).conn as conn:
+        assert conn.execute("SELECT id FROM tracks WHERE learned = 1").fetchall() == [(701,)]
+        offset = int(conn.execute("SELECT value FROM settings WHERE key = 'learn_offset'").fetchone()[0])
+    assert offset == len(complete.encode())
+    report = crawl.status(args.db)
+    assert report["learned"]["songs"] == {"ok": 1} and report["learned"]["artists_waiting"] == 0
+
+
+def test_learning_resumes_after_a_lookup_failure_and_waits_for_partial_lines(tmp_path):
+    queue = tmp_path / "learn.jsonl"
+    write_queue(queue, [{"id": 701, "artist_id": 7, "day": "2026-11-07"}], partial='{"id": 702, "artist_id": 7}')
+    args = setup(tmp_path, learn_queue=queue, max_artists=1)
+    client, calls = fake_client(top=LEARN_TOP, related=LEARN_RELATED, tracks=LEARNED, fail_lookup={701})
+    run(args, client)
+    assert 701 not in statuses(args.db, "tracks")
+    with CrawlDB(args.db, readonly=True).conn as conn:
+        assert conn.execute("SELECT value FROM settings WHERE key = 'learn_offset'").fetchone() is None
+    with queue.open("a", encoding="utf-8") as fh:
+        fh.write("\n")
+    client, calls = fake_client(top=LEARN_TOP, related=LEARN_RELATED, tracks=LEARNED)
+    run(args, client)
+    assert [c[1] for c in calls if c[0] == "track"] == [701, 702]
+    tracks = statuses(args.db, "tracks")
+    assert tracks[701] == "ok" and tracks[702] == "ok"
+    assert [c[1] for c in calls if c[0] == "top"] == [7]
+
+
+def test_keep_learning_keeps_running_after_the_target_for_new_lookups(tmp_path):
+    import threading
+    import time
+
+    queue = tmp_path / "learn.jsonl"
+    queue.write_text("", encoding="utf-8")
+    args = setup(tmp_path, learn_queue=queue, learn_every=0.05, keep_learning=True, target=1)
+    client, calls = fake_client(top=LEARN_TOP, related=LEARN_RELATED, tracks=LEARNED)
+    holder, result = {}, {}
+
+    def go():  # SQLite connections belong to the thread that opened them, as in main()
+        holder["crawler"] = crawl.Crawler(args, client=client, log=lambda line: None)
+        result["reason"] = holder["crawler"].run()
+
+    worker = threading.Thread(target=go)
+    worker.start()
+    try:
+        deadline = time.time() + 20
+        while time.time() < deadline and not any(c[0] == "top" for c in calls):
+            time.sleep(0.02)
+        time.sleep(0.3)
+        assert [c[1] for c in calls if c[0] == "top"] == [1]  # target reached after one artist; bulk crawl stops
+        with queue.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps({"id": 701, "artist_id": 7, "day": "2026-11-07"}) + "\n")
+        while time.time() < deadline and ("preview", 702, True) not in calls:
+            time.sleep(0.02)
+        assert ("track", 701) in calls and ("preview", 702, True) in calls
+    finally:
+        while "crawler" not in holder and worker.is_alive():
+            time.sleep(0.01)
+        if "crawler" in holder:
+            holder["crawler"].stop.set()
+        worker.join(30)
+    assert not worker.is_alive() and result["reason"] == "stopped"
+    assert [c[1] for c in calls if c[0] == "top"] == [1, 7, 8]

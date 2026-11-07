@@ -161,7 +161,11 @@ which may look the song up on Deezer and analyze Deezer's public 30-second
 preview. Only when that matcher can't answer does it send the same title and
 artist to the older Sounds like service at `https://soundalike-api.yassin.app`
 (then `https://soundalike.yassin.app` as a fallback).
-The matcher keeps recent results in memory so repeat searches are fast. With a
+The matcher keeps recent results in memory so repeat searches are fast. When
+it analyzes a song that isn't in its catalog yet, it also writes that song's
+Deezer track and artist IDs and the date to a list the catalog crawl reads, so
+the catalog grows toward songs people look up. Nothing about who asked (no
+address, account, or request details) is written. With a
 healthy local companion, Sounds like stays on your computer and Best matches
 ask first. Soundalike never sends audio, your Spotify password, access token,
 library, listening history, or artwork. Language

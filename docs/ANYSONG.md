@@ -135,6 +135,23 @@ roughly a day and 340 GB. Everything is in SQLite, so stopping and rerunning res
 It also writes `deezer_tracks.jsonl` and `deezer_related.jsonl` (related lists with names and fan counts for
 every crawled artist), which go into the scene data folder before the next `scene` build.
 
+**Learning as it goes.** The API's `--learn-queue` file gets one line per song it answered live, meaning a song
+not yet in the catalog: `{"id": <Deezer track>, "artist_id": <Deezer artist>, "day": "YYYY-MM-DD"}`.
+- Nothing about the request is written: no address, title or time of day.
+- Each song is written once per process, with at most 5,000 lines a day, and a failed write never fails the
+  request.
+
+`crawl run --learn-queue <file> --keep-learning` reads new lines every 10 minutes:
+- The looked-up song is added itself, with the usual filters except the rank minimum.
+- Its artist goes ahead of the bulk crawl. If that artist was crawled already, its related artists go ahead
+  instead.
+- Crawling a looked-up artist queues its related artists (with at least 100 fans) next, so the song's
+  neighbourhood follows.
+
+A Deezer failure leaves the rest of the queue for the next pass. Once the bulk target is reached, the crawl keeps
+running for looked-up songs only. They are embedded with the rest of the crawl's songs and join the catalog at the
+next index rebuild. `crawl status` reports learned songs and looked-up artists still waiting.
+
 ## Building an index
 
 Extract window embeddings for the frozen catalog with
@@ -306,7 +323,8 @@ package in `/opt/soundalike/crawl-src` so API deploys never change it mid-crawl.
 the bulk HDD. The state database is `/var/lib/soundalike-crawl/crawl.sqlite` on the NVMe rootfs: on the HDD, its
 small random writes made up more than half of the disk's write operations (57 writes/s before the move, 23 after, at
 the same write volume), which left little room for reading previews while the crawl ran. Progress is in the
-journal or `crawl status`.
+journal or `crawl status`. The API writes its learn queue to `/var/lib/anysong/learn-queue.jsonl`, and the crawl
+reads it with `--keep-learning`, so it keeps running after the bulk target.
 
 ## Limitations
 

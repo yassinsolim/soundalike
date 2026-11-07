@@ -12,10 +12,12 @@ Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONPATH=/opt/soundalike/crawl-src
 # Resumable: a restart continues from the SQLite state; the run exits 0 once --target new songs are saved.
 # The state database lives on the NVMe rootfs (StateDirectory): its small random writes would otherwise compete with
-# preview writes and reads on the bulk HDD. Previews and exports stay on /data.
+# preview writes and reads on the bulk HDD. Previews and exports stay on /data. After the bulk target the crawl keeps
+# running for songs people looked up (the API's learn queue, read-only here).
 ExecStart=/opt/soundalike/venv/bin/python -m soundalike.anysong.crawl run \
     --scene /opt/soundalike/index/scene.npz --meta /opt/soundalike/index/catalog_meta.npz \
-    --db /var/lib/soundalike-crawl/crawl.sqlite --previews /data/previews --target 730000
+    --db /var/lib/soundalike-crawl/crawl.sqlite --previews /data/previews --target 730000 \
+    --learn-queue /var/lib/anysong/learn-queue.jsonl --keep-learning
 StateDirectory=soundalike-crawl
 Restart=on-failure
 RestartSec=60
