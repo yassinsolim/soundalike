@@ -213,3 +213,25 @@ def test_scene_best_matches_plain_best_without_affinity_and_moves_with_it():
     # these synthetic cosines all clear the real melody threshold, so every top-10 song is head evidence
     everything = ei.evaluate_indexes(indexes, [query], keys, log=lambda _: None, scene=table)["best_scene"]
     assert everything["test/held_out"]["median_first"] == 11
+
+
+def test_tiers_rank_only_the_songs_the_api_would_allow():
+    from soundalike.anysong.scene import build
+    from soundalike.anysong.tiers import TierGate
+
+    ids, ix = random_index(n=40, seed=31)
+    # Four artists in turn; the first 20 rows are the core catalog. The seed's artist (100) lists 101 as related.
+    table = build({int(t): 100 + i % 4 for i, t in enumerate(ids)}, {100: [101]}, {}, {})
+    tiers = TierGate(ids[:20], table, {"test": ix})
+    seed = int(ids[0])
+    related_new, other_new, other_core = int(ids[21]), int(ids[22]), int(ids[2])
+    queries = [ev.Query(name, "k", "test", seed, frozenset({pos}))
+               for name, pos in (("related", related_new), ("other", other_new), ("core", other_core))]
+    open_ = ei.evaluate_indexes({"test": ix}, queries, ei.SongKeys({}), log=lambda _: None)
+    gated = ei.evaluate_indexes({"test": ix}, queries, ei.SongKeys({}), log=lambda _: None, tiers=tiers)
+    for name in ("related", "core"):
+        assert gated["channels"]["test"][f"{name}/test"]["songs"]["n"] == 1
+        # fewer rows compete, so an allowed positive can only move up
+        assert gated["any_tab"][f"{name}/test"]["median_first"] <= open_["any_tab"][f"{name}/test"]["median_first"]
+    assert gated["coverage"]["test"]["other/test"] == {"no_positive_songs": 1}
+    assert open_["channels"]["test"]["other/test"]["songs"]["n"] == 1
