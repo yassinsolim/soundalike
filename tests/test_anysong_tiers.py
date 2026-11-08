@@ -136,3 +136,24 @@ def test_live_seed_uses_its_live_related_list_and_fails_closed_for_new_songs(tmp
     svc = service(tmp_path)
     svc.deezer.fail_related = True
     assert ids(svc.similar(99, k=10)) == [2, 3, 1]  # no related list: core songs only
+
+
+def test_live_seed_embeds_while_its_related_list_is_fetched(tmp_path):
+    import threading
+
+    svc = service(tmp_path)
+    embedded = threading.Event()
+    embed, related = svc.engine.embed_clips, svc.deezer.related_artists
+
+    def embed_clips(clips):
+        embedded.set()
+        return embed(clips)
+
+    def related_artists(artist_id):  # Deezer answers only after the GPU has embedded the preview
+        if not embedded.wait(5):
+            raise RuntimeError("the related list was awaited before embedding")
+        return related(artist_id)
+
+    svc.engine.embed_clips, svc.deezer.related_artists = embed_clips, related_artists
+    r = svc.similar(99, k=10)
+    assert ids(r) == [2, 5, 6, 3, 1] and r["timings_ms"]["related"] >= 0
