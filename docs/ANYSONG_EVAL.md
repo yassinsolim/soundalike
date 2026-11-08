@@ -1066,6 +1066,100 @@ Their ListenBrainz similar artists are fetched the same way as the fresh set's. 
 an unseen song: its preview windows, read from the embedding shards, ranked against the 269k index, with the
 related artists Deezer lists. "Gated" serves the song from the grown index. Scoring is as in rule 1.
 
+### Result: catalog tiers passed rules 1 to 3 (2026-11-08)
+
+Run once on each set after the amendment was committed (c70e110).
+
+Rule 1, ListenBrainz hit rate (current → gated, difference with its 95 % interval; it must stay at −0.010 or
+above):
+
+| Seeds | List | Current | Gated | Difference |
+|---|---|---:|---:|---|
+| Held-out (799) | Best matches | 0.215 | 0.217 | +0.002 (−0.003 to +0.007) |
+| | Same vibe | 0.314 | 0.316 | +0.002 (−0.004 to +0.008) |
+| | Sounds like | 0.211 | 0.217 | +0.006 (+0.002 to +0.011) |
+| Fresh (1,000) | Best matches | 0.212 | 0.219 | +0.007 (+0.002 to +0.012) |
+| | Same vibe | 0.316 | 0.321 | +0.004 (−0.002 to +0.011) |
+| | Sounds like | 0.210 | 0.215 | +0.006 (+0.001 to +0.011) |
+
+The other rule-1 checks passed on both sets:
+- Shared genre: from +0.002 to +0.012.
+- Other-language rows: unchanged.
+- Derivative uploads: unchanged.
+
+Crawled songs made up 3 % to 7 % of the top 10. (Erratum to the amendment: on development seeds, Sounds like's
+shared genre rose by 0.013, not by less than 0.01.)
+
+Rule 2 (any-tab HR@10, with `--core-ids`):
+
+| Benchmark | Current | Gated | Change | Limit |
+|---|---:|---:|---:|---:|
+| Covers | 0.709 | 0.707 | −0.002 | −0.03 |
+| Samples | 0.162 | 0.165 | +0.003 | −0.03 |
+| Samples reverse | 0.170 | 0.168 | −0.001 | −0.03 |
+| Gen Alpha | 0.508 | 0.508 | 0.000 | −0.10 |
+
+Rule 3: with the masks on both sides, the served top 20 and top 100 matched brute force for all 300 random tracks
+in every channel.
+
+**Reported, not gated: seeds outside the current catalog.** 800 seeds, drawn from 5,236 eligible artists:
+
+| List | Current (unseen song) | Gated | Difference |
+|---|---:|---:|---|
+| Best matches | 0.072 | 0.138 | +0.066 (+0.056 to +0.077) |
+| Same vibe | 0.103 | 0.186 | +0.084 (+0.070 to +0.098) |
+| Sounds like | 0.076 | 0.139 | +0.063 (+0.051 to +0.075) |
+
+Further changes for these seeds:
+- Other-language rows fell from 37 %, 33 % and 38 % to none. The current API cannot tell the language of an unseen
+  song by an artist outside the catalog, so its language filter stays off; the grown catalog has labels for every
+  crawled song.
+- Shared genre rose by 0.035, 0.051 and 0.043.
+- Crawled songs made up 22 %, 25 % and 18 % of the top 10.
+
+Sounds like lists were slightly shorter: 9.7 rows in the top 10 on average.
+
+### Rule 4 on the RTX 2070 SUPER: latency over the limit, not deployed (2026-11-08)
+
+Two deploys with automatic rollback, both rolled back.
+
+The first deploy's checks:
+- `serve_check` parity: all 64 re-embedded tracks per channel ranked themselves first; window cosine at least
+  0.999999.
+- `serve_check` VRAM: 5,445 MiB loaded, 6,797 MiB peak.
+- `serve_check` serial unseen p95: 847 ms, against 555 ms for the 269k index.
+- Startup: 45 s, with the tiers active.
+
+Its latency check through the API was invalid. It sent 40 requests back to back from one address and 32 got
+HTTP 429 from the API's own rate limit. It also requested songs by id, which adds a Deezer track lookup that the
+original serving measurement did not include.
+
+**Corrected method.** As in the serving measurement above, each song is searched, then requested from `/similar`,
+and only that request is timed. Requests are paced under the rate limits. The 40 songs are taken from crawl chunk 30,
+which neither index holds. Both services were measured the same way on the same songs:
+
+| Unseen song | Current (269k) | Gated grown |
+|---|---:|---:|
+| p50 | 0.932 s | 0.997 s |
+| p95 | 1.125 s | 1.046 s |
+| max | 1.416 s | 1.192 s |
+| peak VRAM | 6,215 MiB | 6,435 MiB |
+
+The gated grown catalog missed the 1.0 s p95 limit by 46 ms, so the deploy script rolled it back. The current
+service misses the limit too. The limit was set from the 610 to 670 ms measured before Same vibe's tempo tracking
+and the scene layer's related-artist lookup were added.
+
+Medians per stage:
+- **Search:** 201 ms on the current index, 413 ms on the grown one. The samples channel went from 133 to 310 ms.
+- **Related artists:** on the current service, the API waited a median 137 ms (up to 616 ms) after the search for
+  Deezer's list. On the grown index, the list had arrived by the time the longer search ended.
+
+**Serving fix found during the attempts.** In the first deploy, the API fetched the seed's related artists from
+Deezer before searching, for the tiers. The fetch runs in a background thread and took about 880 ms while the GPU
+work ran, against about 300 ms on its own (probably contention for Python's GIL; not verified). Serving now gates
+with the related lists stored in the scene table, as the evaluation did, so the search never waits for Deezer. 150
+development and 150 out-of-catalog seeds reproduced the evaluated gated lists exactly.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
