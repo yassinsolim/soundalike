@@ -1160,6 +1160,12 @@ work ran, against about 300 ms on its own (probably contention for Python's GIL;
 with the related lists stored in the scene table, as the evaluation did, so the search never waits for Deezer. 150
 development and 150 out-of-catalog seeds reproduced the evaluated gated lists exactly.
 
+**Decision (2026-11-08, after the results above).** The project owner changed rule 4's latency limit for this
+release to "unseen-song p95 no higher than the current service's, measured the same way". The current service
+measured 1.125 s and the gated grown catalog 1.046 s. The original 1.0 s limit predates Same vibe and the scene
+layer, and the current service no longer meets it either. The deploy re-measures against 1.125 s, with the other
+rule-4 checks and automatic rollback unchanged.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
