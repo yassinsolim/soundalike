@@ -67,15 +67,12 @@ class Deezer:
     def __init__(self, tmp_path):
         self.tmp_path = tmp_path
         self.related = {999: [200]}
-        self.fail_related = False
+        self.artist = {"id": 999, "name": "New Artist"}
 
     def track(self, tid):
-        return {"id": tid, "title": "Live Song", "artist": {"id": 999, "name": "New Artist"}, "album": {},
-                "preview": "u"}
+        return {"id": tid, "title": "Live Song", "artist": dict(self.artist), "album": {}, "preview": "u"}
 
     def related_artists(self, artist_id):
-        if self.fail_related:
-            raise RuntimeError("down")
         return self.related.get(artist_id, [])
 
     def fetch_preview(self, tid, meta=None):
@@ -98,10 +95,10 @@ def test_masks_cover_core_rows_and_the_seed_artists_scene():
     scene = scene_table()
     gate = TierGate(np.array(CORE), scene, {"melody": Index(sorted(META))})
     assert gate.sizes == {"melody": {"core": 3, "discovered": 4}}
-    assert gate.artists(100) == [100, 300, 500]  # the table's own list for Daft Punk
-    assert gate.artists(400, live_related=[200]) == [200, 400]  # no list in the table: the live one
-    assert gate.artists(300, live_related=[200]) == [100, 300]  # the table's list wins
-    assert gate.artists(None, live_related=[200]) == [] and gate.artists(600) == [600]
+    assert gate.artists(100) == [100, 300, 500]  # Daft Punk's own list in the table
+    assert gate.artists(300) == [100, 300]
+    assert gate.artists(400) == [400]  # no own list in the table: the artist alone
+    assert gate.artists(None) == [] and gate.artists(999) == [999]
     order = sorted(META)
     allowed = lambda artists: [t for t, ok in zip(order, gate.mask("melody", artists).tolist()) if ok]  # noqa: E731
     assert allowed(gate.artists(100)) == [1, 2, 3, 7, 8]
@@ -128,32 +125,33 @@ def test_catalog_seed_gets_core_songs_and_its_related_artists_new_songs(tmp_path
     assert ids(service(tmp_path, tiers=False).similar(1, k=10)) == [2, 5, 6, 7, 8, 3]
 
 
-def test_live_seed_uses_its_live_related_list_and_fails_closed_for_new_songs(tmp_path):
+def test_live_seed_is_gated_by_the_tables_related_list_only(tmp_path):
     svc = service(tmp_path)
     r = svc.similar(99, k=10)
-    assert r["query"]["source"] == "live" and r["query"]["artist_id"] == 999
-    assert ids(r) == [2, 5, 6, 3, 1]  # New Artist lists Other Artist; Third's and Daft Punk's new songs are out
+    assert r["query"]["source"] == "live" and r["query"]["artist_id"] == 999 and r["query"]["scene"] == "on"
+    # New Artist has no list in the table: core songs only, although Deezer lists Other Artist (scene layer input)
+    assert ids(r) == [2, 3, 1]
     svc = service(tmp_path)
-    svc.deezer.fail_related = True
-    assert ids(svc.similar(99, k=10)) == [2, 3, 1]  # no related list: core songs only
+    svc.deezer.artist = {"id": 200, "name": "Other Artist"}  # a live song by an artist the table knows
+    assert ids(svc.similar(98, k=10)) == [2, 5, 6, 3, 1]  # Other Artist's own songs; Third's and Daft Punk's are out
 
 
-def test_live_seed_embeds_while_its_related_list_is_fetched(tmp_path):
+def test_the_search_never_waits_for_deezer(tmp_path):
     import threading
 
     svc = service(tmp_path)
-    embedded = threading.Event()
-    embed, related = svc.engine.embed_clips, svc.deezer.related_artists
+    searched = threading.Event()
+    search, related = svc.engine.search_windows, svc.deezer.related_artists
 
-    def embed_clips(clips):
-        embedded.set()
-        return embed(clips)
+    def search_windows(wins, k, exclude=(), allow=None):
+        searched.set()
+        return search(wins, k, exclude, allow)
 
-    def related_artists(artist_id):  # Deezer answers only after the GPU has embedded the preview
-        if not embedded.wait(5):
-            raise RuntimeError("the related list was awaited before embedding")
+    def related_artists(artist_id):  # Deezer answers only once the GPU search has run
+        if not searched.wait(5):
+            raise RuntimeError("the search waited for the related list")
         return related(artist_id)
 
-    svc.engine.embed_clips, svc.deezer.related_artists = embed_clips, related_artists
+    svc.engine.search_windows, svc.deezer.related_artists = search_windows, related_artists
     r = svc.similar(99, k=10)
-    assert ids(r) == [2, 5, 6, 3, 1] and r["timings_ms"]["related"] >= 0
+    assert ids(r) == [2, 3, 1] and r["query"]["scene"] == "on"  # the related list still reached the scene layer

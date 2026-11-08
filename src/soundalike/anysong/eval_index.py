@@ -135,8 +135,8 @@ def evaluate_indexes(indexes: dict[str, ChannelIndex | TwoStageIndex], queries: 
                      batch: int = 32, log=print, languages: LanguageTable | None = None,
                      scene: SceneTable | None = None, scene_params: SceneParams | None = None,
                      tiers: TierGate | None = None) -> dict:
-    """With ``tiers``, every channel ranks only the rows the API would allow for the query's artist (the table's
-    related list; the API also fetches it from Deezer when the table lacks it)."""
+    """With ``tiers``, every channel ranks only the rows the API would allow for the query's artist (its related list
+    in the scene table, as the API uses it)."""
     by_id: dict[int, list[Query]] = defaultdict(list)
     for q in queries:
         by_id[q.q].append(q)

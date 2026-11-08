@@ -24,7 +24,7 @@ track id, artist id and UTC day, nothing about who asked (``LearnQueue``); ``any
 catalog toward what people look up.
 
 With ``--core-ids`` (and ``--scene``), indexed songs outside the core catalog, the ones ``anysong.crawl`` added, are
-only ranked for seeds by their own artist or by an artist that names theirs among its Deezer related artists
+only ranked for seeds by their own artist or by an artist whose Deezer related list in the scene table names theirs
 (``tiers.TierGate``); every list, the channel lists included, is gated the same way.
 """
 
@@ -400,32 +400,31 @@ class AnySong:
                 artist, title = self.meta.get(track_id, ("", ""))
                 query = {"id": track_id, "artist": artist, "title": title, "source": "catalog"}
                 timings: dict[str, float] = {}
-                # The tiers need the related list before the search; without them the view alone needs it.
-                related = self._scene_context(query, timings) if self.tiers is not None else None
                 with self._gpu(timings):
-                    raw, t = self.engine.search_stored(track_id, FETCH, **self._allow(query, related))
+                    raw, t = self.engine.search_stored(track_id, FETCH, **self._allow(query))
                     vibe = self._vibe_inputs(raw, t, query_track=track_id) if self.vibe else None
                 if vibe is not None:
                     vibe["bpm"] = self.tempo.bpm(track_id)
             else:
-                query, raw, timings, t, vibe, related = self._live(track_id)
+                query, raw, timings, t, vibe = self._live(track_id)
                 if self.learn is not None:
                     self.learn.add(track_id, query.get("artist_id"))
             self._count(query["source"])
             timings |= t
-            if related is None:
-                related = self._scene_context(query, timings)
+            related = self._scene_context(query, timings)
             timings["total"] = (time.perf_counter() - t0) * 1000
             return {"query": query, "raw": raw, "related": related, "vibe": vibe,
                     "timings_ms": {k: round(v, 1) for k, v in timings.items()}}
         finally:
             self.pending.release()
 
-    def _allow(self, query: dict, related: list[int] | None) -> dict:
-        """Engine keyword for the catalog tiers: row masks for the query's artist scene (none without tiers)."""
+    def _allow(self, query: dict) -> dict:
+        """Engine keyword for the catalog tiers: row masks for the seed artist's scene as the scene table records it.
+        No Deezer request, so the search never waits for one (none without tiers)."""
         if self.tiers is None:
             return {}
-        return {"allow": self.tiers.masks(self.tiers.artists(query.get("artist_id"), related))}
+        artist_id = query.get("artist_id") or self.tiers.scene.artist(int(query["id"]))
+        return {"allow": self.tiers.masks(self.tiers.artists(artist_id))}
 
     def _vibe_inputs(self, raw: dict, timings: dict[str, float], windows=None, query_track: int | None = None) -> dict:
         """Served MuQ-MuLan scores against the seed for every track in the channel lists (Same vibe's sound gate):
@@ -486,7 +485,7 @@ class AnySong:
     def _gpu(self, timings: dict[str, float]) -> Iterator[None]:
         t = time.perf_counter()
         with self.gpu:
-            timings["queue"] = timings.get("queue", 0.0) + (time.perf_counter() - t) * 1000
+            timings["queue"] = (time.perf_counter() - t) * 1000
             yield
 
     def _live(self, track_id: int):
@@ -532,14 +531,10 @@ class AnySong:
             if not self.keep_previews:
                 Path(path).unlink(missing_ok=True)
         timings |= t_decode
-        with self._gpu(timings):
-            wins, t_embed = self.engine.embed_clips(clips)
-        # The tiers need the related list (fetched since the track lookup) before the search: waiting for it between
-        # the two GPU sections lets embedding hide most of Deezer's latency. Without tiers the view alone needs it.
-        related = self._scene_context(query, timings) if self.tiers is not None else None
         vibe = None
         with self._gpu(timings):
-            raw, t_search = self.engine.search_windows(wins, FETCH, [track_id], **self._allow(query, related))
+            wins, t_embed = self.engine.embed_clips(clips)
+            raw, t_search = self.engine.search_windows(wins, FETCH, [track_id], **self._allow(query))
             if self.vibe:
                 vibe = self._vibe_inputs(raw, t_search, windows=wins["sonic"])
                 if clip22 is not None:
@@ -547,7 +542,7 @@ class AnySong:
                     bpm = self.tracker.tempo(clip22)[0]
                     vibe["bpm"] = bpm if np.isfinite(bpm) else None
                     t_search["tempo"] = (time.perf_counter() - t) * 1000
-        return query, raw, timings | t_embed, t_search, vibe, related
+        return query, raw, timings | t_embed, t_search, vibe
 
     def _view(self, res: dict, k: int, dedupe: bool, cached: bool, lang_mode: str = "same",
               scene: bool = True) -> dict:

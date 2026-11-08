@@ -7,8 +7,10 @@ rows, yet the seed artist's listeners almost never played those artists (ListenB
 for core songs as far from the seed). Songs the crawl added by the seed's related artists did hit.
 
 So a discovered (non-core) song is eligible only for seeds by its own primary artist or by an artist whose own
-Deezer related list names that artist; core songs are always eligible. The gate is a boolean mask per channel index
-row, applied before candidates are picked (``TwoStageIndex.scores``), so it removes songs without shortening lists.
+Deezer related list names that artist; core songs are always eligible. The lists are the ones stored in the scene
+table, so the search never waits for Deezer; a seed whose artist has no list there gets core songs and its own
+artist's (never fewer candidates than the core catalog alone). The gate is a boolean mask per channel index row,
+applied before candidates are picked (``TwoStageIndex.scores``), so it removes songs without shortening lists.
 
     python -m soundalike.anysong.api ... --scene scene.npz --core-ids core_ids.npy
 """
@@ -50,15 +52,12 @@ class TierGate:
     def load(cls, path: str | Path, scene: SceneTable, indexes: Mapping[str, object]) -> TierGate:
         return cls(np.load(path), scene, indexes)
 
-    def artists(self, artist_id: int | None, live_related: Iterable[int] | None = None) -> list[int]:
-        """Artists whose discovered songs a seed by ``artist_id`` may get: the artist and its own related list (the
-        table's, else ``live_related`` as fetched from Deezer). Empty for an unknown artist."""
+    def artists(self, artist_id: int | None) -> list[int]:
+        """Artists whose discovered songs a seed by ``artist_id`` may get: the artist and its own related list in the
+        scene table. Empty for an unknown artist."""
         if not artist_id:
             return []
-        related = self.scene.related(artist_id)
-        if related is None:
-            related = live_related or ()
-        return sorted({int(artist_id), *(int(a) for a in related if a)})
+        return sorted({int(artist_id), *(int(a) for a in self.scene.related(artist_id) or () if a)})
 
     def mask(self, channel: str, artists: Iterable[int]) -> torch.Tensor:
         """True for the channel's core rows and the rows of ``artists``."""

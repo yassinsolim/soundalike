@@ -158,9 +158,10 @@ always candidates. Unrestricted, the grown catalog failed its go-live gate: craw
 seed's scene filled about 45 % of list rows, and listeners almost never played them (see
 [ANYSONG_EVAL.md](ANYSONG_EVAL.md), "Catalog growth"). [`anysong.tiers`](../src/soundalike/anysong/tiers.py) turns
 the rule into one row mask per channel, applied before the index picks its exact-scored candidates, so lists keep
-their depth. A seed outside the scene table uses the related list the API fetches from Deezer for the scene layer;
-without one, it gets core songs and its own artist's. Every list is gated, the channel lists included, and
-`eval_index --core-ids` measures the gated catalog. `/healthz` reports core and discovered rows per channel.
+their depth. The related lists come from the scene table, so the search never waits for Deezer: a seed whose artist
+has no list there gets core songs and its own artist's, never fewer candidates than before the crawl (Deezer's live
+list still feeds the scene layer). Every list is gated, the channel lists included, and `eval_index --core-ids`
+measures the gated catalog. `/healthz` reports core and discovered rows per channel.
 
 ## Building an index
 
