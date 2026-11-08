@@ -978,6 +978,94 @@ were displaced by unlabelled versions of the same work (same normalized title, d
 - Share of top-10 rows that are new songs.
 - The same list metrics on development seeds.
 
+### Result: the unrestricted grown catalog failed (2026-11-08)
+
+Run once as registered, on the 889,277-song index: the 269,278 catalog songs plus the 620,000 crawled songs
+embedded by then. Rules 1 and 2 failed and rule 3 passed. Rule 4 was not run, and nothing was deployed.
+
+Rule 1 on the 799 held-out seeds, ListenBrainz hit rate (current → grown, difference with its 95 % interval):
+
+| List | Current | Grown | Difference |
+|---|---:|---:|---|
+| Best matches | 0.215 | 0.119 | −0.096 (−0.108 to −0.085) |
+| Same vibe | 0.314 | 0.193 | −0.120 (−0.134 to −0.107) |
+| Sounds like | 0.211 | 0.113 | −0.098 (−0.110 to −0.086) |
+
+The other rule-1 checks passed:
+- Shared genre: −0.012, −0.014 and −0.009.
+- Other-language rows: unchanged.
+- Derivative uploads: down by up to 0.2 points.
+
+Rule 2 (any-tab HR@10):
+
+| Benchmark | Current | Grown | Change | Verdict |
+|---|---:|---:|---:|---|
+| Covers | 0.709 | 0.653 | −0.056 | fail |
+| Samples | 0.162 | 0.135 | −0.027 | pass |
+| Samples reverse | 0.170 | 0.144 | −0.026 | pass |
+| Gen Alpha | 0.508 | 0.339 | −0.170 | fail |
+
+Rule 3: the served top 20 matched brute force for all 300 queries in every channel.
+
+Reported measures:
+- Coverage: the share of held-out seeds' ListenBrainz-similar artists in the catalog rose from 75.7 % to 99.6 %
+  (492 seeds with ListenBrainz data).
+- New songs: crawled songs made up 60 %, 56 % and 63 % of the three lists' top 10.
+
+**Diagnosis on development seeds only.** ListenBrainz hit rate of Best-list rows, by how far the row's artist is
+from the seed's artist in Deezer's related graph:
+
+| Rows | Related | Two steps | Farther |
+|---|---:|---:|---:|
+| Catalog songs, current index | 0.633 | 0.369 | 0.052 |
+| Crawled songs, grown index | 0.329 | 0.128 | 0.004 |
+
+Crawled songs from farther away filled about 45 % of the rows (2,139 rows over 800 seeds) and were almost never
+hits. The crawl reaches long-tail artists whose audio is close to the seed's, but their listeners are not the seed's
+listeners. ListenBrainz also knows less about long-tail artists, so part of this gap is missing labels. Crawled
+songs by the seed's related artists were hits a third of the time.
+
+### Amendment: catalog tiers (2026-11-08)
+
+Written before any held-out, fresh or out-of-catalog result of this change.
+
+**Change under test.** The same grown index and tables, served with `--core-ids` (`anysong.tiers`):
+- A crawled song is a candidate only for seeds by its own artist, or by an artist whose own Deezer related list
+  names its artist.
+- The 269,278 catalog songs stay candidates for every seed.
+
+The rule was chosen on development seeds and has no tuned parameters. The mask is applied before the index picks
+the candidates it scores exactly, so lists keep their length. The same code without `--core-ids` reproduced the
+first run's current lists exactly for all 800 development and 799 held-out seeds.
+
+Development seeds, current → gated, as design data:
+
+| List | Current | Gated | 95 % interval of the difference |
+|---|---:|---:|---|
+| Best matches | 0.210 | 0.215 | −0.000 to +0.011 |
+| Same vibe | 0.322 | 0.326 | −0.004 to +0.011 |
+| Sounds like | 0.213 | 0.226 | +0.007 to +0.018 |
+
+Shared genre, other-language rows and derivative uploads are each within 0.01. Crawled songs make up 4 %, 7 % and
+4 % of the three lists' top 10.
+
+**Decision.** All four rules apply as registered, with two adjustments:
+- Rule 2 runs `eval_index --core-ids`, and rule 4 runs against the gated service.
+- The held-out seeds were already scored once, for the ungated build, so rule 1 must also pass on 1,000 fresh
+  seeds. These are artist-disjoint catalog seeds drawn for the pattern research on 2026-11-06
+  (`fresh_seeds.json`) and never used for the catalog question. Their ListenBrainz labels were fetched the same
+  way.
+
+**Reported, not gated: seeds outside the current catalog.** Development, held-out and fresh seeds are all catalog
+songs, so they cannot show what the crawl adds for songs the catalog lacks. These seeds are selected as follows:
+1. Take artists with no catalog song, at least five songs in the grown index and a MusicBrainz ID.
+2. Shuffle them with `random.Random(20261108)`.
+3. Draw one song per artist uniformly, and keep the first 800.
+
+Their ListenBrainz similar artists are fetched the same way as the fresh set's. "Current" is the live API path for
+an unseen song: its preview windows, read from the embedding shards, ranked against the 269k index, with the
+related artists Deezer lists. "Gated" serves the song from the grown index. Scoring is as in rule 1.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the

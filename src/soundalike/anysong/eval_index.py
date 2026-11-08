@@ -12,6 +12,8 @@ best     the API's fused "best" list: each channel's top ``api.FETCH`` rows as s
 best_scene  with ``--scene``: the same lists (plus sonic) combined by ``scene.scene_fuse``, the Best list with
          the artist-scene layer, as served with ``api --scene``; ``best_scene_same_language`` with ``--languages``.
 
+With ``--core-ids`` every view ranks only the songs the API's catalog tiers (``tiers.TierGate``) allow the query.
+
 Also reported: exact brute force vs two-stage agreement on a sample (``--exact``), hubness over random
 catalog queries (``--hubs``) and named example rankings (``--examples``).
 
@@ -38,6 +40,7 @@ from .evaluate import Query, load_benchmarks, score_block
 from .serve import CHANNELS, ChannelIndex, Engine, TwoStageIndex, load_meta
 from .languages import LanguageTable, UNKNOWN
 from .scene import SceneParams, SceneTable, scene_fuse
+from .tiers import TierGate
 
 TAB_K = 20
 HEADLINE = {
@@ -130,7 +133,10 @@ def stored_batch(ix: ChannelIndex | TwoStageIndex, ids: list[int]) -> torch.Tens
 @torch.inference_mode()
 def evaluate_indexes(indexes: dict[str, ChannelIndex | TwoStageIndex], queries: list[Query], keys: SongKeys,
                      batch: int = 32, log=print, languages: LanguageTable | None = None,
-                     scene: SceneTable | None = None, scene_params: SceneParams | None = None) -> dict:
+                     scene: SceneTable | None = None, scene_params: SceneParams | None = None,
+                     tiers: TierGate | None = None) -> dict:
+    """With ``tiers``, every channel ranks only the rows the API would allow for the query's artist (the table's
+    related list; the API also fetches it from Deezer when the table lacks it)."""
     by_id: dict[int, list[Query]] = defaultdict(list)
     for q in queries:
         by_id[q.q].append(q)
@@ -153,7 +159,9 @@ def evaluate_indexes(indexes: dict[str, ChannelIndex | TwoStageIndex], queries: 
         ids = sorted(t for t in by_id if t in ix.pos)
         for s in range(0, len(ids), batch):
             b = ids[s:s + batch]
-            sc = ix.scores(stored_batch(ix, b))
+            allow = None if tiers is None else torch.stack(
+                [tiers.mask(name, tiers.artists(tiers.scene.artist(t))) for t in b])
+            sc = ix.scores(stored_batch(ix, b), allow=allow)
             for j, t in enumerate(b):
                 row = sc[j]
                 row[ix.pos[t]] = -torch.inf
@@ -478,6 +486,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--languages", type=Path, default=None, help="optional language labels for Best-list evaluation")
     p.add_argument("--scene", type=Path, default=None, help="optional scene table: also report the scene-layer Best")
     p.add_argument("--scene-params", default=None, help="JSON overrides of scene.SceneParams (default: shipped)")
+    p.add_argument("--core-ids", type=Path, default=None,
+                   help="core catalog track ids: rank other songs as the API's catalog tiers allow (needs --scene)")
     p.add_argument("--bench", type=Path, required=True)
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--channels", nargs="+", default=list(CHANNELS), choices=list(CHANNELS))
@@ -524,8 +534,14 @@ def main(argv: list[str] | None = None) -> None:
     scene_params = SceneParams(**json.loads(args.scene_params)) if args.scene_params else SceneParams()
     if scene is not None:
         report["scene_params"] = vars(scene_params)
+    tiers = None
+    if args.core_ids is not None:
+        if scene is None:
+            p.error("--core-ids needs --scene")
+        tiers = TierGate.load(args.core_ids, scene, eng.indexes)
+        report["tiers"] = tiers.sizes
     report |= evaluate_indexes(eng.indexes, queries, keys, args.batch, log, languages=languages,
-                               scene=scene, scene_params=scene_params)
+                               scene=scene, scene_params=scene_params, tiers=tiers)
     bench_ids = sorted({q.q for q in queries})
     if args.exact:
         report["exact_check"] = {}

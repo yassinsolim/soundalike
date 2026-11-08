@@ -75,6 +75,41 @@ def test_candidates_are_exact_and_rank_above_estimates(tmp_path, prep, mode):
     assert two.rank_of(staged, [int(ids[11])])[0] == 1
 
 
+@pytest.mark.parametrize("prep,mode", [("raw", "maxsim"), ("none", "bpwr")])
+def test_allow_mask_picks_candidates_among_allowed_rows_only(tmp_path, prep, mode):
+    ch = channel(prep, mode)
+    ids, _ = write_shards(tmp_path / "emb" / "fake", n=200, d=32, dup=False, rank=6)
+    index_build.build_channel(ch, tmp_path / "emb", tmp_path / "ix", 6, None, "cpu")
+    brute = serve.ChannelIndex.load(tmp_path / "emb", ch)
+    allow = torch.zeros(len(ids), dtype=torch.bool)
+    allow[::3] = True
+    q = brute.stored_query(int(ids[11]))
+    exact = brute.scores(q, allow=allow)
+    assert torch.isinf(exact[~allow]).all() and torch.equal(exact[allow], brute.scores(q)[allow])
+    full = serve.TwoStageIndex.load(tmp_path / "ix", ch, candidates=len(ids)).scores(q, allow=allow)
+    assert torch.isinf(full[~allow]).all() and torch.allclose(full[allow], exact[allow], atol=1e-5)
+    two = serve.TwoStageIndex.load(tmp_path / "ix", ch, candidates=25)
+    staged = two.scores(q, allow=allow)
+    cand = two.stage1(q[None])[0].masked_fill(~allow, -torch.inf).topk(25).indices
+    picked = torch.zeros(len(ids), dtype=torch.bool)
+    picked[cand] = True
+    assert bool(allow[cand].all())  # all 25 exact re-scores went to allowed rows
+    assert torch.allclose(staged[picked], exact[picked], atol=1e-5)
+    assert staged[allow & ~picked].max() < staged[picked].min() and torch.isinf(staged[~allow]).all()
+    assert all(bool(allow[two.pos[t]]) for t, _ in two.top(staged, 50))
+    # Fewer allowed rows than candidates or k: only those rows come back, exactly scored.
+    few = torch.zeros(len(ids), dtype=torch.bool)
+    few[[4, 40, 140]] = True
+    got = two.top(two.scores(q, allow=few), 10)
+    assert sorted(t for t, _ in got) == sorted(int(ids[i]) for i in (4, 40, 140))
+    assert [s for _, s in got] == pytest.approx([s for _, s in brute.top(brute.scores(q, allow=few), 10)], abs=1e-5)
+    # Batched queries take one mask per query.
+    qs = torch.stack([q, brute.stored_query(int(ids[12]))])
+    masks = torch.stack([allow, few])
+    rows = two.scores(qs, allow=masks)
+    assert torch.equal(torch.isfinite(rows), masks)
+
+
 def test_keep_filter_and_first_occurrence(tmp_path):
     ids, win = write_shards(tmp_path / "emb" / "fake", n=10, d=8)
     keep = {int(ids[0]), int(ids[5]), int(ids[9])}

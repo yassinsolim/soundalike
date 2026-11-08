@@ -144,6 +144,20 @@ def test_table_round_trip_and_validation(table, tmp_path):
         SceneTable({**np.load(path), "track_ids": np.array([3, 1, 2], np.int64)})
 
 
+def test_table_keeps_each_artists_own_related_list(table, tmp_path):
+    assert table.related(10) == [11, 13, 20] and table.related(12) == [30, 31]
+    assert table.related(20) is None and table.related(99) is None and table.related(None) is None
+    assert table.stored(30).neighbours == {12, 30} and table.related(30) is None  # listed by 12, has no own list
+    path = tmp_path / "scene.npz"
+    table.save(path)
+    assert SceneTable.load(path).related(13) == [10, 11]
+    with np.load(path) as z:
+        older = {name: z[name] for name in z.files if name not in ("rel_ptr", "rel_idx")}
+    assert SceneTable(older).related(10) is None  # tables built before the lists existed still load
+    with pytest.raises(ValueError):
+        SceneTable({**older, "rel_ptr": np.zeros(3, np.int64), "rel_idx": np.zeros(0, np.int32)})
+
+
 def test_sources_parse_wikidata_and_build_a_table(tmp_path):
     import json
 

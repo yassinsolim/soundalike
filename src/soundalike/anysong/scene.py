@@ -75,7 +75,10 @@ def _csr(rows: Sequence[Sequence], dtype) -> tuple[np.ndarray, np.ndarray]:
 
 
 class SceneTable:
-    """Per-track primary artist and per-artist neighbourhood, country and genre, loaded from one npz."""
+    """Per-track primary artist and per-artist neighbourhood, country and genre, loaded from one npz.
+
+    Tables built since 2026-11-08 also hold each crawled artist's own Deezer related list (``related``); older
+    tables only have the symmetric neighbourhood."""
 
     def __init__(self, arrays: Mapping[str, np.ndarray]):
         self.track_ids = np.asarray(arrays["track_ids"], dtype=np.int64)
@@ -88,11 +91,17 @@ class SceneTable:
         self.genres = [str(g) for g in arrays["genres"]]
         self.crawled = np.asarray(arrays["crawled"], dtype=bool) if "crawled" in arrays \
             else np.ones(len(self.artist_ids), dtype=bool)
+        self.rel_ptr = np.asarray(arrays["rel_ptr"], dtype=np.int64) if "rel_ptr" in arrays else None
+        self.rel_idx = np.asarray(arrays["rel_idx"], dtype=np.int32) if "rel_idx" in arrays else None
         if not (np.all(np.diff(self.track_ids) > 0) and np.all(np.diff(self.artist_ids) > 0)):
             raise ValueError("scene table ids must be sorted and unique")
         if len(self.track_artist) != len(self.track_ids) or len(self.nbr_ptr) != len(self.artist_ids) + 1 \
                 or len(self.crawled) != len(self.artist_ids):
             raise ValueError("inconsistent scene table arrays")
+        if (self.rel_ptr is None) != (self.rel_idx is None) or (
+                self.rel_ptr is not None and (len(self.rel_ptr) != len(self.artist_ids) + 1
+                                              or self.rel_ptr[-1] != len(self.rel_idx))):
+            raise ValueError("inconsistent related-list arrays")
         self._profiles: dict[int, ArtistProfile] = {}
 
     @classmethod
@@ -101,12 +110,13 @@ class SceneTable:
             return cls({name: z[name] for name in z.files})
 
     def save(self, path: str | Path) -> None:
+        related = {} if self.rel_ptr is None else {"rel_ptr": self.rel_ptr, "rel_idx": self.rel_idx}
         np.savez_compressed(path, track_ids=self.track_ids, track_artist=self.track_artist,
                             artist_ids=self.artist_ids, nbr_ptr=self.nbr_ptr, nbr_idx=self.nbr_idx,
                             cty_ptr=self.cty_ptr, cty_idx=self.cty_idx, cty_p=self.cty_p,
                             gen_ptr=self.gen_ptr, gen_idx=self.gen_idx, gen_w=self.gen_w,
                             countries=np.array(self.countries), genres=np.array(self.genres),
-                            crawled=self.crawled)
+                            crawled=self.crawled, **related)
 
     def _row(self, artist_id: int) -> int | None:
         i = int(np.searchsorted(self.artist_ids, artist_id))
@@ -116,6 +126,13 @@ class SceneTable:
         """Whether the artist's own related-artist list is in the table (else only artists that list it)."""
         row = self._row(int(artist_id)) if artist_id else None
         return row is not None and bool(self.crawled[row])
+
+    def related(self, artist_id: int | None) -> list[int] | None:
+        """The artist's own Deezer related list in Deezer's order, or None when the table does not hold it."""
+        row = self._row(int(artist_id)) if artist_id else None
+        if row is None or self.rel_ptr is None or not self.crawled[row]:
+            return None
+        return [int(a) for a in self.artist_ids[self.rel_idx[self.rel_ptr[row]:self.rel_ptr[row + 1]]]]
 
     def artist(self, track_id: int) -> int | None:
         i = int(np.searchsorted(self.track_ids, track_id))
@@ -381,11 +398,14 @@ def build(tracks: Mapping[int, int], related: Mapping[int, Sequence[int]], count
     _, gen_w = _csr([[genre[a][g] for g in sorted(genre.get(a, {}))] for a in artist_ids], np.float32)
     track_ids = np.array(sorted(tracks), dtype=np.int64)
     crawled = np.array([a in related for a in artist_ids], dtype=bool)
+    rel_ptr, rel_idx = _csr([list(dict.fromkeys(index[int(b)] for b in related.get(a, ()) if b and int(b) != a))
+                             for a in artist_ids], np.int32)
     return SceneTable({"track_ids": track_ids, "track_artist": np.array([tracks[t] for t in track_ids], np.int64),
                        "artist_ids": np.array(artist_ids, np.int64), "nbr_ptr": nbr_ptr, "nbr_idx": nbr_idx,
                        "cty_ptr": cty_ptr, "cty_idx": cty_idx, "cty_p": cty_p, "gen_ptr": gen_ptr,
                        "gen_idx": gen_idx, "gen_w": gen_w, "countries": np.array(cvocab or [""]),
-                       "genres": np.array(gvocab or [""]), "crawled": crawled})
+                       "genres": np.array(gvocab or [""]), "crawled": crawled, "rel_ptr": rel_ptr,
+                       "rel_idx": rel_idx})
 
 
 def _jsonl(path: Path) -> Iterable[dict]:

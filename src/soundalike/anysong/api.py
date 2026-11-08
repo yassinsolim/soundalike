@@ -22,6 +22,10 @@ localhost and put a reverse proxy in front for TLS and public exposure.
 With ``--learn-queue``, each song answered live (so not yet in the catalog) is appended to that file as its Deezer
 track id, artist id and UTC day, nothing about who asked (``LearnQueue``); ``anysong.crawl`` reads it to grow the
 catalog toward what people look up.
+
+With ``--core-ids`` (and ``--scene``), indexed songs outside the core catalog, the ones ``anysong.crawl`` added, are
+only ranked for seeds by their own artist or by an artist that names theirs among its Deezer related artists
+(``tiers.TierGate``); every list, the channel lists included, is gated the same way.
 """
 
 from __future__ import annotations
@@ -247,10 +251,13 @@ class AnySong:
                  follower_timeout: float = 180.0, known_ttl: float = 600.0, languages=None,
                  scene: SceneTable | None = None, scene_params: SceneParams | None = None,
                  related_ttl: float = 86400.0, tempo: TempoTable | None = None, tracker=None,
-                 vibe_params: samevibe.SameVibeParams | None = None, learn: LearnQueue | None = None):
+                 vibe_params: samevibe.SameVibeParams | None = None, learn: LearnQueue | None = None,
+                 tiers=None):
         self.engine, self.deezer, self.meta, self.keep_previews = engine, deezer, meta, keep_previews
         self.languages = languages
         self.learn = learn
+        # Catalog tiers (``tiers.TierGate``): songs added by the crawl only for seeds in their artist's scene.
+        self.tiers = tiers
         self.scene, self.scene_params = scene, scene_params or SceneParams()
         # Same vibe needs catalog tempos and the sonic channel; ``tracker`` estimates the tempo of unseen seeds.
         self.tempo, self.tracker = tempo, tracker
@@ -294,9 +301,11 @@ class AnySong:
         scene = None if self.scene is None else {"tracks": int((self.scene.track_artist > 0).sum()),
                                                  "artists": len(self.scene.artist_ids)}
         tempo = None if not self.vibe else {"tracks": len(self.tempo.by_id), "live": self.tracker is not None}
+        tiers = None if self.tiers is None else self.tiers.sizes
         return {"ok": True, "device": self.engine.device,
                 "channels": {name: len(ix) for name, ix in self.engine.indexes.items()},
-                "cached_results": len(self.results), "served": served, "scene": scene, "tempo": tempo}
+                "cached_results": len(self.results), "served": served, "scene": scene, "tempo": tempo,
+                "tiers": tiers}
 
     def search(self, q: str, limit: int = 10) -> dict:
         q = " ".join(q.split())
@@ -391,23 +400,29 @@ class AnySong:
                 artist, title = self.meta.get(track_id, ("", ""))
                 query = {"id": track_id, "artist": artist, "title": title, "source": "catalog"}
                 timings: dict[str, float] = {}
+                related = self._scene_context(query, timings)
                 with self._gpu(timings):
-                    raw, t = self.engine.search_stored(track_id, FETCH)
+                    raw, t = self.engine.search_stored(track_id, FETCH, **self._allow(query, related))
                     vibe = self._vibe_inputs(raw, t, query_track=track_id) if self.vibe else None
                 if vibe is not None:
                     vibe["bpm"] = self.tempo.bpm(track_id)
             else:
-                query, raw, timings, t, vibe = self._live(track_id)
+                query, raw, timings, t, vibe, related = self._live(track_id)
                 if self.learn is not None:
                     self.learn.add(track_id, query.get("artist_id"))
             self._count(query["source"])
             timings |= t
-            related = self._scene_context(query, timings)
             timings["total"] = (time.perf_counter() - t0) * 1000
             return {"query": query, "raw": raw, "related": related, "vibe": vibe,
                     "timings_ms": {k: round(v, 1) for k, v in timings.items()}}
         finally:
             self.pending.release()
+
+    def _allow(self, query: dict, related: list[int]) -> dict:
+        """Engine keyword for the catalog tiers: row masks for the query's artist scene (none without tiers)."""
+        if self.tiers is None:
+            return {}
+        return {"allow": self.tiers.masks(self.tiers.artists(query.get("artist_id"), related))}
 
     def _vibe_inputs(self, raw: dict, timings: dict[str, float], windows=None, query_track: int | None = None) -> dict:
         """Served MuQ-MuLan scores against the seed for every track in the channel lists (Same vibe's sound gate):
@@ -514,10 +529,12 @@ class AnySong:
             if not self.keep_previews:
                 Path(path).unlink(missing_ok=True)
         timings |= t_decode
+        # Before the GPU lock: the related list (fetched during the preview download) decides the tier masks.
+        related = self._scene_context(query, timings)
         vibe = None
         with self._gpu(timings):
             wins, t_embed = self.engine.embed_clips(clips)
-            raw, t_search = self.engine.search_windows(wins, FETCH, [track_id])
+            raw, t_search = self.engine.search_windows(wins, FETCH, [track_id], **self._allow(query, related))
             if self.vibe:
                 vibe = self._vibe_inputs(raw, t_search, windows=wins["sonic"])
                 if clip22 is not None:
@@ -525,7 +542,7 @@ class AnySong:
                     bpm = self.tracker.tempo(clip22)[0]
                     vibe["bpm"] = bpm if np.isfinite(bpm) else None
                     t_search["tempo"] = (time.perf_counter() - t) * 1000
-        return query, raw, timings | t_embed, t_search, vibe
+        return query, raw, timings | t_embed, t_search, vibe, related
 
     def _view(self, res: dict, k: int, dedupe: bool, cached: bool, lang_mode: str = "same",
               scene: bool = True) -> dict:
@@ -763,6 +780,9 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--meta", type=Path, default=None, help="catalog_meta npz with track_ids/artists/titles")
     p.add_argument("--languages", type=Path, default=None, help="language labels from anysong.languages")
     p.add_argument("--scene", type=Path, default=None, help="scene table from anysong.scene (metadata for Best)")
+    p.add_argument("--core-ids", type=Path, default=None,
+                   help="npy of the core catalog's track ids: other indexed songs only for seeds in their artist's "
+                        "scene (anysong.tiers; needs --scene)")
     p.add_argument("--tempo", type=Path, default=None,
                    help="catalog tempo table from anysong.tempo; enables the Same vibe list")
     p.add_argument("--tempo-model", default=None,
@@ -785,6 +805,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--learn-queue", type=Path, default=None,
                    help="append songs answered live (Deezer track and artist ids, UTC day) for anysong.crawl")
     args = p.parse_args(argv)
+    if args.core_ids is not None and args.scene is None:
+        p.error("--core-ids needs --scene")
 
     scratch = args.preview_dir or Path(tempfile.mkdtemp(prefix="anysong-"))
     t = time.perf_counter()
@@ -801,6 +823,11 @@ def main(argv: list[str] | None = None) -> None:
             artist_names={track_id: artist for track_id, (artist, _) in meta.items()},
         )
     scene = SceneTable.load(args.scene) if args.scene is not None else None
+    tiers = None
+    if args.core_ids is not None:
+        from .tiers import TierGate
+
+        tiers = TierGate.load(args.core_ids, scene, engine.indexes)
     tempo = TempoTable.load(args.tempo) if args.tempo is not None else None
     tracker = None
     if tempo is not None and args.tempo_model:
@@ -810,13 +837,13 @@ def main(argv: list[str] | None = None) -> None:
         tracker.tempo(np.zeros(30 * 22050, np.float32))  # warm-up
     service = AnySong(engine, Deezer(scratch), meta, args.cache_size, args.max_pending,
                       languages=languages, scene=scene, tempo=tempo, tracker=tracker,
-                      learn=LearnQueue(args.learn_queue) if args.learn_queue else None)
+                      learn=LearnQueue(args.learn_queue) if args.learn_queue else None, tiers=tiers)
     server = Server((args.host, args.port), service, args.search_per_min, args.similar_per_min,
                     args.cors_origin, args.client_ip_header)
     sizes = {name: len(ix) for name, ix in engine.indexes.items()}
     hubs = {name: getattr(ix, "hub_alpha", 0.0) for name, ix in engine.indexes.items()}
     print(f"ready in {time.perf_counter() - t:.1f}s (warmup {warm:.1f}s) {sizes} hub_alpha={hubs} "
-          f"on http://{args.host}:{args.port}", flush=True)
+          f"tiers={None if tiers is None else tiers.sizes} on http://{args.host}:{args.port}", flush=True)
     try:
         server.serve_forever()
     finally:

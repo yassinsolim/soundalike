@@ -18,7 +18,7 @@ import json
 import os
 import sys
 import time
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
@@ -75,12 +75,13 @@ class _Ranked:
         return len(self.ids)
 
     def top(self, scores: torch.Tensor, k: int, exclude: Iterable[int] = ()) -> list[tuple[int, float]]:
-        """Best ``k`` (track_id, score), ties broken by track ID; ``exclude`` IDs are never returned."""
+        """Best ``k`` (track_id, score), ties broken by track ID; ``exclude`` IDs and rows scored -inf (outside an
+        ``allow`` mask) are never returned."""
         row = scores.clone()
         drop = sorted({self.pos[int(t)] for t in exclude if int(t) in self.pos})
         if drop:
             row[torch.tensor(drop, device=row.device)] = -torch.inf
-        k = min(k, len(self) - len(drop))
+        k = min(k, int((row > -torch.inf).sum()))
         if k <= 0:
             return []
         vals, idx = row.topk(k)
@@ -152,13 +153,16 @@ class ChannelIndex(_Ranked):
                            self.channel.mode)[0]
 
     @torch.inference_mode()
-    def scores(self, q: torch.Tensor, chunk: int = 2048) -> torch.Tensor:
-        """Prepared queries [W, D] or [B, W, D] -> similarities [N] or [B, N] (higher is closer)."""
+    def scores(self, q: torch.Tensor, chunk: int = 2048, allow: torch.Tensor | None = None) -> torch.Tensor:
+        """Prepared queries [W, D] or [B, W, D] -> similarities [N] or [B, N] (higher is closer). Rows outside a
+        boolean ``allow`` mask ([N] or [B, N]) score -inf."""
         single = q.dim() == 2
         q = q[None] if single else q
         out = torch.empty(len(q), len(self), device=self.feats.device)
         for s in range(0, len(self), chunk):
             out[:, s:s + chunk] = score_block(q, self.feats[s:s + chunk].float(), self.channel.mode)
+        if allow is not None:
+            out.masked_fill_(~allow, -torch.inf)
         return out[0] if single else out
 
 
@@ -312,13 +316,18 @@ class TwoStageIndex(_Ranked):
         return out
 
     @torch.inference_mode()
-    def scores(self, q: torch.Tensor, chunk: int = 8192) -> torch.Tensor:
-        """Prepared queries [W, D] or [B, W, D] -> scores [N] or [B, N]; the top ``candidates`` are exact."""
+    def scores(self, q: torch.Tensor, chunk: int = 8192, allow: torch.Tensor | None = None) -> torch.Tensor:
+        """Prepared queries [W, D] or [B, W, D] -> scores [N] or [B, N]; the top ``candidates`` are exact.
+
+        Rows outside a boolean ``allow`` mask ([N] or [B, N]) score -inf and are skipped when candidates are
+        picked, so the exact re-scoring covers the best allowed rows."""
         single = q.dim() == 2
         q = q[None] if single else q
         out = self.stage1(q, chunk)
         if self.penalty is not None:
             out -= self.penalty
+        if allow is not None:
+            out.masked_fill_(~allow, -torch.inf)
         c = min(self.candidates, len(self))
         for b, row in enumerate(out):
             # Sorted rows keep memory-mapped reads sequential.
@@ -330,6 +339,8 @@ class TwoStageIndex(_Ranked):
                 exact -= self.penalty[cand]
             row -= (row.max() - exact.min()).clamp_min(0) + 1
             row[cand] = exact
+        if allow is not None:  # with fewer allowed rows than candidates, some re-scored rows were not allowed
+            out.masked_fill_(~allow, -torch.inf)
         return out[0] if single else out
 
 
@@ -409,15 +420,18 @@ class Engine:
         wins, t_embed = self.embed_clips(clips)
         return wins, t_decode | t_embed
 
-    def search_windows(self, wins: dict[str, np.ndarray], k: int = 20,
-                       exclude: Iterable[int] = ()) -> tuple[dict[str, list[tuple[int, float]]], dict[str, float]]:
+    def search_windows(self, wins: dict[str, np.ndarray], k: int = 20, exclude: Iterable[int] = (),
+                       allow: Mapping[str, torch.Tensor] | None = None
+                       ) -> tuple[dict[str, list[tuple[int, float]]], dict[str, float]]:
+        """Top ``k`` per channel for raw windows; ``allow`` maps channels to row masks (``TwoStageIndex.scores``)."""
         results, timings = {}, {}
         exclude = list(exclude)
         for ch in self.channels:
             idx = self.indexes[ch.name]
             _sync(self.device)
             t = time.perf_counter()
-            results[ch.name] = idx.top(idx.scores(idx.prep_query(wins[ch.name])), k, exclude)
+            mask = allow.get(ch.name) if allow else None
+            results[ch.name] = idx.top(idx.scores(idx.prep_query(wins[ch.name]), allow=mask), k, exclude)
             _sync(self.device)
             timings[f"search_{ch.name}"] = (time.perf_counter() - t) * 1000
         return results, timings
@@ -441,18 +455,20 @@ class Engine:
         values = idx.score_rows(q, rows).tolist()
         return {int(idx.ids[r]): float(v) for r, v in zip(rows, values)}
 
-    def search_stored(self, track_id: int, k: int = 20, exclude: Iterable[int] = ()
+    def search_stored(self, track_id: int, k: int = 20, exclude: Iterable[int] = (),
+                      allow: Mapping[str, torch.Tensor] | None = None
                       ) -> tuple[dict[str, list[tuple[int, float]]], dict[str, float]]:
         """Rank an indexed track from its stored fp16 windows instead of re-embedding its preview (live
         embeddings match the stored ones up to fp16 rounding; see ``serve_check``). The track itself is
-        excluded."""
+        excluded; ``allow`` as in ``search_windows``."""
         results, timings = {}, {}
         exclude = [int(track_id), *exclude]
         for ch in self.channels:
             idx = self.indexes[ch.name]
             _sync(self.device)
             t = time.perf_counter()
-            results[ch.name] = idx.top(idx.scores(idx.stored_query(track_id)), k, exclude)
+            mask = allow.get(ch.name) if allow else None
+            results[ch.name] = idx.top(idx.scores(idx.stored_query(track_id), allow=mask), k, exclude)
             _sync(self.device)
             timings[f"search_{ch.name}"] = (time.perf_counter() - t) * 1000
         return results, timings
