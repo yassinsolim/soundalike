@@ -978,6 +978,209 @@ were displaced by unlabelled versions of the same work (same normalized title, d
 - Share of top-10 rows that are new songs.
 - The same list metrics on development seeds.
 
+### Result: the unrestricted grown catalog failed (2026-11-08)
+
+Run once as registered, on the 889,277-song index: the 269,278 catalog songs plus the 620,000 crawled songs
+embedded by then. Rules 1 and 2 failed and rule 3 passed. Rule 4 was not run, and nothing was deployed.
+
+Rule 1 on the 799 held-out seeds, ListenBrainz hit rate (current → grown, difference with its 95 % interval):
+
+| List | Current | Grown | Difference |
+|---|---:|---:|---|
+| Best matches | 0.215 | 0.119 | −0.096 (−0.108 to −0.085) |
+| Same vibe | 0.314 | 0.193 | −0.120 (−0.134 to −0.107) |
+| Sounds like | 0.211 | 0.113 | −0.098 (−0.110 to −0.086) |
+
+The other rule-1 checks passed:
+- Shared genre: −0.012, −0.014 and −0.009.
+- Other-language rows: unchanged.
+- Derivative uploads: down by up to 0.2 points.
+
+Rule 2 (any-tab HR@10):
+
+| Benchmark | Current | Grown | Change | Verdict |
+|---|---:|---:|---:|---|
+| Covers | 0.709 | 0.653 | −0.056 | fail |
+| Samples | 0.162 | 0.135 | −0.027 | pass |
+| Samples reverse | 0.170 | 0.144 | −0.026 | pass |
+| Gen Alpha | 0.508 | 0.339 | −0.170 | fail |
+
+Rule 3: the served top 20 matched brute force for all 300 queries in every channel.
+
+Reported measures:
+- Coverage: the share of held-out seeds' ListenBrainz-similar artists in the catalog rose from 75.7 % to 99.6 %
+  (492 seeds with ListenBrainz data).
+- New songs: crawled songs made up 60 %, 56 % and 63 % of the three lists' top 10.
+
+**Diagnosis on development seeds only.** ListenBrainz hit rate of Best-list rows, by how far the row's artist is
+from the seed's artist in Deezer's related graph:
+
+| Rows | Related | Two steps | Farther |
+|---|---:|---:|---:|
+| Catalog songs, current index | 0.633 | 0.369 | 0.052 |
+| Crawled songs, grown index | 0.329 | 0.128 | 0.004 |
+
+Crawled songs from farther away filled about 45 % of the rows (2,139 rows over 800 seeds) and were almost never
+hits. The crawl reaches long-tail artists whose audio is close to the seed's, but their listeners are not the seed's
+listeners. ListenBrainz also knows less about long-tail artists, so part of this gap is missing labels. Crawled
+songs by the seed's related artists were hits a third of the time.
+
+### Amendment: catalog tiers (2026-11-08)
+
+Written before any held-out, fresh or out-of-catalog result of this change.
+
+**Change under test.** The same grown index and tables, served with `--core-ids` (`anysong.tiers`):
+- A crawled song is a candidate only for seeds by its own artist, or by an artist whose own Deezer related list
+  names its artist.
+- The 269,278 catalog songs stay candidates for every seed.
+
+The rule was chosen on development seeds and has no tuned parameters. The mask is applied before the index picks
+the candidates it scores exactly, so lists keep their length. The same code without `--core-ids` reproduced the
+first run's current lists exactly for all 800 development and 799 held-out seeds.
+
+Development seeds, current → gated, as design data:
+
+| List | Current | Gated | 95 % interval of the difference |
+|---|---:|---:|---|
+| Best matches | 0.210 | 0.215 | −0.000 to +0.011 |
+| Same vibe | 0.322 | 0.326 | −0.004 to +0.011 |
+| Sounds like | 0.213 | 0.226 | +0.007 to +0.018 |
+
+Shared genre, other-language rows and derivative uploads are each within 0.01. Crawled songs make up 4 %, 7 % and
+4 % of the three lists' top 10.
+
+**Decision.** All four rules apply as registered, with two adjustments:
+- Rule 2 runs `eval_index --core-ids`, and rule 4 runs against the gated service.
+- The held-out seeds were already scored once, for the ungated build, so rule 1 must also pass on 1,000 fresh
+  seeds. These are artist-disjoint catalog seeds drawn for the pattern research on 2026-11-06
+  (`fresh_seeds.json`) and never used for the catalog question. Their ListenBrainz labels were fetched the same
+  way.
+
+**Reported, not gated: seeds outside the current catalog.** Development, held-out and fresh seeds are all catalog
+songs, so they cannot show what the crawl adds for songs the catalog lacks. These seeds are selected as follows:
+1. Take artists with no catalog song, at least five songs in the grown index and a MusicBrainz ID.
+2. Shuffle them with `random.Random(20261108)`.
+3. Draw one song per artist uniformly, and keep the first 800.
+
+Their ListenBrainz similar artists are fetched the same way as the fresh set's. "Current" is the live API path for
+an unseen song: its preview windows, read from the embedding shards, ranked against the 269k index, with the
+related artists Deezer lists. "Gated" serves the song from the grown index. Scoring is as in rule 1.
+
+### Result: catalog tiers passed rules 1 to 3 (2026-11-08)
+
+Run once on each set after the amendment was committed (c70e110).
+
+Rule 1, ListenBrainz hit rate (current → gated, difference with its 95 % interval; it must stay at −0.010 or
+above):
+
+| Seeds | List | Current | Gated | Difference |
+|---|---|---:|---:|---|
+| Held-out (799) | Best matches | 0.215 | 0.217 | +0.002 (−0.003 to +0.007) |
+| | Same vibe | 0.314 | 0.316 | +0.002 (−0.004 to +0.008) |
+| | Sounds like | 0.211 | 0.217 | +0.006 (+0.002 to +0.011) |
+| Fresh (1,000) | Best matches | 0.212 | 0.219 | +0.007 (+0.002 to +0.012) |
+| | Same vibe | 0.316 | 0.321 | +0.004 (−0.002 to +0.011) |
+| | Sounds like | 0.210 | 0.215 | +0.006 (+0.001 to +0.011) |
+
+The other rule-1 checks passed on both sets:
+- Shared genre: from +0.002 to +0.012.
+- Other-language rows: unchanged.
+- Derivative uploads: unchanged.
+
+Crawled songs made up 3 % to 7 % of the top 10. (Erratum to the amendment: on development seeds, Sounds like's
+shared genre rose by 0.013, not by less than 0.01.)
+
+Rule 2 (any-tab HR@10, with `--core-ids`):
+
+| Benchmark | Current | Gated | Change | Limit |
+|---|---:|---:|---:|---:|
+| Covers | 0.709 | 0.707 | −0.002 | −0.03 |
+| Samples | 0.162 | 0.165 | +0.003 | −0.03 |
+| Samples reverse | 0.170 | 0.168 | −0.001 | −0.03 |
+| Gen Alpha | 0.508 | 0.508 | 0.000 | −0.10 |
+
+Rule 3: with the masks on both sides, the served top 20 and top 100 matched brute force for all 300 random tracks
+in every channel.
+
+**Reported, not gated: seeds outside the current catalog.** 800 seeds, drawn from 5,236 eligible artists:
+
+| List | Current (unseen song) | Gated | Difference |
+|---|---:|---:|---|
+| Best matches | 0.072 | 0.138 | +0.066 (+0.056 to +0.077) |
+| Same vibe | 0.103 | 0.186 | +0.084 (+0.070 to +0.098) |
+| Sounds like | 0.076 | 0.139 | +0.063 (+0.051 to +0.075) |
+
+Further changes for these seeds:
+- Other-language rows fell from 37 %, 33 % and 38 % to none. The current API cannot tell the language of an unseen
+  song by an artist outside the catalog, so its language filter stays off; the grown catalog has labels for every
+  crawled song.
+- Shared genre rose by 0.035, 0.051 and 0.043.
+- Crawled songs made up 22 %, 25 % and 18 % of the top 10.
+
+Sounds like lists were slightly shorter: 9.7 rows in the top 10 on average.
+
+### Rule 4 on the RTX 2070 SUPER: latency over the limit, not deployed (2026-11-08)
+
+Two deploys with automatic rollback, both rolled back.
+
+The first deploy's checks:
+- `serve_check` parity: all 64 re-embedded tracks per channel ranked themselves first; window cosine at least
+  0.999999.
+- `serve_check` VRAM: 5,445 MiB loaded, 6,797 MiB peak.
+- `serve_check` serial unseen p95: 847 ms, against 555 ms for the 269k index.
+- Startup: 45 s, with the tiers active.
+
+Its latency check through the API was invalid. It sent 40 requests back to back from one address and 32 got
+HTTP 429 from the API's own rate limit. It also requested songs by id, which adds a Deezer track lookup that the
+original serving measurement did not include.
+
+**Corrected method.** As in the serving measurement above, each song is searched, then requested from `/similar`,
+and only that request is timed. Requests are paced under the rate limits. The 40 songs are taken from crawl chunk 30,
+which neither index holds. Both services were measured the same way on the same songs:
+
+| Unseen song | Current (269k) | Gated grown |
+|---|---:|---:|
+| p50 | 0.932 s | 0.997 s |
+| p95 | 1.125 s | 1.046 s |
+| max | 1.416 s | 1.192 s |
+| peak VRAM | 6,215 MiB | 6,435 MiB |
+
+The gated grown catalog missed the 1.0 s p95 limit by 46 ms, so the deploy script rolled it back. The current
+service misses the limit too. The limit was set from the 610 to 670 ms measured before Same vibe's tempo tracking
+and the scene layer's related-artist lookup were added.
+
+Medians per stage:
+- **Search:** 201 ms on the current index, 413 ms on the grown one. The samples channel went from 133 to 310 ms.
+- **Related artists:** on the current service, the API waited a median 137 ms (up to 616 ms) after the search for
+  Deezer's list. On the grown index, the list had arrived by the time the longer search ended.
+
+**Serving fix found during the attempts.** In the first deploy, the API fetched the seed's related artists from
+Deezer before searching, for the tiers. The fetch runs in a background thread and took about 880 ms while the GPU
+work ran, against about 300 ms on its own (probably contention for Python's GIL; not verified). Serving now gates
+with the related lists stored in the scene table, as the evaluation did, so the search never waits for Deezer. 150
+development and 150 out-of-catalog seeds reproduced the evaluated gated lists exactly.
+
+**Decision (2026-11-08, after the results above).** The project owner changed rule 4's latency limit for this
+release to "unseen-song p95 no higher than the current service's, measured the same way". The current service
+measured 1.125 s and the gated grown catalog 1.046 s. The original 1.0 s limit predates Same vibe and the scene
+layer, and the current service no longer meets it either. The deploy re-measures against 1.125 s, with the other
+rule-4 checks and automatic rollback unchanged.
+
+**Deployed (2026-11-08).** The third deploy passed every rule-4 check against that limit:
+
+| Check | Result |
+|---|---|
+| Startup | 44 s, catalog tiers active |
+| Unseen-song latency, 40 songs | p50 0.99 s, p95 1.032 s, max 1.087 s |
+| Peak VRAM | 6,435 MiB |
+
+Checks through the public URL:
+- A catalog song answered in 0.62 s.
+- A crawled song by an artist new to the catalog answered from the index in 0.57 s; the previous index had to
+  fetch and embed it live.
+- Every crawled song in the returned lists was by the seed's artist or one of its related artists.
+- Fixed seeds captured before and after the swap kept most of their top 10; zero to five songs changed per list.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
@@ -1103,7 +1306,8 @@ holds the expected song for 5 of the 24 pairs, against 6 without the layer:
 
 - **Previews only.** Each song is heard through a 30-second Deezer preview. Shared material elsewhere in the song
   is invisible.
-- **Frozen catalog.** Results can only be songs in the 269k index. Any song can be the query.
+- **Indexed catalog only.** Results can only be songs in the index: 269k songs until 2026-11-08, 889k since then,
+  with crawled songs limited to the seed's scene. Any song can be the query.
 - **Small sets.** v4 has 19 held-out and 35 validation queries, so one query moves HR by 3–5 points. Gen Alpha is a
   single group of 65 songs, and its members are not independent queries.
 - **Gen Alpha was seen once.** It was looked at when choosing the melody hub setting (see

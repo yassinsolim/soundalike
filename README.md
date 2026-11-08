@@ -15,7 +15,7 @@ representations and measured features such as tempo, dynamics, and bass
 balance. It does not use your listening history as a ranking signal.
 
 The public web app and Spicetify extension open on **Best matches**, songs that
-share a melody, sample, or loop with yours from a 269,278-track index. **Same vibe**,
+share a melody, sample, or loop with yours from an 889,277-song index. **Same vibe**,
 one tab away, keeps the matches that also share your song's tempo and overall
 sound, one song per artist, and **Sounds like** lists the songs with the closest
 overall sound. All three come from the same GPU matcher, so they work for any
@@ -248,7 +248,9 @@ songs live on a GPU. Architecture, index builds and deployment are described in
 [docs/ANYSONG.md](docs/ANYSONG.md), and measured accuracy in
 [docs/ANYSONG_EVAL.md](docs/ANYSONG_EVAL.md); the research behind it follows.
 
-The served index holds 269,278 catalog tracks. The page opens on a **Best matches** list that fuses the melody and
+The served index holds 889,277 songs: 269,278 catalog tracks plus songs crawled along Deezer's related-artist graph,
+which are recommended only for seeds in their artist's scene (see "Catalog tiers" in
+[docs/ANYSONG.md](docs/ANYSONG.md)). The page opens on a **Best matches** list that fuses the melody and
 samples rankings. On held-out benchmarks its top 10 holds a correct song for 67% of cover queries, 44% of Gen Alpha
 songs and 15–19% of sample pairs, which is the melody tab's cover accuracy with almost twice its sample hits. "Sounds
 like" claims stay hard: about 11% in the fused list and 16–17% when all three tabs are checked. Unseen songs

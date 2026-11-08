@@ -152,6 +152,17 @@ A Deezer failure leaves the rest of the queue for the next pass. Once the bulk t
 running for looked-up songs only. They are embedded with the rest of the crawl's songs and join the catalog at the
 next index rebuild. `crawl status` reports learned songs and looked-up artists still waiting.
 
+**Catalog tiers.** Songs the crawl added are recommended only for seeds by their own artist or by an artist whose
+own Deezer related list names theirs; the songs the catalog held before (the core, listed in `core_ids.npy`) are
+always candidates. Unrestricted, the grown catalog failed its go-live gate: crawled songs by artists outside the
+seed's scene filled about 45 % of list rows, and listeners almost never played them (see
+[ANYSONG_EVAL.md](ANYSONG_EVAL.md), "Catalog growth"). [`anysong.tiers`](../src/soundalike/anysong/tiers.py) turns
+the rule into one row mask per channel, applied before the index picks its exact-scored candidates, so lists keep
+their depth. The related lists come from the scene table, so the search never waits for Deezer: a seed whose artist
+has no list there gets core songs and its own artist's, never fewer candidates than before the crawl (Deezer's live
+list still feeds the scene layer). Every list is gated, the channel lists included, and `eval_index --core-ids`
+measures the gated catalog. `/healthz` reports core and discovered rows per channel.
+
 ## Building an index
 
 Extract window embeddings for the frozen catalog with
@@ -263,7 +274,7 @@ birth countries, and genres with their parent genres. It keeps to 5 Deezer reque
 API terms limit use to personal, non-commercial applications, as for the rest of this project.
 
 `scene` symmetrises the graph (an artist's neighbourhood is the artist, its related artists and the artists that
-list it). An artist's region is 70 % the stated countries of its graph neighbours and 30 % its own, because
+list it), and also keeps each crawled artist's own related list in Deezer's order for the catalog tiers. An artist's region is 70 % the stated countries of its graph neighbours and 30 % its own, because
 citizenship or birthplace alone misplaces artists (21 Savage, born in London, belongs to the Atlanta scene).
 Artists without stated countries or genres inherit their neighbours' at 80 % weight when at least two neighbours
 know them. Genres are IDF-weighted and include Wikidata parent genres at half weight; they are stored but weighted 0
@@ -289,23 +300,29 @@ model on the previews of seeds outside the catalog (`--tempo-model`).
 ## Deployment (homelab)
 
 GPU host CT 409 (`/opt/soundalike`): `src/`, `venv/`, checkpoints under `ckpt/`, upstream code under `ext/`,
-offline Hugging Face cache in `hf/`, indexes under `index/` with `index/current` → the live index,
-`index/catalog_meta.npz` for titles, `index/languages.npz` for language labels (`--languages`),
-`index/scene.npz` for the scene layer (`--scene`), and `index/tempo.npz` plus `ckpt/beat_this/final0.ckpt` for Same
-vibe (`--tempo`, `--tempo-model`; about 160 MiB of VRAM, and 30 ms of GPU time per unseen seed). The service is
+offline Hugging Face cache in `hf/`, and indexes with `index/current` → the live index. Each index directory also
+holds the catalog tables it was built with: `catalog_meta.npz` for titles, `languages.npz` for language labels
+(`--languages`), `scene.npz` for the scene layer (`--scene`), `core_ids.npy` for the catalog tiers (`--core-ids`;
+for an index without crawled songs, all of its ids) and `tempo.npz` (with `ckpt/beat_this/final0.ckpt`)
+for Same vibe (`--tempo`, `--tempo-model`; about 160 MiB of VRAM, and 30 ms of GPU time per unseen seed). One
+symlink swap therefore switches the index and its tables together. Grown indexes live on
+`/opt/soundalike/index-store`, a 96 GB NVMe volume (`mp1`, `backup=0`). The nightly vzdump to the bulk HDD skips it,
+because each index is about 40 GB and can be rebuilt from its embeddings. The first full index stays at
+`index/full-20261101` on the root disk, with its own `core_ids.npy`, as the rollback. Since 2026-11-08,
+`index/current` → `index-store/grown-20261108`: 889,277 songs, the 269,278 core songs plus 619,999 crawled ones,
+served with the catalog tiers. The service is
 [`deploy/homelab/soundalike-anysong.service`](../deploy/homelab/soundalike-anysong.service) (user `anysong`,
-`MemoryMax=6G`, enabled at boot; startup loads and warms the models and index, about 22 s with the full 269k-track
-index). The process itself uses about 1.5 GB of RAM; the rest of the cap is page cache for the memory-mapped
-windows, which the kernel trims.
+`MemoryMax=6G`, enabled at boot; startup loads and warms the models and index). The process itself uses about
+1.5 GB of RAM; the rest of the cap is page cache for the memory-mapped windows, which the kernel trims.
 
 Swapping the index:
 
 ```sh
-scp -r index_full root@ct409:/opt/soundalike/index/full-YYYYMMDD
-scp index_full.sha256 root@ct409:/opt/soundalike/index/full-YYYYMMDD.sha256
-cd /opt/soundalike/index/full-YYYYMMDD && sha256sum -c ../full-YYYYMMDD.sha256 && chmod -R go-w .
+scp -r index_new root@ct409:/opt/soundalike/index-store/NAME          # parallel scp per file is fastest
+cd /opt/soundalike/index-store/NAME && sha256sum -c ../NAME.sha256 && chmod -R go-w .
+cp catalog_meta.npz languages.npz scene.npz tempo.npz core_ids.npy /opt/soundalike/index-store/NAME/   # its tables
 systemctl stop soundalike-anysong
-ln -sfn full-YYYYMMDD /opt/soundalike/index/current
+ln -sfn /opt/soundalike/index-store/NAME /opt/soundalike/index/current
 systemctl start soundalike-anysong && journalctl -u soundalike-anysong -f   # wait for "ready in ..."
 curl -s 192.168.1.47:8790/healthz
 ```
@@ -328,7 +345,8 @@ reads it with `--keep-learning`, so it keeps running after the bulk target.
 
 ## Limitations
 
-- Coverage is limited to the frozen catalog (about 271k tracks with previews, 269k after dropping radio-show
-  segments); famous sources missing from it cannot be returned, however good the match.
+- Coverage is limited to the indexed catalog: 889,277 songs since 2026-11-08 (269,278 core tracks plus the crawl's
+  songs, which only reach seeds in their artist's scene). Famous sources missing from it cannot be returned, however
+  good the match.
 - Preview-only audio: shared material outside the 30-second clip is invisible.
 - Benchmarks are small for some relations (see the held-out notes in the README); treat the channels as beta.
