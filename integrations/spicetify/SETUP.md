@@ -498,7 +498,7 @@ right-click track ─▶ Spotify title + artist
 ```
 
 Best matches, Same vibe, and Sounds like come from the any-song matcher, which
-looks the song up by title and artist. A song in its 269,278-track index
+looks the song up by title and artist. A song in its 889,277-song index
 answers from stored embeddings; any other song with a Deezer preview is
 downloaded and analyzed live on a GPU, which takes a few seconds, and is
 queued (by its Deezer IDs only) for the catalog crawl, so it and its artist's

@@ -49,7 +49,7 @@ you chose.
   any-song matcher: songs with the same melody (covers, interpolations, and
   reused tunes) and songs that share a sample or loop. Each row shows where it
   placed in those rankings, such as "melody #1 · samples #3". The matcher
-  searches a 269,278-track index and works for any song with a 30-second
+  searches an 889,277-song index and works for any song with a 30-second
   Deezer preview, including songs outside the index, which take a few seconds
   to analyze. Other-language songs are hidden when the seed language is known;
   uncertain and instrumental results stay visible. Use **Show all languages**
@@ -197,7 +197,9 @@ the displayed result list are not sent to Discord.
   take up to about 30 seconds. Repeated tracks use the local cache, and hosted
   responses can be reused by the CDN.
 - The matcher picks its Best matches, Same vibe, and Sounds like results from
-  a 269,278-track catalog; the older Sounds like library covers 272,853 tracks.
+  an 889,277-song catalog. Songs added by the catalog crawl are only suggested
+  for songs from their artist's scene. The older Sounds like library covers
+  272,853 tracks.
 - Best matches hear only Deezer's 30-second preview, so a melody or sample
   outside that clip can be missed.
 - The matcher allows about 20 new searches a minute. Past that, Best matches

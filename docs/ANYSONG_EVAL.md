@@ -1166,6 +1166,21 @@ measured 1.125 s and the gated grown catalog 1.046 s. The original 1.0 s limit p
 layer, and the current service no longer meets it either. The deploy re-measures against 1.125 s, with the other
 rule-4 checks and automatic rollback unchanged.
 
+**Deployed (2026-11-08).** The third deploy passed every rule-4 check against that limit:
+
+| Check | Result |
+|---|---|
+| Startup | 44 s, catalog tiers active |
+| Unseen-song latency, 40 songs | p50 0.99 s, p95 1.032 s, max 1.087 s |
+| Peak VRAM | 6,435 MiB |
+
+Checks through the public URL:
+- A catalog song answered in 0.62 s.
+- A crawled song by an artist new to the catalog answered from the index in 0.57 s; the previous index had to
+  fetch and embed it live.
+- Every crawled song in the returned lists was by the seed's artist or one of its related artists.
+- Fixed seeds captured before and after the swap kept most of their top 10; zero to five songs changed per list.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
@@ -1291,7 +1306,8 @@ holds the expected song for 5 of the 24 pairs, against 6 without the layer:
 
 - **Previews only.** Each song is heard through a 30-second Deezer preview. Shared material elsewhere in the song
   is invisible.
-- **Frozen catalog.** Results can only be songs in the 269k index. Any song can be the query.
+- **Indexed catalog only.** Results can only be songs in the index: 269k songs until 2026-11-08, 889k since then,
+  with crawled songs limited to the seed's scene. Any song can be the query.
 - **Small sets.** v4 has 19 held-out and 35 validation queries, so one query moves HR by 3–5 points. Gen Alpha is a
   single group of 65 songs, and its members are not independent queries.
 - **Gen Alpha was seen once.** It was looked at when choosing the melody hub setting (see

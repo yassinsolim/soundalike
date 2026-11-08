@@ -308,7 +308,9 @@ for Same vibe (`--tempo`, `--tempo-model`; about 160 MiB of VRAM, and 30 ms of G
 symlink swap therefore switches the index and its tables together. Grown indexes live on
 `/opt/soundalike/index-store`, a 96 GB NVMe volume (`mp1`, `backup=0`). The nightly vzdump to the bulk HDD skips it,
 because each index is about 40 GB and can be rebuilt from its embeddings. The first full index stays at
-`index/full-20261101` on the root disk. The service is
+`index/full-20261101` on the root disk, with its own `core_ids.npy`, as the rollback. Since 2026-11-08,
+`index/current` → `index-store/grown-20261108`: 889,277 songs, the 269,278 core songs plus 619,999 crawled ones,
+served with the catalog tiers. The service is
 [`deploy/homelab/soundalike-anysong.service`](../deploy/homelab/soundalike-anysong.service) (user `anysong`,
 `MemoryMax=6G`, enabled at boot; startup loads and warms the models and index). The process itself uses about
 1.5 GB of RAM; the rest of the cap is page cache for the memory-mapped windows, which the kernel trims.
@@ -343,7 +345,8 @@ reads it with `--keep-learning`, so it keeps running after the bulk target.
 
 ## Limitations
 
-- Coverage is limited to the frozen catalog (about 271k tracks with previews, 269k after dropping radio-show
-  segments); famous sources missing from it cannot be returned, however good the match.
+- Coverage is limited to the indexed catalog: 889,277 songs since 2026-11-08 (269,278 core tracks plus the crawl's
+  songs, which only reach seeds in their artist's scene). Famous sources missing from it cannot be returned, however
+  good the match.
 - Preview-only audio: shared material outside the 30-second clip is invisible.
 - Benchmarks are small for some relations (see the held-out notes in the README); treat the channels as beta.
