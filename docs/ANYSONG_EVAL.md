@@ -1488,6 +1488,23 @@ code that changes nothing on this path about half the time.
 
 The service went back to the served code automatically. Peak VRAM was 6,727 MiB throughout.
 
+**Amendment (2026-11-09, owner's decision, after the rolled-back attempt and before the next).** This release changes
+nothing before or during the search. For it, the latency check becomes two conditions on the same 40 unseen songs,
+measured in the same session with cold caches:
+- The paired median of the server's total time (new code minus served code) is at most +25 ms.
+- p95 is at most the served code's p95 plus 50 ms. The margin is above the 32 ms spread between two runs of
+  identical code.
+
+The rest of rule 4 is unchanged:
+- Parity as amended above.
+- Startup under 2 minutes.
+- Peak VRAM at most 7,248 MiB.
+- Automatic rollback.
+- No deploy during the nightly backup.
+
+The rolled-back attempt would have passed this check (+6 ms; 1.022 s against 1.042 s). The amendment was therefore
+decided after seeing a result, and the deploy measures again.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
