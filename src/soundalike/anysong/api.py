@@ -57,11 +57,17 @@ import numpy as np
 
 from . import samevibe
 from .deezer import version_words
-from .scene import SceneParams, SceneTable, scene_fuse
+from .scene import SceneParams, SceneTable, affinity, scene_fuse
 from .tempo import TempoTable, decode22
 
 FETCH = 200  # per-channel depth ranked before de-duplication
 K_MAX = 50
+# Another artist's version of the seed's song this high in the samples list reuses the seed's recording (a re-upload,
+# a sped-up edit, a remix, the same song under another credit) rather than covering it (``AnySong._limit_versions``).
+# About 3 % of benchmark covers (development split) score this high.
+COPY_SAMPLES_SCORE = 0.55
+MAX_VERSIONS = 3  # other artists' versions of the seed's song kept in the lists users see
+SOUNDS_BOOST = 8.0  # Sounds like: lift by the artist's scene affinity
 # "best" list: reciprocal-rank fusion of the channels' song lists, score = sum(w / (FUSE_K + rank)).
 # Chosen on development splits only; see docs/ANYSONG_EVAL.md.
 FUSE_K = 5
@@ -297,9 +303,17 @@ class AnySong:
                  scene: SceneTable | None = None, scene_params: SceneParams | None = None,
                  related_ttl: float = 86400.0, tempo: TempoTable | None = None, tracker=None,
                  vibe_params: samevibe.SameVibeParams | None = None, learn: LearnQueue | None = None,
-                 tiers=None):
+                 tiers=None, artist_languages: bool = True, copy_score: float | None = COPY_SAMPLES_SCORE,
+                 max_versions: int | None = MAX_VERSIONS, sounds_boost: float = SOUNDS_BOOST):
         self.engine, self.deezer, self.meta, self.keep_previews = engine, deezer, meta, keep_previews
         self.languages = languages
+        # Songs without a confident language label take their artist's majority language in the language gate.
+        self.artist_languages = artist_languages
+        # Other artists' versions of the seed's own song: copies of its recording (samples score at least
+        # ``copy_score``) dropped, at most ``max_versions`` of the rest kept.
+        self.copy_score, self.max_versions = copy_score, max_versions
+        # Sounds like: lift songs by their artist's scene affinity (0 = the sonic channel's order).
+        self.sounds_boost = sounds_boost
         self.learn = learn
         # Catalog tiers (``tiers.TierGate``): songs added by the crawl only for seeds in their artist's scene.
         self.tiers = tiers
@@ -675,6 +689,8 @@ class AnySong:
                 order[key] = {"id": tid, "score": round(float(score), 4), "artist": artist, "title": title}
             songs[channel] = order
             out[channel] = list(order.values())[:k]
+        if dedupe and qkey is not None and (self.copy_score is not None or self.max_versions is not None):
+            songs = self._limit_versions(songs, qkey)
 
         language = "unknown"
         if self.languages is not None:
@@ -705,8 +721,7 @@ class AnySong:
         filtered = songs
         if language != "unknown" and self.languages is not None:
             def keep(item: dict) -> bool:
-                candidate = self.languages.language(int(item["id"]))
-                return candidate in {"unknown", language}
+                return self._item_language(item) in {"unknown", language}
 
             hidden = sum(
                 1
@@ -729,7 +744,7 @@ class AnySong:
             vibe = self._same_vibe(res["vibe"], filtered, [key for key, _, _ in fused], language, lang_mode, k)
             bpm = res["vibe"]["bpm"]
             query["bpm"] = round(bpm, 1) if bpm else None
-        sounds = self._sounds(filtered, k)
+        sounds = self._sounds(filtered, k, profile, artists)
         lists = {"best": best} if best else {}
         if vibe:
             lists["vibe"] = vibe
@@ -738,12 +753,55 @@ class AnySong:
         return {"ok": True, "query": query, "results": lists | out, "timings_ms": res["timings_ms"],
                 "cached": cached}
 
-    def _sounds(self, view: dict[str, dict[Hashable, dict]], k: int) -> list[dict]:
+    def _item_language(self, item: dict) -> str:
+        """A listed song's language: its own label, else (with ``artist_languages``) its artist's majority language."""
+        language = self.languages.language(int(item["id"]))
+        if language == "unknown" and self.artist_languages:
+            language = self.languages.artist_language(item.get("artist"))
+        return language
+
+    def _limit_versions(self, songs: dict[str, dict[Hashable, dict]], qkey: tuple[str, str]
+                        ) -> dict[str, dict[Hashable, dict]]:
+        """Other artists' versions of the seed's own song (same ``song_key`` title, another artist). With
+        ``copy_score``, those scoring at least that in the samples list are dropped as copies of the seed's recording;
+        with ``max_versions``, only that many of the rest stay (the best placed in any channel), so covers and edits of
+        one song cannot fill the lists. The channel lists themselves are left whole."""
+        best: dict[Hashable, int] = {}
+        for order in songs.values():
+            for i, key in enumerate(order, 1):
+                if isinstance(key, tuple) and key[0] != "id" and key[1] == qkey[1] and key[0] != qkey[0]:
+                    best[key] = min(best.get(key, i), i)
+        drop: set[Hashable] = set()
+        if self.copy_score is not None:
+            samples = songs.get("samples", {})
+            drop = {key for key in best if key in samples and samples[key]["score"] >= self.copy_score}
+        if self.max_versions is not None:
+            kept = [key for key in sorted(best, key=lambda key: best[key]) if key not in drop]
+            drop.update(kept[self.max_versions:])
+        if not drop:
+            return songs
+        return {channel: {key: item for key, item in order.items() if key not in drop}
+                for channel, order in songs.items()}
+
+    def _sounds(self, view: dict[str, dict[Hashable, dict]], k: int, profile=None,
+                artists: Mapping[Hashable, int | None] | None = None) -> list[dict]:
         """The Sounds like list: the sonic channel as filtered for Best (no seed song and, in same-language mode,
-        no confidently other-language song), one song per artist, each with its catalog tempo when known."""
+        no confidently other-language song), one song per artist, each with its catalog tempo when known. With
+        ``sounds_boost`` and a scene profile, songs move up by their artist's scene affinity: 1 / (k + rank) times
+        (1 + sounds_boost * affinity)."""
+        items = list(view.get("sonic", {}).items())
+        if self.sounds_boost > 0 and profile is not None and self.scene is not None and artists is not None:
+            def lifted(i: int, key: Hashable) -> float:
+                artist_id = artists.get(key)
+                candidate = self.scene.stored(artist_id) if artist_id else None
+                return (1.0 / (FUSE_K + i)) * (1.0 + self.sounds_boost * affinity(
+                    profile, candidate, artist_id, self.scene_params))
+
+            lift = {key: lifted(i, key) for i, (key, _) in enumerate(items, 1)}
+            items.sort(key=lambda pair: -lift[pair[0]])
         seen: set[Hashable] = set()
         sounds = []
-        for item in view.get("sonic", {}).values():
+        for _, item in items:
             tid = int(item["id"])
             artist_id = self.scene.artist(tid) if self.scene is not None else None
             artist: Hashable = ("id", artist_id) if artist_id else ("name", (item["artist"] or "").casefold() or tid)
@@ -769,7 +827,7 @@ class AnySong:
             cands[key] = samevibe.Candidate(
                 track_id=tid, bpm=self.tempo.bpm(tid), muq=inputs["muq"].get(tid, -np.inf),
                 artist_id=(self.scene.artist(tid) or 0) if self.scene is not None else 0,
-                language=self.languages.language(tid) if self.languages is not None else "unknown")
+                language=self._item_language(item) if self.languages is not None else "unknown")
         keys = samevibe.same_vibe(best_order, list(view["sonic"]), cands, inputs["bpm"], language, lang_mode,
                                   self.vibe_params)
         return [rep[key] | {"score": round(1.0 / (FUSE_K + i), 5)} for i, key in enumerate(keys[:k], 1)]

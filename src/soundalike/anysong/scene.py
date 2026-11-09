@@ -38,22 +38,24 @@ STATED_SHARE = 0.3  # share of an artist's own stated country when its neighbour
 
 @dataclass(frozen=True)
 class SceneParams:
-    """Defaults are the configuration selected on development data (docs/ANYSONG_EVAL.md#scene-layer-2026-11-04)."""
+    """Defaults are the configuration selected on development data: docs/ANYSONG_EVAL.md#scene-layer-2026-11-04, then
+    a scene lane in every slot after the head, a stronger continuation boost and evidence by score only
+    (docs/ANYSONG_EVAL.md, "Ranking for the lists users see", 2026-11-09)."""
 
     same: float = 0.6  # affinity of another song by the query's primary artist
     graph: float = 4.0  # scale applied to the neighbourhood overlap
     region: float = 0.3
     genre: float = 0.0
-    boost: float = 2.0  # continuation: audio RRF score * (1 + boost * affinity)
+    boost: float = 4.0  # continuation: audio RRF score * (1 + boost * affinity)
     sonic: float = 0.0  # continuation: weight of the sonic RRF score, times affinity
     protect: float = 3.0  # z-score in the melody or samples list that marks a standout match (0 = off)
     protect_window: int = 0  # z-scores relative to the list's first this many songs (0 = the whole list)
-    pattern: str = "AAS"  # slots after the head: A = continuation, S = scene lane ("" = no lane, no head)
+    pattern: str = "S"  # slots after the head: A = continuation, S = scene lane ("" = no lane, no head)
     head_min: int = 3  # audio-fusion songs always kept on top
     head_scan: int = 10  # the head extends to the last of these with cover/sample evidence
     melody_evidence: float = -1.476  # melody score with ~30 % precision for a labelled cover (development data)
     samples_evidence: float = 0.302  # samples score with ~30 % precision for a labelled sample (development data)
-    rank_evidence: int = 3  # a song this high in the melody or samples list also counts as evidence (0 = off)
+    rank_evidence: int = 0  # a song this high in the melody or samples list also counts as evidence (0 = off)
     max_same: int = 2  # songs by the query's artist allowed in the capped head of the list
     max_other: int = 2  # songs by any other single artist allowed in the capped head
     window: int = 20  # length of the capped head

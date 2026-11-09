@@ -245,6 +245,57 @@ def test_artist_language_fallback_filters_unseen_seed(svc):
     assert [item["id"] for item in result["results"]["best"]] == [3]
 
 
+def test_artist_languages_hide_unlabelled_songs_by_artists_of_another_language(svc):
+    svc.languages = FakeLanguages({1: "en", 3: "en"}, {"other artist": "fr", "third": "en"})
+    res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog"},
+           "raw": {"melody": [(3, 0.9), (5, 0.8), (7, 0.7)]}, "timings_ms": {}}
+    svc.artist_languages = False
+    assert [x["id"] for x in svc._view(res, k=10, dedupe=True, cached=False)["results"]["best"]] == [3, 5, 7]
+    svc.artist_languages = True  # the default: 5 is by Other Artist, who sings French; Third (7) sings English
+    view = svc._view(res, k=10, dedupe=True, cached=False)
+    assert [x["id"] for x in view["results"]["best"]] == [3, 7] and view["query"]["hidden"] == 1
+
+
+def test_other_versions_of_the_seed_song_are_limited(tmp_path):
+    meta = {1: ("Brent Faiyaz", "Paper Soldier"), 2: ("d3puu", "Paper Soldier"), 3: ("Choir A", "Paper Soldier"),
+            4: ("Choir B", "Paper Soldier (Live)"), 5: ("Choir C", "Paper Soldier"), 6: ("Cassie", "Addiction")}
+    svc = api.AnySong(FakeEngine(ids=tuple(meta)), FakeDeezer(tmp_path), meta)
+    res = {"query": {"id": 1, "artist": "Brent Faiyaz", "title": "Paper Soldier", "source": "catalog"},
+           "raw": {"melody": [(2, 0.99), (3, 0.9), (6, 0.85), (4, 0.8), (5, 0.7)],
+                   "samples": [(2, 0.9), (6, 0.5), (5, 0.4)]}, "timings_ms": {}}
+
+    def best():
+        return [x["id"] for x in svc._view(res, k=10, dedupe=True, cached=False)["results"]["best"]]
+
+    svc.copy_score = svc.max_versions = None
+    assert best() == [2, 6, 5, 3, 4]
+    svc.copy_score = api.COPY_SAMPLES_SCORE  # 2 shares the seed's audio (samples 0.9): a copy of its recording
+    assert best() == [6, 5, 3, 4]
+    svc.max_versions = 2  # of the other versions, the two best placed in any channel stay
+    assert best() == [6, 5, 3]
+    view = svc._view(res, k=10, dedupe=True, cached=False)
+    assert [x["id"] for x in view["results"]["melody"]] == [2, 3, 6, 4, 5]  # the channel lists stay whole
+    svc.copy_score, svc.max_versions = None, 0
+    assert best() == [6]
+
+
+def test_sounds_boost_lifts_the_seed_artist_scene(tmp_path):
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, scene=_scene_table())
+    res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog", "artist_id": 100},
+           "raw": {"sonic": [(5, 0.9), (3, 0.85), (7, 0.8)]}, "related": [], "timings_ms": {}}
+
+    def sounds(**kw):
+        return [x["id"] for x in svc._view(res, k=10, dedupe=True, cached=False, **kw)["results"]["sounds"]]
+
+    svc.sounds_boost = 0.0
+    assert sounds() == [5, 3, 7]
+    svc.sounds_boost = 4.0  # Third (7) shares Daft Punk's related artists; Other Artist (5) is a US act
+    assert sounds() == [7, 5, 3]
+    assert sounds(scene=False) == [5, 3, 7]
+    svc.sounds_boost = api.SOUNDS_BOOST  # the default
+    assert sounds() == [7, 5, 3]
+
+
 def test_no_best_list_without_fused_channels(svc):
     res = {"query": {"id": 1, "artist": "A", "title": "B", "source": "catalog"}, "raw": {"sonic": [(3, 0.9)]},
            "timings_ms": {}}
@@ -280,7 +331,8 @@ def _scene_table():
 
 
 def test_scene_layer_lifts_related_artists_and_can_be_turned_off(tmp_path):
-    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, scene=_scene_table(),
+    # copy_score=None: the fake engine scores every row 0.9 on samples, which would read as copies of the seed
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, scene=_scene_table(), copy_score=None,
                       scene_params=SceneParams(pattern=""))  # the audio continuation alone, without slots
     r = svc.similar(1, k=10)
     assert r["query"]["scene"] == "on" and r["query"]["artist_id"] == 100
@@ -732,7 +784,8 @@ def test_client_key_normalises_addresses(raw, key):
 
 @pytest.fixture
 def server(tmp_path):
-    srv = api.Server(("127.0.0.1", 0), api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META),
+    # copy_score=None: the fake engine scores every row 0.9 on samples, which would read as copies of the seed
+    srv = api.Server(("127.0.0.1", 0), api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, copy_score=None),
                      search_per_min=600, similar_per_min=8, cors_origin="https://yassin.app",
                      client_header="CF-Connecting-IP")
     th = threading.Thread(target=srv.serve_forever, daemon=True)

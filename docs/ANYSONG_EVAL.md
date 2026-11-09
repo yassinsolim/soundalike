@@ -1340,6 +1340,85 @@ Checks through the public URL:
   fp16 benchmark, but the fp32 stages were faster too. The crawl ran during the first capture and not the second,
   so this comparison is not controlled.
 
+## Ranking for the lists users see (pre-registered 2026-11-09, before any held-out result)
+
+**Why.** A test of the served 999k catalog on 2026-11-09 found lists that often made little sense:
+- 1,018 songs from Deezer's charts of 40 countries and 23 genres.
+- 180 song pairs, each checked against a Wikipedia article.
+- The owner listening in Spotify.
+
+For seeds in a thinly covered language, songs without a language label filled the lists: K-pop, trance, film
+scores, and English songs with no label. Hebrew seeds got 70 % such rows.
+
+Best matches put up to seven weak audio matches above any song from the seed's scene, because a top-3 place in the
+melody or samples list counted as evidence whatever its score. Only 41 % of results for UK chart seeds were by UK
+artists. Copies and covers of the seed sometimes topped or filled the lists. Sounds like had the weakest ListenBrainz
+agreement of the three lists.
+
+**Change under test.** The index, the tables and the channel lists are unchanged. Everything below happens in
+`AnySong._view` and the defaults of `SceneParams`:
+1. **Language gate.** A listed song without a confident language label takes its artist's majority language
+   (`LanguageTable.artist_language`, until now used only for seeds).
+2. **Copies of the seed.** Another artist's version of the seed's song (same `song_key` title) scoring at least
+   0.55 in the samples list is dropped as a copy of the seed's recording. Of the remaining versions, at most 3 stay.
+3. **Best matches.** Evidence by score only (`rank_evidence` 0). After the three-song audio head, the scene lane
+   takes every slot (`pattern` "S"). The continuation boost goes from 2.0 to 4.0.
+4. **Sounds like.** Songs move up by their artist's scene affinity: 1 / (5 + rank) × (1 + 8 × affinity). The list
+   still draws only from the 200 nearest songs in sound.
+
+Song lookups (artist spellings, bracketed titles, a normalized second search, ISRC) were fixed in the same release.
+They change which recording answers a title, not how lists rank, and were checked separately. The 1,018 sweep songs
+and the pair songs were resolved again:
+- 983 sweep songs resolved as before.
+- 6 changed, each to the version asked for (HUNTR/X "Golden" had resolved to "Golden (Acapella)").
+- 8 lookups that had failed now succeed.
+
+**Selection.** 33 variants were compared on development data only:
+- The scene layer's 800 development seeds.
+- The 676 catalog songs of the chart sweep (development data from now on).
+- The development and validation splits of the relationship benchmarks.
+
+Lists came from the served code path with the GPU search cached (`grow/qa/devharness.py`). On that data, against
+the served lists:
+
+| | Best matches | Same vibe | Sounds like |
+|---|---:|---:|---:|
+| ListenBrainz hit rate | +0.102 | +0.028 | +0.119 |
+| Far-genre share | −0.082 | −0.021 | −0.060 |
+
+Best matches HR@10 changed by −0.019 on covers, −0.010 on samples and −0.013 on samples reverse.
+
+Variants were rejected for these reasons:
+- **A one-song head** gained more (Best matches +0.126) but lost 0.034 on samples reverse.
+- **A copy rule at 0.45** cost 0.024 on covers.
+- **A rank-based copy rule** cost 0.128 on covers, since faithful covers top both the melody and samples lists.
+
+**Baselines.** The served 999k lists (`gated1m`), computed before this change and stored.
+
+**Seeds.**
+- Rule 1: the 799 held-out seeds (used four times before) and the 1,000 fresh seeds (used three times before).
+- Rule 2: the relationship benchmarks' held-out split, plus Gen Alpha.
+
+**Must pass (all), else not deployed:**
+1. **Lists users see.** Best matches, Same vibe and Sounds like, each on both seed sets (`gate_eval compare
+   --labels build1m`):
+   - ListenBrainz hit rate: the paired 95 % interval's lower bound at −0.010 or above.
+   - Shared genre: mean change −0.02 or above.
+   - Other-language rows: up by at most 1 point.
+   - Derivative uploads: up by at most 1 point.
+   - Rows shown in the top 20: down by at most 1.0 on average. The language gate shortens some lists.
+2. **Relationship benchmarks.**
+   - Any-tab HR@10 may drop by at most 0.03 on covers, samples and samples reverse, and by at most 0.10 on Gen Alpha.
+     The channel lists are unchanged, so these should not move.
+   - Best matches HR@10, as served, may drop by at most 0.03 on covers, samples and samples reverse.
+3. **It must help.** On both seed sets, the ListenBrainz hit rate of Best matches and of Sounds like must rise,
+   with the paired 95 % interval's lower bound above 0.
+4. **Serving on the RTX 2070 SUPER.** Rule 4 of the 999k catalog with the amended parity check: startup under
+   2 minutes, peak VRAM at most 7,248 MiB, and unseen-song p95 no higher than the served service's, measured in the
+   same session on the same songs, with automatic rollback.
+
+Exactness (rule 3 before) is untouched: the index and its search do not change.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
