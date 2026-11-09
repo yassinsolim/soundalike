@@ -1221,6 +1221,60 @@ settings:
   slice of the served index).
 - On the RTX 5080 at 999k, its top-20 exactness (300 random tracks) is no lower than fp32's.
 
+**Half-precision stage 1, measured.** RTX 2070 SUPER, a 65,536-row slice of each channel of the served 889k index,
+median of 40 runs per setting, per million tracks, while the API kept serving:
+
+| Channel | fp32 | fp16 | Change | Stage-1 top-100 overlap |
+|---|---:|---:|---:|---:|
+| Melody (8-bit) | 53.1 ms | 56.5 ms | +6 % | 1.00 |
+| Samples (4-bit) | 256.3 ms | 196.4 ms | −23 % | 0.99 |
+| Sound (8-bit) | 16.0 ms | 18.3 ms | +14 % | 0.99 |
+
+Stage 2, the exact re-scoring of the candidates read from disk, took 9.5, 69.5 and 8.8 ms. By the rule, fp16
+qualifies for samples only, pending the exactness comparison at 999k.
+
+### Result: the full crawl passed rules 1 to 3 (2026-11-09)
+
+Run once, after the pre-registration (e07ab48) and the fp16 commit (e550a83), with the served setting: samples'
+stage 1 in fp16, melody and sound in fp32. At 999k on the RTX 5080, samples' top-20 exactness was 1.000 in fp16
+and in fp32, so fp16 for samples meets its decision rule.
+
+Rule 1, ListenBrainz hit rate (paired difference with its 95 % interval; the lower bound must be −0.010 or above
+against both baselines):
+
+| Seeds | List | 269k | 889k (served) | 999k | Against 889k | Against 269k |
+|---|---|---:|---:|---:|---|---|
+| Held-out (799) | Best matches | 0.215 | 0.217 | 0.217 | +0.001 (−0.003 to +0.004) | +0.002 (−0.003 to +0.008) |
+| | Same vibe | 0.314 | 0.316 | 0.317 | +0.001 (−0.002 to +0.004) | +0.003 (−0.003 to +0.010) |
+| | Sounds like | 0.211 | 0.217 | 0.218 | +0.000 (−0.002 to +0.003) | +0.007 (+0.002 to +0.012) |
+| Fresh (1,000) | Best matches | 0.212 | 0.219 | 0.220 | +0.001 (−0.002 to +0.004) | +0.008 (+0.002 to +0.013) |
+| | Same vibe | 0.316 | 0.321 | 0.321 | +0.001 (−0.002 to +0.003) | +0.005 (−0.002 to +0.012) |
+| | Sounds like | 0.210 | 0.215 | 0.216 | +0.001 (−0.001 to +0.003) | +0.007 (+0.002 to +0.012) |
+
+The other rule-1 checks passed against both baselines:
+- Shared genre: −0.003 to 0.000 against 889k, +0.002 to +0.011 against 269k.
+- Other-language rows: unchanged.
+- Derivative uploads: changes between −0.0005 and +0.0001.
+
+Crawled songs made up 3 % to 8 % of the top 10 (3 % to 7 % at 889k).
+
+**Reported, not gated.** Among recommended artists that Deezer does not list as related to the seed, the
+ListenBrainz hit rate barely moved against 889k (largest change −0.001). Against 269k it fell in Same vibe on the
+fresh seeds, by 0.009 (−0.016 to −0.002). The 889k catalog already had this drop (−0.008, −0.015 to −0.001); its
+result above did not report it.
+
+Rule 2 (any-tab HR@10, with `--core-ids` and samples in fp16):
+
+| Benchmark | 269k | 889k | 999k | Against 889k | Against 269k | Limit |
+|---|---:|---:|---:|---:|---:|---:|
+| Covers | 0.709 | 0.707 | 0.707 | 0.000 | −0.002 | −0.03 |
+| Samples | 0.162 | 0.165 | 0.162 | −0.003 | 0.000 | −0.03 |
+| Samples reverse | 0.170 | 0.168 | 0.168 | 0.000 | −0.001 | −0.03 |
+| Gen Alpha | 0.508 | 0.508 | 0.508 | 0.000 | 0.000 | −0.10 |
+
+Rule 3: with the tier masks, the served top 10, 20 and 100 matched brute force for all 300 random tracks in every
+channel, with samples in fp16 and in fp32.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
