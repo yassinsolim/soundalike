@@ -409,7 +409,8 @@ client. It probes `http://127.0.0.1:8787` first. If the optional companion is
 healthy, the Sounds like search stays on your machine, and the Best matches
 tab asks before sending the title and artist to the hosted matcher. A Best
 matches list saved from an earlier search shows without asking. Otherwise,
-only that title and artist are sent to
+only that title, artist and, when Spotify lists one, the recording's ISRC
+(read from Spotify's own track metadata) are sent to
 `https://soundalike.yassin.app/api/anysong/similar` for Best matches, Same
 vibe, and Sounds like, which may look the song up on Deezer and analyze its
 public 30-second preview. Only when that matcher can't answer are they sent to

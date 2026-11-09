@@ -245,6 +245,57 @@ def test_artist_language_fallback_filters_unseen_seed(svc):
     assert [item["id"] for item in result["results"]["best"]] == [3]
 
 
+def test_artist_languages_hide_unlabelled_songs_by_artists_of_another_language(svc):
+    svc.languages = FakeLanguages({1: "en", 3: "en"}, {"other artist": "fr", "third": "en"})
+    res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog"},
+           "raw": {"melody": [(3, 0.9), (5, 0.8), (7, 0.7)]}, "timings_ms": {}}
+    svc.artist_languages = False
+    assert [x["id"] for x in svc._view(res, k=10, dedupe=True, cached=False)["results"]["best"]] == [3, 5, 7]
+    svc.artist_languages = True  # the default: 5 is by Other Artist, who sings French; Third (7) sings English
+    view = svc._view(res, k=10, dedupe=True, cached=False)
+    assert [x["id"] for x in view["results"]["best"]] == [3, 7] and view["query"]["hidden"] == 1
+
+
+def test_other_versions_of_the_seed_song_are_limited(tmp_path):
+    meta = {1: ("Brent Faiyaz", "Paper Soldier"), 2: ("d3puu", "Paper Soldier"), 3: ("Choir A", "Paper Soldier"),
+            4: ("Choir B", "Paper Soldier (Live)"), 5: ("Choir C", "Paper Soldier"), 6: ("Cassie", "Addiction")}
+    svc = api.AnySong(FakeEngine(ids=tuple(meta)), FakeDeezer(tmp_path), meta)
+    res = {"query": {"id": 1, "artist": "Brent Faiyaz", "title": "Paper Soldier", "source": "catalog"},
+           "raw": {"melody": [(2, 0.99), (3, 0.9), (6, 0.85), (4, 0.8), (5, 0.7)],
+                   "samples": [(2, 0.9), (6, 0.5), (5, 0.4)]}, "timings_ms": {}}
+
+    def best():
+        return [x["id"] for x in svc._view(res, k=10, dedupe=True, cached=False)["results"]["best"]]
+
+    svc.copy_score = svc.max_versions = None
+    assert best() == [2, 6, 5, 3, 4]
+    svc.copy_score = api.COPY_SAMPLES_SCORE  # 2 shares the seed's audio (samples 0.9): a copy of its recording
+    assert best() == [6, 5, 3, 4]
+    svc.max_versions = 2  # of the other versions, the two best placed in any channel stay
+    assert best() == [6, 5, 3]
+    view = svc._view(res, k=10, dedupe=True, cached=False)
+    assert [x["id"] for x in view["results"]["melody"]] == [2, 3, 6, 4, 5]  # the channel lists stay whole
+    svc.copy_score, svc.max_versions = None, 0
+    assert best() == [6]
+
+
+def test_sounds_boost_lifts_the_seed_artist_scene(tmp_path):
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, scene=_scene_table())
+    res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog", "artist_id": 100},
+           "raw": {"sonic": [(5, 0.9), (3, 0.85), (7, 0.8)]}, "related": [], "timings_ms": {}}
+
+    def sounds(**kw):
+        return [x["id"] for x in svc._view(res, k=10, dedupe=True, cached=False, **kw)["results"]["sounds"]]
+
+    svc.sounds_boost = 0.0
+    assert sounds() == [5, 3, 7]
+    svc.sounds_boost = 4.0  # Third (7) shares Daft Punk's related artists; Other Artist (5) is a US act
+    assert sounds() == [7, 5, 3]
+    assert sounds(scene=False) == [5, 3, 7]
+    svc.sounds_boost = api.SOUNDS_BOOST  # the default
+    assert sounds() == [7, 5, 3]
+
+
 def test_no_best_list_without_fused_channels(svc):
     res = {"query": {"id": 1, "artist": "A", "title": "B", "source": "catalog"}, "raw": {"sonic": [(3, 0.9)]},
            "timings_ms": {}}
@@ -280,7 +331,8 @@ def _scene_table():
 
 
 def test_scene_layer_lifts_related_artists_and_can_be_turned_off(tmp_path):
-    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, scene=_scene_table(),
+    # copy_score=None: the fake engine scores every row 0.9 on samples, which would read as copies of the seed
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, scene=_scene_table(), copy_score=None,
                       scene_params=SceneParams(pattern=""))  # the audio continuation alone, without slots
     r = svc.similar(1, k=10)
     assert r["query"]["scene"] == "on" and r["query"]["artist_id"] == 100
@@ -488,7 +540,8 @@ def test_resolve_prefers_indexed_releases_then_untagged_titles(tmp_path):
     assert svc.resolve("Daft Punk", "One More Time") == 4  # 1 has metadata but no windows; 2 is a radio edit
     meta = {1: ("A", "Song (Unplugged)"), 2: ("A", "Song - Remastered"), 3: ("A", "Song"), 4: ("A feat. B", "Song")}
     assert api.AnySong(FakeEngine(), FakeDeezer(tmp_path), meta).resolve("A", "Song - Remastered 2009") == 3
-    assert api.AnySong(FakeEngine(ids=(1, 2)), FakeDeezer(tmp_path), meta).resolve("A", "Song") == 1
+    # "Song" is the remastered recording, not the unplugged performance (``_content_tags``)
+    assert api.AnySong(FakeEngine(ids=(1, 2)), FakeDeezer(tmp_path), meta).resolve("A", "Song") == 2
 
 
 def test_resolve_leaves_releases_without_windows_to_the_deezer_search(tmp_path):
@@ -570,6 +623,127 @@ def test_resolve_search_limit_and_upstream_failure(tmp_path):
     assert err.value.status == 502
 
 
+@pytest.mark.parametrize("a,b", [
+    (("The Black Eyed Peas", "The Time (Dirty Bit)"), ("Black Eyed Peas", "The Time (Dirty Bit)")),
+    (("Beyonc\u00e9", "D\u00e9j\u00e0 Vu"), ("Beyonce", "Deja Vu")),
+    (("\u271d\u271d\u271d (Crosses)", "Bitches Brew"), ("\u2020\u2020\u2020 (Crosses)", "Bitches Brew")),
+    (("The Jackson 5", "ABC"), ("Jackson 5", "ABC")),
+])
+def test_lookup_key_ignores_credit_spellings(a, b):
+    assert api._lookup_key(*a) == api._lookup_key(*b)
+
+
+def test_lookup_key_keeps_marks_outside_latin_and_lone_words():
+    assert api._lookup_key("A", "\u304b\u304d") != api._lookup_key("A", "\u304c\u304d")  # kaki and gaki differ
+    assert api._lookup_key("The The", "Uncertain Smile")[0] == "the"
+    assert api._lookup_key("The", "x")[0] == "the"
+
+
+@pytest.mark.parametrize("title,tags", [
+    ("Canon in D (Santa Clause is Coming to Town)", {"santa clause is coming to town"}),
+    ("Song (feat. X) [Live] - 2011 Remaster", set()),
+    ("The Shadow Of Your Smile (Love Theme From \"The Sandpiper\")", set()),
+    ("Song (Original Motion Picture Soundtrack)", set()),
+    ("Song (Prod. by X)", set()),
+    ("YUKON (INTERLUDE)", {"interlude"}),
+    ("Song", set()),
+])
+def test_content_tags_name_other_content_not_versions_or_credits(title, tags):
+    assert api._content_tags(title) == tags
+
+
+def test_content_tags_read_full_width_brackets():
+    assert len(api._content_tags("\u60f3\u3044\uff08TV\u30a2\u30cb\u30e1\u633f\u5165\u6b4c\uff09")) == 1
+
+
+def test_resolve_prefers_the_plain_song_over_a_catalog_medley(tmp_path):
+    meta = {7: ("Johann Pachelbel", "Canon in D (Santa Clause is Coming to Town)")}
+    plain = {99: {"id": 99, "title": "Canon in D", "artist": {"name": "Johann Pachelbel"}, "album": {},
+                  "duration": 30, "preview": "u"}}
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path, tracks=plain), meta)
+    assert svc.resolve("Johann Pachelbel", "Canon in D") == 99
+    assert svc.resolve("Johann Pachelbel", "Canon in D (Santa Clause is Coming to Town)") == 7  # asked for it
+    assert svc.deezer.searches == 1
+    other = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), meta)  # Deezer only finds other songs
+    assert other.resolve("Johann Pachelbel", "Canon in D") == 7  # the catalog's medley stands in
+
+
+def test_resolve_finds_catalog_songs_under_another_credit_spelling(tmp_path):
+    meta = {1: ("The Black Eyed Peas", "The Time (Dirty Bit)"), 2: ("Beyonce", "Deja Vu")}
+    svc = api.AnySong(FakeEngine(ids=(1, 2)), FakeDeezer(tmp_path), meta)
+    assert svc.resolve("Black Eyed Peas", "The Time (Dirty Bit)") == 1
+    assert svc.resolve("Beyonc\u00e9", "D\u00e9j\u00e0 Vu (feat. Jay-Z)") == 2
+    assert svc.deezer.searches == 0
+
+
+class QueryDeezer(FakeDeezer):
+    """Search results that depend on the query text, plus Deezer's ISRC lookup."""
+
+    def __init__(self, tmp_path, by_query=None, by_isrc=None, tracks=None):
+        super().__init__(tmp_path, tracks=tracks)
+        self.by_query, self.by_isrc = by_query, by_isrc or {}
+        self.queries, self.isrc_lookups = [], 0
+
+    def search(self, q, limit):
+        if self.by_query is None:
+            return super().search(q, limit)
+        self.searches += 1
+        self.queries.append(q)
+        if self.fail:
+            raise RuntimeError("down")
+        return self.by_query.get(q, [])[:limit]
+
+    def track_by_isrc(self, isrc):
+        self.isrc_lookups += 1
+        if self.fail:
+            raise RuntimeError("down")
+        return self.by_isrc.get(isrc, {})
+
+
+CROSSES = {"id": 42, "title": "Bitches Brew", "artist": {"name": "\u2020\u2020\u2020 (Crosses)"}, "album": {},
+           "duration": 30, "preview": "u"}
+UNLICENSED = {"id": 77, "title": "But Beautiful", "artist": {"name": "Earl Klugh"}, "album": {}, "duration": 30,
+              "preview": "u"}
+
+
+def test_resolve_searches_again_with_the_plain_key_when_the_names_find_nothing(tmp_path):
+    dz = QueryDeezer(tmp_path, by_query={"crosses bitches brew": [CROSSES]})
+    calls = []
+    assert api.AnySong(FakeEngine(), dz, META).resolve("\u271d\u271d\u271d (Crosses)", "Bitches Brew",
+                                                       lambda: calls.append(1)) == 42
+    assert dz.queries == ["\u271d\u271d\u271d (Crosses) Bitches Brew", "crosses bitches brew"] and calls == [1]
+
+
+def test_resolve_isrc_asks_the_catalog_then_deezer_once(tmp_path):
+    dz = QueryDeezer(tmp_path, by_isrc={"USHU21300155": UNLICENSED})
+    svc = api.AnySong(FakeEngine(), dz, META)
+    calls = []
+    assert svc.resolve_isrc("ushu2130 0155", "Daft Punk", "One More Time", lambda: calls.append(1)) == 1
+    assert calls == [] and dz.isrc_lookups == 0  # an indexed release of the named song needs no Deezer request
+    for _ in range(2):
+        assert svc.resolve_isrc("USHU21300155", "Earl Klugh", "But Beautiful", lambda: calls.append(1)) == 77
+    assert calls == [1] and dz.isrc_lookups == 1 and dz.searches == 0
+    assert svc.similar(77)["query"]["source"] == "live" and dz.lookups == 0  # the lookup's track is reused
+
+
+def test_resolve_isrc_falls_back_to_names_and_rejects_bad_codes(tmp_path):
+    no_preview = UNLICENSED | {"id": 78, "preview": ""}
+    dz = QueryDeezer(tmp_path, by_isrc={"GBAYE0000009": no_preview}, tracks=NEW_SONG)
+    svc = api.AnySong(FakeEngine(), dz, META)
+    assert svc.resolve_isrc("GBAYE0000001", "New Artist", "Brand New Song") == 99  # no ISRC hit: name search
+    assert svc.resolve_isrc("GBAYE0000009", "New Artist", "Brand New Song") == 99  # hit without preview
+    for code, status in (("GBAYE0000002", 404), ("not-an-isrc", 400)):
+        with pytest.raises(api.ApiError) as err:
+            svc.resolve_isrc(code)
+        assert err.value.status == status
+    dz.fail = True
+    assert svc.resolve_isrc("GBAYE0000003", "Third", "Third Song") == 7  # Deezer down: the catalog still answers
+    assert svc.resolve_isrc("GBAYE0000005", "New Artist", "Brand New Song") == 99  # searched before: cached
+    with pytest.raises(api.ApiError) as err:
+        svc.resolve_isrc("GBAYE0000004", "Someone Else", "Uncached Song")
+    assert err.value.status == 502
+
+
 def test_lru_evicts_and_expires():
     now = [0.0]
     c = api.LRU(2, ttl=10, clock=lambda: now[0])
@@ -610,7 +784,8 @@ def test_client_key_normalises_addresses(raw, key):
 
 @pytest.fixture
 def server(tmp_path):
-    srv = api.Server(("127.0.0.1", 0), api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META),
+    # copy_score=None: the fake engine scores every row 0.9 on samples, which would read as copies of the seed
+    srv = api.Server(("127.0.0.1", 0), api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, copy_score=None),
                      search_per_min=600, similar_per_min=8, cors_origin="https://yassin.app",
                      client_header="CF-Connecting-IP")
     th = threading.Thread(target=srv.serve_forever, daemon=True)
@@ -704,6 +879,23 @@ def test_http_name_lookups_spend_the_search_budget_only_on_catalog_misses(tmp_pa
         assert [get(srv, miss)[0] for _ in range(2)] == [404, 429]  # search_per_min=4 -> burst of 1
         assert get(srv, "/api/anysong/similar?title=Third%20Song&artist=Third")[0] == 200
         assert srv.service.deezer.searches == 1
+    finally:
+        srv.shutdown()
+        srv.server_close()
+
+
+def test_http_isrc_lookups_answer_songs_deezer_search_cannot_see(tmp_path):
+    dz = QueryDeezer(tmp_path, by_query={}, by_isrc={"USHU21300155": UNLICENSED})
+    srv = api.Server(("127.0.0.1", 0), api.AnySong(FakeEngine(), dz, META), search_per_min=600,
+                     similar_per_min=600)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        names = "title=But%20Beautiful&artist=Earl%20Klugh"
+        assert get(srv, f"/api/anysong/similar?{names}")[0] == 404  # Deezer's search does not list it
+        code, _, body = get(srv, f"/api/anysong/similar?isrc=USHU21300155&{names}&k=2")
+        assert code == 200 and body["query"]["id"] == 77 and body["query"]["source"] == "live"
+        code, _, body = get(srv, f"/api/anysong/similar?isrc=bad&{names}")
+        assert code == 400 and body["error"] == "isrc must be a 12-character ISRC"
     finally:
         srv.shutdown()
         srv.server_close()

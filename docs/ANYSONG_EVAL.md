@@ -1340,6 +1340,195 @@ Checks through the public URL:
   fp16 benchmark, but the fp32 stages were faster too. The crawl ran during the first capture and not the second,
   so this comparison is not controlled.
 
+## Ranking for the lists users see (pre-registered 2026-11-09, before any held-out result)
+
+**Why.** A test of the served 999k catalog on 2026-11-09 found lists that often made little sense:
+- 1,018 songs from Deezer's charts of 40 countries and 23 genres.
+- 180 song pairs, each checked against a Wikipedia article.
+- The owner listening in Spotify.
+
+For seeds in a thinly covered language, songs without a language label filled the lists: K-pop, trance, film
+scores, and English songs with no label. Hebrew seeds got 70 % such rows.
+
+Best matches put up to seven weak audio matches above any song from the seed's scene, because a top-3 place in the
+melody or samples list counted as evidence whatever its score. Only 41 % of results for UK chart seeds were by UK
+artists. Copies and covers of the seed sometimes topped or filled the lists. Sounds like had the weakest ListenBrainz
+agreement of the three lists.
+
+**Change under test.** The index, the tables and the channel lists are unchanged. Everything below happens in
+`AnySong._view` and the defaults of `SceneParams`:
+1. **Language gate.** A listed song without a confident language label takes its artist's majority language
+   (`LanguageTable.artist_language`, until now used only for seeds).
+2. **Copies of the seed.** Another artist's version of the seed's song (same `song_key` title) scoring at least
+   0.55 in the samples list is dropped as a copy of the seed's recording. Of the remaining versions, at most 3 stay.
+3. **Best matches.** Evidence by score only (`rank_evidence` 0). After the three-song audio head, the scene lane
+   takes every slot (`pattern` "S"). The continuation boost goes from 2.0 to 4.0.
+4. **Sounds like.** Songs move up by their artist's scene affinity: 1 / (5 + rank) × (1 + 8 × affinity). The list
+   still draws only from the 200 nearest songs in sound.
+
+Song lookups (artist spellings, bracketed titles, a normalized second search, ISRC) were fixed in the same release.
+They change which recording answers a title, not how lists rank, and were checked separately. The 1,018 sweep songs
+and the pair songs were resolved again:
+- 983 sweep songs resolved as before.
+- 6 changed, each to the version asked for (HUNTR/X "Golden" had resolved to "Golden (Acapella)").
+- 8 lookups that had failed now succeed.
+
+**Selection.** 33 variants were compared on development data only:
+- The scene layer's 800 development seeds.
+- The 676 catalog songs of the chart sweep (development data from now on).
+- The development and validation splits of the relationship benchmarks.
+
+Lists came from the served code path with the GPU search cached (`grow/qa/devharness.py`). On that data, against
+the served lists:
+
+| | Best matches | Same vibe | Sounds like |
+|---|---:|---:|---:|
+| ListenBrainz hit rate | +0.102 | +0.028 | +0.119 |
+| Far-genre share | −0.082 | −0.021 | −0.060 |
+
+Best matches HR@10 changed by −0.019 on covers, −0.010 on samples and −0.013 on samples reverse.
+
+Variants were rejected for these reasons:
+- **A one-song head** gained more (Best matches +0.126) but lost 0.034 on samples reverse.
+- **A copy rule at 0.45** cost 0.024 on covers.
+- **A rank-based copy rule** cost 0.128 on covers, since faithful covers top both the melody and samples lists.
+
+**Baselines.** The served 999k lists (`gated1m`), computed before this change and stored.
+
+**Seeds.**
+- Rule 1: the 799 held-out seeds (used four times before) and the 1,000 fresh seeds (used three times before).
+- Rule 2: the relationship benchmarks' held-out split, plus Gen Alpha.
+
+**Must pass (all), else not deployed:**
+1. **Lists users see.** Best matches, Same vibe and Sounds like, each on both seed sets (`gate_eval compare
+   --labels build1m`):
+   - ListenBrainz hit rate: the paired 95 % interval's lower bound at −0.010 or above.
+   - Shared genre: mean change −0.02 or above.
+   - Other-language rows: up by at most 1 point.
+   - Derivative uploads: up by at most 1 point.
+   - Rows shown in the top 20: down by at most 1.0 on average. The language gate shortens some lists.
+2. **Relationship benchmarks.**
+   - Any-tab HR@10 may drop by at most 0.03 on covers, samples and samples reverse, and by at most 0.10 on Gen Alpha.
+     The channel lists are unchanged, so these should not move.
+   - Best matches HR@10, as served, may drop by at most 0.03 on covers, samples and samples reverse.
+3. **It must help.** On both seed sets, the ListenBrainz hit rate of Best matches and of Sounds like must rise,
+   with the paired 95 % interval's lower bound above 0.
+4. **Serving on the RTX 2070 SUPER.** Rule 4 of the 999k catalog with the amended parity check: startup under
+   2 minutes, peak VRAM at most 7,248 MiB, and unseen-song p95 no higher than the served service's, measured in the
+   same session on the same songs, with automatic rollback.
+
+Exactness (rule 3 before) is untouched: the index and its search do not change.
+
+### Result: rules 1 to 3 passed (2026-11-09)
+
+Run once, after the pre-registration (64664c5), on the served 999k index (samples' stage 1 in fp16). All 41
+checks passed (`grow/qa/verdict_v2.py`).
+
+Rules 1 and 3, top 10 with one song per artist (paired 95 % intervals):
+
+| Seeds | List | ListenBrainz hit rate | Change | Shared genre | Rows in the top 20 |
+|---|---|---|---|---|---|
+| Held-out (799) | Best matches | 0.217 → 0.322 | +0.105 (+0.093 to +0.118) | 0.367 → 0.452 | 20.00 → 19.96 |
+| | Same vibe | 0.317 → 0.341 | +0.025 (+0.019 to +0.031) | 0.454 → 0.477 | 19.99 → 19.93 |
+| | Sounds like | 0.218 → 0.331 | +0.113 (+0.101 to +0.125) | 0.386 → 0.472 | 19.80 → 19.52 |
+| Fresh (1,000) | Best matches | 0.220 → 0.315 | +0.095 (+0.084 to +0.105) | 0.405 → 0.485 | 20.00 → 19.93 |
+| | Same vibe | 0.321 → 0.344 | +0.023 (+0.016 to +0.029) | 0.496 → 0.517 | 20.00 → 19.94 |
+| | Sounds like | 0.216 → 0.331 | +0.115 (+0.104 to +0.125) | 0.425 → 0.500 | 19.84 → 19.67 |
+
+Other-language rows stayed at zero. Derivative uploads changed by −0.0008 to +0.0003.
+
+**Reported, not gated.**
+- The scene layer reads Deezer's related-artist graph, which may share signal with ListenBrainz. Among recommended
+  artists that Deezer does not list as related to the seed, the ListenBrainz hit rate also rose:
+
+  | List | Held-out | Fresh |
+  |---|---|---|
+  | Best matches | +0.080 | +0.067 |
+  | Same vibe | +0.023 | +0.023 |
+  | Sounds like | +0.096 | +0.087 |
+
+  Every interval excludes zero.
+- Distinct artists in the top 10 fell slightly: Sounds like 9.97 → 9.88 (held-out) and 9.97 → 9.92 (fresh); the
+  other lists by about 0.01.
+
+Rule 2, HR@10 on the held-out split:
+
+| Benchmark | Any tab | Best matches as served | Limit |
+|---|---|---|---|
+| Covers | 0.707 → 0.707 | 0.681 → 0.662 (−0.019, 1,170 queries) | −0.03 |
+| Samples | 0.162 → 0.162 | 0.135 → 0.130 (−0.005, 747) | −0.03 |
+| Samples reverse | 0.168 → 0.168 | 0.155 → 0.137 (−0.018, 695) | −0.03 |
+| Gen Alpha (test) | 0.508 → 0.508 | 0.373 → 0.356 (−0.017, 59; not gated) | −0.10 (any tab) |
+
+The held-out costs match development (−0.019, −0.010, −0.013).
+
+### Rule 4: rolled back on latency (2026-11-09)
+
+**First attempt: stopped before the swap.** The baseline came from the service's result cache. The service still
+held the same 40 songs from the 999k deploy, so the baseline p95 was 0.029 s. The run was stopped during
+`serve_check`; the served code never changed. `measure_unseen.py` now ignores cached answers, and the service was
+restarted to clear its cache.
+
+**Second attempt: rolled back on latency.** It passed parity: `rank_agree` 1.0 in every channel, with the Clash
+remaster second in sound as before. It started in 52 s with the catalog tiers active. Then it rolled back on
+latency:
+
+| 40 unseen songs | p50 | p95 | max | Server total, median |
+|---|---|---|---|---|
+| Served code, 04:53 (baseline) | 0.970 s | 0.992 s | 1.130 s | 943.9 ms |
+| New code, 05:04 | 0.972 s | 1.022 s | 1.089 s | 944.8 ms |
+| Served code, 01:00 (999k deploy) | 0.972 s | 1.024 s | 1.087 s | 943.3 ms |
+
+Per song, the new code took a median 8 ms longer (server total +6 ms). The change runs after the search, and the
+extra time sat in stages it does not touch (MuQ-MuLan embedding +4.9 ms).
+
+The same code on the same songs measured 0.992 s and 1.024 s p95 in two sessions four hours apart (paired median
+difference +0.3 ms). The p95 of 40 songs moves by about 30 ms between runs. A rule with no margin therefore fails
+code that changes nothing on this path about half the time.
+
+The service went back to the served code automatically. Peak VRAM was 6,727 MiB throughout.
+
+**Amendment (2026-11-09, owner's decision, after the rolled-back attempt and before the next).** This release changes
+nothing before or during the search. For it, the latency check becomes two conditions on the same 40 unseen songs,
+measured in the same session with cold caches:
+- The paired median of the server's total time (new code minus served code) is at most +25 ms.
+- p95 is at most the served code's p95 plus 50 ms. The margin is above the 32 ms spread between two runs of
+  identical code.
+
+The rest of rule 4 is unchanged:
+- Parity as amended above.
+- Startup under 2 minutes.
+- Peak VRAM at most 7,248 MiB.
+- Automatic rollback.
+- No deploy during the nightly backup.
+
+The rolled-back attempt would have passed this check (+6 ms; 1.022 s against 1.042 s). The amendment was therefore
+decided after seeing a result, and the deploy measures again.
+
+**Deployed (2026-11-09).** The third attempt passed every rule-4 check:
+
+| Check | Result |
+|---|---|
+| Parity | `rank_agree` 1.0 in every channel; all 64 first in melody and samples, 63 in sound (the Clash remaster) |
+| Startup | 57 s, catalog tiers active |
+| Unseen-song latency, 40 songs | p50 0.976 s, p95 1.015 s, max 1.118 s. Served code just before: p50 0.960 s, p95 1.005 s, max 1.096 s. Limit 1.055 s |
+| Paired median server time | +13.0 ms (limit +25 ms) |
+| Peak VRAM | 6,727 MiB |
+
+The extra time sat in stages the change does not touch: MuQ-MuLan +4.1 ms, and each of the three searches +1.2 to
++2.5 ms. Both measurements of the new code ran right after `serve_check`, which loads the GPU for several minutes;
+the served code's never did. That order may explain why those stages were slower both times.
+
+Checks through the public URL:
+- "Bitches Brew" by "✝✝✝ (Crosses)", a 404 before, resolved to "††† (Crosses)".
+- "Where Is The Love?" by "Black Eyed Peas" with its ISRC, a 404 before, resolved from the catalog.
+- The same ISRC alone still returns 404: Deezer maps it to an old release with no preview in any country.
+- The Crosses ISRC alone resolved through Deezer's ISRC lookup.
+- Nemzzz "8PM": Kidwild, Central Cee, Headie One, Nemzzz himself, Digga, Krillz, Blanco and AntsLive now fill
+  places 4 to 12 of Best matches; before, the first of them (Headie One) was 8th and Central Cee 12th. Sounds like
+  opens with Kidwild, Central Cee, LeoStayTrill and Krillz.
+- Brent Faiyaz "Paper Soldier": the d3puu copy is gone from first place.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
