@@ -1505,6 +1505,30 @@ The rest of rule 4 is unchanged:
 The rolled-back attempt would have passed this check (+6 ms; 1.022 s against 1.042 s). The amendment was therefore
 decided after seeing a result, and the deploy measures again.
 
+**Deployed (2026-11-09).** The third attempt passed every rule-4 check:
+
+| Check | Result |
+|---|---|
+| Parity | `rank_agree` 1.0 in every channel; all 64 first in melody and samples, 63 in sound (the Clash remaster) |
+| Startup | 57 s, catalog tiers active |
+| Unseen-song latency, 40 songs | p50 0.976 s, p95 1.015 s, max 1.118 s. Served code just before: p50 0.960 s, p95 1.005 s, max 1.096 s. Limit 1.055 s |
+| Paired median server time | +13.0 ms (limit +25 ms) |
+| Peak VRAM | 6,727 MiB |
+
+The extra time sat in stages the change does not touch: MuQ-MuLan +4.1 ms, and each of the three searches +1.2 to
++2.5 ms. Both measurements of the new code ran right after `serve_check`, which loads the GPU for several minutes;
+the served code's never did. That order may explain why those stages were slower both times.
+
+Checks through the public URL:
+- "Bitches Brew" by "✝✝✝ (Crosses)", a 404 before, resolved to "††† (Crosses)".
+- "Where Is The Love?" by "Black Eyed Peas" with its ISRC, a 404 before, resolved from the catalog.
+- The same ISRC alone still returns 404: Deezer maps it to an old release with no preview in any country.
+- The Crosses ISRC alone resolved through Deezer's ISRC lookup.
+- Nemzzz "8PM": Kidwild, Central Cee, Headie One, Nemzzz himself, Digga, Krillz, Blanco and AntsLive now fill
+  places 4 to 12 of Best matches; before, the first of them (Headie One) was 8th and Central Cee 12th. Sounds like
+  opens with Kidwild, Central Cee, LeoStayTrill and Krillz.
+- Brent Faiyaz "Paper Soldier": the d3puu copy is gone from first place.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
