@@ -116,6 +116,17 @@ function loadExtension(fetchImpl, options = {}) {
   });
   const languageStatus = { textContent: "" };
   const languageLoading = { hidden: false };
+  const listNote = {
+    hidden: false,
+    textContent: "",
+    children: [],
+    replaceChildren(...nodes) {
+      this.children = nodes;
+      this.textContent = nodes
+        .map((node) => (typeof node === "string" ? node : node.textContent))
+        .join("");
+    },
+  };
   function control(value = "") {
     const classes = new Set();
     return {
@@ -162,6 +173,7 @@ function loadExtension(fetchImpl, options = {}) {
   function queryPage(selector) {
     if (selector === ".sa-language-status") return languageStatus;
     if (selector === ".sa-language-loading") return languageLoading;
+    if (selector === ".sa-list-note") return listNote;
     if (selector === ".sa-language-toggle") return languageToggleButton;
     const controls = {
       ".sa-feedback": feedback.panel,
@@ -336,6 +348,9 @@ function loadExtension(fetchImpl, options = {}) {
         if (tag !== "div") return {};
         if (!wrap.className && !wrap.innerHTML) return wrap;
         return makeDiv();
+      },
+      createTextNode(text) {
+        return { textContent: String(text) };
       },
       querySelector(selector) {
         if (
@@ -630,6 +645,7 @@ function loadExtension(fetchImpl, options = {}) {
     nativeChildren: pageContainer.children,
     languageStatus,
     languageLoading,
+    listNote,
     feedback,
     rows,
     bestRequests,
@@ -2082,7 +2098,7 @@ const soundsFixture = [
   { title: "Take My Breath", artist: "The Weeknd", bpm: 121.7 },
 ];
 
-const bestCacheKey = "best:anysong-best-rrf-language-vibe-sounds-v2:same:spotify:track:test";
+const bestCacheKey = "best:anysong-best-rrf-language-vibe-sounds-v3:same:spotify:track:test";
 
 function bestMatchesBody(best = bestFixture, overrides = {}) {
   return {
@@ -2177,12 +2193,12 @@ test("opens on Best matches with Sounds like one tab away", async () => {
   );
   assert.equal(bestUrl.searchParams.get("title"), "Blinding Lights");
   assert.equal(bestUrl.searchParams.get("artist"), "The Weeknd");
-  assert.equal(bestUrl.searchParams.get("k"), "20");
+  assert.equal(bestUrl.searchParams.get("k"), "30");
   assert.equal(bestUrl.searchParams.get("lang"), "same");
   // A new response format gets a new URL, so HTTP-cached older responses are skipped.
   assert.equal(
     bestUrl.searchParams.get("policy"),
-    "anysong-best-rrf-language-vibe-sounds-v2",
+    "anysong-best-rrf-language-vibe-sounds-v3",
   );
   assert.equal(
     app.urls.filter((url) => url.includes("/api/spicetify_recommend")).length,
@@ -2203,7 +2219,11 @@ test("opens on Best matches with Sounds like one tab away", async () => {
   assert.match(html, /<span class="sa-why"> · melody #1 · samples #3<\/span>/);
   assert.doesNotMatch(html, /&lt;b&gt;/);
   assert.equal((html.match(/<div class="sa-row"/g) || []).length, 2);
-  assert.doesNotMatch(html, /<div class="sa-row"[^>]* hidden>/);
+  // Rows start hidden and appear once found on Spotify.
+  assert.equal((html.match(/<div class="sa-row"[^>]* hidden>/g) || []).length, 2);
+  assert.match(html, /<p class="sa-list-note" role="status">Finding these songs on Spotify…<\/p>/);
+  assert.equal(app.rows[0].hidden, false);
+  assert.equal(app.listNote.hidden, true);
   assert.doesNotMatch(html, /<div class="sa-bpm">BPM<\/div>/);
   assert.doesNotMatch(html, /<section class="sa-feedback"/);
 
@@ -2224,6 +2244,141 @@ test("opens on Best matches with Sounds like one tab away", async () => {
   assert.equal(app.feedback.panel.hidden, true);
 });
 
+// `count` hosted Best matches, "Song N" by "Artist N". Spotify has each of them
+// except the indexes in `missing`.
+function loadSpotifyGapsExtension({ count = 30, missing = [], ...options } = {}) {
+  const best = Array.from({ length: count }, (_, index) => ({
+    title: `Song ${index}`,
+    artist: `Artist ${index}`,
+    ranks: { melody: index + 1 },
+  }));
+  const spotifyTracks = {};
+  const languageByTrackId = { test: "en" };
+  best.forEach((song, index) => {
+    if (missing.includes(index)) return;
+    spotifyTracks[`${song.title} ${song.artist}`] =
+      spotifyTrackFixture(song.title, song.artist, `song${index}`);
+    languageByTrackId[`song${index}`] = "en";
+  });
+  const app = loadBestMatchesExtension({
+    results: best,
+    spotifyTracks,
+    languageByTrackId,
+    bestFetch: async () => response(200, bestMatchesBody(best)),
+    ...options,
+  });
+  // The page draws hosted rows hidden until each one is found on Spotify.
+  for (const row of app.rows) row.hidden = true;
+  return app;
+}
+
+const rankOf = (row) =>
+  findElement(row.tree, (node) => node.props?.className === "sa-rank")?.props.children;
+const shownIndexes = (app) =>
+  app.rows.filter((row) => !row.hidden).map((row) => Number(row.dataset.index));
+const searchedSongs = (app) => new Set(app.graphqlRequests
+  .filter(({ definition }) => definition?.name === "searchModalResults")
+  .map(({ variables }) => variables.searchTerm)
+  .filter((term) => term.startsWith("Song ")));
+const upTo = (count, from = 1) => Array.from({ length: count }, (_, index) => index + from);
+
+test("leaves songs Spotify doesn't have out of hosted lists and fills their places", async () => {
+  const app = loadSpotifyGapsExtension({ missing: [0, 5] });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+
+  const shown = shownIndexes(app);
+  assert.deepEqual(shown, [1, 2, 3, 4, ...upTo(16, 6)]);
+  assert.deepEqual(shown.map((index) => rankOf(app.rows[index])), upTo(20));
+  assert.equal(app.rows[1].dataset.uri, "spotify:track:song1");
+  assert.equal(app.rows[0].tree, undefined, "a song Spotify doesn't have is never drawn");
+  assert.equal(app.rows[5].tree, undefined);
+  assert.equal(app.listNote.hidden, false);
+  assert.equal(
+    app.listNote.textContent,
+    "Not found on Spotify, so left out: Song 0 · Artist 0, Song 5 · Artist 5",
+  );
+  assert.ok(hasLog(app, "(shown 20, not on Spotify 2, failed lookups 0,"));
+  // Lookups stop once 20 rows can be shown, apart from the ones in flight.
+  const searched = searchedSongs(app);
+  assert.ok(searched.has("Song 21 Artist 21"));
+  assert.ok(searched.size <= 25, `looked up ${searched.size} songs`);
+
+  // A left-out song still opens a Spotify search for it.
+  app.listNote.children[1].onclick();
+  assert.equal(app.history.at(-1), "/search/Song%200%20Artist%200");
+});
+
+test("shows a hosted row whose Spotify lookup failed in its place, with a search", async () => {
+  const app = loadSpotifyGapsExtension({
+    count: 3,
+    async beforeGraphqlRequest(_definition, variables) {
+      if (variables?.searchTerm === "Song 1 Artist 1") throw new Error("search failed");
+    },
+  });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+
+  assert.deepEqual(shownIndexes(app), [0, 1, 2]);
+  assert.deepEqual([0, 1, 2].map((index) => rankOf(app.rows[index])), [1, 2, 3]);
+  assert.equal(app.rows[1].dataset.uri, undefined);
+  const play = findElement(app.rows[1].tree, (node) => node.props?.className === "sa-play");
+  assert.equal(play.props.children, "›");
+  assert.equal(app.listNote.hidden, true);
+  assert.ok(hasLog(app, "(shown 3, not on Spotify 0, failed lookups 1,"));
+});
+
+test("shows hosted rows unmatched when Spotify finds none of them", async () => {
+  const app = loadSpotifyGapsExtension({ count: 25, missing: upTo(25, 0) });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"), 2000);
+
+  assert.deepEqual(shownIndexes(app), upTo(20, 0));
+  assert.equal(rankOf(app.rows[19]), 20);
+  assert.equal(app.rows[0].dataset.uri, undefined);
+  assert.equal(app.listNote.hidden, true);
+});
+
+test("shows hosted rows in rank order while later ones are found first", async () => {
+  const gate = deferred();
+  const app = loadSpotifyGapsExtension({
+    count: 4,
+    async beforeGraphqlRequest(_definition, variables) {
+      if (variables?.searchTerm === "Song 0 Artist 0") await gate.promise;
+    },
+  });
+  await app.run();
+  await waitFor(() => app.cosmosRequests.some((url) => url.includes("/track/song3")));
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.deepEqual(shownIndexes(app), [], "nothing shows before the first row is settled");
+
+  gate.resolve();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  assert.deepEqual(shownIndexes(app), [0, 1, 2, 3]);
+  assert.deepEqual([0, 1, 2, 3].map((index) => rankOf(app.rows[index])), [1, 2, 3, 4]);
+});
+
+test("a slow Spotify lookup stops holding back the hosted rows below it", async () => {
+  const gate = deferred();
+  const app = loadSpotifyGapsExtension({
+    count: 3,
+    timerScale: 0.01,
+    async beforeGraphqlRequest(_definition, variables) {
+      if (variables?.searchTerm === "Song 0 Artist 0") await gate.promise;
+    },
+  });
+  await app.run();
+  await waitFor(() => shownIndexes(app).length === 3);
+  assert.deepEqual([0, 1, 2].map((index) => rankOf(app.rows[index])), [1, 2, 3]);
+  assert.equal(app.rows[0].dataset.uri, undefined, "shown unmatched while its lookup is slow");
+  assert.equal(app.rows[1].dataset.uri, "spotify:track:song1");
+
+  gate.resolve();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  assert.equal(app.rows[0].dataset.uri, "spotify:track:song0", "it can play once found");
+  assert.equal(rankOf(app.rows[0]), 1);
+});
+
 test("Best matches language switch requests and caches all-language results separately", async () => {
   const app = loadBestMatchesExtension({
     bestFetch: async (url) => {
@@ -2237,7 +2392,7 @@ test("Best matches language switch requests and caches all-language results sepa
   await waitFor(() => hasLog(app, "Best matches metadata settled"));
   assert.match(
     app.currentPage.innerHTML,
-    /English · 2 other-language matches hidden from the top 20/,
+    /English · 2 other-language matches hidden from the top 30/,
   );
   const toggle = app.currentPage.querySelector(".sa-language-toggle");
   assert.ok(toggle);
@@ -2245,7 +2400,7 @@ test("Best matches language switch requests and caches all-language results sepa
   await waitFor(() => app.bestRequests.length === 2 &&
     app.currentPage.innerHTML.includes("Use same-language matches"));
   assert.equal(new URL(app.bestRequests[1]).searchParams.get("lang"), "all");
-  assert.match(app.currentPage.innerHTML, /English · 2 other-language matches in the top 20/);
+  assert.match(app.currentPage.innerHTML, /English · 2 other-language matches in the top 30/);
 });
 
 test("switching back to same-language Best matches reuses the saved list", async () => {
@@ -2264,13 +2419,13 @@ test("switching back to same-language Best matches reuses the saved list", async
   const toggle = app.currentPage.querySelector(".sa-language-toggle");
   toggle.onclick();
   await waitFor(() => app.currentPage.innerHTML.includes("Use same-language matches"));
-  assert.match(app.currentPage.innerHTML, /English · 1 other-language match in the top 20/);
+  assert.match(app.currentPage.innerHTML, /English · 1 other-language match in the top 30/);
   toggle.onclick();
   await waitFor(() =>
     app.currentPage.innerHTML.includes('aria-pressed="false">Show all languages'));
   assert.match(
     app.currentPage.innerHTML,
-    /English · 1 other-language match hidden from the top 20/,
+    /English · 1 other-language match hidden from the top 30/,
   );
   assert.deepEqual(
     app.bestRequests.map((url) => new URL(url).searchParams.get("lang")),
@@ -2891,7 +3046,7 @@ test("offers Same vibe next to Best matches from the same hosted response", asyn
     html,
     />Best matches<\/button><button [^>]*id="sa-tab-vibe"[^>]*aria-selected="false" tabindex="-1">Same vibe<\/button><button [^>]*id="sa-tab-sounds"[^>]*>Sounds like<\/button>/,
   );
-  assert.match(html, /English · 2 other-language matches hidden from the top 20/);
+  assert.match(html, /English · 2 other-language matches hidden from the top 30/);
 
   app.tab("vibe").onclick();
   await waitFor(() => hasLog(app, "Same vibe metadata settled"));
@@ -2973,7 +3128,7 @@ test("Same vibe shares the Best matches language switch", async () => {
 
   app.tab("best").onclick();
   html = app.currentPage.innerHTML;
-  assert.match(html, /English · 2 other-language matches in the top 20/);
+  assert.match(html, /English · 2 other-language matches in the top 30/);
   assert.match(html, /aria-pressed="true">Use same-language matches<\/button>/);
 
   app.tab("vibe").onclick();
@@ -3035,7 +3190,7 @@ test("returns to Best matches when a language reload brings no Same vibe list", 
     /class="sa-panel sa-view-best"/.test(app.currentPage.innerHTML));
   const html = app.currentPage.innerHTML;
   assert.doesNotMatch(html, /sa-tab-vibe/);
-  assert.match(html, /English · 2 other-language matches in the top 20/);
+  assert.match(html, /English · 2 other-language matches in the top 30/);
   assert.equal(app.tabFocus.at(-1), "best");
 });
 
