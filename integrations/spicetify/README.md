@@ -89,6 +89,14 @@ search shows without asking.
   and the list stays visible while music plays.
 - Results use a playlist-style layout with album artwork, verified artist
   names, clickable album names, and, in Sounds like, measured BPM.
+- Best matches, Same vibe, and hosted Sounds like show the first 20 songs of
+  the matcher's top 30 that Spotify has, in the matcher's order. A song
+  Spotify doesn't have, such as a Deezer-only upload, is left out and the next
+  one takes its place; the songs left out are named under the list, and
+  clicking one searches Spotify for it in case the match was missed. A row
+  whose Spotify lookup fails, or takes more than five seconds, still shows,
+  with a Spotify search instead of playback; a slow one becomes playable when
+  its song arrives. If Spotify finds none of the songs, they all show this way.
 - In the companion's Sounds like list (and the older service's fallback list),
   for a seed with a known Spotify lyrics language, only
   candidates with that exact known language are shown (English with English,
