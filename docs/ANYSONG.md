@@ -229,6 +229,11 @@ top 20 were identical in every channel. At top 100, one melody query and one sou
 ([ANYSONG_EVAL.md](ANYSONG_EVAL.md#compressed-stage-1-2026-11-07)). Re-run that comparison at the new size before
 serving it.
 
+Integer projections are exact in fp16, so `api --half-stage1 <channels>` (also on `serve_check` and `eval_index`)
+runs a channel's stage 1 as an fp16 GEMM against the query projection scaled to |x| ≤ 1. On the 2070 SUPER that
+made the 4-bit samples stage 1 23 % faster (196 against 256 ms per million tracks) but the 8-bit melody and sound
+stages 6 % and 14 % slower, so the service enables it for samples only. Candidates are still re-scored exactly.
+
 ## Language labels
 
 `python -m soundalike.anysong.languages` labels cached catalog previews with the pinned Whisper large-v3-turbo
@@ -308,9 +313,10 @@ for Same vibe (`--tempo`, `--tempo-model`; about 160 MiB of VRAM, and 30 ms of G
 symlink swap therefore switches the index and its tables together. Grown indexes live on
 `/opt/soundalike/index-store`, a 96 GB NVMe volume (`mp1`, `backup=0`). The nightly vzdump to the bulk HDD skips it,
 because each index is about 40 GB and can be rebuilt from its embeddings. The first full index stays at
-`index/full-20261101` on the root disk, with its own `core_ids.npy`, as the rollback. Since 2026-11-08,
-`index/current` → `index-store/grown-20261108`: 889,277 songs, the 269,278 core songs plus 619,999 crawled ones,
-served with the catalog tiers. The service is
+`index/full-20261101` on the root disk, with its own `core_ids.npy`, as the rollback. Since 2026-11-09,
+`index/current` → `index-store/grown-20261109`: 999,293 songs, the 269,278 core songs plus 730,015 crawled ones,
+served with the catalog tiers and samples' stage 1 in fp16 (`--half-stage1 samples`). The previous grown index,
+`index-store/grown-20261108` (889,277 songs), stays as the rollback. The service is
 [`deploy/homelab/soundalike-anysong.service`](../deploy/homelab/soundalike-anysong.service) (user `anysong`,
 `MemoryMax=6G`, enabled at boot; startup loads and warms the models and index). The process itself uses about
 1.5 GB of RAM; the rest of the cap is page cache for the memory-mapped windows, which the kernel trims.
@@ -345,7 +351,7 @@ reads it with `--keep-learning`, so it keeps running after the bulk target.
 
 ## Limitations
 
-- Coverage is limited to the indexed catalog: 889,277 songs since 2026-11-08 (269,278 core tracks plus the crawl's
+- Coverage is limited to the indexed catalog: 999,293 songs since 2026-11-09 (269,278 core tracks plus the crawl's
   songs, which only reach seeds in their artist's scene). Famous sources missing from it cannot be returned, however
   good the match.
 - Preview-only audio: shared material outside the 30-second clip is invisible.

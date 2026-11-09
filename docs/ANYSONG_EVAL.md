@@ -1181,6 +1181,165 @@ Checks through the public URL:
 - Every crawled song in the returned lists was by the seed's artist or one of its related artists.
 - Fixed seeds captured before and after the swap kept most of their top 10; zero to five songs changed per list.
 
+### The full crawl, about 1M songs (pre-registered 2026-11-08, before any result)
+
+**Change under test.** All 730,016 crawled songs (the crawl reached its target at 21:54), indexed with the same
+settings:
+- **Catalog:** 999,293 songs, the 269,278 core songs plus the crawl's. Catalog tiers are unchanged (same core ids).
+- **Tables:** the scene table, languages and tempo are rebuilt from the full crawl, including Wikidata facts for
+  13,207 new artists. The hub penalty is rebuilt.
+- **Serving:** stage 1 may run as an fp16 GEMM for channels where that is measured faster on the RTX 2070 SUPER and
+  exact (`--half-stage1`, decided before rules 1 to 3 run, which then use the served setting).
+
+**Baselines.** Both the served gated 889k catalog and the original 269k catalog. Every rule must pass against both.
+
+**Must pass (all), else not deployed:**
+
+1. **Lists users see,** on the 799 held-out seeds (used twice before) and the 1,000 fresh seeds (used once
+   before). Nothing is tuned on either set. The ListenBrainz hit rate's paired 95 % interval must have its lower
+   bound at −0.010 or above. Limits on mean change:
+   - Shared genre: −0.02 or above.
+   - Other-language rows: up by at most 1 point.
+   - Derivative uploads: up by at most 1 point.
+
+   Labels are rebuilt for the bigger catalog and score all three conditions.
+2. **Relationship benchmarks** (`eval_index --core-ids`, served stage-1 setting): any-tab HR@10 may drop by at most
+   0.03 on covers, samples and samples reverse (held-out) and by at most 0.10 on Gen Alpha.
+3. **Exactness** with the tier masks and the served stage-1 setting: the served top 20 matches brute force for at
+   least 99 % of 300 random tracks per channel.
+4. **Serving on the RTX 2070 SUPER:**
+   - `serve_check` parity: every re-embedded catalog track ranks itself first.
+   - Startup under 2 minutes.
+   - Peak VRAM at most 7,248 MiB.
+   - Unseen-song p95 no higher than the served catalog's (the owner's "no slower than now"). Both are measured in the
+     same deploy session, before and after the swap, on the same 40 songs. These are taken from 50 random
+     never-crawled frontier artists, one top track each, so neither catalog holds them. Each song is searched,
+     then requested; only that request is timed. The crawl is stopped during both measurements.
+
+**Half-precision stage 1 decision rule.** fp16 is enabled for a channel only if:
+- On the RTX 2070 SUPER, its stage-1 time per row is at least 10 % lower than fp32's (median of repeated runs on a
+  slice of the served index).
+- On the RTX 5080 at 999k, its top-20 exactness (300 random tracks) is no lower than fp32's.
+
+**Half-precision stage 1, measured.** RTX 2070 SUPER, a 65,536-row slice of each channel of the served 889k index,
+median of 40 runs per setting, per million tracks, while the API kept serving:
+
+| Channel | fp32 | fp16 | Change | Stage-1 top-100 overlap |
+|---|---:|---:|---:|---:|
+| Melody (8-bit) | 53.1 ms | 56.5 ms | +6 % | 1.00 |
+| Samples (4-bit) | 256.3 ms | 196.4 ms | −23 % | 0.99 |
+| Sound (8-bit) | 16.0 ms | 18.3 ms | +14 % | 0.99 |
+
+Stage 2, the exact re-scoring of the candidates read from disk, took 9.5, 69.5 and 8.8 ms. By the rule, fp16
+qualifies for samples only, pending the exactness comparison at 999k.
+
+### Result: the full crawl passed rules 1 to 3 (2026-11-09)
+
+Run once, after the pre-registration (e07ab48) and the fp16 commit (e550a83), with the served setting: samples'
+stage 1 in fp16, melody and sound in fp32. At 999k on the RTX 5080, samples' top-20 exactness was 1.000 in fp16
+and in fp32, so fp16 for samples meets its decision rule.
+
+Rule 1, ListenBrainz hit rate (paired difference with its 95 % interval; the lower bound must be −0.010 or above
+against both baselines):
+
+| Seeds | List | 269k | 889k (served) | 999k | Against 889k | Against 269k |
+|---|---|---:|---:|---:|---|---|
+| Held-out (799) | Best matches | 0.215 | 0.217 | 0.217 | +0.001 (−0.003 to +0.004) | +0.002 (−0.003 to +0.008) |
+| | Same vibe | 0.314 | 0.316 | 0.317 | +0.001 (−0.002 to +0.004) | +0.003 (−0.003 to +0.010) |
+| | Sounds like | 0.211 | 0.217 | 0.218 | +0.000 (−0.002 to +0.003) | +0.007 (+0.002 to +0.012) |
+| Fresh (1,000) | Best matches | 0.212 | 0.219 | 0.220 | +0.001 (−0.002 to +0.004) | +0.008 (+0.002 to +0.013) |
+| | Same vibe | 0.316 | 0.321 | 0.321 | +0.001 (−0.002 to +0.003) | +0.005 (−0.002 to +0.012) |
+| | Sounds like | 0.210 | 0.215 | 0.216 | +0.001 (−0.001 to +0.003) | +0.007 (+0.002 to +0.012) |
+
+The other rule-1 checks passed against both baselines:
+- Shared genre: −0.003 to 0.000 against 889k, +0.002 to +0.011 against 269k.
+- Other-language rows: unchanged.
+- Derivative uploads: changes between −0.0005 and +0.0001.
+
+Crawled songs made up 3 % to 8 % of the top 10 (3 % to 7 % at 889k).
+
+**Reported, not gated.** Among recommended artists that Deezer does not list as related to the seed, the
+ListenBrainz hit rate barely moved against 889k (largest change −0.001). Against 269k it fell in Same vibe on the
+fresh seeds, by 0.009 (−0.016 to −0.002). The 889k catalog already had this drop (−0.008, −0.015 to −0.001); its
+result above did not report it.
+
+Rule 2 (any-tab HR@10, with `--core-ids` and samples in fp16):
+
+| Benchmark | 269k | 889k | 999k | Against 889k | Against 269k | Limit |
+|---|---:|---:|---:|---:|---:|---:|
+| Covers | 0.709 | 0.707 | 0.707 | 0.000 | −0.002 | −0.03 |
+| Samples | 0.162 | 0.165 | 0.162 | −0.003 | 0.000 | −0.03 |
+| Samples reverse | 0.170 | 0.168 | 0.168 | 0.000 | −0.001 | −0.03 |
+| Gen Alpha | 0.508 | 0.508 | 0.508 | 0.000 | 0.000 | −0.10 |
+
+Rule 3: with the tier masks, the served top 10, 20 and 100 matched brute force for all 300 random tracks in every
+channel, with samples in fp16 and in fp32.
+
+### Rule 4, first deploy: rolled back on parity (2026-11-09)
+
+The deploy script measured the served 889k catalog first: 40 of 48 candidate songs answered live (8 were not
+returned by the search), p50 1.003 s, p95 1.065 s, max 1.129 s, 6,435 MiB. `serve_check` on the 999k index then
+reported:
+- Window cosine at least 0.999999 in every channel; self-score difference 1.3e-5 on average.
+- VRAM: 5,737 MiB loaded, 7,141 MiB peak.
+- Serial unseen p95: 807 ms (847 ms for the 889k index).
+- Self-rank: 64 of 64 first in melody and samples, **63 of 64 in sound**.
+
+The script rolled back on the sound-channel parity before the swap; the 889k service came back healthy.
+
+**Cause.** The one track was The Clash's "Straight to Hell (Remastered)" (core catalog, Deezer 69962767). The core
+catalog also holds "Straight to Hell" (69505565), the same recording on another release: their stored windows have
+cosine 0.998. With the hub penalty (alpha 0.5), the other release scores 0.5408 and the track itself 0.5371, so it
+ranks second from its stored windows too. It ranks second in the 269k and 889k indexes as well.
+
+**How often.** Self-rank from the stored windows, with the served settings, for 1,000 random core songs and 1,000
+crawled songs in each index:
+
+| Index | Melody | Samples | Sound | Crawled songs, all channels |
+|---|---:|---:|---:|---:|
+| 269k | 999 | 998 | 997 | (none in the index) |
+| 889k (served) | 999 | 998 | 997 | 1,000 |
+| 999k | 999 | 998 | 998 | 1,000 |
+
+Every track not first, in every index, sat behind another release of the same piece by the same artist with
+identical or near-identical windows (cosine 0.996 to 1.0 in sound and samples; a perfect melody score in both
+releases). Examples: Chopin's waltz Op. 69 No. 2 by Ingrid Fliter under two titles, and "Glass: Metamorphosis
+Four" by Valentina Lisitsa, once titled "Glass: Glass: Metamorphosis Four". With identical windows, the lower
+Deezer ID wins the tie. At these rates (2 to 3 tracks per 1,000 core songs, none in 1,000 crawled songs), a
+64-track draw includes such a track in about 17 % of deploys of the 269k index, whose draws are all core songs,
+and 3 % to 6 % for the grown indexes. By default, lists drop other releases of the seed with the same song key;
+releases under other titles can appear. This is a property of the catalog, not of the serving path, which the
+check exists to test.
+
+`serve_check` now also ranks each sampled track from its stored windows on the serving GPU and reports
+`rank_agree`, the share of tracks whose re-embedded rank equals their stored rank, plus the ids of any track not
+first.
+
+**Amendment (2026-11-09, owner's decision, before the second deploy).** Rule 4's parity check becomes: every
+re-embedded track ranks exactly where its stored windows rank it on the serving GPU (`rank_agree` 1.0 in every
+channel), and at least 62 of the 64 rank themselves first. At the measured rates, three or more of 64 in one
+channel has a chance well under 1 in 10,000. The rest of rule 4 is unchanged: startup under 2 minutes, peak VRAM at most 7,248 MiB, and
+unseen-song p95 no higher than the served catalog's, measured again in the same session on the same songs, with
+automatic rollback. The deploy does not start during the nightly backup (02:45 to 04:00).
+
+**Deployed (2026-11-09).** The second deploy passed every rule-4 check:
+
+| Check | Result |
+|---|---|
+| Parity | `rank_agree` 1.0 in every channel; all 64 first in melody and samples, 63 in sound (the same remaster, second from its stored windows too) |
+| Startup | 52 s, catalog tiers active |
+| Unseen-song latency, 40 songs | p50 0.972 s, p95 1.024 s, max 1.087 s; the 889k catalog, just before: p50 1.009 s, p95 1.078 s, max 1.155 s |
+| Peak VRAM | 6,727 MiB (6,435 MiB for the 889k catalog) |
+
+Checks through the public URL:
+- Two catalog seeds and three songs by artists new in this build answered from the index in 0.53 to 0.87 s.
+- Two seeds outside the catalog answered live in 1.07 and 2.42 s.
+- 29 crawled songs appeared in those lists, each by the seed's artist or one of its related artists.
+- Six fixed seeds captured before and after the swap changed zero to two songs per top-10 list. Their requests took
+  a median 384 ms after the swap and 500 ms before. The samples search went from 347 to 269 ms, in line with the
+  fp16 benchmark, but the fp32 stages were faster too. The crawl ran during the first capture and not the second,
+  so this comparison is not controlled.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
@@ -1306,8 +1465,8 @@ holds the expected song for 5 of the 24 pairs, against 6 without the layer:
 
 - **Previews only.** Each song is heard through a 30-second Deezer preview. Shared material elsewhere in the song
   is invisible.
-- **Indexed catalog only.** Results can only be songs in the index: 269k songs until 2026-11-08, 889k since then,
-  with crawled songs limited to the seed's scene. Any song can be the query.
+- **Indexed catalog only.** Results can only be songs in the index: 269k songs until 2026-11-08, 889k on 2026-11-08,
+  999k since 2026-11-09, with crawled songs limited to the seed's scene. Any song can be the query.
 - **Small sets.** v4 has 19 held-out and 35 validation queries, so one query moves HR by 3–5 points. Gen Alpha is a
   single group of 65 songs, and its members are not independent queries.
 - **Gen Alpha was seen once.** It was looked at when choosing the melody hub setting (see
