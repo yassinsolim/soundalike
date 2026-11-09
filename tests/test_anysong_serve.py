@@ -35,6 +35,40 @@ def serve_metrics(ranks):
     return rank_metrics(ranks)
 
 
+def parity_rows(ids, live, stored):
+    n = len(ids)
+    return {"id": ids, "self_rank": live, "self_rank_stored": stored, "win_cos_mean": [1.0] * n,
+            "win_cos_min": [0.999999] * n, "self_score_delta": [1e-5] * n}
+
+
+def test_parity_summary_passes_a_track_its_stored_windows_rank_second():
+    from soundalike.anysong.serve_check import parity_summary
+
+    s = parity_summary(parity_rows([11, 12, 13], [1, 2, 1], [1, 2, 1]))
+    assert s["rank_agree"] == 1.0
+    assert s["self_at_1"] == s["self_at_1_stored"] == pytest.approx(0.6667)
+    assert s["not_first"] == [{"id": 12, "rank": 2, "rank_stored": 2}]
+
+
+def test_parity_summary_flags_a_serving_path_that_moves_a_track():
+    from soundalike.anysong.serve_check import parity_summary
+
+    s = parity_summary(parity_rows([11, 12], [1, 3], [1, 1]))
+    assert s["rank_agree"] == 0.5
+    assert s["self_rank_max"] == 3
+    assert s["not_first"] == [{"id": 12, "rank": 3, "rank_stored": 1}]
+
+
+def test_duplicate_recording_outranks_itself_by_id_in_live_and_stored_rank():
+    ids, win = random_windows(seed=2)
+    win[7] = win[3]  # the same recording released twice; ids[7] is the higher id
+    ix = serve.ChannelIndex.from_windows(channel(), ids, win)
+    t = int(ids[7])
+    stored = ix.rank_of(ix.scores(ix.stored_query(t)), [t])[0]
+    live = ix.rank_of(ix.scores(ix.prep_query(win[7])), [t])[0]
+    assert stored == live == 2
+
+
 def test_center_prep_uses_index_mean_for_unseen_queries():
     ids, win = random_windows(seed=1)
     ix = serve.ChannelIndex.from_windows(channel("center"), ids, win)

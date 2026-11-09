@@ -793,6 +793,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--candidates", type=int, default=None)
     p.add_argument("--hub-alpha", type=float, default=None,
                    help="CSLS hub penalty weight (default: as recorded by hub_build; 0 disables)")
+    p.add_argument("--half-stage1", nargs="*", default=[], choices=list(CHANNELS),
+                   help="channels whose quantized stage 1 runs as an fp16 GEMM (serve.TwoStageIndex)")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     p.add_argument("--preview-dir", type=Path, default=None, help="scratch space for live previews")
     p.add_argument("--cors-origin", default=None)
@@ -810,7 +812,8 @@ def main(argv: list[str] | None = None) -> None:
 
     scratch = args.preview_dir or Path(tempfile.mkdtemp(prefix="anysong-"))
     t = time.perf_counter()
-    engine = Engine(args.index, args.channels, args.device, candidates=args.candidates, hub_alpha=args.hub_alpha)
+    engine = Engine(args.index, args.channels, args.device, candidates=args.candidates, hub_alpha=args.hub_alpha,
+                    half_stage1=args.half_stage1)
     engine.warm()
     warm = _warmup(engine)
     meta = load_meta(args.meta)

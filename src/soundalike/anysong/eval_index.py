@@ -501,6 +501,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--candidates", type=int, default=None)
     p.add_argument("--hub-alpha", type=float, default=None,
                    help="CSLS hub penalty weight (default: as recorded by hub_build; 0 disables)")
+    p.add_argument("--half-stage1", nargs="*", default=[], choices=list(CHANNELS),
+                   help="channels whose quantized stage 1 runs as an fp16 GEMM, as served with api --half-stage1")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--baseline", type=Path, default=None, help="earlier eval_index report to compare against")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
@@ -522,7 +524,8 @@ def main(argv: list[str] | None = None) -> None:
             groups[(q.bench, q.split)].append(q)
         queries = [q for g in groups.values() for q in (rng.sample(g, args.max_per_bench)
                                                         if len(g) > args.max_per_bench else g)]
-    eng = Engine(args.index, args.channels, args.device, candidates=args.candidates, hub_alpha=args.hub_alpha)
+    eng = Engine(args.index, args.channels, args.device, candidates=args.candidates, hub_alpha=args.hub_alpha,
+                 half_stage1=args.half_stage1)
     report: dict = {"args": {k: str(v) for k, v in vars(args).items()},
                     "started": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
                     "index_sizes": {k: len(v) for k, v in eng.indexes.items()},

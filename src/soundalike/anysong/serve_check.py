@@ -1,7 +1,8 @@
 """Check the any-song serving path on the serving GPU against the offline research embeddings.
 
 parity  Re-embed indexed tracks from their cached previews and compare with the stored windows.
-        Every track should retrieve itself first.
+        Each track should rank exactly where its stored windows rank it (``rank_agree``). That is usually
+        first; ``self_at_1`` also counts tracks that another release of the same recording outranks.
 unseen  Embed each benchmark query live, remove it from the index and rank. The same ranking with the
         stored (offline) query vector is reported beside it, so a difference isolates the serving
         GPU/decoder rather than the model choice. This is a systems check, never model selection.
@@ -60,6 +61,23 @@ def window_agreement(live: torch.Tensor, stored: torch.Tensor) -> torch.Tensor:
     return torch.nn.functional.cosine_similarity(live, stored, dim=-1)
 
 
+def parity_summary(v: dict[str, list]) -> dict:
+    """One channel's parity: re-embedded (``self_rank``) against stored (``self_rank_stored``) self-ranks."""
+    live, stored = np.array(v["self_rank"]), np.array(v["self_rank_stored"])
+    return {
+        "n": len(live),
+        "win_cos_mean": round(float(np.mean(v["win_cos_mean"])), 6),
+        "win_cos_min": round(float(np.min(v["win_cos_min"])), 6),
+        "rank_agree": round(float(np.mean(live == stored)), 4),
+        "self_at_1": round(float(np.mean(live == 1)), 4),
+        "self_at_1_stored": round(float(np.mean(stored == 1)), 4),
+        "self_rank_max": int(live.max()),
+        "self_score_delta_abs_mean": round(float(np.mean(np.abs(v["self_score_delta"]))), 6),
+        "not_first": [{"id": int(t), "rank": int(a), "rank_stored": int(b)}
+                      for t, a, b in zip(v["id"], live, stored) if a != 1 or b != 1],
+    }
+
+
 def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser(prog="serve_check")
     p.add_argument("--index", required=True)
@@ -75,6 +93,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--candidates", type=int, default=None,
                    help="exact re-rank depth for built indexes (default: per-channel value from meta.json)")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    p.add_argument("--half-stage1", nargs="*", default=[], choices=list(CHANNELS),
+                   help="channels whose quantized stage 1 runs as an fp16 GEMM, as served with api --half-stage1")
     p.add_argument("--out", required=True)
     args = p.parse_args(argv)
     previews = Path(args.previews)
@@ -84,7 +104,7 @@ def main(argv: list[str] | None = None) -> None:
     report["gpu_used_mib_before"] = gpu_used_mib()
     if args.device.startswith("cuda"):
         torch.cuda.reset_peak_memory_stats()
-    eng = Engine(args.index, args.channels, args.device, candidates=args.candidates)
+    eng = Engine(args.index, args.channels, args.device, candidates=args.candidates, half_stage1=args.half_stage1)
     eng.warm()
     report["load_secs"] = eng.load_secs
     report["index_sizes"] = {k: len(v) for k, v in eng.indexes.items()}
@@ -129,20 +149,14 @@ def main(argv: list[str] | None = None) -> None:
         for name, ix in eng.indexes.items():
             live, stored = ix.prep_query(wins[name]), ix.stored_query(tid)
             cos = window_agreement(live, stored)
-            sc = ix.scores(live)
-            ranks = ix.rank_of(sc, [tid])
+            sc, sc_stored = ix.scores(live), ix.scores(stored)
+            par[name]["id"].append(tid)
             par[name]["win_cos_mean"].append(float(cos.mean()))
             par[name]["win_cos_min"].append(float(cos.min()))
-            par[name]["self_rank"].append(int(ranks[0]))
-            par[name]["self_score_delta"].append(float(sc[ix.pos[tid]] - ix.scores(stored)[ix.pos[tid]]))
-    report["parity"] = {name: {
-        "n": len(v["self_rank"]),
-        "win_cos_mean": round(float(np.mean(v["win_cos_mean"])), 6),
-        "win_cos_min": round(float(np.min(v["win_cos_min"])), 6),
-        "self_at_1": round(float(np.mean(np.array(v["self_rank"]) == 1)), 4),
-        "self_rank_max": int(np.max(v["self_rank"])),
-        "self_score_delta_abs_mean": round(float(np.mean(np.abs(v["self_score_delta"]))), 6),
-    } for name, v in par.items() if v["self_rank"]}
+            par[name]["self_rank"].append(int(ix.rank_of(sc, [tid])[0]))
+            par[name]["self_rank_stored"].append(int(ix.rank_of(sc_stored, [tid])[0]))
+            par[name]["self_score_delta"].append(float(sc[ix.pos[tid]] - sc_stored[ix.pos[tid]]))
+    report["parity"] = {name: parity_summary(v) for name, v in par.items() if v["self_rank"]}
     print("parity", json.dumps(report["parity"]), flush=True)
 
     # ---------------------------------------------------------------- unseen (leave-one-out) queries
