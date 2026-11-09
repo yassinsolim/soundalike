@@ -254,11 +254,14 @@ which are recommended only for seeds in their artist's scene (see "Catalog tiers
 samples rankings. On held-out benchmarks its top 10 holds a correct song for 67% of cover queries, 44% of Gen Alpha
 songs and 15–19% of sample pairs, which is the melody tab's cover accuracy with almost twice its sample hits. "Sounds
 like" claims stay hard: about 11% in the fused list and 16–17% when all three tabs are checked. Unseen songs
-embedded live score the same as catalog songs. Best matches also weighs the artist's scene: after the strongest audio
-matches, one slot in three goes to an audio match by a related artist from the same scene (Deezer related artists,
-Wikidata regions). On 799 unseen test artists, the share of other-artist results that ListenBrainz lists as similar
-artists rose from 12% to 19%, while covers, samples and Gen Alpha stayed within their regression limits. Songs in
-another language than yours are hidden from Best matches by default; **Show all languages** brings them back.
+embedded live score the same as catalog songs. Best matches also weighs the artist's scene (Deezer related artists,
+Wikidata regions): the strongest audio matches stay on top (at least three, more when their scores suggest a cover or
+sample), and after them audio matches by artists from the seed's scene come first. On 799 unseen test artists, 32% of
+other-artist results are by artists that ListenBrainz lists as similar, up from 22% with the previous ranking, while
+covers, samples and Gen Alpha stayed within their regression limits. **Sounds like** lifts scene artists the same
+way (33%, up from 22%). Other artists' copies of the seed (re-uploads, edits) are left out when their audio matches it
+closely, and at most three other versions of it stay.
+Songs in another language than yours are hidden from Best matches by default; **Show all languages** brings them back.
 **Same vibe** keeps the Best candidates that share the seed's tempo and sound (one per artist). On 1,000 fresh test
 artists, 39% of its results had no genre or listener link to the seed, against 50% for the Sounds like tab.
 
