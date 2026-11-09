@@ -1462,6 +1462,32 @@ Rule 2, HR@10 on the held-out split:
 
 The held-out costs match development (−0.019, −0.010, −0.013).
 
+### Rule 4: rolled back on latency (2026-11-09)
+
+**First attempt: stopped before the swap.** The baseline came from the service's result cache. The service still
+held the same 40 songs from the 999k deploy, so the baseline p95 was 0.029 s. The run was stopped during
+`serve_check`; the served code never changed. `measure_unseen.py` now ignores cached answers, and the service was
+restarted to clear its cache.
+
+**Second attempt: rolled back on latency.** It passed parity: `rank_agree` 1.0 in every channel, with the Clash
+remaster second in sound as before. It started in 52 s with the catalog tiers active. Then it rolled back on
+latency:
+
+| 40 unseen songs | p50 | p95 | max | Server total, median |
+|---|---|---|---|---|
+| Served code, 04:53 (baseline) | 0.970 s | 0.992 s | 1.130 s | 943.9 ms |
+| New code, 05:04 | 0.972 s | 1.022 s | 1.089 s | 944.8 ms |
+| Served code, 01:00 (999k deploy) | 0.972 s | 1.024 s | 1.087 s | 943.3 ms |
+
+Per song, the new code took a median 8 ms longer (server total +6 ms). The change runs after the search, and the
+extra time sat in stages it does not touch (MuQ-MuLan embedding +4.9 ms).
+
+The same code on the same songs measured 0.992 s and 1.024 s p95 in two sessions four hours apart (paired median
+difference +0.3 ms). The p95 of 40 songs moves by about 30 ms between runs. A rule with no margin therefore fails
+code that changes nothing on this path about half the time.
+
+The service went back to the served code automatically. Peak VRAM was 6,727 MiB throughout.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
