@@ -1322,6 +1322,24 @@ channel has a chance well under 1 in 10,000. The rest of rule 4 is unchanged: st
 unseen-song p95 no higher than the served catalog's, measured again in the same session on the same songs, with
 automatic rollback. The deploy does not start during the nightly backup (02:45 to 04:00).
 
+**Deployed (2026-11-09).** The second deploy passed every rule-4 check:
+
+| Check | Result |
+|---|---|
+| Parity | `rank_agree` 1.0 in every channel; all 64 first in melody and samples, 63 in sound (the same remaster, second from its stored windows too) |
+| Startup | 52 s, catalog tiers active |
+| Unseen-song latency, 40 songs | p50 0.972 s, p95 1.024 s, max 1.087 s; the 889k catalog, just before: p50 1.009 s, p95 1.078 s, max 1.155 s |
+| Peak VRAM | 6,727 MiB (6,435 MiB for the 889k catalog) |
+
+Checks through the public URL:
+- Two catalog seeds and three songs by artists new in this build answered from the index in 0.53 to 0.87 s.
+- Two seeds outside the catalog answered live in 1.07 and 2.42 s.
+- 29 crawled songs appeared in those lists, each by the seed's artist or one of its related artists.
+- Six fixed seeds captured before and after the swap changed zero to two songs per top-10 list. Their requests took
+  a median 384 ms after the swap and 500 ms before. The samples search went from 347 to 269 ms, in line with the
+  fp16 benchmark, but the fp32 stages were faster too. The crawl ran during the first capture and not the second,
+  so this comparison is not controlled.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
@@ -1447,8 +1465,8 @@ holds the expected song for 5 of the 24 pairs, against 6 without the layer:
 
 - **Previews only.** Each song is heard through a 30-second Deezer preview. Shared material elsewhere in the song
   is invisible.
-- **Indexed catalog only.** Results can only be songs in the index: 269k songs until 2026-11-08, 889k since then,
-  with crawled songs limited to the seed's scene. Any song can be the query.
+- **Indexed catalog only.** Results can only be songs in the index: 269k songs until 2026-11-08, 889k on 2026-11-08,
+  999k since 2026-11-09, with crawled songs limited to the seed's scene. Any song can be the query.
 - **Small sets.** v4 has 19 held-out and 35 validation queries, so one query moves HR by 3–5 points. Gen Alpha is a
   single group of 65 songs, and its members are not independent queries.
 - **Gen Alpha was seen once.** It was looked at when choosing the melody hub setting (see
