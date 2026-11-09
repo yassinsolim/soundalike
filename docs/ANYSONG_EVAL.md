@@ -1315,6 +1315,13 @@ check exists to test.
 `rank_agree`, the share of tracks whose re-embedded rank equals their stored rank, plus the ids of any track not
 first.
 
+**Amendment (2026-11-09, owner's decision, before the second deploy).** Rule 4's parity check becomes: every
+re-embedded track ranks exactly where its stored windows rank it on the serving GPU (`rank_agree` 1.0 in every
+channel), and at least 62 of the 64 rank themselves first. At the measured rates, three or more of 64 in one
+channel has a chance well under 1 in 10,000. The rest of rule 4 is unchanged: startup under 2 minutes, peak VRAM at most 7,248 MiB, and
+unseen-song p95 no higher than the served catalog's, measured again in the same session on the same songs, with
+automatic rollback. The deploy does not start during the nightly backup (02:45 to 04:00).
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
