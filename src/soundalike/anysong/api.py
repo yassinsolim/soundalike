@@ -14,6 +14,8 @@ GET endpoints (JSON):
   language filter, one song per artist, each with its catalog ``bpm`` when known
 - ``/api/anysong/similar?title=<title>&artist=<artist>&k=20``  the same for a song named by title and artist
   (``AnySong.resolve``): the catalog release of that song, else the first matching Deezer search hit
+- ``/api/anysong/similar?isrc=<ISRC>&title=<title>&artist=<artist>``  the same for the recording with that ISRC
+  (``AnySong.resolve_isrc``): the catalog release of the named song, else Deezer's ISRC lookup, else ``resolve``
 
 Indexed tracks are ranked from their stored windows. Any other track has its 30 s preview fetched and
 embedded live on the GPU, so it never has to be in the catalog. Standard library HTTP only: bind to
@@ -70,6 +72,14 @@ _DASH_SUFFIX = re.compile(r"\s+-\s+.*$")
 _FEAT = re.compile(r"\s(?:feat\.?|ft\.?|featuring)\s.*$")
 _ARTIST_SPLIT = re.compile(r",|&|\s(?:x|feat\.?|ft\.?|featuring|and|with)\s")
 _NON_WORD = re.compile(r"[\W_]+")
+_LEADING_THE = re.compile(r"^the\s+")
+_BRACKETED = re.compile(r"[\(\[]([^\)\]]*)[\)\]]")
+# Title parts that decorate a release rather than name other content (``_content_tags``).
+_DECORATION = re.compile(
+    r"^(?:feat\b|ft\b|featuring\b|with\b|prod\b|produced\b|original\b|mono\b|stereo\b|explicit\b|clean\b|"
+    r"bonus\b|deluxe\b|single\b|album\b|radio\b|mixed\b|\d{4}\b)", re.I)
+_DECORATION_ANY = re.compile(r"\b(?:from|soundtrack|ost|remaster(?:ed)?|motion picture|edition|anniversary)\b", re.I)
+_ISRC = re.compile(r"^[A-Z]{2}[A-Z0-9]{3}\d{7}$")
 
 
 class ApiError(Exception):
@@ -88,6 +98,41 @@ def song_key(artist: str, title: str) -> tuple[str, str]:
     core = _norm(_FEAT.sub("", _DASH_SUFFIX.sub("", _PARENS.sub(" ", t))))
     a = _norm(_ARTIST_SPLIT.split(artist.casefold())[0])
     return a, core or _norm(t)
+
+
+def _fold(s: str) -> str:
+    """Casefolded text without accents on Latin letters ("Beyoncé" = "Beyonce"); other scripts keep their marks."""
+    out: list[str] = []
+    for c in unicodedata.normalize("NFKD", s.casefold()):
+        if unicodedata.combining(c) and out and out[-1].isascii():
+            continue
+        out.append(c)
+    return unicodedata.normalize("NFC", "".join(out))
+
+
+def _lookup_key(artist: str, title: str) -> tuple[str, str]:
+    """``song_key`` for matching a requested title and artist to releases. Services credit artists differently
+    ("The Black Eyed Peas" and "Black Eyed Peas", "Beyoncé" and "Beyonce", "††† (Crosses)" and "✝✝✝ (Crosses)"),
+    so accents on Latin letters, symbols and a leading "The" are ignored. Lists keep ``song_key``."""
+    a, t = song_key(_fold(artist), _fold(title))
+    return _LEADING_THE.sub("", a) or a, t
+
+
+def _content_tags(title: str) -> frozenset[str]:
+    """Bracketed or dash-suffixed parts of a title that name different content rather than a version, a credit or a
+    release decoration: the "Santa Clause is Coming to Town" of a medley, not "Live", "feat. X", "2011 Remaster" or
+    "From ...". Releases of one song whose content tags differ are probably not the same piece."""
+    title = unicodedata.normalize("NFKC", title)
+    parts = [m.group(1) for m in _BRACKETED.finditer(title)]
+    dash = _DASH_SUFFIX.search(title)
+    if dash:
+        parts.append(dash.group(0).split("-", 1)[1])
+    tags = set()
+    for part in parts:
+        part = " ".join(part.split()).strip(" .")
+        if part and not _DECORATION.match(part) and not _DECORATION_ANY.search(part) and not version_words(part):
+            tags.add(_norm(_fold(part)))
+    return frozenset(t for t in tags if t)
 
 
 def fuse(orders: Mapping[str, Sequence[Hashable]], weights: dict[str, float] | None = None, k: int = FUSE_K
@@ -284,12 +329,14 @@ class AnySong:
         entries = []
         for tid, (artist, title) in meta.items():
             if title and engine.indexed(tid):
-                key = _identity(artist, title)
-                entries.append((key[1] != _norm(unicodedata.normalize("NFC", title).casefold()), tid, key))
+                key = _lookup_key(artist, title)
+                entries.append((key[1] != _norm(_fold(unicodedata.normalize("NFC", title))), tid, key))
         releases: dict[tuple[str, str], list[int]] = {}
         for _, tid, key in sorted(entries):
             releases.setdefault(key, []).append(tid)
         self.by_key: dict[tuple[str, str], tuple[int, ...]] = {key: tuple(ids) for key, ids in releases.items()}
+        # ISRC -> Deezer id answered by Deezer's ISRC lookup (``resolve_isrc``).
+        self.isrcs = LRU(cache_size * 4)
 
     def _count(self, kind: str) -> None:
         with self._lock:
@@ -325,37 +372,103 @@ class AnySong:
             self.searches.put(key, cards)
         return {"query": q, "tracks": [c | {"in_catalog": self.engine.indexed(c["id"])} for c in cards]}
 
+    def _catalog_release(self, key: tuple[str, str], version: set[str], tags: frozenset[str]) -> int | None:
+        """The indexed release of song ``key`` with the requested version words and content tags, if any."""
+        for tid in self.by_key.get(key, ()):
+            title = self.meta[tid][1]
+            if version_words(title) == version and _content_tags(title) == tags:
+                return tid
+        return None
+
+    def _search_song(self, artist: str, title: str, key: tuple[str, str]) -> list[dict]:
+        """Deezer search cards with a preview for song ``key``: first for "artist title" as given, then, if that finds
+        none, for the normalized key text, which Deezer's search handles better ("crosses bitches brew" finds
+        "††† (Crosses)" where "✝✝✝ (Crosses) Bitches Brew" finds nothing)."""
+        queries = [f"{artist} {title}"[:200]]
+        plain = f"{key[0]} {key[1]}".strip()[:200]
+        if plain and " ".join(queries[0].casefold().split()) != plain:
+            queries.append(plain)
+        for q in queries:
+            cards = self.search(q, RESOLVE_LIMIT)["tracks"]
+            same = [c for c in cards if c["has_preview"] and _lookup_key(c["artist"], c["title"]) == key]
+            if same:
+                return same
+        return []
+
     def resolve(self, artist: str, title: str, on_search: Callable[[], None] | None = None) -> int:
         """Deezer id of the recording named by ``artist`` and ``title``.
 
-        Songs match by ``song_key``. Among a song's releases, one with the same ``version_words`` wins, so
-        "Song - Live" asks for a live recording, while "Song" or "Song - Remastered" will not be served by a remix.
-        An indexed catalog release answers without any Deezer request. Otherwise ``on_search`` runs (the caller's
-        search rate limit) and the first Deezer search hit with a preview and that version wins. Failing that, the
-        song's best indexed release, then its first search hit, stands in.
+        Songs match by ``_lookup_key``. Among a song's releases, one with the same ``version_words`` and
+        ``_content_tags`` wins, so "Song - Live" asks for a live recording, while "Song" or "Song - Remastered" will
+        not be served by a remix or a medley. An indexed catalog release answers without any Deezer request.
+        Otherwise ``on_search`` runs (the caller's search rate limit) and Deezer is searched; a hit with a preview,
+        that version and those content tags wins. Failing that, an indexed release with that version, a hit with
+        that version, the song's best indexed release, then its first search hit stand in.
         """
         artist, title = _text_param(artist, "artist"), _text_param(title, "title")
-        key, version = _identity(artist, title), version_words(title)
+        key, version, tags = _lookup_key(artist, title), version_words(title), _content_tags(title)
+        found = self._catalog_release(key, version, tags)
+        if found is not None:
+            return found
         known = self.by_key.get(key, ())
-        for tid in known:
-            if version_words(self.meta[tid][1]) == version:
-                return tid
+        same_version = [tid for tid in known if version_words(self.meta[tid][1]) == version]
         try:
             if on_search is not None:
                 on_search()
-            cards = self.search(f"{artist} {title}"[:200], RESOLVE_LIMIT)["tracks"]
+            cards = self._search_song(artist, title, key)
         except ApiError:
             if known:
-                return known[0]
+                return (same_version or known)[0]
             raise
-        same = [c for c in cards if c["has_preview"] and _identity(c["artist"], c["title"]) == key]
-        for card in same:
+        for card in cards:
+            if version_words(card["title"]) == version and _content_tags(card["title"]) == tags:
+                return card["id"]
+        if same_version:
+            return same_version[0]
+        for card in cards:
             if version_words(card["title"]) == version:
                 return card["id"]
         if known:
             return known[0]
-        if same:
-            return same[0]["id"]
+        if cards:
+            return cards[0]["id"]
+        raise ApiError(404, "song not found")
+
+    def resolve_isrc(self, isrc: str, artist: str | None = None, title: str | None = None,
+                     on_search: Callable[[], None] | None = None) -> int:
+        """Deezer id of the recording with this ISRC, which the Spotify extension reads from Spotify.
+
+        With ``artist`` and ``title``, an indexed release of that exact version answers first, without Deezer.
+        Then Deezer's ISRC lookup (cached), which, unlike its search, also finds tracks that Deezer does not license
+        where this server runs; a hit counts if it is indexed or has a preview. Failing that, ``resolve``.
+        """
+        code = "".join(isrc.split()).upper()
+        if not _ISRC.match(code):
+            raise ApiError(400, "isrc must be a 12-character ISRC")
+        named = bool(artist and title)
+        if named:
+            artist, title = _text_param(artist, "artist"), _text_param(title, "title")
+            found = self._catalog_release(_lookup_key(artist, title), version_words(title), _content_tags(title))
+            if found is not None:
+                return found
+        tid = self.isrcs.get(code)
+        if tid is None:
+            if on_search is not None:
+                on_search()
+                on_search = None
+            try:
+                track = self.deezer.track_by_isrc(code)
+            except RuntimeError:
+                track = {}
+            if isinstance(track, dict) and type(track.get("id")) is int and (
+                    self.engine.indexed(track["id"]) or track.get("preview")):
+                tid = track["id"]
+                self.known.put(tid, track)
+                self.isrcs.put(code, tid)
+        if tid is not None:
+            return tid
+        if named:
+            return self.resolve(artist, title, on_search)
         raise ApiError(404, "song not found")
 
     def cached(self, track_id: int) -> bool:
@@ -729,7 +842,11 @@ class Handler(BaseHTTPRequestHandler):
                 if lang_mode not in {"same", "all"}:
                     raise ApiError(400, "lang must be 'same' or 'all'")
                 scene = _int_param(params, "scene", 1, 0, 1) == 1
-                if "id" not in params and ("title" in params or "artist" in params):
+                if "id" not in params and "isrc" in params:
+                    tid = svc.resolve_isrc((params.get("isrc") or [""])[0], (params.get("artist") or [None])[0],
+                                           (params.get("title") or [None])[0],
+                                           lambda: self._limit("/api/anysong/search"))
+                elif "id" not in params and ("title" in params or "artist" in params):
                     tid = svc.resolve((params.get("artist") or [""])[0], (params.get("title") or [""])[0],
                                       lambda: self._limit("/api/anysong/search"))
                 else:
