@@ -11,7 +11,7 @@
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.6.0";
+  const RUNTIME_SEMANTIC_VERSION = "2.7.0";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -41,10 +41,21 @@
     "top-20-strict-language-related-artist-model-quality-v1";
   const DISPLAY_RESULT_COUNT = 20;
   const RECOMMENDATION_POOL_SIZE = DISPLAY_RESULT_COUNT;
+  // Rows asked of the hosted matcher: songs Spotify doesn't have are left out
+  // of the 20 shown, and the next ones take their places.
+  const HOSTED_RESULT_COUNT = 30;
+  // The hosted lists start hidden and fill in as their songs are found on
+  // Spotify (hydrateBestRows); this line says so, then names the songs that
+  // weren't found.
+  const LIST_NOTE_MARKUP =
+    '<p class="sa-list-note" role="status">Finding these songs on Spotify…</p>';
   const LANGUAGE_LOOKUP_ATTEMPTS = 2;
   const LANGUAGE_RETRY_DELAY_MS = 350;
   const RELATED_ARTIST_TIMEOUT_MS = 1500;
   const SPOTIFY_ENRICH_WORKERS = 4;
+  // Hosted rows appear in rank order, so a slow Spotify lookup would hold back
+  // every row below it; past this it shows unmatched until its song arrives.
+  const SPOTIFY_LOOKUP_PATIENCE_MS = 5000;
   const SPOTIFY_TRACK_SEARCH_LIMIT = 20;
   const SPOTIFY_TRACK_SEARCH_HASH =
     "59ee4a659c32e9ad894a71308207594a65ba67bb6b632b183abe97303a51fa55";
@@ -55,7 +66,7 @@
   // Spotify drops songs queued just as a song starts playing.
   const LATE_QUEUE_DELAY_MS = 1500;
   const BEST_MATCHES_ENDPOINT = `${FALLBACK_HOSTED_SERVER}/api/anysong/similar`;
-  const BEST_MATCHES_POLICY = "anysong-best-rrf-language-vibe-sounds-v2";
+  const BEST_MATCHES_POLICY = "anysong-best-rrf-language-vibe-sounds-v3";
   const BEST_MATCHES_TIMEOUT_MS = 30000;
   const BEST_MATCHES_RETRIES = 2;
   const BEST_MATCHES_RETRY_DELAY_MS = 1500;
@@ -692,7 +703,7 @@
           : "",
       }))
       .filter((item) => item.title && item.artist)
-      .slice(0, DISPLAY_RESULT_COUNT);
+      .slice(0, HOSTED_RESULT_COUNT);
     // Servers without Same vibe send no vibe list; its rows carry no ranks.
     const vibe = (Array.isArray(body?.results?.vibe) ? body.results.vibe : [])
       .map((item) => ({
@@ -700,7 +711,7 @@
         artist: String(item?.artist || "").trim(),
       }))
       .filter((item) => item.title && item.artist)
-      .slice(0, DISPLAY_RESULT_COUNT);
+      .slice(0, HOSTED_RESULT_COUNT);
     // The hosted Sounds like list; servers before it send none.
     const sounds = (Array.isArray(body?.results?.sounds) ? body.results.sounds : [])
       .map((item) => ({
@@ -709,7 +720,7 @@
         bpm: Number.isFinite(item?.bpm) && item.bpm > 0 ? item.bpm : null,
       }))
       .filter((item) => item.title && item.artist)
-      .slice(0, DISPLAY_RESULT_COUNT);
+      .slice(0, HOSTED_RESULT_COUNT);
     const total = Number(body?.timings_ms?.total);
     return {
       query: {
@@ -734,7 +745,7 @@
     const params = new URLSearchParams({
       title,
       artist,
-      k: String(DISPLAY_RESULT_COUNT),
+      k: String(HOSTED_RESULT_COUNT),
       lang: langMode,
       policy: BEST_MATCHES_POLICY,
     });
@@ -1808,6 +1819,8 @@
 
     const React = Spicetify.React;
     if (!(React?.createElement && Spicetify.ReactDOM?.createRoot)) {
+      const rankNode = row.querySelector(".sa-rank");
+      if (rankNode) rankNode.textContent = String(rank);
       const artistNode = row.querySelector(".sa-artist");
       if (artistNode) artistNode.textContent = `${artist}${matchNote}`;
       if (image) {
@@ -2113,16 +2126,44 @@
     );
   }
 
-  function revealBestRow(page, results, tracks, index, bpm = false) {
+  function revealBestRow(page, results, tracks, index, rank, bpm = false) {
     const row = page.querySelector(`.sa-row[data-index="${index}"]`);
     if (!row || page !== activePage?.view) return;
-    renderResultRow(row, results[index], index, tracks[index] || null, index + 1, { bpm });
+    renderResultRow(row, results[index], index, tracks[index] || null, rank, { bpm });
     row.hidden = false;
   }
 
+  // Names the songs left out because Spotify doesn't have them. Each one still
+  // opens a Spotify search, in case the match was missed.
+  function showLeftOutSongs(page, results, leftOut) {
+    const note = page.querySelector(".sa-list-note");
+    if (!note || page !== activePage?.view) return;
+    if (!leftOut.length) {
+      note.hidden = true;
+      return;
+    }
+    const songs = leftOut.flatMap((index, position) => {
+      const result = results[index];
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "sa-left-out";
+      button.textContent = `${result.title} · ${result.artist}`;
+      button.title = `Search Spotify for ${result.title} by ${result.artist}`;
+      button.onclick = () => activateResult(result, null);
+      return position ? [document.createTextNode(", "), button] : [button];
+    });
+    note.replaceChildren("Not found on Spotify, so left out: ", ...songs);
+    note.hidden = false;
+  }
+
   // Best matches, Same vibe and hosted Sounds like arrive already ranked, so
-  // Spotify only adds artwork, album and playback. The lyrics-language gate
-  // and feedback belong to the companion's Sounds like list.
+  // Spotify adds artwork, album and playback, and decides what is shown: rows
+  // appear in rank order once found on Spotify, a song Spotify doesn't have is
+  // left out, and the next row takes its place. A row whose lookup failed, or
+  // is too slow to wait for, still shows with a Spotify search instead of
+  // playback (a slow one gains its song if it arrives), and so do all rows when
+  // this client can't search. The lyrics-language gate and feedback belong to
+  // the companion's Sounds like list.
   async function hydrateBestRows(
     results,
     page,
@@ -2132,34 +2173,78 @@
     { bpm = false } = {}
   ) {
     const startedAt = nowMs();
-    if (!Spicetify.GraphQL.Definitions.searchModalResults) {
+    const searchable = Boolean(Spicetify.GraphQL.Definitions.searchModalResults);
+    if (!searchable) {
       console.warn("[soundalike] Spotify artwork lookup is unavailable in this client.");
-      return;
+    }
+    const unmatched = new Set();
+    const usable = new Set();
+    const ranks = new Map();
+    const leftOut = [];
+    let placed = 0;
+    let failures = 0;
+    function place() {
+      while (
+        placed < results.length &&
+        (!searchable || placed in tracks || unmatched.has(placed))
+      ) {
+        const index = placed++;
+        if (searchable && !tracks[index] && !unmatched.has(index)) {
+          leftOut.push(index);
+        } else if (ranks.size < DISPLAY_RESULT_COUNT) {
+          ranks.set(index, ranks.size + 1);
+          revealBestRow(page, results, tracks, index, ranks.get(index), bpm);
+        }
+      }
     }
     let cursor = 0;
     async function worker() {
-      while (cursor < results.length) {
+      while (cursor < results.length && usable.size < DISPLAY_RESULT_COUNT) {
         const index = cursor++;
         if (!(index in tracks)) {
+          const patience = setTimeout(() => {
+            unmatched.add(index);
+            usable.add(index);
+            place();
+          }, SPOTIFY_LOOKUP_PATIENCE_MS);
           try {
             tracks[index] = await findSpotifyTrack(results[index]);
           } catch (error) {
-            tracks[index] = null;
+            failures++;
+            unmatched.add(index);
             console.warn(
               `[soundalike] Spotify metadata lookup failed for ${results[index].title}`,
               error
             );
+          } finally {
+            clearTimeout(patience);
+          }
+          if (tracks[index] && ranks.has(index)) {
+            // Shown unmatched while its lookup was slow; now it can play.
+            revealBestRow(page, results, tracks, index, ranks.get(index), bpm);
           }
         }
-        revealBestRow(page, results, tracks, index, bpm);
+        if (tracks[index] || unmatched.has(index)) usable.add(index);
+        place();
       }
     }
-    const workerCount = Math.min(SPOTIFY_ENRICH_WORKERS, results.length);
-    await Promise.all(Array.from({ length: workerCount }, worker));
-    const enriched = results.filter((_, index) => tracks[index]).length;
+    if (searchable) {
+      const workerCount = Math.min(SPOTIFY_ENRICH_WORKERS, results.length);
+      await Promise.all(Array.from({ length: workerCount }, worker));
+    }
+    place();
+    if (!ranks.size && leftOut.length) {
+      // Spotify finding none of them points at its search, not at the songs.
+      console.warn(`[soundalike] Spotify found none of the ${label} songs; showing them unmatched.`);
+      leftOut.splice(0).slice(0, DISPLAY_RESULT_COUNT).forEach((index) => {
+        ranks.set(index, ranks.size + 1);
+        revealBestRow(page, results, tracks, index, ranks.get(index), bpm);
+      });
+    }
+    showLeftOutSongs(page, results, leftOut);
     console.log(
       `[soundalike] ${label} metadata settled in ${elapsedMs(startedAt)} ms ` +
-      `(${enriched}/${results.length} rows, ` +
+      `(shown ${ranks.size}, not on Spotify ${leftOut.length}, failed lookups ${failures}, ` +
       `${timing ? `${elapsedMs(timing.startedAt)} ms total` : "total unavailable"}).`
     );
   }
@@ -2322,15 +2407,15 @@
     const hidden = Math.max(0, Number(query.hidden) || 0);
     const languageStatus = hidden
       ? `${hidden} other-language ${hidden === 1 ? "match" : "matches"} ` +
-        `${query.languageMode === "all" ? "in" : "hidden from"} the top ${DISPLAY_RESULT_COUNT}`
-      : `no other-language matches in the top ${DISPLAY_RESULT_COUNT}`;
+        `${query.languageMode === "all" ? "in" : "hidden from"} the top ${HOSTED_RESULT_COUNT}`
+      : `no other-language matches in the top ${HOSTED_RESULT_COUNT}`;
     const tags = tagsMarkup(["Melody + samples", ...sourceTags(best)]);
     return `<p class="sa-blurb">${esc(blurb)}</p>
       <div class="sa-tags">${tags}</div>
       ${languageFilterMarkup(query, languageStatus)}
       <div class="sa-list-head"><div>#</div><div></div><div>Title</div><div class="sa-album-head">Album</div></div>
-      <div class="sa-list">${resultRowsMarkup(results, { hidden: false, notes: true })}
-      </div>`;
+      <div class="sa-list">${resultRowsMarkup(results, { hidden: true, notes: true })}
+      </div>${LIST_NOTE_MARKUP}`;
   }
 
   // Best's hidden count doesn't describe this list, so its status only says
@@ -2355,8 +2440,8 @@
       <div class="sa-tags">${tags}</div>
       ${languageFilterMarkup(query, languageStatus)}
       <div class="sa-list-head"><div>#</div><div></div><div>Title</div><div class="sa-album-head">Album</div></div>
-      <div class="sa-list">${resultRowsMarkup(vibe, { hidden: false, notes: false })}
-      </div>`;
+      <div class="sa-list">${resultRowsMarkup(vibe, { hidden: true, notes: false })}
+      </div>${LIST_NOTE_MARKUP}`;
   }
 
   // Hosted Sounds like comes with Best matches, so it shares their language
@@ -2387,8 +2472,8 @@
       <div class="sa-tags">${tags}</div>
       ${languageFilterMarkup(query, languageStatus)}
       <div class="sa-list-head"><div>#</div><div></div><div>Title</div><div class="sa-album-head">Album</div><div class="sa-bpm">BPM</div></div>
-      <div class="sa-list">${resultRowsMarkup(sounds, { hidden: false, notes: false })}
-      </div>`;
+      <div class="sa-list">${resultRowsMarkup(sounds, { hidden: true, notes: false })}
+      </div>${LIST_NOTE_MARKUP}`;
   }
 
   function soundsPanelMarkup(state, seedArtists) {
@@ -2496,6 +2581,11 @@
         .sa-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
         .sa-tag{background:rgba(255,255,255,.08);border-radius:999px;padding:4px 9px;color:var(--spice-subtext,#b3b3b3);font-size:12px}
         .sa-list{display:flex;flex-direction:column;padding-right:4px}
+        .sa-list-note{margin:12px 6px 0;color:var(--spice-subtext,#b3b3b3);font-size:13px}
+        .sa-list-note[hidden]{display:none}
+        .sa-left-out{padding:0;border:0;background:none;color:inherit;font:inherit;text-decoration:underline;cursor:pointer}
+        .sa-left-out:hover,.sa-left-out:focus-visible{color:var(--spice-text,#fff)}
+        .sa-left-out:focus-visible{outline:2px solid var(--spice-button,#1ed760);outline-offset:2px}
         .sa-language-loading{padding:18px 6px;color:var(--spice-subtext,#b3b3b3)}
         .sa-list-head,.sa-row-content{display:grid;grid-template-columns:32px 44px minmax(180px,1.6fr) minmax(120px,1fr) 64px;align-items:center;column-gap:12px}
         .sa-list-head{height:28px;color:var(--spice-subtext,#b3b3b3);font-size:12px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:4px}
@@ -2596,14 +2686,8 @@
     wrap.querySelectorAll(".sa-row").forEach((row) => {
       const index = Number(row.dataset?.index);
       const result = results[index];
-      if (!result) return;
-      if (!shown.separate) {
-        row.hidden = false;
-        renderResultRow(row, result, index, tracks[index] || null, index + 1, {
-          bpm: Boolean(shown.bpm),
-        });
-        return;
-      }
+      // Hosted rows stay hidden until hydrateBestRows finds them on Spotify.
+      if (!result || !shown.separate) return;
       row.hidden = Boolean(shown.list.seedLanguage);
       renderResultRow(row, result, index, tracks[index] || null);
     });
