@@ -70,6 +70,13 @@
   const BEST_MATCHES_TIMEOUT_MS = 30000;
   const BEST_MATCHES_RETRIES = 2;
   const BEST_MATCHES_RETRY_DELAY_MS = 1500;
+  // The seed's ISRC lets the matcher find songs Deezer's search doesn't list
+  // where the server runs, and the exact recording. The lookup is optional:
+  // past this the request goes by title and artist alone.
+  const ISRC_LOOKUP_TIMEOUT_MS = 1500;
+  const ISRC_PATTERN = /^[A-Z]{2}[A-Z0-9]{3}\d{7}$/;
+  const SPOTIFY_ID_ALPHABET =
+    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
   // How long a ready Sounds like list waits for a slower Best matches list
   // before the page opens with Best matches still loading.
   const BEST_MATCHES_PATIENCE_MS = 4000;
@@ -120,6 +127,7 @@
   let cacheSaveTimer;
   let searchSequence = 0;
   const pendingRecommendations = new Map();
+  const pendingIsrcLookups = new Map();
   const pendingSpotifyTracks = new Map();
   const pendingRelatedArtists = new Map();
   const relatedArtistCache = new Map();
@@ -740,7 +748,7 @@
     };
   }
 
-  async function requestBestMatchesUncached(title, artist, langMode = "same") {
+  async function requestBestMatchesUncached(title, artist, langMode = "same", isrc = null) {
     // The policy keeps HTTP-cached responses from before a format change out.
     const params = new URLSearchParams({
       title,
@@ -749,6 +757,7 @@
       lang: langMode,
       policy: BEST_MATCHES_POLICY,
     });
+    if (isrc) params.set("isrc", isrc);
     for (let attempt = 0; ; attempt++) {
       let response;
       try {
@@ -800,7 +809,8 @@
     if (pendingRecommendations.has(cacheId)) {
       return pendingRecommendations.get(cacheId);
     }
-    const request = requestBestMatchesUncached(title, artist, langMode)
+    const request = lookupSeedIsrc(seedUri)
+      .then((isrc) => requestBestMatchesUncached(title, artist, langMode, isrc))
       .then((data) => {
         writeCacheEntry("recommendations", cacheId, data);
         return { data, cached: false };
@@ -808,6 +818,75 @@
       .finally(() => pendingRecommendations.delete(cacheId));
     pendingRecommendations.set(cacheId, request);
     return request;
+  }
+
+  function spotifyIdToHex(id) {
+    const viaSpicetify = Spicetify.URI?.idToHex?.(id);
+    if (typeof viaSpicetify === "string" && /^[0-9a-f]{32}$/i.test(viaSpicetify)) {
+      return viaSpicetify.toLowerCase();
+    }
+    if (typeof BigInt !== "function" || !/^[0-9A-Za-z]{1,22}$/.test(id || "")) return null;
+    let value = 0n;
+    for (const char of id) {
+      value = value * 62n + BigInt(SPOTIFY_ID_ALPHABET.indexOf(char));
+    }
+    const hex = value.toString(16);
+    return hex.length > 32 ? null : hex.padStart(32, "0");
+  }
+
+  function isrcFrom(value) {
+    const code = String(value || "").replace(/[\s-]/g, "").toUpperCase();
+    return ISRC_PATTERN.test(code) ? code : null;
+  }
+
+  function withTimeout(promise, timeoutMs) {
+    let timer;
+    return Promise.race([
+      promise,
+      new Promise((resolve) => {
+        timer = setTimeout(() => resolve(undefined), timeoutMs);
+      }),
+    ]).finally(() => clearTimeout(timer));
+  }
+
+  // Spotify's GraphQL track query has no ISRC, so ask its metadata service
+  // and the Web API at once and take the first ISRC either gives.
+  async function fetchSeedIsrc(trackId) {
+    const gid = spotifyIdToHex(trackId);
+    const sources = [
+      gid && Spicetify.CosmosAsync.get(
+        `https://spclient.wg.spotify.com/metadata/4/track/${gid}?market=from_token`
+      ).then((meta) => isrcFrom((meta?.external_id || []).find?.(
+        (entry) => String(entry?.type).toLowerCase() === "isrc")?.id)),
+      Spicetify.CosmosAsync.get(`https://api.spotify.com/v1/tracks/${trackId}`)
+        .then((track) => isrcFrom(track?.external_ids?.isrc)),
+    ].filter(Boolean).map((source) => source.catch(() => undefined));
+    const answers = sources.map((source) => source.then((isrc) => isrc || Promise.reject()));
+    try {
+      return await Promise.any(answers);
+    } catch {
+      // Both answered without one (null: remembered) or failed (undefined).
+      const settled = await Promise.all(sources);
+      return settled.every((value) => value === null) ? null : undefined;
+    }
+  }
+
+  function lookupSeedIsrc(seedUri) {
+    const trackId = seedUri?.split(":track:")[1];
+    if (!trackId || !Spicetify.CosmosAsync?.get) return Promise.resolve(null);
+    const cached = readCacheEntry("spotifyTracks", `isrc:${seedUri}`);
+    if (cached) return Promise.resolve(cached.isrc || null);
+    if (!pendingIsrcLookups.has(seedUri)) {
+      const lookup = withTimeout(fetchSeedIsrc(trackId), ISRC_LOOKUP_TIMEOUT_MS)
+        .then((isrc) => {
+          if (isrc !== undefined) writeCacheEntry("spotifyTracks", `isrc:${seedUri}`, { isrc });
+          return isrc || null;
+        })
+        .catch(() => null)
+        .finally(() => pendingIsrcLookups.delete(seedUri));
+      pendingIsrcLookups.set(seedUri, lookup);
+    }
+    return pendingIsrcLookups.get(seedUri);
   }
 
   async function loadSeedTrack(seedUri) {
@@ -971,6 +1050,7 @@
     Spicetify.showNotification("Finding soundalikes…");
     let seedTrack;
     let artist;
+    lookupSeedIsrc(seedUri);
     try {
       seedTrack = await loadSeedTrack(seedUri);
       artist = seedArtistName(seedTrack);
