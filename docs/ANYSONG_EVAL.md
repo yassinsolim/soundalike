@@ -1529,6 +1529,94 @@ Checks through the public URL:
   opens with Kidwild, Central Cee, LeoStayTrill and Krillz.
 - Brent Faiyaz "Paper Soldier": the d3puu copy is gone from first place.
 
+## Listener-aware ranking (pre-registered 2026-11-09, before any held-out result)
+
+**Why.** After the ranking change above, about a third of the other artists in the lists were ones ListenBrainz
+lists as similar to the seed's artist: Best matches 0.32, Sounds like 0.35. Ordering, not retrieval, held this back.
+On 825 development seeds:
+- The songs the search already returns hold a median of 24 listener-similar artists. Perfect reordering would reach
+  0.93; within Sounds like's 200 nearest songs by sound, 0.83.
+- 73 % of Best's top-10 rows were by artists unrelated to the seed's artist on Deezer. Those rows were hits 26 % of
+  the time. Rows by Deezer-related artists were hits 61–76 % of the time.
+- For some seeds the scene's songs are not retrieved at all. All 20 of Roar's Deezer-related artists have catalog
+  songs, but only 5 appear among the 600 songs the search returns for "I Can't Handle Change".
+
+**Change under test** (`listener.py`; `AnySong._listener` and `_listener_lists`):
+1. **Candidates.** The channel lists, plus scene candidates. For each artist in the seed artist's Deezer
+   neighbourhood, the 3 songs closest in sound are added, chosen from at most 150 of its catalog songs. They are scored
+   like the sonic channel (window cosine minus the hub penalty) and gated by the catalog tiers.
+2. **Listener model.** A gradient-boosted tree model estimates whether listeners of the seed's artist also play the
+   candidate's artist. It has 100 trees of depth at most 6 (`ranker/listener-v1.npz`, sha256 `7ad156a6…24a7`).
+   - Features: the served sound score; ranks and scores in the three channels; Deezer graph overlap, related-list
+     direction and neighbourhood; region, genre and scene affinity; tempo gap; whether the language is known.
+   - Not used: popularity, MuLan mood scores, release year.
+   - Training: 434,481 rows from the 823 development seeds (scene `dev` and chart sweep). Labels are ListenBrainz
+     similar artists, which are never a feature.
+3. **Best matches.** The audio head is unchanged: at least 3 songs, extended over cover/sample evidence. The rest
+   follow z(listener logit) + 0.5 z(sound score) + 0.25 z(melody/samples fusion score), then the artist caps.
+4. **Sounds like.** The sonic list by z(sound score) + 2 z(listener logit).
+5. **Same vibe.** Its rule is unchanged, applied to the new Best and Sounds like orders; scene candidates can enter.
+6. **Own artist.** Songs by the seed's own artist get the median listener score, so sound alone places them.
+7. **Fallback.** Without a known seed artist, or with `scene=0`, the lists are as before.
+
+**Selection** on development data only, with out-of-fold models (5 folds grouped by seed artist), through the served
+code path (`grow/qa/ranker_dev.py`):
+
+| List | ListenBrainz hit rate | Shared genre | Far-genre rows |
+|---|---|---|---|
+| Best matches | 0.317 → 0.398 (+0.081) | +0.031 | −0.031 |
+| Same vibe | 0.355 → 0.473 (+0.119) | +0.059 | −0.044 |
+| Sounds like | 0.346 → 0.465 (+0.119) | +0.071 | −0.057 |
+
+Best matches HR@10 on the development benchmarks changed by −0.009 on covers, −0.005 on samples and −0.007 on samples
+reverse. Artist variety did not drop: the distinct-artist share of all top-10 rows went 0.590 → 0.590 (Best) and
+0.577 → 0.554 (Sounds like). Sounds like's mean sound score of the top 10 went 0.453 → 0.441.
+
+Variants were rejected for these reasons:
+- **Popularity features** gained another 0.085, but halved the variety of artists (top-50 share 8 % → 16–20 %).
+- **A one-song head** cost 0.061 on covers; **no head** cost 0.178.
+- **Fusion weight 0** cost 0.025 on covers, too close to the limit. **Weight 0.5** gave no listener gain.
+- **MuLan zero-shot mood scores** carried no information beyond the sound score (mood agreement was about +0.83 for
+  nearly every sonic candidate).
+
+**Baseline.** The served lists (`gated1m_v2`, computed on 2026-11-09 at 04:25 with the served code).
+
+**Seeds.**
+- Rules 1 and 3: the 799 held-out seeds (used five times before) and the 1,000 fresh seeds (used four times before).
+- Rule 2: the relationship benchmarks' held-out split.
+
+**Must pass (all), else not deployed:**
+1. **Lists users see.** Best matches, Same vibe and Sounds like, each on both seed sets (`gate_eval compare --labels
+   build1m`):
+   - ListenBrainz hit rate: the paired 95 % interval's lower bound at −0.010 or above.
+   - Shared genre: mean change −0.02 or above.
+   - Other-language rows and derivative uploads: each up by at most 1 point.
+   - Rows shown in the top 20: down by at most 1.0 on average.
+2. **Relationship benchmarks.** Best matches HR@10 as served on the held-out split may drop by at most 0.03 on covers,
+   samples and samples reverse. The channel lists (the any tab) are not touched by this change and are not
+   re-measured.
+3. **It must help, without narrowing.**
+   - On both seed sets, the ListenBrainz hit rate of Best matches, Same vibe and Sounds like must rise, with the paired
+     95 % interval's lower bound above 0.
+   - For Best matches and Sounds like, on both sets: the distinct-artist share of all top-10 rows may fall by at most
+     0.05, and the 50 most-recommended artists' share may rise by at most 0.03.
+   - Sounds like's mean sound score of the top 10 may fall by at most 0.02.
+4. **Serving on the RTX 2070 SUPER**, with automatic rollback:
+   - Parity as amended (`rank_agree` 1.0, at least 62 of 64 first).
+   - Startup under 2 minutes; peak VRAM at most 7,248 MiB.
+   - 40 unseen songs and 40 catalog songs, measured in the same session on the same songs with cold result caches:
+     the paired median server time may rise by at most 100 ms, and p95 may be at most the served p95 plus 200 ms.
+     The added step took a median 16–31 ms and a p95 of 29–95 ms per seed on the RTX 5080; the 2070 host's CPU and
+     storage are slower.
+
+**Reported, not gated:**
+- The ListenBrainz hit rate among artists Deezer does not list as related.
+- Same vibe's sound score.
+- Best matches HR@10 on the other benchmarks.
+
+ListenBrainz's similar-artist data (labs endpoint) is probably an early-2023 snapshot, so newer artists cannot count as
+hits.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the

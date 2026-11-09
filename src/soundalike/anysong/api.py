@@ -55,9 +55,9 @@ from urllib.parse import parse_qs, urlsplit
 
 import numpy as np
 
-from . import samevibe
+from . import listener, samevibe
 from .deezer import version_words
-from .scene import SceneParams, SceneTable, affinity, scene_fuse
+from .scene import SceneParams, SceneTable, affinity, audio_head, cap_artists, scene_fuse
 from .tempo import TempoTable, decode22
 
 FETCH = 200  # per-channel depth ranked before de-duplication
@@ -68,6 +68,12 @@ K_MAX = 50
 COPY_SAMPLES_SCORE = 0.55
 MAX_VERSIONS = 3  # other artists' versions of the seed's song kept in the lists users see
 SOUNDS_BOOST = 8.0  # Sounds like: lift by the artist's scene affinity
+# With a listener ranker (``listener.Ranker``): Best after its audio head orders by z(listener logit) +
+# BEST_SOUND_WEIGHT * z(sound score) + BEST_AUDIO_WEIGHT * z(melody/samples fusion score); Sounds like by
+# z(sound score) + SOUNDS_LISTENER_WEIGHT * z(listener logit).
+BEST_SOUND_WEIGHT = 0.5
+BEST_AUDIO_WEIGHT = 0.25
+SOUNDS_LISTENER_WEIGHT = 2.0
 # "best" list: reciprocal-rank fusion of the channels' song lists, score = sum(w / (FUSE_K + rank)).
 # Chosen on development splits only; see docs/ANYSONG_EVAL.md.
 FUSE_K = 5
@@ -304,7 +310,9 @@ class AnySong:
                  related_ttl: float = 86400.0, tempo: TempoTable | None = None, tracker=None,
                  vibe_params: samevibe.SameVibeParams | None = None, learn: LearnQueue | None = None,
                  tiers=None, artist_languages: bool = True, copy_score: float | None = COPY_SAMPLES_SCORE,
-                 max_versions: int | None = MAX_VERSIONS, sounds_boost: float = SOUNDS_BOOST):
+                 max_versions: int | None = MAX_VERSIONS, sounds_boost: float = SOUNDS_BOOST,
+                 ranker: listener.Ranker | None = None, best_sound_weight: float = BEST_SOUND_WEIGHT,
+                 sounds_listener_weight: float = SOUNDS_LISTENER_WEIGHT, best_audio_weight: float = BEST_AUDIO_WEIGHT):
         self.engine, self.deezer, self.meta, self.keep_previews = engine, deezer, meta, keep_previews
         self.languages = languages
         # Songs without a confident language label take their artist's majority language in the language gate.
@@ -314,6 +322,13 @@ class AnySong:
         self.copy_score, self.max_versions = copy_score, max_versions
         # Sounds like: lift songs by their artist's scene affinity (0 = the sonic channel's order).
         self.sounds_boost = sounds_boost
+        # Listener-aware ranking (``listener``): needs the scene table; replaces the scene slots and the Sounds like
+        # lift for seeds whose artist the table (or Deezer) knows.
+        self.ranker = ranker if scene is not None else None
+        self.best_sound_weight, self.sounds_listener_weight = best_sound_weight, sounds_listener_weight
+        self.best_audio_weight = best_audio_weight
+        self._artist_tracks = listener.ArtistTracks(scene) if self.ranker is not None else None
+        self._sonic_core: np.ndarray | None = None
         self.learn = learn
         # Catalog tiers (``tiers.TierGate``): songs added by the crawl only for seeds in their artist's scene.
         self.tiers = tiers
@@ -366,7 +381,7 @@ class AnySong:
         return {"ok": True, "device": self.engine.device,
                 "channels": {name: len(ix) for name, ix in self.engine.indexes.items()},
                 "cached_results": len(self.results), "served": served, "scene": scene, "tempo": tempo,
-                "tiers": tiers}
+                "tiers": tiers, "ranker": None if self.ranker is None else self.ranker.meta or "on"}
 
     def search(self, q: str, limit: int = 10) -> dict:
         q = " ".join(q.split())
@@ -523,6 +538,7 @@ class AnySong:
             raise ApiError(503, "busy, retry shortly")
         try:
             t0 = time.perf_counter()
+            windows = None
             if self.engine.indexed(track_id):
                 artist, title = self.meta.get(track_id, ("", ""))
                 query = {"id": track_id, "artist": artist, "title": title, "source": "catalog"}
@@ -533,17 +549,71 @@ class AnySong:
                 if vibe is not None:
                     vibe["bpm"] = self.tempo.bpm(track_id)
             else:
-                query, raw, timings, t, vibe = self._live(track_id)
+                query, raw, timings, t, vibe, windows = self._live(track_id)
                 if self.learn is not None:
                     self.learn.add(track_id, query.get("artist_id"))
             self._count(query["source"])
             timings |= t
             related = self._scene_context(query, timings)
+            res = {"query": query, "raw": raw, "related": related, "vibe": vibe}
+            if self.ranker is not None:
+                res["listener"] = self._listener(res, windows, timings)
             timings["total"] = (time.perf_counter() - t0) * 1000
-            return {"query": query, "raw": raw, "related": related, "vibe": vibe,
-                    "timings_ms": {k: round(v, 1) for k, v in timings.items()}}
+            return res | {"timings_ms": {k: round(v, 1) for k, v in timings.items()}}
         finally:
             self.pending.release()
+
+    def _listener(self, res: dict, windows, timings: dict[str, float]) -> dict | None:
+        """Listener-aware inputs, computed once per seed: each candidate's listener probability (``ranker``) and served
+        sound score, and the scene candidates (``listener.scene_candidates``). None without a known seed artist."""
+        query = res["query"]
+        artist_id = query.get("artist_id")
+        profile = self.scene.profile(artist_id, res.get("related")) if artist_id else None
+        if profile is None:
+            return None
+        t = time.perf_counter()
+        qid = int(query["id"])
+        query_track = None if windows is not None else qid
+        vibe = res.get("vibe")
+        son = dict(vibe["muq"]) if vibe is not None else {}
+        missing = {int(tid) for rows in res["raw"].values() for tid, _ in rows} - set(son)
+        allowed = self._tier_filter(artist_id)
+
+        def score(tids):
+            return self.engine.score_tracks("sonic", tids, windows=windows, query_track=query_track)
+
+        waited: dict[str, float] = {}
+        with self._gpu(waited):
+            if missing:
+                son |= score(missing)
+            scene = listener.scene_candidates(profile, self._artist_tracks, score, self.scene.artist, allowed)
+        son |= scene
+        seed_bpm = vibe["bpm"] if vibe is not None else (self.tempo.bpm(qid) if self.tempo is not None else None)
+        tids, X = listener.features(
+            res["raw"], son, scene, qid, profile, self.scene.related(artist_id) or res.get("related") or (),
+            self.scene, self.scene_params, seed_bpm,
+            self.tempo.bpm if self.tempo is not None else (lambda tid: None), self._language_known)
+        p = self.ranker.predict(X)
+        timings["listener"] = (time.perf_counter() - t) * 1000
+        timings["listener_queue"] = waited.get("queue", 0.0)
+        return {"p": dict(zip(tids, p.tolist())), "son": {tid: float(son[tid]) for tid in tids},
+                "scene": sorted(scene)}
+
+    def _tier_filter(self, artist_id: int) -> Callable[[int], bool] | None:
+        """The catalog tiers for scene candidates: core songs, and crawled songs of the artists the search allows."""
+        if self.tiers is None:
+            return None
+        if self._sonic_core is None:
+            self._sonic_core = self.tiers.rows["sonic"][0].cpu().numpy()
+        eligible = set(self.tiers.artists(artist_id))
+        pos, core = self.engine.indexes["sonic"].pos, self._sonic_core
+        return lambda tid: (tid in pos and bool(core[pos[tid]])) or self.scene.artist(tid) in eligible
+
+    def _language_known(self, track_id: int) -> bool:
+        if self.languages is None:
+            return False
+        item = {"id": int(track_id), "artist": self.meta.get(int(track_id), ("", ""))[0]}
+        return self._item_language(item) != "unknown"
 
     def _allow(self, query: dict) -> dict:
         """Engine keyword for the catalog tiers: row masks for the seed artist's scene as the scene table records it.
@@ -669,7 +739,7 @@ class AnySong:
                     bpm = self.tracker.tempo(clip22)[0]
                     vibe["bpm"] = bpm if np.isfinite(bpm) else None
                     t_search["tempo"] = (time.perf_counter() - t) * 1000
-        return query, raw, timings | t_embed, t_search, vibe
+        return query, raw, timings | t_embed, t_search, vibe, wins.get("sonic")
 
     def _view(self, res: dict, k: int, dedupe: bool, cached: bool, lang_mode: str = "same",
               scene: bool = True) -> dict:
@@ -733,18 +803,25 @@ class AnySong:
                     channel: {key: item for key, item in order.items() if keep(item)}
                     for channel, order in songs.items()
                 }
-        fused = rank(filtered)
-        best = []
-        for key, score, ranks in fused[:k]:
-            channel = min(ranks, key=lambda name: ranks[name])
-            best.append(filtered[channel][key] | {"score": round(score, 5), "ranks": ranks})
         query = q | {"language": language, "language_mode": lang_mode, "hidden": hidden, "scene": scene_state}
-        vibe = []
         if res.get("vibe") is not None and "sonic" in filtered:
-            vibe = self._same_vibe(res["vibe"], filtered, [key for key, _, _ in fused], language, lang_mode, k)
             bpm = res["vibe"]["bpm"]
             query["bpm"] = round(bpm, 1) if bpm else None
-        sounds = self._sounds(filtered, k, profile, artists)
+        if scene_state == "on" and res.get("listener") is not None:
+            keep = (lambda item: self._item_language(item) in {"unknown", language}) \
+                if lang_mode == "same" and language != "unknown" and self.languages is not None else None
+            best, vibe, sounds = self._listener_lists(res, filtered, artists, profile, qkey, keep, language,
+                                                      lang_mode, k, dedupe)
+        else:
+            fused = rank(filtered)
+            best = []
+            for key, score, ranks in fused[:k]:
+                channel = min(ranks, key=lambda name: ranks[name])
+                best.append(filtered[channel][key] | {"score": round(score, 5), "ranks": ranks})
+            vibe = []
+            if res.get("vibe") is not None and "sonic" in filtered:
+                vibe = self._same_vibe(res["vibe"], filtered, [key for key, _, _ in fused], language, lang_mode, k)
+            sounds = self._sounds(filtered, k, profile, artists)
         lists = {"best": best} if best else {}
         if vibe:
             lists["vibe"] = vibe
@@ -752,6 +829,102 @@ class AnySong:
             lists["sounds"] = sounds
         return {"ok": True, "query": query, "results": lists | out, "timings_ms": res["timings_ms"],
                 "cached": cached}
+
+    def _listener_lists(self, res: dict, filtered: dict[str, dict[Hashable, dict]], artists: dict[Hashable, int | None],
+                        profile, qkey, keep: Callable[[dict], bool] | None, language: str, lang_mode: str, k: int,
+                        dedupe: bool) -> tuple[list[dict], list[dict], list[dict]]:
+        """Best matches, Same vibe and Sounds like with the listener ranker (``res["listener"]``, from ``_listener``).
+
+        Best: the audio head (``scene.audio_head``, likely covers and samples), then every other candidate, the channel
+        lists' songs and the scene candidates, by z(listener logit) + ``best_sound_weight`` * z(sound score), then the
+        per-artist caps. Sounds like: the sonic list by z(sound score) + ``sounds_listener_weight`` * z(listener logit),
+        one song per artist. Same vibe: ``samevibe.same_vibe`` over those two orders. Songs by the seed's own artist
+        get the median listener logit, so sound alone places them.
+        """
+        data = res["listener"]
+        p_of, son_of = data["p"], data["son"]
+        extra: dict[Hashable, dict] = {}
+        for tid in data["scene"]:
+            artist, title = self.meta.get(int(tid), (None, None))
+            if title is None or int(tid) not in son_of:
+                continue
+            key: Hashable = song_key(artist, title) if dedupe else ("id", int(tid))
+            if key in extra or any(key in order for order in filtered.values()):
+                continue
+            if dedupe and qkey is not None and key[1] == qkey[1]:
+                continue  # the seed's own song or another artist's version of it: Best's head is for those
+            item = {"id": int(tid), "score": round(son_of[int(tid)], 4), "artist": artist, "title": title}
+            if keep is None or keep(item):
+                extra[key] = item
+                artists[key] = self.scene.artist(int(tid))
+        pos = {channel: {key: i for i, key in enumerate(order, 1)} for channel, order in filtered.items()}
+        keys = list(dict.fromkeys([key for order in filtered.values() for key in order] + list(extra)))
+        shown: dict[Hashable, tuple[dict, dict[str, int]]] = {}
+        for key in keys:
+            ranks = {channel: p[key] for channel, p in pos.items() if key in p}
+            if ranks:
+                channel = min(ranks, key=lambda name: (ranks[name], name))
+                shown[key] = (filtered[channel][key], ranks)
+            else:
+                shown[key] = (extra[key], {})
+
+        def logits(ks: list, item_of: Callable[[Hashable], dict]) -> np.ndarray:
+            p = np.array([p_of.get(int(item_of(key)["id"]), np.nan) for key in ks], dtype=np.float64)
+            out = listener.logit(np.nan_to_num(p, nan=0.5))
+            neutral = np.isnan(p) | np.array([artists.get(key) == profile.artist_id for key in ks], dtype=bool)
+            out[neutral] = np.median(out[~neutral]) if (~neutral).any() else 0.0
+            return out
+
+        def sound(ks: list, item_of: Callable[[Hashable], dict]) -> np.ndarray:
+            s = np.array([son_of.get(int(item_of(key)["id"]), np.nan) for key in ks], dtype=np.float64)
+            return np.nan_to_num(s, nan=np.nanmin(s) if np.isfinite(s).any() else 0.0)
+
+        def ordered(ks: list, score: np.ndarray) -> list:
+            return [ks[i] for i in np.lexsort((np.arange(len(ks)), -score))]
+
+        orders = {channel: list(order) for channel, order in filtered.items()}
+        scores = {channel: [item["score"] for item in order.values()] for channel, order in filtered.items()}
+        head = [key for key in audio_head(orders, scores, self.scene_params) if key in shown]
+        rest = [key for key in keys if key not in set(head)]
+        if rest:
+            item_of = lambda key: shown[key][0]  # noqa: E731
+            audio = [sum(1.0 / (FUSE_K + pos[channel][key]) for channel in ("melody", "samples")
+                         if key in pos.get(channel, {})) for key in rest]
+            rest = ordered(rest, listener.zscore(logits(rest, item_of))
+                           + self.best_sound_weight * listener.zscore(sound(rest, item_of))
+                           + self.best_audio_weight * listener.zscore(audio))
+        best_order = cap_artists(head + rest, artists.get, profile.artist_id, self.scene_params)
+        best = [shown[key][0] | {"score": round(1.0 / (FUSE_K + i), 5), "ranks": shown[key][1]}
+                for i, key in enumerate(best_order[:k], 1)]
+
+        sonic = filtered.get("sonic", {})
+        sonic_order = list(sonic)
+        if sonic_order:
+            item_of = sonic.__getitem__
+            sonic_order = ordered(sonic_order, listener.blend(sound(sonic_order, item_of),
+                                                              logits(sonic_order, item_of),
+                                                              self.sounds_listener_weight))
+        sounds = self._sounds(filtered, k, order=sonic_order)
+
+        vibe: list[dict] = []
+        inputs = res.get("vibe")
+        if inputs is not None and sonic:
+            rep: dict[Hashable, dict] = {}
+            for channel in samevibe.CHANNEL_ORDER:
+                for key, item in filtered.get(channel, {}).items():
+                    rep.setdefault(key, item)
+            rep |= {key: item for key, item in extra.items() if key not in rep}
+            cands = {}
+            for key, item in rep.items():
+                tid = int(item["id"])
+                cands[key] = samevibe.Candidate(
+                    track_id=tid, bpm=self.tempo.bpm(tid), muq=son_of.get(tid, inputs["muq"].get(tid, -np.inf)),
+                    artist_id=artists.get(key) or 0,
+                    language=self._item_language(item) if self.languages is not None else "unknown")
+            chosen = samevibe.same_vibe([key for key in best_order if key in rep], sonic_order, cands, inputs["bpm"],
+                                        language, lang_mode, self.vibe_params)
+            vibe = [rep[key] | {"score": round(1.0 / (FUSE_K + i), 5)} for i, key in enumerate(chosen[:k], 1)]
+        return best, vibe, sounds
 
     def _item_language(self, item: dict) -> str:
         """A listed song's language: its own label, else (with ``artist_languages``) its artist's majority language."""
@@ -784,13 +957,17 @@ class AnySong:
                 for channel, order in songs.items()}
 
     def _sounds(self, view: dict[str, dict[Hashable, dict]], k: int, profile=None,
-                artists: Mapping[Hashable, int | None] | None = None) -> list[dict]:
+                artists: Mapping[Hashable, int | None] | None = None, order: Sequence[Hashable] | None = None
+                ) -> list[dict]:
         """The Sounds like list: the sonic channel as filtered for Best (no seed song and, in same-language mode,
         no confidently other-language song), one song per artist, each with its catalog tempo when known. With
-        ``sounds_boost`` and a scene profile, songs move up by their artist's scene affinity: 1 / (k + rank) times
-        (1 + sounds_boost * affinity)."""
+        ``order`` (the listener ranker's), songs follow it. Otherwise, with ``sounds_boost`` and a scene profile, songs
+        move up by their artist's scene affinity: 1 / (k + rank) times (1 + sounds_boost * affinity)."""
         items = list(view.get("sonic", {}).items())
-        if self.sounds_boost > 0 and profile is not None and self.scene is not None and artists is not None:
+        if order is not None:
+            sonic = view.get("sonic", {})
+            items = [(key, sonic[key]) for key in order]
+        elif self.sounds_boost > 0 and profile is not None and self.scene is not None and artists is not None:
             def lifted(i: int, key: Hashable) -> float:
                 artist_id = artists.get(key)
                 candidate = self.scene.stored(artist_id) if artist_id else None
@@ -981,9 +1158,13 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--cache-size", type=int, default=4096)
     p.add_argument("--learn-queue", type=Path, default=None,
                    help="append songs answered live (Deezer track and artist ids, UTC day) for anysong.crawl")
+    p.add_argument("--ranker", type=Path, default=None,
+                   help="listener ranker (anysong.listener) for the lists users see; needs --scene")
     args = p.parse_args(argv)
     if args.core_ids is not None and args.scene is None:
         p.error("--core-ids needs --scene")
+    if args.ranker is not None and args.scene is None:
+        p.error("--ranker needs --scene")
 
     scratch = args.preview_dir or Path(tempfile.mkdtemp(prefix="anysong-"))
     t = time.perf_counter()
@@ -1015,13 +1196,15 @@ def main(argv: list[str] | None = None) -> None:
         tracker.tempo(np.zeros(30 * 22050, np.float32))  # warm-up
     service = AnySong(engine, Deezer(scratch), meta, args.cache_size, args.max_pending,
                       languages=languages, scene=scene, tempo=tempo, tracker=tracker,
-                      learn=LearnQueue(args.learn_queue) if args.learn_queue else None, tiers=tiers)
+                      learn=LearnQueue(args.learn_queue) if args.learn_queue else None, tiers=tiers,
+                      ranker=listener.Ranker.load(args.ranker) if args.ranker is not None else None)
     server = Server((args.host, args.port), service, args.search_per_min, args.similar_per_min,
                     args.cors_origin, args.client_ip_header)
     sizes = {name: len(ix) for name, ix in engine.indexes.items()}
     hubs = {name: getattr(ix, "hub_alpha", 0.0) for name, ix in engine.indexes.items()}
     print(f"ready in {time.perf_counter() - t:.1f}s (warmup {warm:.1f}s) {sizes} hub_alpha={hubs} "
-          f"tiers={None if tiers is None else tiers.sizes} on http://{args.host}:{args.port}", flush=True)
+          f"tiers={None if tiers is None else tiers.sizes} ranker={service.health()['ranker']} "
+          f"on http://{args.host}:{args.port}", flush=True)
     try:
         server.serve_forever()
     finally:
