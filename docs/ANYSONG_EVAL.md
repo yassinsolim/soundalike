@@ -1181,6 +1181,46 @@ Checks through the public URL:
 - Every crawled song in the returned lists was by the seed's artist or one of its related artists.
 - Fixed seeds captured before and after the swap kept most of their top 10; zero to five songs changed per list.
 
+### The full crawl, about 1M songs (pre-registered 2026-11-08, before any result)
+
+**Change under test.** All 730,016 crawled songs (the crawl reached its target at 21:54), indexed with the same
+settings:
+- **Catalog:** 999,293 songs, the 269,278 core songs plus the crawl's. Catalog tiers are unchanged (same core ids).
+- **Tables:** the scene table, languages and tempo are rebuilt from the full crawl, including Wikidata facts for
+  13,207 new artists. The hub penalty is rebuilt.
+- **Serving:** stage 1 may run as an fp16 GEMM for channels where that is measured faster on the RTX 2070 SUPER and
+  exact (`--half-stage1`, decided before rules 1 to 3 run, which then use the served setting).
+
+**Baselines.** Both the served gated 889k catalog and the original 269k catalog. Every rule must pass against both.
+
+**Must pass (all), else not deployed:**
+
+1. **Lists users see,** on the 799 held-out seeds (used twice before) and the 1,000 fresh seeds (used once
+   before). Nothing is tuned on either set. The ListenBrainz hit rate's paired 95 % interval must have its lower
+   bound at −0.010 or above. Limits on mean change:
+   - Shared genre: −0.02 or above.
+   - Other-language rows: up by at most 1 point.
+   - Derivative uploads: up by at most 1 point.
+
+   Labels are rebuilt for the bigger catalog and score all three conditions.
+2. **Relationship benchmarks** (`eval_index --core-ids`, served stage-1 setting): any-tab HR@10 may drop by at most
+   0.03 on covers, samples and samples reverse (held-out) and by at most 0.10 on Gen Alpha.
+3. **Exactness** with the tier masks and the served stage-1 setting: the served top 20 matches brute force for at
+   least 99 % of 300 random tracks per channel.
+4. **Serving on the RTX 2070 SUPER:**
+   - `serve_check` parity: every re-embedded catalog track ranks itself first.
+   - Startup under 2 minutes.
+   - Peak VRAM at most 7,248 MiB.
+   - Unseen-song p95 no higher than the served catalog's (the owner's "no slower than now"). Both are measured in the
+     same deploy session, before and after the swap, on the same 40 songs. These are taken from 50 random
+     never-crawled frontier artists, one top track each, so neither catalog holds them. Each song is searched,
+     then requested; only that request is timed. The crawl is stopped during both measurements.
+
+**Half-precision stage 1 decision rule.** fp16 is enabled for a channel only if:
+- On the RTX 2070 SUPER, its stage-1 time per row is at least 10 % lower than fp32's (median of repeated runs on a
+  slice of the served index).
+- On the RTX 5080 at 999k, its top-20 exactness (300 random tracks) is no lower than fp32's.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
