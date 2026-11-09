@@ -223,7 +223,9 @@ class TwoStageIndex(_Ranked):
     stage-1 estimate shifted below every exact score, so ranks past ``candidates`` are approximate.
 
     Projections are fp16, or integers with one scale per window (``proj_scale``): int8, or uint8 holding two
-    4-bit values per byte (``index_build.quantize_windows``).
+    4-bit values per byte (``index_build.quantize_windows``). Integers are exact in fp16, so with ``half_stage1``
+    stage 1 multiplies them as an fp16 GEMM (tensor cores, half the bytes) against the query projection scaled to
+    |x| <= 1, which keeps every window dot product inside fp16's range; fp16 projections ignore the option.
 
     With a hub penalty (``hub_build``), every score is lowered by ``alpha * h(track)`` before candidates are
     picked, where ``h`` is the track's mean top-k song similarity: CSLS, which demotes tracks close to everything.
@@ -231,7 +233,8 @@ class TwoStageIndex(_Ranked):
 
     def __init__(self, channel: Channel, ids: np.ndarray, proj: torch.Tensor, basis: torch.Tensor,
                  norms: torch.Tensor, full: np.ndarray, mu: torch.Tensor | None, candidates: int = 1000,
-                 hub: torch.Tensor | None = None, hub_alpha: float = 0.0, proj_scale: torch.Tensor | None = None):
+                 hub: torch.Tensor | None = None, hub_alpha: float = 0.0, proj_scale: torch.Tensor | None = None,
+                 half_stage1: bool = False):
         n, w = len(ids), full.shape[1]
         self.proj_bits = {torch.int8: 8, torch.uint8: 4}.get(proj.dtype, 16)
         stored_dim = proj.shape[2] * 2 if self.proj_bits == 4 else proj.shape[2]
@@ -250,13 +253,14 @@ class TwoStageIndex(_Ranked):
         self.channel, self.proj, self.basis, self.norms, self.full, self.mu = channel, proj, basis, norms, full, mu
         self.proj_scale = proj_scale.to(proj.device).float() if proj_scale is not None else None
         self.candidates, self.device = candidates, proj.device
+        self.half_stage1 = bool(half_stage1) and self.proj_bits < 16
         self.hub_alpha = float(hub_alpha)
         self.penalty = (self.hub_alpha * hub.to(proj.device).float()) if self.hub_alpha else None
         self._set_ids(ids, proj.device)
 
     @classmethod
     def load(cls, path: Path, channel: Channel, device: str = "cpu", candidates: int | None = None,
-             read_threads: int = 8, hub_alpha: float | None = None) -> TwoStageIndex:
+             read_threads: int = 8, hub_alpha: float | None = None, half_stage1: bool = False) -> TwoStageIndex:
         """``candidates`` defaults to the depth recorded at build time and ``hub_alpha`` to the alpha recorded
         by ``hub_build`` (0 when absent; pass 0 to disable the penalty)."""
         path = Path(path)
@@ -274,7 +278,7 @@ class TwoStageIndex(_Ranked):
                    torch.from_numpy(np.load(path / "basis.npy")).to(device),
                    torch.from_numpy(np.load(path / "norms.npy")).to(device),
                    RowFile(path / "full.npy", read_threads), mu, candidates or meta.get("candidates", 1000),
-                   hub, alpha, scale)
+                   hub, alpha, scale, half_stage1)
 
     def prep_query(self, win: np.ndarray | torch.Tensor) -> torch.Tensor:
         x = torch.as_tensor(win).to(self.device).float()
@@ -297,19 +301,25 @@ class TwoStageIndex(_Ranked):
         return exact
 
     def _proj_rows(self, a: int, b: int) -> torch.Tensor:
-        """Stage-1 projections of rows a..b as fp32 (quantized integers before their per-window scale)."""
+        """Stage-1 projections of rows a..b as fp32, or fp16 with ``half_stage1`` (quantized integers before their
+        per-window scale)."""
         p = self.proj[a:b]
         if self.proj_bits == 4:
             p = torch.stack(((p & 15).to(torch.int8) - 8, (p >> 4).to(torch.int8) - 8), -1).flatten(-2)
-        return p.float()
+        return p.half() if self.half_stage1 else p.float()
 
     @torch.inference_mode()
     def stage1(self, q: torch.Tensor, chunk: int = 8192) -> torch.Tensor:
         """Prepared queries [B, W, D] -> approximate scores [B, N]."""
         qp, qn, dim = q @ self.basis, (q ** 2).sum(-1), q.shape[-1]
+        if self.half_stage1:
+            qs = qp.abs().amax(dim=(1, 2)).clamp_min(1e-12)[:, None, None, None]
+            qp = (qp / qs[..., 0]).half()
         out = torch.empty(len(q), len(self), device=self.device)
         for s in range(0, len(self), chunk):
             sims = torch.einsum("bwd,nvd->bnwv", qp, self._proj_rows(s, s + chunk))
+            if self.half_stage1:
+                sims = sims.float() * qs
             if self.proj_scale is not None:
                 sims *= self.proj_scale[s:s + chunk][None, :, None, :]
             out[:, s:s + chunk] = window_scores(sims, self.channel.mode, qn, self.norms[s:s + chunk], dim)
@@ -358,18 +368,19 @@ class Engine:
 
     def __init__(self, index_dir: Path | str, channels: Iterable[str] = tuple(CHANNELS), device: str = "cuda",
                  index_device: str | None = None, drop_text_tower: bool = True, candidates: int | None = None,
-                 hub_alpha: float | None = None):
+                 hub_alpha: float | None = None, half_stage1: Iterable[str] = ()):
         self.device = device
         self.drop_text_tower = drop_text_tower
         self.channels = [CHANNELS[c] for c in channels]
         self.load_secs: dict[str, float] = {}
         self.indexes: dict[str, ChannelIndex | TwoStageIndex] = {}
+        half = set(half_stage1)
         for ch in self.channels:
             t = time.perf_counter()
             built = Path(index_dir) / ch.name
             if (built / "meta.json").exists():
                 self.indexes[ch.name] = TwoStageIndex.load(built, ch, index_device or device, candidates,
-                                                           hub_alpha=hub_alpha)
+                                                           hub_alpha=hub_alpha, half_stage1=ch.name in half)
             else:
                 self.indexes[ch.name] = ChannelIndex.load(Path(index_dir), ch, index_device or device)
             self.load_secs[f"index:{ch.name}"] = round(time.perf_counter() - t, 2)

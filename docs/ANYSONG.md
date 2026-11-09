@@ -229,6 +229,11 @@ top 20 were identical in every channel. At top 100, one melody query and one sou
 ([ANYSONG_EVAL.md](ANYSONG_EVAL.md#compressed-stage-1-2026-11-07)). Re-run that comparison at the new size before
 serving it.
 
+Integer projections are exact in fp16, so `api --half-stage1 <channels>` (also on `serve_check` and `eval_index`)
+runs a channel's stage 1 as an fp16 GEMM against the query projection scaled to |x| ≤ 1. On the 2070 SUPER that
+made the 4-bit samples stage 1 23 % faster (196 against 256 ms per million tracks) but the 8-bit melody and sound
+stages 6 % and 14 % slower, so the service enables it for samples only. Candidates are still re-scored exactly.
+
 ## Language labels
 
 `python -m soundalike.anysong.languages` labels cached catalog previews with the pinned Whisper large-v3-turbo

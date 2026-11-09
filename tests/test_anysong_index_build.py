@@ -165,6 +165,38 @@ def test_quantized_projection_decodes_within_half_a_step_and_reranks_exactly(tmp
     assert torch.allclose(two.scores(q), brute.scores(q), atol=1e-5)
 
 
+@pytest.mark.parametrize("bits", [8, 4])
+@pytest.mark.parametrize("prep,mode", [("raw", "maxsim"), ("center", "maxsim"), ("none", "bpwr")])
+def test_half_stage1_tracks_the_fp32_estimate_and_reranks_exactly(tmp_path, prep, mode, bits):
+    ch = channel(prep, mode)
+    ids, win = write_shards(tmp_path / "emb" / "fake", n=120, d=16, dup=False, rank=6)
+    index_build.build_channel(ch, tmp_path / "emb", tmp_path / "ix", 8, None, "cpu", bits=bits)
+    fp32 = serve.TwoStageIndex.load(tmp_path / "ix", ch, candidates=25)
+    half = serve.TwoStageIndex.load(tmp_path / "ix", ch, candidates=25, half_stage1=True)
+    assert half.half_stage1 and not fp32.half_stage1
+    brute = serve.ChannelIndex.load(tmp_path / "emb", ch)
+    q = torch.stack([brute.stored_query(int(ids[3])), brute.prep_query(win[8].astype(np.float32) + 0.3)])
+    estimate, reference = half.stage1(q, chunk=7), fp32.stage1(q)
+    assert estimate.dtype == torch.float32
+    assert torch.allclose(estimate, reference, atol=2e-3 * float(reference.abs().max()))
+    # fp16 leaves the served ranking as fp32 gives it, and every candidate is re-scored exactly.
+    served, reference_served = half.scores(q), fp32.scores(q)
+    for b in range(2):
+        assert [t for t, _ in half.top(served[b], 10)] == [t for t, _ in fp32.top(reference_served[b], 10)]
+    every = serve.TwoStageIndex.load(tmp_path / "ix", ch, candidates=len(ids), half_stage1=True)
+    assert torch.allclose(every.scores(q), brute.scores(q), atol=1e-5)
+
+
+def test_half_stage1_is_off_for_fp16_projections_and_passed_on_by_the_engine(tmp_path):
+    samples = serve.CHANNELS["samples"]
+    write_shards(tmp_path / "emb" / samples.model, n=12, d=8)
+    index_build.build_channel(samples, tmp_path / "emb", tmp_path / "ix16" / "samples", 4, None, "cpu")
+    assert not serve.TwoStageIndex.load(tmp_path / "ix16" / "samples", samples, half_stage1=True).half_stage1
+    index_build.build_channel(samples, tmp_path / "emb", tmp_path / "ix" / "samples", 4, None, "cpu", bits=4)
+    assert serve.Engine(tmp_path / "ix", ["samples"], "cpu", half_stage1=["samples"]).indexes["samples"].half_stage1
+    assert not serve.Engine(tmp_path / "ix", ["samples"], "cpu").indexes["samples"].half_stage1
+
+
 def test_quantized_builds_reject_bad_settings_and_fp16_rebuilds_drop_the_scale(tmp_path):
     write_shards(tmp_path / "emb" / "fake", n=12, d=8)
     with pytest.raises(ValueError, match="even dimension"):

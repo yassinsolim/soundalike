@@ -75,6 +75,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--candidates", type=int, default=None,
                    help="exact re-rank depth for built indexes (default: per-channel value from meta.json)")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    p.add_argument("--half-stage1", nargs="*", default=[], choices=list(CHANNELS),
+                   help="channels whose quantized stage 1 runs as an fp16 GEMM, as served with api --half-stage1")
     p.add_argument("--out", required=True)
     args = p.parse_args(argv)
     previews = Path(args.previews)
@@ -84,7 +86,7 @@ def main(argv: list[str] | None = None) -> None:
     report["gpu_used_mib_before"] = gpu_used_mib()
     if args.device.startswith("cuda"):
         torch.cuda.reset_peak_memory_stats()
-    eng = Engine(args.index, args.channels, args.device, candidates=args.candidates)
+    eng = Engine(args.index, args.channels, args.device, candidates=args.candidates, half_stage1=args.half_stage1)
     eng.warm()
     report["load_secs"] = eng.load_secs
     report["index_sizes"] = {k: len(v) for k, v in eng.indexes.items()}
