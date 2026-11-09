@@ -52,9 +52,12 @@ you chose.
   searches a 999,293-song index and works for any song with a 30-second
   Deezer preview, including songs outside the index, which take a few seconds
   to analyze. Other-language songs are hidden when the seed language is known;
-  uncertain and instrumental results stay visible. Use **Show all languages**
+  a song without a language label of its own counts in its artist's usual
+  language, and songs with neither stay visible. Use **Show all languages**
   to restore cross-language matches. If the seed language cannot be established,
-  no language filter is applied. Tags say whether your song was **In our library**,
+  no language filter is applied. Close copies of your own song by other artists
+  (re-uploads, edits) are left out, and at most three other versions of it are
+  shown. Tags say whether your song was **In our library**,
   **Heard live just now**, or **Heard live earlier**. If the matcher used a song
   with a different title or artist, the list names it.
 - **Same vibe** comes from the same hosted response as Best matches: songs from
@@ -64,7 +67,8 @@ you chose.
   list, and not with the local companion.
 - **Sounds like** comes from the same hosted response too: songs with the same
   overall sound (instruments, production, and mood) by Soundalike's MuQ-MuLan
-  model, one per artist, with each song's BPM. It also follows the **Show all
+  model, one per artist, with each song's BPM. Songs by artists from your
+  song's scene move up. It also follows the **Show all
   languages** switch, and like the other two lists it works for any song with a
   Deezer preview. Until November 2026 this tab used an older model that only
   knew a fixed 272,853-track library; that service now only answers when the
@@ -102,7 +106,8 @@ search shows without asking.
   candidates with that exact known language are shown (English with English,
   French with French, and so on). Best matches, Same vibe, and hosted Sounds
   like use the server's audio-derived language gate instead: confidently
-  different-language songs are hidden by default,
+  different-language songs are hidden by default (judged by the song's own
+  label, else its artist's usual language),
   uncertain/instrumental rows remain, and **Show all languages** restores the
   unfiltered list. The individual melody, samples, and sounds tabs are not
   filtered, so cross-language covers and samples remain explorable. The Sounds-like gate examines only
