@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from dataclasses import replace
 
 from soundalike.anysong import api
 from soundalike.anysong.scene import (SceneParams, SceneTable, affinity, build, components, inferred,
@@ -90,23 +91,41 @@ def test_standout_protects_a_likely_cover_from_scene_neighbours(table):
     assert z == {"a": pytest.approx(1.0), "b": pytest.approx(1.0)}
 
 
+SLOTS_V1 = SceneParams(boost=2.0, pattern="AAS", rank_evidence=3)  # the slots served until 2026-11-09
+
+
+def test_default_slots_give_every_place_after_the_head_to_the_scene_lane(table):
+    unrelated = [f"a{i}" for i in range(8)]
+    orders = {"melody": [*unrelated, "uk"], "samples": [], "sonic": ["uk_sonic"]}
+    artists = {**{x: 0 for x in unrelated}, "uk": 11, "uk_sonic": 11}
+    flat = {"melody": [-2.0] * 9, "samples": []}  # no cover/sample evidence: the head is the first three songs
+    keys = [k for k, _, _ in scene_fuse(orders, artists, table.profile(10), table, SceneParams(), scores=flat)]
+    # the lane by affinity * (audio + sonic RRF): the sonic-only neighbour, then the melody one; then audio again
+    assert keys[:6] == ["a0", "a1", "a2", "uk_sonic", "uk", "a3"]
+    top3 = {"melody": [-2.0] * 9, "samples": []}
+    orders_top3 = {"melody": [*unrelated, "uk"], "samples": ["s0"], "sonic": ["uk_sonic"]}
+    # a top-3 place alone no longer extends the head (rank_evidence 0): only calibrated scores do
+    assert [k for k, _, _ in scene_fuse(orders_top3, artists | {"s0": 0}, table.profile(10), table, SceneParams(),
+                                        scores=top3 | {"samples": [0.1]})][3:5] == ["uk_sonic", "uk"]
+
+
 def test_slots_keep_the_audio_head_and_interleave_the_scene_lane(table):
     unrelated = [f"a{i}" for i in range(8)]
     orders = {"melody": [*unrelated, "uk"], "samples": [], "sonic": ["uk_sonic"]}
     artists = {**{x: 0 for x in unrelated}, "uk": 11, "uk_sonic": 11}
     q = table.profile(10)
     flat = {"melody": [-2.0] * 9, "samples": []}  # no cover/sample evidence and no standout
-    out = scene_fuse(orders, artists, q, table, SceneParams(), scores=flat)
+    out = scene_fuse(orders, artists, q, table, SLOTS_V1, scores=flat)
     keys = [k for k, _, _ in out]
     # head of three audio songs; then A: the lifted scene neighbour, A: next audio song, S: the sonic-only neighbour
     assert keys[:6] == ["a0", "a1", "a2", "uk", "a3", "uk_sonic"]
     assert dict((k, r) for k, _, r in out)["uk_sonic"] == {"sonic": 1}
     assert [s for _, s, _ in out] == sorted((s for _, s, _ in out), reverse=True)  # positional scores
     evidence = {"melody": [-2.0] * 5 + [-1.4] + [-2.0] * 3, "samples": []}  # a5 reaches the cover threshold
-    assert [k for k, _, _ in scene_fuse(orders, artists, q, table, SceneParams(), scores=evidence)][:6] == \
+    assert [k for k, _, _ in scene_fuse(orders, artists, q, table, SLOTS_V1, scores=evidence)][:6] == \
         unrelated[:6]
     plain = [k for k, _, _ in api.fuse({"melody": orders["melody"]})]
-    assert [k for k, _, _ in scene_fuse(orders, artists, None, table, SceneParams(), scores=flat)] == plain
+    assert [k for k, _, _ in scene_fuse(orders, artists, None, table, SLOTS_V1, scores=flat)] == plain
 
 
 def test_a_channel_top3_song_extends_the_head(table):
@@ -118,8 +137,9 @@ def test_a_channel_top3_song_extends_the_head(table):
     baseline = [k for k, _, _ in api.fuse({"melody": melody, "samples": samples})]
     assert baseline[:6] == ["m0", "s0", "m1", "s1", "m2", "s2"]
     # s2 is third in the samples list, so the head reaches it and no scene song moves above it
-    assert [k for k, _, _ in scene_fuse(orders, artists, q, table, SceneParams(), scores=flat)][:6] == baseline[:6]
-    shallow = [k for k, _, _ in scene_fuse(orders, artists, q, table, SceneParams(rank_evidence=0), scores=flat)]
+    assert [k for k, _, _ in scene_fuse(orders, artists, q, table, SLOTS_V1, scores=flat)][:6] == baseline[:6]
+    shallow = [k for k, _, _ in scene_fuse(orders, artists, q, table, replace(SLOTS_V1, rank_evidence=0),
+                                           scores=flat)]
     assert shallow[:3] == baseline[:3] and shallow[3:6] == ["uk", "s1", "uk_sonic"]
 
 

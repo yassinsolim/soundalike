@@ -60,6 +60,7 @@ function loadExtension(fetchImpl, options = {}) {
   const songChangeListeners = [];
   const graphqlRequests = [];
   const cosmosRequests = [];
+  const isrcRequests = [];
   const logs = [];
   const historyListeners = [];
   const storage = options.storage || new Map();
@@ -519,12 +520,23 @@ function loadExtension(fetchImpl, options = {}) {
         };
       },
     },
-    ...(options.languageByTrackId ? {
+    ...((options.languageByTrackId || options.isrc) ? {
       CosmosAsync: {
         async get(url) {
+          // The seed's ISRC: Spotify's metadata service, then the Web API.
+          if (url.includes("/metadata/4/track/") || url.includes("api.spotify.com/v1/tracks/")) {
+            isrcRequests.push(url);
+            const source = url.includes("/metadata/4/track/") ? "metadata" : "webApi";
+            const answer = await options.isrc?.[source];
+            if (answer instanceof Error) throw answer;
+            if (source === "metadata") {
+              return answer ? { external_id: [{ type: "isrc", id: answer }] } : {};
+            }
+            return answer ? { external_ids: { isrc: answer } } : {};
+          }
           cosmosRequests.push(url);
           const trackId = url.match(/\/track\/([^?]+)/)?.[1];
-          const configured = options.languageByTrackId[trackId];
+          const configured = options.languageByTrackId?.[trackId];
           const attempt = languageAttempts.get(trackId) || 0;
           languageAttempts.set(trackId, attempt + 1);
           const language = Array.isArray(configured)
@@ -649,6 +661,7 @@ function loadExtension(fetchImpl, options = {}) {
     feedback,
     rows,
     bestRequests,
+    isrcRequests,
     tabs,
     tab(view) {
       return tabs.find((item) => item.dataset.view === view);
@@ -2098,7 +2111,7 @@ const soundsFixture = [
   { title: "Take My Breath", artist: "The Weeknd", bpm: 121.7 },
 ];
 
-const bestCacheKey = "best:anysong-best-rrf-language-vibe-sounds-v3:same:spotify:track:test";
+const bestCacheKey = "best:anysong-best-rrf-language-vibe-sounds-v4:same:spotify:track:test";
 
 function bestMatchesBody(best = bestFixture, overrides = {}) {
   return {
@@ -2177,6 +2190,57 @@ const hostedMiss = async () => response(422, {
   error: "This track is not in the hosted library.",
 });
 
+test("sends the seed's ISRC from Spotify's metadata service", async () => {
+  const app = loadBestMatchesExtension({ isrc: { metadata: "usum7 1703861" } });
+
+  await app.run();
+  await waitFor(() => app.bestRequests.length === 1);
+
+  const bestUrl = new URL(app.bestRequests[0]);
+  assert.equal(bestUrl.searchParams.get("isrc"), "USUM71703861");
+  assert.equal(bestUrl.searchParams.get("title"), "Blinding Lights");
+  // "test" in Spotify's base 62, as the metadata service's hex id.
+  assert.ok(app.isrcRequests.includes(
+    "https://spclient.wg.spotify.com/metadata/4/track/000000000000000000000000006a4f35?market=from_token"));
+});
+
+test("takes the seed's ISRC from the Web API when the metadata service fails", async () => {
+  const app = loadBestMatchesExtension({
+    isrc: { metadata: new Error("unavailable"), webApi: "GBARL9300135" },
+  });
+
+  await app.run();
+  await waitFor(() => app.bestRequests.length === 1);
+
+  assert.equal(new URL(app.bestRequests[0]).searchParams.get("isrc"), "GBARL9300135");
+});
+
+test("asks by title and artist when Spotify gives no usable ISRC", async () => {
+  const app = loadBestMatchesExtension({
+    isrc: { metadata: "not-an-isrc", webApi: new Error("429") },
+  });
+
+  await app.run();
+  await waitFor(() => app.bestRequests.length === 1);
+
+  const bestUrl = new URL(app.bestRequests[0]);
+  assert.equal(bestUrl.searchParams.get("isrc"), null);
+  assert.equal(bestUrl.searchParams.get("artist"), "The Weeknd");
+  assert.deepEqual(errorNotifications(app), []);
+});
+
+test("stops waiting for the ISRC after a moment", async () => {
+  const never = new Promise(() => {});
+  const app = loadBestMatchesExtension({ isrc: { metadata: never, webApi: never } });
+  const started = Date.now();
+
+  await app.run();
+  await waitFor(() => app.bestRequests.length === 1, 3000);
+
+  assert.ok(Date.now() - started >= 1400);
+  assert.equal(new URL(app.bestRequests[0]).searchParams.get("isrc"), null);
+});
+
 test("opens on Best matches with Sounds like one tab away", async () => {
   const app = loadBestMatchesExtension();
 
@@ -2195,10 +2259,11 @@ test("opens on Best matches with Sounds like one tab away", async () => {
   assert.equal(bestUrl.searchParams.get("artist"), "The Weeknd");
   assert.equal(bestUrl.searchParams.get("k"), "30");
   assert.equal(bestUrl.searchParams.get("lang"), "same");
+  assert.equal(bestUrl.searchParams.get("isrc"), null);  // Spotify gave none
   // A new response format gets a new URL, so HTTP-cached older responses are skipped.
   assert.equal(
     bestUrl.searchParams.get("policy"),
-    "anysong-best-rrf-language-vibe-sounds-v3",
+    "anysong-best-rrf-language-vibe-sounds-v4",
   );
   assert.equal(
     app.urls.filter((url) => url.includes("/api/spicetify_recommend")).length,

@@ -164,11 +164,13 @@ search shows without asking.
 ## Privacy
 
 For Best matches, Same vibe, and Sounds like, Soundalike sends the selected
-track's title and artist to `https://soundalike.yassin.app/api/anysong/similar`,
+track's title, artist and, when Spotify lists one, its recording code (ISRC)
+to `https://soundalike.yassin.app/api/anysong/similar`,
 which may look the song up on Deezer and analyze Deezer's public 30-second
 preview. Only when that matcher can't answer does it send the same title and
 artist to the older Sounds like service at `https://soundalike-api.yassin.app`
-(then `https://soundalike.yassin.app` as a fallback).
+(then `https://soundalike.yassin.app` as a fallback). To read the ISRC, the
+extension asks Spotify's own track metadata inside the desktop client.
 The matcher keeps recent results in memory so repeat searches are fast. When
 it analyzes a song that isn't in its catalog yet, it also writes that song's
 Deezer track and artist IDs and the date to a list the catalog crawl reads, so
