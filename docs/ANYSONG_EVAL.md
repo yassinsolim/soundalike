@@ -1275,6 +1275,46 @@ Rule 2 (any-tab HR@10, with `--core-ids` and samples in fp16):
 Rule 3: with the tier masks, the served top 10, 20 and 100 matched brute force for all 300 random tracks in every
 channel, with samples in fp16 and in fp32.
 
+### Rule 4, first deploy: rolled back on parity (2026-11-09)
+
+The deploy script measured the served 889k catalog first: 40 of 48 candidate songs answered live (8 were not
+returned by the search), p50 1.003 s, p95 1.065 s, max 1.129 s, 6,435 MiB. `serve_check` on the 999k index then
+reported:
+- Window cosine at least 0.999999 in every channel; self-score difference 1.3e-5 on average.
+- VRAM: 5,737 MiB loaded, 7,141 MiB peak.
+- Serial unseen p95: 807 ms (847 ms for the 889k index).
+- Self-rank: 64 of 64 first in melody and samples, **63 of 64 in sound**.
+
+The script rolled back on the sound-channel parity before the swap; the 889k service came back healthy.
+
+**Cause.** The one track was The Clash's "Straight to Hell (Remastered)" (core catalog, Deezer 69962767). The core
+catalog also holds "Straight to Hell" (69505565), the same recording on another release: their stored windows have
+cosine 0.998. With the hub penalty (alpha 0.5), the other release scores 0.5408 and the track itself 0.5371, so it
+ranks second from its stored windows too. It ranks second in the 269k and 889k indexes as well.
+
+**How often.** Self-rank from the stored windows, with the served settings, for 1,000 random core songs and 1,000
+crawled songs in each index:
+
+| Index | Melody | Samples | Sound | Crawled songs, all channels |
+|---|---:|---:|---:|---:|
+| 269k | 999 | 998 | 997 | (none in the index) |
+| 889k (served) | 999 | 998 | 997 | 1,000 |
+| 999k | 999 | 998 | 998 | 1,000 |
+
+Every track not first, in every index, sat behind another release of the same piece by the same artist with
+identical or near-identical windows (cosine 0.996 to 1.0 in sound and samples; a perfect melody score in both
+releases). Examples: Chopin's waltz Op. 69 No. 2 by Ingrid Fliter under two titles, and "Glass: Metamorphosis
+Four" by Valentina Lisitsa, once titled "Glass: Glass: Metamorphosis Four". With identical windows, the lower
+Deezer ID wins the tie. At these rates (2 to 3 tracks per 1,000 core songs, none in 1,000 crawled songs), a
+64-track draw includes such a track in about 17 % of deploys of the 269k index, whose draws are all core songs,
+and 3 % to 6 % for the grown indexes. By default, lists drop other releases of the seed with the same song key;
+releases under other titles can appear. This is a property of the catalog, not of the serving path, which the
+check exists to test.
+
+`serve_check` now also ranks each sampled track from its stored windows on the serving GPU and reports
+`rank_agree`, the share of tracks whose re-embedded rank equals their stored rank, plus the ids of any track not
+first.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
