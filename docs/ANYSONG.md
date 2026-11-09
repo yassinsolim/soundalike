@@ -20,23 +20,29 @@ than the samples tab ([ANYSONG_EVAL.md](ANYSONG_EVAL.md#best-matches)). The chan
 relation. The same list is the default view on the main page and in the
 [Spicetify extension](../integrations/spicetify/README.md), which name the song by title and artist instead of a
 Deezer id. Best matches hides confidently detected other-language songs by default (`--languages`, see
-[Language labels](#language-labels)); instrumental or uncertain songs remain visible, a **Show all languages** switch
-(`lang=all`) restores the unfiltered ranking, and the individual melody, samples and sounds tabs are never filtered.
-For a live seed outside the catalog, the API uses a conservative majority-language prior from indexed songs by that
-artist; if it cannot establish a language, it fails open. The filter costs some cross-language matches; the measured
-trade-offs are in [ANYSONG_EVAL.md](ANYSONG_EVAL.md#language-gate-impact).
+[Language labels](#language-labels)); a **Show all languages** switch (`lang=all`) restores the unfiltered ranking,
+and the individual melody, samples and sounds tabs are never filtered. A song without a confident label takes its
+artist's majority language, a conservative prior from that artist's indexed songs; songs with neither (often
+instrumentals) remain visible. A live seed outside the catalog uses the same prior; if it cannot establish a
+language, the filter fails open. The filter costs some cross-language matches; the measured trade-offs are in
+[ANYSONG_EVAL.md](ANYSONG_EVAL.md#language-gate-impact).
+
+Other artists' versions of the seed's own song (the same title) are limited in Best matches, Same vibe and Sounds
+like. One that scores 0.55 or more in the samples list reuses the seed's recording (a re-upload, a sped-up edit, the
+same song under another credit) and is dropped. At most three of the rest stay, the best placed first, so covers of
+a standard cannot fill the lists. The channel tabs keep them all.
 
 Best matches also weighs the **artist scene** ([`scene.py`](../src/soundalike/anysong/scene.py)). Audio still decides
 which songs can appear; the scene layer only arranges them. A candidate's affinity to the seed's artist combines the
 same artist, closeness in Deezer's related-artist graph and a shared regional scene (Wikidata countries, mostly
 those of the artist's graph neighbours). The first songs of the audio ranking stay on top: at least three, and
-further down to the last top-10 song that is among the first three of the melody or samples tab or whose score
-there is strong enough to suggest a cover or sample (usually six songs or more).
-After that, two audio slots alternate with one **scene slot**: a scene neighbour that also has audio evidence in
-some channel (the sounds list counts here). The audio slots lift scene neighbours too, but never past a song whose
-melody or samples score clearly stands out. One artist can place at most two songs in the top 20. Without metadata
-for the seed's artist the ranking is the plain fusion. The selection, safeguards and results are in
-[ANYSONG_EVAL.md](ANYSONG_EVAL.md#scene-layer-2026-11-04).
+further down to the last top-10 song whose melody or samples score is strong enough to suggest a cover or sample.
+After that, each slot takes the next **scene neighbour** with audio evidence in some channel (the sounds list counts
+here), ordered by affinity times that evidence. When none is left, the audio ranking continues; it lifts scene
+neighbours too, but never past a song whose melody or samples score clearly stands out. One artist can place at most
+two songs in the top 20. Without metadata for the seed's artist the ranking is the plain fusion. The selection,
+safeguards and results are in [ANYSONG_EVAL.md](ANYSONG_EVAL.md#scene-layer-2026-11-04) and, for the current slots,
+[ANYSONG_EVAL.md](ANYSONG_EVAL.md#ranking-for-the-lists-users-see-pre-registered-2026-11-09-before-any-held-out-result).
 
 Next to Best matches, **Same vibe** ([`samevibe.py`](../src/soundalike/anysong/samevibe.py)) lists songs a listener
 hears as belonging together. It keeps the Best candidates that share the seed's tempo (the same, double or half,
@@ -74,17 +80,25 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   positional `score`, language-filtered like `best`), and `query.bpm` gives the seed's tempo (`null` when unknown).
   `--tempo-model` points to the Beat This! checkpoint that estimates the tempo of seeds outside the catalog; without
   it their tempo is unknown and only the sound gate applies. Whenever the sonic channel is served, `sounds` is the
-  Sounds like list that the main page and Spotify show: the sonic channel's songs in order, language-filtered like
-  `best`, one song per artist (the scene table's Deezer artist, else the artist name), each with its sonic `score`
-  and its catalog `bpm` (`null` when unknown or without `--tempo`).
+  Sounds like list that the main page and Spotify show: the sonic channel's songs, language-filtered like `best`,
+  one song per artist (the scene table's Deezer artist, else the artist name), each with its sonic `score` and its
+  catalog `bpm` (`null` when unknown or without `--tempo`). With the scene layer on, songs move up by their artist's
+  scene affinity, `1 / (5 + rank) * (1 + 8 * affinity)`; it still draws only from the sonic channel's 200 songs.
 - `/similar?title=&artist=&k=` (used by the main page and Spotify, which have no Deezer id) resolves the name first.
-  Songs match by song key (primary artist plus title without bracketed, dashed or feat. tags), and among a song's
-  releases one with the same version words (`deezer.version_words`: live, remix, acoustic, edit, sped up, ...) wins,
-  so "Song" is never seeded with "Song (X Remix)" when the original exists, while "Song - Remastered" may use "Song".
-  A catalog release with the requested version answers without any Deezer request (only indexed releases count:
-  the rest usually had no preview). Otherwise the first of 10 Deezer search hits with a preview and that version is
-  ranked live; failing that, the song's best indexed release (untagged first, then lowest id) or else its first
-  search hit stands in, and no release at all is a 404. `query.id`
+  Songs match by song key (primary artist plus title without bracketed, dashed or feat. tags), ignoring accents on
+  Latin letters, symbols and a leading "The" ("Beyoncé" = "Beyonce", "The Black Eyed Peas" = "Black Eyed Peas").
+  Among a song's releases, one with the same version words (`deezer.version_words`: live, remix, acoustic, edit,
+  sped up, ...) and the same content tags (bracketed or dashed parts that name other content, such as a medley's
+  other songs) wins, so "Song" is never seeded with "Song (X Remix)" or a medley when the original exists, while
+  "Song - Remastered" may use "Song". A catalog release with the requested version answers without any Deezer
+  request (only indexed releases count: the rest usually had no preview). Otherwise Deezer is searched for the title
+  and artist as given and, when that finds no release of the song, for the normalized song key, which finds
+  symbol-named artists. The first of 10 hits with a preview, that version and those tags is ranked live. Failing
+  that, an indexed release with that version, a hit with that version, the song's best indexed release (untagged
+  first, then lowest id) or else its first search hit stands in, and no release at all is a 404. With `isrc=` (the
+  Spotify extension reads the seed's ISRC from Spotify), an indexed release with the requested version answers
+  first; then Deezer's ISRC lookup (cached), which also finds tracks that Deezer's search hides in the server's
+  country; then the name lookup. `query.id`
   and `query.title` in the response name the resolved track. The service sends `Access-Control-Allow-Origin: *`
   (`--cors-origin`) so the Spotify desktop client can read these public, credential-free GET responses.
 - [`anysong/serve.py`](../src/soundalike/anysong/serve.py) holds the two-stage index: a PCA projection of every
@@ -256,9 +270,10 @@ python -m soundalike.anysong.languages `
 ```
 
 Catalog seeds use their own label. A live seed outside the catalog uses a conservative artist-majority prior
-(≥2 confidently labelled recordings and ≥80% agreement); if no prior is available, the filter fails open. The
-Best list alone is filtered, preserving uncertain candidates; the three channel lists are unchanged. `lang=all`
-returns the same unfiltered Best ranking and still reports the other-language count in `query.hidden`.
+(≥2 confidently labelled recordings and ≥80% agreement); if no prior is available, the filter fails open. Listed
+songs without a confident label take the same prior, and stay when it is unknown. The lists users see (Best
+matches, Same vibe, Sounds like) are filtered; the three channel lists are unchanged. `lang=all` returns the same
+unfiltered Best ranking and still reports the other-language count in `query.hidden`.
 
 ## Scene table
 

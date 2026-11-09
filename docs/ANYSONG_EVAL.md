@@ -1419,6 +1419,49 @@ Variants were rejected for these reasons:
 
 Exactness (rule 3 before) is untouched: the index and its search do not change.
 
+### Result: rules 1 to 3 passed (2026-11-09)
+
+Run once, after the pre-registration (64664c5), on the served 999k index (samples' stage 1 in fp16). All 41
+checks passed (`grow/qa/verdict_v2.py`).
+
+Rules 1 and 3, top 10 with one song per artist (paired 95 % intervals):
+
+| Seeds | List | ListenBrainz hit rate | Change | Shared genre | Rows in the top 20 |
+|---|---|---|---|---|---|
+| Held-out (799) | Best matches | 0.217 → 0.322 | +0.105 (+0.093 to +0.118) | 0.367 → 0.452 | 20.00 → 19.96 |
+| | Same vibe | 0.317 → 0.341 | +0.025 (+0.019 to +0.031) | 0.454 → 0.477 | 19.99 → 19.93 |
+| | Sounds like | 0.218 → 0.331 | +0.113 (+0.101 to +0.125) | 0.386 → 0.472 | 19.80 → 19.52 |
+| Fresh (1,000) | Best matches | 0.220 → 0.315 | +0.095 (+0.084 to +0.105) | 0.405 → 0.485 | 20.00 → 19.93 |
+| | Same vibe | 0.321 → 0.344 | +0.023 (+0.016 to +0.029) | 0.496 → 0.517 | 20.00 → 19.94 |
+| | Sounds like | 0.216 → 0.331 | +0.115 (+0.104 to +0.125) | 0.425 → 0.500 | 19.84 → 19.67 |
+
+Other-language rows stayed at zero. Derivative uploads changed by −0.0008 to +0.0003.
+
+**Reported, not gated.**
+- The scene layer reads Deezer's related-artist graph, which may share signal with ListenBrainz. Among recommended
+  artists that Deezer does not list as related to the seed, the ListenBrainz hit rate also rose:
+
+  | List | Held-out | Fresh |
+  |---|---|---|
+  | Best matches | +0.080 | +0.067 |
+  | Same vibe | +0.023 | +0.023 |
+  | Sounds like | +0.096 | +0.087 |
+
+  Every interval excludes zero.
+- Distinct artists in the top 10 fell slightly: Sounds like 9.97 → 9.88 (held-out) and 9.97 → 9.92 (fresh); the
+  other lists by about 0.01.
+
+Rule 2, HR@10 on the held-out split:
+
+| Benchmark | Any tab | Best matches as served | Limit |
+|---|---|---|---|
+| Covers | 0.707 → 0.707 | 0.681 → 0.662 (−0.019, 1,170 queries) | −0.03 |
+| Samples | 0.162 → 0.162 | 0.135 → 0.130 (−0.005, 747) | −0.03 |
+| Samples reverse | 0.168 → 0.168 | 0.155 → 0.137 (−0.018, 695) | −0.03 |
+| Gen Alpha (test) | 0.508 → 0.508 | 0.373 → 0.356 (−0.017, 59; not gated) | −0.10 (any tab) |
+
+The held-out costs match development (−0.019, −0.010, −0.013).
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
