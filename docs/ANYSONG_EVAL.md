@@ -1709,6 +1709,52 @@ artist's two songs (the per-artist cap) next to each other more often:
 
 Same vibe and Sounds like hold one song per artist and are unaffected.
 
+## Spacing an artist's songs in Best matches (pre-registered 2026-11-09, before any held-out result)
+
+**Why.** See above: with the listener ranker, Best matches often places an artist's two songs back to back.
+
+**Change under test** (`scene.arrange_artists`, used only with the listener ranker). The audio head and the
+per-artist caps are unchanged. After the head:
+- No artist appears twice in a row (`BEST_ARTIST_GAP` 2).
+- Each artist appears at most once in the first 10 places (`BEST_ARTIST_ONCE` 10). Head songs count.
+
+An entry that breaks a rule waits for the first place where it does not, ahead of later entries. Every artist's
+first song therefore keeps its order. With one song per artist, Best's top 10 is the same as before, or extended
+where the old list had fewer than 10 artists in its top 20.
+
+**Selection** on the development seeds, as for the ranker (`ranker_dev.py`, out-of-fold):
+
+| Variant | Distinct artists in Best's top 10 as shown | Back-to-back pairs in the top 10, per list |
+|---|---|---|
+| Served (caps only) | 8.57 | 0.60 |
+| Never twice in a row | 8.62 | 0.03 |
+| At least 3 places apart | 8.69 | 0.03 |
+| No back-to-back and once in the top 10 (chosen) | 9.89 | 0.03 |
+
+- Every variant left the one-per-artist ListenBrainz, genre and sound metrics unchanged.
+- Best HR@10 on the development benchmarks moved by at most +0.001.
+- The remaining 0.03 pairs sit inside the audio head.
+
+**Baseline.** The served lists (`gated1m_lr`). **Seeds.** The 799 held-out and 1,000 fresh seeds; the benchmarks'
+held-out split.
+
+**Must pass (all), else not deployed:**
+1. **Lists users see.** On both seed sets:
+   - Every seed's one-per-artist Best top 10 equals the served one, or extends it.
+   - Sounds like is identical.
+   - Same vibe: the ListenBrainz hit rate's paired 95 % lower bound is −0.010 or above. Rows shown in its top 20 fall
+     by at most 1.0.
+2. **Relationship benchmarks.** Best matches HR@10 on held-out covers, samples and samples reverse falls by at most
+   0.01 each against the served ranker.
+3. **It must help.** On both seed sets, back-to-back pairs by one artist in Best's top 10 as shown are at most 0.10
+   per list, and the number of distinct artists there rises.
+4. **Serving.** Rule 4 of the listener ranking, unchanged:
+   - parity as amended;
+   - startup under 2 minutes; peak VRAM at most 7,248 MiB;
+   - 40 unseen and 40 catalog songs in one session: paired median server time at most +100 ms, p95 at most the served
+     p95 plus 200 ms;
+   - automatic rollback.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
