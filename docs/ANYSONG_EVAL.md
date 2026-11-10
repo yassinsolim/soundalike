@@ -1916,6 +1916,56 @@ Bryson Tiller "Whatever She Wants" now keeps three audio matches on top, with PA
 Roy Woods, Tory Lanez, DeJ Loaf and Blxst. Runtime 2.10.1 changes the cache policy to v7, so Spotify drops lists saved
 under the longer heads.
 
+## Stem dissection (pre-registered 2026-11-10, before any result)
+
+**What.** `soundalike.anysong.stems` splits a preview into six stems with htdemucs_6s (vocals, drums, bass, guitar,
+piano, other). For each song it keeps:
+- the MuQ-MuLan embedding of each stem (the sonic channel's model, run on the stem instead of the mix);
+- measurements: Beat This! tempo and downbeats, a 16-step kick/snare/hat pattern per bar, the key and key-relative
+  chroma, vocal and bass pitch statistics and interval habits, and the stem balance;
+- lanes for a visual view.
+
+Stems below −20 dB relative to the mix are marked absent and never graded: separation bleed embeds alike. Two songs
+are compared per facet (`stems.pair_features`): a cosine per stem, plus groove, tempo, harmony, key, vocal register
+and range, vocal presence, bass register and motion, and mix balance.
+
+On the prototype pair, Bryson Tiller "Whatever She Wants" and "Don't", the stems agree on vocals 0.89, drums 0.90,
+bass 0.81 and synths 0.95. Tempo is 95.9 against 97.0 BPM, with the keys four fifths apart.
+
+**Two uses, decided separately:**
+1. **Explanation (no ranking change).** An opt-in Dissect view in Spotify shows both songs' stems, drum hits, pitch
+   lines, beat grid and per-facet grades. Grades are percentiles among development (seed, shortlist candidate) pairs.
+   "Matched on" lists facets at the 85th percentile or above. The lists users see do not change, so this ships without
+   a gate.
+2. **Ranking.** The development ablation below decides whether stem facets earn a held-out test.
+
+**Ablation design** (`grow/qa/stem_ablation.py`; development seeds only):
+- **Stage 1.** The served listener ranker's recipe. Its out-of-fold probability p for every candidate comes from
+  GroupKFold(5) by seed artist, as in `ranker_dev.cv`.
+- **Shortlist.** Each seed's top 60 candidates by that p. Stage 2 re-scores the shortlist; every other candidate keeps p.
+- **Stage 2.** HistGradientBoosting with the ranker's settings, per outer fold, trained on the training seeds' labelled
+  shortlist rows. Their p comes from an inner GroupKFold(4) over the training folds, never in-sample.
+  - Control: logit p.
+  - Treatment: logit p plus the 16 facets.
+
+  Both arms use the same rows and folds, so only the facets differ.
+- **Lists.** Built by `AnySong._view` with the served weights. Treatment is compared with control by paired bootstrap
+  over seeds.
+- **Benchmarks.** The bench_dev seeds, with stage 1 trained on all development rows and stage 2 on all development
+  shortlists.
+- **Seed count**, fixed before any evaluation:
+  - Budget: the songs the 5080 dissects in four hours at the measured end-to-end rate, capped at 60,000.
+  - Dev+sweep seeds in SHA-1 order of their id until 60 % of the budget; bench_dev seeds in the same order for the rest.
+
+**Must pass (all), else stems stay explanation-only:**
+1. Best matches: ListenBrainz hit rate up by at least +0.010, with a paired 95 % lower bound above 0.
+2. Same vibe: the hit rate's lower bound is −0.005 or above.
+3. Best matches HR@10 on covers, samples and samples reverse: each lower bound is −0.01 or above.
+4. Serving cost: reading the shortlist's rows and scoring stage 2 adds at most 15 ms at p95.
+
+A pass leads to a held-out pre-registration with the rules used for the listener ranker, before anything is served.
+Reported, not gated: each facet's AUC for listener-related candidates within the shortlists.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the

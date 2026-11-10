@@ -90,6 +90,10 @@ class Tracker:
 
     def beats(self, clips: Sequence[np.ndarray]) -> list[np.ndarray]:
         """Beat times in seconds for each clip (only the first chunk: up to 29.9 s)."""
+        return [b for b, _ in self.track(clips)]
+
+    def track(self, clips: Sequence[np.ndarray]) -> list[tuple[np.ndarray, np.ndarray]]:
+        """(beat times, downbeat times) in seconds for each clip (only the first chunk: up to 29.9 s)."""
         torch = self.torch
         with torch.inference_mode():
             specs: list = [None] * len(clips)
@@ -113,8 +117,8 @@ class Tracker:
                 down.append(y["downbeat"].float()[:, BORDER:CHUNK - BORDER])
             beat, down = torch.cat(beat), torch.cat(down)
             mask = torch.arange(beat.shape[1], device=self.device)[None] < torch.tensor(lens, device=self.device)[:, None]
-            beats, _ = self.post(beat.masked_fill(~mask, -1000.0), down.masked_fill(~mask, -1000.0), mask)
-        return [np.asarray(b, np.float32) for b in beats]
+            beats, downs = self.post(beat.masked_fill(~mask, -1000.0), down.masked_fill(~mask, -1000.0), mask)
+        return [(np.asarray(b, np.float32), np.asarray(d, np.float32)) for b, d in zip(beats, downs)]
 
     def tempo(self, clip: np.ndarray) -> tuple[float, float]:
         return tempo_of(self.beats([clip])[0])
