@@ -23,9 +23,9 @@ Environment=SOUNDALIKE_EXT=/opt/soundalike/ext
 Environment=ANYSONG_HOST=192.168.1.47
 Environment=ANYSONG_PORT=8790
 # /opt/soundalike/index/current points at an index_build output that also holds the catalog tables it was built with
-# (catalog_meta, languages, scene, tempo) and core_ids.npy, the songs of the catalog before anysong.crawl grew it
-# (anysong.tiers), so swapping the symlink swaps them together. Grown indexes live on the backup-excluded NVMe volume
-# /opt/soundalike/index-store.
+# (catalog_meta, languages, scene, tempo), core_ids.npy, the songs of the catalog before anysong.crawl grew it
+# (anysong.tiers), and ranker.npz, the listener ranker trained on these tables (anysong.listener), so swapping the
+# symlink swaps them together. Grown indexes live on the backup-excluded NVMe volume /opt/soundalike/index-store.
 # Rate limits are keyed on CF-Connecting-IP (set by Cloudflare) so proxied users don't share one bucket.
 # Only trust it while this port is reachable solely through the Cloudflare tunnel / proxy chain.
 # Responses are public, credential-free GETs, so any origin may read them (the Spotify desktop client needs this).
@@ -34,6 +34,7 @@ ExecStart=/opt/soundalike/venv/bin/python -m soundalike.anysong.api \
     --languages /opt/soundalike/index/current/languages.npz \
     --scene /opt/soundalike/index/current/scene.npz --core-ids /opt/soundalike/index/current/core_ids.npy \
     --tempo /opt/soundalike/index/current/tempo.npz --tempo-model /opt/soundalike/ckpt/beat_this/final0.ckpt \
+    --ranker /opt/soundalike/index/current/ranker.npz \
     --half-stage1 samples \
     --learn-queue /var/lib/anysong/learn-queue.jsonl \
     --host ${ANYSONG_HOST} --port ${ANYSONG_PORT} --client-ip-header CF-Connecting-IP --cors-origin "*"

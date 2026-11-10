@@ -24,9 +24,10 @@ import argparse
 import json
 import math
 from collections import Counter, defaultdict
-from collections.abc import Hashable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -241,6 +242,51 @@ def standout(orders: Mapping[str, Sequence[Hashable]], scores: Mapping[str, Sequ
     return out
 
 
+def _channel_ranks(orders: Mapping[str, Sequence[Hashable]]) -> dict[Hashable, dict[str, int]]:
+    ranks: dict[Hashable, dict[str, int]] = {}
+    for channel in (*AUDIO_CHANNELS, "sonic"):
+        for r, key in enumerate(orders.get(channel, ()), 1):
+            ranks.setdefault(key, {})[channel] = r
+    return ranks
+
+
+def audio_head(orders: Mapping[str, Sequence[Hashable]], scores: Mapping[str, Sequence[float]] | None,
+               params: SceneParams, k: int = FUSE_K) -> list[Hashable]:
+    """The audio fusion's first songs kept on top of a slotted Best list: at least ``head_min``, extended down to the
+    last of its first ``head_scan`` songs whose melody or samples score reaches the calibrated cover/sample evidence
+    (``scores``: per channel, aligned with ``orders``) or that is among the first ``rank_evidence`` songs of either."""
+    ranks = _channel_ranks(orders)
+    audio = {key: sum(1.0 / (k + rk[ch]) for ch in AUDIO_CHANNELS if ch in rk) for key, rk in ranks.items()}
+    tie = {key: min((r for ch, r in rk.items() if ch in AUDIO_CHANNELS), default=1_000_000 + rk.get("sonic", 0))
+           for key, rk in ranks.items()}
+    baseline = sorted((key for key in ranks if audio[key] > 0), key=lambda key: (-audio[key], tie[key]))
+    evidence = set()
+    for channel, threshold in (("melody", params.melody_evidence), ("samples", params.samples_evidence)):
+        for key, value in zip(orders.get(channel, ()), (scores or {}).get(channel, ())):
+            if value >= threshold:
+                evidence.add(key)
+        evidence.update(list(orders.get(channel, ()))[:params.rank_evidence])
+    hits = [i for i, key in enumerate(baseline[:params.head_scan]) if key in evidence]
+    return baseline[:max(params.head_min, hits[-1] + 1 if hits else 0)]
+
+
+def cap_artists(placed: Sequence, artist_of: Callable[[Any], int | None], query_artist: int | None,
+                params: SceneParams) -> list:
+    """Per-artist caps over the first ``window`` places: at most ``max_same`` songs by the query's artist and
+    ``max_other`` by any other; songs over a cap move behind the window, in order."""
+    head_list, tail, counts = [], [], Counter()
+    for entry in placed:
+        artist_id = artist_of(entry)
+        if len(head_list) < params.window and artist_id:
+            limit = params.max_same if artist_id == query_artist else params.max_other
+            if counts[artist_id] >= limit:
+                tail.append(entry)
+                continue
+            counts[artist_id] += 1
+        (head_list if len(head_list) < params.window else tail).append(entry)
+    return head_list + tail
+
+
 def scene_fuse(orders: Mapping[str, Sequence[Hashable]], artists: Mapping[Hashable, int | None],
                query: ArtistProfile | None, table: SceneTable | None, params: SceneParams,
                k: int = FUSE_K, scores: Mapping[str, Sequence[float]] | None = None
@@ -293,15 +339,7 @@ def scene_fuse(orders: Mapping[str, Sequence[Hashable]], artists: Mapping[Hashab
     if not scene_on or not params.pattern:
         placed = [(key, lifted[key], shown(key, params.sonic > 0)) for key in ordered(lifted)]
     else:
-        baseline = ordered(audio)
-        evidence = set()
-        for channel, threshold in (("melody", params.melody_evidence), ("samples", params.samples_evidence)):
-            for key, value in zip(orders.get(channel, ()), (scores or {}).get(channel, ())):
-                if value >= threshold:
-                    evidence.add(key)
-            evidence.update(list(orders.get(channel, ()))[:params.rank_evidence])
-        hits = [i for i, key in enumerate(baseline[:params.head_scan]) if key in evidence]
-        head = baseline[:max(params.head_min, hits[-1] + 1 if hits else 0)]
+        head = audio_head(orders, scores, params, k)
         used = set(head)
         rest = [key for key in ordered(lifted) if key not in used]
         lane = [key for key in ordered({key: aff[key] * (audio[key] + sonic[key]) for key in ranks})
@@ -323,18 +361,8 @@ def scene_fuse(orders: Mapping[str, Sequence[Hashable]], artists: Mapping[Hashab
                     used.add(source[i])
                     placed.append((source[i], 0.0, shown(source[i], from_lane or params.sonic > 0)))
                     break
-    head_list, tail, counts = [], [], Counter()
     query_artist = query.artist_id if query is not None else None
-    for key, score, rk in placed:
-        artist_id = artists.get(key)
-        if len(head_list) < params.window and artist_id:
-            limit = params.max_same if artist_id == query_artist else params.max_other
-            if counts[artist_id] >= limit:
-                tail.append((key, score, rk))
-                continue
-            counts[artist_id] += 1
-        (head_list if len(head_list) < params.window else tail).append((key, score, rk))
-    out = head_list + tail
+    out = cap_artists(placed, lambda entry: artists.get(entry[0]), query_artist, params)
     if scene_on and params.pattern:
         out = [(key, 1.0 / (k + position), rk) for position, (key, _, rk) in enumerate(out, 1)]
     return out

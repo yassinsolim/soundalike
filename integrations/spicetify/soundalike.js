@@ -11,7 +11,7 @@
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.8.0";
+  const RUNTIME_SEMANTIC_VERSION = "2.9.0";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -66,7 +66,7 @@
   // Spotify drops songs queued just as a song starts playing.
   const LATE_QUEUE_DELAY_MS = 1500;
   const BEST_MATCHES_ENDPOINT = `${FALLBACK_HOSTED_SERVER}/api/anysong/similar`;
-  const BEST_MATCHES_POLICY = "anysong-best-rrf-language-vibe-sounds-v4";
+  const BEST_MATCHES_POLICY = "anysong-best-rrf-language-vibe-sounds-v5";
   const BEST_MATCHES_TIMEOUT_MS = 30000;
   const BEST_MATCHES_RETRIES = 2;
   const BEST_MATCHES_RETRY_DELAY_MS = 1500;
@@ -87,7 +87,7 @@
   ];
   const BEST_MATCHES_BLURB =
     "Likely covers, samples and shared melodies first, then similar-sounding " +
-    "songs by related artists from the same scene.";
+    "songs by artists this song's listeners also play.";
   const SAME_VIBE_BLURB =
     "Songs from these matches that share this song's tempo and overall " +
     "sound, one per artist.";
@@ -99,7 +99,8 @@
     "Songs with the same overall sound: low end, dynamics and tone.";
   // The hosted Sounds like list comes from the GPU engine's MuQ-MuLan model.
   const HOSTED_SOUNDS_LIKE_BLURB =
-    "Songs with the same overall sound: instruments, production and mood.";
+    "Songs with the same overall sound (instruments, production and mood), " +
+    "favouring artists this song's listeners also play.";
   const FEEDBACK_ENDPOINT =
     `${FALLBACK_HOSTED_SERVER}/api/spicetify-feedback`;
   const FEEDBACK_INSTALL_KEY = "soundalike:feedback-install:v1";

@@ -330,6 +330,89 @@ def _scene_table():
     return build_scene(tracks, related, {100: ["FR"], 300: ["FR"], 500: ["FR"], 200: ["US"]}, {})
 
 
+LISTENER_META = META | {8: ("Third", "Third Song Two"), 9: ("Fifth", "Fünfter Song"), 10: ("Daft Punk", "Around")}
+
+
+def _listener_scene_table():
+    # As _scene_table, plus a second Third song (8), a song by Fifth (500, related to both) and another Daft Punk song.
+    tracks = {1: 100, 2: 100, 3: 400, 4: 100, 5: 200, 6: 200, 7: 300, 8: 300, 9: 500, 10: 100}
+    related = {100: [300, 500], 300: [100, 500], 200: [600, 601]}
+    return build_scene(tracks, related, {100: ["FR"], 300: ["FR"], 500: ["FR"], 200: ["US"]}, {})
+
+
+def _stump(feature, left, right):
+    from soundalike.anysong.listener import FEATURES, Ranker
+
+    return Ranker(FEATURES, 0.0, np.array([0]), np.array([FEATURES.index(feature), 0, 0]), np.array([0.5, 0, 0]),
+                  np.array([True, True, True]), np.array([1, 1, 2]), np.array([2, 1, 2]),
+                  np.array([0.0, left, right]), depth=1, meta="stump")
+
+
+def test_listener_lists_keep_the_audio_head_and_rank_the_rest_for_listeners(tmp_path):
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), LISTENER_META, scene=_listener_scene_table(),
+                      copy_score=None, ranker=_stump("fwd", 0.0, 0.0), scene_params=SceneParams(head_min=1),
+                      languages=FakeLanguages({1: "en", 9: "de"}),
+                      tempo=TempoTable(np.array([5, 7, 8, 10]), np.array([120, 120, 121, 120], np.float32)))
+    p = {3: 0.2, 5: 0.1, 7: 0.9, 8: 0.8, 9: 0.95, 10: 0.99}
+    res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog", "artist_id": 100},
+           "raw": {"melody": [(5, -1.0), (3, -2.0)], "samples": [(3, 0.1)],
+                   "sonic": [(10, 0.5), (5, 0.45), (7, 0.44)]},
+           "related": [], "timings_ms": {}, "vibe": {"muq": {10: 0.5, 5: 0.45, 7: 0.44, 3: 0.2}, "bpm": 120.0},
+           "listener": {"p": p, "son": {3: 0.2, 5: 0.45, 7: 0.44, 8: 0.40, 9: 0.43, 10: 0.5}, "scene": [8, 9]}}
+
+    def lists(**kw):
+        return svc._view(res, k=10, dedupe=True, cached=False, **kw)["results"]
+
+    r = lists()
+    # Head: the audio fusion down to the cover evidence (5's melody score), then the listener order; Fifth's German
+    # song (9) is left out, and the seed artist's own song (10) is placed by sound alone.
+    assert [x["id"] for x in r["best"]] == [3, 5, 7, 10, 8]
+    assert [x["ranks"] for x in r["best"]] == [{"melody": 2, "samples": 1}, {"melody": 1, "sonic": 2}, {"sonic": 3},
+                                               {"sonic": 1}, {}]
+    assert [x["id"] for x in r["sounds"]] == [7, 10, 5]
+    assert {x["id"] for x in r["vibe"]} <= {3, 5, 7, 8, 10}
+    p[10] = 0.01  # the seed artist's songs ignore their listener probability
+    assert [x["id"] for x in lists()["best"]] == [3, 5, 7, 10, 8] and [x["id"] for x in lists()["sounds"]] == [7, 10, 5]
+    assert 9 in [x["id"] for x in lists(lang_mode="all")["best"]]
+    assert [x["id"] for x in lists(scene=False)["best"]] == [3, 5]  # no scene: the plain fusion, no ranker
+    del res["listener"]
+    assert [x["id"] for x in lists()["best"]][:2] == [3, 5] and 8 not in [x["id"] for x in lists()["best"]]
+
+
+class SonicEngine(FakeEngine):
+    def __init__(self):
+        super().__init__(ids=tuple(range(1, 11)))
+        self.indexes["sonic"] = FakeIndex(range(1, 11))
+        self.scored = []
+
+    def score_tracks(self, channel, track_ids, windows=None, query_track=None):
+        tids = sorted(int(t) for t in track_ids)
+        self.scored.append((channel, tids, query_track))
+        return {t: 0.3 + t / 100 for t in tids if t in self.indexes[channel].pos}
+
+
+def test_listener_inputs_add_scene_songs_once_per_seed(tmp_path):
+    engine = SonicEngine()
+    svc = api.AnySong(engine, FakeDeezer(tmp_path), LISTENER_META, scene=_listener_scene_table(), copy_score=None,
+                      ranker=_stump("fwd", -1.0, 1.0))
+    res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "artist_id": 100},
+           "raw": {"melody": [(5, -1.0)], "sonic": [(7, 0.44)]}, "related": [], "vibe": None}
+    timings = {}
+    out = svc._listener(res, None, timings)
+    # Pool songs without a sound score, then the neighbours' songs (Third: 7, 8; Fifth: 9), from the stored windows.
+    assert engine.scored == [("sonic", [5, 7], 1), ("sonic", [7, 8, 9], 1)]
+    assert out["scene"] == [7, 8, 9] and set(out["p"]) == {5, 7, 8, 9} and out["son"][9] == pytest.approx(0.39)
+    assert out["p"][7] > out["p"][5]  # Daft Punk's related list names Third, not Other Artist
+    assert "listener" in timings
+    assert svc._listener({**res, "query": {"id": 1, "artist": "Daft Punk"}}, None, {}) is None  # no artist id
+
+    r = svc.similar(1, k=10)
+    assert {8, 9} <= {x["id"] for x in r["results"]["best"]}
+    assert next(x for x in r["results"]["best"] if x["id"] == 9)["ranks"] == {}
+    assert svc.health()["ranker"] == "stump"
+    assert api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, ranker=_stump("fwd", 0, 1)).ranker is None
+
+
 def test_scene_layer_lifts_related_artists_and_can_be_turned_off(tmp_path):
     # copy_score=None: the fake engine scores every row 0.9 on samples, which would read as copies of the seed
     svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, scene=_scene_table(), copy_score=None,
