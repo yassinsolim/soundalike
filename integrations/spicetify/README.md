@@ -54,7 +54,8 @@ you chose.
   to analyze. After the likely covers and samples, songs are ordered by how
   likely your song's listeners are to also play their artists, as learned from
   public listening data, and by how close they sound. Rows from that part of the
-  list may show no melody or samples rank. Other-language songs are hidden when the seed language is known;
+  list may show no melody or samples rank. Each artist appears once in that
+  part of the top 10 and never twice in a row. Other-language songs are hidden when the seed language is known;
   a song without a language label of its own counts in its artist's usual
   language, and songs with neither stay visible. Use **Show all languages**
   to restore cross-language matches. If the seed language cannot be established,

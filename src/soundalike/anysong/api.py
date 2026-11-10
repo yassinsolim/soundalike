@@ -57,7 +57,7 @@ import numpy as np
 
 from . import listener, samevibe
 from .deezer import version_words
-from .scene import SceneParams, SceneTable, affinity, audio_head, cap_artists, scene_fuse
+from .scene import SceneParams, SceneTable, affinity, arrange_artists, audio_head, scene_fuse
 from .tempo import TempoTable, decode22
 
 FETCH = 200  # per-channel depth ranked before de-duplication
@@ -74,6 +74,10 @@ SOUNDS_BOOST = 8.0  # Sounds like: lift by the artist's scene affinity
 BEST_SOUND_WEIGHT = 0.5
 BEST_AUDIO_WEIGHT = 0.25
 SOUNDS_LISTENER_WEIGHT = 2.0
+# With a listener ranker, Best's songs after its audio head are spread out (``scene.arrange_artists``): an artist's
+# songs at least BEST_ARTIST_GAP places apart, and each artist once in the first BEST_ARTIST_ONCE places.
+BEST_ARTIST_GAP = 2
+BEST_ARTIST_ONCE = 10
 # "best" list: reciprocal-rank fusion of the channels' song lists, score = sum(w / (FUSE_K + rank)).
 # Chosen on development splits only; see docs/ANYSONG_EVAL.md.
 FUSE_K = 5
@@ -312,7 +316,8 @@ class AnySong:
                  tiers=None, artist_languages: bool = True, copy_score: float | None = COPY_SAMPLES_SCORE,
                  max_versions: int | None = MAX_VERSIONS, sounds_boost: float = SOUNDS_BOOST,
                  ranker: listener.Ranker | None = None, best_sound_weight: float = BEST_SOUND_WEIGHT,
-                 sounds_listener_weight: float = SOUNDS_LISTENER_WEIGHT, best_audio_weight: float = BEST_AUDIO_WEIGHT):
+                 sounds_listener_weight: float = SOUNDS_LISTENER_WEIGHT, best_audio_weight: float = BEST_AUDIO_WEIGHT,
+                 best_artist_gap: int = BEST_ARTIST_GAP, best_artist_once: int = BEST_ARTIST_ONCE):
         self.engine, self.deezer, self.meta, self.keep_previews = engine, deezer, meta, keep_previews
         self.languages = languages
         # Songs without a confident language label take their artist's majority language in the language gate.
@@ -327,6 +332,7 @@ class AnySong:
         self.ranker = ranker if scene is not None else None
         self.best_sound_weight, self.sounds_listener_weight = best_sound_weight, sounds_listener_weight
         self.best_audio_weight = best_audio_weight
+        self.best_artist_gap, self.best_artist_once = best_artist_gap, best_artist_once
         self._artist_tracks = listener.ArtistTracks(scene) if self.ranker is not None else None
         self._sonic_core: np.ndarray | None = None
         self.learn = learn
@@ -893,7 +899,8 @@ class AnySong:
             rest = ordered(rest, listener.zscore(logits(rest, item_of))
                            + self.best_sound_weight * listener.zscore(sound(rest, item_of))
                            + self.best_audio_weight * listener.zscore(audio))
-        best_order = cap_artists(head + rest, artists.get, profile.artist_id, self.scene_params)
+        best_order = arrange_artists(head + rest, artists.get, profile.artist_id, self.scene_params, head=len(head),
+                                     gap=self.best_artist_gap, once=self.best_artist_once)
         best = [shown[key][0] | {"score": round(1.0 / (FUSE_K + i), 5), "ranks": shown[key][1]}
                 for i, key in enumerate(best_order[:k], 1)]
 
