@@ -2111,7 +2111,7 @@ const soundsFixture = [
   { title: "Take My Breath", artist: "The Weeknd", bpm: 121.7 },
 ];
 
-const bestCacheKey = "best:anysong-best-rrf-language-vibe-sounds-v4:same:spotify:track:test";
+const bestCacheKey = "best:anysong-best-rrf-language-vibe-sounds-v5:same:spotify:track:test";
 
 function bestMatchesBody(best = bestFixture, overrides = {}) {
   return {
@@ -2263,7 +2263,7 @@ test("opens on Best matches with Sounds like one tab away", async () => {
   // A new response format gets a new URL, so HTTP-cached older responses are skipped.
   assert.equal(
     bestUrl.searchParams.get("policy"),
-    "anysong-best-rrf-language-vibe-sounds-v4",
+    "anysong-best-rrf-language-vibe-sounds-v5",
   );
   assert.equal(
     app.urls.filter((url) => url.includes("/api/spicetify_recommend")).length,
@@ -3687,7 +3687,7 @@ test("serves hosted Sounds like from the Best matches response", async () => {
   assert.match(html, /class="sa-panel sa-view-sounds"/);
   assert.match(
     html,
-    /<p class="sa-blurb">Songs with the same overall sound: instruments, production and mood\.<\/p>/,
+    /<p class="sa-blurb">Songs with the same overall sound \(instruments, production and mood\), favouring artists this song's listeners also play\.<\/p>/,
   );
   assert.match(
     html,

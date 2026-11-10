@@ -1679,6 +1679,36 @@ Rule 2, Best matches HR@10 on the held-out split:
   related list, as the catalog tiers allow.
 - The added step took a median 17 ms and a p95 of 34 ms per held-out benchmark seed on the RTX 5080.
 
+### Rule 4: deployed (2026-11-09)
+
+The deploy (`deploy_lr.sh`) passed every check on the first attempt:
+
+| Check | Result | Limit |
+|---|---|---|
+| Parity | `rank_agree` 1.0 in every channel; all 64 first in melody and samples, 63 in sound (the Clash remaster) | as amended |
+| Startup | 82 s, catalog tiers and ranker active (52 to 57 s in earlier deploys) | under 120 s |
+| 40 unseen songs | paired median server time +18 ms; p95 1.043 → 1.070 s | +100 ms; 1.243 s |
+| 40 catalog songs | paired median server time +31 ms; p95 0.467 → 0.512 s | +100 ms; 0.667 s |
+| Peak VRAM | 6,727 MiB, unchanged | 7,248 MiB |
+
+On the RTX 2070 SUPER the listener step itself took a median 28 ms for unseen songs and 40 ms for catalog songs
+(p95 35 and 61 ms). The searches did not slow down.
+
+Checks through the public URL and the LAN:
+- Roar "I Can't Handle Change": Sounds like opens with salvia palth, dandelion hands, Black Box Recorder, Elita and
+  Joy Again, where the served list had Ty Segall, Cursive and Sufjan Stevens' "Come on! Let's Boogey to the Elf Dance".
+- Nemzzz "8PM": Sounds like holds only UK artists in its first eight.
+
+**Found after deploying, not covered by the gates.** The gates read one song per artist. Best matches now places an
+artist's two songs (the per-artist cap) next to each other more often:
+
+| Best matches, raw top 10 | Before | After |
+|---|---|---|
+| Distinct artists | 9.10 (held-out), 9.13 (fresh) | 8.52, 8.59 |
+| Back-to-back pairs by one artist, per list | 0.26 | 0.59 (held-out), 0.57 (fresh) |
+
+Same vibe and Sounds like hold one song per artist and are unaffected.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the

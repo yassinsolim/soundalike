@@ -256,14 +256,15 @@ songs and 15–19% of sample pairs, which is the melody tab's cover accuracy wit
 like" claims stay hard: about 11% in the fused list and 16–17% when all three tabs are checked. Unseen songs
 embedded live score the same as catalog songs. Best matches also weighs the artist's scene (Deezer related artists,
 Wikidata regions): the strongest audio matches stay on top (at least three, more when their scores suggest a cover or
-sample), and after them audio matches by artists from the seed's scene come first. On 799 unseen test artists, 32% of
-other-artist results are by artists that ListenBrainz lists as similar, up from 22% with the previous ranking, while
-covers, samples and Gen Alpha stayed within their regression limits. **Sounds like** lifts scene artists the same
-way (33%, up from 22%). Other artists' copies of the seed (re-uploads, edits) are left out when their audio matches it
-closely, and at most three other versions of it stay.
+sample). After them, a small learned model ranks the rest by how likely listeners of the seed's artist also play
+each candidate's artist. Popularity is not one of its inputs. The candidates include the songs closest in sound by
+artists in the seed's Deezer neighbourhood. On 799 unseen test artists, 41% of other-artist results are by artists
+that ListenBrainz lists as similar, up from 32% with the scene slots and 22% before them. Covers and samples stayed
+within their regression limits; Gen Alpha fell from 36% to 29% on 59 queries. **Sounds like** blends sound closeness
+with the same model (46%, up from 33%), as does **Same vibe** (45%, up from 34%). Other artists' copies of the seed
+(re-uploads, edits) are left out when their audio matches it closely, and at most three other versions of it stay.
 Songs in another language than yours are hidden from Best matches by default; **Show all languages** brings them back.
-**Same vibe** keeps the Best candidates that share the seed's tempo and sound (one per artist). On 1,000 fresh test
-artists, 39% of its results had no genre or listener link to the seed, against 50% for the Sounds like tab.
+**Same vibe** keeps the Best candidates that share the seed's tempo and sound (one per artist).
 
 The experimental [`soundalike.anysong`](src/soundalike/anysong/) package compares
 MuQ-MuLan, CLAP, MuQ, MERT and MAEST with dedicated SampleID/CLEWS adapters.

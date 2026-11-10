@@ -422,7 +422,7 @@ function loadAnysong({ hash = `#id=${AMANGA_ID}`, body = anysongBody } = {}) {
 
 const BEST_CAPTION =
   "Likely covers, samples and shared melodies first, then similar-sounding songs " +
-  "by related artists from the same scene.";
+  "by artists this song's listeners also play.";
 
 test("any-song Best matches ask for one language and say what was hidden", async () => {
   const page = loadAnysong();
@@ -677,7 +677,7 @@ test("main page Best matches ask for one language and offer the switch", async (
   assert.equal(params.get("title"), "8PM");
   assert.equal(params.get("artist"), "Nemzzz");
   assert.equal(params.get("lang"), "same");
-  assert.equal(params.get("policy"), "best-vibe-sounds-v1");
+  assert.equal(params.get("policy"), "best-vibe-sounds-v2");
   assert.equal(page.document.querySelector("#tab-best").getAttribute("aria-selected"), "true");
   assert.equal(page.document.querySelector("#language").hidden, false);
   assert.equal(
@@ -762,7 +762,7 @@ test("main page Sounds like comes with Best matches and shares the switch", asyn
   assert.deepEqual(page.texts("#matches .t"), ["Sounds Match", "Close Sound"]);
   assert.equal(
     page.text("#matchblurb"),
-    "Songs with the same overall sound: instruments, production and mood.",
+    "Songs with the same overall sound (instruments, production and mood), favouring artists this song's listeners also play.",
   );
   assert.deepEqual(page.texts("#seedtags .tag"), ["in our library", "140 BPM"]);
   assert.equal(page.document.querySelector("#language").hidden, false);
