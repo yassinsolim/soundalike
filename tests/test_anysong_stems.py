@@ -77,6 +77,30 @@ def test_warm_up_measures_vocals_drums_and_bass():
     assert row["pitch"].any(axis=1).all() and row["hits"][0].any()
 
 
+def test_drum_lanes_do_not_fire_on_the_other_drum():
+    # alternating kick and snare: each lane must stay quiet on the other drum's hits (the VERSION 1 band flux gave 0.71)
+    rng = np.random.default_rng(1)
+    n = int(0.08 * S.SR)
+    t = np.arange(n) / S.SR
+    hits = {"kick": 0.8 * np.sin(2 * np.pi * 60 * t) * np.exp(-t / 0.015),
+            "snare": (0.3 * np.sin(2 * np.pi * 200 * t) + 0.3 * rng.standard_normal(n)) * np.exp(-t / 0.03)}
+    y, times = np.zeros(S.SAMPLES), {"kick": [], "snare": []}
+    for k in range(48):
+        name = "kick" if k % 2 == 0 else "snare"
+        i0 = int((0.1 + 0.6 * k) * S.SR)
+        y[i0:i0 + n] += hits[name][:len(y[i0:i0 + n])]
+        times[name].append(round((0.1 + 0.6 * k) * S.ONSET_FPS))
+    env = S.band_onsets(y)
+    assert list(env) == ["kick", "snare", "hats"] and all(len(e) == S.SECONDS * S.ONSET_FPS + 1 for e in env.values())
+
+    def level(lane, drum):
+        e = env[lane]
+        return np.median([e[i - 1:i + 4].max() for i in times[drum]]) / e.max()
+
+    assert level("kick", "kick") > 0.8 and level("snare", "snare") > 0.8
+    assert level("kick", "snare") < 0.15 and level("snare", "kick") < 0.15
+
+
 def test_detuned_and_gliding_vocals():
     beats, downbeats = _beats()
     stems, mix = _song(vocal=57.4)
