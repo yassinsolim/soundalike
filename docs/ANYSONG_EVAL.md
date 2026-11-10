@@ -1771,6 +1771,20 @@ Run once, after the pre-registration (d727c61). All 15 checks passed (`grow/qa/v
 Best matches HR@10 on the held-out split: covers 0.650 → 0.653, samples 0.130 → 0.130, samples reverse
 0.138 → 0.138. Gen Alpha, SampleID and V4 did not move (reported).
 
+**Deployed (2026-11-09).** Rule 4 passed on the first attempt:
+
+| Check | Result |
+|---|---|
+| Parity | `rank_agree` 1.0 in every channel |
+| Startup | 56 s |
+| 40 unseen songs | paired median server time +6.7 ms; p95 1.060 → 1.066 s |
+| 40 catalog songs | paired median server time −0.3 ms; p95 0.524 → 0.526 s |
+| Peak VRAM | 6,727 MiB |
+
+The LRCLIB dump was being unpacked on the same host; it was paused for the whole deploy. Joy Crookes'
+"Feet Don't Fail Me Now" now lists Celeste and Joesef once each in the top 10 (they held places 5 to 8 as two
+back-to-back pairs). Runtime 2.9.1 changes only the cache policy (v6), so Spotify drops lists saved before the change.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
