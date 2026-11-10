@@ -3,8 +3,8 @@ import pytest
 from dataclasses import replace
 
 from soundalike.anysong import api
-from soundalike.anysong.scene import (SceneParams, SceneTable, affinity, build, components, inferred,
-                                      scene_fuse, standout)
+from soundalike.anysong.scene import (SceneParams, SceneTable, affinity, arrange_artists, build, cap_artists,
+                                      components, inferred, scene_fuse, standout)
 
 OFF = SceneParams(boost=0.0, sonic=0.0, pattern="", max_same=10**6, max_other=10**6)
 
@@ -151,6 +151,34 @@ def test_artist_caps_defer_extra_songs_without_dropping_them(table):
     keys = [k for k, _, _ in scene_fuse(orders, artists, q, table, params)]
     assert keys[:4] == ["a1", "a2", "b1", "c1"]
     assert sorted(keys) == sorted(orders["melody"])
+
+
+def test_arrange_artists_without_spacing_is_cap_artists():
+    rng = np.random.default_rng(1)
+    for _ in range(300):
+        n = int(rng.integers(0, 40))
+        artist = {i: int(rng.integers(0, 6)) or None for i in range(n)}  # None: unknown artist
+        params = SceneParams(max_same=int(rng.integers(1, 3)), max_other=int(rng.integers(1, 3)),
+                             window=int(rng.integers(1, 25)))
+        order = list(rng.permutation(n))
+        expected = cap_artists(order, artist.get, 1, params)
+        assert arrange_artists(order, artist.get, 1, params) == expected
+        assert arrange_artists(order, artist.get, 1, params, head=int(rng.integers(0, 5))) == expected
+
+
+def test_arrange_artists_spreads_songs_after_the_head():
+    artist = {"h1": 1, "h2": 1, "a1": 2, "a2": 2, "b1": 3, "b2": 3, "c1": 4, "x": None, "d1": 5}.get
+    params = SceneParams(max_same=2, max_other=2, window=20)
+    order = ["h1", "h2", "a1", "a2", "b1", "b2", "c1", "x", "d1"]
+    # The head keeps its back-to-back pair; after it, a2 waits one place, so no artist plays twice in a row.
+    assert arrange_artists(order, artist, 9, params, head=2, gap=2) == \
+        ["h1", "h2", "a1", "b1", "a2", "b2", "c1", "x", "d1"]
+    # Once in the first six places: second songs wait until place 7, then go ahead of later songs.
+    assert arrange_artists(order, artist, 9, params, head=2, gap=2, once=6) == \
+        ["h1", "h2", "a1", "b1", "c1", "x", "a2", "b2", "d1"]
+    assert arrange_artists(["a1", "a2"], artist, 9, params, gap=2) == ["a1", "a2"]  # nothing else to place
+    over = SceneParams(max_same=2, max_other=1, window=3)  # caps still apply: a2 waits until after the window
+    assert arrange_artists(["a1", "a2", "b1", "c1", "d1"], artist, 9, over, gap=2) == ["a1", "b1", "c1", "a2", "d1"]
 
 
 def test_table_round_trip_and_validation(table, tmp_path):

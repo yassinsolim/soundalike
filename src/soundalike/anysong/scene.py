@@ -287,6 +287,50 @@ def cap_artists(placed: Sequence, artist_of: Callable[[Any], int | None], query_
     return head_list + tail
 
 
+def arrange_artists(placed: Sequence, artist_of: Callable[[Any], int | None], query_artist: int | None,
+                    params: SceneParams, head: int = 0, gap: int = 1, once: int = 0) -> list:
+    """``cap_artists`` plus spacing after the first ``head`` entries (the audio head): an artist's songs are at least
+    ``gap`` places apart (2 = never twice in a row), and within the first ``once`` places each artist appears once.
+
+    An entry that breaks a rule waits and takes the first place where it no longer does, ahead of later entries, so
+    every artist's first song keeps its order and only later songs move down. Head entries obey the caps only. With
+    ``gap`` 1 and ``once`` 0 this is ``cap_artists``. When only waiting entries are left and none fits, the earliest
+    goes next."""
+    counts: Counter = Counter()  # songs per artist in the first ``window`` places
+    out: list[int] = []
+    waiting: list[int] = []
+    artist = [artist_of(entry) for entry in placed]
+
+    def fits(i: int) -> bool:
+        a, p = artist[i], len(out)
+        if not a:
+            return True
+        if p < params.window and counts[a] >= (params.max_same if a == query_artist else params.max_other):
+            return False
+        if i < head:
+            return True
+        if gap > 1 and any(artist[j] == a for j in out[max(0, p - gap + 1):]):
+            return False
+        return not (p < once and counts[a] > 0)
+
+    nxt = 0
+    while nxt < len(placed) or waiting:
+        k = next((k for k, i in enumerate(waiting) if fits(i)), None)
+        if k is not None:
+            i = waiting.pop(k)
+        elif nxt < len(placed):
+            i, nxt = nxt, nxt + 1
+            if not fits(i):
+                waiting.append(i)
+                continue
+        else:
+            i = waiting.pop(0)
+        if artist[i] and len(out) < params.window:
+            counts[artist[i]] += 1
+        out.append(i)
+    return [placed[i] for i in out]
+
+
 def scene_fuse(orders: Mapping[str, Sequence[Hashable]], artists: Mapping[Hashable, int | None],
                query: ArtistProfile | None, table: SceneTable | None, params: SceneParams,
                k: int = FUSE_K, scores: Mapping[str, Sequence[float]] | None = None

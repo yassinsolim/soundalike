@@ -11,7 +11,7 @@
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.9.0";
+  const RUNTIME_SEMANTIC_VERSION = "2.9.1";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -66,7 +66,7 @@
   // Spotify drops songs queued just as a song starts playing.
   const LATE_QUEUE_DELAY_MS = 1500;
   const BEST_MATCHES_ENDPOINT = `${FALLBACK_HOSTED_SERVER}/api/anysong/similar`;
-  const BEST_MATCHES_POLICY = "anysong-best-rrf-language-vibe-sounds-v5";
+  const BEST_MATCHES_POLICY = "anysong-best-rrf-language-vibe-sounds-v6";
   const BEST_MATCHES_TIMEOUT_MS = 30000;
   const BEST_MATCHES_RETRIES = 2;
   const BEST_MATCHES_RETRY_DELAY_MS = 1500;

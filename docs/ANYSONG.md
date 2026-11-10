@@ -53,7 +53,8 @@ way to a learned order whenever the seed's artist is known:
   genre), tempo and whether the language is known. Popularity is deliberately not a feature. The model was trained on
   development seeds with ListenBrainz similar artists as labels.
 - **Best matches** keeps its audio head. The rest follow that estimate, the sound score and the melody/samples fusion
-  score (z-scores weighted 1, 0.5 and 0.25).
+  score (z-scores weighted 1, 0.5 and 0.25). After the head, no artist plays twice in a row, and each artist appears
+  once in the first 10 places; an artist's later songs wait for the next place that fits (`scene.arrange_artists`).
 - **Sounds like** orders the sonic list by its sound score plus twice the estimate.
 - **Same vibe** applies its rule to both new orders.
 - Songs by the seed's own artist are placed by sound alone.
