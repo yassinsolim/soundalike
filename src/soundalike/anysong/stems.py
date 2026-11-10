@@ -40,7 +40,7 @@ STEMS = ("vocals", "drums", "bass", "guitar", "piano", "other")
 VOCALS, DRUMS, BASS = 0, 1, 2
 HARMONIC = (2, 3, 4, 5)  # bass, guitar, piano, other: the chroma and key source
 HTDEMUCS_6S = "5c90dfd2"  # htdemucs_6s signature (demucs 4, MIT code); weights in a local repo folder
-VERSION = 1
+VERSION = 2  # 2: drum lanes unmixed by templates (band_onsets)
 LANE_FPS = 10
 LANE_FRAMES = int(SECONDS * LANE_FPS)
 ONSET_FPS = 100
@@ -49,6 +49,7 @@ PRESENT_DB = -20.0
 SILENT_DBFS = -60.0
 MAX_BEATS = 128
 STEPS = 16
+# drum lane names and order; the ranges are the bands of the VERSION 1 lanes, kept as the lab's baseline
 DRUM_BANDS = {"kick": (30.0, 120.0), "snare": (180.0, 1500.0), "hats": (7000.0, 16000.0)}
 DB_RANGE = 60.0  # lane loudness: 0 = 60 dB below full scale or quieter, 255 = full scale
 EPS = 1e-9
@@ -177,17 +178,123 @@ def _fit(x: np.ndarray, n: int) -> np.ndarray:
     return x[..., :n] if x.shape[-1] >= n else np.pad(x, [(0, 0)] * (x.ndim - 1) + [(0, n - x.shape[-1])], mode="edge")
 
 
+# Kick/snare/hat attack-flux templates (columns; each sums to 1) over 81 log bands, 12 per octave from 30 Hz to 16 kHz
+# (bands narrower than an FFT bin merged): median attack spectra of isolated hits in MDB Drums' MIREX-2017 training
+# tracks after htdemucs_6s. Lane exponents and iterations were tuned on the same tracks (anysong-lab/stems/drums).
+DRUM_TEMPLATES = np.array([
+    [0.156057, 0.00388362, 0.000501097],  # 43 Hz
+    [0.206148, 0.0049701, 0.000565328],  # 65 Hz
+    [0.168806, 0.00551708, 0.000975446],  # 86 Hz
+    [0.11114, 0.00526719, 0.000946413],  # 108 Hz
+    [0.0721317, 0.00758275, 0.00111191],  # 129 Hz
+    [0.041204, 0.0139863, 0.00114966],  # 151 Hz
+    [0.0271278, 0.0314635, 0.00131954],  # 172 Hz
+    [0.0161045, 0.0468915, 0.00105148],  # 194 Hz
+    [0.0117387, 0.0377372, 0.00101226],  # 215 Hz
+    [0.00649433, 0.0223748, 0.000889472],  # 237 Hz
+    [0.00494329, 0.0139724, 0.000863945],  # 258 Hz
+    [0.00417531, 0.0108537, 0.000904447],  # 280 Hz
+    [0.00388825, 0.00934546, 0.000796752],  # 301 Hz
+    [0.00365315, 0.00937889, 0.000773308],  # 323 Hz
+    [0.00381885, 0.00842479, 0.000713537],  # 345 Hz
+    [0.00452541, 0.00728805, 0.0008174],  # 366 Hz
+    [0.00471725, 0.00591659, 0.000787204],  # 388 Hz
+    [0.00464498, 0.00590091, 0.000784546],  # 409 Hz
+    [0.00718246, 0.0108958, 0.00115383],  # 441 Hz
+    [0.00270661, 0.00572318, 0.000685306],  # 474 Hz
+    [0.00208555, 0.00476118, 0.000676238],  # 495 Hz
+    [0.00346416, 0.00774197, 0.00142681],  # 528 Hz
+    [0.00182735, 0.00424808, 0.000778364],  # 560 Hz
+    [0.00303953, 0.0066128, 0.00157001],  # 592 Hz
+    [0.0015046, 0.00349452, 0.000934339],  # 624 Hz
+    [0.00290375, 0.00588939, 0.00132142],  # 657 Hz
+    [0.00225836, 0.00563304, 0.00105295],  # 700 Hz
+    [0.00260739, 0.00565774, 0.00117079],  # 743 Hz
+    [0.00220059, 0.00474885, 0.00126721],  # 786 Hz
+    [0.00232535, 0.00450893, 0.00114206],  # 829 Hz
+    [0.00305979, 0.00568802, 0.00134626],  # 883 Hz
+    [0.00214406, 0.00367206, 0.000972426],  # 937 Hz
+    [0.00249465, 0.00447365, 0.00119834],  # 991 Hz
+    [0.00233152, 0.00506642, 0.00119294],  # 1055 Hz
+    [0.00210844, 0.00564469, 0.00134075],  # 1120 Hz
+    [0.00187125, 0.00519059, 0.00117463],  # 1184 Hz
+    [0.00209665, 0.00573794, 0.00143452],  # 1249 Hz
+    [0.00219726, 0.00754443, 0.001986],  # 1324 Hz
+    [0.00159526, 0.00531311, 0.00144804],  # 1400 Hz
+    [0.00195704, 0.00691615, 0.0020375],  # 1475 Hz
+    [0.00199072, 0.00781173, 0.00196193],  # 1561 Hz
+    [0.0024414, 0.00969473, 0.00250071],  # 1658 Hz
+    [0.00221896, 0.00824932, 0.00218075],  # 1766 Hz
+    [0.00207627, 0.0085541, 0.00187244],  # 1873 Hz
+    [0.0024548, 0.00666539, 0.00179316],  # 1981 Hz
+    [0.00336577, 0.00879407, 0.00290512],  # 2099 Hz
+    [0.00360266, 0.00973732, 0.00271596],  # 2229 Hz
+    [0.00303138, 0.00942797, 0.0024956],  # 2358 Hz
+    [0.003567, 0.0109596, 0.00385557],  # 2498 Hz
+    [0.00309222, 0.0100716, 0.00406861],  # 2649 Hz
+    [0.00288448, 0.0101432, 0.00375663],  # 2799 Hz
+    [0.00337328, 0.012327, 0.00474864],  # 2961 Hz
+    [0.00299049, 0.0127306, 0.00442614],  # 3133 Hz
+    [0.00303543, 0.0137911, 0.00573317],  # 3316 Hz
+    [0.00369741, 0.0153669, 0.00959832],  # 3521 Hz
+    [0.00359544, 0.0171324, 0.0104025],  # 3736 Hz
+    [0.00369823, 0.0170186, 0.0122919],  # 3951 Hz
+    [0.00314747, 0.0199671, 0.0110224],  # 4188 Hz
+    [0.00318208, 0.0226868, 0.0108981],  # 4447 Hz
+    [0.00267575, 0.0231304, 0.0147422],  # 4705 Hz
+    [0.00296861, 0.0247164, 0.0223624],  # 4985 Hz
+    [0.0027608, 0.0245084, 0.0208786],  # 5286 Hz
+    [0.00301061, 0.0266908, 0.0204109],  # 5599 Hz
+    [0.00262971, 0.0242026, 0.0218379],  # 5932 Hz
+    [0.0023198, 0.0241575, 0.0270396],  # 6277 Hz
+    [0.0026844, 0.0229189, 0.0282556],  # 6643 Hz
+    [0.00229353, 0.0229682, 0.0301778],  # 7041 Hz
+    [0.00234935, 0.0211954, 0.0322785],  # 7461 Hz
+    [0.0024147, 0.0188288, 0.0340233],  # 7903 Hz
+    [0.0015719, 0.0179875, 0.0353531],  # 8376 Hz
+    [0.00145594, 0.0189408, 0.0380557],  # 8882 Hz
+    [0.00139932, 0.0186554, 0.0444634],  # 9410 Hz
+    [0.00106359, 0.0169177, 0.0446115],  # 9970 Hz
+    [0.000657966, 0.0162618, 0.0400449],  # 10562 Hz
+    [0.000645732, 0.0145189, 0.0507563],  # 11186 Hz
+    [0.000395391, 0.0136928, 0.0533177],  # 11854 Hz
+    [0.000522616, 0.0122318, 0.0555033],  # 12554 Hz
+    [0.000465813, 0.011179, 0.0714637],  # 13297 Hz
+    [0.000380301, 0.00896038, 0.0643365],  # 14093 Hz
+    [0.000338628, 0.00712331, 0.0630613],  # 14933 Hz
+    [0.000269426, 0.00316645, 0.0445233],  # 15687 Hz
+], np.float32)
+DRUM_LANE_POWER = (1.5, 1.0, 0.75)
+DRUM_NMF_ITERS = 20
+
+
+def _drum_band_bins(per_oct: int = 12, lo: float = 30.0, hi: float = 16000.0) -> np.ndarray:
+    fr = np.arange(1025) * SR / 2048
+    edges = lo * 2.0 ** (np.arange(int(np.ceil(np.log2(hi / lo) * per_oct)) + 1) / per_oct)
+    return np.unique(np.searchsorted(fr, np.minimum(edges, hi)))
+
+
+DRUM_BAND_BINS = _drum_band_bins()
+
+
 def band_onsets(drums44: np.ndarray) -> dict[str, np.ndarray]:
-    """Kick/snare/hat proxies: rectified log-energy flux of three bands of the drum stem at ``ONSET_FPS``."""
+    """Kick/snare/hat onset envelopes of the drum stem at ``ONSET_FPS``: the rectified flux of 81 log bands, unmixed
+    by KL-NMF with fixed kick/snare/hat attack templates (after Dittmar & Gaertner 2014). A band's own log flux fires
+    as hard on another drum's spill as on its own drum (an 808 lit the snare lane, a clap the kick lane); unmixing lets
+    each onset's spectral shape pick its lane. Deterministic: no random initialisation."""
     import librosa
 
-    S = np.abs(librosa.stft(drums44, n_fft=2048, hop_length=SR // ONSET_FPS)) ** 2
-    freqs = librosa.fft_frequencies(sr=SR, n_fft=2048)
-    out = {}
-    for name, (lo, hi) in DRUM_BANDS.items():
-        e = np.log1p(1e3 * S[(freqs >= lo) & (freqs < hi)].sum(axis=0))
-        out[name] = np.maximum(0.0, np.diff(e, prepend=e[0]))
-    return out
+    b = DRUM_BAND_BINS
+    M = np.abs(librosa.stft(np.asarray(drums44, np.float32), n_fft=2048, hop_length=SR // ONSET_FPS))
+    X = np.add.reduceat(M[b[0]:b[-1]], b[:-1] - b[0], axis=0)
+    V = np.maximum(0.0, np.diff(X, axis=1, prepend=X[:, :1]))
+    W = DRUM_TEMPLATES
+    tiny = 1e-12 + 1e-9 * float(V.mean())
+    V = V + tiny
+    H = np.repeat(V.sum(0, keepdims=True) / W.shape[1], W.shape[1], axis=0)
+    for _ in range(DRUM_NMF_ITERS):
+        H *= (W.T @ (V / (W @ H))) / (W.sum(0)[:, None] + tiny)
+    return {name: H[i] ** p for i, (name, p) in enumerate(zip(DRUM_BANDS, DRUM_LANE_POWER))}
 
 
 def step_pattern(envs: Sequence[np.ndarray], beats: np.ndarray, downbeats: np.ndarray) -> tuple[np.ndarray, int]:
