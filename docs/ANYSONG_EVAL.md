@@ -1785,6 +1785,43 @@ The LRCLIB dump was being unpacked on the same host; it was paused for the whole
 "Feet Don't Fail Me Now" now lists Celeste and Joesef once each in the top 10 (they held places 5 to 8 as two
 back-to-back pairs). Runtime 2.9.1 changes only the cache policy (v6), so Spotify drops lists saved before the change.
 
+## Lyrics (2026-11-10): development only, not served
+
+**Data.** Lyrics come from LRCLIB's public database dump of 2026-10-30: 49.3 GB compressed, a 268.6 GB SQLite file.
+- **Matching.** Catalog songs were matched by the API's lookup key (`api._lookup_key`). Up to 8 LRCLIB entries per
+  song were read, and the text most of them agree on was kept.
+- **Result.** 616,276 songs, covering 650,585 catalog tracks (65 %). 47,419 of those songs are marked instrumental.
+- **Embedding.** Each text was embedded with BAAI/bge-m3: the dense first-token vector, L2-normalised, from the first
+  512 tokens. This took 39 minutes on the RTX 5080.
+- **Retention.** The dump and all lyrics text were deleted after embedding. Only the vectors are kept, in the
+  research lab.
+
+**Test.** On the 823 development seeds with ListenBrainz data (706 have lyrics; 72.6 % of candidate rows have a lyric
+cosine), out-of-fold as for the listener ranker (`grow/qa/lyrics_eval.py`):
+- **Raw association.** The mean lyric cosine to the seed is 0.595 for listener-similar artists and 0.591 for the rest.
+- **Lyric cosine as a ranker feature.** The model gives it almost no weight:
+  - ListenBrainz hit rate: Best −0.001, Same vibe 0.000, Sounds like +0.003, all intervals spanning 0.
+  - Lyric closeness of the top 10: unchanged.
+- **Explicit lift.** Lyrically closer songs are pushed up: logit(p) + w × sd × z(lyric cosine).
+
+| w | Lyric closeness of the top 10 (Best / Sounds like) | ListenBrainz hit rate change (Best / Same vibe / Sounds like) | Shared genre (Sounds like) |
+|---|---|---|---|
+| 0 | 0.603 / 0.599 | — | 0.636 |
+| 0.5 | 0.628 / 0.624 | −0.007 / −0.018 / −0.020 | 0.629 |
+| 1 | 0.638 / 0.636 | −0.023 / −0.048 / −0.049 | 0.607 |
+| 2 | 0.644 / 0.646 | −0.060 / −0.111 / −0.108 | 0.560 |
+
+**Decision: not served.** Similarity from a general-purpose text embedding of lyrics does not follow what listeners
+pair, and lifting it costs listener agreement and shared genre. Lyric cosines sit in a narrow band (median 0.60,
+90th percentile 0.67 among one seed's candidates). For Roar "I Can't Handle Change" the closest lyrics among the
+retrieved songs were Angel Olsen "Lights Out", salvia palth "reprise", Current Joys "falling down" and Turnstile
+"NEVER ENOUGH". They are plausible one by one, but the lift hurt on average.
+
+Ideas not yet tested:
+- An emotion-specific lyric model (sadness, joy, anger, fear), checked against the valence and arousal of the Deezer
+  Mood Detection Dataset.
+- A separate, opt-in lyrics list, rather than changing the three lists.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
