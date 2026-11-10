@@ -1902,6 +1902,20 @@ Best matches HR@10 on the held-out split:
 
 Reported, not gated: SampleID fell 0.186 → 0.163 (43 queries); Gen Alpha and V4 did not move.
 
+**Deployed (2026-11-10).** Rule 4 passed on the first attempt, started at 04:05 after the nightly backup:
+
+| Check | Result |
+|---|---|
+| Parity | `rank_agree` 1.0 in every channel |
+| Startup | 53 s |
+| 40 unseen songs | paired median server time −27 ms; p95 1.076 → 1.047 s |
+| 40 catalog songs | paired median −6 ms; p95 0.516 → 0.513 s |
+| Peak VRAM | 6,727 MiB |
+
+Bryson Tiller "Whatever She Wants" now keeps three audio matches on top, with PARTYNEXTDOOR at #4 (#10 before), then
+Roy Woods, Tory Lanez, DeJ Loaf and Blxst. Runtime 2.10.1 changes the cache policy to v7, so Spotify drops lists saved
+under the longer heads.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
