@@ -78,6 +78,10 @@ SOUNDS_LISTENER_WEIGHT = 2.0
 # songs at least BEST_ARTIST_GAP places apart, and each artist once in the first BEST_ARTIST_ONCE places.
 BEST_ARTIST_GAP = 2
 BEST_ARTIST_ONCE = 10
+# With a listener ranker, a melody or samples match extends Best's audio head only if it also stands out from the seed's
+# other matches: a z-score of at least BEST_HEAD_STANDOUT among the first BEST_HEAD_WINDOW songs of its list (0 = off).
+BEST_HEAD_STANDOUT = 2.0
+BEST_HEAD_WINDOW = 20
 # "best" list: reciprocal-rank fusion of the channels' song lists, score = sum(w / (FUSE_K + rank)).
 # Chosen on development splits only; see docs/ANYSONG_EVAL.md.
 FUSE_K = 5
@@ -317,7 +321,8 @@ class AnySong:
                  max_versions: int | None = MAX_VERSIONS, sounds_boost: float = SOUNDS_BOOST,
                  ranker: listener.Ranker | None = None, best_sound_weight: float = BEST_SOUND_WEIGHT,
                  sounds_listener_weight: float = SOUNDS_LISTENER_WEIGHT, best_audio_weight: float = BEST_AUDIO_WEIGHT,
-                 best_artist_gap: int = BEST_ARTIST_GAP, best_artist_once: int = BEST_ARTIST_ONCE):
+                 best_artist_gap: int = BEST_ARTIST_GAP, best_artist_once: int = BEST_ARTIST_ONCE,
+                 best_head_standout: float = BEST_HEAD_STANDOUT, best_head_window: int = BEST_HEAD_WINDOW):
         self.engine, self.deezer, self.meta, self.keep_previews = engine, deezer, meta, keep_previews
         self.languages = languages
         # Songs without a confident language label take their artist's majority language in the language gate.
@@ -333,6 +338,7 @@ class AnySong:
         self.best_sound_weight, self.sounds_listener_weight = best_sound_weight, sounds_listener_weight
         self.best_audio_weight = best_audio_weight
         self.best_artist_gap, self.best_artist_once = best_artist_gap, best_artist_once
+        self.best_head_standout, self.best_head_window = best_head_standout, best_head_window
         self._artist_tracks = listener.ArtistTracks(scene) if self.ranker is not None else None
         self._sonic_core: np.ndarray | None = None
         self.learn = learn
@@ -890,7 +896,8 @@ class AnySong:
 
         orders = {channel: list(order) for channel, order in filtered.items()}
         scores = {channel: [item["score"] for item in order.values()] for channel, order in filtered.items()}
-        head = [key for key in audio_head(orders, scores, self.scene_params) if key in shown]
+        head = [key for key in audio_head(orders, scores, self.scene_params, standout_min=self.best_head_standout,
+                                          standout_window=self.best_head_window) if key in shown]
         rest = [key for key in keys if key not in set(head)]
         if rest:
             item_of = lambda key: shown[key][0]  # noqa: E731

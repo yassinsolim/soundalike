@@ -3,8 +3,8 @@ import pytest
 from dataclasses import replace
 
 from soundalike.anysong import api
-from soundalike.anysong.scene import (SceneParams, SceneTable, affinity, arrange_artists, build, cap_artists,
-                                      components, inferred, scene_fuse, standout)
+from soundalike.anysong.scene import (SceneParams, SceneTable, affinity, arrange_artists, audio_head, build,
+                                      cap_artists, components, inferred, scene_fuse, standout)
 
 OFF = SceneParams(boost=0.0, sonic=0.0, pattern="", max_same=10**6, max_other=10**6)
 
@@ -151,6 +151,22 @@ def test_artist_caps_defer_extra_songs_without_dropping_them(table):
     keys = [k for k, _, _ in scene_fuse(orders, artists, q, table, params)]
     assert keys[:4] == ["a1", "a2", "b1", "c1"]
     assert sorted(keys) == sorted(orders["melody"])
+
+
+def test_audio_head_needs_standout_evidence_when_asked():
+    params = SceneParams()
+    smooth = [f"m{i}" for i in range(20)]
+    smooth_scores = [-1.06 - 0.02 * i for i in range(20)]  # every one clears the absolute melody threshold
+    samples = [f"s{i}" for i in range(20)]
+    orders = {"melody": smooth, "samples": samples, "sonic": []}
+    scores = {"melody": smooth_scores, "samples": [0.25 - 0.003 * i for i in range(20)]}
+    # A smoothly declining list (Bryson Tiller's case) pins nine songs; with the standout rule, the minimum three.
+    assert len(audio_head(orders, scores, params)) == 9
+    assert len(audio_head(orders, scores, params, standout_min=2.0, standout_window=20)) == 3
+    # Three songs far above the rest are likely covers and still extend the head.
+    orders["melody"] = ["c0", "c1", "c2"] + smooth[:17]
+    scores["melody"] = [-0.40, -0.42, -0.45] + smooth_scores[:17]
+    assert audio_head(orders, scores, params, standout_min=2.0, standout_window=20) == ["c0", "s0", "c1", "s1", "c2"]
 
 
 def test_arrange_artists_without_spacing_is_cap_artists():
