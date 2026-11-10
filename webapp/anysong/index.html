@@ -113,7 +113,7 @@ li.row .btn{padding:8px 10px}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
 const CHANNELS = [
-  {key: "best", label: "Best matches", blurb: "Likely covers, samples and shared melodies first, then similar-sounding songs by related artists from the same scene."},
+  {key: "best", label: "Best matches", blurb: "Likely covers, samples and shared melodies first, then similar-sounding songs by artists this song's listeners also play."},
   {key: "vibe", label: "Same vibe", blurb: "Songs from these matches that share this song's tempo and overall sound, one per artist."},
   {key: "melody", label: "Same melody", blurb: "Covers, interpolations and songs that reuse the tune."},
   {key: "samples", label: "Samples & loops", blurb: "Songs that may share a sample, a loop or a chopped-up section."},

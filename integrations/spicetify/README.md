@@ -51,7 +51,10 @@ you chose.
   placed in those rankings, such as "melody #1 · samples #3". The matcher
   searches a 999,293-song index and works for any song with a 30-second
   Deezer preview, including songs outside the index, which take a few seconds
-  to analyze. Other-language songs are hidden when the seed language is known;
+  to analyze. After the likely covers and samples, songs are ordered by how
+  likely your song's listeners are to also play their artists, as learned from
+  public listening data, and by how close they sound. Rows from that part of the
+  list may show no melody or samples rank. Other-language songs are hidden when the seed language is known;
   a song without a language label of its own counts in its artist's usual
   language, and songs with neither stay visible. Use **Show all languages**
   to restore cross-language matches. If the seed language cannot be established,
@@ -67,8 +70,8 @@ you chose.
   list, and not with the local companion.
 - **Sounds like** comes from the same hosted response too: songs with the same
   overall sound (instruments, production, and mood) by Soundalike's MuQ-MuLan
-  model, one per artist, with each song's BPM. Songs by artists from your
-  song's scene move up. It also follows the **Show all
+  model, one per artist, with each song's BPM. Among similar-sounding songs,
+  those by artists your song's listeners also play move up. It also follows the **Show all
   languages** switch, and like the other two lists it works for any song with a
   Deezer preview. Until November 2026 this tab used an older model that only
   knew a fixed 272,853-track library; that service now only answers when the

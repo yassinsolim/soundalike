@@ -148,7 +148,7 @@
 
   const bestMatchesTimeoutMs = 30000;
   const bestMatchesRetries = 2;
-  const bestMatchesPolicy = "best-vibe-sounds-v1";
+  const bestMatchesPolicy = "best-vibe-sounds-v2";
   // Best matches, Same vibe and Sounds like come from one any-song response;
   // the older library service answers Sounds like only when it has none.
   const legacySoundsBlurb = "Songs with the same overall sound: low end, dynamics and tone.";
@@ -157,7 +157,7 @@
       key: "best",
       label: "Best matches",
       blurb:
-        "Likely covers, samples and shared melodies first, then similar-sounding songs by related artists from the same scene.",
+        "Likely covers, samples and shared melodies first, then similar-sounding songs by artists this song's listeners also play.",
     },
     {
       key: "vibe",
@@ -168,7 +168,8 @@
     {
       key: "sounds",
       label: "Sounds like",
-      blurb: "Songs with the same overall sound: instruments, production and mood.",
+      blurb:
+        "Songs with the same overall sound (instruments, production and mood), favouring artists this song's listeners also play.",
     },
   ];
   let pickSequence = 0;

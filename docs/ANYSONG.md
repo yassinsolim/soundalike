@@ -44,6 +44,23 @@ two songs in the top 20. Without metadata for the seed's artist the ranking is t
 safeguards and results are in [ANYSONG_EVAL.md](ANYSONG_EVAL.md#scene-layer-2026-11-04) and, for the current slots,
 [ANYSONG_EVAL.md](ANYSONG_EVAL.md#ranking-for-the-lists-users-see-pre-registered-2026-11-09-before-any-held-out-result).
 
+With a **listener ranker** (`--ranker`, [`listener.py`](../src/soundalike/anysong/listener.py)), the slots above give
+way to a learned order whenever the seed's artist is known:
+- **Candidates.** The channel lists, plus, for each artist in the seed artist's Deezer neighbourhood, its three songs
+  closest in sound. These are scored like the sonic channel and gated by the catalog tiers.
+- **Model.** A small tree model estimates, for each candidate, whether listeners of the seed's artist also play the
+  candidate's artist. It uses the audio scores, the Deezer artist graph (overlap, which artist lists the other, region,
+  genre), tempo and whether the language is known. Popularity is deliberately not a feature. The model was trained on
+  development seeds with ListenBrainz similar artists as labels.
+- **Best matches** keeps its audio head. The rest follow that estimate, the sound score and the melody/samples fusion
+  score (z-scores weighted 1, 0.5 and 0.25).
+- **Sounds like** orders the sonic list by its sound score plus twice the estimate.
+- **Same vibe** applies its rule to both new orders.
+- Songs by the seed's own artist are placed by sound alone.
+
+The selection and results are in
+[ANYSONG_EVAL.md](ANYSONG_EVAL.md#listener-aware-ranking-pre-registered-2026-11-09-before-any-held-out-result).
+
 Next to Best matches, **Same vibe** ([`samevibe.py`](../src/soundalike/anysong/samevibe.py)) lists songs a listener
 hears as belonging together. It keeps the Best candidates that share the seed's tempo (the same, double or half,
 within 6 %) and its overall sound, fills up from the sounds list, and takes one song per artist. Best stays the list
@@ -83,7 +100,10 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   Sounds like list that the main page and Spotify show: the sonic channel's songs, language-filtered like `best`,
   one song per artist (the scene table's Deezer artist, else the artist name), each with its sonic `score` and its
   catalog `bpm` (`null` when unknown or without `--tempo`). With the scene layer on, songs move up by their artist's
-  scene affinity, `1 / (5 + rank) * (1 + 8 * affinity)`; it still draws only from the sonic channel's 200 songs.
+  scene affinity, `1 / (5 + rank) * (1 + 8 * affinity)`; with the listener ranker, they follow z(sound score) + 2
+  z(listener estimate) instead. Either way the list draws only from the sonic channel's 200 songs. With the ranker, a
+  Best item that came from the seed artist's neighbourhood rather than a channel list has empty `ranks`, and
+  `timings_ms.listener` gives the time the ranker took.
 - `/similar?title=&artist=&k=` (used by the main page and Spotify, which have no Deezer id) resolves the name first.
   Songs match by song key (primary artist plus title without bracketed, dashed or feat. tags), ignoring accents on
   Latin letters, symbols and a leading "The" ("Beyoncé" = "Beyonce", "The Black Eyed Peas" = "Black Eyed Peas").
@@ -317,6 +337,21 @@ python -m soundalike.anysong.tempo --ids index_full/samples/ids.npy --previews p
 The full catalog took 0.7 GPU-hours on the RTX 5080; 266,945 of 269,278 tracks have a tempo. The API runs the same
 model on the previews of seeds outside the catalog (`--tempo-model`).
 
+## Listener ranker
+
+`ranker.npz` holds the listener model as plain arrays: 100 trees of depth at most 6, about 120 KB. Serving
+evaluates it with numpy (`listener.Ranker`), with no dependency on scikit-learn's pickles. It is trained in the
+research lab (`grow/qa/ranker_dev.py`) on rows that come from `AnySong._listener` itself, the code the server runs,
+on cached searches of development seeds:
+- `rows` captures each seed's candidate features;
+- `cv` compares out-of-fold variants with the served lists;
+- `train` fits on all development rows and writes `listener.export(model)`.
+
+Labels are ListenBrainz similar artists; they are never a feature. The model depends on the scene table and the sonic
+index it was trained with, so it belongs with the index's tables. Retrain it when they change. Per seed the extra
+work is about 650 candidates and up to a few thousand neighbour songs scored like the sonic channel. That took a median
+of 16–31 ms on the RTX 5080. `/healthz` reports the model's description under `ranker`.
+
 ## Deployment (homelab)
 
 GPU host CT 409 (`/opt/soundalike`): `src/`, `venv/`, checkpoints under `ckpt/`, upstream code under `ext/`,
@@ -324,7 +359,8 @@ offline Hugging Face cache in `hf/`, and indexes with `index/current` → the li
 holds the catalog tables it was built with: `catalog_meta.npz` for titles, `languages.npz` for language labels
 (`--languages`), `scene.npz` for the scene layer (`--scene`), `core_ids.npy` for the catalog tiers (`--core-ids`;
 for an index without crawled songs, all of its ids) and `tempo.npz` (with `ckpt/beat_this/final0.ckpt`)
-for Same vibe (`--tempo`, `--tempo-model`; about 160 MiB of VRAM, and 30 ms of GPU time per unseen seed). One
+for Same vibe (`--tempo`, `--tempo-model`; about 160 MiB of VRAM, and 30 ms of GPU time per unseen seed), and
+`ranker.npz`, the [listener ranker](#listener-ranker) trained on these tables (`--ranker`). One
 symlink swap therefore switches the index and its tables together. Grown indexes live on
 `/opt/soundalike/index-store`, a 96 GB NVMe volume (`mp1`, `backup=0`). The nightly vzdump to the bulk HDD skips it,
 because each index is about 40 GB and can be rebuilt from its embeddings. The first full index stays at
@@ -341,7 +377,7 @@ Swapping the index:
 ```sh
 scp -r index_new root@ct409:/opt/soundalike/index-store/NAME          # parallel scp per file is fastest
 cd /opt/soundalike/index-store/NAME && sha256sum -c ../NAME.sha256 && chmod -R go-w .
-cp catalog_meta.npz languages.npz scene.npz tempo.npz core_ids.npy /opt/soundalike/index-store/NAME/   # its tables
+cp catalog_meta.npz languages.npz scene.npz tempo.npz core_ids.npy ranker.npz /opt/soundalike/index-store/NAME/   # its tables
 systemctl stop soundalike-anysong
 ln -sfn /opt/soundalike/index-store/NAME /opt/soundalike/index/current
 systemctl start soundalike-anysong && journalctl -u soundalike-anysong -f   # wait for "ready in ..."
