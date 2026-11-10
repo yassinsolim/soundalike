@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from soundalike.anysong import api
+from soundalike.anysong import stems as stemlib
 from soundalike.anysong.languages import LanguageTable, decide, top_languages
 from soundalike.anysong.scene import SceneParams
 from soundalike.anysong.scene import build as build_scene
@@ -1021,3 +1022,186 @@ def test_engine_search_stored_matches_live_search_on_same_windows():
         assert [t for t, _ in stored[name]] == [t for t, _ in live[name]]
         np.testing.assert_allclose([s for _, s in stored[name]], [s for _, s in live[name]], atol=2e-3)
     assert torch.is_tensor(eng.indexes["melody"].stored_query(tid))
+
+
+# ---------------------------------------------------------------- stem dissection
+def _stem_record(seed, present=None):
+    rng = np.random.default_rng(seed)
+    rec = {name: np.zeros(shape, dtype) for name, (shape, dtype) in stemlib.COLUMNS.items()}
+    rec["vec"] = rng.standard_normal((6, 512)).astype(np.float16)
+    rec["present"] = np.ones(6, bool) if present is None else np.asarray(present, bool)
+    rec["balance"] = rng.uniform(-30, 0, 6).astype(np.float32)
+    desc = rng.uniform(1, 60, len(stemlib.DESC)).astype(np.float32)
+    desc[stemlib.D["key_tonic"]], desc[stemlib.D["key_minor"]], desc[stemlib.D["drum_bars"]] = seed % 12, 1, 4
+    rec["desc"] = desc
+    rec["chroma"] = rng.dirichlet(np.ones(12)).astype(np.float16)
+    rec["intervals"] = rng.dirichlet(np.ones(12), 2).astype(np.float16)
+    rec["beats"][:] = stemlib.NO_BEAT
+    rec["beats"][:4], rec["downbeat"][0] = [50, 100, 150, 200], True
+    return rec
+
+
+def _stem_table(ids=(1, 3), calib=True):
+    recs = [_stem_record(t) for t in ids]
+    meta = {"mu": np.zeros((6, 512)).tolist(),
+            "calib": np.tile(np.linspace(-1, 1, 101), (len(stemlib.FACETS), 1)).tolist() if calib else None}
+    return stemlib.StemTable(np.array(ids), stemlib.stack(recs), meta)
+
+
+class FakeDissector:
+    def __init__(self, gate=None, fail=None):
+        self.gate, self.fail = gate, fail
+        self.gpu_calls, self.cpu_calls = [], 0
+
+    def gpu(self, mixes):
+        self.gpu_calls.append(mixes.shape)
+        if self.gate is not None:
+            self.gate.wait(5)
+        if self.fail is not None:
+            raise self.fail
+        return np.zeros((len(mixes), 6, 2, 4), np.float32), [(np.zeros(0), np.zeros(0))] * len(mixes), \
+            np.zeros((len(mixes), 6, 512), np.float16)
+
+    def cpu(self, stems, mixes, beats, vec):
+        self.cpu_calls += 1
+        return [_stem_record(1000 + len(self.gpu_calls)) for _ in mixes]
+
+
+@pytest.fixture
+def stereo(monkeypatch):
+    decoded = []
+
+    def decode(path):
+        decoded.append(path)
+        if path.read_bytes() == b"bad":
+            raise RuntimeError("corrupt mp3")
+        return np.zeros((2, stemlib.SAMPLES), np.float32)
+
+    monkeypatch.setattr(stemlib, "decode_stereo", decode)
+    return decoded
+
+
+def test_dissect_serves_stored_rows_and_grades_the_pair(tmp_path):
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, stems=stemlib.StemStore(_stem_table()))
+    out = json.loads(json.dumps(svc.dissect(1, 3)))
+    assert [s["id"] for s in out["songs"]] == [1, 3] and {s["source"] for s in out["songs"]} == {"catalog"}
+    assert all("ms" not in s for s in out["songs"]) and out["songs"][0]["beats"] == [0.5, 1.0, 1.5, 2.0]
+    assert out["compare"]["graded"] and out["compare"]["facets"]
+    assert all(x["grade"] is not None for x in out["compare"]["facets"])
+    assert set(out["compare"]["matched_on"]) <= {x["name"] for x in out["compare"]["facets"]}
+    assert "compare" not in svc.dissect(1) and "compare" not in svc.dissect(1, 1)
+    with pytest.raises(api.ApiError) as err:
+        svc.dissect(1, 5)
+    assert err.value.status == 404 and err.value.message == "this song has not been dissected yet"
+    assert not svc.stems_missing(5)  # without a dissector nothing is computed, so nothing is charged
+    assert svc.health()["stems"] == {"songs": 2, "live": False, "graded": True,
+                                     "dissected": {"stored": 5, "live": 0}}
+    assert svc.health()["gpu_mib"] is None
+
+
+def test_dissect_is_off_without_a_store(svc):
+    assert svc.health()["stems"] is None and not svc.stems_missing(1)
+    with pytest.raises(api.ApiError) as err:
+        svc.dissect(1, 3)
+    assert err.value.status == 404 and err.value.message == "song dissection is not enabled"
+
+
+def test_dissect_live_once_then_from_the_cache_and_never_keeps_the_download(tmp_path, stereo):
+    dz, dis = FakeDeezer(tmp_path), FakeDissector()
+    store = stemlib.StemStore(_stem_table(calib=False), tmp_path / "cache")
+    svc = api.AnySong(FakeEngine(), dz, META, stems=store, dissector=dis)
+    assert svc.stems_missing(99) and not svc.stems_missing(1)
+    out = svc.dissect(1, 99)
+    assert [s["source"] for s in out["songs"]] == ["catalog", "live"] and "ms" in out["songs"][1]
+    assert not out["compare"]["graded"] and out["compare"]["matched_on"] == []
+    assert dis.gpu_calls == [(1, 2, stemlib.SAMPLES)] and dis.cpu_calls == 1
+    assert dz.lookups == 1 and not (tmp_path / "99.mp3").exists()
+    assert (tmp_path / "cache" / "099" / "99.npz").exists() and not svc.stems_missing(99)
+    assert svc.dissect(99)["songs"][0]["source"] == "cache" and len(dis.gpu_calls) == 1
+    restarted = api.AnySong(FakeEngine(), dz, META, stems=stemlib.StemStore(None, tmp_path / "cache"),
+                            dissector=FakeDissector())
+    assert restarted.dissect(99)["songs"][0]["source"] == "cache"
+    assert svc.health()["stems"]["dissected"] == {"stored": 2, "live": 1}
+
+
+def test_dissect_reads_catalog_previews_without_deezer(tmp_path, stereo):
+    (tmp_path / "previews" / "005").mkdir(parents=True)
+    (tmp_path / "previews" / "005" / "5.mp3").write_bytes(b"mp3")
+    dz = FakeDeezer(tmp_path)
+    svc = api.AnySong(FakeEngine(), dz, META, dissector=FakeDissector(), catalog_previews=tmp_path / "previews")
+    assert svc.dissect(5)["songs"][0]["source"] == "live"
+    assert dz.lookups == 0 and stereo == [tmp_path / "previews" / "005" / "5.mp3"]
+    assert (tmp_path / "previews" / "005" / "5.mp3").exists()  # the catalog copy stays
+    assert svc.health()["stems"] == {"songs": 0, "live": True, "graded": False, "dissected": {"stored": 0, "live": 1}}
+
+
+@pytest.mark.parametrize("setup,status,message", [
+    (lambda dz, dis: setattr(dz, "fail", True), 502, "track lookup failed"),
+    (lambda dz, dis: dz.tracks[99].update(preview=""), 404, "no preview available for this track"),
+    (lambda dz, dis: dz.tracks.clear(), 404, "unknown track"),
+    (lambda dz, dis: setattr(dz, "preview", b"bad"), 422, "could not decode the preview"),
+    (lambda dz, dis: setattr(dis, "fail", RuntimeError("CUDA out of memory. Tried to allocate")), 503,
+     "the GPU is busy, retry shortly"),
+])
+def test_dissect_live_errors_free_their_slot_and_leave_nothing_cached(tmp_path, stereo, setup, status, message):
+    dz, dis = FakeDeezer(tmp_path), FakeDissector()
+    setup(dz, dis)
+    svc = api.AnySong(FakeEngine(), dz, META, max_pending=1, dissector=dis)
+    for _ in range(2):  # a leaked pending slot would turn the second try into 503 busy
+        with pytest.raises(api.ApiError) as err:
+            svc.dissect(99)
+        assert (err.value.status, err.value.message) == (status, message)
+    assert svc.stems_missing(99) and not svc._stem_flight and not (tmp_path / "99.mp3").exists()
+
+
+def test_dissect_other_gpu_errors_propagate(tmp_path, stereo):
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, dissector=FakeDissector(fail=ValueError("shape")))
+    with pytest.raises(ValueError):
+        svc.dissect(99)
+
+
+def test_dissect_busy_and_concurrent_requests_for_one_song_dissect_once(tmp_path, stereo):
+    gate = threading.Event()
+    dis = FakeDissector(gate=gate)
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, max_pending=1, dissector=dis)
+    results = []
+    threads = [threading.Thread(target=lambda: results.append(svc.dissect(99))) for _ in range(3)]
+    for th in threads:
+        th.start()
+    for _ in range(100):
+        if dis.gpu_calls:
+            break
+        threading.Event().wait(0.01)
+    with pytest.raises(api.ApiError) as err:  # the one pending slot is taken by the running dissection
+        svc.dissect(77)
+    assert err.value.status == 503
+    gate.set()
+    for th in threads:
+        th.join(5)
+    assert len(results) == 3 and len(dis.gpu_calls) == 1
+    assert sorted(r["songs"][0]["source"] for r in results) == ["live", "live", "live"]
+
+
+def test_http_dissect_route_charges_only_live_dissections(tmp_path, stereo):
+    store = stemlib.StemStore(_stem_table())
+    srv = api.Server(("127.0.0.1", 0), api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, stems=store,
+                                                   dissector=FakeDissector()),
+                     search_per_min=600, similar_per_min=600, dissect_per_min=4)  # burst of 1
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        for _ in range(3):
+            code, headers, body = get(srv, "/api/anysong/dissect?id=1&with=3")
+            assert code == 200 and body["ok"] and len(body["songs"]) == 2 and "compare" in body
+            assert headers["Cache-Control"] == "public, max-age=3600"
+        code, _, body = get(srv, "/api/anysong/dissect?id=1&with=99")
+        assert code == 200 and body["songs"][1]["source"] == "live"
+        assert get(srv, "/api/anysong/dissect?id=99&with=1")[0] == 200  # now cached: free
+        code, _, body = get(srv, "/api/anysong/dissect?id=1&with=77")
+        assert code == 429 and body["error"] == "too many requests"
+        for path in ("/api/anysong/dissect", "/api/anysong/dissect?id=x", "/api/anysong/dissect?id=1&with=0"):
+            code, _, body = get(srv, path)
+            assert code == 400 and not body["ok"]
+        assert get(srv, "/healthz")[2]["stems"]["live"] is True
+    finally:
+        srv.shutdown()
+        srv.server_close()

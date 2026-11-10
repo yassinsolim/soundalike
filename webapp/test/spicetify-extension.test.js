@@ -80,6 +80,7 @@ function loadExtension(fetchImpl, options = {}) {
   const offerButton = { onclick: null };
   const seedPlayButton = { onclick: null };
   const languageToggleButton = { onclick: null };
+  const stemsButtons = { back: [], retry: [], play: [] };
   // Best matches are offline unless a test opts in, so the older tests keep
   // exercising the Sounds like flow they were written for.
   function fetchWithBestMatches(url, init) {
@@ -227,6 +228,19 @@ function loadExtension(fetchImpl, options = {}) {
         if (this.className === "sa-results-host") currentPage = undefined;
       },
       querySelector(selector) {
+        // Stems draws its own Back and Try again buttons into its panel.
+        const stemsButton = selector.match(/^\.sa-dx-(back|retry)$/);
+        if (stemsButton) {
+          if (!this.innerHTML.includes(`class="sa-dx-${stemsButton[1]}"`)) return null;
+          const button = {
+            onclick: null,
+            focus() {
+              context.document.activeElement = this;
+            },
+          };
+          stemsButtons[stemsButton[1]].push(button);
+          return button;
+        }
         if (selector === ".sa-best-offer") {
           return this.innerHTML.includes('class="sa-best-offer"')
             ? offerButton
@@ -248,6 +262,13 @@ function loadExtension(fetchImpl, options = {}) {
         if (selector === ".sa-tab") {
           const at = (tab) => this.innerHTML.indexOf(`data-view="${tab.dataset.view}"`);
           return tabs.filter((tab) => at(tab) >= 0).sort((left, right) => at(left) - at(right));
+        }
+        if (selector === ".sa-dx-play") {
+          const buttons = [...this.innerHTML.matchAll(
+            /<button class="sa-dx-play" type="button" data-uri="([^"]*)" data-title="([^"]*)"/g,
+          )].map(([, uri, title]) => ({ onclick: null, dataset: { uri, title } }));
+          stemsButtons.play.push(...buttons);
+          return buttons;
         }
         return queryAllPage(selector);
       },
@@ -337,6 +358,7 @@ function loadExtension(fetchImpl, options = {}) {
     AbortController,
     Date,
     URLSearchParams,
+    atob,
     clearTimeout,
     crypto: webcrypto,
     fetch: fetchWithBestMatches,
@@ -675,6 +697,13 @@ function loadExtension(fetchImpl, options = {}) {
     tabFocus,
     offerButton,
     seedPlayButton,
+    stemsButtons,
+    get resultsHost() {
+      return body.children.find((child) => child.className === "sa-results-host");
+    },
+    get stemsPanel() {
+      return this.resultsHost?.children.find((child) => child.className === "sa-results sa-dx");
+    },
     get activeElement() {
       return context.document.activeElement;
     },
@@ -2830,7 +2859,7 @@ test("restores cached Best matches without asking the matcher again", async () =
   );
   assert.deepEqual(
     entry.query,
-    { title: "Blinding Lights", artist: "The Weeknd", source: "live",
+    { id: 908604612, title: "Blinding Lights", artist: "The Weeknd", source: "live",
       language: "unknown", languageMode: "same", hidden: 0, bpm: null },
   );
   assert.deepEqual(entry.vibe, []);
@@ -3298,8 +3327,8 @@ test("restores a saved Same vibe list without asking the matcher again", async (
   ), 1000);
   const entry = saved().recommendations[bestCacheKey].value;
   assert.deepEqual(entry.vibe, [
-    { title: "Take My Breath", artist: "The Weeknd" },
-    { title: "Chanson Proche", artist: "Artiste Deux" },
+    { id: 41, title: "Take My Breath", artist: "The Weeknd" },
+    { id: 42, title: "Chanson Proche", artist: "Artiste Deux" },
   ]);
   assert.equal(entry.query.bpm, 171.4);
 
@@ -3809,4 +3838,360 @@ test("asks the older Sounds like service when Best matches carry no list", async
   first.tab("sounds").onclick();
   await waitFor(() => first.feedback.panel.dataset.ready === "true");
   assert.match(first.currentPage.innerHTML, /Dual-Sonic64/);
+});
+
+// ---- Stems ----------------------------------------------------------------
+
+function stemsLane(value) {
+  return Buffer.from(Array.from({ length: 300 }, (_, index) =>
+    (typeof value === "function" ? value(index) : value))).toString("base64");
+}
+
+// One song as /api/anysong/dissect sends it (stems.payload plus its source).
+function dissectedSong(id, overrides = {}) {
+  return {
+    id,
+    version: 1,
+    seconds: 30,
+    fps: 10,
+    frames: 300,
+    bpm: 171.4,
+    key: { tonic: "F", mode: "minor", strength: 0.71 },
+    beats: [0.35, 0.7, 1.05, 1.4],
+    downbeats: [0.35],
+    stems: ["vocals", "drums", "bass", "guitar", "piano", "other"].map((name) => ({
+      name,
+      present: name !== "guitar",
+      balance_db: name === "guitar" ? -41.2 : -6.5,
+      loudness: stemsLane(name === "guitar" ? 4 : 180),
+    })),
+    mix: stemsLane(200),
+    db_range: 60,
+    drums: {
+      kick: stemsLane((index) => (index % 5 === 0 ? 220 : 0)),
+      snare: stemsLane((index) => (index % 10 === 5 ? 200 : 0)),
+      hats: stemsLane(20),
+    },
+    pattern: {
+      kick: [255, 0, 0, 0, 0, 0, 0, 0, 255, 0, 0, 0, 0, 0, 0, 0],
+      snare: [0, 0, 0, 0, 255, 0, 0, 0, 0, 0, 0, 0, 255, 0, 0, 0],
+      hats: Array(16).fill(120),
+    },
+    pitch: {
+      vocals: stemsLane((index) => (index < 100 ? 0 : 114 + (index % 8))),
+      bass: stemsLane(0),
+    },
+    vocals: { median: "A3", range_st: 9.4, presence: 0.66, onsets_per_s: 3.1 },
+    bass: { median: "F1", range_st: 5, onsets_per_s: 2.2, sub_share: 0.4 },
+    drum_rates: { kick: 2, snare: 1, hats: null },
+    source: "catalog",
+    ...overrides,
+  };
+}
+
+const gradedCompare = {
+  facets: [
+    { name: "key", label: "Key", value: 5, grade: 12 },
+    { name: "vocals", label: "Vocals", value: 0.81, grade: 93 },
+    { name: "groove", label: "Groove", value: 0.4, grade: null },
+    { name: "drums", label: "Drums", value: 0.7, grade: 88 },
+  ],
+  graded: true,
+  matched_on: ["vocals", "drums"],
+};
+
+function dissectBody(seedId, matchId, overrides = {}) {
+  return {
+    ok: true,
+    songs: [dissectedSong(seedId), dissectedSong(matchId)],
+    compare: gradedCompare,
+    ...overrides,
+  };
+}
+
+const isDissect = (url) => url.includes("/api/anysong/dissect");
+const dissectUrl = (seedId, matchId) =>
+  `https://soundalike.yassin.app/api/anysong/dissect?id=${seedId}&with=${matchId}`;
+const stemsOpener = (row) =>
+  findElement(row.tree, (node) => node.props?.className === "sa-dx-open");
+const quietEvent = () => ({ stopPropagation() {} });
+
+async function openSameVibe(bestFetch, options = {}) {
+  const app = loadBestMatchesExtension({ bestFetch, ...options });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  app.tab("vibe").onclick();
+  await waitFor(() => hasLog(app, "Same vibe metadata settled"));
+  return app;
+}
+
+test("Stems shows a hosted match next to its seed, part by part", async () => {
+  const gate = deferred();
+  const app = loadBestMatchesExtension({
+    bestFetch: async (url) => {
+      if (!isDissect(url)) return vibeFetch(url);
+      await gate.promise;
+      return response(200, dissectBody(908604612, 41));
+    },
+  });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  // These Best rows carry no Deezer ids, so there is nothing to compare.
+  assert.doesNotMatch(app.currentPage.innerHTML, /class="sa-list-head sa-with-stems"|class="sa-dx-head"/);
+  assert.equal(stemsOpener(app.rows[0]), null);
+  assert.equal(app.rows[0].classList.contains("sa-row-stems"), false);
+
+  app.tab("vibe").onclick();
+  await waitFor(() => hasLog(app, "Same vibe metadata settled"));
+  const list = app.currentPage;
+  assert.match(
+    list.innerHTML,
+    /<div class="sa-list-head sa-with-stems"><div>#<\/div><div><\/div><div>Title<\/div><div class="sa-album-head">Album<\/div><div class="sa-dx-head">Compare<\/div><\/div>/,
+  );
+  assert.equal(app.rows[0].classList.contains("sa-row-stems"), true);
+  const opener = stemsOpener(app.rows[0]);
+  assert.equal(opener.props.children, "Stems");
+  assert.equal(opener.props["aria-label"], "Stems: compare Take My Breath with Blinding Lights");
+  // The button's clicks and keys stay off the row, which would play the song.
+  let stopped = 0;
+  const event = { stopPropagation() { stopped += 1; } };
+  opener.props.onKeyDown(event);
+  opener.props.onDoubleClick(event);
+  opener.props.onClick(event);
+  assert.equal(stopped, 3);
+  assert.deepEqual(app.played, []);
+
+  assert.equal(list.hidden, true);
+  const panel = app.stemsPanel;
+  assert.ok(panel, "the Stems panel joins the results page");
+  assert.match(
+    panel.innerHTML,
+    /<h2 class="sa-dx-title">Blinding Lights <span>vs<\/span> Take My Breath<\/h2>/,
+  );
+  assert.match(panel.innerHTML, /<div class="sa-state" role="status">Splitting both songs into instruments…/);
+  assert.equal(app.activeElement, app.stemsButtons.back.at(-1));
+  assert.equal(app.bestRequests.at(-1), dissectUrl(908604612, 41));
+
+  gate.resolve();
+  await waitFor(() => panel.innerHTML.includes("How alike, part by part"));
+  const html = panel.innerHTML;
+  assert.match(
+    html,
+    /<div class="sa-dx-matched"><span>Matched on<\/span><span class="sa-dx-chip">Vocals<\/span><span class="sa-dx-chip">Drums<\/span><\/div>/,
+  );
+  // Strongest first; a facet without a grade is left out rather than read as 0.
+  const labels = [...html.matchAll(/<span class="sa-dx-facet-label"[^>]*>([^<]+)<\/span>/g)]
+    .map((match) => match[1]);
+  assert.deepEqual(labels, ["Vocals", "Drums", "Key"]);
+  assert.match(
+    html,
+    /<span class="sa-dx-bar" title="More alike than 93% of typical match pairs"><span style="width:93%"><\/span><\/span>/,
+  );
+  // Per song: the whole mix, six stems and three drum lanes.
+  assert.equal((html.match(/<div class="sa-dx-lane[" ]/g) || []).length, 20);
+  assert.equal((html.match(/<div class="sa-dx-lane sa-dx-absent">/g) || []).length, 2);
+  assert.match(
+    html,
+    /<div class="sa-dx-lane sa-dx-absent"><div class="sa-dx-lane-label">Guitar<span>not in this song<\/span><\/div>/,
+  );
+  assert.match(html, /<div class="sa-dx-lane-label">Vocals<span>\u22126\.5 dB vs mix<\/span><\/div>/);
+  assert.match(html, /<div class="sa-dx-lane-label">Synths &amp; other<span>/);
+  assert.match(html, /<div class="sa-dx-lane-label">Kick<span>2\.0 hits\/s<\/span><\/div>/);
+  assert.match(html, /<div class="sa-dx-lane-label">Hats<\/div>/);
+  // Sung frames draw a melody line; a bass with no pitched frames draws none.
+  assert.equal((html.match(/class="sa-dx-pitch"/g) || []).length, 2);
+  assert.match(
+    html,
+    /<span class="sa-tag">171 BPM<\/span><span class="sa-tag">F minor<\/span><span class="sa-tag">Vocals around A3 · 9-semitone range<\/span><span class="sa-tag">Bass around F1<\/span>/,
+  );
+  assert.equal((html.match(/class="sa-dx-step/g) || []).length, 96);
+  assert.match(html, /Measured on each song's 30-second Deezer preview\. From earlier dissections\./);
+  assert.doesNotMatch(html, /NaN|undefined|null/);
+
+  const plays = app.stemsButtons.play.slice(-2);
+  assert.deepEqual(
+    plays.map((button) => button.dataset.uri),
+    ["spotify:track:test", "spotify:track:sounds0"],
+  );
+  await plays[1].onclick();
+  assert.deepEqual(app.played, ["spotify:track:sounds0"]);
+
+  // Back brings the list back and returns focus to where it was.
+  const openedFrom = app.tab("vibe");
+  app.stemsButtons.back.at(-1).onclick();
+  assert.equal(app.stemsPanel, undefined);
+  assert.equal(list.hidden, false);
+  assert.equal(app.activeElement, openedFrom);
+
+  // The same pair opens again from memory; Escape closes it too.
+  const requests = app.bestRequests.length;
+  stemsOpener(app.rows[0]).props.onClick(quietEvent());
+  await waitFor(() => app.stemsPanel?.innerHTML.includes("How alike, part by part"));
+  assert.equal(app.bestRequests.length, requests);
+  app.stemsPanel.onkeydown({ key: "Tab", preventDefault() {} });
+  assert.ok(app.stemsPanel);
+  app.stemsPanel.onkeydown({ key: "Escape", preventDefault() {} });
+  assert.equal(app.stemsPanel, undefined);
+  assert.equal(list.hidden, false);
+
+  // Leaving the results page takes Stems with it.
+  stemsOpener(app.rows[1]).props.onClick(quietEvent());
+  assert.ok(app.stemsPanel);
+  app.navigate("/");
+  assert.equal(app.resultsHost, undefined);
+});
+
+test("Stems explains failures, waits out a busy dissector and shows raw measures", async () => {
+  let dissects = 0;
+  const app = await openSameVibe(async (url) => {
+    if (!isDissect(url)) return vibeFetch(url);
+    dissects += 1;
+    if (dissects === 1) {
+      return response(404, { ok: false, error: "this song has not been dissected yet" });
+    }
+    if (dissects === 2) {
+      return response(503, { ok: false, error: "the GPU is busy, retry shortly" });
+    }
+    return response(200, dissectBody(908604612, 42, {
+      songs: [
+        dissectedSong(908604612, { source: "live", ms: 8400 }),
+        dissectedSong(42, { source: "cache", stems: [], drums: {}, pattern: {}, bpm: null }),
+      ],
+      compare: {
+        graded: false,
+        matched_on: [],
+        facets: [
+          { name: "vocals", label: "Vocals", value: 0.812, grade: null },
+          { name: "key", label: "Key", value: 2, grade: null },
+          { name: "vocal_pitch", label: "Vocal register", value: 1, grade: null },
+          { name: "vocal_presence", label: "Vocal presence", value: 0.25, grade: null },
+          { name: "balance", label: "Mix balance", value: 3.2, grade: null },
+          { name: "groove", label: "Groove", value: null, grade: null },
+        ],
+      },
+    }));
+  }, { timerScale: 0.01 });
+
+  stemsOpener(app.rows[1]).props.onClick(quietEvent());
+  const panel = app.stemsPanel;
+  await waitFor(() => panel.innerHTML.includes("sa-state-error"));
+  assert.equal(app.bestRequests.at(-1), dissectUrl(908604612, 42));
+  assert.match(panel.innerHTML, /These songs haven't been dissected yet\./);
+  assert.match(panel.innerHTML, /<button class="sa-dx-retry" type="button">Try again<\/button>/);
+  assert.equal(app.activeElement, app.stemsButtons.back.at(-1));
+
+  // A failed pair is forgotten, so Try again asks again; 503 is retried quietly.
+  app.stemsButtons.retry.at(-1).onclick();
+  assert.match(panel.innerHTML, /Splitting both songs into instruments/);
+  await waitFor(() => panel.innerHTML.includes("How alike, part by part"));
+  assert.equal(dissects, 3);
+  assert.equal(app.bestRequests.filter(isDissect).length, 3);
+  const html = panel.innerHTML;
+  assert.doesNotMatch(html, /Matched on|sa-dx-strong/);
+  const readings = [...html.matchAll(/<span class="sa-dx-facet-value"[^>]*>([^<]+)<\/span>/g)]
+    .map((match) => match[1]);
+  assert.deepEqual(
+    readings,
+    ["0.81", "2 steps apart", "1 semitone apart", "25 pts apart", "3.2 dB apart"],
+  );
+  assert.match(html, /Grades arrive once the dissector is calibrated\./);
+  assert.match(html, /Dissected just now in 8\.4 s\./);
+  // A song with no stems still shows its whole mix, and no drum pattern.
+  assert.equal((html.match(/<div class="sa-dx-lane[" ]/g) || []).length, 11);
+  assert.match(html, /No steady drum pattern in this preview\./);
+  assert.doesNotMatch(html, /NaN|undefined/);
+  assert.deepEqual(errorNotifications(app), []);
+});
+
+test("Stems gives up on a dissector that stays busy and reads each failure", async () => {
+  const failures = [
+    [404, "song dissection is not enabled", "Stems aren't switched on for the hosted library yet."],
+    [404, "no preview available for this track", "One of these songs has no Deezer preview to dissect."],
+    [429, "too many requests", "You're going a bit fast. Wait a few seconds and try again."],
+    [503, "the GPU is busy, retry shortly", "The dissector is busy right now. Try again in a moment."],
+    [504, "timed out waiting for the dissection", "Dissecting took too long. Try again."],
+    [200, "", "Stems are unavailable right now. Try again in a moment."],
+  ];
+  let failure;
+  let calls = 0;
+  const app = await openSameVibe(async (url) => {
+    if (!isDissect(url)) return vibeFetch(url);
+    calls += 1;
+    const [status, error] = failure;
+    // A 200 with one song is a broken answer, not a dissection.
+    return status === 200
+      ? response(200, { ok: true, songs: [dissectedSong(908604612)] })
+      : response(status, { ok: false, error });
+  }, { timerScale: 0.01 });
+
+  for (const [status, error, message] of failures) {
+    failure = [status, error];
+    calls = 0;
+    const retry = app.stemsButtons.retry.at(-1);
+    if (app.stemsPanel) retry.onclick();
+    else stemsOpener(app.rows[0]).props.onClick(quietEvent());
+    await waitFor(() => app.stemsPanel.innerHTML.includes("sa-state-error"));
+    assert.ok(app.stemsPanel.innerHTML.includes(message), `${status} ${error}`);
+    assert.equal(calls, status === 503 ? 4 : 1, `${status} attempts`);
+  }
+});
+
+test("Stems compares hosted Sounds like rows but never the companion's local list", async () => {
+  const hosted = await openSameVibe(async (url) => (isDissect(url)
+    ? response(200, dissectBody(908604612, 51))
+    : soundsFetch(url)));
+  hosted.tab("sounds").onclick();
+  await waitFor(() => hasLog(hosted, "Sounds like metadata settled"));
+  assert.match(
+    hosted.currentPage.innerHTML,
+    /<div class="sa-bpm">BPM<\/div><div class="sa-dx-head">Compare<\/div><\/div>/,
+  );
+  stemsOpener(hosted.rows[0]).props.onClick(quietEvent());
+  await waitFor(() => hosted.stemsPanel?.innerHTML.includes("How alike, part by part"));
+  assert.equal(hosted.bestRequests.at(-1), dissectUrl(908604612, 51));
+
+  const local = loadBestMatchesExtension({ localCompanion: true, bestFetch: soundsFetch });
+  await local.run();
+  await waitFor(() => local.feedback.panel.dataset.ready === "true");
+  local.tabs[0].onclick();
+  local.offerButton.onclick();
+  await waitFor(() => hasLog(local, "Best matches metadata settled"));
+  local.tab("sounds").onclick();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  const html = local.currentPage.innerHTML;
+  assert.match(html, /SOUNDS LIKE · LOCAL ENGINE/);
+  assert.doesNotMatch(html, /class="sa-list-head sa-with-stems"|class="sa-dx-head"/);
+  for (const row of local.rows) {
+    assert.equal(row.tree ? stemsOpener(row) : null, null);
+  }
+  assert.equal(local.bestRequests.filter(isDissect).length, 0);
+});
+
+test("refetches a saved Best matches list that predates song ids, once", async () => {
+  const storage = new Map();
+  const { id: _id, ...queryWithoutId } = bestSeedQuery;
+  const first = loadBestMatchesExtension({
+    storage,
+    bestFetch: async () => response(200, bestMatchesBody(bestFixture, { query: queryWithoutId })),
+  });
+  await first.run();
+  await waitFor(() => hasLog(first, "Best matches metadata settled"));
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  const saved = () => JSON.parse(storage.get("soundalike:spicetify-cache:v9") || "{}");
+  await waitFor(() => Boolean(saved().recommendations?.[bestCacheKey]), 1000);
+  assert.equal(saved().recommendations[bestCacheKey].value.query.id, undefined);
+
+  const second = loadBestMatchesExtension({ storage });
+  await second.run();
+  await waitFor(() => hasLog(second, "Best matches metadata settled"));
+  assert.equal(second.bestRequests.length, 1);
+  await waitFor(() => saved().recommendations[bestCacheKey].value.query.id === 908604612, 1000);
+
+  const third = loadBestMatchesExtension({
+    storage,
+    bestFetch: async () => response(500, { ok: false }),
+  });
+  await third.run();
+  await waitFor(() => hasLog(third, "Best matches metadata settled"));
+  assert.deepEqual(third.bestRequests, []);
 });
