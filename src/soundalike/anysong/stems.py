@@ -377,6 +377,23 @@ def describe(stems: np.ndarray, mix: np.ndarray, beats: np.ndarray, downbeats: n
             "lanes": _lane_u8(lane_db), "hits": hits, "pitch": pitch, "beats": beat_arr, "downbeat": down}
 
 
+def warm_up() -> dict[str, np.ndarray]:
+    """``describe`` a synthetic song with vocals, drums and bass, so the measurements' numba kernels (pYIN, onsets)
+    compile before the first live dissection instead of during it (about 5 s on first use)."""
+    t = np.arange(SAMPLES) / SR
+    mono = np.zeros((len(STEMS), SAMPLES), np.float32)
+    mono[VOCALS] = 0.2 * np.sin(2 * np.pi * 220.0 * t)
+    mono[BASS] = 0.3 * np.sin(2 * np.pi * 55.0 * t)
+    n = int(0.08 * SR)
+    hit = 0.8 * np.sin(2 * np.pi * 60.0 * np.arange(n) / SR) * np.exp(-np.arange(n) / (0.015 * SR))
+    beats = np.arange(0.1, SECONDS - 0.2, 0.6)
+    for b in beats:
+        i = int(b * SR)
+        mono[DRUMS, i:i + n] += hit[:SAMPLES - i]
+    stems = np.repeat(mono[:, None], 2, axis=1)
+    return describe(stems, stems.sum(0), beats, beats[::4])
+
+
 # ---------------------------------------------------------------- dissecting songs
 class Dissector:
     """Separation, beats and stem embeddings on one device; measurements on a CPU thread pool."""

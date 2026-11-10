@@ -1386,6 +1386,7 @@ def main(argv: list[str] | None = None) -> None:
         dissector.gpu(noise)  # warm-up
         _release_cuda(args.device)
         stems_warm = round(time.perf_counter() - t_stems, 1)
+        threading.Thread(target=stemlib.warm_up, name="stems-warm-up", daemon=True).start()
     service = AnySong(engine, Deezer(scratch), meta, args.cache_size, args.max_pending,
                       languages=languages, scene=scene, tempo=tempo, tracker=tracker,
                       learn=LearnQueue(args.learn_queue) if args.learn_queue else None, tiers=tiers,

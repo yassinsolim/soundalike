@@ -70,6 +70,13 @@ def test_describe_columns_and_measurements(record):
     assert d[S.D["kick_rate"]] > 0 and d[S.D["drum_bars"]] > 0
 
 
+def test_warm_up_measures_vocals_drums_and_bass():
+    # every numba path in describe runs: pYIN on vocals and bass, onsets on drums
+    row = S.warm_up()
+    assert row["present"][[S.VOCALS, S.DRUMS, S.BASS]].all()
+    assert row["pitch"].any(axis=1).all() and row["hits"][0].any()
+
+
 def test_detuned_and_gliding_vocals():
     beats, downbeats = _beats()
     stems, mix = _song(vocal=57.4)
