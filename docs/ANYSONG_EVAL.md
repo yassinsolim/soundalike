@@ -1966,6 +1966,44 @@ bass 0.81 and synths 0.95. Tempo is 95.9 against 97.0 BPM, with the keys four fi
 A pass leads to a held-out pre-registration with the rules used for the listener ranker, before anything is served.
 Reported, not gated: each facet's AUC for listener-related candidates within the shortlists.
 
+### The Stems view: deployed (2026-11-10)
+
+This is the explanation use only: the lists users see do not change. There is no stem table yet. Every song is
+dissected live on the RTX 2070 SUPER, then kept in `/var/lib/anysong/stems`. Each cached row carries `stems.VERSION`,
+so a change to the measurements retires the old rows. The unit gained `--stems-model`, `--stems-cache` and
+`--catalog-previews /data/previews` (catalog songs need no Deezer download).
+
+The guarded deploy (`deploy_stems.sh`) applied the serving checks of rule 4 to the 40 unseen songs:
+
+| Check | Result | Limit |
+|---|---|---|
+| Startup | 49 s; catalog tiers active, dissector live | under 120 s |
+| 40 unseen songs | paired median server time +0.8 ms; p95 1.059 → 1.041 s | +25 ms; 1.109 s |
+| Peak VRAM, ranking | 6,931 MiB | 7,248 MiB |
+| Live dissection | Bryson Tiller "Whatever She Wants" against "Don't": 200 in 7.0 s (3.6 and 3.4 s per song); again from the cache in 1.3 ms | 200, both songs live then cached |
+
+**Live dissections**
+- Peak VRAM during the dissection was 7,471 MiB, sampled every 100 ms on the 8,192 MiB card. Afterwards the service
+  returns its cached blocks (6,013 MiB).
+- Dissections and ranking queries share one GPU lock, so their peaks never add up.
+- Public URL check: 200 in 0.13 s, `max-age=3600`.
+
+**Parity against the lab's float32 CPU run of the same pair**
+- Tempo and key are identical: 95.9 and 97.0 BPM, E minor and B major.
+- Stem cosines: vocals 0.888 → 0.886, drums 0.903 → 0.874, bass 0.808 → 0.843, synths 0.947 → 0.952.
+- The float16 SDR parity check (`stems/gpu_bench.py`) is still to run.
+
+**Measurement warm-up.** The first `describe` in a process compiles numba kernels (pYIN, onsets). The API now runs it
+on a synthetic song at startup. On the 3700X this takes 7.4 s cold against 1.9 s warm.
+
+**Deploy note.** The served process had cached the 60-song unseen list from the previous deploy, so its baseline
+answered only 10 songs live, and the script stopped before changing anything. The served code is now restarted before
+the baseline, so both measurements start from a fresh process.
+
+**Known issue.** On "Whatever She Wants" the kick and snare lanes, and their one-bar patterns, are nearly the same. The
+log-energy flux of each band also fires on the other drum's spill into that band. A replacement is being measured
+against annotated drum recordings before it changes `describe`.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
