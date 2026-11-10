@@ -1617,6 +1617,68 @@ Variants were rejected for these reasons:
 ListenBrainz's similar-artist data (labs endpoint) is probably an early-2023 snapshot, so newer artists cannot count as
 hits.
 
+### Result: rules 1 to 3 passed (2026-11-09)
+
+Run once, after the pre-registration (4ca3c8c), with `ranker/listener-v1.npz`. All 49 checks passed
+(`grow/qa/verdict_lr.py`). The benchmark step was interrupted once at 2,000 of 2,739 queries and re-run from the
+start; it computes features only, so nothing was chosen in between.
+
+Rules 1 and 3, top 10 with one song per artist (paired 95 % intervals):
+
+| Seeds | List | ListenBrainz hit rate | Change | Shared genre | Rows in the top 20 |
+|---|---|---|---|---|---|
+| Held-out (799) | Best matches | 0.322 → 0.408 | +0.085 (+0.073 to +0.099) | +0.042 | 19.96 → 19.98 |
+| | Same vibe | 0.341 → 0.451 | +0.110 (+0.096 to +0.124) | +0.079 | 19.93 → 19.96 |
+| | Sounds like | 0.331 → 0.456 | +0.125 (+0.111 to +0.137) | +0.092 | 19.52 → 19.52 |
+| Fresh (1,000) | Best matches | 0.315 → 0.406 | +0.091 (+0.079 to +0.103) | +0.024 | 19.93 → 20.00 |
+| | Same vibe | 0.344 → 0.466 | +0.122 (+0.110 to +0.134) | +0.052 | 19.94 → 19.97 |
+| | Sounds like | 0.331 → 0.454 | +0.123 (+0.111 to +0.134) | +0.066 | 19.67 → 19.67 |
+
+Other-language rows stayed at zero. Derivative uploads changed by −0.0008 to +0.0002.
+
+Rule 3, variety and sound:
+
+| Seeds | List | Distinct-artist share of top-10 rows | Top-50 artists' share | Sound score of the top 10 |
+|---|---|---|---|---|
+| Held-out | Best matches | 0.641 → 0.679 | 0.066 → 0.052 | |
+| | Sounds like | 0.634 → 0.652 | 0.059 → 0.054 | 0.450 → 0.438 (−0.013) |
+| Fresh | Best matches | 0.602 → 0.625 | 0.070 → 0.061 | |
+| | Sounds like | 0.598 → 0.597 | 0.068 → 0.061 | 0.454 → 0.442 (−0.012) |
+
+Rule 2, Best matches HR@10 on the held-out split:
+
+| Benchmark | Before | After | Limit |
+|---|---|---|---|
+| Covers (1,170 queries) | 0.662 | 0.650 (−0.012) | −0.03 |
+| Samples (747) | 0.130 | 0.130 (0.000) | −0.03 |
+| Samples reverse (695) | 0.137 | 0.138 (+0.001) | −0.03 |
+
+**Reported, not gated.**
+- **ListenBrainz hit rate among artists Deezer does not list as related to the seed.**
+
+  | List | Held-out | Fresh |
+  |---|---|---|
+  | Best matches | 0.229 → 0.202, −0.027 (−0.041 to −0.013) | 0.224 → 0.206, −0.018 (−0.029 to −0.005) |
+  | Same vibe | +0.068 | +0.086 |
+  | Sounds like | +0.124 | +0.114 |
+
+  Best's gain comes from placing more Deezer-related artists, which are mostly listener-similar. Among the others,
+  fewer are. Deezer's related lists are themselves co-listening data, so part of Best's gain is two co-listening
+  sources agreeing. Same vibe and Sounds like improved beyond the related artists too.
+- Same vibe's sound score of the top 10: 0.432 → 0.416 (held-out), 0.435 → 0.419 (fresh).
+- Best matches HR@10 on the other benchmarks:
+
+  | Benchmark | Queries | Before | After |
+  |---|---|---|---|
+  | Gen Alpha | 59 | 0.356 | 0.288 |
+  | SampleID | 43 | 0.186 | 0.186 |
+  | V4 | 19 | 0.158 | 0.105 |
+
+  The Gen Alpha drop is the largest regression in this release.
+- Crawled songs in the top 10: 11 % to 16 % (7 % to 8 % before). They come only from the seed artist's own Deezer
+  related list, as the catalog tiers allow.
+- The added step took a median 17 ms and a p95 of 34 ms per held-out benchmark seed on the RTX 5080.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
