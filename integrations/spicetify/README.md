@@ -144,6 +144,9 @@ search shows without asking.
   no playlist is created. Rows still being matched to Spotify when you press
   play join the queue, in order, once the list reaches its last song. The row
   of the song that is playing is highlighted.
+- The green play button next to your song's title plays your song again, then
+  continues down the list you are viewing, like a song radio that starts from
+  your song.
 - **Find soundalikes** is also in the menu of the song in the player bar.
   Spicetify 2.46.4 and earlier pass that menu no song, so extension items are
   normally missing there; Soundalike adds its item itself and uses the song
