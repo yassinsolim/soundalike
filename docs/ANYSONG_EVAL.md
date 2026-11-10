@@ -1876,6 +1876,32 @@ held-out split.
    benchmark queries the mean head gets shorter. Back-to-back pairs in Best's top 10 stay at most 0.10.
 4. **Serving.** Rule 4 of the listener ranking, unchanged.
 
+### Result: rules 1 to 3 passed (2026-11-10)
+
+Run once, after the pre-registration (68ad5d9). All 35 checks passed (`grow/qa/verdict_head.py`).
+
+| Seeds | List | ListenBrainz hit rate | Change | Shared genre |
+|---|---|---|---|---|
+| Held-out (799) | Best matches | 0.408 → 0.454 | +0.046 (+0.035 to +0.056) | +0.029 |
+| | Same vibe | 0.450 → 0.456 | +0.006 (+0.003 to +0.008) | +0.005 |
+| Fresh (1,000) | Best matches | 0.406 → 0.454 | +0.048 (+0.039 to +0.058) | +0.030 |
+| | Same vibe | 0.466 → 0.471 | +0.005 (+0.002 to +0.008) | +0.002 |
+
+- Sounds like was identical for every seed.
+- Rows shown, other-language rows and derivative uploads did not move.
+- Back-to-back pairs in Best's top 10: 0.03 (held-out) and 0.04 (fresh).
+- Mean head on the held-out benchmark queries: 4.38 → 3.04.
+
+Best matches HR@10 on the held-out split:
+
+| Benchmark | v2 | Served | Now |
+|---|---|---|---|
+| Covers | 0.662 | 0.653 | 0.647 |
+| Samples | 0.130 | 0.130 | 0.122 |
+| Samples reverse | 0.137 | 0.138 | 0.132 |
+
+Reported, not gated: SampleID fell 0.186 → 0.163 (43 queries); Gen Alpha and V4 did not move.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
