@@ -2000,9 +2000,41 @@ on a synthetic song at startup. On the 3700X this takes 7.4 s cold against 1.9 s
 answered only 10 songs live, and the script stopped before changing anything. The served code is now restarted before
 the baseline, so both measurements start from a fresh process.
 
-**Known issue.** On "Whatever She Wants" the kick and snare lanes, and their one-bar patterns, are nearly the same. The
-log-energy flux of each band also fires on the other drum's spill into that band. A replacement is being measured
-against annotated drum recordings before it changes `describe`.
+**Fixed: drum lanes (stems VERSION 2).** In version 1, the kick and snare lanes on "Whatever She Wants" were nearly
+identical, and so were their one-bar patterns. The log-energy flux of each fixed band also fired when the other drum
+spilled into that band.
+
+`band_onsets` now unmixes the onset flux of 81 log bands with fixed kick, snare and hat attack templates: KL-NMF, 20
+iterations (Dittmar & Gärtner 2014).
+
+**Rule.** The rule was registered before the test split was scored:
+- mean F of kick and snare above the baseline;
+- hats F no lower than the baseline − 0.02;
+- runtime no more than 0.3 s slower.
+
+**Data.** MDB Drums (MIREX 2017 split), with Demucs drum stems:
+- tuning used the dev tracks only;
+- the decision used 11 held-out tracks (22 excerpts);
+- onsets count as hits within a 50 ms tolerance.
+
+| Held-out F | Kick | Snare | Hats | Mean kick + snare [95% CI] | `band_onsets` per song |
+|---|---|---|---|---|---|
+| version 1 | 0.663 | 0.627 | 0.651 | 0.645 | 32.1 ms |
+| **version 2** | **0.958** | 0.662 | 0.703 | **0.810** (paired delta [+0.098, +0.222]) | 29.8 ms |
+
+**Leakage.** The kick–snare envelope correlation fell from 0.62 to 0.02 on held-out MDB (true onsets: −0.03) and from
+0.72 to 0.15 on 28 catalog previews. On the bad case, the snare is now the backbeat (steps 5 and 13), and the kick is a
+separate pattern. Pattern correlation went from 0.96 to −0.08.
+
+**Caveats.**
+- Snare recall drops (0.82 → 0.57), mostly on jazz ghost notes. The snare rate reads 0.55 hits/s low.
+- On the out-of-domain STAR preview, hats F falls from 0.897 to 0.815 (CI [−0.142, +0.002]).
+- On HUMBLE., weak snare bumps remain at the kicks (pattern correlation 0.97 → 0.65).
+- On 808-heavy trap, the kick rate falls a lot (2.33 → 0.30 hits/s on the bad case). Most of the old rate was spill,
+  but no ground truth exists for that genre.
+
+`StemStore` treats a cached dissection from version 1 as a miss and replaces it. Full evidence:
+`anysong-lab/stems/drums/RESULTS.md`.
 
 ## Serving on the RTX 2070 SUPER
 
