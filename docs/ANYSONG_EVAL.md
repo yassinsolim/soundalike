@@ -1956,6 +1956,20 @@ bass 0.81 and synths 0.95. Tempo is 95.9 against 97.0 BPM, with the keys four fi
 - **Seed count**, fixed before any evaluation:
   - Budget: the songs the 5080 dissects in four hours at the measured end-to-end rate, capped at 60,000.
   - Dev+sweep seeds in SHA-1 order of their id until 60 % of the budget; bench_dev seeds in the same order for the rest.
+- **Amendment (2026-11-10, before any facet or label was evaluated).** The budget is now the 60,000-song cap; the
+  four-hour clause is dropped.
+  - Why: `stems/gpu_bench.py` measured 2.42 s per song end to end, mostly per-stem MuQ-MuLan at 1.78 s. Four hours would
+    dissect 5,952 songs, which is 59 of the 823 dev seeds.
+  - For scale, earlier paired ListenBrainz intervals were about ±0.02 at 53 seeds and ±0.007 at about 490. At 59 seeds,
+    gate 1 could not detect a +0.010 effect.
+  - The seed order and every gate are unchanged. The first seeds of the larger plan are the same as in the four-hour plan.
+    The amended plan has 59,992 songs from 681 dev and 540 bench_dev seeds. All 59 dev and 40 bench_dev seeds of the
+    four-hour plan are the first seeds of their lists.
+  - Two engineering changes, which do not touch the gates:
+    - Songs are dissected in 250-song chunks, so an interruption by Local Qwen or a game reruns at most one chunk.
+    - On the 5080 only, fp32 matmuls may run as TF32. `stems/tf32_check.py` allows this only if the TF32 track
+      embeddings of 48 stem clips are within cosine 0.999 of exact fp32 and at least 1.25 times faster. The served
+      2070 SUPER stays exact fp32.
 
 **Must pass (all), else stems stay explanation-only:**
 1. Best matches: ListenBrainz hit rate up by at least +0.010, with a paired 95 % lower bound above 0.
@@ -1991,7 +2005,10 @@ The guarded deploy (`deploy_stems.sh`) applied the serving checks of rule 4 to t
 **Parity against the lab's float32 CPU run of the same pair**
 - Tempo and key are identical: 95.9 and 97.0 BPM, E minor and B major.
 - Stem cosines: vocals 0.888 → 0.886, drums 0.903 → 0.874, bass 0.808 → 0.843, synths 0.947 → 0.952.
-- The float16 SDR parity check (`stems/gpu_bench.py`) is still to run.
+- The float16 SDR parity check (`stems/gpu_bench.py`, RTX 5080, median of 8 previews) found float16 separation within
+  37.5 dB SDR of float32 for keys and 48–63 dB for the other stems. On the 5080, the end-to-end build took 2.42 s per
+  song: separation 0.20, per-stem MuQ-MuLan 1.78 and Beat This! 0.007 s per song, with `describe` at 0.84 s per song
+  on the CPU in parallel.
 
 **Measurement warm-up.** The first `describe` in a process compiles numba kernels (pYIN, onsets). The API now runs it
 on a synthetic song at startup. On the 3700X this takes 7.4 s cold against 1.9 s warm.
