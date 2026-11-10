@@ -11,7 +11,7 @@
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.9.1";
+  const RUNTIME_SEMANTIC_VERSION = "2.10.0";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -1795,11 +1795,14 @@
 
   // Plays the shown songs from this one as an unsaved list, so the next row
   // plays next, the way Spotify's song radio does. False when it can't.
-  async function playShownResults(uri) {
-    const player = Spicetify.Platform?.PlayerAPI;
+  function playShownResults(uri) {
     const uris = shownResultUris();
-    const index = uris.indexOf(uri);
-    if (typeof player?.play !== "function" || index < 0) return false;
+    return playResultsList(uris, uris.indexOf(uri));
+  }
+
+  async function playResultsList(uris, index) {
+    const player = Spicetify.Platform?.PlayerAPI;
+    if (typeof player?.play !== "function" || index < 0 || index >= uris.length) return false;
     lateMatches = null;
     await player.play(
       {
@@ -1807,10 +1810,32 @@
         pages: [{ items: uris.map((item) => ({ uri: item })) }],
       },
       { featureIdentifier: "soundalike" },
-      { skipTo: { index, uri } }
+      { skipTo: { index, uri: uris[index] } }
     );
     followLateMatches(uris);
     return true;
+  }
+
+  // The header's play button: the seed song, then the shown list, like a song
+  // radio that starts from its song. Plays the seed alone when Spotify refuses.
+  async function playSeedSong(state) {
+    const seedUri = state?.seedUri;
+    if (!seedUri) return;
+    const uris = [seedUri, ...shownResultUris().filter((uri) => uri !== seedUri)];
+    try {
+      if (await playResultsList(uris, 0)) return;
+    } catch (error) {
+      console.warn(
+        "[soundalike] Spotify would not play the song with its results; playing it alone.",
+        error
+      );
+    }
+    try {
+      await Spicetify.Player.playUri(seedUri);
+    } catch (error) {
+      console.error(`[soundalike] Could not play ${seedUri}`, error);
+      Spicetify.showNotification(`Could not play ${state.seedTrack?.name || "this song"}.`, true);
+    }
   }
 
   // A started list can't grow, so rows matched to a Spotify song after it
@@ -2659,6 +2684,9 @@
         .sa-kicker{color:var(--spice-subtext,#b3b3b3);font-size:12px;margin-bottom:2px}
         .sa-seed-title{font-size:clamp(24px,4vw,40px);font-weight:800;line-height:1.1}
         .sa-seed-artist{color:var(--spice-subtext,#b3b3b3);margin-top:2px}
+        .sa-seed-play{flex:none;width:52px;height:52px;margin-left:8px;border:0;border-radius:50%;background:var(--spice-button,#1ed760);color:#000;font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center;box-shadow:0 8px 16px rgba(0,0,0,.3)}
+        .sa-seed-play:hover{transform:scale(1.04)}
+        .sa-seed-play:focus-visible{outline:2px solid var(--spice-text,#fff);outline-offset:2px}
         .sa-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
         .sa-tag{background:rgba(255,255,255,.08);border-radius:999px;padding:4px 9px;color:var(--spice-subtext,#b3b3b3);font-size:12px}
         .sa-list{display:flex;flex-direction:column;padding-right:4px}
@@ -2751,6 +2779,9 @@
           <div class="sa-seed-title">${esc(seedTrack?.name)}</div>
           <div class="sa-seed-artist">${esc(seedArtists.join(", "))}</div>
         </div>
+        ${state.seedUri
+          ? `<button class="sa-seed-play" type="button" title="Play ${esc(seedTrack?.name || "this song")}, then this list" aria-label="Play ${esc(seedTrack?.name || "this song")}, then this list">▶</button>`
+          : ""}
       </div>
       ${resultTabsMarkup(state)}
       <div class="sa-panel sa-view-${view}" id="sa-panel" role="tabpanel" aria-labelledby="sa-tab-${view}">
@@ -2858,6 +2889,8 @@
     activePage = { container, view: page, ...mounted };
     nativeContextChain = undefined;
     bindResultTabs(page);
+    const seedPlay = page.querySelector(".sa-seed-play");
+    if (seedPlay) seedPlay.onclick = () => playSeedSong(state);
     const offer = page.querySelector(".sa-best-offer");
     if (offer) offer.onclick = requestOfferedBestMatches;
     const languageToggle = page.querySelector(".sa-language-toggle");

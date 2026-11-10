@@ -78,6 +78,7 @@ function loadExtension(fetchImpl, options = {}) {
     },
   }));
   const offerButton = { onclick: null };
+  const seedPlayButton = { onclick: null };
   const languageToggleButton = { onclick: null };
   // Best matches are offline unless a test opts in, so the older tests keep
   // exercising the Sounds like flow they were written for.
@@ -229,6 +230,11 @@ function loadExtension(fetchImpl, options = {}) {
         if (selector === ".sa-best-offer") {
           return this.innerHTML.includes('class="sa-best-offer"')
             ? offerButton
+            : null;
+        }
+        if (selector === ".sa-seed-play") {
+          return this.innerHTML.includes('class="sa-seed-play"')
+            ? seedPlayButton
             : null;
         }
         if (selector === ".sa-language-toggle") {
@@ -668,6 +674,7 @@ function loadExtension(fetchImpl, options = {}) {
     },
     tabFocus,
     offerButton,
+    seedPlayButton,
     get activeElement() {
       return context.document.activeElement;
     },
@@ -3460,6 +3467,45 @@ test("leaves hidden, unmatched and repeated songs out of the played list", async
     origin: { featureIdentifier: "soundalike" },
     options: { skipTo: { index: 0, uri: "spotify:track:best1" } },
   });
+});
+
+test("plays the original song, then the shown list, from the header", async () => {
+  const app = loadBestMatchesExtension({ playerApi: true });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  assert.match(
+    app.currentPage.innerHTML,
+    /<button class="sa-seed-play" type="button" title="Play [^"]+, then this list" aria-label="Play [^"]+, then this list">▶<\/button>/,
+  );
+
+  await app.seedPlayButton.onclick();
+  assert.deepEqual(plain(app.contextPlays), [{
+    context: {
+      uri: "spotify:app:soundalike",
+      pages: [{
+        items: [
+          { uri: "spotify:track:test" },
+          { uri: "spotify:track:best0" },
+          { uri: "spotify:track:best1" },
+        ],
+      }],
+    },
+    origin: { featureIdentifier: "soundalike" },
+    options: { skipTo: { index: 0, uri: "spotify:track:test" } },
+  }]);
+  assert.deepEqual(app.played, []);
+  assert.deepEqual(errorNotifications(app), []);
+});
+
+test("plays the original song alone when Spotify refuses the list", async () => {
+  const app = loadBestMatchesExtension({ playerApi: "fails" });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+
+  await app.seedPlayButton.onclick();
+  assert.equal(app.contextPlays.length, 1);
+  assert.deepEqual(app.played, ["spotify:track:test"]);
+  assert.deepEqual(errorNotifications(app), []);
 });
 
 test("plays the song alone when Spotify refuses the list", async () => {
