@@ -13,7 +13,7 @@
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.11.0";
+  const RUNTIME_SEMANTIC_VERSION = "2.11.1";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -2862,13 +2862,12 @@
         .sa-dx-compare h3,.sa-dx-song h3{font-size:13px;font-weight:700;margin:0 0 10px;color:var(--spice-subtext,#b3b3b3);text-transform:uppercase;letter-spacing:.06em}
         .sa-dx-matched{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 12px}
         .sa-dx-chip{background:var(--spice-button,#1ed760);color:#000;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700}
-        .sa-dx-facets{display:grid;grid-template-columns:minmax(110px,max-content) minmax(120px,1fr) minmax(64px,max-content);gap:6px 12px;align-items:center}
-        .sa-dx-facet-label{white-space:nowrap}
+        .sa-dx-facets{display:grid;grid-template-columns:minmax(0,max-content) minmax(48px,1fr) minmax(0,max-content);gap:6px 12px;align-items:center}
         .sa-dx-bar{height:8px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden}
         .sa-dx-bar span{display:block;height:100%;border-radius:inherit;background:var(--spice-subtext,#b3b3b3)}
         .sa-dx-strong .sa-dx-bar span{background:var(--spice-button,#1ed760)}
         .sa-dx-strong .sa-dx-facet-label{font-weight:700}
-        .sa-dx-facet-value{color:var(--spice-subtext,#b3b3b3);font-variant-numeric:tabular-nums;white-space:nowrap}
+        .sa-dx-facet-value{color:var(--spice-subtext,#b3b3b3);font-variant-numeric:tabular-nums}
         .sa-dx-hint{margin:10px 0 0;color:var(--spice-subtext,#b3b3b3);font-size:12px}
         .sa-dx-songs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr));gap:22px}
         .sa-dx-song{min-width:0}
