@@ -1755,6 +1755,22 @@ held-out split.
      p95 plus 200 ms;
    - automatic rollback.
 
+### Result: rules 1 to 3 passed (2026-11-09)
+
+Run once, after the pre-registration (d727c61). All 15 checks passed (`grow/qa/verdict_spacing.py`).
+
+| Check | Held-out (799) | Fresh (1,000) |
+|---|---|---|
+| One-per-artist Best top 10 kept | all seeds | all seeds |
+| Sounds like identical | all seeds | all seeds |
+| Same vibe ListenBrainz hit rate | 0.451 → 0.450 (−0.001 to +0.000) | 0.466 → 0.466 (−0.001 to +0.001) |
+| Same vibe rows in the top 20 | 19.96 → 19.96 | 19.97 → 19.97 |
+| Back-to-back pairs in Best's top 10 as shown | 0.59 → 0.04 | 0.57 → 0.05 |
+| Distinct artists in Best's top 10 as shown | 8.52 → 9.83 | 8.59 → 9.85 |
+
+Best matches HR@10 on the held-out split: covers 0.650 → 0.653, samples 0.130 → 0.130, samples reverse
+0.138 → 0.138. Gen Alpha, SampleID and V4 did not move (reported).
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the
