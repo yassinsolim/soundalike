@@ -1822,6 +1822,100 @@ Ideas not yet tested:
   Mood Detection Dataset.
 - A separate, opt-in lyrics list, rather than changing the three lists.
 
+## Best's audio head needs standout evidence (pre-registered 2026-11-10, before any held-out result)
+
+**Why.** For Bryson Tiller "Whatever She Wants", Best matches opened with nine audio matches before the first song
+chosen for listeners (PARTYNEXTDOOR at #10). None of the nine is a cover or sample:
+- Every top-10 melody score (−1.06 to −1.29) cleared the calibrated cover threshold (−1.476), so the head extended to
+  the ninth song.
+- The scores decline smoothly; nothing stands out.
+
+On the development seeds, 20 % to 24 % of heads held six songs or more.
+
+**Change under test** (`scene.audio_head` with `standout_min`; listener ranker only). A melody or samples match
+extends the head only if it clears the threshold and also stands out: a z-score of at least 2.0 among the first 20
+songs of its list (`BEST_HEAD_STANDOUT`, `BEST_HEAD_WINDOW`). The minimum head of 3 songs, the weights, the caps and the
+spacing are unchanged.
+
+**Selection** on the development seeds and benchmarks (`ranker_dev.py`, out-of-fold).
+- Head length: the mean head and the share at the minimum length, on the benchmark queries.
+- HR@10: covers, samples and samples reverse, against the lists of 2026-11-09 before the listener ranker (v2).
+- Listener: the ListenBrainz hit rate of Best matches.
+
+| Variant | Mean head | At minimum | Best ListenBrainz | HR@10 change vs v2 |
+|---|---|---|---|---|
+| Served | 4.24 | 75 % | 0.398 | −0.008 / −0.005 / −0.007 |
+| z ≥ 1.5 | 3.18 | 90 % | 0.451 | −0.014 / −0.014 / −0.014 |
+| **z ≥ 2.0 (chosen)** | **3.03** | **97 %** | **0.456** | **−0.014 / −0.015 / −0.014** |
+| z ≥ 2.5 | 3.00 | 100 % | 0.458 | −0.015 / −0.015 / −0.014 |
+| z ≥ 2.0, minimum 2 | 2.14 | 97 % | 0.494 | −0.036 / −0.022 / −0.026 |
+| z ≥ 2.0, minimum 1 | 1.35 | 97 % | 0.518 | −0.048 / −0.037 / −0.043 |
+| z ≥ 2.0, minimum 2, fusion weight 0.35 | 2.14 | 97 % | 0.465 | −0.023 / −0.016 / −0.022 |
+
+For z ≥ 2.0: Same vibe went 0.473 → 0.478; Best's shared genre 0.548 → 0.595; Best's sound score of the top 10
+0.307 → 0.328.
+
+**Rejected:**
+- Shorter minimum heads raise listener agreement further, but covers fall beyond the original −0.03 envelope.
+- Raising the fusion weight to recover covers gives most of the listener gain back.
+
+**Baseline.** The served lists (`gated1m_lr2`). **Seeds.** The 799 held-out and 1,000 fresh seeds; the benchmarks'
+held-out split.
+
+**Must pass (all), else not deployed:**
+1. **Lists users see.** On both seed sets:
+   - Best matches and Same vibe: the ListenBrainz hit rate's paired 95 % lower bound is −0.010 or above; the shared
+     genre change is −0.02 or above.
+   - Other-language rows and derivative uploads: each up by at most 1 point.
+   - Rows shown in the top 20: down by at most 1.0.
+   - Sounds like: identical.
+2. **Relationship benchmarks.** Best matches HR@10 on the held-out covers, samples and samples reverse:
+   - at most 0.02 below the served lists;
+   - at most 0.03 below the v2 lists (the original envelope).
+3. **It must help.** On both seed sets, Best's ListenBrainz hit rate rises (paired lower bound above 0). On the held-out
+   benchmark queries the mean head gets shorter. Back-to-back pairs in Best's top 10 stay at most 0.10.
+4. **Serving.** Rule 4 of the listener ranking, unchanged.
+
+### Result: rules 1 to 3 passed (2026-11-10)
+
+Run once, after the pre-registration (68ad5d9). All 35 checks passed (`grow/qa/verdict_head.py`).
+
+| Seeds | List | ListenBrainz hit rate | Change | Shared genre |
+|---|---|---|---|---|
+| Held-out (799) | Best matches | 0.408 → 0.454 | +0.046 (+0.035 to +0.056) | +0.029 |
+| | Same vibe | 0.450 → 0.456 | +0.006 (+0.003 to +0.008) | +0.005 |
+| Fresh (1,000) | Best matches | 0.406 → 0.454 | +0.048 (+0.039 to +0.058) | +0.030 |
+| | Same vibe | 0.466 → 0.471 | +0.005 (+0.002 to +0.008) | +0.002 |
+
+- Sounds like was identical for every seed.
+- Rows shown, other-language rows and derivative uploads did not move.
+- Back-to-back pairs in Best's top 10: 0.03 (held-out) and 0.04 (fresh).
+- Mean head on the held-out benchmark queries: 4.38 → 3.04.
+
+Best matches HR@10 on the held-out split:
+
+| Benchmark | v2 | Served | Now |
+|---|---|---|---|
+| Covers | 0.662 | 0.653 | 0.647 |
+| Samples | 0.130 | 0.130 | 0.122 |
+| Samples reverse | 0.137 | 0.138 | 0.132 |
+
+Reported, not gated: SampleID fell 0.186 → 0.163 (43 queries); Gen Alpha and V4 did not move.
+
+**Deployed (2026-11-10).** Rule 4 passed on the first attempt, started at 04:05 after the nightly backup:
+
+| Check | Result |
+|---|---|
+| Parity | `rank_agree` 1.0 in every channel |
+| Startup | 53 s |
+| 40 unseen songs | paired median server time −27 ms; p95 1.076 → 1.047 s |
+| 40 catalog songs | paired median −6 ms; p95 0.516 → 0.513 s |
+| Peak VRAM | 6,727 MiB |
+
+Bryson Tiller "Whatever She Wants" now keeps three audio matches on top, with PARTYNEXTDOOR at #4 (#10 before), then
+Roy Woods, Tory Lanez, DeJ Loaf and Blxst. Runtime 2.10.1 changes the cache policy to v7, so Spotify drops lists saved
+under the longer heads.
+
 ## Serving on the RTX 2070 SUPER
 
 The served API runs on an 8 GB RTX 2070 SUPER in the homelab. `serve_check` and `robustness` ran there against the

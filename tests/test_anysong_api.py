@@ -349,9 +349,11 @@ def _stump(feature, left, right):
 
 
 def test_listener_lists_keep_the_audio_head_and_rank_the_rest_for_listeners(tmp_path):
+    # best_head_standout=0: any melody score over the calibrated threshold extends the head (the standout rule is
+    # checked at the end).
     svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), LISTENER_META, scene=_listener_scene_table(),
                       copy_score=None, ranker=_stump("fwd", 0.0, 0.0), scene_params=SceneParams(head_min=1),
-                      languages=FakeLanguages({1: "en", 9: "de"}),
+                      languages=FakeLanguages({1: "en", 9: "de"}), best_head_standout=0.0,
                       tempo=TempoTable(np.array([5, 7, 8, 10]), np.array([120, 120, 121, 120], np.float32)))
     p = {3: 0.2, 5: 0.1, 7: 0.9, 8: 0.8, 9: 0.95, 10: 0.99}
     res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog", "artist_id": 100},
@@ -375,6 +377,10 @@ def test_listener_lists_keep_the_audio_head_and_rank_the_rest_for_listeners(tmp_
     assert [x["id"] for x in lists()["best"]] == [3, 5, 7, 10, 8] and [x["id"] for x in lists()["sounds"]] == [7, 10, 5]
     assert 9 in [x["id"] for x in lists(lang_mode="all")["best"]]
     assert [x["id"] for x in lists(scene=False)["best"]] == [3, 5]  # no scene: the plain fusion, no ranker
+    # The shipped standout rule: 5's melody score does not stand out in a two-song list, so it no longer extends the
+    # head and is placed like the other candidates.
+    svc.best_head_standout = api.BEST_HEAD_STANDOUT
+    assert [x["id"] for x in lists()["best"]] == [3, 10, 7, 5, 8]
     del res["listener"]
     assert [x["id"] for x in lists()["best"]][:2] == [3, 5] and 8 not in [x["id"] for x in lists()["best"]]
 

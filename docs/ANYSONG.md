@@ -52,7 +52,9 @@ way to a learned order whenever the seed's artist is known:
   candidate's artist. It uses the audio scores, the Deezer artist graph (overlap, which artist lists the other, region,
   genre), tempo and whether the language is known. Popularity is deliberately not a feature. The model was trained on
   development seeds with ListenBrainz similar artists as labels.
-- **Best matches** keeps its audio head. The rest follow that estimate, the sound score and the melody/samples fusion
+- **Best matches** keeps its audio head: at least three songs, longer only for melody or samples matches that also
+  stand out from the seed's other matches (a z-score of 2 or more among the first 20 songs of their list). The rest
+  follow that estimate, the sound score and the melody/samples fusion
   score (z-scores weighted 1, 0.5 and 0.25). After the head, no artist plays twice in a row, and each artist appears
   once in the first 10 places; an artist's later songs wait for the next place that fits (`scene.arrange_artists`).
 - **Sounds like** orders the sonic list by its sound score plus twice the estimate.
