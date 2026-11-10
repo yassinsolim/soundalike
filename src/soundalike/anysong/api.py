@@ -16,6 +16,10 @@ GET endpoints (JSON):
   (``AnySong.resolve``): the catalog release of that song, else the first matching Deezer search hit
 - ``/api/anysong/similar?isrc=<ISRC>&title=<title>&artist=<artist>``  the same for the recording with that ISRC
   (``AnySong.resolve_isrc``): the catalog release of the named song, else Deezer's ISRC lookup, else ``resolve``
+- ``/api/anysong/dissect?id=<deezer id>&with=<deezer id>``  the stem dissection of a song (``stems.payload``: six
+  stems' loudness lanes, drum hits and pattern, vocal and bass pitch, beats, key and tempo) and, with ``with``, of a
+  second song plus how alike their stems and measurements are (``stems.compare``). Rows come from the stem table
+  (``--stems``) or earlier live runs; with ``--stems-model`` any other song's preview is dissected on the GPU
 
 Indexed tracks are ranked from their stored windows. Any other track has its 30 s preview fetched and
 embedded live on the GPU, so it never has to be in the catalog. Standard library HTTP only: bind to
@@ -56,6 +60,7 @@ from urllib.parse import parse_qs, urlsplit
 import numpy as np
 
 from . import listener, samevibe
+from . import stems as stemlib
 from .deezer import version_words
 from .scene import SceneParams, SceneTable, affinity, arrange_artists, audio_head, scene_fuse
 from .tempo import TempoTable, decode22
@@ -308,6 +313,27 @@ def _card(track: dict) -> dict:
             "duration": track.get("duration"), "has_preview": bool(track.get("preview"))}
 
 
+def _gpu_mib(device: str) -> dict | None:
+    """The CUDA allocator in MiB (``peak``: most allocated at once since start; ``free``: on the whole card)."""
+    if not str(device).startswith("cuda"):
+        return None
+    import torch
+
+    mib = 1 << 20
+    free, _ = torch.cuda.mem_get_info(device)
+    return {"allocated": torch.cuda.memory_allocated(device) // mib,
+            "reserved": torch.cuda.memory_reserved(device) // mib,
+            "peak": torch.cuda.max_memory_allocated(device) // mib, "free": free // mib}
+
+
+def _release_cuda(device: str) -> None:
+    """Hand cached blocks back after a dissection so ranking queries never find the card full of them."""
+    if str(device).startswith("cuda"):
+        import torch
+
+        torch.cuda.empty_cache()
+
+
 class AnySong:
     """Request logic shared by HTTP threads. One GPU lock serialises the (non-thread-safe) engine."""
 
@@ -322,8 +348,17 @@ class AnySong:
                  ranker: listener.Ranker | None = None, best_sound_weight: float = BEST_SOUND_WEIGHT,
                  sounds_listener_weight: float = SOUNDS_LISTENER_WEIGHT, best_audio_weight: float = BEST_AUDIO_WEIGHT,
                  best_artist_gap: int = BEST_ARTIST_GAP, best_artist_once: int = BEST_ARTIST_ONCE,
-                 best_head_standout: float = BEST_HEAD_STANDOUT, best_head_window: int = BEST_HEAD_WINDOW):
+                 best_head_standout: float = BEST_HEAD_STANDOUT, best_head_window: int = BEST_HEAD_WINDOW,
+                 stems: stemlib.StemStore | None = None, dissector: stemlib.Dissector | None = None,
+                 catalog_previews: str | Path | None = None):
         self.engine, self.deezer, self.meta, self.keep_previews = engine, deezer, meta, keep_previews
+        # Stem dissections (``dissect``): stored rows, else (with ``dissector``) the song's preview separated on the
+        # GPU, read from ``catalog_previews/<id % 1000:03d>/<id>.mp3`` when there, else fetched from Deezer.
+        self.stems = stems if stems is not None or dissector is None else stemlib.StemStore()
+        self.dissector = dissector
+        self.catalog_previews = Path(catalog_previews) if catalog_previews is not None else None
+        self._stem_flight: dict[int, Future] = {}
+        self.dissected = {"stored": 0, "live": 0}
         self.languages = languages
         # Songs without a confident language label take their artist's majority language in the language gate.
         self.artist_languages = artist_languages
@@ -386,14 +421,21 @@ class AnySong:
     def health(self) -> dict:
         with self._lock:
             served = dict(self.served)
+            dissected = dict(self.dissected)
         scene = None if self.scene is None else {"tracks": int((self.scene.track_artist > 0).sum()),
                                                  "artists": len(self.scene.artist_ids)}
         tempo = None if not self.vibe else {"tracks": len(self.tempo.by_id), "live": self.tracker is not None}
         tiers = None if self.tiers is None else self.tiers.sizes
+        stems = None
+        if self.stems is not None:
+            stems = {"songs": 0 if self.stems.table is None else len(self.stems.table),
+                     "live": self.dissector is not None, "graded": self.stems.calib is not None,
+                     "dissected": dissected}
         return {"ok": True, "device": self.engine.device,
                 "channels": {name: len(ix) for name, ix in self.engine.indexes.items()},
                 "cached_results": len(self.results), "served": served, "scene": scene, "tempo": tempo,
-                "tiers": tiers, "ranker": None if self.ranker is None else self.ranker.meta or "on"}
+                "tiers": tiers, "ranker": None if self.ranker is None else self.ranker.meta or "on", "stems": stems,
+                "gpu_mib": _gpu_mib(self.engine.device)}
 
     def search(self, q: str, limit: int = 10) -> dict:
         q = " ".join(q.split())
@@ -753,6 +795,105 @@ class AnySong:
                     t_search["tempo"] = (time.perf_counter() - t) * 1000
         return query, raw, timings | t_embed, t_search, vibe, wins.get("sonic")
 
+    def stems_missing(self, track_id: int) -> bool:
+        """True when ``dissect`` would separate this song live (the costly case the HTTP layer rate-limits)."""
+        return self.dissector is not None and self.stems.get(track_id)[0] is None
+
+    def dissect(self, track_id: int, other: int | None = None) -> dict:
+        if self.stems is None:
+            raise ApiError(404, "song dissection is not enabled")
+        ids = [track_id] if other is None or other == track_id else [track_id, other]
+        rows, songs = [], []
+        for tid in ids:
+            row, source, ms = self._stem_row(tid)
+            rows.append(row)
+            songs.append(stemlib.payload(tid, row) | {"source": source} | ({"ms": round(ms)} if ms else {}))
+        out: dict[str, Any] = {"ok": True, "songs": songs}
+        if len(rows) == 2:
+            out["compare"] = stemlib.compare(rows[0], rows[1], self.stems.mu, self.stems.calib)
+        return out
+
+    def _stem_row(self, track_id: int) -> tuple[dict[str, np.ndarray], str, float | None]:
+        row, source = self.stems.get(track_id)
+        if row is not None:
+            with self._lock:
+                self.dissected["stored"] += 1
+            return row, source, None
+        if self.dissector is None:
+            raise ApiError(404, "this song has not been dissected yet")
+        with self._lock:
+            fut = self._stem_flight.get(track_id)
+            owner = fut is None
+            if owner:
+                fut = self._stem_flight[track_id] = Future()
+        if not owner:
+            try:
+                return fut.result(timeout=self.follower_timeout), "live", None
+            except FutureTimeout:
+                raise ApiError(504, "timed out waiting for the dissection") from None
+        t = time.perf_counter()
+        try:
+            row = self._dissect_live(track_id)
+            self.stems.put(track_id, row)
+            fut.set_result(row)
+        except BaseException as exc:
+            fut.set_exception(exc)
+            raise
+        finally:
+            with self._lock:
+                self._stem_flight.pop(track_id, None)
+        with self._lock:
+            self.dissected["live"] += 1
+        return row, "live", (time.perf_counter() - t) * 1000
+
+    def _stem_preview(self, track_id: int) -> tuple[Path, bool]:
+        """The song's 30 s preview and whether it is a temporary download."""
+        if self.catalog_previews is not None:
+            path = self.catalog_previews / f"{track_id % 1000:03d}" / f"{track_id}.mp3"
+            if path.is_file():
+                return path, False
+        info = self.known.get(track_id)
+        if info is None:
+            try:
+                info = self.deezer.track(track_id)
+            except RuntimeError as exc:
+                raise ApiError(502, "track lookup failed") from exc
+        if not info or info.get("id") is None:
+            raise ApiError(404, "unknown track")
+        try:
+            path = self.deezer.fetch_preview(track_id, info)
+        except RuntimeError as exc:
+            raise ApiError(502, "preview download failed") from exc
+        if path is None:
+            raise ApiError(404, "no preview available for this track")
+        return Path(path), True
+
+    def _dissect_live(self, track_id: int) -> dict[str, np.ndarray]:
+        if not self.pending.acquire(blocking=False):
+            raise ApiError(503, "busy, retry shortly")
+        try:
+            path, temporary = self._stem_preview(track_id)
+            try:
+                mixes = stemlib.decode_stereo(path)[None]
+            except Exception as exc:
+                raise ApiError(422, "could not decode the preview") from exc
+            finally:
+                if temporary and not self.keep_previews:
+                    path.unlink(missing_ok=True)
+            try:
+                with self._gpu({}):
+                    try:
+                        parts = self.dissector.gpu(mixes)
+                    finally:
+                        _release_cuda(self.engine.device)
+            except Exception as exc:
+                if "out of memory" in str(exc).lower():
+                    raise ApiError(503, "the GPU is busy, retry shortly") from exc
+                raise
+            return self.dissector.cpu(parts[0], mixes, parts[1], parts[2])[0]  # measurements outside the GPU lock
+        finally:
+            self.pending.release()
+
     def _view(self, res: dict, k: int, dedupe: bool, cached: bool, lang_mode: str = "same",
               scene: bool = True) -> dict:
         q = res["query"]
@@ -1103,6 +1244,13 @@ class Handler(BaseHTTPRequestHandler):
                 if not svc.cached(tid):  # only new rankings cost GPU time and Deezer requests
                     self._limit(url.path)
                 return self._send(200, svc.similar(tid, k, dedupe, lang_mode, scene), max_age=3600)
+            if url.path == "/api/anysong/dissect":
+                tid = _int_param(params, "id", None, 1, 2**53)
+                other = _int_param(params, "with", 0, 1, 2**53) or None
+                for t in dict.fromkeys((tid, other)):
+                    if t is not None and svc.stems_missing(t):  # only live dissections cost GPU time
+                        self._limit(url.path)
+                return self._send(200, svc.dissect(tid, other), max_age=3600)
             raise ApiError(404, "not found")
         except ApiError as exc:
             self._send(exc.status, {"ok": False, "error": exc.message})
@@ -1116,11 +1264,12 @@ class Server(ThreadingHTTPServer):
     allow_reuse_address = True
 
     def __init__(self, addr, service: AnySong, search_per_min: float = 60, similar_per_min: float = 20,
-                 cors_origin: str | None = None, client_header: str | None = None):
+                 cors_origin: str | None = None, client_header: str | None = None, dissect_per_min: float = 12):
         super().__init__(addr, Handler)
         self.service, self.cors_origin, self.client_header = service, cors_origin, client_header
         self.limiters = {"/api/anysong/search": TokenBucket(search_per_min, max(1, int(search_per_min // 4))),
-                         "/api/anysong/similar": TokenBucket(similar_per_min, max(1, int(similar_per_min // 4)))}
+                         "/api/anysong/similar": TokenBucket(similar_per_min, max(1, int(similar_per_min // 4))),
+                         "/api/anysong/dissect": TokenBucket(dissect_per_min, max(1, int(dissect_per_min // 4)))}
 
 
 def _warmup(engine) -> float:
@@ -1174,7 +1323,18 @@ def main(argv: list[str] | None = None) -> None:
                    help="append songs answered live (Deezer track and artist ids, UTC day) for anysong.crawl")
     p.add_argument("--ranker", type=Path, default=None,
                    help="listener ranker (anysong.listener) for the lists users see; needs --scene")
+    p.add_argument("--stems", type=Path, default=None,
+                   help="stem table from anysong.stems pack: stored dissections for /api/anysong/dissect")
+    p.add_argument("--stems-model", type=Path, default=None,
+                   help="folder with the htdemucs_6s weights: dissect other songs live (needs --tempo-model)")
+    p.add_argument("--stems-cache", type=Path, default=None, help="keep live dissections here across restarts")
+    p.add_argument("--stems-fp32", action="store_true", help="separate in float32 (default: float16 autocast)")
+    p.add_argument("--catalog-previews", type=Path, default=None,
+                   help="catalog previews as <id %% 1000>/<id>.mp3, dissected without a Deezer download")
+    p.add_argument("--dissect-per-min", type=float, default=12)
     args = p.parse_args(argv)
+    if args.stems_model is not None and not args.tempo_model:
+        p.error("--stems-model needs --tempo-model")
     if args.core_ids is not None and args.scene is None:
         p.error("--core-ids needs --scene")
     if args.ranker is not None and args.scene is None:
@@ -1208,16 +1368,36 @@ def main(argv: list[str] | None = None) -> None:
 
         tracker = Tracker(args.tempo_model, args.device)
         tracker.tempo(np.zeros(30 * 22050, np.float32))  # warm-up
+    store, dissector, stems_warm = None, None, None
+    if args.stems is not None or args.stems_model is not None:
+        store = stemlib.StemStore(stemlib.StemTable.load(args.stems) if args.stems is not None else None,
+                                  args.stems_cache)
+    if args.stems_model is not None:
+        from .tempo import Tracker
+
+        t_stems = time.perf_counter()
+        # One song at a time, sharing the service's Beat This! and MuQ-MuLan models; two stems per MuQ call keep the
+        # spike small on an 8 GB card.
+        dissector = stemlib.Dissector(stemlib.Separator(args.stems_model, args.device, fp16=not args.stems_fp32,
+                                                        batch=1),
+                                      tracker or Tracker(args.tempo_model, args.device),
+                                      engine.embedder("muq_mulan"), workers=0, embed_batch=2)
+        noise = np.random.default_rng(0).standard_normal((1, 2, stemlib.SAMPLES)).astype(np.float32) * 0.05
+        dissector.gpu(noise)  # warm-up
+        _release_cuda(args.device)
+        stems_warm = round(time.perf_counter() - t_stems, 1)
     service = AnySong(engine, Deezer(scratch), meta, args.cache_size, args.max_pending,
                       languages=languages, scene=scene, tempo=tempo, tracker=tracker,
                       learn=LearnQueue(args.learn_queue) if args.learn_queue else None, tiers=tiers,
-                      ranker=listener.Ranker.load(args.ranker) if args.ranker is not None else None)
+                      ranker=listener.Ranker.load(args.ranker) if args.ranker is not None else None,
+                      stems=store, dissector=dissector, catalog_previews=args.catalog_previews)
     server = Server((args.host, args.port), service, args.search_per_min, args.similar_per_min,
-                    args.cors_origin, args.client_ip_header)
+                    args.cors_origin, args.client_ip_header, dissect_per_min=args.dissect_per_min)
     sizes = {name: len(ix) for name, ix in engine.indexes.items()}
     hubs = {name: getattr(ix, "hub_alpha", 0.0) for name, ix in engine.indexes.items()}
     print(f"ready in {time.perf_counter() - t:.1f}s (warmup {warm:.1f}s) {sizes} hub_alpha={hubs} "
           f"tiers={None if tiers is None else tiers.sizes} ranker={service.health()['ranker']} "
+          f"stems={service.health()['stems']} (warmup {stems_warm}s) gpu={_gpu_mib(args.device)} "
           f"on http://{args.host}:{args.port}", flush=True)
     try:
         server.serve_forever()

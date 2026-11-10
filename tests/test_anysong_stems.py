@@ -158,6 +158,33 @@ def test_pack_table_payload_and_compare_round_trip(tmp_path, record):
         S.StemTable.load(tmp_path / "table")
 
 
+def test_table_finds_rows_when_ids_are_not_sorted():
+    rng = np.random.default_rng(4)
+    recs = [_rand_record(rng) for _ in range(3)]
+    table = S.StemTable(np.array([30, 10, 20]), S.stack(recs), {})
+    assert [t in table for t in (10, 20, 30, 15, 99, 0)] == [True, True, True, False, False, False]
+    np.testing.assert_array_equal(table.row(10)["vec"], recs[1]["vec"])
+    assert table.mu is None and table.calib is None
+
+
+def test_store_reads_the_table_then_its_cache_and_keeps_live_rows_across_restarts(tmp_path):
+    rng = np.random.default_rng(5)
+    stored, live = _rand_record(rng), _rand_record(rng)
+    table = S.StemTable(np.array([7]), S.stack([stored]), {"mu": np.zeros((6, 512)).tolist()})
+    store = S.StemStore(table, tmp_path / "cache", size=1)
+    assert store.get(7)[1] == "catalog" and store.mu.shape == (6, 512) and store.calib is None
+    assert store.get(1234) == (None, None)
+    store.put(1234, live)
+    assert (tmp_path / "cache" / "234" / "1234.npz").exists() and not list((tmp_path / "cache").rglob("*.tmp*"))
+    row, source = store.get(1234)
+    assert source == "cache" and all(row[k].dtype == dt for k, (_, dt) in S.COLUMNS.items())
+    store.put(99, live)  # evicts 1234 from memory; the disk copy remains
+    again = S.StemStore(None, tmp_path / "cache")
+    np.testing.assert_array_equal(again.get(1234)[0]["vec"], live["vec"])
+    (tmp_path / "cache" / "234" / "1234.npz").write_bytes(b"torn")
+    assert S.StemStore(None, tmp_path / "cache").get(1234) == (None, None)  # a broken file is a miss
+
+
 class _FakeSeparator:
     def __call__(self, mixes):
         return np.repeat(mixes[:, None], 6, axis=1) / 6

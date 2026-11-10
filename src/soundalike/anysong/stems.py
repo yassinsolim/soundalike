@@ -21,8 +21,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import threading
 import time
-from collections import deque
+from collections import OrderedDict, deque
 from collections.abc import Callable, Iterable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from itertools import islice
@@ -505,7 +507,9 @@ class StemTable:
 
     def __init__(self, ids: np.ndarray, cols: dict[str, np.ndarray], meta: dict):
         self.ids = np.asarray(ids, np.int64)
-        self.pos = {int(t): i for i, t in enumerate(self.ids)}
+        # ``pack`` writes ids sorted; a binary search avoids a per-song dict (~100 MB at a million songs).
+        self._order = None if bool(np.all(self.ids[1:] > self.ids[:-1])) else np.argsort(self.ids, kind="stable")
+        self._sorted = self.ids if self._order is None else self.ids[self._order]
         self.cols, self.meta = cols, meta
         self.mu = np.asarray(meta["mu"], np.float32) if meta.get("mu") is not None else None
         self.calib = np.asarray(meta["calib"], np.float32) if meta.get("calib") is not None else None
@@ -522,12 +526,76 @@ class StemTable:
     def __len__(self) -> int:
         return len(self.ids)
 
+    def _index(self, track_id: int) -> int | None:
+        track_id = int(track_id)
+        j = int(np.searchsorted(self._sorted, track_id))
+        if j < len(self._sorted) and int(self._sorted[j]) == track_id:
+            return j if self._order is None else int(self._order[j])
+        return None
+
     def __contains__(self, track_id: int) -> bool:
-        return int(track_id) in self.pos
+        return self._index(track_id) is not None
 
     def row(self, track_id: int) -> dict[str, np.ndarray] | None:
-        i = self.pos.get(int(track_id))
+        i = self._index(track_id)
         return None if i is None else {name: np.array(col[i]) for name, col in self.cols.items()}
+
+
+class StemStore:
+    """Rows for the API by track id: the packed table, then dissections cached on disk, then a small LRU.
+    ``mu`` and ``calib`` come from the table (an empty table can carry them for live-only serving)."""
+
+    def __init__(self, table: StemTable | None = None, cache_dir: str | Path | None = None, size: int = 256):
+        self.table, self.size = table, size
+        self.cache_dir = Path(cache_dir) if cache_dir is not None else None
+        self.mu = table.mu if table is not None else None
+        self.calib = table.calib if table is not None else None
+        self._mem: OrderedDict[int, dict[str, np.ndarray]] = OrderedDict()
+        self._lock = threading.Lock()
+
+    def _path(self, track_id: int) -> Path:
+        return self.cache_dir / f"{track_id % 1000:03d}" / f"{track_id}.npz"
+
+    def _remember(self, track_id: int, row: dict[str, np.ndarray]) -> None:
+        with self._lock:
+            self._mem[track_id] = row
+            self._mem.move_to_end(track_id)
+            while len(self._mem) > self.size:
+                self._mem.popitem(last=False)
+
+    def get(self, track_id: int) -> tuple[dict[str, np.ndarray] | None, str | None]:
+        """(row, "catalog" | "cache") or (None, None)."""
+        track_id = int(track_id)
+        if self.table is not None:
+            row = self.table.row(track_id)
+            if row is not None:
+                return row, "catalog"
+        with self._lock:
+            row = self._mem.get(track_id)
+            if row is not None:
+                self._mem.move_to_end(track_id)
+                return row, "cache"
+        if self.cache_dir is not None and self._path(track_id).exists():
+            try:
+                with np.load(self._path(track_id), allow_pickle=False) as z:
+                    row = {name: z[name] for name in COLUMNS} if int(z["version"]) == VERSION else None
+            except Exception:  # noqa: BLE001 - a torn or foreign cache file is a miss
+                row = None
+            if row is not None:
+                self._remember(track_id, row)
+                return row, "cache"
+        return None, None
+
+    def put(self, track_id: int, row: dict[str, np.ndarray]) -> None:
+        track_id = int(track_id)
+        row = {name: np.asarray(row[name], dtype) for name, (_, dtype) in COLUMNS.items()}
+        self._remember(track_id, row)
+        if self.cache_dir is not None:
+            path = self._path(track_id)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = path.with_name(f".{track_id}.{threading.get_ident()}.tmp.npz")
+            np.savez(tmp, version=np.int32(VERSION), **row)
+            os.replace(tmp, path)
 
 
 def pack(shards: Iterable[str | Path], out: str | Path, mu: np.ndarray | None = None,
@@ -544,14 +612,14 @@ def pack(shards: Iterable[str | Path], out: str | Path, mu: np.ndarray | None = 
     out.mkdir(parents=True, exist_ok=True)
     np.save(out / "ids.npy", ids[keep].astype(np.int64))
     for name in COLUMNS:
-        col = np.concatenate([p[name] for p in parts]) if parts else np.zeros((0, *COLUMNS[name][0]))
+        col = np.concatenate([p[name] for p in parts]) if parts else np.zeros((0, *COLUMNS[name][0]), COLUMNS[name][1])
         np.save(out / f"{name}.npy", np.ascontiguousarray(col[keep]))
     vec = np.concatenate([p["vec"] for p in parts])[keep] if parts else None
     present = np.concatenate([p["present"] for p in parts])[keep] if parts else None
     if mu is None and vec is not None and len(vec):
         mu = np.stack([vec[present[:, s], s].astype(np.float32).mean(0) if present[:, s].any()
                        else np.zeros(vec.shape[-1], np.float32) for s in range(len(STEMS))])
-    meta = {"version": VERSION, "model": f"htdemucs_6s ({HTDEMUCS_6S}) + MuQ-MuLan per stem", "songs": int(len(keep)),
+    meta = {"version": VERSION, "model": f"htdemucs_6s ({HTDEMUCS_6S}) + MuQ-MuLan per stem", "songs": len(keep),
             "stems": list(STEMS), "facets": list(FACETS), "desc": list(DESC), "present_db": PRESENT_DB,
             "lane_fps": LANE_FPS, "mu": None if mu is None else np.asarray(mu, np.float32).round(6).tolist(),
             "calib": None if calib is None else np.asarray(calib, np.float32).round(6).tolist()} | (info or {})
@@ -563,7 +631,7 @@ def pack(shards: Iterable[str | Path], out: str | Path, mu: np.ndarray | None = 
 def _midi_name(m: float) -> str | None:
     if not np.isfinite(m):
         return None
-    n = int(round(m))
+    n = round(float(m))
     return f"{PITCHES[n % 12]}{n // 12 - 1}"
 
 
@@ -621,7 +689,8 @@ def compare(a: dict[str, np.ndarray], b: dict[str, np.ndarray], mu: np.ndarray |
     facets = [{"name": n, "label": FACET_LABELS[n], "value": _num(f[i], 3), "grade": _num(g[i], 0)}
               for i, n in enumerate(FACETS) if np.isfinite(f[i])]
     graded = sorted((x for x in facets if x["grade"] is not None), key=lambda x: -x["grade"])
-    return {"facets": facets, "matched_on": [x["name"] for x in graded if x["grade"] >= 85][:3]}
+    return {"facets": facets, "graded": calib is not None,
+            "matched_on": [x["name"] for x in graded if x["grade"] >= 85][:3]}
 
 
 # ---------------------------------------------------------------- catalog build
