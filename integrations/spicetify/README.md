@@ -91,6 +91,30 @@ prompt. Best matches only run on the hosted matcher, so their tab asks before
 sending the song's title and artist. A Best matches list saved from an earlier
 search shows without asking.
 
+## Stems
+
+Rows in Best matches, Same vibe, and hosted Sounds like have a **Stems**
+button. It shows your song and that match side by side, each split into vocals,
+drums, bass, guitar, keys, and synths & other by the `htdemucs_6s` separation
+model, then measured part by part:
+
+- **How alike, part by part** compares each part's sound, the groove, tempo,
+  key and harmony, vocal register, range and presence, the bassline, and the
+  mix balance. Once the dissector is calibrated, each gets a 0–100 grade
+  against typical match pairs, and up to three graded 85 or more are listed as
+  **Matched on**. Until then the view shows the raw measures in their own
+  units.
+- For each song: the loudness of the whole mix and of each part across the
+  30-second preview, the beat grid, the sung and bass melody lines, kick,
+  snare, and hat hits, and an average one-bar drum pattern. A part the
+  separator doesn't find is dimmed and marked **not in this song**.
+- ▶ plays either song.
+
+**Back** or Escape returns to the list where you left it. Songs already
+dissected open at once; others are split on the server's GPU, which takes up to
+about half a minute. Like Best matches, Stems hears only Deezer's 30-second
+preview. The companion's local Sounds like list has no Stems button.
+
 ## Spotify-native results
 
 - Results open on a normal Spotify page, so the Back and Forward buttons work
@@ -195,6 +219,12 @@ labels and related-artist context come directly from Spotify inside the
 already-authenticated desktop client and are not sent to Soundalike. No
 separate Spotify login is required.
 
+Opening **Stems** sends the two songs' Deezer track IDs, taken from the
+matcher's own list, to `https://soundalike.yassin.app/api/anysong/dissect`.
+The server may download their public Deezer previews to split and measure them,
+and keeps the measurements so the next look is instant. As with searches,
+nothing about who asked is kept.
+
 Optional feedback is sent to the public CORS endpoint at
 `https://soundalike.yassin.app/api/spicetify-feedback`. Its record contains only
 the seed title/artist, the rows actually displayed and their final order,
@@ -226,7 +256,8 @@ the displayed result list are not sent to Discord.
   outside that clip can be missed.
 - The matcher allows about 20 new searches a minute. Past that, Best matches
   say **You're going a bit fast**; wait a few seconds and try again. Lists
-  saved on your computer don't count.
+  saved on your computer don't count. Stems allows about 12 songs a minute
+  that haven't been dissected yet; songs already dissected don't count.
 - The companion's and the fallback Sounds like ranking use the independently
   validated `dual_sonic64_guardrail` model. The `v=4` value in their requests
   is the strict Spotify-lyrics policy contract, not a V4 recommendation model.

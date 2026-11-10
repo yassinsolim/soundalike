@@ -5,13 +5,15 @@
 // "Same vibe" and "Sounds like" (both from the same hosted response; with the
 // local companion, Sounds like comes from the local soundalike server and
 // Same vibe is not shown). Playing a result plays the shown list on in
-// order, like a playlist that is never saved.
+// order, like a playlist that is never saved. Each hosted row's "Stems" button
+// opens the seed and that match split into instruments and compared part by
+// part (the hosted /api/anysong/dissect endpoint).
 //
 // Install (requires a patchable desktop Spotify app): follow this directory's
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.10.1";
+  const RUNTIME_SEMANTIC_VERSION = "2.11.0";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -70,6 +72,37 @@
   const BEST_MATCHES_TIMEOUT_MS = 30000;
   const BEST_MATCHES_RETRIES = 2;
   const BEST_MATCHES_RETRY_DELAY_MS = 1500;
+  // Stems: the hosted matcher splits a seed and a match into instruments and
+  // measures each part. A song it hasn't dissected before takes GPU time, so
+  // the wait is longer and a busy dissector (503) is retried a few times.
+  const DISSECT_ENDPOINT = `${FALLBACK_HOSTED_SERVER}/api/anysong/dissect`;
+  const DISSECT_TIMEOUT_MS = 90000;
+  const DISSECT_RETRIES = 3;
+  const DISSECT_RETRY_DELAY_MS = 2000;
+  const DISSECT_CACHE_SIZE = 40;
+  const DISSECT_FRAMES = 300; // 30 s lanes at 10 frames a second
+  const DISSECT_STEMS = [
+    ["vocals", "Vocals"],
+    ["drums", "Drums"],
+    ["bass", "Bass"],
+    ["guitar", "Guitar"],
+    ["piano", "Keys"],
+    ["other", "Synths & other"],
+  ];
+  const DISSECT_DRUMS = [["kick", "Kick"], ["snare", "Snare"], ["hats", "Hats"]];
+  // Raw facet values before calibration: cosine-like similarities (1 = alike)
+  // or distances in the units below.
+  const DISSECT_SIMILARITIES = new Set([
+    "vocals", "drums", "bass", "guitar", "piano", "other",
+    "groove", "tempo", "harmony", "bass_motion",
+  ]);
+  const DISSECT_BLURB =
+    "Both songs split into vocals, drums, bass, guitar, keys and the rest, " +
+    "then measured part by part: loudness over time, the beat grid, drum hits, " +
+    "the sung and bass melody lines, and a one-bar drum pattern.";
+  const DISSECT_PENDING =
+    "Splitting both songs into instruments… a song that hasn't been dissected " +
+    "before takes up to half a minute.";
   // The seed's ISRC lets the matcher find songs Deezer's search doesn't list
   // where the server runs, and the exact recording. The lookup is optional:
   // past this the request goes by title and artist alone.
@@ -122,6 +155,9 @@
   let warnedAboutNativeMenus = false;
   let resultsState = null;
   let activePage = null;
+  // The open Stems view over the results list, and dissections by song pair.
+  let dissectView = null;
+  const dissections = new Map();
   // Rows matched after their list started playing: { last, uris }.
   let lateMatches = null;
   let routeMountTimer;
@@ -694,12 +730,22 @@
     return error;
   }
 
-  // Keeps only what the page shows, so cached lists stay small.
+  function deezerId(value) {
+    const id = Number(value);
+    return Number.isSafeInteger(id) && id > 0 ? id : null;
+  }
+
+  // Keeps only what the page shows, so cached lists stay small. Deezer ids stay
+  // so a match can be dissected next to its seed (Stems).
   function compactBestMatches(body) {
     const query = body?.query || {};
     const best = Array.isArray(body?.results?.best) ? body.results.best : [];
+    const withId = (item, compact) => {
+      const id = deezerId(item?.id);
+      return id ? { id, ...compact } : compact;
+    };
     const results = best
-      .map((item) => ({
+      .map((item) => withId(item, {
         title: String(item?.title || "").trim(),
         artist: String(item?.artist || "").trim(),
         matchNote: item?.ranks && typeof item.ranks === "object"
@@ -715,7 +761,7 @@
       .slice(0, HOSTED_RESULT_COUNT);
     // Servers without Same vibe send no vibe list; its rows carry no ranks.
     const vibe = (Array.isArray(body?.results?.vibe) ? body.results.vibe : [])
-      .map((item) => ({
+      .map((item) => withId(item, {
         title: String(item?.title || "").trim(),
         artist: String(item?.artist || "").trim(),
       }))
@@ -723,7 +769,7 @@
       .slice(0, HOSTED_RESULT_COUNT);
     // The hosted Sounds like list; servers before it send none.
     const sounds = (Array.isArray(body?.results?.sounds) ? body.results.sounds : [])
-      .map((item) => ({
+      .map((item) => withId(item, {
         title: String(item?.title || "").trim(),
         artist: String(item?.artist || "").trim(),
         bpm: Number.isFinite(item?.bpm) && item.bpm > 0 ? item.bpm : null,
@@ -732,7 +778,7 @@
       .slice(0, HOSTED_RESULT_COUNT);
     const total = Number(body?.timings_ms?.total);
     return {
-      query: {
+      query: withId(query, {
         title: String(query.title || ""),
         artist: String(query.artist || ""),
         source: query.source === "live" ? "live" : "catalog",
@@ -740,7 +786,7 @@
         languageMode: query.language_mode === "all" ? "all" : "same",
         hidden: Number.isFinite(Number(query.hidden)) ? Math.max(0, Number(query.hidden)) : 0,
         bpm: Number.isFinite(query.bpm) && query.bpm > 0 ? query.bpm : null,
-      },
+      }),
       results,
       vibe,
       sounds,
@@ -796,9 +842,10 @@
     return `best:${BEST_MATCHES_POLICY}:${langMode}:${seedUri}`;
   }
 
+  // Lists saved before Stems have no Deezer ids, so they are fetched once more.
   function savedBestMatches(seedUri, langMode = "same") {
     const cached = readCacheEntry("recommendations", bestMatchesCacheId(seedUri, langMode));
-    return Array.isArray(cached?.results) && cached.results.length
+    return Array.isArray(cached?.results) && cached.results.length && deezerId(cached.query?.id)
       ? { data: cached, cached: true }
       : null;
   }
@@ -1911,7 +1958,7 @@
     index,
     track = null,
     rank = index + 1,
-    { bpm = true } = {}
+    { bpm = true, stems = null } = {}
   ) {
     const artist = spotifyArtists(track, result.artist);
     const image = track ? artworkUrl(track) : "";
@@ -1943,6 +1990,9 @@
     if (!row.__soundalikeRoot) {
       row.__soundalikeRoot = Spicetify.ReactDOM.createRoot(row);
     }
+    // The row keeps its grid class; this one adds the Stems column.
+    row.classList?.toggle?.("sa-row-stems", Boolean(stems));
+    const dissectable = Boolean(stems) && deezerId(result.id) && result.id !== stems.id;
     const activate = () => activateResult(result, track);
     const child = React.createElement(
       "div",
@@ -2033,6 +2083,31 @@
       ),
       bpm
         ? React.createElement("div", { className: "sa-bpm" }, formatBpm(result.bpm))
+        : null,
+      stems
+        ? React.createElement(
+          "div",
+          { className: "sa-dx-cell" },
+          dissectable
+            ? React.createElement(
+              "button",
+              {
+                className: "sa-dx-open",
+                type: "button",
+                title: `Compare ${result.title} with ${stems.title || "this song"}, instrument by instrument`,
+                "aria-label": `Stems: compare ${result.title} with ${stems.title || "this song"}`,
+                onClick: (event) => {
+                  event.stopPropagation();
+                  openDissection(stems, result, track);
+                },
+                onDoubleClick: (event) => event.stopPropagation(),
+                // Enter on the button opens Stems, not the row's playback.
+                onKeyDown: (event) => event.stopPropagation(),
+              },
+              "Stems"
+            )
+            : null
+        )
         : null
     );
     const menu = nativeTrackMenu(track);
@@ -2232,10 +2307,10 @@
     );
   }
 
-  function revealBestRow(page, results, tracks, index, rank, bpm = false) {
+  function revealBestRow(page, results, tracks, index, rank, bpm = false, stems = null) {
     const row = page.querySelector(`.sa-row[data-index="${index}"]`);
     if (!row || page !== activePage?.view) return;
-    renderResultRow(row, results[index], index, tracks[index] || null, rank, { bpm });
+    renderResultRow(row, results[index], index, tracks[index] || null, rank, { bpm, stems });
     row.hidden = false;
   }
 
@@ -2276,7 +2351,7 @@
     tracks,
     timing,
     label = "Best matches",
-    { bpm = false } = {}
+    { bpm = false, stems = null } = {}
   ) {
     const startedAt = nowMs();
     const searchable = Boolean(Spicetify.GraphQL.Definitions.searchModalResults);
@@ -2299,7 +2374,7 @@
           leftOut.push(index);
         } else if (ranks.size < DISPLAY_RESULT_COUNT) {
           ranks.set(index, ranks.size + 1);
-          revealBestRow(page, results, tracks, index, ranks.get(index), bpm);
+          revealBestRow(page, results, tracks, index, ranks.get(index), bpm, stems);
         }
       }
     }
@@ -2327,7 +2402,7 @@
           }
           if (tracks[index] && ranks.has(index)) {
             // Shown unmatched while its lookup was slow; now it can play.
-            revealBestRow(page, results, tracks, index, ranks.get(index), bpm);
+            revealBestRow(page, results, tracks, index, ranks.get(index), bpm, stems);
           }
         }
         if (tracks[index] || unmatched.has(index)) usable.add(index);
@@ -2344,7 +2419,7 @@
       console.warn(`[soundalike] Spotify found none of the ${label} songs; showing them unmatched.`);
       leftOut.splice(0).slice(0, DISPLAY_RESULT_COUNT).forEach((index) => {
         ranks.set(index, ranks.size + 1);
-        revealBestRow(page, results, tracks, index, ranks.get(index), bpm);
+        revealBestRow(page, results, tracks, index, ranks.get(index), bpm, stems);
       });
     }
     showLeftOutSongs(page, results, leftOut);
@@ -2419,6 +2494,13 @@
       .filter(Boolean)
       .map((tag) => `<span class="sa-tag">${esc(tag)}</span>`)
       .join("");
+  }
+
+  function listHeadMarkup({ bpm = false, stems = false } = {}) {
+    return `<div class="sa-list-head${stems ? " sa-with-stems" : ""}"><div>#</div><div></div>` +
+      `<div>Title</div><div class="sa-album-head">Album</div>` +
+      `${bpm ? '<div class="sa-bpm">BPM</div>' : ""}` +
+      `${stems ? '<div class="sa-dx-head">Compare</div>' : ""}</div>`;
   }
 
   function listStateMarkup(list, pendingText) {
@@ -2519,7 +2601,7 @@
     return `<p class="sa-blurb">${esc(blurb)}</p>
       <div class="sa-tags">${tags}</div>
       ${languageFilterMarkup(query, languageStatus)}
-      <div class="sa-list-head"><div>#</div><div></div><div>Title</div><div class="sa-album-head">Album</div></div>
+      ${listHeadMarkup({ stems: Boolean(dissectSeed(state, results)) })}
       <div class="sa-list">${resultRowsMarkup(results, { hidden: true, notes: true })}
       </div>${LIST_NOTE_MARKUP}`;
   }
@@ -2545,7 +2627,7 @@
     return `<p class="sa-blurb">${esc(blurb)}</p>
       <div class="sa-tags">${tags}</div>
       ${languageFilterMarkup(query, languageStatus)}
-      <div class="sa-list-head"><div>#</div><div></div><div>Title</div><div class="sa-album-head">Album</div></div>
+      ${listHeadMarkup({ stems: Boolean(dissectSeed(state, vibe)) })}
       <div class="sa-list">${resultRowsMarkup(vibe, { hidden: true, notes: false })}
       </div>${LIST_NOTE_MARKUP}`;
   }
@@ -2577,7 +2659,7 @@
     return `<p class="sa-blurb">${esc(blurb)}</p>
       <div class="sa-tags">${tags}</div>
       ${languageFilterMarkup(query, languageStatus)}
-      <div class="sa-list-head"><div>#</div><div></div><div>Title</div><div class="sa-album-head">Album</div><div class="sa-bpm">BPM</div></div>
+      ${listHeadMarkup({ bpm: true, stems: Boolean(dissectSeed(state, sounds)) })}
       <div class="sa-list">${resultRowsMarkup(sounds, { hidden: true, notes: false })}
       </div>${LIST_NOTE_MARKUP}`;
   }
@@ -2678,6 +2760,7 @@
     wrap.innerHTML = `
       <style>
         .sa-results{box-sizing:border-box;min-height:100%;padding:32px clamp(24px,5vw,64px) 56px;font:14px var(--encore-body-font-stack,system-ui,sans-serif);color:var(--spice-text,#fff)}
+        .sa-results[hidden]{display:none}
         .sa-seed{display:flex;align-items:center;gap:18px;margin:0 0 18px}
         .sa-seed img,.sa-seed-fallback{width:96px;height:96px;border-radius:6px;object-fit:cover;background:#282828;box-shadow:0 8px 24px rgba(0,0,0,.35)}
         .sa-seed-fallback{display:grid;place-items:center;color:#b3b3b3;font-size:22px}
@@ -2763,11 +2846,69 @@
         .sa-best-offer{min-height:36px;border:0;border-radius:999px;padding:7px 14px;background:var(--spice-button,#1ed760);color:#000;font:inherit;font-weight:700;cursor:pointer}
         .sa-best-offer:focus-visible{outline:2px solid var(--spice-text,#fff);outline-offset:2px}
         .sa-view-best .sa-list-head,.sa-view-best .sa-row-content,.sa-view-vibe .sa-list-head,.sa-view-vibe .sa-row-content{grid-template-columns:32px 44px minmax(180px,1.6fr) minmax(120px,1fr)}
+        .sa-list-head.sa-with-stems,.sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(180px,1.6fr) minmax(120px,1fr) 64px 72px}
+        .sa-view-best .sa-list-head.sa-with-stems,.sa-view-best .sa-row-stems .sa-row-content,.sa-view-vibe .sa-list-head.sa-with-stems,.sa-view-vibe .sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(180px,1.6fr) minmax(120px,1fr) 72px}
+        .sa-dx-head{text-align:center}
+        .sa-dx-cell{display:flex;justify-content:center}
+        .sa-dx-open{min-height:28px;padding:4px 11px;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:transparent;color:var(--spice-subtext,#b3b3b3);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+        .sa-dx-open:hover,.sa-dx-open:focus-visible{border-color:var(--spice-button,#1ed760);color:var(--spice-text,#fff);outline:none}
+        .sa-dx-top{display:flex;align-items:center;gap:12px;margin:0 0 16px}
+        .sa-dx-back,.sa-dx-retry{min-height:32px;border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:5px 14px;background:transparent;color:var(--spice-text,#fff);font:inherit;font-weight:600;cursor:pointer}
+        .sa-dx-back:hover,.sa-dx-retry:hover{border-color:var(--spice-button,#1ed760)}
+        .sa-dx-back:focus-visible,.sa-dx-retry:focus-visible,.sa-dx-play:focus-visible{outline:2px solid var(--spice-button,#1ed760);outline-offset:2px}
+        .sa-dx-title{font-size:clamp(20px,3vw,30px);font-weight:800;line-height:1.15;margin:2px 0 8px}
+        .sa-dx-title span{color:var(--spice-subtext,#b3b3b3);font-weight:600}
+        .sa-dx-compare{max-width:760px;margin:6px 0 22px;padding:14px 16px;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:rgba(255,255,255,.04)}
+        .sa-dx-compare h3,.sa-dx-song h3{font-size:13px;font-weight:700;margin:0 0 10px;color:var(--spice-subtext,#b3b3b3);text-transform:uppercase;letter-spacing:.06em}
+        .sa-dx-matched{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 12px}
+        .sa-dx-chip{background:var(--spice-button,#1ed760);color:#000;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700}
+        .sa-dx-facets{display:grid;grid-template-columns:minmax(110px,max-content) minmax(120px,1fr) minmax(64px,max-content);gap:6px 12px;align-items:center}
+        .sa-dx-facet-label{white-space:nowrap}
+        .sa-dx-bar{height:8px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden}
+        .sa-dx-bar span{display:block;height:100%;border-radius:inherit;background:var(--spice-subtext,#b3b3b3)}
+        .sa-dx-strong .sa-dx-bar span{background:var(--spice-button,#1ed760)}
+        .sa-dx-strong .sa-dx-facet-label{font-weight:700}
+        .sa-dx-facet-value{color:var(--spice-subtext,#b3b3b3);font-variant-numeric:tabular-nums;white-space:nowrap}
+        .sa-dx-hint{margin:10px 0 0;color:var(--spice-subtext,#b3b3b3);font-size:12px}
+        .sa-dx-songs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr));gap:22px}
+        .sa-dx-song{min-width:0}
+        .sa-dx-song-head{display:flex;align-items:center;gap:10px;margin:0 0 8px}
+        .sa-dx-song-title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .sa-dx-song-artist{color:var(--spice-subtext,#b3b3b3);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .sa-dx-song-head>div{min-width:0}
+        .sa-dx-role{flex:none;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--spice-subtext,#b3b3b3)}
+        .sa-dx-play{flex:none;width:32px;height:32px;border:0;border-radius:50%;background:var(--spice-button,#1ed760);color:#000;font-size:13px;cursor:pointer;display:grid;place-items:center}
+        .sa-dx-lane{display:grid;grid-template-columns:96px minmax(0,1fr);align-items:center;column-gap:10px;margin:0 0 4px}
+        .sa-dx-lane-label{font-size:12px;font-weight:600;line-height:1.2}
+        .sa-dx-lane-label span{display:block;font-weight:400;color:var(--spice-subtext,#b3b3b3)}
+        .sa-dx-svg{display:block;width:100%;background:rgba(255,255,255,.03);border-radius:4px}
+        .sa-dx-absent{opacity:.4}
+        .sa-dx-beat{stroke:rgba(255,255,255,.08);stroke-width:1;vector-effect:non-scaling-stroke}
+        .sa-dx-down{stroke:rgba(255,255,255,.24);stroke-width:1;vector-effect:non-scaling-stroke}
+        .sa-dx-area{opacity:.85}
+        .sa-dx-mix{fill:rgba(255,255,255,.45)}
+        .sa-dx-vocals{fill:#ff9f43}.sa-dx-drums{fill:#ef5777}.sa-dx-bass{fill:#8c7ae6}
+        .sa-dx-guitar{fill:#2ed573}.sa-dx-piano{fill:#48b0f7}.sa-dx-other{fill:#a4b0be}
+        .sa-dx-pitch{fill:none;stroke:#fff;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+        .sa-dx-hits{fill:none;stroke:#ef5777;stroke-width:2;vector-effect:non-scaling-stroke}
+        .sa-dx-axis{display:flex;justify-content:space-between;margin:2px 0 14px 106px;color:var(--spice-subtext,#b3b3b3);font-size:11px;font-variant-numeric:tabular-nums}
+        .sa-dx-pattern{display:grid;grid-template-columns:96px repeat(16,minmax(0,1fr));gap:3px;align-items:center;margin:0 0 4px}
+        .sa-dx-pattern>span:first-child{font-size:12px;font-weight:600;margin-right:7px}
+        .sa-dx-step{height:16px;border-radius:3px;background:rgba(255,255,255,.07);overflow:hidden}
+        .sa-dx-step.sa-dx-on-beat{background:rgba(255,255,255,.13)}
+        .sa-dx-step i{display:block;height:100%;background:#ef5777}
+        .sa-dx-quiet{color:var(--spice-subtext,#b3b3b3);font-size:13px;margin:0}
+        .sa-dx-foot{margin:18px 0 0;color:var(--spice-subtext,#b3b3b3);font-size:12px}
         @media(max-width:760px){
           .sa-list-head,.sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 56px}
           .sa-view-best .sa-list-head,.sa-view-best .sa-row-content,.sa-view-vibe .sa-list-head,.sa-view-vibe .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr)}
+          .sa-list-head.sa-with-stems,.sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 56px 72px}
+          .sa-view-best .sa-list-head.sa-with-stems,.sa-view-best .sa-row-stems .sa-row-content,.sa-view-vibe .sa-list-head.sa-with-stems,.sa-view-vibe .sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 72px}
           .sa-album,.sa-list-head .sa-album-head{display:none}
           .sa-feedback-help{display:block}
+          .sa-dx-lane{grid-template-columns:72px minmax(0,1fr)}
+          .sa-dx-pattern{grid-template-columns:72px repeat(16,minmax(0,1fr))}
+          .sa-dx-axis{margin-left:82px}
         }
       </style>
       <div class="sa-seed">
@@ -2839,6 +2980,7 @@
   function teardownResultsPage() {
     clearTimeout(routeMountTimer);
     routeMountTimer = undefined;
+    dissectView = null;
     if (!activePage) return;
     activePage.view?.querySelectorAll(".sa-row").forEach((row) => {
       row.__soundalikeRoot?.unmount?.();
@@ -2906,7 +3048,7 @@
         shown.tracks,
         state.timing,
         label,
-        { bpm: Boolean(shown.bpm) }
+        { bpm: Boolean(shown.bpm), stems: dissectSeed(state, shown.results || []) }
       ).catch((error) => {
         console.error(`[soundalike] ${label} enrichment failed`, error);
       });
@@ -2959,6 +3101,491 @@
       state: { soundalike: true },
     });
     scheduleResultsRoute();
+  }
+
+  // ---- Stems: a match next to its seed, instrument by instrument ----------
+
+  // The seed as the dissector knows it: the hosted list's song, by Deezer id.
+  // Lists whose rows carry no ids (older servers) get no Stems column.
+  function dissectSeed(state, results = null) {
+    const query = state?.best?.status === "ready" ? state.best.data?.query : null;
+    const id = deezerId(query?.id);
+    if (!id) return null;
+    if (results && !results.some((result) => deezerId(result?.id) && result.id !== id)) return null;
+    return {
+      id,
+      title: query.title || state.seedTrack?.name || "",
+      artist: query.artist || seedArtistNames(state.seedTrack).join(", "),
+      uri: state.seedUri || null,
+    };
+  }
+
+  function dissectMessage(status, serverError = "") {
+    const reason = String(serverError || "");
+    if (status === 404 && reason.includes("not enabled")) {
+      return "Stems aren't switched on for the hosted library yet.";
+    }
+    if (status === 404 && reason.includes("not been dissected")) {
+      return "These songs haven't been dissected yet.";
+    }
+    if (status === 404) return "One of these songs has no Deezer preview to dissect.";
+    if (status === 400) return "These songs can't be dissected.";
+    if (status === 429) return "You're going a bit fast. Wait a few seconds and try again.";
+    if (status === 503) return "The dissector is busy right now. Try again in a moment.";
+    if (status === 504) return "Dissecting took too long. Try again.";
+    if (status === 502) return "Deezer didn't respond. Try again in a moment.";
+    if (status === 422) return "We couldn't decode one of these previews.";
+    return "Stems are unavailable right now. Try again in a moment.";
+  }
+
+  async function fetchDissection(seedId, matchId) {
+    const params = new URLSearchParams({ id: String(seedId), with: String(matchId) });
+    for (let attempt = 0; ; attempt++) {
+      let response;
+      try {
+        response = await fetchWithTimeout(
+          `${DISSECT_ENDPOINT}?${params}`,
+          { cache: "default" },
+          DISSECT_TIMEOUT_MS
+        );
+      } catch (error) {
+        const status = error?.name === "AbortError" ? 504 : 0;
+        throw bestMatchesError(status, dissectMessage(status));
+      }
+      let body = null;
+      try {
+        body = await response.json();
+      } catch {
+        body = null;
+      }
+      // 503: the one live-dissection slot is taken; it frees within seconds.
+      if (response.status === 503 && attempt < DISSECT_RETRIES) {
+        await delay(DISSECT_RETRY_DELAY_MS * (attempt + 1));
+        continue;
+      }
+      const songs = Array.isArray(body?.songs) ? body.songs : [];
+      if (
+        !response.ok ||
+        !body?.ok ||
+        songs.length !== 2 ||
+        !songs.every((song) => song && typeof song === "object")
+      ) {
+        const status = response.ok ? 0 : response.status;
+        throw bestMatchesError(status, dissectMessage(status, body?.error));
+      }
+      return body;
+    }
+  }
+
+  // One request per song pair; a failed one is forgotten so it can be retried.
+  function requestDissection(seedId, matchId) {
+    const key = `${seedId}:${matchId}`;
+    const known = dissections.get(key);
+    if (known) {
+      dissections.delete(key);
+      dissections.set(key, known);
+      return known;
+    }
+    const request = fetchDissection(seedId, matchId);
+    request.catch(() => {
+      if (dissections.get(key) === request) dissections.delete(key);
+    });
+    dissections.set(key, request);
+    while (dissections.size > DISSECT_CACHE_SIZE) {
+      dissections.delete(dissections.keys().next().value);
+    }
+    return request;
+  }
+
+  // Stems replaces the list inside the results page; Back (or Escape) brings
+  // the list back where it was.
+  function openDissection(seed, result, track) {
+    const page = activePage;
+    if (!page?.host || !page.view) return;
+    closeDissection();
+    const panel = document.createElement("div");
+    panel.className = "sa-results sa-dx";
+    const view = {
+      page,
+      panel,
+      seed,
+      result,
+      matchUri: track?.uri || null,
+      scrollTop: page.host.scrollTop || 0,
+      opener: document.activeElement || null,
+    };
+    dissectView = view;
+    panel.onkeydown = (event) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault?.();
+      closeDissection();
+    };
+    page.view.hidden = true;
+    page.host.appendChild(panel);
+    page.host.scrollTop = 0;
+    loadDissection(view, true);
+  }
+
+  function closeDissection() {
+    const view = dissectView;
+    if (!view) return;
+    dissectView = null;
+    view.panel.remove?.();
+    if (view.page !== activePage) return;
+    view.page.view.hidden = false;
+    view.page.host.scrollTop = view.scrollTop;
+    view.opener?.focus?.();
+  }
+
+  function loadDissection(view, focusBack = false) {
+    renderDissection(view, { status: "pending" }, focusBack);
+    requestDissection(view.seed.id, view.result.id).then(
+      (data) => {
+        if (dissectView === view) renderDissection(view, { status: "ready", data });
+      },
+      (error) => {
+        if (dissectView !== view) return;
+        console.warn("[soundalike] Stems failed", error);
+        renderDissection(
+          view,
+          { status: "error", error: error?.message || dissectMessage(0) },
+          true
+        );
+      }
+    );
+  }
+
+  function renderDissection(view, state, focusBack = false) {
+    const refocus = focusBack || Boolean(view.panel.contains?.(document.activeElement));
+    view.state = state;
+    view.panel.innerHTML = dissectionMarkup(view, state);
+    const back = view.panel.querySelector(".sa-dx-back");
+    if (back) {
+      back.onclick = closeDissection;
+      if (refocus) back.focus?.();
+    }
+    const retry = view.panel.querySelector(".sa-dx-retry");
+    if (retry) retry.onclick = () => loadDissection(view, true);
+    (view.panel.querySelectorAll(".sa-dx-play") || []).forEach((button) => {
+      button.onclick = () => playDissectedSong(button.dataset.uri, button.dataset.title);
+    });
+  }
+
+  async function playDissectedSong(uri, title) {
+    if (!uri) return;
+    try {
+      await Spicetify.Player.playUri(uri);
+    } catch (error) {
+      console.error(`[soundalike] Could not play ${uri}`, error);
+      Spicetify.showNotification(`Could not play ${title || "this song"}.`, true);
+    }
+  }
+
+  // JSON null means "not measured", which must never read as zero.
+  function measured(value) {
+    return typeof value === "number" && Number.isFinite(value) ? value : null;
+  }
+
+  // Lanes arrive as base64 bytes, one per tenth of a second.
+  function dissectBytes(value) {
+    if (typeof value !== "string" || typeof atob !== "function") return null;
+    try {
+      const raw = atob(value);
+      return raw.length === DISSECT_FRAMES
+        ? Uint8Array.from(raw, (char) => char.charCodeAt(0))
+        : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function svgNum(value) {
+    return Math.round(value * 10) / 10;
+  }
+
+  function beatPath(times, seconds) {
+    return times
+      .filter((time) => Number.isFinite(time) && time >= 0 && time <= seconds)
+      .map((time) => `M${svgNum((time / seconds) * DISSECT_FRAMES)} 0V100`)
+      .join("");
+  }
+
+  // Loudness bytes span 60 dB below full scale (0) to full scale (255).
+  function loudnessPath(bytes, height) {
+    let path = `M0 ${height}`;
+    bytes.forEach((value, index) => {
+      path += `L${index + 0.5} ${svgNum(height - (value / 255) * (height - 2))}`;
+    });
+    return `${path}L${DISSECT_FRAMES} ${height}Z`;
+  }
+
+  // Pitch bytes are MIDI notes times two; 0 is unvoiced.
+  function pitchPath(bytes, height) {
+    const notes = Array.from(bytes, (value) => (value ? value / 2 : null));
+    const voiced = notes.filter((note) => note !== null);
+    if (voiced.length < 3) return "";
+    let low = Math.min(...voiced) - 2;
+    let high = Math.max(...voiced) + 2;
+    if (high - low < 12) {
+      const middle = (high + low) / 2;
+      low = middle - 6;
+      high = middle + 6;
+    }
+    let path = "";
+    let drawing = false;
+    notes.forEach((note, index) => {
+      if (note === null) {
+        drawing = false;
+        return;
+      }
+      const y = height - 2 - ((note - low) / (high - low)) * (height - 4);
+      path += `${drawing ? "L" : "M"}${index + 0.5} ${svgNum(y)}`;
+      drawing = true;
+    });
+    return path;
+  }
+
+  function hitsPath(bytes, height) {
+    let path = "";
+    bytes.forEach((value, index) => {
+      if (value >= 48) path += `M${index + 0.5} ${height}V${svgNum(height - (value / 255) * height)}`;
+    });
+    return path;
+  }
+
+  function laneMarkup(label, note, body, grid, { height = 34, absent = false } = {}) {
+    return `<div class="sa-dx-lane${absent ? " sa-dx-absent" : ""}">` +
+      `<div class="sa-dx-lane-label">${esc(label)}${note ? `<span>${esc(note)}</span>` : ""}</div>` +
+      `<svg class="sa-dx-svg" viewBox="0 0 ${DISSECT_FRAMES} ${height}" preserveAspectRatio="none" ` +
+      `style="height:${height}px" aria-hidden="true" focusable="false">${grid}${body}</svg></div>`;
+  }
+
+  function formatDb(value) {
+    return `${value < 0 ? "\u2212" : "+"}${Math.abs(value).toFixed(1)} dB`;
+  }
+
+  function patternMarkup(pattern, drumsPresent) {
+    const rows = DISSECT_DRUMS.map(([name, label]) => {
+      const steps = Array.isArray(pattern?.[name]) ? pattern[name].map(Number) : [];
+      return { label, steps: steps.length === 16 && steps.every(Number.isFinite) ? steps : null };
+    });
+    if (
+      !drumsPresent ||
+      rows.some((row) => !row.steps) ||
+      rows.every((row) => row.steps.every((value) => value <= 0))
+    ) {
+      return '<p class="sa-dx-quiet">No steady drum pattern in this preview.</p>';
+    }
+    return '<div role="img" aria-label="Kick, snare and hats on the 16 steps of an average bar">' +
+      rows.map(({ label, steps }) =>
+        `<div class="sa-dx-pattern"><span>${esc(label)}</span>` +
+        steps.map((value, index) =>
+          `<span class="sa-dx-step${index % 4 === 0 ? " sa-dx-on-beat" : ""}">` +
+          `<i style="opacity:${(Math.max(0, Math.min(255, value)) / 255).toFixed(2)}"></i></span>`
+        ).join("") +
+        "</div>"
+      ).join("") +
+      "</div>";
+  }
+
+  function dissectedSongMarkup(song, { role, title, artist, uri }) {
+    const seconds = measured(song.seconds) > 0 ? song.seconds : 30;
+    const times = (list) => (Array.isArray(list) ? list.map(measured) : []);
+    const grid = `<path class="sa-dx-beat" d="${beatPath(times(song.beats), seconds)}"/>` +
+      `<path class="sa-dx-down" d="${beatPath(times(song.downbeats), seconds)}"/>`;
+    const lanes = [];
+    const mix = dissectBytes(song.mix);
+    if (mix) {
+      lanes.push(laneMarkup(
+        "Whole mix",
+        "",
+        `<path class="sa-dx-area sa-dx-mix" d="${loudnessPath(mix, 34)}"/>`,
+        grid
+      ));
+    }
+    const stems = Array.isArray(song.stems) ? song.stems : [];
+    for (const [name, label] of DISSECT_STEMS) {
+      const stem = stems.find((item) => item?.name === name);
+      const loudness = stem ? dissectBytes(stem.loudness) : null;
+      if (!loudness) continue;
+      const present = stem.present === true;
+      const pitch = present && (name === "vocals" || name === "bass")
+        ? dissectBytes(song.pitch?.[name])
+        : null;
+      const melody = pitch ? pitchPath(pitch, 34) : "";
+      const balance = measured(stem.balance_db);
+      const note = !present
+        ? "not in this song"
+        : balance !== null ? `${formatDb(balance)} vs mix` : "";
+      lanes.push(laneMarkup(
+        label,
+        note,
+        `<path class="sa-dx-area sa-dx-${name}" d="${loudnessPath(loudness, 34)}"/>` +
+          (melody ? `<path class="sa-dx-pitch" d="${melody}"/>` : ""),
+        grid,
+        { absent: !present }
+      ));
+    }
+    const drumsPresent = stems.find((item) => item?.name === "drums")?.present === true;
+    if (drumsPresent) {
+      for (const [name, label] of DISSECT_DRUMS) {
+        const hits = dissectBytes(song.drums?.[name]);
+        const rate = measured(song.drum_rates?.[name]);
+        if (!hits) continue;
+        lanes.push(laneMarkup(
+          label,
+          rate !== null ? `${rate.toFixed(1)} hits/s` : "",
+          `<path class="sa-dx-hits" d="${hitsPath(hits, 18)}"/>`,
+          grid,
+          { height: 18 }
+        ));
+      }
+    }
+    const chips = [];
+    const bpm = measured(song.bpm);
+    if (bpm > 0) chips.push(`${Math.round(bpm)} BPM`);
+    if (song.key?.tonic) {
+      chips.push(`${song.key.tonic} ${song.key.mode === "minor" ? "minor" : "major"}`);
+    }
+    if (song.vocals?.median) {
+      const range = measured(song.vocals.range_st);
+      chips.push(`Vocals around ${song.vocals.median}` +
+        (range > 0 ? ` · ${Math.round(range)}-semitone range` : ""));
+    }
+    if (song.bass?.median) chips.push(`Bass around ${song.bass.median}`);
+    const play = uri
+      ? `<button class="sa-dx-play" type="button" data-uri="${esc(uri)}" data-title="${esc(title)}" ` +
+        `title="Play ${esc(title)}" aria-label="Play ${esc(title)}">▶</button>`
+      : "";
+    return `<section class="sa-dx-song" aria-label="${esc(`${role}: ${title}`)}">
+        <div class="sa-dx-song-head">${play}<div>
+          <div class="sa-dx-role">${esc(role)}</div>
+          <div class="sa-dx-song-title">${esc(title)}</div>
+          <div class="sa-dx-song-artist">${esc(artist)}</div>
+        </div></div>
+        <div class="sa-tags">${tagsMarkup(chips)}</div>
+        ${lanes.join("")}
+        <div class="sa-dx-axis" aria-hidden="true"><span>0 s</span><span>10 s</span><span>20 s</span><span>${Math.round(seconds)} s</span></div>
+        <h3>One-bar drum pattern</h3>
+        ${patternMarkup(song.pattern, drumsPresent)}
+      </section>`;
+  }
+
+  // Graded facets are percentiles among typical match pairs. Until the
+  // dissector is calibrated, raw measures show in their own units.
+  function facetReading(facet, graded) {
+    if (graded) {
+      const grade = measured(facet.grade);
+      return grade !== null
+        ? {
+          fill: grade / 100,
+          text: String(Math.round(grade)),
+          title: `More alike than ${Math.round(grade)}% of typical match pairs`,
+        }
+        : null;
+    }
+    const value = measured(facet.value);
+    if (value === null) return null;
+    if (DISSECT_SIMILARITIES.has(facet.name)) {
+      return { fill: value, text: value.toFixed(2), title: "Similarity; 1.00 is identical" };
+    }
+    if (facet.name === "key") {
+      const steps = Math.round(value);
+      return {
+        fill: 1 - value / 6,
+        text: steps ? `${steps} ${steps === 1 ? "step" : "steps"} apart` : "same key",
+        title: "Steps apart on the circle of fifths",
+      };
+    }
+    if (facet.name === "vocal_presence") {
+      return {
+        fill: 1 - value,
+        text: `${Math.round(value * 100)} pts apart`,
+        title: "Difference in how much of the preview has singing",
+      };
+    }
+    if (facet.name === "balance") {
+      return {
+        fill: 1 - value / 40,
+        text: `${value.toFixed(1)} dB apart`,
+        title: "How differently the parts sit in the mix",
+      };
+    }
+    const semitones = Math.round(value);
+    return {
+      fill: 1 - value / 12,
+      text: `${semitones} ${semitones === 1 ? "semitone" : "semitones"} apart`,
+      title: "Distance in semitones",
+    };
+  }
+
+  function compareMarkup(compare) {
+    const graded = compare?.graded === true;
+    const facets = (Array.isArray(compare?.facets) ? compare.facets : [])
+      .filter((facet) => facet && typeof facet.label === "string" && typeof facet.name === "string")
+      .map((facet) => ({ facet, reading: facetReading(facet, graded) }))
+      .filter((item) => item.reading);
+    if (!facets.length) return "";
+    if (graded) facets.sort((left, right) => right.reading.fill - left.reading.fill);
+    const matchedOn = new Set(
+      graded && Array.isArray(compare.matched_on) ? compare.matched_on : []
+    );
+    const strong = facets.filter(({ facet }) => matchedOn.has(facet.name));
+    const headline = !graded
+      ? ""
+      : strong.length
+        ? `<div class="sa-dx-matched"><span>Matched on</span>${strong
+          .map(({ facet }) => `<span class="sa-dx-chip">${esc(facet.label)}</span>`)
+          .join("")}</div>`
+        : '<p class="sa-dx-hint">No single part stands out; the match comes from the overall sound.</p>';
+    const rows = facets.map(({ facet, reading }) => {
+      const fill = Math.round(Math.max(0, Math.min(1, reading.fill)) * 100);
+      const title = esc(reading.title);
+      return `<div class="sa-dx-facet${matchedOn.has(facet.name) ? " sa-dx-strong" : ""}" style="display:contents">` +
+        `<span class="sa-dx-facet-label" title="${title}">${esc(facet.label)}</span>` +
+        `<span class="sa-dx-bar" title="${title}"><span style="width:${fill}%"></span></span>` +
+        `<span class="sa-dx-facet-value" title="${title}">${esc(reading.text)}</span></div>`;
+    }).join("");
+    const hint = graded
+      ? "Grades run 0 to 100 against typical match pairs; 85 or more counts as matched on."
+      : "Grades arrive once the dissector is calibrated. Until then these are raw " +
+        "measures: similarities run up to 1.00, distances are best at zero.";
+    return `<section class="sa-dx-compare" aria-label="How alike, part by part">
+        <h3>How alike, part by part</h3>
+        ${headline}
+        <div class="sa-dx-facets">${rows}</div>
+        <p class="sa-dx-hint">${esc(hint)}</p>
+      </section>`;
+  }
+
+  function dissectionMarkup(view, state) {
+    const { seed, result } = view;
+    const head = `<div class="sa-dx-top"><button class="sa-dx-back" type="button">← Back to matches</button></div>
+      <div class="sa-kicker">STEMS · HOSTED LIBRARY</div>
+      <h2 class="sa-dx-title">${esc(seed.title)} <span>vs</span> ${esc(result.title)}</h2>
+      <p class="sa-blurb">${esc(DISSECT_BLURB)}</p>`;
+    if (state.status === "pending") {
+      return `${head}<div class="sa-state" role="status">${esc(DISSECT_PENDING)}</div>`;
+    }
+    if (state.status === "error") {
+      return `${head}<div class="sa-state sa-state-error" role="alert">${esc(state.error)}</div>` +
+        '<button class="sa-dx-retry" type="button">Try again</button>';
+    }
+    const songs = state.data.songs;
+    const live = songs.filter((song) => song.source === "live");
+    const liveMs = live.reduce((sum, song) => sum + (Number(song.ms) || 0), 0);
+    const source = !live.length
+      ? "From earlier dissections."
+      : liveMs > 0
+        ? `Dissected just now in ${(liveMs / 1000).toFixed(1)} s.`
+        : "Dissected just now.";
+    return `${head}${compareMarkup(state.data.compare)}
+      <div class="sa-dx-songs">
+        ${dissectedSongMarkup(songs[0], { role: "This song", title: seed.title, artist: seed.artist, uri: seed.uri })}
+        ${dissectedSongMarkup(songs[1], { role: "Match", title: result.title, artist: result.artist, uri: view.matchUri })}
+      </div>
+      <p class="sa-dx-hint">Shaded: each part's loudness over the preview. White line: the sung or bass melody. Bright lines mark bars, faint lines beats.</p>
+      <p class="sa-dx-foot">Measured on each song's 30-second Deezer preview. ${esc(source)}</p>`;
   }
 
   function esc(str) {
