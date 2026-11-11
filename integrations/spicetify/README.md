@@ -51,7 +51,10 @@ you chose.
   placed in those rankings, such as "melody #1 · samples #3". The matcher
   searches a 999,293-song index and works for any song with a 30-second
   Deezer preview, including songs outside the index, which take a few seconds
-  to analyze. After the likely covers and samples, songs are ordered by how
+  to analyze. Likely covers and samples lead the list: a melody or samples
+  match that clearly stands out from the song's other matches. When none
+  stands out, only the strongest melody or samples match stays on top. After
+  them, songs are ordered by how
   likely your song's listeners are to also play their artists, as learned from
   public listening data, and by how close they sound. Rows from that part of the
   list may show no melody or samples rank. Each artist appears once in that
@@ -90,6 +93,16 @@ Spotify lyrics-language filtering, related-artist ordering, and the feedback
 prompt. Best matches only run on the hosted matcher, so their tab asks before
 sending the song's title and artist. A Best matches list saved from an earlier
 search shows without asking.
+
+## Match
+
+Rows in Best matches, Same vibe, and hosted Sounds like show a **Match** bar
+to the left of Stems: how alike the song sounds to yours by the MuQ-MuLan
+model, as the share of typical matches it sounds more alike than. 50 % is a
+typical match; 90 % sounds more alike than nine in ten songs Soundalike
+usually shows. A song can rank high in Best matches or Same vibe for its
+listeners or its tempo with a low bar, and a very unusual song gets low bars
+throughout. In a narrow window only the bar shows; hover it for the number.
 
 ## Stems
 
@@ -166,7 +179,10 @@ preview. The companion's local Sounds like list has no Stems button.
   Spotify's song radio: the next row plays next, and Previous goes back up the
   list. Hidden rows and rows without a verified Spotify track are skipped, and
   no playlist is created. Rows still being matched to Spotify when you press
-  play join the queue, in order, once the list reaches its last song. The row
+  play join the queue, in order, once the list reaches its last song. Those
+  songs leave Spotify's queue again when you play another list or a song
+  outside the list, so the next song is never one left over from an earlier
+  list. Stems' ▶ also plays within the list. The row
   of the song that is playing is highlighted.
 - The green play button next to your song's title plays your song again, then
   continues down the list you are viewing, like a song radio that starts from
