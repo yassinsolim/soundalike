@@ -35,8 +35,9 @@ ml_data/
 # OS
 .DS_Store
 Thumbs.db
-.vercel
 .env.local
+.env.*
+!.env.example
 node_modules/
 private-ratings-inbox/
 private-ratings-*/

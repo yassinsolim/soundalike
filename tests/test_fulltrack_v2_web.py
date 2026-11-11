@@ -78,7 +78,7 @@ def test_v17_evaluator_is_byte_preserved_at_the_v1_route():
 
 
 def test_v1_v2_routes_state_submission_and_blob_namespaces_are_isolated():
-    config = _load(WEB / "vercel.json")
+    config = _load(WEB / "site.json")
     rewrites = {item["source"]: item["destination"] for item in config["rewrites"]}
     assert rewrites["/evaluate-v2"] == "/evaluate-v2/index.html"
     assert rewrites["/evaluate-v1"] == "/evaluate-v1/index.html"
@@ -128,6 +128,6 @@ def test_production_recommendation_implementation_hash_is_reviewed():
             WEB / "api" / "recommend.py",
         )
     } == {
-        "webapp/api/_reco.py": "4a415ba5481adf226a3ccf44401883926fa4daae2db280d6c18e3a357183eb9d",
-        "webapp/api/recommend.py": "dbf66c9bc32c6438b05c67c23784d91dab6c196d3edaf79107a9b89c231d7b1e",
+        "webapp/api/_reco.py": "bed051a351d8a6b02e7a741133dfbdb2b0f1fecb3ad7ff54c599372008c19f2f",
+        "webapp/api/recommend.py": "91bde957522bf175fc9887648f6b46c3c624a2792d7574d1db91cc6a2158b36a",
     }

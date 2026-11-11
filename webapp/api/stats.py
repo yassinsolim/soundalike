@@ -1,4 +1,4 @@
-"""Vercel serverless function: GET /api/stats
+"""HTTP function: GET /api/stats
 
 Lightweight library metadata for the UI (so copy like the song count stays
 correct across index rebuilds instead of being hard-coded). Returns the current

@@ -11,7 +11,7 @@ SCRIPT = (WEB / "search.js").read_text(encoding="utf-8")
 
 
 def _config():
-    config = json.loads((WEB / "vercel.json").read_text(encoding="utf-8"))
+    config = json.loads((WEB / "site.json").read_text(encoding="utf-8"))
     rewrites = {r["source"]: r["destination"] for r in config["rewrites"]}
     redirects = {r["source"]: r for r in config.get("redirects", [])}
     routes = {
@@ -40,7 +40,7 @@ def test_anysong_redirects_home_and_keeps_strict_csp():
 
 
 def test_anysong_stub_forwards_old_links_to_the_home_page():
-    # Hosts that ignore vercel.json redirects still serve this file, so it
+    # Hosts that ignore site.json redirects still serve this file, so it
     # forwards ?id=<id>&tab=<tab> and #id=<id>&tab=<tab> links itself.
     script = '<script>location.replace("/" + location.search + location.hash);</script>'
     assert script in PAGE

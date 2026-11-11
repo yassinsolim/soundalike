@@ -1,10 +1,10 @@
-# Deploying Soundalike as a hosted web app (Vercel)
+# Deploying Soundalike as a hosted web app
 
-This directory is a **self-contained Vercel deployment**: a static frontend,
-small Python recommendation functions, and one Node ratings-ingest function. The
-recommender serves the 272,853-song library using **numpy only** (no PyTorch). You
-can host it on a subdomain like
-`soundalike.yassin.app` and let anyone try it in the browser.
+This directory is a **self-contained web app**: a static frontend, small Python
+recommendation functions, and Node ratings and feedback functions. The
+recommender serves the 272,853-song library using **numpy only** (no PyTorch).
+Production runs it on a self-hosted Linux container behind Cloudflare Tunnel at
+`soundalike.yassin.app`, where anyone can try it in the browser.
 
 > **Release status (2026-07-11):** Dual-Sonic64 uses the versioned
 > `index-2026.07.11-dual-sonic64` release asset. Desktop and hosted paths checksum the
@@ -14,11 +14,11 @@ can host it on a subdomain like
 
 ---
 
-## Vercel limits
+## Web app limits
 
-**The full model cannot run there.** Embedding an *arbitrary* song needs PyTorch
-(~2.9 GB), which is about 12 times over Vercel's 250 MB serverless limit. The
-hosted catalog does not need to embed songs during a request.
+**The full model does not run in the web app.** Embedding an *arbitrary* song
+needs PyTorch (~2.9 GB), so the web app stays numpy-only and starts quickly on a
+small host. The hosted catalog does not need to embed songs during a request.
 
 Every song in the 272,853-row release already has precomputed neural, vibe,
 EfficientNet PCA64, and CLAP PCA64 embeddings. Ranking is pure numpy (whiten →
@@ -26,14 +26,14 @@ cosine → guarded candidate union). The hosted app therefore needs only
 numpy plus the 299 MB release index. `tests/test_webapp.py` pins the numpy path to
 the desktop recommender so results are **byte-identical**.
 
-| | Hosted (Vercel) | Desktop (`soundalike serve`) |
+| | Hosted web app | Desktop (`soundalike serve`) |
 |---|---|---|
 | Recommend from a library song (272,853) | Yes, with numpy | Yes |
 | Recommend from *any* song (on-the-fly neural embedding) | No, needs PyTorch | Yes |
 | Save to Spotify playlist | Yes, through the browser | Yes |
-| Cost / maintenance | free, serverless | your machine |
+| Cost / maintenance | a small always-on container | your machine |
 
-Vercel hosts the catalog app, while the desktop app handles arbitrary songs.
+The web app hosts the catalog, while the desktop app handles arbitrary songs.
 The release catalog contains 272,853 songs and reports tracks outside that
 catalog as missing.
 
@@ -121,8 +121,8 @@ the SSH key, host key, host, and user secrets **and**
 `StrictHostKeyChecking=yes`, never a password or relaxed host verification.
 
 The website and Spicetify extension try this always-on origin first and retain
-Vercel's cacheable GET endpoint as a fallback. The Vercel POST endpoint remains
-available for compatibility but is not the normal interactive path.
+the web app's cacheable GET endpoint as a fallback. The web app's POST endpoint
+remains available for compatibility but is not the normal interactive path.
 
 ---
 
@@ -143,16 +143,19 @@ webapp/
     ratings-v2.js     # POST-only private full-track v2 ingestion
     ratings-pacing-v3.js # POST-only private pacing V3 ingestion
     ratings-v5.js     # archived V5 private ratings ingestion
+  server/
+    storage.js        # private create-only disk storage (SOUNDALIKE_STORAGE_DIR)
     ratings-v6.js     # active V6 development ratings ingestion
-    spicetify-feedback.js # public-CORS, private-Blob extension feedback
+    spicetify-feedback.js # public-CORS extension feedback with private storage
+    spicetify-feedback-digest.js # daily private Discord digest
   evaluate/           # active blinded V6 evaluator + compatibility V5 assets
   evaluate-v5/        # byte-preserved V5 evaluator
   evaluate-semantic-v2/ # byte-preserved semantic v2 evaluator
   evaluate-v1/        # byte-preserved v17 evaluator public payload
-  package.json        # official @vercel/blob SDK
+  package.json        # Node test and private inbox scripts (no runtime dependencies)
   requirements.txt    # numpy   (that's the entire backend dependency)
-  vercel.json
-  dev_server.py       # local-only: mimics Vercel routing for testing
+  site.json           # rewrites, redirects, security headers, function limits, cron
+  dev_server.py       # local-only: mimics production routing for testing
 ```
 
 The index is **not** committed here. On first request the function downloads
@@ -182,17 +185,29 @@ count together in `api/_search.py`. Custom catalogs may instead set both
 
 ---
 
-## Deploy it (≈5 minutes)
+## Deploy it
 
-1. **Create the Vercel project** from your `soundalike` GitHub repo.
-2. In **Project → Settings → General**, set **Root Directory = `webapp`**.
-   (Framework preset: *Other*. Vercel auto-detects `api/*.py` as Python functions
-   and installs `requirements.txt`.)
-3. Deploy. You'll get `https://<project>.vercel.app`.
-4. **Custom domain:** Project → Settings → Domains → add `soundalike.yassin.app`
-   (Vercel shows the CNAME to add at your DNS provider). Your existing
-   `yassin.app` / `os.yassin.app` / `strafe.yassin.app` projects are untouched;
-   this is just another subdomain pointing at a different project.
+Production runs on a Proxmox LXC container with a small private gateway, reached
+only through Cloudflare Tunnel. The host checks `main` every five minutes, builds
+an immutable release of each new commit, and switches to it after installation
+succeeds. Any Linux host can run the same app if it provides:
+
+1. **A checkout with `webapp` as the site root.** Create a Python 3.12+ virtual
+   environment and `pip install -r webapp/requirements.txt`. The Node functions
+   need Node 24 and have no runtime npm dependencies.
+2. **A gateway** that serves the static files, runs each `api/*.py` module's
+   `handler` (a `BaseHTTPRequestHandler`) and each `api/*.js` default-export
+   `(request, response)` handler, and applies the `rewrites`, `redirects`, and
+   `headers` in `site.json`. It must never serve `api/`, `server/`, `tools/`,
+   `test/`, package files, `site.json`, or Python/Markdown sources as static files.
+3. **Environment variables** in a root-owned file read by the service:
+   `SOUNDALIKE_STORAGE_DIR` (see [Private storage setup](#private-storage-setup)),
+   and optionally `CRON_SECRET` and `SOUNDALIKE_FEEDBACK_DISCORD_WEBHOOK` (see
+   [Private Discord feedback notifications](#private-discord-feedback-notifications)).
+4. **A scheduler** that calls each `crons` entry in `site.json` (UTC) with
+   `GET <path>` and `Authorization: Bearer $CRON_SECRET`.
+5. **A hostname**, for example a Cloudflare Tunnel route to the gateway's local
+   port. Do not expose the gateway port directly.
 
 That is the complete recommendation app. **No Spotify setup is needed** for
 search and recommendations. Spotify setup is only needed for the optional
@@ -239,17 +254,22 @@ detector conflicts, and requires exact same-language candidates for vocal seeds.
 saves language decisions but no transcript.
 The archived pacing study did not evaluate language.
 
-### Blob setup
+### Private storage setup
 
-1. Create a **private Vercel Blob store** and connect it only to this Vercel project.
-   Do not use a public store.
-2. Prefer Vercel OIDC credentials: enable project OIDC, set `BLOB_STORE_ID` to the
-   private store ID, and let the runtime supply `VERCEL_OIDC_TOKEN`.
-3. If OIDC is unavailable, set the store's `BLOB_READ_WRITE_TOKEN` as a sensitive
-   server-side environment variable. `@vercel/blob` uses this official fallback
-   automatically. Never expose either credential to browser code.
-4. Deploy from `webapp`; `npm ci` installs the pinned official Blob SDK.
-5. Add Vercel Firewall rate-limit rules for `POST /api/ratings`,
+1. Create a dedicated directory outside the site root and every release
+   checkout, owned by the service user with mode `0700`, for example
+   `install -d -o web -g web -m 0700 /var/lib/web-data/soundalike`.
+2. Set `SOUNDALIKE_STORAGE_DIR` to that absolute path in the service
+   environment. Without it, every ratings and feedback endpoint returns 503
+   and stores nothing. Never place it under a served directory.
+3. `server/storage.js` writes create-only: each object goes to a temporary file
+   in the same directory, is fsynced, then hard-linked into place, so an
+   existing record is never overwritten. Pathnames are validated segment by
+   segment, so traversal, absolute paths, and dot files are rejected. Records
+   are written with mode `0600`.
+4. Include the directory in the host's backups and keep those backups private.
+5. Add rate-limit rules at the edge (for example Cloudflare rate limiting) for
+   `POST /api/ratings`,
    `POST /api/ratings-v2`, `POST /api/ratings-semantic-v1`,
    `POST /api/ratings-semantic-v2`, `POST /api/ratings-pacing-v3`,
    `POST /api/ratings-v4`, `POST /api/ratings-v5`, `POST /api/ratings-v6`,
@@ -258,8 +278,8 @@ The archived pacing study did not evaluate language.
    not authentication. The extension feedback endpoint is intentionally
    unauthenticated and allows public CORS because a Spicetify extension cannot
    safely hold a secret. Its exact schema, body limits, immutable digest
-   deduplication, and private storage are still not substitutes for a Vercel
-   Firewall rate limit.
+   deduplication, and private storage are still not substitutes for an edge
+   rate-limit rule.
 
 ### Private Discord feedback notifications
 
@@ -272,13 +292,14 @@ the same date twice.
 1. Create a private channel in a Discord server you control.
 2. Open **Edit Channel > Integrations > Webhooks**, create a webhook for that
    channel, and copy its URL.
-3. In the Vercel project, add the webhook URL as the sensitive Production
-   environment variable `SOUNDALIKE_FEEDBACK_DISCORD_WEBHOOK`.
-4. Generate a random value of at least 32 characters and add it as the sensitive
-   Production environment variable `CRON_SECRET`. Vercel includes it as a
-   bearer token when it calls `/api/feedback-digest`.
-5. Redeploy after adding both variables. Submit one real extension response to
-   confirm that the private channel receives the immediate notification.
+3. On the web host, add the webhook URL to the site's root-owned environment
+   file as `SOUNDALIKE_FEEDBACK_DISCORD_WEBHOOK`.
+4. Generate a random value of at least 32 characters and add it to the same
+   file as `CRON_SECRET`. The host's scheduler sends it as a bearer token when
+   it calls `/api/feedback-digest` on the `crons` schedule in `site.json`.
+5. Restart the site after adding both variables. Submit one real extension
+   response to confirm that the private channel receives the immediate
+   notification.
 
 Treat the Discord webhook URL and `CRON_SECRET` as credentials. Do not commit
 them or paste them into an issue, chat, command argument, or log.
@@ -287,13 +308,13 @@ Immediate messages contain only the Good/Mixed/Off selection, seed title and
 artist, selected closed reasons, displayed-result count, and a short receipt.
 The daily digest contains totals, reason counts, and up to five Mixed or Off
 seed summaries. Neither message contains the optional note, anonymous nonces,
-displayed result list, credentials, or a private Blob URL. Discord mentions and
+displayed result list, credentials, or a private storage path. Discord mentions and
 link previews are disabled.
 
 Discord delivery is secondary to storage. If an immediate notification fails,
 the feedback response still succeeds because the validated private record is
-already stored; Vercel finishes that notification after returning the receipt
-and writes a content-free error to its logs if delivery fails. The digest
+already stored; the long-lived function server finishes that notification after
+returning the receipt and writes a content-free error to its log if delivery fails. The digest
 creates its private claim before contacting Discord. A failed delivery removes
 the claim so the job remains retryable. A network timeout can be ambiguous, so
 a retry could rarely produce a duplicate message after Discord accepted the
@@ -340,14 +361,14 @@ CORS endpoint accepts only `POST` and bounded `OPTIONS` preflight, requires
 unencoded `application/json`, rejects unknown keys and invalid enum/count/string
 bounds, and caps notes at 280 characters. The digest is computed from the
 normalized accepted payload, so a retry receives the same receipt without an
-overwrite. Responses contain only `receipt_sha256`, never a Blob URL.
+overwrite. Responses contain only `receipt_sha256`, never a storage path.
 
 The stored record contains random anonymous/session IDs, ratings, rating timestamps
 and durations, locked protocol/list hashes, server receipt time, canonical digest,
 and server-derived counts. It strips the local HMAC key and HMAC. Application code
 does not store IP addresses, Origin, user-agent, cookies, raw headers, Spotify
-identity, email, or a Blob URL. Vercel may process request metadata in operational
-infrastructure; review project log settings separately. There is no public GET,
+identity, email, or a storage path. The reverse proxy and Cloudflare may process
+request metadata in operational logs; review their log settings separately. There is no public GET,
 listing, admin, or unblinding endpoint for any inbox. Feedback application
 records likewise omit account identity, credentials, library/history, headers,
 IP addresses, user agent, and hidden candidates. They contain only the seed,
@@ -356,13 +377,16 @@ plain-text note, random anonymous nonces, receipt time, and digest.
 
 ### Authorized analyst and retention workflow
 
-Private downloads are deliberately local-only. From an authorized workstation:
+Private downloads are deliberately local-only. From an authorized workstation
+with SSH access to the web host, copy the private storage directory into a
+private root, then validate and split it with the inbox commands:
 
 ```bash
-cd webapp
-npm ci
 PRIVATE_ROOT="${SOUNDALIKE_PRIVATE_ROOT:-$HOME/.soundalike/private}"
-mkdir -p "$PRIVATE_ROOT"
+mkdir -p -m 700 "$PRIVATE_ROOT"
+rsync -a --chmod=D700,F600 web-host:/var/lib/web-data/soundalike/ "$PRIVATE_ROOT/storage/"
+export SOUNDALIKE_STORAGE_DIR="$PRIVATE_ROOT/storage"
+cd webapp
 npm run ratings:inbox -- "$PRIVATE_ROOT/ratings-v1" --acknowledge-private-data
 npm run ratings:v2-inbox -- "$PRIVATE_ROOT/ratings-v2" --acknowledge-private-data
 npm run ratings:semantic-inbox -- "$PRIVATE_ROOT/ratings-semantic-v1" --acknowledge-private-data
@@ -386,9 +410,9 @@ python ../tools/aggregate_ratings.py "$PRIVATE_ROOT/ratings-v1" \
   --output "$PRIVATE_ROOT/ratings-aggregate.local.json"
 ```
 
-The inbox commands use the same official SDK credential resolution (OIDC first,
-static token fallback), validate every private object path and byte count, and
-never print Blob URLs, free-text feedback comments, or rating contents. The
+The inbox commands read only from `SOUNDALIKE_STORAGE_DIR`, validate every
+private object path and byte count, and never print storage paths, free-text
+feedback comments, or rating contents. The
 feedback downloader reports only downloaded/existing counts and how many records
 are older than the configured retention window; it never deletes automatically.
 The aggregator also accepts already-downloaded v16 signed
@@ -416,25 +440,26 @@ inference is exact through 16 nonzero clusters (the complete task population);
 listener sensitivity uses 100,000 deterministic Monte Carlo draws above that
 bound so a large response count cannot cause exponential memory growth.
 
-Before opening a study, an authorized analyst must use private Blob credentials
-to record the other prefix counts, submit one fresh test snapshot, download and
+Before opening a study, an authorized analyst must use the private storage
+directory to record the other prefix counts, submit one fresh test snapshot, download and
 validate that receipt only through the matching inbox command, confirm it does not
-appear under either other prefix, and delete the exact test object with the official
-private Blob SDK/CLI. Record only counts and the deletion result, never listener
-identifiers, credentials, private URLs, or rating contents.
+appear under either other prefix, and delete the exact test object from the
+storage directory. Record only counts and the deletion result, never listener
+identifiers, credentials, private paths, or rating contents.
 
 Use **90 days** as the private Spicetify feedback record retention period unless
 a documented legal or research requirement approves a different duration. On
 review dates, an authorized analyst should download and verify the private
-inbox, keep only the approved encrypted analysis copy, and delete expired Blob
-objects with the official Vercel Blob SDK/CLI. Deletion is a separate,
+inbox, keep only the approved encrypted analysis copy, and delete expired
+objects from the storage directory on the web host. Deletion is a separate,
 deliberate maintainer action; the inbox tool only identifies the count eligible
 for review. Record deletion totals without recording listener identifiers,
-comments, or URLs. Do not retain credentials in shell history or analysis
+comments, or paths. Do not retain credentials in shell history or analysis
 output.
 
-For an end-to-end local function test use `vercel dev` with a dedicated test-only
-private store. `python webapp/dev_server.py` remains useful for recommendation and
+`npm test` exercises every ratings and feedback handler against in-memory
+storage and the disk adapter against a temporary directory.
+`python webapp/dev_server.py` remains useful for recommendation and
 preview UI work, but intentionally does not emulate or weaken private ratings
 validation.
 
@@ -452,8 +477,7 @@ This uses **OAuth 2.0 Authorization Code + PKCE**. When someone clicks
 3. They approve **on Spotify's site** and get redirected back to us with a
    one-time `code`, which the browser exchanges for a scoped **access token**.
 4. **"Save as playlist" runs entirely in the browser → Spotify.** The token never
-   touches our server (the frontend is static; there's no server to touch). Vercel
-   never sees it.
+   touches our server; the web host only serves the static page and never sees it.
 
 **The user never gives Soundalike their password.** Credentials only go to
 Spotify. The browser receives a token limited to `playlist-modify-*`.
@@ -495,7 +519,7 @@ that's effectively unavailable. So realistically:
 
 If you want *any* visitor to get a real playlist without logging in, the only route
 is an **owner-account model**: store your own refresh token as a server-side secret
-and have a serverless function create public playlists in your account, returning a
+and have a server function create public playlists in your account, returning a
 shareable link. It sidesteps the 5-user cap (visitors are listeners, not API users)
 but every playlist lives under your account. Soundalike does not enable this
 behavior by default.
@@ -504,14 +528,15 @@ behavior by default.
 
 ## Release and verification procedure
 
-The GitHub repository is already connected to the production Vercel project with
-`webapp` as its root. For an index-backed ranking release:
+The web host deploys new commits on `main` automatically (see
+[Deploy it](#deploy-it)). For an index-backed ranking release:
 
 1. Build the index and verify its row order, SHA-256, dimensions, and local parity.
 2. Upload it as `deepvibe_index.npz` under the release tag named in
    `src/soundalike/data/index_manifest.json`.
 3. Update `_INDEX_URL`, `_INDEX_VERSION`, and `_INDEX_SHA256` together.
-4. Merge the verified code to `main`; the Git integration triggers production.
+4. Merge the verified code to `main` after CI passes; the web host picks it up
+   within about five minutes.
 5. Cold-load `/api/stats`, then verify search, recommendations, and previews for at
    least ten diverse seeds. Confirm each response reports the expected retrieval
    mode and index version.

@@ -1,4 +1,4 @@
-"""Vercel serverless function: POST /api/recommend
+"""HTTP function: POST /api/recommend
 
 Body: {"query": "Title - Artist"}  or  {"row": <int>}  plus optional
       {"n", "alpha", "diversity", "max_per_artist"}.

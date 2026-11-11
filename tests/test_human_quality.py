@@ -532,7 +532,7 @@ class TestHeldOutSeeds:
 # ---------------------------------------------------------------------------
 
 class TestDesktopHostedParity:
-    """The canonical desktop path and hosted Vercel path must apply identical
+    """The canonical desktop path and hosted web app path must apply identical
     enhancements so recommendations are consistent across both surfaces."""
 
     def test_enhanced_desktop_builds_validated_modules(self):

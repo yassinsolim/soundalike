@@ -245,21 +245,17 @@ def test_submission_is_manual_consent_gated_and_privacy_bounded():
         assert disclosure in html
 
 
-def test_blob_dependency_route_and_firewall_guidance_are_present():
+def test_storage_route_and_rate_limit_guidance_are_present():
     package = _load(ROOT / "webapp" / "package.json")
     lock = _load(ROOT / "webapp" / "package-lock.json")
-    assert package["dependencies"] == {
-        "@vercel/blob": "2.6.1",
-        "@vercel/functions": "3.9.5",
-    }
-    assert lock["packages"]["node_modules/@vercel/blob"]["version"] == "2.6.1"
-    config = _load(ROOT / "webapp" / "vercel.json")
+    assert "dependencies" not in package
+    assert list(lock["packages"]) == [""]
+    config = _load(ROOT / "webapp" / "site.json")
     assert config["functions"]["api/ratings.js"]["maxDuration"] == 60
     deploy_docs = (ROOT / "webapp" / "DEPLOY.md").read_text(encoding="utf-8")
-    assert "private Vercel Blob store" in deploy_docs
-    assert "`BLOB_STORE_ID`" in deploy_docs
-    assert "`VERCEL_OIDC_TOKEN`" in deploy_docs
-    assert "`BLOB_READ_WRITE_TOKEN`" in deploy_docs
-    assert "Vercel Firewall rate-limit" in deploy_docs
+    assert "`SOUNDALIKE_STORAGE_DIR`" in deploy_docs
+    assert "create-only" in deploy_docs
+    assert "rate-limit rules at the edge" in deploy_docs
     assert "not authentication" in deploy_docs
     assert "There is no public GET" in deploy_docs
+    assert "vercel" not in deploy_docs.lower()

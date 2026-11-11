@@ -260,8 +260,8 @@ the displayed result list are not sent to Discord.
 
 - Hosted Sounds like comes from the same GPU matcher as Best matches. The older
   Sounds like service it replaced is only asked when that matcher can't answer;
-  it quietly prewarms its Vercel fallback after Spotify starts, and if its
-  primary service is unavailable, the first fallback request after idle can
+  it quietly prewarms the web app fallback after Spotify starts, and if its
+  primary service is unavailable, the first fallback request after a restart can
   take up to about 30 seconds. Repeated tracks use the local cache, and hosted
   responses can be reused by the CDN.
 - The matcher picks its Best matches, Same vibe, and Sounds like results from
@@ -279,7 +279,7 @@ the displayed result list are not sent to Discord.
   is the strict Spotify-lyrics policy contract, not a V4 recommendation model.
   It invalidates permissive cached results. If the always-on service has not
   received that contract yet, the extension goes directly to the current
-  Vercel ranker instead of accepting an older compatibility ranking.
+  web app ranker instead of accepting an older compatibility ranking.
 - The completed V5 receipt favored the full-track acoustic control by 56/96
   pairwise choices, versus 54/96 for the preference head and 46/96 for fixed
   V4. That research scorer depends on Jamendo full-track section embeddings

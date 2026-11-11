@@ -1,11 +1,11 @@
 import {
-  BlobNotFoundError,
-  del as blobDel,
-  get as blobGet,
-  head as blobHead,
-  list as blobList,
-  put as blobPut,
-} from "@vercel/blob";
+  isObjectNotFound as isNotFound,
+  del as storageDel,
+  get as storageGet,
+  head as storageHead,
+  list as storageList,
+  put as storagePut,
+} from "./storage.js";
 import { timingSafeEqual } from "node:crypto";
 
 import {
@@ -88,13 +88,6 @@ function previousUtcDay(now) {
     end,
     date: new Date(start).toISOString().slice(0, 10),
   };
-}
-
-function isNotFound(error) {
-  return (
-    error instanceof BlobNotFoundError ||
-    error?.name === "BlobNotFoundError"
-  );
 }
 
 async function exists(storage, pathname) {
@@ -288,11 +281,11 @@ async function claimDigest(storage, pathname, date, now) {
 
 export function createFeedbackDigestHandler(
   storage = {
-    get: blobGet,
-    head: blobHead,
-    list: blobList,
-    put: blobPut,
-    del: blobDel,
+    get: storageGet,
+    head: storageHead,
+    list: storageList,
+    put: storagePut,
+    del: storageDel,
   },
   options = {},
 ) {

@@ -1,4 +1,4 @@
-"""Vercel serverless function: GET /api/preview?id=<deezer_track_id>
+"""HTTP function: GET /api/preview?id=<deezer_track_id>
 
 Returns a fresh 30-second preview URL for a track. Deezer preview URLs are signed
 and expire, so we can't bake them into the index — we fetch one on demand by

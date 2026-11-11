@@ -24,7 +24,7 @@ Key properties:
   * Graceful degradation: if the seed artist is unknown to the graph, the
     score contribution is 0 and the existing blend is unchanged.
   * Scale-free: graph query time is O(1) per candidate (set membership).
-  * Compatible with the hosted Vercel path (numpy-only backend).
+  * Compatible with the hosted web app path (numpy-only backend).
 
 Graph construction:
   The class can read explicit cache artifacts for offline experiments. Static

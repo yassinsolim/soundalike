@@ -108,7 +108,7 @@ class MemoryStorage {
   async head(pathname) {
     if (!this.objects.has(pathname)) {
       const error = new Error("missing");
-      error.name = "BlobNotFoundError";
+      error.name = "ObjectNotFoundError";
       throw error;
     }
     return { pathname };
@@ -132,7 +132,7 @@ async function submit(
     options.wrapper === undefined
       ? { consent: true, study: "semantic-fulltrack-v1", ratings }
       : options.wrapper;
-  await createSemanticHandler(storage, options.deploymentHost)(
+  await createSemanticHandler(storage)(
     request(options.rawBody ?? wrapper, options),
     res,
   );

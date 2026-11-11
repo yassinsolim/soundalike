@@ -1,7 +1,7 @@
-"""Torch-free numpy recommender for the Vercel deployment.
+"""Torch-free numpy recommender for the hosted web app.
 
 The full model needs PyTorch (~2.9 GB) to embed an *arbitrary* song, which can't
-live in a serverless function. But recommending from a song that's already in the
+live in the lightweight web function. But recommending from a song that's already in the
 272,853-track library needs **no torch at all** — every embedding is precomputed,
 and ranking is pure numpy (whiten + cosine + vibe-blend + guarded reranking).
 
@@ -109,7 +109,7 @@ _CONTEXT_TITLE_JUNK_RE = re.compile(
 
 
 class _TitleQualityFilter:
-    """Self-contained hosted copy; keeps Vercel independent of the torch package."""
+    """Self-contained hosted copy; keeps the web app independent of the torch package."""
 
     @staticmethod
     def _plain(value: str) -> str:
@@ -334,7 +334,7 @@ class WebRecommender:
     def _load_enhancements(self, acc_cache_dir: Optional[str]) -> None:
         """Lazily load the two validated quality-improvement modules.
 
-        These implementations intentionally live in this self-contained Vercel
+        These implementations intentionally live in this self-contained web
         module.  The deployment installs numpy only and cannot import the desktop
         package from outside the ``webapp`` root.
         """

@@ -16,9 +16,5 @@
     "ratings:v6-inbox": "node tools/ratings-v6-inbox.js",
     "ratings:v6-analysis": "node tools/ratings-v6-analysis.js",
     "feedback:inbox": "node tools/spicetify-feedback-inbox.js"
-  },
-  "dependencies": {
-    "@vercel/blob": "2.6.1",
-    "@vercel/functions": "3.9.5"
   }
 }

@@ -98,7 +98,7 @@ class MemoryStorage {
   async head(pathname) {
     if (!this.objects.has(pathname)) {
       const error = new Error("missing");
-      error.name = "BlobNotFoundError";
+      error.name = "ObjectNotFoundError";
       throw error;
     }
     return { pathname };
@@ -267,7 +267,7 @@ test("requires exact consent and enforces origin, body and method boundaries", a
   );
 });
 
-test("accepts a Vercel-style replay without touching request.body", async () => {
+test("accepts a streamed replay without touching request.body", async () => {
   const result = await submit(validExport(), new MemoryStorage(), {
     replayed: true,
   });

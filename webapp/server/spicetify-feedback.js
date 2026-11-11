@@ -1,10 +1,9 @@
 import {
-  BlobNotFoundError,
-  get as blobGet,
-  head as blobHead,
-  put as blobPut,
-} from "@vercel/blob";
-import { waitUntil as vercelWaitUntil } from "@vercel/functions";
+  isObjectNotFound as isNotFound,
+  get as storageGet,
+  head as storageHead,
+  put as storagePut,
+} from "./storage.js";
 import { createHash } from "node:crypto";
 import { TextDecoder } from "node:util";
 
@@ -271,8 +270,8 @@ async function readBody(request) {
     error.statusCode = 413;
     throw error;
   }
-  // Vercel replays its lazily buffered request through data/end listeners.
-  // Avoid request.body so duplicate JSON keys remain observable.
+  // Read the raw stream through data/end listeners and avoid request.body
+  // so duplicate JSON keys remain observable.
   const raw = await new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
@@ -352,13 +351,6 @@ function sendEmpty(response, status) {
   return response.end();
 }
 
-function isNotFound(error) {
-  return (
-    error instanceof BlobNotFoundError ||
-    error?.name === "BlobNotFoundError"
-  );
-}
-
 async function exists(storage, pathname) {
   try {
     const metadata = await storage.head(pathname);
@@ -435,13 +427,15 @@ async function persistDigestInput(storage, stored, pathname, receiptHash) {
 }
 
 export function createFeedbackHandler(
-  storage = { get: blobGet, head: blobHead, put: blobPut },
+  storage = { get: storageGet, head: storageHead, put: storagePut },
   options = {},
 ) {
   const sendDiscord = options.sendDiscord ?? createDiscordWebhookSender();
   const logger = options.logger ?? console;
   const now = options.now ?? (() => Date.now());
-  const waitUntil = options.waitUntil ?? vercelWaitUntil;
+  // The Node function server is long-lived, so the notification finishes
+  // after the response without a platform hook.
+  const waitUntil = options.waitUntil ?? (() => {});
   return async function spicetifyFeedbackHandler(request, response) {
     if (request.method === "OPTIONS") return sendEmpty(response, 204);
     if (request.method !== "POST") {

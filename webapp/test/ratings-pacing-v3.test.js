@@ -115,7 +115,7 @@ class MemoryStorage {
   async head(pathname) {
     if (!this.objects.has(pathname)) {
       const error = new Error("missing");
-      error.name = "BlobNotFoundError";
+      error.name = "ObjectNotFoundError";
       throw error;
     }
     return { pathname };
@@ -139,7 +139,7 @@ async function submit(
     options.wrapper === undefined
       ? { consent: true, study: "pacing-v3-blind", ratings }
       : options.wrapper;
-  await createPacingHandler(storage, options.deploymentHost)(
+  await createPacingHandler(storage)(
     request(options.rawBody ?? wrapper, options),
     res,
   );

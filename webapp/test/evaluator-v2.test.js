@@ -234,7 +234,7 @@ test("preserves byte-locked v17 assets and isolates routes and state", () => {
   assert.equal(v1Html.includes('fetch("/api/ratings"'), true);
 
   const config = JSON.parse(
-    readFileSync(new URL("../vercel.json", import.meta.url), "utf8"),
+    readFileSync(new URL("../site.json", import.meta.url), "utf8"),
   );
   const routes = Object.fromEntries(
     config.rewrites.map((item) => [item.source, item.destination]),

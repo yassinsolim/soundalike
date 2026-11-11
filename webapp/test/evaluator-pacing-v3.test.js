@@ -237,7 +237,7 @@ test("archives semantic v2 byte-for-byte and exposes all versioned routes", () =
     );
     assert.equal(createHash("sha256").update(bytes).digest("hex"), expected);
   }
-  const config = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url)));
+  const config = JSON.parse(readFileSync(new URL("../site.json", import.meta.url)));
   const routes = Object.fromEntries(
     config.rewrites.map((item) => [item.source, item.destination]),
   );

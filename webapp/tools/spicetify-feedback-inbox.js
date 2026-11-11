@@ -1,4 +1,4 @@
-import { get as blobGet, list as blobList } from "@vercel/blob";
+import { get as storageGet, list as storageList } from "../server/storage.js";
 import { lstat, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -37,7 +37,7 @@ async function destinationFor(root, digest) {
 
 export async function downloadSpicetifyFeedback(
   outputDirectory,
-  storage = { get: blobGet, list: blobList },
+  storage = { get: storageGet, list: storageList },
   options = {},
 ) {
   const retentionDays = options.retentionDays ?? DEFAULT_RETENTION_DAYS;
@@ -180,8 +180,8 @@ async function main() {
     );
   } catch {
     console.error(
-      "Private feedback inbox download failed. Check authorized Blob " +
-        "credentials and retry.",
+      "Private feedback inbox download failed. Check SOUNDALIKE_STORAGE_DIR " +
+        "and retry.",
     );
     process.exitCode = 1;
   }

@@ -108,7 +108,7 @@ async function requestRecommendations(
 }
 
 /**
- * Always-on host first, Vercel second. A missing catalog entry is a real answer,
+ * Always-on host first, web app second. A missing catalog entry is a real answer,
  * so it is never retried against the second host.
  */
 export async function fetchRecommendations(

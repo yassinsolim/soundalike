@@ -76,14 +76,14 @@ genre-incoherent results than the Sounds like tab (39 % vs 50 %) and more Listen
 
 ```
 browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api/anysong/*  ─▶ CT 409 :8790  anysong.api (RTX 2070 SUPER)
-                                                        └─ everything else ─▶ vercel_gateway (webapp/)
+                                                        └─ everything else ─▶ web gateway (webapp/)
 ```
 
 - The home page, [`webapp/index.html`](../webapp/index.html) with [`webapp/search.js`](../webapp/search.js), is the
   any-song search: suggestions from `/api/anysong/search`, results from `/api/anysong/similar?id=` in five tabs
   (Best matches, Same vibe, Same melody, Samples & loops, Sounds like). Share links are `/#id=<deezer id>&tab=<tab>`;
   older `#s=<title — artist>` links still resolve by name. Previews are resolved through the existing `/api/preview`.
-- `/anysong` redirects to `/` (`redirects` in [`vercel.json`](../webapp/vercel.json), temporary, query kept).
+- `/anysong` redirects to `/` (`redirects` in [`site.json`](../webapp/site.json), temporary, query kept).
   [`webapp/anysong/index.html`](../webapp/anysong/index.html) is a stub for servers that ignore `redirects`: it
   forwards the query and hash to `/`, where old `?id=` and `#id=` links (including `tab=sonic`, now Sounds like) open
   the same song.

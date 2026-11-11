@@ -1,8 +1,8 @@
 import {
-  BlobNotFoundError,
-  head as blobHead,
-  put as blobPut,
-} from "@vercel/blob";
+  isObjectNotFound as isNotFound,
+  head as storageHead,
+  put as storagePut,
+} from "../server/storage.js";
 import {
   createHash,
   createHmac,
@@ -440,13 +440,6 @@ function send(response, status, body) {
   return response.end(JSON.stringify(body));
 }
 
-function isNotFound(error) {
-  return (
-    error instanceof BlobNotFoundError ||
-    error?.name === "BlobNotFoundError"
-  );
-}
-
 async function exists(storage, pathname) {
   try {
     const metadata = await storage.head(pathname);
@@ -477,15 +470,14 @@ async function persist(storage, pathname, body) {
 }
 
 export function createSemanticHandler(
-  storage = { head: blobHead, put: blobPut },
-  deploymentHost = process.env.VERCEL_URL,
+  storage = { head: storageHead, put: storagePut },
 ) {
   return async function ratingsSemanticHandler(request, response) {
     if (request.method !== "POST") {
       response.setHeader("Allow", "POST");
       return send(response, 405, { error: "method not allowed" });
     }
-    if (!allowedRequestOrigin(request, deploymentHost)) {
+    if (!allowedRequestOrigin(request)) {
       return send(response, 403, { error: "forbidden" });
     }
     const contentType = header(request, "content-type");

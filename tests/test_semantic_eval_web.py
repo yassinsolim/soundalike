@@ -114,7 +114,7 @@ def test_semantic_v1_is_byte_preserved_at_its_versioned_route():
 
 
 def test_routes_state_and_private_inboxes_are_version_isolated():
-    config = _load(WEB / "vercel.json")
+    config = _load(WEB / "site.json")
     rewrites = {item["source"]: item["destination"] for item in config["rewrites"]}
     assert rewrites["/evaluate"] == "/evaluate/index.html"
     assert (
