@@ -624,8 +624,9 @@ history, headers, IP addresses, or hidden candidates.
 
 The feedback endpoint is intentionally public-CORS because an extension cannot
 keep a client secret. Strict validation, request-size limits, deterministic
-immutable private storage paths, an edge rate limit, and a recommended 90-day
-private-record retention window form the abuse/privacy boundary. This informal
+immutable private storage paths, a per-IP rate limit at the front gateway, and a
+recommended 90-day private-record retention window form the abuse/privacy
+boundary. This informal
 feedback and the active V6 evaluator are model-improvement inputs, not evidence
 that independently authorizes promotion.
 
