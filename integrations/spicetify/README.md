@@ -100,10 +100,10 @@ model, then measured part by part:
 
 - **How alike, part by part** compares each part's sound, the groove, tempo,
   key and harmony, vocal register, range and presence, the bassline, and the
-  mix balance. Once the dissector is calibrated, each gets a 0–100 grade
-  against typical match pairs, and up to three graded 85 or more are listed as
-  **Matched on**. Until then the view shows the raw measures in their own
-  units.
+  mix balance. Each gets a 0–100 grade against typical match pairs, and up to
+  three graded 85 or more are listed as **Matched on**. A part missing from
+  either song isn't graded. If the server has no calibration, the view shows
+  the raw measures in their own units.
 - For each song: the loudness of the whole mix and of each part across the
   30-second preview, the beat grid, the sung and bass melody lines, kick,
   snare, and hat hits, and an average one-bar drum pattern. A part the

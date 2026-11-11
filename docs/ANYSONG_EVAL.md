@@ -1994,10 +1994,36 @@ bass 0.81 and synths 0.95. Tempo is 95.9 against 97.0 BPM, with the keys four fi
 A pass leads to a held-out pre-registration with the rules used for the listener ranker, before anything is served.
 Reported, not gated: each facet's AUC for listener-related candidates within the shortlists.
 
+### Result (2026-11-11): rule 1 failed; stems stay explanation-only
+
+The build dissected all 59,992 songs (240 chunks, none failed). TF32 stayed off: `tf32_check` measured a 1.147×
+speedup against the required 1.25× (minimum cosine 1.000000). Evidence: `grow/qa/stems/ablation_report.json`.
+
+| Rule | Control → treatment, delta [95 % CI] | Limit | Verdict |
+|---|---|---|---|
+| 1. Best matches, ListenBrainz hit rate | 0.4488 → 0.4475, −0.0013 [−0.0064, +0.0039], 681 seeds | ≥ +0.010, lower bound > 0 | **fail** |
+| 2. Same vibe, ListenBrainz hit rate | 0.4765 → 0.4759, −0.0006 [−0.0038, +0.0029] | lower bound ≥ −0.005 | pass |
+| 3. HR@10 covers, samples, samples reverse | 0.673, 0.111, 0.166, all unchanged (208, 153, 163 seeds) | lower bounds ≥ −0.01 | pass |
+| 4. Stage 2 serving cost | p95 10.6 ms (median 10.1 ms, 540 seeds) | ≤ 15 ms | pass |
+
+- Rule 1 is a well-powered null. The upper bound, +0.0039, rules out the +0.010 the gate asks for. At 681 seeds the
+  interval is about ±0.005, half the width projected for 252 seeds.
+- Not gated:
+  - Sounds like, ListenBrainz hit rate: +0.0011 [−0.0026, +0.0048].
+  - Best matches, shared genre: +0.0066 [+0.0010, +0.0122] over 602 seeds. This is the only interval clear of 0, and
+    it is outside the gate.
+- Facet AUCs for listener-related candidates within the shortlists are 0.49–0.565: guitar 0.565 (46 % coverage),
+  groove 0.537, bass 0.533, synths & other 0.523, balance 0.521, vocals 0.520, drums 0.519, tempo 0.497, keys 0.49
+  (6 % coverage). Within shortlists the served ranker has already chosen, no stem facet separates listener-related
+  songs much better than chance.
+- No held-out pre-registration follows. The ablation's stem table now serves only the Stems view's grades (see
+  "Grades" below).
+
 ### The Stems view: deployed (2026-11-10)
 
-This is the explanation use only: the lists users see do not change. There is no stem table yet. Every song is
-dissected live on the RTX 2070 SUPER, then kept in `/var/lib/anysong/stems`. Each cached row carries `stems.VERSION`,
+This is the explanation use only: the lists users see do not change. Songs in the stem table (since 2026-11-11, see
+"Grades" below) are read from it. Every other song is dissected live on the RTX 2070 SUPER, then kept in
+`/var/lib/anysong/stems`. Each cached row carries `stems.VERSION`,
 so a change to the measurements retires the old rows. The unit gained `--stems-model`, `--stems-cache` and
 `--catalog-previews /data/previews` (catalog songs need no Deezer download).
 
@@ -2066,6 +2092,32 @@ separate pattern. Pattern correlation went from 0.96 to −0.08.
 
 `StemStore` treats a cached dissection from version 1 as a miss and replaces it. Full evidence:
 `anysong-lab/stems/drums/RESULTS.md`.
+
+**Grades (2026-11-11).** The ablation's stem table is deployed at `/opt/soundalike/stems/ablation60k-v2`: 59,992 songs,
+stems VERSION 2, 593 MB.
+- Its `meta.json` carries `calib`, the percentiles of each of the 16 facets over the development seeds' labelled
+  shortlist pairs, the rows stage 2 trained on.
+- The facets were computed with the table's own per-stem means (`mu`), so the table and its calibration ship together.
+- A grade is the share of those pairs that are less alike; distance facets are flipped. "Matched on" lists up to three
+  facets graded 85 or more.
+- A part missing from either song gets no grade and is left out of the graded view.
+- Ranking never reads the table.
+
+The guarded deploy (`deploy_stems_calib.sh`) checked the archive's SHA-256 and test-loaded the table with the served
+code. It then pointed the unit's `--stems` at the table and restarted:
+
+| Check | Result |
+|---|---|
+| Startup | 53 s (ready in 47.3 s); healthz stems: 59,992 songs, live, graded |
+| VRAM | 5,742 MiB allocated, peak 6,879 MiB |
+| `/similar` lists for a fixed seed | identical before and after |
+| Table pair (3586401241 against 60753051) | both songs read from the table in 7 ms; every grade matches the lab |
+| Live pair ("Whatever She Wants" against "Don't") | both songs from the cache, graded; matched on synths & other, mix balance, bass register |
+| Public URL | 200, graded, `max-age=3600` |
+| Spotify, runtime 2.11.1 from the signed feed | LOTTA SHOTS against "What You Need": matched on bass, bassline moves, bass register; 13 graded facets sorted by grade; no overflow at 573 px |
+
+The client already supported graded comparisons, so there is no runtime release. Rollback: restore the unit from
+`/opt/soundalike/deploy-backups/20261111-104204-stemscalib/`, then `systemctl daemon-reload` and restart the service.
 
 ## Serving on the RTX 2070 SUPER
 
