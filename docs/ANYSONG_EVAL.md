@@ -1970,6 +1970,20 @@ bass 0.81 and synths 0.95. Tempo is 95.9 against 97.0 BPM, with the keys four fi
     - On the 5080 only, fp32 matmuls may run as TF32. `stems/tf32_check.py` allows this only if the TF32 track
       embeddings of 48 stem clips are within cosine 0.999 of exact fp32 and at least 1.25 times faster. The served
       2070 SUPER stays exact fp32.
+- **Rate correction (2026-11-11, before any evaluation).** The 2.42 s per song above was inflated, but the
+  60,000-song cap stands.
+  - VRAM spill: with 6 clips per MuQ-MuLan call the build reserved 20 GiB on the 16 GB card. Windows spilled 6.3 GB
+    into shared system memory and MuQ-MuLan ran 6–7 times slower (`stems/vram_check.py`). The lab build now embeds 3
+    clips per call and returns the CUDA cache after separation and after embedding. The embeddings agree with the
+    6-clip run to cosine 0.9999996.
+  - GIL: `describe` in 16 threads took 0.82 s per song, the same as in one thread. In 8 processes it takes 0.18–0.20
+    s per song, and every column is bit-identical (`stems/describe_check.py`).
+  - In interleaved 250-song chunks the build takes 0.59 s per song with processes (chunks 63 and 65) and 0.97–1.01 s
+    with threads (chunks 64 and 66).
+  - At 0.59 s per song, four hours would dissect 24,386 songs, which is 252 dev seeds. Scaling the intervals above by
+    1/√n gives about ±0.010 at 252 seeds, still too wide to show +0.010 with a lower bound above 0.
+  - The plan, the seeds and the gates are unchanged. Shards made before the fix used 6 clips per call; all shards
+    store the embeddings as float16.
 
 **Must pass (all), else stems stay explanation-only:**
 1. Best matches: ListenBrainz hit rate up by at least +0.010, with a paired 95 % lower bound above 0.
@@ -2006,9 +2020,9 @@ The guarded deploy (`deploy_stems.sh`) applied the serving checks of rule 4 to t
 - Tempo and key are identical: 95.9 and 97.0 BPM, E minor and B major.
 - Stem cosines: vocals 0.888 → 0.886, drums 0.903 → 0.874, bass 0.808 → 0.843, synths 0.947 → 0.952.
 - The float16 SDR parity check (`stems/gpu_bench.py`, RTX 5080, median of 8 previews) found float16 separation within
-  37.5 dB SDR of float32 for keys and 48–63 dB for the other stems. On the 5080, the end-to-end build took 2.42 s per
-  song: separation 0.20, per-stem MuQ-MuLan 1.78 and Beat This! 0.007 s per song, with `describe` at 0.84 s per song
-  on the CPU in parallel.
+  37.5 dB SDR of float32 for keys and 48–63 dB for the other stems. The same run timed the 5080 build at 2.42 s per
+  song (per-stem MuQ-MuLan 1.78 s). VRAM spill inflated that figure; the corrected rate is 0.59 s per song (see the
+  rate correction under Seed count).
 
 **Measurement warm-up.** The first `describe` in a process compiles numba kernels (pYIN, onsets). The API now runs it
 on a synthetic song at startup. On the 3700X this takes 7.4 s cold against 1.9 s warm.
