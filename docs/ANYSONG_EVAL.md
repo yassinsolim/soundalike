@@ -1970,6 +1970,33 @@ seeds; the benchmarks' held-out split.
 **Fallback, fixed now.** If the chosen variant fails only rule 2, "1; down to the last, at least 1" is evaluated once
 under the same rules. Nothing else is tried on held-out data.
 
+### Result: rules 1 to 3 passed (2026-11-12)
+
+Run once, after the pre-registration (ff96a3b). All 32 checks passed (`grow/qa/verdict_head2.py`); the fallback was not
+needed.
+
+| Seeds | List | ListenBrainz hit rate | Change | Shared genre |
+|---|---|---|---|---|
+| Held-out (799) | Best matches | 0.454 → 0.522 | +0.069 (+0.061 to +0.075) | +0.040 |
+| | Same vibe | 0.456 → 0.462 | +0.006 (+0.003 to +0.010) | +0.004 |
+| Fresh (1,000) | Best matches | 0.454 → 0.518 | +0.064 (+0.058 to +0.071) | +0.035 |
+| | Same vibe | 0.471 → 0.477 | +0.005 (+0.004 to +0.009) | +0.003 |
+
+- Sounds like was identical for every seed.
+- Rows shown, other-language rows and derivative uploads did not move.
+- Back-to-back pairs in Best's top 10: 0.02 (held-out) and 0.01 (fresh).
+- Mean head on the held-out benchmark queries: 3.04 → 1.17.
+
+Best matches HR@10 on the held-out split:
+
+| Benchmark | v2 | Served | Now |
+|---|---|---|---|
+| Covers | 0.662 | 0.647 | 0.612 |
+| Samples | 0.130 | 0.122 | 0.088 |
+| Samples reverse | 0.137 | 0.132 | 0.106 |
+
+Reported, not gated: SampleID fell 0.163 → 0.140 (43 queries), Gen Alpha 0.288 → 0.254 (59), V4 did not move (19).
+
 **Shipped with it, display only.** Each shown song gets a sound match (`match`, 0 to 100): its sonic score against
 the seed, placed among the songs shown in the top 20 of Best, Same vibe and Sounds like for the development seeds.
 The calibration used 62,362 songs from 1,474 seeds (`MATCH_QUANTILES`); a typical seed's median shown song scores 50.
