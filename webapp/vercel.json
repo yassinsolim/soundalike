@@ -39,9 +39,11 @@
     { "source": "/evaluate-semantic-v1", "destination": "/evaluate-semantic-v1/index.html" },
     { "source": "/evaluate-semantic-v1/", "destination": "/evaluate-semantic-v1/index.html" },
     { "source": "/evaluate-v1", "destination": "/evaluate-v1/index.html" },
-    { "source": "/evaluate-v1/", "destination": "/evaluate-v1/index.html" },
-    { "source": "/anysong", "destination": "/anysong/index.html" },
-    { "source": "/anysong/", "destination": "/anysong/index.html" }
+    { "source": "/evaluate-v1/", "destination": "/evaluate-v1/index.html" }
+  ],
+  "redirects": [
+    { "source": "/anysong", "destination": "/", "permanent": false },
+    { "source": "/anysong/", "destination": "/", "permanent": false }
   ],
   "headers": [
     {

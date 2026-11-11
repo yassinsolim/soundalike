@@ -774,11 +774,11 @@ def test_autocomplete_client_aborts_stale_requests_and_reuses_cache():
     assert "AbortController" in script
     assert "requestSequence" in script
     assert "cachedPrefix" in script
-    assert "requestIdleCallback" in script
-    assert 'primaryRecommendationServer = "https://soundalike-api.yassin.app"' in script
-    assert 'fallbackRecommendationServer = "https://soundalike.yassin.app"' in script
-    assert "primaryRecommendationTimeoutMs = 5000" in script
-    assert "/api/spicetify_recommend?" in script
+    # The one search bar searches any song on Deezer, not the hosted library.
+    assert "/api/anysong/search?limit=8&q=" in script
+    assert "/api/search?" not in script and "/api/search?" not in html
+    assert "/api/spicetify_recommend" not in script
+    assert "soundalike-api.yassin.app" not in script
 
 
 def test_results_include_deezer_id_for_previews(tmp_path):

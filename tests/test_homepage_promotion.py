@@ -57,12 +57,12 @@ class _ActionParser(HTMLParser):
             self.current_link["text"].append(data)
 
 
-def test_homepage_promotes_spicetify_evaluator_and_anysong_with_native_links():
+def test_homepage_promotes_spicetify_and_evaluator_with_native_links():
     parser = _ActionParser()
     parser.feed(HTML)
 
     assert parser.navigation_label == "Soundalike actions"
-    assert len(parser.links) == 3
+    assert len(parser.links) == 2
     links = {
         " ".join(link["text"]).strip(): link["attrs"] for link in parser.links
     }
@@ -79,14 +79,24 @@ def test_homepage_promotes_spicetify_evaluator_and_anysong_with_native_links():
     assert spotify["target"] == "_blank"
     assert "noopener" in spotify["rel"].split()
     assert evaluator["href"] == "/evaluate"
-    anysong = next(
-        attrs for text, attrs in links.items() if "Try any song" in text
-    )
-    assert anysong["href"] == "/anysong"
-    assert "target" not in anysong
+    # The home page search already finds any song, so it no longer points at /anysong.
+    assert not any("Try any song" in text for text in links)
+    assert 'href="/anysong"' not in HTML
+    assert ".promos{display:grid;grid-template-columns:repeat(2," in HTML
+
+
+def test_homepage_drops_the_library_size_line():
+    assert "/api/stats" not in HTML
+    assert "library_size" not in HTML
+    assert "loadStats" not in HTML
+    assert "covers a large, growing library" not in HTML
+    assert (
+        '<div class="hint" id="hint">Search any song on Deezer, even a brand-new one.'
+    ) in HTML
 
 
 def test_homepage_search_accessibility_and_wiring_remain_present():
+    script = (ROOT / "webapp" / "search.js").read_text(encoding="utf-8")
     assert '<main class="wrap">' in HTML
     assert "</main>" in HTML
     assert (
@@ -96,51 +106,53 @@ def test_homepage_search_accessibility_and_wiring_remain_present():
     assert 'id="ac" role="listbox" aria-label="Song suggestions"' in HTML
     assert '<div id="out" aria-live="polite"></div>' in HTML
     assert '<script src="/search.js"></script>' in HTML
-    assert '$("#q").addEventListener("input",onType)' in HTML
-    assert 'fetch("/api/search?q="' in HTML
-    assert 'fetch("/api/recommend"' in HTML
+    assert 'input.addEventListener("input", onType);' in script
+    assert "`/api/anysong/search?limit=8&q=${encodeURIComponent(value)}`" in script
+    assert "/api/anysong/similar?" in script
+    assert "/api/search?q=" not in HTML
+    assert "/api/recommend" not in HTML and "/api/recommend" not in script
 
 
 def test_homepage_language_switch_is_accessible_and_covers_best_and_same_vibe():
     script = (ROOT / "webapp" / "search.js").read_text(encoding="utf-8")
     assert ".language-filter[hidden]{display:none}" in HTML
-    assert re.search(r'k: "20",\s*lang,', script)
-    assert "fetchBestMatches(item, isCurrent, picked.lang)" in script
+    assert 'params.set("lang", lang);' in script
+    assert "fetchBestMatches(picked.target, isCurrent, picked.lang)" in script
     assert '<div class="language-filter" id="language" role="status" hidden>' in script
     assert (
         '<button id="language-toggle" type="button" aria-pressed="false" hidden>'
     ) in script
-    assert re.search(
-        r'box\.hidden =\s*\(picked\.tab !== "best" && !fromBest\(picked\)\) \|\| '
-        r'picked\.best\.status === "failed";',
-        script,
-    )
+    assert (
+        'box.hidden = !languageFiltered(picked) || picked.best.status === "failed";'
+    ) in script
+    assert re.search(r'if \(tab === "best" \|\| tab === "vibe"\) return true;', script)
     assert '"all languages" : "other languages left out"' in script
     assert "hidden_sounds" not in script
 
 
-def test_homepage_same_vibe_and_sounds_like_read_the_best_matches_response():
+def test_homepage_offers_every_any_song_tab_from_one_response():
     script = (ROOT / "webapp" / "search.js").read_text(encoding="utf-8")
     keys = re.findall(r'key: "(\w+)",\s*label: "([^"]+)"', script)
-    assert keys == [("best", "Best matches"), ("vibe", "Same vibe"), ("sounds", "Sounds like")]
+    assert keys == [
+        ("best", "Best matches"),
+        ("vibe", "Same vibe"),
+        ("melody", "Same melody"),
+        ("samples", "Samples & loops"),
+        ("sounds", "Sounds like"),
+    ]
     assert (
         "\"Songs from these matches that share this song's tempo and overall sound, "
         'one per artist."'
     ) in script
-    assert re.search(
-        r'const fromBest = picked =>\s*picked\.tab === "vibe" \|\| '
-        r'\(picked\.tab === "sounds" && picked\.soundsFromBest\);',
-        script,
-    )
-    assert 'const entryFor = picked => picked[fromBest(picked) ? "best" : picked.tab];' in script
+    # Old any-song links name Sounds like "sonic".
+    assert 'const name = key === "sonic" ? "sounds" : key;' in script
     # Servers without Same vibe send no vibe list; the tab stays hidden.
     assert "picked.hasVibe = Array.isArray(vibe) && vibe.length > 0;" in script
     assert "if (button) button.hidden = !picked.hasVibe;" in script
-    # The library's Sounds like is asked only when the response carries no sounds list.
-    assert re.search(
-        r'hasSoundsList\(picked\.best\) \? undefined : settle\("sounds", requestSoundsLike\(item\)\)',
-        script,
-    )
+    # Sounds like reads the fused list and falls back to the raw sound channel.
+    assert (
+        'Array.isArray(results.sounds) && results.sounds.length ? "sounds" : "sonic"'
+    ) in script
 
 
 def test_marketplace_description_pins_the_immutable_update_bootstrap():

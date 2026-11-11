@@ -69,11 +69,13 @@ manual installation, supported Spotify builds, and troubleshooting.
 
 Open <https://soundalike.yassin.app>.
 
-Pick a song from the search suggestions. Results open on **Best matches**, with
-**Same vibe** and **Sounds like** one tab away. The suggestions come from the catalog;
-[`/anysong`](https://soundalike.yassin.app/anysong) accepts any song on Deezer.
+Search any song on Deezer, even one outside the catalog, and pick it from the
+suggestions. Results open on **Best matches**, with **Same vibe**, **Same melody**,
+**Samples & loops** and **Sounds like** one tab away. A song the matcher has not
+heard before takes a few seconds the first time. The old `/anysong` address
+redirects to the home page.
 
-You do not need an account to search the hosted catalog. Spotify login is
+You do not need an account to search. Spotify login is
 optional and is only used when you ask the site to save a playlist. Spotify
 handles the authorization through OAuth; Soundalike never receives your
 password.
@@ -242,7 +244,7 @@ model.
 
 ### Any-song (beta)
 
-[`/anysong`](https://soundalike.yassin.app/anysong) matches any Deezer track, even
+The search on [soundalike.yassin.app](https://soundalike.yassin.app) matches any Deezer track, even
 one outside the catalog, by melody, samples and overall sound, embedding unseen
 songs live on a GPU. Architecture, index builds and deployment are described in
 [docs/ANYSONG.md](docs/ANYSONG.md), and measured accuracy in
