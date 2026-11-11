@@ -188,6 +188,16 @@ def test_fuse_sums_weighted_reciprocal_ranks():
     assert api.fuse({"sonic": ["e"]}) == []
 
 
+def test_sound_match_places_a_sonic_score_among_the_songs_shown_for_typical_seeds():
+    q = api.MATCH_QUANTILES
+    assert len(q) == 21 and list(q) == sorted(q)
+    assert api.sound_match(q[10]) == 50 and api.sound_match(q[19]) == 95
+    assert api.sound_match(q[-1] + 1.0) == 100 and api.sound_match(-1.0) == 0
+    assert api.sound_match((q[2] + q[3]) / 2) in (12, 13)
+    values = [api.sound_match(s) for s in np.linspace(-0.6, 0.7, 200)]
+    assert values == sorted(values) and all(isinstance(v, int) for v in values)
+
+
 def test_best_list_fuses_the_song_views(svc):
     res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog"},
            "raw": {"melody": [(2, 0.99), (3, 0.9), (5, 0.8), (7, 0.7)],
@@ -351,10 +361,11 @@ def _stump(feature, left, right):
 
 def test_listener_lists_keep_the_audio_head_and_rank_the_rest_for_listeners(tmp_path):
     # best_head_standout=0: any melody score over the calibrated threshold extends the head (the standout rule is
-    # checked at the end).
+    # checked at the end); one song is kept without evidence.
     svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), LISTENER_META, scene=_listener_scene_table(),
                       copy_score=None, ranker=_stump("fwd", 0.0, 0.0), scene_params=SceneParams(head_min=1),
-                      languages=FakeLanguages({1: "en", 9: "de"}), best_head_standout=0.0,
+                      languages=FakeLanguages({1: "en", 9: "de"}), best_head_standout=0.0, best_head_bare=1,
+                      best_head_evidence_only=False,
                       tempo=TempoTable(np.array([5, 7, 8, 10]), np.array([120, 120, 121, 120], np.float32)))
     p = {3: 0.2, 5: 0.1, 7: 0.9, 8: 0.8, 9: 0.95, 10: 0.99}
     res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog", "artist_id": 100},
@@ -374,6 +385,11 @@ def test_listener_lists_keep_the_audio_head_and_rank_the_rest_for_listeners(tmp_
                                                {"sonic": 1}, {}]
     assert [x["id"] for x in r["sounds"]] == [7, 10, 5]
     assert {x["id"] for x in r["vibe"]} <= {3, 5, 7, 8, 10}
+    # The shipped head holds only the songs with evidence: 3 is above 5 in the fusion but is no likely cover or sample,
+    # so it is placed for listeners.
+    svc.best_head_evidence_only = api.BEST_HEAD_EVIDENCE_ONLY
+    assert [x["id"] for x in lists()["best"]] == [5, 7, 10, 3, 8]
+    svc.best_head_evidence_only = False
     p[10] = 0.01  # the seed artist's songs ignore their listener probability
     assert [x["id"] for x in lists()["best"]] == [3, 5, 7, 10, 8] and [x["id"] for x in lists()["sounds"]] == [7, 10, 5]
     assert 9 in [x["id"] for x in lists(lang_mode="all")["best"]]
@@ -382,6 +398,14 @@ def test_listener_lists_keep_the_audio_head_and_rank_the_rest_for_listeners(tmp_
     # head and is placed like the other candidates.
     svc.best_head_standout = api.BEST_HEAD_STANDOUT
     assert [x["id"] for x in lists()["best"]] == [3, 10, 7, 5, 8]
+    # Every shown song carries its sound match: its sonic score against the seed on the calibrated 0..100 scale.
+    son = res["listener"]["son"]
+    for name in ("best", "vibe", "sounds"):
+        assert [x["match"] for x in r[name]] == [api.sound_match(son[x["id"]]) for x in r[name]]
+    assert r["sounds"][1]["match"] > r["sounds"][0]["match"]  # 10 (0.5) sounds more alike than 7 (0.44)
+    svc.best_head_bare = 0  # no evidence, no head: Best is the listener order from its first place
+    assert [x["id"] for x in lists()["best"]][0] != 3
+    svc.best_head_bare = 1
     del res["listener"]
     assert [x["id"] for x in lists()["best"]][:2] == [3, 5] and 8 not in [x["id"] for x in lists()["best"]]
 

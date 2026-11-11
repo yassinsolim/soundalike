@@ -13,7 +13,7 @@
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.11.1";
+  const RUNTIME_SEMANTIC_VERSION = "2.12.0";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -67,8 +67,10 @@
   const RESULTS_CONTEXT_URI = "spotify:app:soundalike";
   // Spotify drops songs queued just as a song starts playing.
   const LATE_QUEUE_DELAY_MS = 1500;
+  // Songs this extension queued; Spotify keeps its queue across restarts.
+  const LATE_QUEUE_KEY = "soundalike:late-queue:v1";
   const BEST_MATCHES_ENDPOINT = `${FALLBACK_HOSTED_SERVER}/api/anysong/similar`;
-  const BEST_MATCHES_POLICY = "anysong-best-rrf-language-vibe-sounds-v7";
+  const BEST_MATCHES_POLICY = "anysong-best-rrf-language-vibe-sounds-v8";
   const BEST_MATCHES_TIMEOUT_MS = 30000;
   const BEST_MATCHES_RETRIES = 2;
   const BEST_MATCHES_RETRY_DELAY_MS = 1500;
@@ -735,6 +737,12 @@
     return Number.isSafeInteger(id) && id > 0 ? id : null;
   }
 
+  // The server's sound match: 0 to 100, the percentile of a song's sound score
+  // among the matches its lists show for typical songs.
+  function matchPercent(value) {
+    return Number.isInteger(value) && value >= 0 && value <= 100 ? value : null;
+  }
+
   // Keeps only what the page shows, so cached lists stay small. Deezer ids stay
   // so a match can be dissected next to its seed (Stems).
   function compactBestMatches(body) {
@@ -742,7 +750,9 @@
     const best = Array.isArray(body?.results?.best) ? body.results.best : [];
     const withId = (item, compact) => {
       const id = deezerId(item?.id);
-      return id ? { id, ...compact } : compact;
+      const match = matchPercent(item?.match);
+      const kept = match === null ? compact : { ...compact, match };
+      return id ? { id, ...kept } : kept;
     };
     const results = best
       .map((item) => withId(item, {
@@ -1851,6 +1861,7 @@
     const player = Spicetify.Platform?.PlayerAPI;
     if (typeof player?.play !== "function" || index < 0 || index >= uris.length) return false;
     lateMatches = null;
+    await dropLateQueue(player);
     await player.play(
       {
         uri: RESULTS_CONTEXT_URI,
@@ -1900,6 +1911,50 @@
     });
   }
 
+  function lateQueuedUris() {
+    try {
+      const value = JSON.parse(Spicetify.LocalStorage?.get(LATE_QUEUE_KEY) || "[]");
+      return Array.isArray(value) ? value.filter((uri) => typeof uri === "string") : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function rememberLateQueued(uris) {
+    try {
+      if (uris.length) {
+        Spicetify.LocalStorage?.set(LATE_QUEUE_KEY, JSON.stringify(uris.slice(-200)));
+      } else {
+        Spicetify.LocalStorage?.remove(LATE_QUEUE_KEY);
+      }
+    } catch {}
+  }
+
+  // Queued songs play before a list's next song, so the ones queued for an
+  // earlier list leave the queue once another list starts or playback leaves
+  // the list. A failure here never stops the new list from playing.
+  async function dropLateQueue(player = Spicetify.Platform?.PlayerAPI) {
+    const ours = new Set(lateQueuedUris());
+    if (!ours.size) return;
+    rememberLateQueued([]);
+    if (typeof player?.removeFromQueue !== "function") return;
+    try {
+      const stale = (player.getQueue?.()?.queued || [])
+        .filter((item) => ours.has(item?.uri))
+        .map(({ uri, uid }) => (uid ? { uri, uid } : { uri }));
+      if (stale.length) await player.removeFromQueue(stale);
+    } catch (error) {
+      console.warn("[soundalike] Songs queued for an earlier list could not be removed.", error);
+    }
+  }
+
+  // Queued songs keep the list as their context, so another context means
+  // the listener moved on.
+  function leftResultsList() {
+    const context = Spicetify.Platform?.PlayerAPI?.getState?.()?.context?.uri;
+    if (context && context !== RESULTS_CONTEXT_URI) void dropLateQueue();
+  }
+
   function playingLastLateSong(late, player) {
     const state = player.getState?.();
     return state?.context?.uri === RESULTS_CONTEXT_URI && state.item?.uri === late.last;
@@ -1919,6 +1974,7 @@
         if (lateMatches !== late || !playingLastLateSong(late, player)) return;
         const queued = new Set((player.getQueue?.()?.queued || []).map((item) => item.uri));
         if (late.uris.every((uri) => queued.has(uri))) break;
+        rememberLateQueued([...new Set([...lateQueuedUris(), ...late.uris])]);
         await player.addToQueue(late.uris.map((uri) => ({ uri })));
       }
       lateMatches = null;
@@ -1949,6 +2005,22 @@
     }
     Spicetify.Platform.History.push(
       `/search/${encodeURIComponent(`${result.title} ${result.artist}`)}`
+    );
+  }
+
+  function matchCell(React, result) {
+    const match = matchPercent(result.match);
+    if (match === null) return React.createElement("div", { className: "sa-match" });
+    const label = `Sound match ${match}%: sounds more alike than ${match}% of typical matches`;
+    return React.createElement(
+      "div",
+      { className: "sa-match", title: label, role: "img", "aria-label": label },
+      React.createElement(
+        "span",
+        { className: "sa-match-bar" },
+        React.createElement("i", { style: { width: `${match}%` } })
+      ),
+      React.createElement("span", { className: "sa-match-value" }, `${match}%`)
     );
   }
 
@@ -2084,6 +2156,7 @@
       bpm
         ? React.createElement("div", { className: "sa-bpm" }, formatBpm(result.bpm))
         : null,
+      stems ? matchCell(React, result) : null,
       stems
         ? React.createElement(
           "div",
@@ -2500,7 +2573,7 @@
     return `<div class="sa-list-head${stems ? " sa-with-stems" : ""}"><div>#</div><div></div>` +
       `<div>Title</div><div class="sa-album-head">Album</div>` +
       `${bpm ? '<div class="sa-bpm">BPM</div>' : ""}` +
-      `${stems ? '<div class="sa-dx-head">Compare</div>' : ""}</div>`;
+      `${stems ? '<div class="sa-match-head">Match</div><div class="sa-dx-head">Compare</div>' : ""}</div>`;
   }
 
   function listStateMarkup(list, pendingText) {
@@ -2846,8 +2919,12 @@
         .sa-best-offer{min-height:36px;border:0;border-radius:999px;padding:7px 14px;background:var(--spice-button,#1ed760);color:#000;font:inherit;font-weight:700;cursor:pointer}
         .sa-best-offer:focus-visible{outline:2px solid var(--spice-text,#fff);outline-offset:2px}
         .sa-view-best .sa-list-head,.sa-view-best .sa-row-content,.sa-view-vibe .sa-list-head,.sa-view-vibe .sa-row-content{grid-template-columns:32px 44px minmax(180px,1.6fr) minmax(120px,1fr)}
-        .sa-list-head.sa-with-stems,.sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(180px,1.6fr) minmax(120px,1fr) 64px 72px}
-        .sa-view-best .sa-list-head.sa-with-stems,.sa-view-best .sa-row-stems .sa-row-content,.sa-view-vibe .sa-list-head.sa-with-stems,.sa-view-vibe .sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(180px,1.6fr) minmax(120px,1fr) 72px}
+        .sa-list-head.sa-with-stems,.sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(180px,1.6fr) minmax(120px,1fr) 64px 76px 72px}
+        .sa-view-best .sa-list-head.sa-with-stems,.sa-view-best .sa-row-stems .sa-row-content,.sa-view-vibe .sa-list-head.sa-with-stems,.sa-view-vibe .sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(180px,1.6fr) minmax(120px,1fr) 76px 72px}
+        .sa-match{display:flex;align-items:center;gap:6px;min-width:0}
+        .sa-match-bar{flex:1 1 auto;min-width:20px;height:6px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden}
+        .sa-match-bar i{display:block;height:100%;border-radius:3px;background:var(--spice-button,#1ed760)}
+        .sa-match-value{flex:0 0 auto;width:32px;text-align:right;color:var(--spice-subtext,#b3b3b3);font-size:12px;font-variant-numeric:tabular-nums}
         .sa-dx-head{text-align:center}
         .sa-dx-cell{display:flex;justify-content:center}
         .sa-dx-open{min-height:28px;padding:4px 11px;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:transparent;color:var(--spice-subtext,#b3b3b3);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
@@ -2901,8 +2978,9 @@
         @media(max-width:760px){
           .sa-list-head,.sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 56px}
           .sa-view-best .sa-list-head,.sa-view-best .sa-row-content,.sa-view-vibe .sa-list-head,.sa-view-vibe .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr)}
-          .sa-list-head.sa-with-stems,.sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 56px 72px}
-          .sa-view-best .sa-list-head.sa-with-stems,.sa-view-best .sa-row-stems .sa-row-content,.sa-view-vibe .sa-list-head.sa-with-stems,.sa-view-vibe .sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 72px}
+          .sa-list-head.sa-with-stems,.sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 56px 40px 72px}
+          .sa-view-best .sa-list-head.sa-with-stems,.sa-view-best .sa-row-stems .sa-row-content,.sa-view-vibe .sa-list-head.sa-with-stems,.sa-view-vibe .sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 40px 72px}
+          .sa-match-value{display:none}
           .sa-album,.sa-list-head .sa-album-head{display:none}
           .sa-feedback-help{display:block}
           .sa-dx-lane{grid-template-columns:72px minmax(0,1fr)}
@@ -3270,8 +3348,22 @@
     });
   }
 
+  // Like the list's own rows: the match plays from its place in the list, and
+  // the seed plays first with the list after it, as the header button does.
   async function playDissectedSong(uri, title) {
     if (!uri) return;
+    const shown = shownResultUris();
+    try {
+      const played = shown.includes(uri)
+        ? await playResultsList(shown, shown.indexOf(uri))
+        : await playResultsList([uri, ...shown], 0);
+      if (played) return;
+    } catch (error) {
+      console.warn(
+        "[soundalike] Spotify would not play the song with its results; playing it alone.",
+        error
+      );
+    }
     try {
       await Spicetify.Player.playUri(uri);
     } catch (error) {
@@ -3673,6 +3765,7 @@
   Spicetify.Player?.addEventListener?.("songchange", () => {
     markPlayingRows();
     void queueLateMatches();
+    leftResultsList();
   });
 
   window.__soundalikeContextMenuItem = new Spicetify.ContextMenu.Item(

@@ -55,7 +55,8 @@ function loadExtension(fetchImpl, options = {}) {
   const contextPlays = [];
   const playerState = { context: null, item: null };
   const queuedSongs = [];
-  const queueState = [];
+  const queueState = [...(options.queued || [])];
+  const removedFromQueue = [];
   const nowPlayingMenuItems = [];
   const songChangeListeners = [];
   const graphqlRequests = [];
@@ -621,6 +622,15 @@ function loadExtension(fetchImpl, options = {}) {
             if (options.dropFirstQueueAdd && queuedSongs.length === 1) return;
             queueState.push(...items);
           },
+          async removeFromQueue(items) {
+            removedFromQueue.push(items);
+            if (options.removeFromQueueFails) throw new Error("Command failed");
+            for (const item of items) {
+              const at = queueState.findIndex((queued) =>
+                queued.uri === item.uri && (!item.uid || queued.uid === item.uid));
+              if (at >= 0) queueState.splice(at, 1);
+            }
+          },
         },
       } : {}),
     },
@@ -676,6 +686,9 @@ function loadExtension(fetchImpl, options = {}) {
     contextPlays,
     playerState,
     queuedSongs,
+    queueState,
+    removedFromQueue,
+    storage,
     nowPlayingMenuItems,
     player,
     songChangeListeners,
@@ -2147,7 +2160,7 @@ const soundsFixture = [
   { title: "Take My Breath", artist: "The Weeknd", bpm: 121.7 },
 ];
 
-const bestCacheKey = "best:anysong-best-rrf-language-vibe-sounds-v7:same:spotify:track:test";
+const bestCacheKey = "best:anysong-best-rrf-language-vibe-sounds-v8:same:spotify:track:test";
 
 function bestMatchesBody(best = bestFixture, overrides = {}) {
   return {
@@ -2299,7 +2312,7 @@ test("opens on Best matches with Sounds like one tab away", async () => {
   // A new response format gets a new URL, so HTTP-cached older responses are skipped.
   assert.equal(
     bestUrl.searchParams.get("policy"),
-    "anysong-best-rrf-language-vibe-sounds-v7",
+    "anysong-best-rrf-language-vibe-sounds-v8",
   );
   assert.equal(
     app.urls.filter((url) => url.includes("/api/spicetify_recommend")).length,
@@ -3656,6 +3669,112 @@ test("queues nothing when every shown row was in the list", async () => {
   assert.deepEqual(app.queuedSongs, []);
 });
 
+async function queueLateRow(app) {
+  await playBeforeLastRowMatches(app);
+  app.playerState.item = { uri: "spotify:track:best1" };
+  app.songChangeListeners[0]();
+  await waitFor(() => app.queueState.some((item) => item.uri === "spotify:track:late0"));
+}
+
+test("takes songs it queued for a list out of the queue when another list starts", async () => {
+  // A song the listener queued shares the queue with the late row.
+  const app = loadLateMatchExtension({
+    queued: [{ uri: "spotify:track:mine", uid: "q-mine" }],
+  });
+  await queueLateRow(app);
+  assert.equal(app.storage.get("soundalike:late-queue:v1"), '["spotify:track:late0"]');
+
+  // Queued songs play before the list's next song, so they leave first.
+  await rowContent(app.rows[1]).props.onDoubleClick();
+  assert.deepEqual(plain(app.removedFromQueue), [[{ uri: "spotify:track:late0" }]]);
+  assert.deepEqual(plain(app.queueState), [{ uri: "spotify:track:mine", uid: "q-mine" }]);
+  assert.equal(app.storage.has("soundalike:late-queue:v1"), false);
+  assert.deepEqual(plain(app.contextPlays.at(-1).options), {
+    skipTo: { index: 1, uri: "spotify:track:best1" },
+  });
+});
+
+test("takes its queued songs out once playback leaves the list", async () => {
+  const app = loadLateMatchExtension();
+  await queueLateRow(app);
+
+  // A queued song keeps the list as its context.
+  app.playerState.item = { uri: "spotify:track:late0" };
+  app.songChangeListeners[0]();
+  await pause(20);
+  assert.deepEqual(app.removedFromQueue, []);
+
+  app.playerState.context = { uri: "spotify:playlist:elsewhere" };
+  app.playerState.item = { uri: "spotify:track:other" };
+  app.songChangeListeners[0]();
+  await waitFor(() => app.removedFromQueue.length === 1);
+  assert.deepEqual(plain(app.removedFromQueue), [[{ uri: "spotify:track:late0" }]]);
+  assert.equal(app.storage.has("soundalike:late-queue:v1"), false);
+});
+
+test("removes songs queued before a Spotify restart and plays the list if removal fails", async () => {
+  const storage = new Map([["soundalike:late-queue:v1", '["spotify:track:old"]']]);
+  const app = loadBestMatchesExtension({
+    playerApi: true,
+    storage,
+    queued: [
+      { uri: "spotify:track:old", uid: "q-old" },
+      { uri: "spotify:track:mine", uid: "q-mine" },
+    ],
+  });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  await rowContent(app.rows[0]).props.onDoubleClick();
+  assert.deepEqual(plain(app.removedFromQueue), [[{ uri: "spotify:track:old", uid: "q-old" }]]);
+  assert.deepEqual(plain(app.queueState), [{ uri: "spotify:track:mine", uid: "q-mine" }]);
+
+  const broken = loadBestMatchesExtension({
+    playerApi: true,
+    removeFromQueueFails: true,
+    storage: new Map([["soundalike:late-queue:v1", '["spotify:track:old"]']]),
+    queued: [{ uri: "spotify:track:old", uid: "q-old" }],
+  });
+  await broken.run();
+  await waitFor(() => hasLog(broken, "Best matches metadata settled"));
+  // Spotify refusing the removal must not stop the list.
+  await rowContent(broken.rows[0]).props.onDoubleClick();
+  assert.equal(broken.removedFromQueue.length, 1);
+  assert.equal(broken.contextPlays.length, 1);
+  assert.deepEqual(broken.played, []);
+  assert.equal(broken.storage.has("soundalike:late-queue:v1"), false);
+});
+
+test("Stems plays its songs inside the shown list", async () => {
+  const app = loadBestMatchesExtension({
+    playerApi: true,
+    bestFetch: async (url) =>
+      isDissect(url) ? response(200, dissectBody(908604612, 41)) : vibeFetch(url),
+  });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  app.tab("vibe").onclick();
+  await waitFor(() => hasLog(app, "Same vibe metadata settled"));
+  stemsOpener(app.rows[0]).props.onClick(quietEvent());
+  await waitFor(() => app.stemsPanel?.innerHTML.includes("How alike, part by part"));
+
+  const [seed, match] = app.stemsButtons.play.slice(-2);
+  await match.onclick();
+  const listed = app.contextPlays.at(-1);
+  const items = listed.context.pages[0].items.map((item) => item.uri);
+  assert.equal(listed.context.uri, "spotify:app:soundalike");
+  assert.equal(items[listed.options.skipTo.index], "spotify:track:sounds0");
+  assert.equal(listed.options.skipTo.uri, "spotify:track:sounds0");
+
+  await seed.onclick();
+  const seeded = app.contextPlays.at(-1);
+  assert.deepEqual(
+    plain(seeded.context.pages[0].items.map((item) => item.uri)),
+    plain(["spotify:track:test", ...items]),
+  );
+  assert.deepEqual(plain(seeded.options), { skipTo: { index: 0, uri: "spotify:track:test" } });
+  assert.deepEqual(app.played, [], "nothing plays alone, so Spotify can't autoplay after it");
+});
+
 test("marks the row of the song that is playing", async () => {
   const app = loadBestMatchesExtension({ playingTrackUri: "spotify:track:best1" });
   await app.run();
@@ -3946,7 +4065,7 @@ test("Stems shows a hosted match next to its seed, part by part", async () => {
   const list = app.currentPage;
   assert.match(
     list.innerHTML,
-    /<div class="sa-list-head sa-with-stems"><div>#<\/div><div><\/div><div>Title<\/div><div class="sa-album-head">Album<\/div><div class="sa-dx-head">Compare<\/div><\/div>/,
+    /<div class="sa-list-head sa-with-stems"><div>#<\/div><div><\/div><div>Title<\/div><div class="sa-album-head">Album<\/div><div class="sa-match-head">Match<\/div><div class="sa-dx-head">Compare<\/div><\/div>/,
   );
   assert.equal(app.rows[0].classList.contains("sa-row-stems"), true);
   const opener = stemsOpener(app.rows[0]);
@@ -4144,7 +4263,7 @@ test("Stems compares hosted Sounds like rows but never the companion's local lis
   await waitFor(() => hasLog(hosted, "Sounds like metadata settled"));
   assert.match(
     hosted.currentPage.innerHTML,
-    /<div class="sa-bpm">BPM<\/div><div class="sa-dx-head">Compare<\/div><\/div>/,
+    /<div class="sa-bpm">BPM<\/div><div class="sa-match-head">Match<\/div><div class="sa-dx-head">Compare<\/div><\/div>/,
   );
   stemsOpener(hosted.rows[0]).props.onClick(quietEvent());
   await waitFor(() => hosted.stemsPanel?.innerHTML.includes("How alike, part by part"));
@@ -4165,6 +4284,32 @@ test("Stems compares hosted Sounds like rows but never the companion's local lis
     assert.equal(row.tree ? stemsOpener(row) : null, null);
   }
   assert.equal(local.bestRequests.filter(isDissect).length, 0);
+});
+
+test("shows each hosted match's sound match as a bar next to Stems", async () => {
+  const app = await openSameVibe(async (url) => {
+    const body = vibeMatchesBody(new URL(url).searchParams.get("lang"));
+    body.results.vibe = vibeFixture.map((item, index) => ({ ...item, match: [87, 140, 3][index] }));
+    body.results.sounds = soundsListFixture.map((item, index) => ({ ...item, match: ["50", 0, 9][index] }));
+    return response(200, body);
+  });
+  const matchOf = (row) => findElement(row.tree, (node) => node.props?.className === "sa-match");
+  const bar = matchOf(app.rows[0]);
+  assert.equal(bar.props["aria-label"], "Sound match 87%: sounds more alike than 87% of typical matches");
+  assert.equal(bar.props.title, bar.props["aria-label"]);
+  assert.equal(findElement(bar, (node) => node.type === "i").props.style.width, "87%");
+  assert.equal(findElement(bar, (node) => node.props?.className === "sa-match-value").props.children, "87%");
+  // Out of range: the cell stays, empty, so the columns line up.
+  assert.equal(matchOf(app.rows[1]).props["aria-label"], undefined);
+  assert.equal(matchOf(app.rows[1]).props.children, undefined);
+
+  app.tab("sounds").onclick();
+  await waitFor(() => hasLog(app, "Sounds like metadata settled"));
+  assert.equal(matchOf(app.rows[0]).props["aria-label"], undefined, "a string is not a sound match");
+  assert.equal(
+    findElement(matchOf(app.rows[1]), (node) => node.type === "i").props.style.width,
+    "0%",
+  );
 });
 
 test("refetches a saved Best matches list that predates song ids, once", async () => {

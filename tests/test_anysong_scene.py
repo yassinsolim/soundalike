@@ -169,6 +169,25 @@ def test_audio_head_needs_standout_evidence_when_asked():
     assert audio_head(orders, scores, params, standout_min=2.0, standout_window=20) == ["c0", "s0", "c1", "s1", "c2"]
 
 
+def test_audio_head_without_evidence_keeps_head_bare_songs_and_can_pin_only_evidence():
+    from dataclasses import replace
+    smooth = [f"m{i}" for i in range(20)]
+    smooth_scores = [-1.06 - 0.02 * i for i in range(20)]
+    orders = {"melody": smooth, "samples": [f"s{i}" for i in range(20)], "sonic": []}
+    scores = {"melody": smooth_scores, "samples": [0.25 - 0.003 * i for i in range(20)]}
+    standout = {"standout_min": 2.0, "standout_window": 20}
+    for bare in (0, 1, 3):
+        params = replace(SceneParams(), head_bare=bare)
+        assert audio_head(orders, scores, params, **standout) == ["m0", "s0", "m1"][:bare]
+    orders["melody"] = ["c0", "c1", "c2"] + smooth[:17]
+    scores["melody"] = [-0.40, -0.42, -0.45] + smooth_scores[:17]
+    only = replace(SceneParams(), head_bare=1, head_evidence_only=True)
+    assert audio_head(orders, scores, only, **standout) == ["c0", "c1", "c2"]
+    # The minimum with evidence still applies without head_evidence_only.
+    assert audio_head(orders, scores, replace(only, head_evidence_only=False, head_min=6), **standout) == [
+        "c0", "s0", "c1", "s1", "c2", "s2"]
+
+
 def test_arrange_artists_without_spacing_is_cap_artists():
     rng = np.random.default_rng(1)
     for _ in range(300):

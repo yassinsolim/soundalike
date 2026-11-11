@@ -52,7 +52,9 @@ class SceneParams:
     protect: float = 3.0  # z-score in the melody or samples list that marks a standout match (0 = off)
     protect_window: int = 0  # z-scores relative to the list's first this many songs (0 = the whole list)
     pattern: str = "S"  # slots after the head: A = continuation, S = scene lane ("" = no lane, no head)
-    head_min: int = 3  # audio-fusion songs always kept on top
+    head_min: int = 3  # audio-fusion songs kept on top when one of the first head_scan has cover/sample evidence
+    head_bare: int = 3  # audio-fusion songs kept on top when none of them has evidence
+    head_evidence_only: bool = False  # the head holds only the songs with evidence, not the songs above them
     head_scan: int = 10  # the head extends to the last of these with cover/sample evidence
     melody_evidence: float = -1.476  # melody score with ~30 % precision for a labelled cover (development data)
     samples_evidence: float = 0.302  # samples score with ~30 % precision for a labelled sample (development data)
@@ -258,7 +260,8 @@ def audio_head(orders: Mapping[str, Sequence[Hashable]], scores: Mapping[str, Se
     (``scores``: per channel, aligned with ``orders``) or that is among the first ``rank_evidence`` songs of either.
     With ``standout_min``, evidence also needs that song to stand out in its list: a z-score of at least
     ``standout_min`` among the list's first ``standout_window`` songs (``standout``), so a seed whose melody or samples
-    list declines smoothly, with no likely cover or sample in it, keeps the minimum head."""
+    list declines smoothly, with no likely cover or sample in it, keeps ``head_bare`` songs. With
+    ``head_evidence_only`` the head is just the songs with evidence, in fusion order."""
     ranks = _channel_ranks(orders)
     audio = {key: sum(1.0 / (k + rk[ch]) for ch in AUDIO_CHANNELS if ch in rk) for key, rk in ranks.items()}
     tie = {key: min((r for ch, r in rk.items() if ch in AUDIO_CHANNELS), default=1_000_000 + rk.get("sonic", 0))
@@ -274,7 +277,11 @@ def audio_head(orders: Mapping[str, Sequence[Hashable]], scores: Mapping[str, Se
         z = standout(orders, scores, standout_window)
         evidence = {key for key in evidence if z.get(key, -math.inf) >= standout_min}
     hits = [i for i, key in enumerate(baseline[:params.head_scan]) if key in evidence]
-    return baseline[:max(params.head_min, hits[-1] + 1 if hits else 0)]
+    if not hits:
+        return baseline[:params.head_bare]
+    if params.head_evidence_only:
+        return [baseline[i] for i in hits]
+    return baseline[:max(params.head_min, hits[-1] + 1)]
 
 
 def cap_artists(placed: Sequence, artist_of: Callable[[Any], int | None], query_artist: int | None,
