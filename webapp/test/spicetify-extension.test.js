@@ -59,6 +59,7 @@ function loadExtension(fetchImpl, options = {}) {
   const removedFromQueue = [];
   const nowPlayingMenuItems = [];
   const songChangeListeners = [];
+  const playPauseListeners = [];
   const graphqlRequests = [];
   const cosmosRequests = [];
   const isrcRequests = [];
@@ -79,8 +80,37 @@ function loadExtension(fetchImpl, options = {}) {
     },
   }));
   const offerButton = { onclick: null };
-  const seedPlayButton = { onclick: null };
+  // The header's play button keeps its icon class and labels like a node.
+  const seedPlayButton = (() => {
+    const classes = new Set();
+    const attributes = new Map();
+    return {
+      onclick: null,
+      classList: {
+        toggle(name, force = !classes.has(name)) {
+          if (force) classes.add(name);
+          else classes.delete(name);
+          return force;
+        },
+        contains(name) {
+          return classes.has(name);
+        },
+      },
+      setAttribute(name, value) {
+        attributes.set(name, String(value));
+      },
+      getAttribute(name) {
+        return attributes.get(name) ?? null;
+      },
+    };
+  })();
   const languageToggleButton = { onclick: null };
+  const audioOnlyButton = {
+    onclick: null,
+    focus() {
+      context.document.activeElement = this;
+    },
+  };
   const stemsButtons = { back: [], retry: [], play: [] };
   // Best matches are offline unless a test opts in, so the older tests keep
   // exercising the Sounds like flow they were written for.
@@ -257,6 +287,11 @@ function loadExtension(fetchImpl, options = {}) {
             ? languageToggleButton
             : null;
         }
+        if (selector === ".sa-audio-only") {
+          return this.innerHTML.includes('class="sa-audio-only"')
+            ? audioOnlyButton
+            : null;
+        }
         return queryPage(selector);
       },
       querySelectorAll(selector) {
@@ -275,7 +310,7 @@ function loadExtension(fetchImpl, options = {}) {
       },
       contains(node) {
         return this.className === "sa-results-host" &&
-          (tabs.includes(node) || node === offerButton);
+          (tabs.includes(node) || node === offerButton || node === audioOnlyButton);
       },
     };
   }
@@ -434,6 +469,7 @@ function loadExtension(fetchImpl, options = {}) {
     data: options.playingTrackUri ? { item: { uri: options.playingTrackUri } } : null,
     addEventListener(type, callback) {
       if (type === "songchange") songChangeListeners.push(callback);
+      if (type === "onplaypause") playPauseListeners.push(callback);
     },
     async playUri(uri) {
       played.push(uri);
@@ -692,6 +728,7 @@ function loadExtension(fetchImpl, options = {}) {
     nowPlayingMenuItems,
     player,
     songChangeListeners,
+    playPauseListeners,
     graphqlRequests,
     cosmosRequests,
     logs,
@@ -710,6 +747,7 @@ function loadExtension(fetchImpl, options = {}) {
     tabFocus,
     offerButton,
     seedPlayButton,
+    audioOnlyButton,
     stemsButtons,
     get resultsHost() {
       return body.children.find((child) => child.className === "sa-results-host");
@@ -1910,6 +1948,71 @@ test("offers feedback only after filtering settles and sends displayed order onl
   assert.equal(app.feedback.dismiss.hidden, true);
 });
 
+test("Audio only keeps model order and tags its feedback with that mode", async () => {
+  const results = [
+    { title: "Model First", artist: "Artist One" },
+    { title: "Related First", artist: "Related Artist" },
+  ];
+  const spotifyTracks = Object.fromEntries(results.map((result, index) => [
+    `${result.title} ${result.artist}`,
+    {
+      __typename: "Track",
+      name: result.title,
+      uri: `spotify:track:feedback${index}`,
+      albumOfTrack: { coverArt: { sources: [] } },
+      artists: {
+        items: [{
+          uri: index === 1
+            ? "spotify:artist:related-feedback"
+            : `spotify:artist:feedback${index}`,
+          profile: { name: result.artist },
+        }],
+      },
+    },
+  ]));
+  const feedbackRequests = [];
+  const app = loadExtension(async (url, options) => {
+    if (url.endsWith("/health")) throw new TypeError("connection refused");
+    if (url.endsWith("/api/spicetify-feedback")) {
+      feedbackRequests.push(options);
+      return response(200, { receipt_sha256: "a".repeat(64) });
+    }
+    return response(200, { ...recommendation, results });
+  }, {
+    results,
+    storage: new Map([["soundalike:audio-only:v1", "true"]]),
+    spotifyTracks,
+    languageByTrackId: { test: "en", feedback0: "en", feedback1: "en" },
+    relatedArtists: [{
+      id: "related-feedback",
+      uri: "spotify:artist:related-feedback",
+      profile: { name: "Related Artist" },
+    }],
+  });
+
+  await app.run();
+  await waitFor(() => app.feedback.panel.hidden === false, 1000);
+  const html = app.currentPage.innerHTML;
+  assert.match(html, /<span class="sa-tag">V5 strict<\/span>/);
+  assert.doesNotMatch(html, /artist context/);
+  assert.match(html, /aria-pressed="true" title="[^"]+">Audio only/);
+  assert.doesNotMatch(app.languageStatus.textContent, /related prioritized/);
+
+  app.feedback.ratings[0].checked = true;
+  app.feedback.ratings[0].onchange();
+  await app.feedback.send.onclick();
+  assert.equal(feedbackRequests.length, 1);
+  const sent = JSON.parse(feedbackRequests[0].body);
+  assert.deepEqual(sent.displayed_results, [
+    { position: 1, title: "Model First", artist: "Artist One" },
+    { position: 2, title: "Related First", artist: "Related Artist" },
+  ]);
+  assert.equal(
+    sent.selection_policy,
+    "top-20-strict-language-audio-only-model-quality-v1",
+  );
+});
+
 test("reveals optional details conditionally and caps reasons and note", async () => {
   const result = { title: "Candidate", artist: "Artist" };
   const app = loadExtension(async (url) => {
@@ -2160,7 +2263,7 @@ const soundsFixture = [
   { title: "Take My Breath", artist: "The Weeknd", bpm: 121.7 },
 ];
 
-const bestCacheKey = "best:anysong-best-rrf-language-vibe-sounds-v8:same:spotify:track:test";
+const bestCacheKey = "best:anysong-best-rrf-language-vibe-sounds-v9:listeners:same:spotify:track:test";
 
 function bestMatchesBody(best = bestFixture, overrides = {}) {
   return {
@@ -2309,10 +2412,11 @@ test("opens on Best matches with Sounds like one tab away", async () => {
   assert.equal(bestUrl.searchParams.get("k"), "30");
   assert.equal(bestUrl.searchParams.get("lang"), "same");
   assert.equal(bestUrl.searchParams.get("isrc"), null);  // Spotify gave none
+  assert.equal(bestUrl.searchParams.get("scene"), null);  // listener-aware by default
   // A new response format gets a new URL, so HTTP-cached older responses are skipped.
   assert.equal(
     bestUrl.searchParams.get("policy"),
-    "anysong-best-rrf-language-vibe-sounds-v8",
+    "anysong-best-rrf-language-vibe-sounds-v9",
   );
   assert.equal(
     app.urls.filter((url) => url.includes("/api/spicetify_recommend")).length,
@@ -2554,6 +2658,112 @@ test("switching back to same-language Best matches reuses the saved list", async
   }, 1000);
 });
 
+const listenerBestFixture = [
+  { ...bestFixture[0], basis: "bogus" },
+  { ...bestFixture[1], basis: "listeners" },
+  { ...bestFixture[2], basis: "audio" },
+];
+
+test("labels listener picks and keeps Audio only lists apart from them", async () => {
+  const storage = new Map();
+  const saved = () => JSON.parse(storage.get("soundalike:spicetify-cache:v9") || "{}");
+  const settled = () => app.logs.filter((line) => line.includes("Best matches metadata settled")).length;
+  const app = loadBestMatchesExtension({
+    storage,
+    bestFetch: async (url) => {
+      const audioOnly = new URL(url).searchParams.get("scene") === "0";
+      return response(200, bestMatchesBody(audioOnly ? bestFixture : listenerBestFixture, {
+        query: { ...bestSeedQuery, language: "en", language_mode: "same", hidden: 0 },
+      }));
+    },
+  });
+  await app.run();
+  await waitFor(() => settled() === 1);
+  let html = app.currentPage.innerHTML;
+  assert.match(
+    html,
+    /<p class="sa-blurb">Likely covers, samples and shared melodies first, then similar-sounding songs by artists this song's listeners also play, marked Listeners also play\. Turn on Audio only to leave those out\.<\/p>/,
+  );
+  assert.match(
+    html,
+    /<button class="sa-audio-only" type="button" aria-pressed="false" title="Rank by audio alone, leaving out songs placed by what this song's listeners also play">Audio only<\/button>/,
+  );
+  // Only an exact "listeners" basis is labelled; the label comes before the ranks.
+  assert.match(
+    html,
+    /<span class="sa-why"> · <span class="sa-basis" title="Placed by what this song's listeners also play, not by audio alone">Listeners also play<\/span> · samples #2<\/span>/,
+  );
+  assert.match(html, /<span class="sa-why"> · melody #1 · samples #3<\/span>/);
+  assert.equal(new URL(app.bestRequests[0]).searchParams.get("scene"), null);
+  assert.equal(
+    findElement(app.rows[0].tree, (node) => node.props?.className === "sa-basis"),
+    null,
+  );
+  const why = findElement(app.rows[1].tree, (node) => node.props?.className === "sa-why");
+  const basis = findElement(why, (node) => node.props?.className === "sa-basis");
+  assert.equal(basis.props.title, "Placed by what this song's listeners also play, not by audio alone");
+  assert.equal(basis.props.children, "Listeners also play");
+  assert.equal(why.props.children.at(-1), " · samples #2");
+  assert.equal(
+    findElement(app.rows[1].tree, (node) => node.props?.className === "sa-row-content")
+      .props["aria-label"],
+    "Play Chanson Proche by Artiste Deux, placed by what this song's listeners also play rather than by audio alone",
+  );
+  await waitFor(() => Boolean(saved().recommendations?.[bestCacheKey]), 1000);
+  assert.deepEqual(
+    saved().recommendations[bestCacheKey].value.results.map((row) => row.basis),
+    [undefined, "listeners"],
+  );
+
+  app.audioOnlyButton.onclick();
+  assert.equal(storage.get("soundalike:audio-only:v1"), "true");
+  assert.equal(app.activeElement, app.audioOnlyButton);
+  await waitFor(() => settled() === 2);
+  html = app.currentPage.innerHTML;
+  const audioUrl = new URL(app.bestRequests[1]);
+  assert.equal(audioUrl.searchParams.get("scene"), "0");
+  assert.equal(audioUrl.searchParams.get("lang"), "same");
+  assert.match(
+    html,
+    /<button class="sa-audio-only" type="button" aria-pressed="true" title="[^"]+">Audio only<\/button>/,
+  );
+  assert.match(
+    html,
+    /<p class="sa-blurb">Likely covers, samples and shared melodies first, then the songs that sound most alike\.<\/p>/,
+  );
+  assert.doesNotMatch(html, /Listeners also play|class="sa-basis"/);
+  assert.equal(
+    findElement(app.rows[1].tree, (node) => node.props?.className === "sa-basis"),
+    null,
+  );
+  await waitFor(
+    () => Boolean(saved().recommendations?.[bestCacheKey.replace(":listeners:", ":audio:")]),
+    1000,
+  );
+
+  // Back to listener-aware lists: the saved one shows without a new request.
+  app.audioOnlyButton.onclick();
+  assert.equal(storage.has("soundalike:audio-only:v1"), false);
+  await waitFor(() => settled() === 3);
+  assert.equal(app.bestRequests.length, 2);
+  assert.match(app.currentPage.innerHTML, /aria-pressed="false" title="[^"]+">Audio only/);
+  assert.match(app.currentPage.innerHTML, /class="sa-basis"/);
+  assert.deepEqual(errorNotifications(app), []);
+});
+
+test("a saved Audio only choice applies to the next search", async () => {
+  const storage = new Map([["soundalike:audio-only:v1", "true"]]);
+  const app = loadBestMatchesExtension({ storage });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  assert.equal(new URL(app.bestRequests[0]).searchParams.get("scene"), "0");
+  assert.match(app.currentPage.innerHTML, /aria-pressed="true" title="[^"]+">Audio only/);
+  await waitFor(() => {
+    const cache = JSON.parse(storage.get("soundalike:spicetify-cache:v9") || "{}");
+    return Boolean(cache.recommendations?.[bestCacheKey.replace(":listeners:", ":audio:")]);
+  }, 1000);
+});
+
 test("leaves Sounds like unfiltered and without the language switch", async () => {
   const app = loadBestMatchesExtension({
     bestFetch: async () => response(200, bestMatchesBody(bestFixture, {
@@ -2585,7 +2795,7 @@ test("shows all languages without a switch when the seed language is unknown", a
   const html = app.currentPage.innerHTML;
   assert.match(
     html,
-    /<div class="sa-language-filter" role="status"><span>Language uncertain; showing all languages\.<\/span><\/div>/,
+    /<div class="sa-language-filter" role="status"><span>Language uncertain; showing all languages\.<\/span><span class="sa-filter-actions"><button class="sa-audio-only" type="button" aria-pressed="false" title="[^"]+">Audio only<\/button><\/span><\/div>/,
   );
   assert.equal(app.currentPage.querySelector(".sa-language-toggle"), null);
 });
@@ -3178,7 +3388,7 @@ test("offers Same vibe next to Best matches from the same hosted response", asyn
   );
   assert.match(
     html,
-    /<div class="sa-language-filter" role="status"><span>English · other languages left out<\/span><button class="sa-language-toggle" type="button" aria-pressed="false">Show all languages<\/button><\/div>/,
+    /<div class="sa-language-filter" role="status"><span>English · other languages left out<\/span><span class="sa-filter-actions"><button class="sa-language-toggle" type="button" aria-pressed="false">Show all languages<\/button><button class="sa-audio-only" type="button" aria-pressed="false" title="[^"]+">Audio only<\/button><\/span><\/div>/,
   );
   assert.doesNotMatch(html, /hidden from the top/);
   assert.doesNotMatch(html, /class="sa-why"/);
@@ -3550,6 +3760,76 @@ test("plays the original song alone when Spotify refuses the list", async () => 
   assert.deepEqual(errorNotifications(app), []);
 });
 
+test("the header play button starts the original song while another list song plays", async () => {
+  const app = loadBestMatchesExtension({ playerApi: true });
+  let toggles = 0;
+  app.player.isPlaying = () => true;
+  app.player.togglePlay = () => { toggles += 1; };
+  app.player.data = {
+    item: { uri: "spotify:track:best0" },
+    context_uri: "spotify:app:soundalike",
+  };
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+
+  assert.match(
+    app.currentPage.innerHTML,
+    /<button class="sa-seed-play" type="button" title="Play Blinding Lights, then this list" aria-label="Play Blinding Lights, then this list">/,
+  );
+  assert.equal(app.seedPlayButton.classList.contains("sa-paused-icon"), false);
+  assert.equal(app.seedPlayButton.getAttribute("aria-label"), "Play Blinding Lights, then this list");
+  assert.equal(app.seedPlayButton.getAttribute("title"), "Play Blinding Lights, then this list");
+
+  await app.seedPlayButton.onclick();
+  assert.equal(toggles, 0, "the other song keeps playing until the seed starts");
+  assert.equal(app.contextPlays.length, 1);
+  assert.deepEqual(
+    plain(app.contextPlays[0].options),
+    { skipTo: { index: 0, uri: "spotify:track:test" } },
+  );
+  assert.deepEqual(errorNotifications(app), []);
+});
+
+test("the header play button pauses and resumes only the original song", async () => {
+  const app = loadBestMatchesExtension({ playerApi: true });
+  let playing = true;
+  let toggles = 0;
+  app.player.isPlaying = () => playing;
+  app.player.togglePlay = () => {
+    toggles += 1;
+    playing = !playing;
+  };
+  // The seed counts from any context, not just this page's list.
+  app.player.data = {
+    item: { uri: "spotify:track:test" },
+    context_uri: "spotify:album:elsewhere",
+  };
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+
+  assert.match(
+    app.currentPage.innerHTML,
+    /<button class="sa-seed-play" type="button" title="Pause Blinding Lights" aria-label="Pause Blinding Lights">/,
+  );
+  assert.equal(app.seedPlayButton.classList.contains("sa-paused-icon"), true);
+  assert.equal(app.seedPlayButton.getAttribute("aria-label"), "Pause Blinding Lights");
+
+  await app.seedPlayButton.onclick();
+  assert.equal(toggles, 1);
+  assert.equal(app.contextPlays.length, 0);
+  for (const listener of app.playPauseListeners) listener();
+  assert.equal(app.seedPlayButton.classList.contains("sa-paused-icon"), false);
+  assert.equal(app.seedPlayButton.getAttribute("aria-label"), "Resume Blinding Lights");
+  assert.equal(app.seedPlayButton.getAttribute("title"), "Resume Blinding Lights");
+
+  await app.seedPlayButton.onclick();
+  assert.equal(toggles, 2);
+  assert.equal(app.contextPlays.length, 0);
+  for (const listener of app.playPauseListeners) listener();
+  assert.equal(app.seedPlayButton.classList.contains("sa-paused-icon"), true);
+  assert.equal(app.seedPlayButton.getAttribute("aria-label"), "Pause Blinding Lights");
+});
+
 test("plays the song alone when Spotify refuses the list", async () => {
   const app = loadBestMatchesExtension({ playerApi: "fails" });
   await app.run();
@@ -3863,6 +4143,23 @@ const soundsFetch = async (url) => {
   return response(200, body);
 };
 
+test("Audio only Sounds like leaves listeners out of its description", async () => {
+  const storage = new Map([["soundalike:audio-only:v1", "true"]]);
+  const app = loadBestMatchesExtension({ storage, bestFetch: soundsFetch, playerApi: true });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  app.tab("sounds").onclick();
+  await waitFor(() => hasLog(app, "Sounds like metadata settled"));
+  const html = app.currentPage.innerHTML;
+  assert.equal(new URL(app.bestRequests[0]).searchParams.get("scene"), "0");
+  assert.match(
+    html,
+    /<p class="sa-blurb">Songs with the same overall sound \(instruments, production and mood\)\.<\/p>/,
+  );
+  assert.match(html, /aria-pressed="true" title="[^"]+">Audio only<\/button>/);
+  assert.doesNotMatch(html, /Listeners also play|favouring/);
+});
+
 test("serves hosted Sounds like from the Best matches response", async () => {
   const app = loadBestMatchesExtension({ bestFetch: soundsFetch, playerApi: true });
   await app.run();
@@ -3881,7 +4178,7 @@ test("serves hosted Sounds like from the Best matches response", async () => {
   assert.match(html, /class="sa-panel sa-view-sounds"/);
   assert.match(
     html,
-    /<p class="sa-blurb">Songs with the same overall sound \(instruments, production and mood\), favouring artists this song's listeners also play\.<\/p>/,
+    /<p class="sa-blurb">Songs with the same overall sound \(instruments, production and mood\), favouring artists this song's listeners also play\. Turn on Audio only to leave that out\.<\/p>/,
   );
   assert.match(
     html,
@@ -3889,7 +4186,7 @@ test("serves hosted Sounds like from the Best matches response", async () => {
   );
   assert.match(
     html,
-    /<span>English · other languages left out<\/span><button class="sa-language-toggle" type="button" aria-pressed="false">Show all languages<\/button>/,
+    /<span>English · other languages left out<\/span><span class="sa-filter-actions"><button class="sa-language-toggle" type="button" aria-pressed="false">Show all languages<\/button>/,
   );
   assert.match(html, /<div class="sa-bpm">BPM<\/div>/);
   assert.doesNotMatch(html, /Dual-Sonic64|<section class="sa-feedback"/);

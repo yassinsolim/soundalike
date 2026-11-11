@@ -410,6 +410,38 @@ def test_listener_lists_keep_the_audio_head_and_rank_the_rest_for_listeners(tmp_
     assert [x["id"] for x in lists()["best"]][:2] == [3, 5] and 8 not in [x["id"] for x in lists()["best"]]
 
 
+def test_listener_best_items_say_whether_audio_or_listeners_placed_them(tmp_path):
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), LISTENER_META, scene=_listener_scene_table(),
+                      copy_score=None, ranker=_stump("fwd", 0.0, 0.0), scene_params=SceneParams(head_min=1),
+                      languages=FakeLanguages({1: "en", 9: "de"}), best_head_standout=0.0, best_head_bare=1,
+                      best_head_evidence_only=False,
+                      tempo=TempoTable(np.array([5, 7, 8, 10]), np.array([120, 120, 121, 120], np.float32)))
+    res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog", "artist_id": 100},
+           "raw": {"melody": [(5, -1.0), (3, -2.0)], "samples": [(3, 0.1)],
+                   "sonic": [(10, 0.5), (5, 0.45), (7, 0.44)]},
+           "related": [], "timings_ms": {}, "vibe": {"muq": {10: 0.5, 5: 0.45, 7: 0.44, 3: 0.2}, "bpm": 120.0},
+           "listener": {"p": {3: 0.2, 5: 0.1, 7: 0.9, 8: 0.8, 9: 0.95, 10: 0.99},
+                        "son": {3: 0.2, 5: 0.45, 7: 0.44, 8: 0.40, 9: 0.43, 10: 0.5}, "scene": [8, 9]}}
+
+    def lists(**kw):
+        return svc._view(res, k=10, dedupe=True, cached=False, **kw)["results"]
+
+    r = lists()
+    # The audio head (3, 5) is audio; the rest, the scene-only song 8 without channel ranks included, is placed by
+    # the listener blend.
+    assert [(x["id"], x["basis"]) for x in r["best"]] == [
+        (3, "audio"), (5, "audio"), (7, "listeners"), (10, "listeners"), (8, "listeners")]
+    assert r["best"][-1]["ranks"] == {}
+    assert all("basis" not in x for name in ("vibe", "sounds") for x in r[name])
+    svc.best_head_evidence_only = api.BEST_HEAD_EVIDENCE_ONLY  # 3 has no evidence: it leaves the head
+    assert [(x["id"], x["basis"]) for x in lists()["best"]] == [
+        (5, "audio"), (7, "listeners"), (10, "listeners"), (3, "listeners"), (8, "listeners")]
+    # Without the listener ranker, scene=0 or not, Best is audio only and says nothing.
+    assert all("basis" not in x for x in lists(scene=False)["best"])
+    del res["listener"]
+    assert lists()["best"] and all("basis" not in x for x in lists()["best"])
+
+
 class SonicEngine(FakeEngine):
     def __init__(self):
         super().__init__(ids=tuple(range(1, 11)))

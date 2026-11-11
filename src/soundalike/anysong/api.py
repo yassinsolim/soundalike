@@ -9,11 +9,14 @@ GET endpoints (JSON):
 - ``/api/anysong/similar?id=<deezer id>&k=20&dedupe=1``  top matches per channel, plus ``best``: the melody and
   samples lists fused into one ranking (``fuse``). With a scene table (``--scene``) the fused list also weighs the
   artist scene (same artist, related artists, region, genre; ``scene.scene_fuse``); ``scene=0`` turns that off.
-  With a tempo table (``--tempo``), ``vibe`` is the Same vibe list: Best matches that share the seed's tempo and
-  sound, one song per artist (``samevibe``). ``sounds`` is the Sounds like list: the sonic channel with Best's
-  language filter, one song per artist, each with its catalog ``bpm`` when known. Every listed song with a sound score
-  also carries ``match``: how alike it sounds to the seed, 0 to 100, the percentile of its sound score among the songs
-  these lists show for typical seeds (``sound_match``)
+  With the listener ranker (``--ranker``), each ``best`` item also carries ``basis``: ``audio`` for the audio head
+  (likely covers, samples and shared melodies) and ``listeners`` for the songs placed after it by what the seed's
+  listeners also play blended with sound; lists without the listener ranker (``scene=0`` among them) carry no
+  ``basis``, and its absence means audio only. With a tempo table (``--tempo``), ``vibe`` is the Same vibe list:
+  Best matches that share the seed's tempo and sound, one song per artist (``samevibe``). ``sounds`` is the Sounds
+  like list: the sonic channel with Best's language filter, one song per artist, each with its catalog ``bpm`` when
+  known. Every listed song with a sound score also carries ``match``: how alike it sounds to the seed, 0 to 100, the
+  percentile of its sound score among the songs these lists show for typical seeds (``sound_match``)
 - ``/api/anysong/similar?title=<title>&artist=<artist>&k=20``  the same for a song named by title and artist
   (``AnySong.resolve``): the catalog release of that song, else the first matching Deezer search hit
 - ``/api/anysong/similar?isrc=<ISRC>&title=<title>&artist=<artist>``  the same for the recording with that ISRC
@@ -1079,7 +1082,9 @@ class AnySong:
                            + self.best_audio_weight * listener.zscore(audio))
         best_order = arrange_artists(head + rest, artists.get, profile.artist_id, self.scene_params, head=len(head),
                                      gap=self.best_artist_gap, once=self.best_artist_once)
-        best = [shown[key][0] | {"score": round(1.0 / (FUSE_K + i), 5), "ranks": shown[key][1]}
+        head_set = set(head)
+        best = [shown[key][0] | {"score": round(1.0 / (FUSE_K + i), 5), "ranks": shown[key][1],
+                                 "basis": "audio" if key in head_set else "listeners"}
                 for i, key in enumerate(best_order[:k], 1)]
 
         sonic = filtered.get("sonic", {})
