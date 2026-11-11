@@ -2002,6 +2002,20 @@ the seed, placed among the songs shown in the top 20 of Best, Same vibe and Soun
 The calibration used 62,362 songs from 1,474 seeds (`MATCH_QUANTILES`); a typical seed's median shown song scores 50.
 It does not change any ranking.
 
+**Deployed (2026-11-11).** Rule 4 passed on the first attempt (release 5dd4c9e):
+
+| Check | Result |
+|---|---|
+| Parity | `rank_agree` 1.0 in every channel |
+| Startup | 52 s |
+| 40 unseen songs | paired median server time +1.7 ms; p95 1.054 → 1.058 s |
+| 40 catalog songs | paired median +1.5 ms; p95 0.512 → 0.514 s |
+| Peak VRAM | 7,051 MiB |
+
+Every shown song in Best, Same vibe and Sounds like carries a `match`, and Sounds like was unchanged for Bryson Tiller
+"Whatever She Wants". Its Best head is now Chris Brown alone; PARTYNEXTDOOR moves from #4 to #2. For "Heartbeat"
+Deichkind fell from #2 to #16. Runtime 2.12.0 changes the cache policy to v8 and shows the sound match as a bar.
+
 ## Stem dissection (pre-registered 2026-11-10, before any result)
 
 **What.** `soundalike.anysong.stems` splits a preview into six stems with htdemucs_6s (vocals, drums, bass, guitar,
