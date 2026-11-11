@@ -11,7 +11,9 @@ GET endpoints (JSON):
   artist scene (same artist, related artists, region, genre; ``scene.scene_fuse``); ``scene=0`` turns that off.
   With a tempo table (``--tempo``), ``vibe`` is the Same vibe list: Best matches that share the seed's tempo and
   sound, one song per artist (``samevibe``). ``sounds`` is the Sounds like list: the sonic channel with Best's
-  language filter, one song per artist, each with its catalog ``bpm`` when known
+  language filter, one song per artist, each with its catalog ``bpm`` when known. Every listed song with a sound score
+  also carries ``match``: how alike it sounds to the seed, 0 to 100, the percentile of its sound score among the songs
+  these lists show for typical seeds (``sound_match``)
 - ``/api/anysong/similar?title=<title>&artist=<artist>&k=20``  the same for a song named by title and artist
   (``AnySong.resolve``): the catalog release of that song, else the first matching Deezer search hit
 - ``/api/anysong/similar?isrc=<ISRC>&title=<title>&artist=<artist>``  the same for the recording with that ISRC
@@ -52,6 +54,7 @@ from collections.abc import Callable, Hashable, Iterator, Mapping, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
 from contextlib import contextmanager
+from dataclasses import replace
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -87,6 +90,15 @@ BEST_ARTIST_ONCE = 10
 # other matches: a z-score of at least BEST_HEAD_STANDOUT among the first BEST_HEAD_WINDOW songs of its list (0 = off).
 BEST_HEAD_STANDOUT = 2.0
 BEST_HEAD_WINDOW = 20
+# With a listener ranker, Best's audio head when none of its first songs has cover/sample evidence: BEST_HEAD_BARE
+# songs; with BEST_HEAD_EVIDENCE_ONLY, a head with evidence holds only those songs (``scene.audio_head``).
+BEST_HEAD_BARE = 1
+BEST_HEAD_EVIDENCE_ONLY = True
+# Sound match (``sound_match``): sonic (MuQ-MuLan) score quantiles 0, 5, ..., 100 % over every song shown in the top
+# 20 of Best matches, Same vibe or Sounds like for the development seeds: 62,362 songs from 1,474 seeds with the
+# served lists (grow/qa/head_dev.py calib, 2026-11-11). A typical seed's median shown song scores 0.419 (50).
+MATCH_QUANTILES = (-0.4515, 0.1873, 0.2729, 0.3209, 0.3498, 0.3695, 0.3834, 0.3933, 0.4023, 0.4106, 0.4177, 0.4248,
+                   0.4312, 0.4374, 0.4437, 0.4500, 0.4563, 0.4628, 0.4701, 0.4784, 0.5354)
 # "best" list: reciprocal-rank fusion of the channels' song lists, score = sum(w / (FUSE_K + rank)).
 # Chosen on development splits only; see docs/ANYSONG_EVAL.md.
 FUSE_K = 5
@@ -178,6 +190,12 @@ def fuse(orders: Mapping[str, Sequence[Hashable]], weights: dict[str, float] | N
             score[key] = score.get(key, 0.0) + w / (k + r)
             ranks.setdefault(key, {})[ch] = r
     return sorted(((key, s, ranks[key]) for key, s in score.items()), key=lambda x: (-x[1], min(x[2].values())))
+
+
+def sound_match(score: float, quantiles: Sequence[float] = MATCH_QUANTILES) -> int:
+    """A song's sonic score against the seed as 0 to 100: the share of songs shown for typical seeds that it sounds
+    more alike than (``MATCH_QUANTILES``)."""
+    return int(round(float(np.interp(score, quantiles, np.linspace(0, 100, len(quantiles))))))
 
 
 class LRU:
@@ -349,6 +367,7 @@ class AnySong:
                  sounds_listener_weight: float = SOUNDS_LISTENER_WEIGHT, best_audio_weight: float = BEST_AUDIO_WEIGHT,
                  best_artist_gap: int = BEST_ARTIST_GAP, best_artist_once: int = BEST_ARTIST_ONCE,
                  best_head_standout: float = BEST_HEAD_STANDOUT, best_head_window: int = BEST_HEAD_WINDOW,
+                 best_head_bare: int = BEST_HEAD_BARE, best_head_evidence_only: bool = BEST_HEAD_EVIDENCE_ONLY,
                  stems: stemlib.StemStore | None = None, dissector: stemlib.Dissector | None = None,
                  catalog_previews: str | Path | None = None):
         self.engine, self.deezer, self.meta, self.keep_previews = engine, deezer, meta, keep_previews
@@ -374,6 +393,7 @@ class AnySong:
         self.best_audio_weight = best_audio_weight
         self.best_artist_gap, self.best_artist_once = best_artist_gap, best_artist_once
         self.best_head_standout, self.best_head_window = best_head_standout, best_head_window
+        self.best_head_bare, self.best_head_evidence_only = best_head_bare, best_head_evidence_only
         self._artist_tracks = listener.ArtistTracks(scene) if self.ranker is not None else None
         self._sonic_core: np.ndarray | None = None
         self.learn = learn
@@ -980,6 +1000,14 @@ class AnySong:
             lists["vibe"] = vibe
         if sounds:
             lists["sounds"] = sounds
+        sound_of = {int(tid): float(score) for tid, score in res["raw"].get("sonic", ())}
+        sound_of |= (res.get("vibe") or {}).get("muq") or {}
+        sound_of |= (res.get("listener") or {}).get("son") or {}
+        for items in (*lists.values(), *out.values()):
+            for item in items:
+                score = sound_of.get(int(item["id"]))
+                if score is not None:
+                    item["match"] = sound_match(score)
         return {"ok": True, "query": query, "results": lists | out, "timings_ms": res["timings_ms"],
                 "cached": cached}
 
@@ -1037,7 +1065,9 @@ class AnySong:
 
         orders = {channel: list(order) for channel, order in filtered.items()}
         scores = {channel: [item["score"] for item in order.values()] for channel, order in filtered.items()}
-        head = [key for key in audio_head(orders, scores, self.scene_params, standout_min=self.best_head_standout,
+        head_params = replace(self.scene_params, head_bare=self.best_head_bare,
+                              head_evidence_only=self.best_head_evidence_only)
+        head = [key for key in audio_head(orders, scores, head_params, standout_min=self.best_head_standout,
                                           standout_window=self.best_head_window) if key in shown]
         rest = [key for key in keys if key not in set(head)]
         if rest:

@@ -1916,6 +1916,106 @@ Bryson Tiller "Whatever She Wants" now keeps three audio matches on top, with PA
 Roy Woods, Tory Lanez, DeJ Loaf and Blxst. Runtime 2.10.1 changes the cache policy to v7, so Spotify drops lists saved
 under the longer heads.
 
+## Best's audio head only with evidence (pre-registered 2026-11-11, before any held-out result)
+
+**Why.** Feedback on 2026-11-11:
+- Childish Gambino "Heartbeat": Best's #2 was a loud, harsh electronic song (Deichkind). It sat there only because the
+  head always keeps three audio-fusion songs. Its samples score (0.284) is below the calibrated evidence (0.302).
+- KIRBS "Follow My Lead" and trxy "icantbelieveiletyougetaway": Same vibe and Sounds like beat Best.
+
+The served head holds three songs for every development seed, but 55 % of those seeds have no song with standout
+evidence in it.
+
+**Change under test** (`scene.audio_head`, listener ranker only; `BEST_HEAD_BARE`, `BEST_HEAD_EVIDENCE_ONLY`):
+- No standout evidence among the head's songs: the head keeps 1 song (was 3).
+- With evidence: the head holds only the songs with evidence, in fusion order. Before, it held every song down to the
+  last one with evidence, at least 3.
+- The standout rule, the weights, the caps and the spacing are unchanged.
+
+**Selection** on the development seeds and benchmarks, in two rounds (`grow/qa/head_dev.py`, out-of-fold):
+- Rule: the highest Best ListenBrainz hit rate with each relationship benchmark at most 0.05 below the served lists.
+  This is the trade-off accepted on 2026-11-11.
+- Round 1 (no head without evidence) cost covers about 0.10, so round 2 kept one or two songs.
+
+| Variant: head without evidence; with evidence | Mean head | Best ListenBrainz | HR@10 change vs served (covers / samples / samples reverse) |
+|---|---|---|---|
+| Served: 3; down to the last, at least 3 | 3.04 | 0.456 | 0 / 0 / 0 |
+| 0; down to the last, at least 3 | 1.41 | 0.519 | −0.096 / −0.017 / −0.033 |
+| 0; down to the last, at least 1 | 0.84 | 0.540 | −0.106 / −0.027 / −0.042 |
+| 0; evidence only | 0.61 | 0.548 | −0.109 / −0.038 / −0.050 |
+| 0; evidence only, z ≥ 1.5 | 0.89 | 0.538 | −0.102 / −0.037 / −0.049 |
+| 1; down to the last, at least 1 | 1.39 | 0.518 | −0.034 / −0.022 / −0.029 |
+| 1; down to the last, at least 3 | 1.95 | 0.497 | −0.023 / −0.012 / −0.021 |
+| **1; evidence only (chosen)** | **1.16** | **0.526** | **−0.037 / −0.033 / −0.037** |
+| 2; down to the last, at least 2 | 2.16 | 0.494 | −0.022 / −0.007 / −0.012 |
+| 2; evidence only | 1.70 | 0.508 | −0.028 / −0.022 / −0.024 |
+
+For the chosen variant (paired 95 % intervals over the development seeds):
+- Best ListenBrainz +0.070 (+0.064 to +0.075); shared genre 0.595 → 0.644; sound score of the top 10 0.328 → 0.356.
+- Same vibe 0.478 → 0.486.
+- Sounds like identical; other-language rows, derivative uploads and rows shown unchanged; no back-to-back pairs in
+  Best's top 10.
+
+**Baseline.** The served lists (`gated1m_lr3`); candidate `gated1m_lr4`. **Seeds.** The 799 held-out and 1,000 fresh
+seeds; the benchmarks' held-out split.
+
+**Must pass (all), else not deployed:**
+1. **Lists users see.** Rule 1 of the standout head, unchanged.
+2. **Relationship benchmarks.** Best matches HR@10 on the held-out covers, samples and samples reverse: each at most
+   0.05 below the served lists. This replaces 0.02 below served and 0.03 below v2.
+3. **It must help.** On both seed sets, Best's ListenBrainz hit rate rises (paired lower bound above 0). On the held-out
+   benchmark queries the mean head gets shorter. Back-to-back pairs in Best's top 10 stay at most 0.10.
+4. **Serving.** Rule 4 of the listener ranking, unchanged.
+
+**Fallback, fixed now.** If the chosen variant fails only rule 2, "1; down to the last, at least 1" is evaluated once
+under the same rules. Nothing else is tried on held-out data.
+
+### Result: rules 1 to 3 passed (2026-11-11)
+
+Run once, after the pre-registration (ff96a3b). All 32 checks passed (`grow/qa/verdict_head2.py`); the fallback was not
+needed.
+
+| Seeds | List | ListenBrainz hit rate | Change | Shared genre |
+|---|---|---|---|---|
+| Held-out (799) | Best matches | 0.454 → 0.522 | +0.069 (+0.061 to +0.075) | +0.040 |
+| | Same vibe | 0.456 → 0.462 | +0.006 (+0.003 to +0.010) | +0.004 |
+| Fresh (1,000) | Best matches | 0.454 → 0.518 | +0.064 (+0.058 to +0.071) | +0.035 |
+| | Same vibe | 0.471 → 0.477 | +0.005 (+0.004 to +0.009) | +0.003 |
+
+- Sounds like was identical for every seed.
+- Rows shown, other-language rows and derivative uploads did not move.
+- Back-to-back pairs in Best's top 10: 0.02 (held-out) and 0.01 (fresh).
+- Mean head on the held-out benchmark queries: 3.04 → 1.17.
+
+Best matches HR@10 on the held-out split:
+
+| Benchmark | v2 | Served | Now |
+|---|---|---|---|
+| Covers | 0.662 | 0.647 | 0.612 |
+| Samples | 0.130 | 0.122 | 0.088 |
+| Samples reverse | 0.137 | 0.132 | 0.106 |
+
+Reported, not gated: SampleID fell 0.163 → 0.140 (43 queries), Gen Alpha 0.288 → 0.254 (59), V4 did not move (19).
+
+**Shipped with it, display only.** Each shown song gets a sound match (`match`, 0 to 100): its sonic score against
+the seed, placed among the songs shown in the top 20 of Best, Same vibe and Sounds like for the development seeds.
+The calibration used 62,362 songs from 1,474 seeds (`MATCH_QUANTILES`); a typical seed's median shown song scores 50.
+It does not change any ranking.
+
+**Deployed (2026-11-11).** Rule 4 passed on the first attempt (release 5dd4c9e):
+
+| Check | Result |
+|---|---|
+| Parity | `rank_agree` 1.0 in every channel |
+| Startup | 52 s |
+| 40 unseen songs | paired median server time +1.7 ms; p95 1.054 → 1.058 s |
+| 40 catalog songs | paired median +1.5 ms; p95 0.512 → 0.514 s |
+| Peak VRAM | 7,051 MiB |
+
+Every shown song in Best, Same vibe and Sounds like carries a `match`, and Sounds like was unchanged for Bryson Tiller
+"Whatever She Wants". Its Best head is now Chris Brown alone; PARTYNEXTDOOR moves from #4 to #2. For "Heartbeat"
+Deichkind fell from #2 to #16. Runtime 2.12.0 changes the cache policy to v8 and shows the sound match as a bar.
+
 ## Stem dissection (pre-registered 2026-11-10, before any result)
 
 **What.** `soundalike.anysong.stems` splits a preview into six stems with htdemucs_6s (vocals, drums, bass, guitar,
