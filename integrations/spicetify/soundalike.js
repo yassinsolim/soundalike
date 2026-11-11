@@ -13,7 +13,7 @@
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.12.1";
+  const RUNTIME_SEMANTIC_VERSION = "2.13.0";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
