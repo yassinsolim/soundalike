@@ -266,6 +266,8 @@ within their regression limits; Gen Alpha fell from 36% to 29% on 59 queries. **
 with the same model (46%, up from 33%), as does **Same vibe** (45%, up from 34%). Other artists' copies of the seed
 (re-uploads, edits) are left out when their audio matches it closely, and at most three other versions of it stay.
 Songs in another language than yours are hidden from Best matches by default; **Show all languages** brings them back.
+Rows the listener model placed are marked **Listeners also play**, and the **Audio only** switch (in the web app and
+the Spotify extension) leaves that model out of all three lists.
 **Same vibe** keeps the Best candidates that share the seed's tempo and sound (one per artist).
 
 The experimental [`soundalike.anysong`](src/soundalike/anysong/) package compares

@@ -11,13 +11,21 @@
   const maxCacheEntries = 64;
   const bestMatchesTimeoutMs = 30000;
   const bestMatchesRetries = 3;
-  const bestMatchesPolicy = "best-vibe-sounds-v3";
+  const bestMatchesPolicy = "best-vibe-sounds-v4";
+  // Audio only asks for lists without the listener ranker (scene=0).
+  const audioOnlyKey = "soundalike:audio-only:v1";
+  const listenerPickLabel = "Listeners also play";
+  const listenerPickTitle = "Placed by what this song's listeners also play, not by audio alone";
+  const audioOnlyTitle =
+    "Rank by audio alone, leaving out songs placed by what this song's listeners also play";
   const resultTabs = [
     {
       key: "best",
       label: "Best matches",
       blurb:
-        "Likely covers, samples and shared melodies first, then similar-sounding songs by artists this song's listeners also play.",
+        "Likely covers, samples and shared melodies first, then similar-sounding songs by artists this song's listeners also play, marked Listeners also play. Turn on Audio only to leave those out.",
+      audioBlurb:
+        "Likely covers, samples and shared melodies first, then the songs that sound most alike.",
     },
     {
       key: "vibe",
@@ -39,7 +47,8 @@
       key: "sounds",
       label: "Sounds like",
       blurb:
-        "Songs with the same overall sound (instruments, production and mood), favouring artists this song's listeners also play.",
+        "Songs with the same overall sound (instruments, production and mood), favouring artists this song's listeners also play. Turn on Audio only to leave that out.",
+      audioBlurb: "Songs with the same overall sound (instruments, production and mood).",
     },
   ];
   // Servers without the fused Sounds like list send only the raw sound channel.
@@ -98,6 +107,22 @@
   }
 
   const pause = ms => new Promise(resolve => window.setTimeout(resolve, ms));
+
+  // The choice outlasts the page; browsers without storage just don't keep it.
+  function savedAudioOnly() {
+    try {
+      return window.localStorage.getItem(audioOnlyKey) === "true";
+    } catch {
+      return false;
+    }
+  }
+
+  function saveAudioOnly(audioOnly) {
+    try {
+      if (audioOnly) window.localStorage.setItem(audioOnlyKey, "true");
+      else window.localStorage.removeItem(audioOnlyKey);
+    } catch {}
+  }
 
   const normalize = value =>
     value.trim().toLocaleLowerCase().replace(/\s+/g, " ");
@@ -387,7 +412,7 @@
   }
 
   // ---------- results ----------
-  async function fetchBestMatches(target, isCurrent, lang) {
+  async function fetchBestMatches(target, isCurrent, lang, audioOnly = false) {
     // The policy keeps HTTP-cached responses from before a format change out.
     const params = new URLSearchParams(
       target.id
@@ -397,6 +422,7 @@
     params.set("k", "20");
     params.set("lang", lang);
     params.set("policy", bestMatchesPolicy);
+    if (audioOnly) params.set("scene", "0");
     for (let attempt = 0; ; attempt += 1) {
       const requestController = new AbortController();
       const timeout = window.setTimeout(
@@ -505,14 +531,15 @@
         target: id ? { id } : target,
         seed: null,
         lang: "same",
-        languageSequence: 0,
+        audioOnly: savedAudioOnly(),
+        bestSequence: 0,
         hasVibe: false,
         best: { status: "pending" },
         body: null,
       };
       let body;
       try {
-        body = await fetchBestMatches(picked.target, isCurrent, picked.lang);
+        body = await fetchBestMatches(picked.target, isCurrent, picked.lang, picked.audioOnly);
       } catch (error) {
         if (isCurrent()) setState(esc(errorText(error)), "err");
         return;
@@ -582,6 +609,7 @@
         title,
         artist,
         why,
+        listenerPick: key === "best" && x.basis === "listeners",
         // Scores are only comparable within one list, so bars are relative to it.
         width:
           high > low
@@ -592,13 +620,21 @@
     });
   }
 
+  // Best rows placed by the listener ranker say so before their ranks.
+  const whyHtml = x => {
+    const pick = x.listenerPick
+      ? ` · <span class="basis" title="${esc(listenerPickTitle)}">${esc(listenerPickLabel)}</span>`
+      : "";
+    return pick || x.why
+      ? `<span class="why">${pick}${x.why ? ` · ${esc(x.why)}` : ""}</span>`
+      : "";
+  };
+
   const rowHtml = (x, index) =>
     `<li class="row" data-id="${x.id}">` +
     `<button class="pv" type="button" aria-label="Preview ${esc(x.title)} by ${esc(x.artist)}" title="Preview" data-id="${x.id}">▶</button>` +
     `<div class="rank">${index + 1}</div>` +
-    `<div class="meta"><button class="t" type="button" data-id="${x.id}" title="Find songs like this">${esc(x.title)}</button><div class="a">${esc(x.artist)}${
-      x.why ? `<span class="why"> · ${esc(x.why)}</span>` : ""
-    }</div></div>` +
+    `<div class="meta"><button class="t" type="button" data-id="${x.id}" title="Find songs like this">${esc(x.title)}</button><div class="a">${esc(x.artist)}${whyHtml(x)}</div></div>` +
     `<div class="bar" aria-hidden="true"><i style="width:${x.width}%"></i></div>` +
     `<a class="play" href="${esc(x.url)}" target="_blank" rel="noopener" aria-label="Open ${esc(x.title)} by ${esc(x.artist)} in Spotify">Open in Spotify ▸</a></li>`;
 
@@ -621,7 +657,7 @@
     if (tab === "sounds" && picked.body && soundsList(picked.body.results || {}) === "sonic") {
       return sonicBlurb;
     }
-    return entry.blurb;
+    return picked.audioOnly && entry.audioBlurb ? entry.audioBlurb : entry.blurb;
   }
 
   function languageName(code) {
@@ -658,9 +694,17 @@
   function renderLanguage(picked) {
     const box = document.querySelector("#language");
     const button = document.querySelector("#language-toggle");
-    if (!box || !button) return;
-    box.hidden = !languageFiltered(picked) || picked.best.status === "failed";
+    const audio = document.querySelector("#audio-only");
+    if (!box || !button || !audio) return;
+    box.hidden = !languageFiltered(picked);
     if (box.hidden) return;
+    audio.setAttribute("aria-pressed", String(picked.audioOnly));
+    // After a failed reload only Audio only is left, so the switch can be undone.
+    if (picked.best.status === "failed") {
+      document.querySelector("#language-status").textContent = "";
+      button.hidden = true;
+      return;
+    }
     if (picked.best.status !== "ready") {
       button.setAttribute("aria-pressed", String(picked.lang === "all"));
       button.textContent = picked.lang === "all" ? "Show same language" : "Show all languages";
@@ -690,18 +734,29 @@
   function toggleLanguage(picked) {
     if (picked.best.status !== "ready") return;
     picked.lang = (picked.best.body.query || {}).language_mode === "all" ? "same" : "all";
-    const sequence = ++picked.languageSequence;
+    reloadBest(picked);
+  }
+
+  // Audio only drops the listener ranker (scene=0) and is kept for later songs.
+  function toggleAudioOnly(picked) {
+    picked.audioOnly = !picked.audioOnly;
+    saveAudioOnly(picked.audioOnly);
+    reloadBest(picked);
+  }
+
+  function reloadBest(picked) {
+    const sequence = ++picked.bestSequence;
     picked.best = { status: "pending" };
     renderTab(picked);
     const isCurrent = () =>
-      shownPick === picked && picked.languageSequence === sequence;
-    fetchBestMatches(picked.target, isCurrent, picked.lang)
+      shownPick === picked && picked.bestSequence === sequence;
+    fetchBestMatches(picked.target, isCurrent, picked.lang, picked.audioOnly)
       .then(
         body => ({ status: "ready", body }),
         error => ({ status: "failed", error })
       )
       .then(entry => {
-        if (picked.languageSequence !== sequence) return;
+        if (picked.bestSequence !== sequence) return;
         picked.best = entry;
         if (entry.status === "ready") picked.body = entry.body;
         renderTab(picked);
@@ -813,11 +868,13 @@
             `<button class="tab" type="button" role="tab" id="tab-${entry.key}" data-tab="${entry.key}" aria-controls="matches" aria-selected="false" tabindex="-1">${esc(entry.label)}</button>`
         )
         .join("")}</div>` +
-      '<div class="language-filter" id="language" role="status" hidden><span id="language-status"></span><button id="language-toggle" type="button" aria-pressed="false" hidden></button></div>' +
+      '<div class="language-filter" id="language" role="status" hidden><span id="language-status"></span><span class="filter-actions"><button id="language-toggle" type="button" aria-pressed="false" hidden></button>' +
+      `<button id="audio-only" type="button" aria-pressed="false" title="${esc(audioOnlyTitle)}">Audio only</button></span></div>` +
       '<p class="blurb" id="matchblurb"></p><ol id="matches" role="tabpanel"></ol>';
     document.querySelector("#copy").onclick = copyList;
     document.querySelector("#share").onclick = share;
     document.querySelector("#language-toggle").onclick = () => toggleLanguage(picked);
+    document.querySelector("#audio-only").onclick = () => toggleAudioOnly(picked);
     const seedPreview = out.querySelector(".seed .pv");
     if (seedPreview) seedPreview.onclick = () => togglePreview(seed.id, seedPreview);
     const tabs = [...out.querySelectorAll(".tab")];

@@ -117,14 +117,16 @@ def test_homepage_language_switch_is_accessible_and_covers_best_and_same_vibe():
     script = (ROOT / "webapp" / "search.js").read_text(encoding="utf-8")
     assert ".language-filter[hidden]{display:none}" in HTML
     assert 'params.set("lang", lang);' in script
-    assert "fetchBestMatches(picked.target, isCurrent, picked.lang)" in script
+    assert "fetchBestMatches(picked.target, isCurrent, picked.lang, picked.audioOnly)" in script
     assert '<div class="language-filter" id="language" role="status" hidden>' in script
     assert (
         '<button id="language-toggle" type="button" aria-pressed="false" hidden>'
     ) in script
-    assert (
-        'box.hidden = !languageFiltered(picked) || picked.best.status === "failed";'
-    ) in script
+    # Audio only sits with the language switch and stays usable after a failed reload.
+    assert '<button id="audio-only" type="button" aria-pressed="false"' in script
+    assert 'if (audioOnly) params.set("scene", "0");' in script
+    assert 'const audioOnlyKey = "soundalike:audio-only:v1";' in script
+    assert "box.hidden = !languageFiltered(picked);" in script
     assert re.search(r'if \(tab === "best" \|\| tab === "vibe"\) return true;', script)
     assert '"all languages" : "other languages left out"' in script
     assert "hidden_sounds" not in script

@@ -21,9 +21,12 @@ export const MAX_FEEDBACK_STORED_BYTES = 40 * 1024;
 
 const SURVEY_VERSION = "spicetify-match-feedback-v1";
 const MOBILE_SELECTION_POLICY = "mobile-top-20-model-quality-v1";
+// The audio-only policy marks lists shown with Spicetify's Audio only switch
+// on: no related-artist ordering, so they are rated apart from the others.
 const SELECTION_POLICIES = new Set([
   "top-20-strict-language-related-artist-v1",
   "top-20-strict-language-related-artist-model-quality-v1",
+  "top-20-strict-language-audio-only-model-quality-v1",
   MOBILE_SELECTION_POLICY,
 ]);
 const LANGUAGE_POLICY = "spotify-lyrics-strict-v2";

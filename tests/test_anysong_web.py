@@ -99,7 +99,12 @@ def test_anysong_language_switch_covers_best_same_vibe_and_sounds_like():
 def test_anysong_best_caption_puts_covers_first_then_the_listeners():
     assert (
         '"Likely covers, samples and shared melodies first, then similar-sounding songs '
-        "by artists this song's listeners also play.\""
+        "by artists this song's listeners also play, marked Listeners also play. "
+        'Turn on Audio only to leave those out."'
+    ) in SCRIPT
+    # Audio only leaves the listeners out, so its caption does too.
+    assert (
+        '"Likely covers, samples and shared melodies first, then the songs that sound most alike."'
     ) in SCRIPT
 
 

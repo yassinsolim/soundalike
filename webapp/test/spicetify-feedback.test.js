@@ -326,6 +326,37 @@ test("requires exact keys and validates nested types and enums", async () => {
   assert.equal((await submit(modelQuality)).res.statusCode, 200);
 });
 
+test("keeps feedback on audio-only lists apart from listener-aware lists", () => {
+  // Clients from before the Audio only switch send only the related-artist
+  // policies and stay accepted.
+  for (const policy of [
+    "top-20-strict-language-related-artist-v1",
+    "top-20-strict-language-related-artist-model-quality-v1",
+    "top-20-strict-language-audio-only-model-quality-v1",
+  ]) {
+    const value = validPayload();
+    value.selection_policy = policy;
+    assert.equal(validateFeedbackPayload(value)?.selection_policy, policy);
+    const local = clone(value);
+    local.source = "local";
+    local.api_version = "local";
+    assert.equal(validateFeedbackPayload(local)?.selection_policy, policy);
+  }
+  const mobileAudioOnly = mobilePayload();
+  mobileAudioOnly.selection_policy =
+    "top-20-strict-language-audio-only-model-quality-v1";
+  assert.equal(validateFeedbackPayload(mobileAudioOnly), null);
+  for (const policy of [
+    "top-20-strict-language-audio-only-v1",
+    "top-20-strict-language-audio-only-model-quality-v2",
+    "audio-only",
+  ]) {
+    const value = validPayload();
+    value.selection_policy = policy;
+    assert.equal(validateFeedbackPayload(value), null);
+  }
+});
+
 test("enforces displayed order, result count, labels, and reason rules", async () => {
   const mutations = [
     (value) => {

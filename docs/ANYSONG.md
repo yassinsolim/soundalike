@@ -83,6 +83,8 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   any-song search: suggestions from `/api/anysong/search`, results from `/api/anysong/similar?id=` in five tabs
   (Best matches, Same vibe, Same melody, Samples & loops, Sounds like). Share links are `/#id=<deezer id>&tab=<tab>`;
   older `#s=<title — artist>` links still resolve by name. Previews are resolved through the existing `/api/preview`.
+  Best rows with `basis: "listeners"` are marked **Listeners also play**; the **Audio only** switch next to the
+  language switch asks with `scene=0` and is remembered in `localStorage` (`soundalike:audio-only:v1`).
 - `/anysong` redirects to `/` (`redirects` in [`site.json`](../webapp/site.json), temporary, query kept).
   [`webapp/anysong/index.html`](../webapp/anysong/index.html) is a stub for servers that ignore `redirects`: it
   forwards the query and hash to `/`, where old `?id=` and `#id=` links (including `tab=sonic`, now Sounds like) open
@@ -111,8 +113,10 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   catalog `bpm` (`null` when unknown or without `--tempo`). With the scene layer on, songs move up by their artist's
   scene affinity, `1 / (5 + rank) * (1 + 8 * affinity)`; with the listener ranker, they follow z(sound score) + 2
   z(listener estimate) instead. Either way the list draws only from the sonic channel's 200 songs. With the ranker, a
-  Best item that came from the seed artist's neighbourhood rather than a channel list has empty `ranks`, and
-  `timings_ms.listener` gives the time the ranker took.
+  Best item that came from the seed artist's neighbourhood rather than a channel list has empty `ranks`, each Best
+  item has `basis`: `audio` for the audio head (likely covers, samples and shared melodies) and `listeners` for the
+  songs placed after it by the listener blend, and `timings_ms.listener` gives the time the ranker took. Without the
+  ranker (or with `scene=0`) Best items have no `basis`; the list is audio only.
 - `/similar?title=&artist=&k=` (used by Spotify, which has no Deezer id, and by old `#s=` home-page links) resolves
   the name first.
   Songs match by song key (primary artist plus title without bracketed, dashed or feat. tags), ignoring accents on

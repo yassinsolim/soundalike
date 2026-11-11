@@ -286,7 +286,7 @@ function json(status, body) {
   return { ok: status >= 200 && status < 300, status, json: async () => body };
 }
 
-function loadPage(html, scripts, { path, hash = "", search = "", storage = {}, routes }) {
+function loadPage(html, scripts, { path, hash = "", search = "", storage = {}, local = {}, routes }) {
   const body = html.match(/<body>([\s\S]*)<\/body>/)[1]
     .replace(/<script[\s\S]*?<\/script>/g, "");
   const document = new FakeDocument(body);
@@ -294,6 +294,7 @@ function loadPage(html, scripts, { path, hash = "", search = "", storage = {}, r
   const requests = [];
   const errors = [];
   const stored = new Map(Object.entries(storage));
+  const kept = new Map(Object.entries(local));
   let currentHash = hash;
   let currentSearch = search;
   const context = {
@@ -309,6 +310,11 @@ function loadPage(html, scripts, { path, hash = "", search = "", storage = {}, r
       getItem: (key) => stored.get(key) ?? null,
       setItem: (key, value) => stored.set(key, String(value)),
       removeItem: (key) => stored.delete(key),
+    },
+    localStorage: {
+      getItem: (key) => kept.get(key) ?? null,
+      setItem: (key, value) => kept.set(key, String(value)),
+      removeItem: (key) => kept.delete(key),
     },
     setTimeout,
     scrollTo() {},
@@ -362,6 +368,7 @@ function loadPage(html, scripts, { path, hash = "", search = "", storage = {}, r
       return currentSearch;
     },
     stored,
+    kept,
     text: (selector) => document.querySelector(selector)?.textContent,
     texts: (selector) =>
       document.querySelectorAll(selector).map((node) => node.textContent),
@@ -496,12 +503,13 @@ const TRACKS = [
 ];
 const LEGACY_APIS = ["/api/search", "/api/recommend", "/api/stats", "/api/spicetify_recommend"];
 
-function loadMain({ hash = "", search = "", storage, body = mainBestBody, best, tracks = TRACKS } = {}) {
+function loadMain({ hash = "", search = "", storage, local, body = mainBestBody, best, tracks = TRACKS } = {}) {
   return loadPage(mainHtml, [inlineScript(mainHtml), searchJs], {
     path: "/",
     hash,
     search,
     storage,
+    local,
     routes: (url) => {
       if (url.hostname === "accounts.spotify.com") {
         return json(200, { access_token: "spotify-token" });
@@ -520,8 +528,8 @@ function loadMain({ hash = "", search = "", storage, body = mainBestBody, best, 
   });
 }
 
-const loadAnysong = ({ hash = `#id=${AMANGA_ID}`, search = "", body = anysongBody } = {}) =>
-  loadMain({ hash, search, body });
+const loadAnysong = ({ hash = `#id=${AMANGA_ID}`, search = "", body = anysongBody, local } = {}) =>
+  loadMain({ hash, search, body, local });
 const shown = (page) => page.document.querySelector("#matches li.row");
 const selected = (page, key) =>
   page.document.querySelector(`#tab-${key}`).getAttribute("aria-selected");
@@ -530,7 +538,16 @@ const legacyCalls = (page) =>
 
 const BEST_CAPTION =
   "Likely covers, samples and shared melodies first, then similar-sounding songs " +
-  "by artists this song's listeners also play.";
+  "by artists this song's listeners also play, marked Listeners also play. " +
+  "Turn on Audio only to leave those out.";
+const AUDIO_BEST_CAPTION =
+  "Likely covers, samples and shared melodies first, then the songs that sound most alike.";
+const SOUNDS_CAPTION =
+  "Songs with the same overall sound (instruments, production and mood), favouring " +
+  "artists this song's listeners also play. Turn on Audio only to leave that out.";
+const AUDIO_SOUNDS_CAPTION =
+  "Songs with the same overall sound (instruments, production and mood).";
+const AUDIO_ONLY_KEY = "soundalike:audio-only:v1";
 const VIBE_CAPTION =
   "Songs from these matches that share this song's tempo and overall sound, one per artist.";
 const TAB_LABELS = ["Best matches", "Same vibe", "Same melody", "Samples & loops", "Sounds like"];
@@ -587,7 +604,8 @@ test("the one search bar suggests any song on Deezer and opens the pick", async 
   assert.equal(params.get("id"), String(EIGHT_PM_ID));
   assert.equal(params.get("k"), "20");
   assert.equal(params.get("lang"), "same");
-  assert.equal(params.get("policy"), "best-vibe-sounds-v3");
+  assert.equal(params.get("policy"), "best-vibe-sounds-v4");
+  assert.equal(params.get("scene"), null);
   assert.equal(page.text(".seed h2"), "8PM");
   assert.equal(page.document.querySelector(".seed .cover img").getAttribute("src"), COVER);
   assert.deepEqual(page.texts("#matches .t"), ["n.h.i.e.", "AHHH HA"]);
@@ -736,7 +754,7 @@ test("Best matches ask for one language and say what was hidden", async () => {
 
   assert.equal(
     page.requests[0],
-    `/api/anysong/similar?id=${AMANGA_ID}&k=20&lang=same&policy=best-vibe-sounds-v3`,
+    `/api/anysong/similar?id=${AMANGA_ID}&k=20&lang=same&policy=best-vibe-sounds-v4`,
   );
   assert.equal(page.text("#matchblurb"), BEST_CAPTION);
   const box = page.document.querySelector("#language");
@@ -898,10 +916,7 @@ test("Sounds like reads the fused list and shares the language switch", async ()
 
   page.document.querySelector("#tab-sounds").click();
   assert.deepEqual(page.texts("#matches .t"), ["Sounds Match", "Close Sound"]);
-  assert.equal(
-    page.text("#matchblurb"),
-    "Songs with the same overall sound (instruments, production and mood), favouring artists this song's listeners also play.",
-  );
+  assert.equal(page.text("#matchblurb"), SOUNDS_CAPTION);
   assert.deepEqual(page.texts("#seedtags .tag"), ["in our library", "140 BPM"]);
   assert.equal(page.document.querySelector("#language").hidden, false);
   assert.equal(page.text("#language-status"), "English · other languages left out");
@@ -913,6 +928,105 @@ test("Sounds like reads the fused list and shares the language switch", async ()
   assert.deepEqual(page.texts("#matches .t"), ["Sounds Match", "Autre Son"]);
   assert.deepEqual(legacyCalls(page), []);
   assert.deepEqual(page.errors, []);
+});
+
+test("Best matches label the songs placed by what listeners also play", async () => {
+  const page = loadAnysong({
+    body: ({ lang }) => {
+      const body = anysongBody({ lang });
+      body.results.best[0].basis = "audio";
+      body.results.best[1].basis = "listeners";
+      return body;
+    },
+  });
+  await waitFor(() => shown(page));
+
+  assert.deepEqual(page.texts("#matches .why"), [
+    " · melody #1",
+    " · Listeners also play · samples #1",
+  ]);
+  const labels = page.document.querySelectorAll("#matches .basis");
+  assert.equal(labels.length, 1);
+  assert.equal(
+    labels[0].getAttribute("title"),
+    "Placed by what this song's listeners also play, not by audio alone",
+  );
+  page.document.querySelector("#tab-melody").click();
+  assert.deepEqual(page.texts("#matches .basis"), []);
+  assert.deepEqual(page.errors, []);
+});
+
+test("Audio only reloads the lists without listeners and is remembered", async () => {
+  const page = loadMain({
+    hash: `#id=${EIGHT_PM_ID}`,
+    best: (params) => json(200, mainSoundsBody({ lang: params.get("lang") })),
+  });
+  await waitFor(() => shown(page));
+  const audio = page.document.querySelector("#audio-only");
+  assert.equal(audio.textContent, "Audio only");
+  assert.equal(audio.getAttribute("aria-pressed"), "false");
+  assert.equal(page.similar()[0].get("scene"), null);
+
+  audio.focus();
+  audio.click();
+  assert.equal(audio.getAttribute("aria-pressed"), "true");
+  assert.match(page.text("#matches"), /matching…/);
+  await waitFor(() => page.similar().length === 2 && shown(page));
+  assert.equal(page.similar()[1].get("scene"), "0");
+  assert.equal(page.similar()[1].get("lang"), "same");
+  assert.equal(page.kept.get(AUDIO_ONLY_KEY), "true");
+  assert.equal(page.document.activeElement, audio);
+  assert.equal(page.text("#matchblurb"), AUDIO_BEST_CAPTION);
+  page.document.querySelector("#tab-sounds").click();
+  assert.equal(page.text("#matchblurb"), AUDIO_SOUNDS_CAPTION);
+  assert.equal(page.document.querySelector("#language").hidden, false);
+
+  page.document.querySelector("#language-toggle").click();
+  await waitFor(() => page.text("#language-status") === "English · all languages");
+  assert.equal(page.similar()[2].get("lang"), "all");
+  assert.equal(page.similar()[2].get("scene"), "0");
+
+  audio.click();
+  await waitFor(() => page.similar().length === 4 && shown(page));
+  assert.equal(page.similar()[3].get("scene"), null);
+  assert.equal(page.similar()[3].get("lang"), "all");
+  assert.equal(audio.getAttribute("aria-pressed"), "false");
+  assert.equal(page.kept.has(AUDIO_ONLY_KEY), false);
+  assert.equal(page.text("#matchblurb"), SOUNDS_CAPTION);
+  assert.deepEqual(page.errors, []);
+});
+
+test("a saved Audio only choice applies to the first request", async () => {
+  const page = loadAnysong({ local: { [AUDIO_ONLY_KEY]: "true" } });
+  await waitFor(() => shown(page));
+
+  assert.equal(page.similar().length, 1);
+  assert.equal(page.similar()[0].get("scene"), "0");
+  assert.equal(page.document.querySelector("#audio-only").getAttribute("aria-pressed"), "true");
+  assert.equal(page.text("#matchblurb"), AUDIO_BEST_CAPTION);
+});
+
+test("Audio only stays reachable when its reload fails", async () => {
+  const page = loadMain({
+    hash: `#id=${EIGHT_PM_ID}`,
+    best: (params) => params.get("scene") === "0"
+      ? json(500, { ok: false })
+      : json(200, mainBestBody({ lang: params.get("lang") })),
+  });
+  await waitFor(() => shown(page));
+  const audio = page.document.querySelector("#audio-only");
+  audio.click();
+
+  await waitFor(() => page.document.querySelector("#matches .state.err"));
+  assert.equal(page.document.querySelector("#language").hidden, false);
+  assert.equal(page.document.querySelector("#language-toggle").hidden, true);
+  assert.equal(audio.getAttribute("aria-pressed"), "true");
+
+  audio.click();
+  await waitFor(() => shown(page));
+  assert.equal(page.similar().at(-1).get("scene"), null);
+  assert.equal(page.document.querySelector("#language-toggle").hidden, false);
+  assert.deepEqual(page.texts("#matches .t"), ["n.h.i.e.", "AHHH HA"]);
 });
 
 test("a reload without a Same vibe list returns to Best matches", async () => {

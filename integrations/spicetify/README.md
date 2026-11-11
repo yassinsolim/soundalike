@@ -57,7 +57,8 @@ you chose.
   them, songs are ordered by how
   likely your song's listeners are to also play their artists, as learned from
   public listening data, and by how close they sound. Rows from that part of the
-  list may show no melody or samples rank. Each artist appears once in that
+  list are marked **Listeners also play** (hover it for why) and may show no
+  melody or samples rank. Each artist appears once in that
   part of the top 10 and never twice in a row. Other-language songs are hidden when the seed language is known;
   a song without a language label of its own counts in its artist's usual
   language, and songs with neither stay visible. Use **Show all languages**
@@ -80,6 +81,13 @@ you chose.
   Deezer preview. Until November 2026 this tab used an older model that only
   knew a fixed 272,853-track library; that service now only answers when the
   hosted matcher can't, and for the local companion.
+
+**Audio only**, next to **Show all languages**, leaves listening data out of
+all three lists: Best matches then put the songs that sound most alike after
+the likely covers and samples, and Sounds like ranks by sound alone. The choice
+is remembered for later searches; turn it off to get the listener-aware lists
+back. In the companion's (or fallback) Sounds like list it also turns off the
+related-artist ordering.
 
 The page opens as soon as the hosted matcher answers, or after four seconds
 with the lists still loading. If Best matches fail, for example because Deezer
@@ -184,9 +192,11 @@ preview. The companion's local Sounds like list has no Stems button.
   outside the list, so the next song is never one left over from an earlier
   list. Stems' ▶ also plays within the list. The row
   of the song that is playing is highlighted.
-- The green play button next to your song's title plays your song again, then
-  continues down the list you are viewing, like a song radio that starts from
-  your song.
+- The green play button next to your song's title is only for your song. It
+  plays your song again, then continues down the list you are viewing, like a
+  song radio that starts from your song. While your song is the one playing,
+  it pauses and resumes it instead; while another song from the list plays, it
+  starts your song again.
 - **Find soundalikes** is also in the menu of the song in the player bar.
   Spicetify 2.46.4 and earlier pass that menu no song, so extension items are
   normally missing there; Soundalike adds its item itself and uses the song
@@ -244,7 +254,8 @@ nothing about who asked is kept.
 Optional feedback is sent to the public CORS endpoint at
 `https://soundalike.yassin.app/api/spicetify-feedback`. Its record contains only
 the seed title/artist, the rows actually displayed and their final order,
-method/index/API/language/selection policy labels, Good/Mixed/Off, selected
+method/index/API/language/selection policy labels (the selection policy says
+whether **Audio only** was on), Good/Mixed/Off, selected
 closed reasons, the optional note, and random anonymous install/session
 nonces used for retry deduplication. It does **not** include Spotify account
 identity, credentials, access tokens, library, listening history, request

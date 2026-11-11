@@ -41,6 +41,10 @@
   const RANKING_POLICY = "model-quality-v1";
   const FEEDBACK_SELECTION_POLICY =
     "top-20-strict-language-related-artist-model-quality-v1";
+  // Lists shown with Audio only on skip the related-artist ordering, so their
+  // feedback says so and isn't mixed with the listener-aware lists'.
+  const FEEDBACK_AUDIO_ONLY_SELECTION_POLICY =
+    "top-20-strict-language-audio-only-model-quality-v1";
   const DISPLAY_RESULT_COUNT = 20;
   const RECOMMENDATION_POOL_SIZE = DISPLAY_RESULT_COUNT;
   // Rows asked of the hosted matcher: songs Spotify doesn't have are left out
@@ -70,7 +74,10 @@
   // Songs this extension queued; Spotify keeps its queue across restarts.
   const LATE_QUEUE_KEY = "soundalike:late-queue:v1";
   const BEST_MATCHES_ENDPOINT = `${FALLBACK_HOSTED_SERVER}/api/anysong/similar`;
-  const BEST_MATCHES_POLICY = "anysong-best-rrf-language-vibe-sounds-v8";
+  const BEST_MATCHES_POLICY = "anysong-best-rrf-language-vibe-sounds-v9";
+  // Audio only: the hosted lists come without the scene and listener layer
+  // (scene=0), and the companion's Sounds like without related-artist ordering.
+  const AUDIO_ONLY_KEY = "soundalike:audio-only:v1";
   const BEST_MATCHES_TIMEOUT_MS = 30000;
   const BEST_MATCHES_RETRIES = 2;
   const BEST_MATCHES_RETRY_DELAY_MS = 1500;
@@ -122,7 +129,20 @@
   ];
   const BEST_MATCHES_BLURB =
     "Likely covers, samples and shared melodies first, then similar-sounding " +
-    "songs by artists this song's listeners also play.";
+    "songs by artists this song's listeners also play, marked Listeners also " +
+    "play. Turn on Audio only to leave those out.";
+  const AUDIO_ONLY_BEST_MATCHES_BLURB =
+    "Likely covers, samples and shared melodies first, then the songs that " +
+    "sound most alike.";
+  // A Best row the listener ranker placed, rather than the audio alone.
+  const LISTENER_PICK_LABEL = "Listeners also play";
+  const LISTENER_PICK_TITLE =
+    "Placed by what this song's listeners also play, not by audio alone";
+  const LISTENER_PICK_ARIA =
+    "placed by what this song's listeners also play rather than by audio alone";
+  const AUDIO_ONLY_TITLE =
+    "Rank by audio alone, leaving out songs placed by what this song's " +
+    "listeners also play";
   const SAME_VIBE_BLURB =
     "Songs from these matches that share this song's tempo and overall " +
     "sound, one per artist.";
@@ -135,7 +155,10 @@
   // The hosted Sounds like list comes from the GPU engine's MuQ-MuLan model.
   const HOSTED_SOUNDS_LIKE_BLURB =
     "Songs with the same overall sound (instruments, production and mood), " +
-    "favouring artists this song's listeners also play.";
+    "favouring artists this song's listeners also play. Turn on Audio only " +
+    "to leave that out.";
+  const AUDIO_ONLY_HOSTED_SOUNDS_LIKE_BLURB =
+    "Songs with the same overall sound (instruments, production and mood).";
   const FEEDBACK_ENDPOINT =
     `${FALLBACK_HOSTED_SERVER}/api/spicetify-feedback`;
   const FEEDBACK_INSTALL_KEY = "soundalike:feedback-install:v1";
@@ -270,6 +293,21 @@
     return feedbackPreference().showAgain === false;
   }
 
+  function savedAudioOnly() {
+    try {
+      return Spicetify.LocalStorage?.get(AUDIO_ONLY_KEY) === "true";
+    } catch {
+      return false;
+    }
+  }
+
+  function saveAudioOnly(audioOnly) {
+    try {
+      if (audioOnly) Spicetify.LocalStorage?.set(AUDIO_ONLY_KEY, "true");
+      else Spicetify.LocalStorage?.remove(AUDIO_ONLY_KEY);
+    } catch {}
+  }
+
   function recordFeedbackDismissal() {
     const current = feedbackPreference();
     const next = {
@@ -296,7 +334,7 @@
       : "unknown";
   }
 
-  function feedbackPayload(data, displayed, installNonce, sessionNonce, form) {
+  function feedbackPayload(data, displayed, installNonce, sessionNonce, form, audioOnly = false) {
     const selection = form.selection();
     const detailed = selection === "mixed" || selection === "off";
     return {
@@ -321,7 +359,9 @@
         ? data.__soundalikeApiVersion
         : "unknown",
       language_policy: LANGUAGE_POLICY,
-      selection_policy: FEEDBACK_SELECTION_POLICY,
+      selection_policy: audioOnly
+        ? FEEDBACK_AUDIO_ONLY_SELECTION_POLICY
+        : FEEDBACK_SELECTION_POLICY,
       source: data.__soundalikeSource === "local" ? "local" : "hosted",
       selection,
       reasons: detailed ? form.reasons() : [],
@@ -329,7 +369,8 @@
     };
   }
 
-  function setupFeedbackPrompt(page, data, displayed, session = null) {
+  // audioOnly is the mode the displayed list was ordered in.
+  function setupFeedbackPrompt(page, data, displayed, session = null, audioOnly = false) {
     const panel = page.querySelector(".sa-feedback");
     if (
       !panel ||
@@ -471,7 +512,8 @@
           displayed,
           installNonce,
           sessionNonce,
-          form
+          form,
+          audioOnly
         );
         const response = await fetchWithTimeout(
           FEEDBACK_ENDPOINT,
@@ -766,6 +808,10 @@
             .map(([list, rank]) => `${list} #${rank}`)
             .join(" · ")
           : "",
+        // What placed the row: the audio head or the listener ranker.
+        ...(item?.basis === "audio" || item?.basis === "listeners"
+          ? { basis: item.basis }
+          : {}),
       }))
       .filter((item) => item.title && item.artist)
       .slice(0, HOSTED_RESULT_COUNT);
@@ -805,7 +851,13 @@
     };
   }
 
-  async function requestBestMatchesUncached(title, artist, langMode = "same", isrc = null) {
+  async function requestBestMatchesUncached(
+    title,
+    artist,
+    langMode = "same",
+    isrc = null,
+    audioOnly = false
+  ) {
     // The policy keeps HTTP-cached responses from before a format change out.
     const params = new URLSearchParams({
       title,
@@ -814,6 +866,7 @@
       lang: langMode,
       policy: BEST_MATCHES_POLICY,
     });
+    if (audioOnly) params.set("scene", "0");
     if (isrc) params.set("isrc", isrc);
     for (let attempt = 0; ; attempt++) {
       let response;
@@ -848,27 +901,31 @@
     }
   }
 
-  function bestMatchesCacheId(seedUri, langMode = "same") {
-    return `best:${BEST_MATCHES_POLICY}:${langMode}:${seedUri}`;
+  // Audio-only and listener-aware lists are saved apart, so they never mix.
+  function bestMatchesCacheId(seedUri, langMode = "same", audioOnly = false) {
+    return `best:${BEST_MATCHES_POLICY}:${audioOnly ? "audio" : "listeners"}:${langMode}:${seedUri}`;
   }
 
   // Lists saved before Stems have no Deezer ids, so they are fetched once more.
-  function savedBestMatches(seedUri, langMode = "same") {
-    const cached = readCacheEntry("recommendations", bestMatchesCacheId(seedUri, langMode));
+  function savedBestMatches(seedUri, langMode = "same", audioOnly = false) {
+    const cached = readCacheEntry(
+      "recommendations",
+      bestMatchesCacheId(seedUri, langMode, audioOnly)
+    );
     return Array.isArray(cached?.results) && cached.results.length && deezerId(cached.query?.id)
       ? { data: cached, cached: true }
       : null;
   }
 
-  async function requestBestMatches(title, artist, seedUri, langMode = "same") {
-    const saved = savedBestMatches(seedUri, langMode);
+  async function requestBestMatches(title, artist, seedUri, langMode = "same", audioOnly = false) {
+    const saved = savedBestMatches(seedUri, langMode, audioOnly);
     if (saved) return saved;
-    const cacheId = bestMatchesCacheId(seedUri, langMode);
+    const cacheId = bestMatchesCacheId(seedUri, langMode, audioOnly);
     if (pendingRecommendations.has(cacheId)) {
       return pendingRecommendations.get(cacheId);
     }
     const request = lookupSeedIsrc(seedUri)
-      .then((isrc) => requestBestMatchesUncached(title, artist, langMode, isrc))
+      .then((isrc) => requestBestMatchesUncached(title, artist, langMode, isrc, audioOnly))
       .then((data) => {
         writeCacheEntry("recommendations", cacheId, data);
         return { data, cached: false };
@@ -1126,9 +1183,10 @@
     // The local companion keeps searches on this computer, but Best matches
     // only run on the hosted matcher, so its users opt in for each search.
     const askFirst = await localServerReady();
+    const audioOnly = savedAudioOnly();
     const best = askFirst
       ? null
-      : settledRequest(requestBestMatches(seedTrack.name, artist, seedUri));
+      : settledRequest(requestBestMatches(seedTrack.name, artist, seedUri, "same", audioOnly));
     const sounds = settledRequest(best
       ? soundsAfterBest(best, seedTrack, artist, seedUri)
       : requestSoundsLike(seedTrack, artist, seedUri));
@@ -1165,11 +1223,12 @@
       view: showSounds ? "sounds" : "best",
       viewChosen: false,
       showAllLanguages: false,
+      audioOnly,
       companion: askFirst,
       hasVibe: false,
       soundsFromBest: false,
       timing: { startedAt, initialReadyMs },
-      best: best ? pendingResultList() : offeredBestList(seedUri),
+      best: best ? pendingResultList() : offeredBestList(seedUri, audioOnly),
       sounds: pendingResultList(),
     };
     if (best?.done) applyBestOutcome(state, best);
@@ -1180,7 +1239,7 @@
     );
     showResultsPage(state);
     if (best && !best.done) {
-      best.promise.then(() => settleResultsView(searchId, "best", best));
+      best.promise.then(() => settleBestMatches(searchId, audioOnly, best));
     }
     if (!sounds.done) {
       sounds.promise.then(() => settleResultsView(searchId, "sounds", sounds));
@@ -1189,23 +1248,37 @@
 
   // A Best matches list saved by an earlier search needs no request, so it
   // shows straight away; otherwise the tab offers to ask the hosted matcher.
-  function offeredBestList(seedUri) {
-    const saved = savedBestMatches(seedUri);
+  function offeredBestList(seedUri, audioOnly = false) {
+    const saved = savedBestMatches(seedUri, "same", audioOnly);
     return saved
       ? { status: "ready", data: saved.data, cached: true, tracks: [] }
       : { status: "offer", tracks: [] };
   }
 
+  // Asks for this search's Best matches in the page's language and audio
+  // modes. A list that arrives after the mode changed again is dropped.
+  function requestModeBestMatches(state) {
+    const { searchId, seedTrack, seedUri, audioOnly } = state;
+    state.best = pendingResultList();
+    const request = settledRequest(requestBestMatches(
+      seedTrack.name,
+      seedArtistName(seedTrack),
+      seedUri,
+      state.showAllLanguages ? "all" : "same",
+      audioOnly
+    ));
+    request.promise.then(() => settleBestMatches(searchId, audioOnly, request));
+  }
+
+  function settleBestMatches(searchId, audioOnly, request) {
+    if (resultsState?.audioOnly !== audioOnly) return;
+    settleResultsView(searchId, "best", request);
+  }
+
   function requestOfferedBestMatches() {
     const state = resultsState;
     if (!state || state.best.status !== "offer") return;
-    const { searchId, seedTrack, seedUri } = state;
-    state.best = pendingResultList();
-    const request = settledRequest(
-      requestBestMatches(seedTrack.name, seedArtistName(seedTrack), seedUri,
-        state.showAllLanguages ? "all" : "same")
-    );
-    request.promise.then(() => settleResultsView(searchId, "best", request));
+    requestModeBestMatches(state);
     refreshResultsPage(true);
   }
 
@@ -1214,16 +1287,26 @@
     if (!state || state.best.status !== "ready") return;
     state.showAllLanguages = !state.showAllLanguages;
     state.viewChosen = true;
-    const { searchId, seedTrack, seedUri } = state;
-    state.best = pendingResultList();
+    requestModeBestMatches(state);
     refreshResultsPage(true);
-    const request = settledRequest(requestBestMatches(
-      seedTrack.name,
-      seedArtistName(seedTrack),
-      seedUri,
-      state.showAllLanguages ? "all" : "same"
-    ));
-    request.promise.then(() => settleResultsView(searchId, "best", request));
+  }
+
+  // Audio only is saved for later searches too. The open search asks again in
+  // the new mode, except for a companion search's Best matches that weren't
+  // asked for yet; a list saved in that mode still shows straight away.
+  function toggleAudioOnly() {
+    const state = resultsState;
+    if (!state) return;
+    state.audioOnly = !state.audioOnly;
+    saveAudioOnly(state.audioOnly);
+    state.viewChosen = true;
+    if (state.best.status === "offer") {
+      state.best = offeredBestList(state.seedUri, state.audioOnly);
+    } else {
+      requestModeBestMatches(state);
+    }
+    refreshResultsPage(true);
+    activePage?.view?.querySelector?.(".sa-audio-only")?.focus?.();
   }
 
   // Applies a list that finished after the page opened.
@@ -1832,11 +1915,17 @@
   const PAUSE_BAR = "a.7.7 0 0 0-.7.7v16.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V3.7a.7.7 0 0 0-.7-.7z";
   const PAUSE_PATH = `M5.7 3${PAUSE_BAR}m10 0${PAUSE_BAR}`;
 
-  function listIsCurrent() {
+  // The header's play button is for the seed song alone: it pauses and
+  // resumes the seed whenever the seed is the current song, from any context.
+  function seedIsCurrent(state = resultsState) {
     const uri = playingTrackUri();
-    const context = Spicetify.Player?.data?.context_uri || Spicetify.Player?.data?.context?.uri;
-    return context === RESULTS_CONTEXT_URI &&
-      (uri === resultsState?.seedUri || shownResultUris().includes(uri));
+    return Boolean(uri && state?.seedUri) && uri === state.seedUri;
+  }
+
+  function seedPlayLabel(state = resultsState) {
+    const name = state?.seedTrack?.name || "this song";
+    if (!seedIsCurrent(state)) return `Play ${name}, then this list`;
+    return Spicetify.Player?.isPlaying?.() ? `Pause ${name}` : `Resume ${name}`;
   }
 
   // Like Spotify's own lists, the page marks the song that is playing.
@@ -1855,10 +1944,10 @@
     });
     const main = page?.querySelector?.(".sa-seed-play");
     if (main) {
-      const pause = listIsCurrent() && playing;
-      main.classList?.toggle?.("sa-paused-icon", pause);
-      main.setAttribute?.("aria-label", `${pause ? "Pause" : "Play"} soundalike list`);
-      main.setAttribute?.("title", `${pause ? "Pause" : "Play"} soundalike list`);
+      const label = seedPlayLabel();
+      main.classList?.toggle?.("sa-paused-icon", seedIsCurrent() && playing);
+      main.setAttribute?.("aria-label", label);
+      main.setAttribute?.("title", label);
     }
   }
 
@@ -2061,6 +2150,7 @@
     const artist = spotifyArtists(track, result.artist);
     const image = track ? artworkUrl(track) : "";
     const matchNote = result.matchNote ? ` · ${result.matchNote}` : "";
+    const listenerPick = result.basis === "listeners";
     row.dataset.q = `${result.title} ${result.artist}`;
     if (track?.uri) row.dataset.uri = track.uri;
     row.classList?.toggle?.(
@@ -2073,7 +2163,10 @@
       const rankNode = row.querySelector(".sa-rank");
       if (rankNode) rankNode.textContent = String(rank);
       const artistNode = row.querySelector(".sa-artist");
-      if (artistNode) artistNode.textContent = `${artist}${matchNote}`;
+      if (artistNode) {
+        artistNode.textContent =
+          `${artist}${listenerPick ? ` · ${LISTENER_PICK_LABEL}` : ""}${matchNote}`;
+      }
       if (image) {
         const img = document.createElement("img");
         img.src = image;
@@ -2101,9 +2194,10 @@
         title: track?.uri
           ? `Double-click to play ${result.title} by ${artist}`
           : `Double-click to search Spotify for ${result.title} by ${result.artist}`,
-        "aria-label": track?.uri
+        "aria-label": (track?.uri
           ? `Play ${result.title} by ${artist}`
-          : `Search Spotify for ${result.title} by ${result.artist}`,
+          : `Search Spotify for ${result.title} by ${result.artist}`) +
+          (listenerPick ? `, ${LISTENER_PICK_ARIA}` : ""),
         onDoubleClick: activate,
         onKeyDown: (event) => {
           if (event.key === "Enter" || event.key === " ") {
@@ -2149,7 +2243,24 @@
         "div",
         { className: "sa-meta" },
         React.createElement("div", { className: "sa-title" }, result.title),
-        matchNote
+        listenerPick
+          ? React.createElement(
+            "div",
+            { className: "sa-artist" },
+            artist,
+            React.createElement(
+              "span",
+              { className: "sa-why" },
+              " · ",
+              React.createElement(
+                "span",
+                { className: "sa-basis", title: LISTENER_PICK_TITLE },
+                LISTENER_PICK_LABEL
+              ),
+              matchNote
+            )
+          )
+          : matchNote
           ? React.createElement(
             "div",
             { className: "sa-artist" },
@@ -2303,7 +2414,8 @@
         page,
         resultsState.sounds.data,
         displayed.map(({ index }) => results[index]),
-        resultsState.sounds
+        resultsState.sounds,
+        resultsState.audioOnly === true
       );
     }
     const status = page.querySelector(".sa-language-status");
@@ -2625,20 +2737,24 @@
 
   function resultRowsMarkup(results, { hidden, notes }) {
     return results
-      .map(
-        (x, i) => `
+      .map((x, i) => {
+        const pick = notes && x.basis === "listeners"
+          ? ` · <span class="sa-basis" title="${esc(LISTENER_PICK_TITLE)}">${esc(LISTENER_PICK_LABEL)}</span>`
+          : "";
+        const why = pick || (notes && x.matchNote)
+          ? `<span class="sa-why">${pick}${notes && x.matchNote ? ` · ${esc(x.matchNote)}` : ""}</span>`
+          : "";
+        return `
       <div class="sa-row" data-index="${i}" data-q="${esc(x.title + " " + x.artist)}"${hidden ? " hidden" : ""}>
         <div class="sa-rank">${i + 1}</div>
         <div class="sa-cover" aria-hidden="true"><span>♫</span></div>
         <div class="sa-meta">
           <div class="sa-title">${esc(x.title)}</div>
-          <div class="sa-artist">${esc(x.artist)}${notes && x.matchNote
-            ? `<span class="sa-why"> · ${esc(x.matchNote)}</span>`
-            : ""}</div>
+          <div class="sa-artist">${esc(x.artist)}${why}</div>
         </div>
         <div class="sa-open">›</div>
-      </div>`
-      )
+      </div>`;
+      })
       .join("");
   }
 
@@ -2663,7 +2779,18 @@
     ];
   }
 
-  function languageFilterMarkup(query, status) {
+  // Audio only drops the listener ranker from every hosted list, so each of
+  // them shows the switch: next to the language one once a list is ready.
+  function audioOnlyToggleMarkup(state) {
+    return `<button class="sa-audio-only" type="button" aria-pressed="${Boolean(state.audioOnly)}" ` +
+      `title="${esc(AUDIO_ONLY_TITLE)}">Audio only</button>`;
+  }
+
+  function audioOnlyRowMarkup(state) {
+    return `<div class="sa-audio-only-row">${audioOnlyToggleMarkup(state)}</div>`;
+  }
+
+  function languageFilterMarkup(query, status, state) {
     const allLanguages = query.languageMode === "all";
     const unknown = query.language === "unknown";
     const control = unknown ? "" :
@@ -2671,24 +2798,25 @@
     const text = unknown
       ? "Language uncertain; showing all languages."
       : `${languageName(query.language)} · ${status}`;
-    return `<div class="sa-language-filter" role="status"><span>${esc(text)}</span>${control}</div>`;
+    return `<div class="sa-language-filter" role="status"><span>${esc(text)}</span>` +
+      `<span class="sa-filter-actions">${control}${audioOnlyToggleMarkup(state)}</span></div>`;
   }
 
   function bestPanelMarkup(state, seedArtists) {
     const best = state.best;
-    let blurb = BEST_MATCHES_BLURB;
+    let blurb = state.audioOnly ? AUDIO_ONLY_BEST_MATCHES_BLURB : BEST_MATCHES_BLURB;
     if (best.status === "offer") {
       const note = !state.viewChosen && state.sounds.status === "error"
         ? `<p class="sa-note">${esc(state.sounds.error)}</p>`
         : "";
-      return `<p class="sa-blurb">${esc(blurb)}</p>${note}
+      return `<p class="sa-blurb">${esc(blurb)}</p>${note}${audioOnlyRowMarkup(state)}
       <div class="sa-offer">
         <p>${esc(BEST_MATCHES_OFFER)}</p>
         <button class="sa-best-offer" type="button">Get best matches</button>
       </div>`;
     }
     if (best.status !== "ready") {
-      return `<p class="sa-blurb">${esc(blurb)}</p>` + listStateMarkup(
+      return `<p class="sa-blurb">${esc(blurb)}</p>${audioOnlyRowMarkup(state)}` + listStateMarkup(
         best,
         "Listening for best matches… songs outside the library take a few seconds."
       );
@@ -2703,7 +2831,7 @@
     const tags = tagsMarkup(["Melody + samples", ...sourceTags(best)]);
     return `<p class="sa-blurb">${esc(blurb)}</p>
       <div class="sa-tags">${tags}</div>
-      ${languageFilterMarkup(query, languageStatus)}
+      ${languageFilterMarkup(query, languageStatus, state)}
       ${listHeadMarkup({ stems: Boolean(dissectSeed(state, results)) })}
       <div class="sa-list">${resultRowsMarkup(results, { hidden: true, notes: true })}
       </div>${LIST_NOTE_MARKUP}`;
@@ -2714,7 +2842,7 @@
   function vibePanelMarkup(state, seedArtists) {
     const best = state.best;
     if (best.status !== "ready") {
-      return `<p class="sa-blurb">${esc(SAME_VIBE_BLURB)}</p>` +
+      return `<p class="sa-blurb">${esc(SAME_VIBE_BLURB)}</p>${audioOnlyRowMarkup(state)}` +
         listStateMarkup(best, "Finding songs with the same vibe…");
     }
     const { query, vibe } = best.data;
@@ -2729,7 +2857,7 @@
       : "other languages left out";
     return `<p class="sa-blurb">${esc(blurb)}</p>
       <div class="sa-tags">${tags}</div>
-      ${languageFilterMarkup(query, languageStatus)}
+      ${languageFilterMarkup(query, languageStatus, state)}
       ${listHeadMarkup({ stems: Boolean(dissectSeed(state, vibe)) })}
       <div class="sa-list">${resultRowsMarkup(vibe, { hidden: true, notes: false })}
       </div>${LIST_NOTE_MARKUP}`;
@@ -2739,18 +2867,21 @@
   // switch; its rows keep the BPM column.
   function hostedSoundsPanelMarkup(state, seedArtists) {
     const best = state.best;
+    const baseBlurb = state.audioOnly
+      ? AUDIO_ONLY_HOSTED_SOUNDS_LIKE_BLURB
+      : HOSTED_SOUNDS_LIKE_BLURB;
     if (best.status !== "ready") {
-      return `<p class="sa-blurb">${esc(HOSTED_SOUNDS_LIKE_BLURB)}</p>` +
+      return `<p class="sa-blurb">${esc(baseBlurb)}</p>${audioOnlyRowMarkup(state)}` +
         listStateMarkup(best, "Finding songs that sound alike…");
     }
     const { query, sounds } = best.data;
     if (!sounds?.length) {
-      return `<p class="sa-blurb">${esc(HOSTED_SOUNDS_LIKE_BLURB)}</p>` + listStateMarkup(
+      return `<p class="sa-blurb">${esc(baseBlurb)}</p>${audioOnlyRowMarkup(state)}` + listStateMarkup(
         { status: "error", error: "No sound-alike songs came back for this song." },
         ""
       );
     }
-    const blurb = HOSTED_SOUNDS_LIKE_BLURB + matchedToNote(state, query, seedArtists);
+    const blurb = baseBlurb + matchedToNote(state, query, seedArtists);
     const tags = tagsMarkup([
       "Overall sound",
       query.bpm ? `${Math.round(query.bpm)} BPM` : "",
@@ -2761,7 +2892,7 @@
       : "other languages left out";
     return `<p class="sa-blurb">${esc(blurb)}</p>
       <div class="sa-tags">${tags}</div>
-      ${languageFilterMarkup(query, languageStatus)}
+      ${languageFilterMarkup(query, languageStatus, state)}
       ${listHeadMarkup({ bpm: true, stems: Boolean(dissectSeed(state, sounds)) })}
       <div class="sa-list">${resultRowsMarkup(sounds, { hidden: true, notes: false })}
       </div>${LIST_NOTE_MARKUP}`;
@@ -2788,25 +2919,28 @@
     ) {
       blurb += ` Based on “${s.title}” by ${s.artist}, the closest song in that library.`;
     }
+    // Spotify's related artists come from what listeners also play, so Audio
+    // only keeps the model's order here too.
+    const context = state.audioOnly ? "" : " and artist context";
     const languageStatus = sounds.seedLanguage
       ? `${languageName(sounds.seedLanguage)} lyrics · checking quality head`
-      : "Checking Spotify metadata and artist context";
+      : `Checking Spotify metadata${context}`;
     const modelLabel = data.method === "dual_sonic64_guardrail"
       ? "Dual-Sonic64"
       : "Production model";
     const tags = tagsMarkup([
       modelLabel,
-      "V5 strict + artist context",
+      state.audioOnly ? "V5 strict" : "V5 strict + artist context",
       v.tempo,
       v.dynamics,
       v.low_end,
       v.tone,
     ]) + `<span class="sa-tag sa-language-status">${esc(languageStatus)}</span>`;
     return `<p class="sa-blurb">${esc(blurb)}</p>${note}
-      <div class="sa-tags">${tags}</div>
+      <div class="sa-tags">${tags}</div>${audioOnlyRowMarkup(state)}
       <div class="sa-list-head"><div>#</div><div></div><div>Title</div><div class="sa-album-head">Album</div><div class="sa-bpm">BPM</div></div>
       <div class="sa-list">
-        <div class="sa-language-loading">Checking Spotify language and artist context before showing results…</div>
+        <div class="sa-language-loading">Checking Spotify language${context} before showing results…</div>
         ${resultRowsMarkup(data.results, { hidden: true, notes: false })}
       </div>${feedbackMarkup()}`;
   }
@@ -2942,9 +3076,13 @@
         .sa-tab[aria-selected="true"]{background:var(--spice-text,#fff);color:var(--spice-main,#121212)}
         .sa-tab:focus-visible{outline:2px solid var(--spice-button,#1ed760);outline-offset:2px}
         .sa-language-filter{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;color:var(--spice-subtext,#b3b3b3);font-size:13px}
-        .sa-language-toggle{min-height:32px;border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:5px 12px;background:transparent;color:var(--spice-text,#fff);font:inherit;font-weight:600;cursor:pointer}
-        .sa-language-toggle:hover{border-color:var(--spice-button,#1ed760)}
-        .sa-language-toggle:focus-visible{outline:2px solid var(--spice-button,#1ed760);outline-offset:2px}
+        .sa-language-toggle,.sa-audio-only{min-height:32px;border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:5px 12px;background:transparent;color:var(--spice-text,#fff);font:inherit;font-weight:600;cursor:pointer}
+        .sa-language-toggle:hover,.sa-audio-only:hover{border-color:var(--spice-button,#1ed760)}
+        .sa-language-toggle:focus-visible,.sa-audio-only:focus-visible{outline:2px solid var(--spice-button,#1ed760);outline-offset:2px}
+        .sa-audio-only[aria-pressed="true"]{border-color:var(--spice-button,#1ed760);background:var(--spice-button,#1ed760);color:#000}
+        .sa-filter-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+        .sa-audio-only-row{display:flex;justify-content:flex-end;margin:0 0 14px}
+        .sa-basis{text-decoration:underline dotted;text-underline-offset:2px;cursor:help}
         .sa-blurb{max-width:680px;margin:0 0 10px;color:var(--spice-subtext,#b3b3b3)}
         .sa-note{max-width:680px;margin:0 0 12px;color:var(--spice-text,#fff)}
         .sa-why{color:var(--spice-subtext,#b3b3b3)}
@@ -3034,7 +3172,7 @@
           <div class="sa-seed-artist">${esc(seedArtists.join(", "))}</div>
         </div>
         ${state.seedUri
-          ? `<button class="sa-seed-play" type="button" title="Play ${esc(seedTrack?.name || "this song")}, then this list" aria-label="Play ${esc(seedTrack?.name || "this song")}, then this list"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="sa-icon-play" d="${PLAY_PATH}"></path><path class="sa-icon-pause" d="${PAUSE_PATH}"></path></svg></button>`
+          ? `<button class="sa-seed-play" type="button" title="${esc(seedPlayLabel(state))}" aria-label="${esc(seedPlayLabel(state))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="sa-icon-play" d="${PLAY_PATH}"></path><path class="sa-icon-pause" d="${PAUSE_PATH}"></path></svg></button>`
           : ""}
       </div>
       ${resultTabsMarkup(state)}
@@ -3146,7 +3284,7 @@
     bindResultTabs(page);
     const seedPlay = page.querySelector(".sa-seed-play");
     if (seedPlay) seedPlay.onclick = () => {
-      if (listIsCurrent()) Spicetify.Player.togglePlay();
+      if (seedIsCurrent(state)) Spicetify.Player.togglePlay();
       else return playSeedSong(state);
     };
     markPlayingRows(page);
@@ -3154,6 +3292,8 @@
     if (offer) offer.onclick = requestOfferedBestMatches;
     const languageToggle = page.querySelector(".sa-language-toggle");
     if (languageToggle) languageToggle.onclick = toggleBestLanguageMode;
+    const audioOnlyToggle = page.querySelector(".sa-audio-only");
+    if (audioOnlyToggle) audioOnlyToggle.onclick = toggleAudioOnly;
     const view = shownView(state);
     const shown = viewList(state, view);
     if (!shown.separate) {
@@ -3177,7 +3317,7 @@
       page,
       state.sounds.tracks,
       state.sounds.seedLanguage,
-      state.sounds.relatedArtistsPromise,
+      state.audioOnly ? new Set() : state.sounds.relatedArtistsPromise,
       state.timing
     ).catch((error) => {
       console.error("[soundalike] Spotify result enrichment failed", error);
