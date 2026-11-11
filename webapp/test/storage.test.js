@@ -222,6 +222,39 @@ test("symlinks inside the root are not followed", async (t) => {
   });
 });
 
+test("symlinked parent directories are never followed", async (t) => {
+  const linkType = process.platform === "win32" ? "junction" : "dir";
+  for (const parent of ["human-ratings", "spicetify-feedback/digest-input-v1"]) {
+    await withStorage(async (storage, root) => {
+      const outside = await mkdtemp(join(tmpdir(), "soundalike-outside-"));
+      try {
+       await writeFile(join(outside, "secret.json"), "{\"secret\":1}");
+       const segments = parent.split("/");
+       await mkdir(join(root, ...segments.slice(0, -1)), { recursive: true });
+       try {
+         await symlink(outside, join(root, ...segments), linkType);
+       } catch {
+         t.skip("directory links are not permitted on this machine");
+         return;
+       }
+       const pathname = `${parent}/secret.json`;
+       await assert.rejects(storage.head(pathname), isObjectNotFound);
+       await assert.rejects(storage.get(pathname), isObjectNotFound);
+       assert.deepEqual((await storage.list({ prefix: `${parent}/` })).blobs, []);
+       assert.deepEqual((await storage.list({ prefix: "" })).blobs, []);
+       await assert.rejects(
+         storage.put(`${parent}/written.json`, "{}", JSON_PUT),
+         /not a directory/,
+       );
+       await storage.del(pathname);
+       assert.deepEqual(await readdir(outside), ["secret.json"]);
+      } finally {
+       await rm(outside, { recursive: true, force: true });
+      }
+    });
+  }
+});
+
 test("storage fails closed when the root is not configured", async () => {
   const saved = process.env.SOUNDALIKE_STORAGE_DIR;
   delete process.env.SOUNDALIKE_STORAGE_DIR;

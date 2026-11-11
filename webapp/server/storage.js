@@ -106,7 +106,35 @@ export function createDiskStorage(
     if (!inside || inside.startsWith("..") || isAbsolute(inside)) {
       throw new TypeError("Invalid storage pathname.");
     }
-    return { base, file };
+    return { base, file, parents: segments.slice(0, -1) };
+  }
+
+  // Walks each parent below the root with lstat so a symlinked directory can
+  // never redirect an operation outside the root. With create, missing parents
+  // are made one level at a time.
+  async function realParents(base, parents, create = false) {
+    let directory = base;
+    for (const segment of parents) {
+      directory = join(directory, segment);
+      let metadata;
+      try {
+        metadata = await lstat(directory);
+      } catch (error) {
+        if (!missing(error)) throw error;
+        if (!create) return false;
+        try {
+          await mkdir(directory, { mode: 0o700 });
+        } catch (mkdirError) {
+          if (mkdirError?.code !== "EEXIST") throw mkdirError;
+        }
+        metadata = await lstat(directory);
+      }
+      if (!metadata.isDirectory()) {
+        if (create) throw new Error("Storage path is not a directory.");
+        return false;
+      }
+    }
+    return true;
   }
 
   async function regularFile(file) {
@@ -122,7 +150,8 @@ export function createDiskStorage(
   }
 
   async function head(pathname) {
-    const { file } = locate(pathname);
+    const { base, file, parents } = locate(pathname);
+    if (!(await realParents(base, parents))) throw new ObjectNotFoundError();
     const metadata = await regularFile(file);
     return {
       pathname,
@@ -133,14 +162,14 @@ export function createDiskStorage(
   }
 
   async function put(pathname, body, options = {}) {
-    const { file } = locate(pathname);
+    const { base, file, parents } = locate(pathname);
     if (options.addRandomSuffix) {
       throw new TypeError("Random pathname suffixes are not supported.");
     }
     const bytes =
       typeof body === "string" ? Buffer.from(body, "utf8") : Buffer.from(body);
     const directory = resolve(file, "..");
-    await mkdir(directory, { recursive: true, mode: 0o700 });
+    await realParents(base, parents, true);
     const temporary = join(
       directory,
       `.tmp-${process.pid}-${randomBytes(8).toString("hex")}`,
@@ -175,7 +204,8 @@ export function createDiskStorage(
   }
 
   async function get(pathname) {
-    const { file } = locate(pathname);
+    const { base, file, parents } = locate(pathname);
+    if (!(await realParents(base, parents))) throw new ObjectNotFoundError();
     let handle;
     try {
       handle = await open(file, constants.O_RDONLY | NO_FOLLOW);
@@ -249,10 +279,14 @@ export function createDiskStorage(
     if (cursor !== undefined && typeof cursor !== "string") {
       throw new TypeError("Invalid storage cursor.");
     }
+    const directorySegments = directoryPart ? directoryPart.split("/") : [];
+    if (!(await realParents(base, directorySegments))) {
+      return { blobs: [], hasMore: false, cursor: undefined };
+    }
     const found = [];
     await walk(
       base,
-      directoryPart ? resolve(base, ...directoryPart.split("/")) : base,
+      resolve(base, ...directorySegments),
       prefix,
       found,
     );
@@ -279,7 +313,8 @@ export function createDiskStorage(
   }
 
   async function del(pathname) {
-    const { file } = locate(pathname);
+    const { base, file, parents } = locate(pathname);
+    if (!(await realParents(base, parents))) return;
     try {
       await unlink(file);
     } catch (error) {
