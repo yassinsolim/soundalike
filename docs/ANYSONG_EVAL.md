@@ -2014,7 +2014,8 @@ It does not change any ranking.
 
 Every shown song in Best, Same vibe and Sounds like carries a `match`, and Sounds like was unchanged for Bryson Tiller
 "Whatever She Wants". Its Best head is now Chris Brown alone; PARTYNEXTDOOR moves from #4 to #2. For "Heartbeat"
-Deichkind fell from #2 to #16. Runtime 2.12.0 changes the cache policy to v8 and shows the sound match as a bar.
+Deichkind, #2 in the feedback, is now #7 in the library version that Spotify opens and #16 for the album version
+answered live. Runtime 2.12.0 changes the cache policy to v8 and shows the sound match as a bar.
 
 ## Stem dissection (pre-registered 2026-11-10, before any result)
 
