@@ -268,18 +268,23 @@ The archived pacing study did not evaluate language.
    segment, so traversal, absolute paths, and dot files are rejected. Records
    are written with mode `0600`.
 4. Include the directory in the host's backups and keep those backups private.
-5. Add rate-limit rules at the edge (for example Cloudflare rate limiting) for
-   `POST /api/ratings`,
+5. Rate-limit writes per client IP for `POST /api/ratings`,
    `POST /api/ratings-v2`, `POST /api/ratings-semantic-v1`,
    `POST /api/ratings-semantic-v2`, `POST /api/ratings-pacing-v3`,
    `POST /api/ratings-v4`, `POST /api/ratings-v5`, `POST /api/ratings-v6`,
-   and `POST /api/spicetify-feedback`. Ratings origin checks and the browser's
-   local-key HMAC provide abuse resistance and integrity; these controls are
+   and `POST /api/spicetify-feedback`. Use rate-limit rules at the edge (for
+   example Cloudflare rate limiting) or limits in the reverse proxy or gateway
+   in front of the app. Behind a tunnel or CDN, key the limit on the real
+   client IP header (for example `Cf-Connecting-Ip`), not the proxy's address.
+   The production host enforces per-IP limits in its front gateway and answers
+   excess writes with `429 Too Many Requests` and a `Retry-After` header. Reads
+   are not limited. Ratings origin checks and the browser's local-key HMAC
+   provide abuse resistance and integrity; these controls are
    not authentication. The extension feedback endpoint is intentionally
    unauthenticated and allows public CORS because a Spicetify extension cannot
    safely hold a secret. Its exact schema, body limits, immutable digest
-   deduplication, and private storage are still not substitutes for an edge
-   rate-limit rule.
+   deduplication, and private storage are still not substitutes for a per-IP
+   rate limit.
 
 ### Private Discord feedback notifications
 

@@ -256,6 +256,8 @@ def test_storage_route_and_rate_limit_guidance_are_present():
     assert "`SOUNDALIKE_STORAGE_DIR`" in deploy_docs
     assert "create-only" in deploy_docs
     assert "rate-limit rules at the edge" in deploy_docs
+    assert "per-IP" in deploy_docs
+    assert "`Retry-After`" in deploy_docs
     assert "not authentication" in deploy_docs
     assert "There is no public GET" in deploy_docs
     assert "vercel" not in deploy_docs.lower()
