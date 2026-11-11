@@ -353,8 +353,8 @@ def test_evaluator_auto_load_export_and_explicit_private_submission():
     assert 'body:JSON.stringify({consent:true,ratings:submissionPayload})' in html
 
 
-def test_vercel_routes_and_security_headers_cover_evaluator():
-    config = _load(ROOT / "webapp" / "vercel.json")
+def test_site_routes_and_security_headers_cover_evaluator():
+    config = _load(ROOT / "webapp" / "site.json")
     assert {item["source"]: item["destination"] for item in config["rewrites"]} == {
         "/api/ratings-v6": "/api/ratings?__soundalike_handler=ratings-v6",
         "/api/spicetify-feedback": (
@@ -378,7 +378,7 @@ def test_vercel_routes_and_security_headers_cover_evaluator():
         "/evaluate-v1": "/evaluate-v1/index.html",
         "/evaluate-v1/": "/evaluate-v1/index.html",
     }
-    # Any-song search lives on the home page; Vercel forwards the query string,
+    # Any-song search lives on the home page; the redirect keeps the query string,
     # so old /anysong?id=<id> links open the same song there.
     assert config["redirects"] == [
         {"source": "/anysong", "destination": "/", "permanent": False},

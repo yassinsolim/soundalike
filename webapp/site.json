@@ -1,5 +1,4 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "api/recommend.py": { "maxDuration": 60 },
     "api/spicetify_recommend.py": { "maxDuration": 60 },

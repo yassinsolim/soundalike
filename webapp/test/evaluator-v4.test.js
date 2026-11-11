@@ -238,7 +238,7 @@ test("pacing V3 archive is byte-identical and version routed", () => {
     assert.equal(createHash("sha256").update(bytes).digest("hex"), digest);
   }
   const config = JSON.parse(
-    readFileSync(new URL("../vercel.json", import.meta.url)),
+    readFileSync(new URL("../site.json", import.meta.url)),
   );
   const routes = Object.fromEntries(
     config.rewrites.map((item) => [item.source, item.destination]),

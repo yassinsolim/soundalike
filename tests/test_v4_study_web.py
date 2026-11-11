@@ -195,7 +195,7 @@ def test_v4_archive_is_byte_locked_at_versioned_route():
 
 
 def test_routes_and_private_inboxes_are_version_isolated():
-    config = _load(WEB / "vercel.json")
+    config = _load(WEB / "site.json")
     rewrites = {item["source"]: item["destination"] for item in config["rewrites"]}
     assert rewrites["/evaluate"] == "/evaluate/index.html"
     assert rewrites["/evaluate-v5"] == "/evaluate-v5/index.html"

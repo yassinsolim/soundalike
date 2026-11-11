@@ -1,4 +1,4 @@
-"""Tests for the Vercel web recommender (webapp/api/_reco.py).
+"""Tests for the hosted web recommender (webapp/api/_reco.py).
 
 The hosted library-mode recommender is a torch-free numpy reimplementation of
 DeepVibeRecommender. These tests pin it to the canonical recommender so the two
@@ -734,7 +734,7 @@ def test_packaged_search_catalog_is_bound_to_production_index():
     assert _sha256(_PACKAGED_CATALOG_PATH) == _PACKAGED_CATALOG_SHA256
     assert _PRODUCTION_LIBRARY_SIZE == 272_853
     config = json.loads(
-        (_PACKAGED_CATALOG_PATH.parents[1] / "vercel.json").read_text()
+        (_PACKAGED_CATALOG_PATH.parents[1] / "site.json").read_text()
     )
     assert (
         config["functions"]["api/search.py"]["includeFiles"]

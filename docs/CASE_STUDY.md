@@ -624,7 +624,7 @@ history, headers, IP addresses, or hidden candidates.
 
 The feedback endpoint is intentionally public-CORS because an extension cannot
 keep a client secret. Strict validation, request-size limits, deterministic
-immutable Blob paths, a Vercel Firewall rate limit, and a recommended 90-day
+immutable private storage paths, an edge rate limit, and a recommended 90-day
 private-record retention window form the abuse/privacy boundary. This informal
 feedback and the active V6 evaluator are model-improvement inputs, not evidence
 that independently authorizes promotion.

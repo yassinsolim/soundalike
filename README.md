@@ -335,7 +335,6 @@ by default); HTTP 429 responses pause all affected workers and honor
 - Audio similarity is subjective. Some seeds work better than others.
 - Strict language filtering may hide otherwise strong instrumental or
   no-lyrics candidates.
-- The Vercel fallback may be slower on its first request after being idle.
 - Spicetify cannot patch every Spotify distribution. In particular, Windows
   Store and Linux Snap builds are not supported by Spicetify.
 - The basic content engine uses a much smaller bundled CSV and is separate from

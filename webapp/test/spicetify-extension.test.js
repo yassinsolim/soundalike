@@ -833,7 +833,7 @@ test("prefers a healthy local companion over the hosted library", async () => {
   );
 });
 
-test("uses Vercel when the primary lacks the strict contract", async () => {
+test("uses the web app when the primary lacks the strict contract", async () => {
   const urls = [];
   const app = loadExtension(async (url) => {
     urls.push(url);
@@ -859,7 +859,7 @@ test("uses Vercel when the primary lacks the strict contract", async () => {
   assert.match(page.innerHTML, /HOSTED LIBRARY/);
 });
 
-test("uses Vercel when the primary returns an outdated ranking policy", async () => {
+test("uses the web app when the primary returns an outdated ranking policy", async () => {
   const urls = [];
   const app = loadExtension(async (url) => {
     urls.push(url);
@@ -883,7 +883,7 @@ test("uses Vercel when the primary returns an outdated ranking policy", async ()
   assert.match(page.innerHTML, /HOSTED LIBRARY/);
 });
 
-test("uses Vercel when the primary service fails", async () => {
+test("uses the web app when the primary service fails", async () => {
   const urls = [];
   const app = loadExtension(async (url) => {
     urls.push(url);

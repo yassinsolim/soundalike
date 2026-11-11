@@ -1,8 +1,8 @@
-"""Local dev server that mimics Vercel's routing for webapp/.
+"""Local dev server that mimics the production routing for webapp/.
 
 Serves index.html and dispatches /api/search + /api/recommend to the same
-`_reco` engine the serverless functions use — so you can test the whole UI
-without deploying. Not shipped to Vercel (Vercel uses api/*.py directly).
+`_reco` engine the API functions use — so you can test the whole UI
+without deploying. Not used in production (the gateway runs api/*.py directly).
 
     set SOUNDALIKE_INDEX_PATH=../src/soundalike/data/deepvibe_index.npz
     python webapp/dev_server.py

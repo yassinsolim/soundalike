@@ -105,7 +105,7 @@ class MemoryStorage {
   async head(pathname) {
     if (!this.objects.has(pathname)) {
       const error = new Error("missing");
-      error.name = "BlobNotFoundError";
+      error.name = "ObjectNotFoundError";
       throw error;
     }
     return { pathname };
@@ -129,7 +129,7 @@ async function submit(
     options.wrapper === undefined
       ? { consent: true, study: "fulltrack-v2-pilot", ratings }
       : options.wrapper;
-  await createV2Handler(storage, options.deploymentHost)(
+  await createV2Handler(storage)(
     request(options.rawBody ?? wrapper, options),
     res,
   );

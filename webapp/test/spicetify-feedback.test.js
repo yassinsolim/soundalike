@@ -28,6 +28,7 @@ import {
   createFeedbackDigestHandler,
   summarizeFeedback,
 } from "../server/spicetify-feedback-digest.js";
+import { createDiskStorage } from "../server/storage.js";
 import { downloadSpicetifyFeedback } from "../tools/spicetify-feedback-inbox.js";
 
 function validPayload() {
@@ -124,7 +125,7 @@ class MemoryStorage {
   async head(pathname) {
     if (!this.objects.has(pathname)) {
       const error = new Error("missing");
-      error.name = "BlobNotFoundError";
+      error.name = "ObjectNotFoundError";
       throw error;
     }
     const body = this.objects.get(pathname);
@@ -444,7 +445,7 @@ test("enforces declared and actual request size and strict JSON parsing", async 
   );
 });
 
-test("accepts a Vercel-style replay without touching request.body", async () => {
+test("accepts a streamed replay without touching request.body", async () => {
   const { res, storage } = await submit(
     validPayload(),
     new MemoryStorage(),
@@ -884,9 +885,9 @@ test("inbox rejects an oversized listing and has no content logging path", async
   }
 });
 
-test("Vercel routes feedback through the shared bounded ratings function", () => {
+test("site config routes feedback through the shared bounded ratings function", () => {
   const config = JSON.parse(
-    readFileSync(new URL("../vercel.json", import.meta.url), "utf8"),
+    readFileSync(new URL("../site.json", import.meta.url), "utf8"),
   );
   assert.equal(Object.keys(config.functions).length, 12);
   assert.equal(config.functions["api/spicetify-feedback.js"], undefined);
@@ -907,4 +908,65 @@ test("Vercel routes feedback through the shared bounded ratings function", () =>
   assert.deepEqual(config.crons, [
     { path: "/api/feedback-digest", schedule: "0 15 * * *" },
   ]);
+});
+
+test("feedback, digest and inbox work end to end on disk storage", async () => {
+  const root = await mkdtemp(join(tmpdir(), "soundalike-feedback-disk-"));
+  const output = await mkdtemp(join(tmpdir(), "soundalike-feedback-disk-inbox-"));
+  try {
+    const storage = createDiskStorage(root);
+    const recordTime = Date.UTC(2026, 8, 1, 12);
+    const options = {
+      handlerOptions: {
+        now: () => recordTime,
+        sendDiscord: async () => true,
+      },
+    };
+    const first = await submit(validPayload(), storage, options);
+    const retry = await submit(validPayload(), storage, options);
+    assert.equal(first.res.statusCode, 200);
+    assert.equal(retry.res.statusCode, 200);
+    assert.equal(retry.res.body.receipt_sha256, first.res.body.receipt_sha256);
+    const records = await storage.list({ prefix: FEEDBACK_BLOB_PREFIX });
+    assert.deepEqual(
+      records.blobs.map((blob) => blob.pathname),
+      [`${FEEDBACK_BLOB_PREFIX}${first.res.body.receipt_sha256}.json`],
+    );
+
+    const messages = [];
+    const handler = createFeedbackDigestHandler(storage, {
+      cronSecret: "test-cron-secret",
+      now: () => Date.UTC(2026, 8, 2, 15),
+      sendDiscord: async (content) => {
+        messages.push(content);
+        return true;
+      },
+    });
+    const request = {
+      method: "GET",
+      headers: { authorization: "Bearer test-cron-secret" },
+    };
+    const digest = response();
+    await handler(request, digest);
+    assert.equal(digest.statusCode, 200);
+    assert.deepEqual(digest.body, {
+      date: "2026-09-01",
+      record_count: 1,
+      sent: true,
+    });
+    const again = response();
+    await handler(request, again);
+    assert.equal(again.body.already_processed, true);
+    assert.equal(messages.length, 1);
+
+    const inbox = await downloadSpicetifyFeedback(output, storage, {
+      now: recordTime,
+      retentionDays: 90,
+    });
+    assert.equal(inbox.downloaded, 1);
+    assert.equal(inbox.existing, 0);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+    await rm(output, { recursive: true, force: true });
+  }
 });

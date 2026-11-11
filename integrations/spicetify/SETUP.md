@@ -508,8 +508,8 @@ extension retries twice when the matcher is busy and gives up after 30
 seconds.
 
 If the matcher can't answer, Sounds like falls back to the older hosted
-recommendation service, which in turn falls back to the Vercel deployment. It
-quietly asks the Vercel function to warm after Spotify becomes idle. A
+recommendation service, which in turn falls back to the hosted web app. It
+quietly asks the web app to warm after Spotify becomes idle. A
 fallback request can still take up to about 30 seconds while the
 checksum-pinned 299 MB index initializes. Both successful lists, Spotify
 metadata, and language labels remain in a bounded local cache for seven days,

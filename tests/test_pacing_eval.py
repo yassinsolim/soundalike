@@ -259,7 +259,3 @@ def test_semantic_v2_archive_is_byte_preserved_and_core_is_isolated():
     assert "webapp/evaluate-semantic-v2/* -text -whitespace" in (
         ROOT / ".gitattributes"
     ).read_text(encoding="utf-8")
-    assert (ROOT / "webapp" / ".vercelignore").read_text(encoding="utf-8").splitlines() == [
-        "test/",
-        "tools/",
-    ]

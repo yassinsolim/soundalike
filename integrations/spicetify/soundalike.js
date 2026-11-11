@@ -623,7 +623,7 @@
       );
     } catch (error) {
       console.warn(
-        "[soundalike] Primary hosted endpoint is unavailable or outdated; using Vercel fallback.",
+        "[soundalike] Primary hosted endpoint is unavailable or outdated; using web app fallback.",
         error
       );
     }
@@ -635,7 +635,7 @@
       );
     } catch (error) {
       console.warn(
-        "[soundalike] Cacheable Vercel endpoint failed; using legacy endpoint.",
+        "[soundalike] Cacheable web app endpoint failed; using legacy endpoint.",
         error
       );
       return getLegacyHostedRecommendations(payload);
@@ -3839,7 +3839,7 @@
         );
       } catch (error) {
         console.debug?.(
-          "[soundalike] Vercel fallback prewarm was unavailable.",
+          "[soundalike] Web app fallback prewarm was unavailable.",
           error
         );
       }
