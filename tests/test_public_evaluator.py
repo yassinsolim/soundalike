@@ -377,9 +377,13 @@ def test_vercel_routes_and_security_headers_cover_evaluator():
         "/evaluate-semantic-v2/": "/evaluate-semantic-v2/index.html",
         "/evaluate-v1": "/evaluate-v1/index.html",
         "/evaluate-v1/": "/evaluate-v1/index.html",
-        "/anysong": "/anysong/index.html",
-        "/anysong/": "/anysong/index.html",
     }
+    # Any-song search lives on the home page; Vercel forwards the query string,
+    # so old /anysong?id=<id> links open the same song there.
+    assert config["redirects"] == [
+        {"source": "/anysong", "destination": "/", "permanent": False},
+        {"source": "/anysong/", "destination": "/", "permanent": False},
+    ]
     routes = {
         item["source"]: {header["key"]: header["value"] for header in item["headers"]}
         for item in config["headers"]

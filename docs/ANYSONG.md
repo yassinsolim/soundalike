@@ -1,6 +1,7 @@
 # Any-song (beta)
 
-`/anysong` on soundalike.yassin.app takes any Deezer track, including one that has never been indexed, and finds
+The search on soundalike.yassin.app (the old `/anysong` page now redirects to the home page) takes any Deezer track,
+including one that has never been indexed, and finds
 catalog songs that share its **melody**, a **sample/loop** or its overall **sound**. Unseen songs are fetched
 and embedded live on a GPU; everything else is a lookup.
 
@@ -17,8 +18,8 @@ The page opens on **Best matches**, one list that merges the melody and samples 
 a song scores `sum(1 / (5 + rank))` over the two channels' song lists, and is shown as the release found by the
 channel that ranked it higher. On held-out benchmarks it finds covers as well as the melody tab and samples better
 than the samples tab ([ANYSONG_EVAL.md](ANYSONG_EVAL.md#best-matches)). The channel tabs remain for browsing one
-relation. The same list is the default view on the main page and in the
-[Spicetify extension](../integrations/spicetify/README.md), which name the song by title and artist instead of a
+relation. The same list is the default view in the
+[Spicetify extension](../integrations/spicetify/README.md), which names the song by title and artist instead of a
 Deezer id. Best matches hides confidently detected other-language songs by default (`--languages`, see
 [Language labels](#language-labels)); a **Show all languages** switch (`lang=all`) restores the unfiltered ranking,
 and the individual melody, samples and sounds tabs are never filtered. A song without a confident label takes its
@@ -75,12 +76,17 @@ genre-incoherent results than the Sounds like tab (39 % vs 50 %) and more Listen
 
 ```
 browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api/anysong/*  ─▶ CT 409 :8790  anysong.api (RTX 2070 SUPER)
-                                                        └─ everything else ─▶ vercel_gateway (webapp/, /anysong page)
+                                                        └─ everything else ─▶ vercel_gateway (webapp/)
 ```
 
-- [`webapp/anysong/index.html`](../webapp/anysong/index.html) is a self-contained page (inline CSS/JS, strict CSP in
-  [`vercel.json`](../webapp/vercel.json): same-origin `connect-src`, images and audio from `*.dzcdn.net` only).
-  Previews are resolved through the existing `/api/preview`.
+- The home page, [`webapp/index.html`](../webapp/index.html) with [`webapp/search.js`](../webapp/search.js), is the
+  any-song search: suggestions from `/api/anysong/search`, results from `/api/anysong/similar?id=` in five tabs
+  (Best matches, Same vibe, Same melody, Samples & loops, Sounds like). Share links are `/#id=<deezer id>&tab=<tab>`;
+  older `#s=<title — artist>` links still resolve by name. Previews are resolved through the existing `/api/preview`.
+- `/anysong` redirects to `/` (`redirects` in [`vercel.json`](../webapp/vercel.json), temporary, query kept).
+  [`webapp/anysong/index.html`](../webapp/anysong/index.html) is a stub for servers that ignore `redirects`: it
+  forwards the query and hash to `/`, where old `?id=` and `#id=` links (including `tab=sonic`, now Sounds like) open
+  the same song.
 - [`anysong/api.py`](../src/soundalike/anysong/api.py) serves `GET /api/anysong/search?q=&limit=` (Deezer search
   plus `in_catalog`), `GET /api/anysong/similar?id=&k=&lang=same|all&scene=1|0` and `GET /healthz`. With
   `--languages`, `lang=same` is the default and `lang=all` bypasses the Best-matches-only filter; without it, `lang`
@@ -107,7 +113,8 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   z(listener estimate) instead. Either way the list draws only from the sonic channel's 200 songs. With the ranker, a
   Best item that came from the seed artist's neighbourhood rather than a channel list has empty `ranks`, and
   `timings_ms.listener` gives the time the ranker took.
-- `/similar?title=&artist=&k=` (used by the main page and Spotify, which have no Deezer id) resolves the name first.
+- `/similar?title=&artist=&k=` (used by Spotify, which has no Deezer id, and by old `#s=` home-page links) resolves
+  the name first.
   Songs match by song key (primary artist plus title without bracketed, dashed or feat. tags), ignoring accents on
   Latin letters, symbols and a leading "The" ("Beyoncé" = "Beyonce", "The Black Eyed Peas" = "Black Eyed Peas").
   Among a song's releases, one with the same version words (`deezer.version_words`: live, remix, acoustic, edit,
