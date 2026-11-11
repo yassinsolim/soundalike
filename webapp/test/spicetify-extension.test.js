@@ -3517,7 +3517,7 @@ test("plays the original song, then the shown list, from the header", async () =
   await waitFor(() => hasLog(app, "Best matches metadata settled"));
   assert.match(
     app.currentPage.innerHTML,
-    /<button class="sa-seed-play" type="button" title="Play [^"]+, then this list" aria-label="Play [^"]+, then this list">▶<\/button>/,
+    /<button class="sa-seed-play" type="button" title="Play [^"]+, then this list" aria-label="Play [^"]+, then this list"><svg[^>]*>.*<\/svg><\/button>/,
   );
 
   await app.seedPlayButton.onclick();

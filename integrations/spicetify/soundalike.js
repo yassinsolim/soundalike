@@ -1828,12 +1828,38 @@
     return data?.item?.uri || data?.track?.uri || null;
   }
 
+  const PLAY_PATH = "M7.05 3.606 20.54 11.394a.7.7 0 0 1 0 1.212L7.05 20.394A.7.7 0 0 1 6 19.788V4.212a.7.7 0 0 1 1.05-.606";
+  const PAUSE_BAR = "a.7.7 0 0 0-.7.7v16.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V3.7a.7.7 0 0 0-.7-.7z";
+  const PAUSE_PATH = `M5.7 3${PAUSE_BAR}m10 0${PAUSE_BAR}`;
+
+  function listIsCurrent() {
+    const uri = playingTrackUri();
+    const context = Spicetify.Player?.data?.context_uri || Spicetify.Player?.data?.context?.uri;
+    return context === RESULTS_CONTEXT_URI &&
+      (uri === resultsState?.seedUri || shownResultUris().includes(uri));
+  }
+
   // Like Spotify's own lists, the page marks the song that is playing.
   function markPlayingRows(page = activePage?.view) {
     const uri = playingTrackUri();
+    const playing = Boolean(Spicetify.Player?.isPlaying?.());
     page?.querySelectorAll?.(".sa-row").forEach((row) => {
-      row.classList?.toggle?.("sa-row-playing", Boolean(uri) && row.dataset?.uri === uri);
+      const current = Boolean(uri) && row.dataset?.uri === uri;
+      row.classList?.toggle?.("sa-row-playing", current);
+      const button = row.querySelector?.(".sa-play");
+      if (button) {
+        button.classList?.toggle?.("sa-paused-icon", current && playing);
+        const label = button.getAttribute?.("aria-label") || "";
+        button.setAttribute?.("aria-label", label.replace(/^(Play|Pause) /, current && playing ? "Pause " : "Play "));
+      }
     });
+    const main = page?.querySelector?.(".sa-seed-play");
+    if (main) {
+      const pause = listIsCurrent() && playing;
+      main.classList?.toggle?.("sa-paused-icon", pause);
+      main.setAttribute?.("aria-label", `${pause ? "Pause" : "Play"} soundalike list`);
+      main.setAttribute?.("title", `${pause ? "Pause" : "Play"} soundalike list`);
+    }
   }
 
   // The Spotify songs the page shows, in its order, each once.
@@ -2103,10 +2129,13 @@
               : `Search Spotify for ${result.title}`,
             onClick: (event) => {
               event.stopPropagation();
-              activate();
+              if (track?.uri === playingTrackUri()) Spicetify.Player.togglePlay();
+              else activate();
             },
           },
-          track?.uri ? "\u25B6" : "\u203A"
+          track?.uri ? React.createElement("svg", { viewBox: "0 0 24 24", "aria-hidden": true },
+            React.createElement("path", { className: "sa-icon-play", d: PLAY_PATH }),
+            React.createElement("path", { className: "sa-icon-pause", d: PAUSE_PATH })) : "\u203A"
         )
       ),
       React.createElement(
@@ -2188,6 +2217,7 @@
       ? React.createElement(Spicetify.ReactComponent.RightClickMenu, { menu }, child)
       : child;
     row.__soundalikeRoot.render(menu ? withNativeContext(interactiveRow) || child : child);
+    setTimeout(() => markPlayingRows(), 0);
   }
 
   function languageName(code) {
@@ -2840,8 +2870,13 @@
         .sa-kicker{color:var(--spice-subtext,#b3b3b3);font-size:12px;margin-bottom:2px}
         .sa-seed-title{font-size:clamp(24px,4vw,40px);font-weight:800;line-height:1.1}
         .sa-seed-artist{color:var(--spice-subtext,#b3b3b3);margin-top:2px}
-        .sa-seed-play{flex:none;width:52px;height:52px;margin-left:8px;border:0;border-radius:50%;background:var(--spice-button,#1ed760);color:#000;font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center;box-shadow:0 8px 16px rgba(0,0,0,.3)}
-        .sa-seed-play:hover{transform:scale(1.04)}
+        .sa-seed-play{flex:none;width:56px;height:56px;margin-left:8px;padding:0;border:0;border-radius:50%;background:var(--spice-button,#1ed760);color:#000;line-height:1;cursor:pointer;display:grid;place-items:center}
+        .sa-seed-play:hover{transform:scale(1.06)}
+        .sa-seed-play svg{width:24px;height:24px;fill:currentColor}
+        .sa-seed-play:hover{background:var(--spice-button-active,#3be477)}
+        .sa-icon-pause,.sa-paused-icon .sa-icon-play{display:none}
+        .sa-paused-icon .sa-icon-pause{display:block}
+        .sa-play svg{width:16px;height:16px;fill:currentColor}
         .sa-seed-play:focus-visible{outline:2px solid var(--spice-text,#fff);outline-offset:2px}
         .sa-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
         .sa-tag{background:rgba(255,255,255,.08);border-radius:999px;padding:4px 9px;color:var(--spice-subtext,#b3b3b3);font-size:12px}
@@ -2871,7 +2906,8 @@
         .sa-play{grid-area:1/1;display:none;width:30px;height:30px;border:0;border-radius:50%;background:transparent;color:var(--spice-text,#fff);font-size:15px;cursor:pointer}
         .sa-row-content:hover .sa-rank,.sa-row-content:focus-within .sa-rank{display:none}
         .sa-row-content:hover .sa-play,.sa-play:focus-visible{display:grid;place-items:center}
-        .sa-play:hover,.sa-play:focus-visible{background:var(--spice-button,#1ed760);color:#000;outline:none}
+        .sa-play:hover,.sa-play:focus-visible{background:transparent;color:var(--spice-text,#fff)}
+        .sa-play:focus-visible{outline:2px solid currentColor;outline-offset:2px}
         .sa-row-content:hover .sa-title,.sa-row-content:focus-visible .sa-title{color:var(--spice-text,#fff)}
         .sa-row.sa-row-playing .sa-title,.sa-row.sa-row-playing .sa-rank{color:var(--spice-button,#1ed760)}
         .sa-menu-loading{padding:8px 12px;color:var(--spice-subtext,#b3b3b3);white-space:nowrap}
@@ -2998,7 +3034,7 @@
           <div class="sa-seed-artist">${esc(seedArtists.join(", "))}</div>
         </div>
         ${state.seedUri
-          ? `<button class="sa-seed-play" type="button" title="Play ${esc(seedTrack?.name || "this song")}, then this list" aria-label="Play ${esc(seedTrack?.name || "this song")}, then this list">▶</button>`
+          ? `<button class="sa-seed-play" type="button" title="Play ${esc(seedTrack?.name || "this song")}, then this list" aria-label="Play ${esc(seedTrack?.name || "this song")}, then this list"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="sa-icon-play" d="${PLAY_PATH}"></path><path class="sa-icon-pause" d="${PAUSE_PATH}"></path></svg></button>`
           : ""}
       </div>
       ${resultTabsMarkup(state)}
@@ -3109,7 +3145,11 @@
     nativeContextChain = undefined;
     bindResultTabs(page);
     const seedPlay = page.querySelector(".sa-seed-play");
-    if (seedPlay) seedPlay.onclick = () => playSeedSong(state);
+    if (seedPlay) seedPlay.onclick = () => {
+      if (listIsCurrent()) Spicetify.Player.togglePlay();
+      else return playSeedSong(state);
+    };
+    markPlayingRows(page);
     const offer = page.querySelector(".sa-best-offer");
     if (offer) offer.onclick = requestOfferedBestMatches;
     const languageToggle = page.querySelector(".sa-language-toggle");
@@ -3761,6 +3801,7 @@
     return;
   }
 
+  Spicetify.Player?.addEventListener?.("onplaypause", () => markPlayingRows());
   Spicetify.Platform.History.listen(onHistoryChange);
   Spicetify.Player?.addEventListener?.("songchange", () => {
     markPlayingRows();
