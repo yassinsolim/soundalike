@@ -1,12 +1,32 @@
+<div align="center">
+
+<img src="docs/logo.png" alt="Soundalike logo" width="112" height="112">
+
 # Soundalike
 
-Find songs that sound like a track you already enjoy.
+**Find songs that sound like a track you already enjoy.**
 
-[Try the web app](https://soundalike.yassin.app) |
-[Install it in Spotify](integrations/spicetify/README.md) |
-[Help evaluate matches](https://soundalike.yassin.app/evaluate) |
-[Report a bug](https://github.com/yassinsolim/soundalike/issues/new?labels=bug&title=Bug%3A%20) |
-[Request a feature](https://github.com/yassinsolim/soundalike/issues/new?labels=enhancement&title=Feature%20request%3A%20)
+Open-source, audio-based music discovery across a 999,293-song index.<br>
+Use it inside Spotify, in your browser, or on your phone.
+
+[![CI](https://github.com/yassinsolim/soundalike/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/yassinsolim/soundalike/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/github/license/yassinsolim/soundalike?color=blue)](LICENSE)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![Spicetify extension](https://img.shields.io/badge/Spicetify-extension-1DB954?logo=spotify&logoColor=white)](integrations/spicetify/README.md)
+[![Web app](https://img.shields.io/badge/web%20app-soundalike.yassin.app-8B5CF6)](https://soundalike.yassin.app)
+
+[**Try the web app**](https://soundalike.yassin.app) ·
+[Install in Spotify](integrations/spicetify/README.md) ·
+[Help evaluate matches](https://soundalike.yassin.app/evaluate) ·
+[Report a bug](https://github.com/yassinsolim/soundalike/issues/new?labels=bug&title=Bug%3A%20) ·
+[Request a feature](https://github.com/yassinsolim/soundalike/issues/new?labels=enhancement&title=Feature%20request%3A%20) ·
+[Contribute](CONTRIBUTING.md)
+
+<img src="docs/spicetify-results.png" alt="Soundalike best matches inside Spotify" width="860">
+
+</div>
+
+## About
 
 I started Soundalike as a small university project and kept rebuilding it as
 Spotify's APIs changed and the catalog grew. Today it is an open-source music
@@ -25,8 +45,6 @@ indexes, and the research code used to test new ranking ideas.
 
 I am still improving the recommendations. If you try it, specific examples of
 great or poor matches are always useful.
-
-![Soundalike best matches inside Spotify](docs/spicetify-results.png)
 
 ## Choose how you want to use it
 
