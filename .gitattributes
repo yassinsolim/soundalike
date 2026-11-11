@@ -4,6 +4,7 @@ webapp/evaluate/* -text -whitespace
 webapp/evaluate-v5/* -text -whitespace
 webapp/evaluate-v4/* -text -whitespace
 webapp/evaluate-pacing-v3/* -text -whitespace
+webapp/evaluate-v1/index.html text eol=crlf
 webapp/evaluate-v1/protocol.json -text -whitespace
 webapp/evaluate-v1/served-lists.json -text -whitespace
 webapp/evaluate-semantic-v1/* -text -whitespace
