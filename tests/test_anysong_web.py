@@ -96,12 +96,11 @@ def test_anysong_language_switch_covers_best_same_vibe_and_sounds_like():
     assert "hidden_sounds" not in SCRIPT
 
 
-def test_anysong_best_caption_puts_covers_first_then_the_scene():
+def test_anysong_best_caption_puts_covers_first_then_the_listeners():
     assert (
-        '{key: "best", label: "Best matches", blurb: "Likely covers, samples and shared '
-        'melodies first, then similar-sounding songs by related artists from the same '
-        'scene."}'
-    ) in PAGE
+        '"Likely covers, samples and shared melodies first, then similar-sounding songs '
+        "by artists this song's listeners also play.\""
+    ) in SCRIPT
 
 
 def test_anysong_same_vibe_tab_follows_best_and_needs_a_vibe_list():

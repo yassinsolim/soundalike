@@ -587,7 +587,7 @@ test("the one search bar suggests any song on Deezer and opens the pick", async 
   assert.equal(params.get("id"), String(EIGHT_PM_ID));
   assert.equal(params.get("k"), "20");
   assert.equal(params.get("lang"), "same");
-  assert.equal(params.get("policy"), "best-vibe-sounds-v2");
+  assert.equal(params.get("policy"), "best-vibe-sounds-v3");
   assert.equal(page.text(".seed h2"), "8PM");
   assert.equal(page.document.querySelector(".seed .cover img").getAttribute("src"), COVER);
   assert.deepEqual(page.texts("#matches .t"), ["n.h.i.e.", "AHHH HA"]);
@@ -736,7 +736,7 @@ test("Best matches ask for one language and say what was hidden", async () => {
 
   assert.equal(
     page.requests[0],
-    `/api/anysong/similar?id=${AMANGA_ID}&k=20&lang=same&policy=best-vibe-sounds-v2`,
+    `/api/anysong/similar?id=${AMANGA_ID}&k=20&lang=same&policy=best-vibe-sounds-v3`,
   );
   assert.equal(page.text("#matchblurb"), BEST_CAPTION);
   const box = page.document.querySelector("#language");

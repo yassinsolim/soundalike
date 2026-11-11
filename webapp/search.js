@@ -11,7 +11,7 @@
   const maxCacheEntries = 64;
   const bestMatchesTimeoutMs = 30000;
   const bestMatchesRetries = 3;
-  const bestMatchesPolicy = "best-vibe-sounds-v2";
+  const bestMatchesPolicy = "best-vibe-sounds-v3";
   const resultTabs = [
     {
       key: "best",
