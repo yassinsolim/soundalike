@@ -1,0 +1,68 @@
+name: Bad match
+description: A seed song returned results that do not sound alike.
+title: "Bad match: "
+labels: ["bad match"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Specific examples are the most useful way to improve results. One seed
+        song per report, please.
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where did you use Soundalike?
+      options:
+        - Spotify (Spicetify extension)
+        - soundalike.yassin.app
+        - Mobile app
+        - Local app or command line
+    validations:
+      required: true
+  - type: input
+    id: seed
+    attributes:
+      label: Seed song
+      description: Title and artist. A Spotify link helps too.
+      placeholder: "Heartbeat - Childish Gambino, https://open.spotify.com/track/..."
+    validations:
+      required: true
+  - type: dropdown
+    id: tab
+    attributes:
+      label: Which list?
+      options:
+        - Best matches
+        - Same vibe
+        - Sounds like
+        - Not sure or not shown
+    validations:
+      required: true
+  - type: textarea
+    id: results
+    attributes:
+      label: Results that felt wrong
+      description: List them with their position, for example "2. Song - Artist".
+    validations:
+      required: true
+  - type: checkboxes
+    id: problems
+    attributes:
+      label: What felt wrong?
+      options:
+        - label: Tempo or energy
+        - label: Mood
+        - label: Vocals or vocal style
+        - label: Genre or scene
+        - label: Language
+        - label: Instruments or production
+  - type: textarea
+    id: details
+    attributes:
+      label: Anything else?
+      description: Songs you expected instead, or what makes the seed distinctive.
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: Optional. Drag an image here.

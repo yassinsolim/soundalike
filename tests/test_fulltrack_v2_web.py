@@ -82,7 +82,7 @@ def test_v1_v2_routes_state_submission_and_blob_namespaces_are_isolated():
     rewrites = {item["source"]: item["destination"] for item in config["rewrites"]}
     assert rewrites["/evaluate-v2"] == "/evaluate-v2/index.html"
     assert rewrites["/evaluate-v1"] == "/evaluate-v1/index.html"
-    assert config["functions"]["api/ratings.js"]["maxDuration"] == 15
+    assert config["functions"]["api/ratings.js"]["maxDuration"] == 60
     assert config["functions"]["api/ratings-v2.js"]["maxDuration"] == 15
 
     v1_html = (V1 / "index.html").read_text(encoding="utf-8")

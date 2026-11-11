@@ -1,0 +1,54 @@
+name: Bug report
+description: Something is broken or behaves unexpectedly.
+title: "Bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Remove access tokens, credentials and personal information from
+        anything you paste below.
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where does it happen?
+      options:
+        - Spotify (Spicetify extension)
+        - soundalike.yassin.app
+        - Mobile app
+        - Local app or command line
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Include the complete error message if there is one.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Right-click a song and choose Find soundalikes
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Operating system, and Spotify and Spicetify versions if relevant.
+      placeholder: "Windows 11, Spotify 1.2.x, Spicetify 2.x"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Optional.
