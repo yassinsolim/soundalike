@@ -45,10 +45,35 @@ const runtimeBase =
   "https://raw.githubusercontent.com/yassinsolim/soundalike/";
 const runtimeCdnBase =
   "https://cdn.jsdelivr.net/gh/yassinsolim/soundalike@";
-const bundledRuntime = Buffer.from(execFileSync(
-  "git",
-  ["show", "52ee71dfea4503fd1619762613b0d795815bc3e8:integrations/spicetify/soundalike.js"],
-  { cwd: new URL("../..", import.meta.url) },
+const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
+const signerPath = fileURLToPath(new URL(
+  "../../integrations/spicetify/tools/sign-release.cjs",
+  import.meta.url,
+));
+const canonicalRepository = "https://github.com/yassinsolim/soundalike.git";
+
+// Published runtimes are pinned to commits that can live only in pull request
+// refs, which ordinary clones and CI checkouts do not fetch.
+function showPinned(commit, file) {
+  const spec = `${commit}:${file}`;
+  try {
+    return execFileSync("git", ["show", spec], {
+      cwd: repoRoot,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+  } catch {
+    execFileSync(
+      "git",
+      ["fetch", "--quiet", "--no-tags", canonicalRepository, commit],
+      { cwd: repoRoot, stdio: "ignore" },
+    );
+    return execFileSync("git", ["show", spec], { cwd: repoRoot });
+  }
+}
+
+const bundledRuntime = Buffer.from(showPinned(
+  "52ee71dfea4503fd1619762613b0d795815bc3e8",
+  "integrations/spicetify/soundalike.js",
 ));
 
 function canonicalJson(value) {
@@ -456,14 +481,9 @@ test("committed stable feed verifies against the production key and runtime", ()
     ),
     true,
   );
-  const runtime = Buffer.from(execFileSync(
-    "git",
-    [
-      "show",
-      `${new URL(stableManifest.payload.runtime.url).pathname.split("/")[3]}` +
-        ":integrations/spicetify/soundalike.js",
-    ],
-    { cwd: new URL("../..", import.meta.url) },
+  const runtime = Buffer.from(showPinned(
+    new URL(stableManifest.payload.runtime.url).pathname.split("/")[3],
+    "integrations/spicetify/soundalike.js",
   ));
   const digest = createHash("sha256").update(runtime).digest();
   assert.equal(stableManifest.payload.runtime.sha256, digest.toString("hex"));
@@ -481,55 +501,84 @@ test("committed stable feed verifies against the production key and runtime", ()
 });
 
 test("release signer enforces matching runtime and monotonic versions", () => {
-  const root = fileURLToPath(new URL("../..", import.meta.url));
-  const releaseDirectory = fs.mkdtempSync(path.join(
-    root,
-    "integrations",
-    "spicetify",
-    "releases",
-    "signer-test-",
-  ));
+  // Sign inside a throwaway repository so the test does not depend on the
+  // published release or on local changes to the runtime.
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "soundalike-signer-"));
   const keyDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "soundalike-signing-"));
-  const output = path.join(releaseDirectory, "stable.json");
+  const git = (...args) => execFileSync("git", [
+    "-c", "user.name=Signer Test",
+    "-c", "user.email=signer-test@example.invalid",
+    "-c", "commit.gpgsign=false",
+    "-c", "core.autocrlf=false",
+    ...args,
+  ], { cwd: scratch, stdio: "pipe" }).toString().trim();
+  const runtimePath = "integrations/spicetify/soundalike.js";
+  const runtimeFile = path.join(scratch, ...runtimePath.split("/"));
+  const output = path.join(scratch, "integrations", "spicetify", "releases", "stable.json");
   const keyFile = path.join(keyDirectory, "private.pem");
-  fs.writeFileSync(
-    keyFile,
-    signingKey.privateKey.export({ type: "pkcs8", format: "pem" }),
-  );
-  fs.writeFileSync(output, JSON.stringify({
-    payload: {
-      sequence: stableManifest.payload.sequence - 1,
-      runtime: { version: "2.1.0" },
-    },
-  }));
-  const command = [
-    "integrations/spicetify/tools/sign-release.cjs",
-    "--runtime-file",
-    "integrations/spicetify/soundalike.js",
-    "--runtime-url",
-    stableManifest.payload.runtime.url,
-    "--version",
-    stableManifest.payload.runtime.version,
-    "--sequence",
-    String(stableManifest.payload.sequence),
-    "--out",
-    output,
-    "--key",
-    keyFile,
-  ];
+  const failure = (pattern) => (error) => {
+    assert.match(String(error.stderr), pattern);
+    return true;
+  };
   try {
-    execFileSync(process.execPath, command, { cwd: root });
+    fs.mkdirSync(path.join(scratch, "integrations", "spicetify", "tools"), { recursive: true });
+    fs.mkdirSync(path.dirname(output), { recursive: true });
+    fs.copyFileSync(
+      signerPath,
+      path.join(scratch, "integrations", "spicetify", "tools", "sign-release.cjs"),
+    );
+    const runtime = 'const RUNTIME_SEMANTIC_VERSION = "3.0.0";\n';
+    fs.writeFileSync(runtimeFile, runtime);
+    git("init", "--quiet");
+    git("add", ".");
+    git("commit", "--quiet", "-m", "release");
+    const commit = git("rev-parse", "HEAD");
+    fs.writeFileSync(keyFile, signingKey.privateKey.export({ type: "pkcs8", format: "pem" }));
+    fs.writeFileSync(output, JSON.stringify({
+      payload: { sequence: 4, runtime: { version: "2.9.0" } },
+    }));
+    const signRelease = ({ version = "3.0.0", sequence = 5 } = {}) => execFileSync(
+      process.execPath,
+      [
+        "integrations/spicetify/tools/sign-release.cjs",
+        "--runtime-file", runtimePath,
+        "--runtime-url", `${runtimeBase}${commit}/${runtimePath}`,
+        "--version", version,
+        "--sequence", String(sequence),
+        "--out", output,
+        "--key", keyFile,
+      ],
+      { cwd: scratch, stdio: "pipe" },
+    );
+
+    signRelease();
     const signed = JSON.parse(fs.readFileSync(output, "utf8"));
-    assert.equal(signed.payload.sequence, stableManifest.payload.sequence);
+    const digest = createHash("sha256").update(runtime).digest();
+    assert.equal(signed.payload.sequence, 5);
+    assert.equal(signed.payload.runtime.version, "3.0.0");
+    assert.equal(signed.payload.runtime.sha256, digest.toString("hex"));
+    assert.equal(
+      verify(
+        null,
+        Buffer.from(canonicalJson(signed.payload)),
+        signingKey.publicKey,
+        Buffer.from(signed.signature, "base64"),
+      ),
+      true,
+    );
+
+    assert.throws(() => signRelease(), failure(/increase monotonically/));
     assert.throws(
-      () => execFileSync(process.execPath, command, {
-        cwd: root,
-        stdio: "pipe",
-      }),
-      /Command failed/,
+      () => signRelease({ version: "3.0.1", sequence: 6 }),
+      failure(/does not match the runtime source/),
+    );
+    fs.writeFileSync(runtimeFile, `${runtime}// local edit\n`);
+    assert.throws(
+      () => signRelease({ sequence: 6 }),
+      failure(/does not match the immutable commit/),
     );
   } finally {
-    fs.rmSync(releaseDirectory, { recursive: true, force: true });
+    fs.rmSync(scratch, { recursive: true, force: true });
     fs.rmSync(keyDirectory, { recursive: true, force: true });
   }
 });

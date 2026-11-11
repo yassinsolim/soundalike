@@ -350,8 +350,9 @@ Before opening a new issue, check the
 [existing issues](https://github.com/yassinsolim/soundalike/issues) in case
 someone has already reported it.
 
-- [Report a bug](https://github.com/yassinsolim/soundalike/issues/new?labels=bug&title=Bug%3A%20)
-- [Request a feature](https://github.com/yassinsolim/soundalike/issues/new?labels=enhancement&title=Feature%20request%3A%20)
+- [Report a bad match](https://github.com/yassinsolim/soundalike/issues/new?template=bad_match.yml)
+- [Report a bug](https://github.com/yassinsolim/soundalike/issues/new?template=bug_report.yml)
+- [Request a feature](https://github.com/yassinsolim/soundalike/issues/new?template=feature_request.yml)
 - [Ask a question](https://github.com/yassinsolim/soundalike/issues/new?labels=question&title=Question%3A%20)
 
 For recommendation-quality reports, include:
@@ -371,6 +372,9 @@ You can also help by completing a few comparisons in the public
 [listening evaluator](https://soundalike.yassin.app/evaluate).
 
 ## Development
+
+Contributions are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers setup,
+the checks CI runs, and how pull requests are reviewed.
 
 Install the development dependencies:
 
@@ -400,7 +404,8 @@ npm --prefix mobile test
 
 Keep changes focused and add tests for behavior changes. For a large feature or
 ranking experiment, open an issue first so the approach and evaluation plan can
-be discussed before implementation.
+be discussed before implementation. Every pull request runs the same checks in
+GitHub Actions, and they must pass before it can be merged.
 
 The main directories are:
 

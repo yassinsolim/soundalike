@@ -1,7 +1,9 @@
 import numpy as np
-import torch
+import pytest
 
-from soundalike.anysong.embedders import SampleIDEmb
+torch = pytest.importorskip("torch")
+
+from soundalike.anysong.embedders import SampleIDEmb  # noqa: E402
 
 
 class GlobalMaxNorm(torch.nn.Module):

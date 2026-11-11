@@ -248,10 +248,13 @@ def test_submission_is_manual_consent_gated_and_privacy_bounded():
 def test_blob_dependency_route_and_firewall_guidance_are_present():
     package = _load(ROOT / "webapp" / "package.json")
     lock = _load(ROOT / "webapp" / "package-lock.json")
-    assert package["dependencies"] == {"@vercel/blob": "2.6.1"}
+    assert package["dependencies"] == {
+        "@vercel/blob": "2.6.1",
+        "@vercel/functions": "3.9.5",
+    }
     assert lock["packages"]["node_modules/@vercel/blob"]["version"] == "2.6.1"
     config = _load(ROOT / "webapp" / "vercel.json")
-    assert config["functions"]["api/ratings.js"]["maxDuration"] == 15
+    assert config["functions"]["api/ratings.js"]["maxDuration"] == 60
     deploy_docs = (ROOT / "webapp" / "DEPLOY.md").read_text(encoding="utf-8")
     assert "private Vercel Blob store" in deploy_docs
     assert "`BLOB_STORE_ID`" in deploy_docs

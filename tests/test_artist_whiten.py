@@ -4,6 +4,7 @@ artist-aware training helpers (pure logic, no GPU/network)."""
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from soundalike.ml.deepvibe import DeepVibeIndex, DeepVibeRecommender
 from soundalike.audio.vibe import FEATURE_NAMES, VibeFeatures
@@ -57,6 +58,7 @@ def test_recommend_runs_with_whitening_and_excludes():
 
 
 def test_pk_batches_shape():
+    pytest.importorskip("torch")
     from soundalike.ml.train_artist import _pk_batches
 
     labels = np.array([i // 5 for i in range(200)])  # 40 artists, 5 songs each
@@ -70,6 +72,7 @@ def test_pk_batches_shape():
 
 
 def test_pk_batches_empty_when_too_few_artists():
+    pytest.importorskip("torch")
     # Regression: fewer eligible artists than p_artists yields no batches (the
     # trainer guards this by reducing p_artists / raising a clear error).
     from soundalike.ml.train_artist import _pk_batches
@@ -79,6 +82,7 @@ def test_pk_batches_empty_when_too_few_artists():
 
 
 def test_supcon_loss_rewards_grouping():
+    pytest.importorskip("torch")
     import torch
 
     from soundalike.ml.train_artist import _supcon_loss

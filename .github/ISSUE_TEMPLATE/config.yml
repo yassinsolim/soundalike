@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security problem
+    url: https://github.com/yassinsolim/soundalike/security/advisories/new
+    about: Report vulnerabilities privately instead of opening a public issue.
+  - name: Rate comparisons in the listening evaluator
+    url: https://soundalike.yassin.app/evaluate
+    about: Help measure which results sound most alike.
