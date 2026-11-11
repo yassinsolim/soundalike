@@ -96,7 +96,7 @@ BEST_HEAD_BARE = 1
 BEST_HEAD_EVIDENCE_ONLY = True
 # Sound match (``sound_match``): sonic (MuQ-MuLan) score quantiles 0, 5, ..., 100 % over every song shown in the top
 # 20 of Best matches, Same vibe or Sounds like for the development seeds: 62,362 songs from 1,474 seeds with the
-# served lists (grow/qa/head_dev.py calib, 2026-11-12). A typical seed's median shown song scores 0.419 (50).
+# served lists (grow/qa/head_dev.py calib, 2026-11-11). A typical seed's median shown song scores 0.419 (50).
 MATCH_QUANTILES = (-0.4515, 0.1873, 0.2729, 0.3209, 0.3498, 0.3695, 0.3834, 0.3933, 0.4023, 0.4106, 0.4177, 0.4248,
                    0.4312, 0.4374, 0.4437, 0.4500, 0.4563, 0.4628, 0.4701, 0.4784, 0.5354)
 # "best" list: reciprocal-rank fusion of the channels' song lists, score = sum(w / (FUSE_K + rank)).

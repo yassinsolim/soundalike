@@ -1916,9 +1916,9 @@ Bryson Tiller "Whatever She Wants" now keeps three audio matches on top, with PA
 Roy Woods, Tory Lanez, DeJ Loaf and Blxst. Runtime 2.10.1 changes the cache policy to v7, so Spotify drops lists saved
 under the longer heads.
 
-## Best's audio head only with evidence (pre-registered 2026-11-12, before any held-out result)
+## Best's audio head only with evidence (pre-registered 2026-11-11, before any held-out result)
 
-**Why.** Feedback on 2026-11-12:
+**Why.** Feedback on 2026-11-11:
 - Childish Gambino "Heartbeat": Best's #2 was a loud, harsh electronic song (Deichkind). It sat there only because the
   head always keeps three audio-fusion songs. Its samples score (0.284) is below the calibrated evidence (0.302).
 - KIRBS "Follow My Lead" and trxy "icantbelieveiletyougetaway": Same vibe and Sounds like beat Best.
@@ -1934,7 +1934,7 @@ evidence in it.
 
 **Selection** on the development seeds and benchmarks, in two rounds (`grow/qa/head_dev.py`, out-of-fold):
 - Rule: the highest Best ListenBrainz hit rate with each relationship benchmark at most 0.05 below the served lists.
-  This is the trade-off accepted on 2026-11-12.
+  This is the trade-off accepted on 2026-11-11.
 - Round 1 (no head without evidence) cost covers about 0.10, so round 2 kept one or two songs.
 
 | Variant: head without evidence; with evidence | Mean head | Best ListenBrainz | HR@10 change vs served (covers / samples / samples reverse) |
@@ -1970,7 +1970,7 @@ seeds; the benchmarks' held-out split.
 **Fallback, fixed now.** If the chosen variant fails only rule 2, "1; down to the last, at least 1" is evaluated once
 under the same rules. Nothing else is tried on held-out data.
 
-### Result: rules 1 to 3 passed (2026-11-12)
+### Result: rules 1 to 3 passed (2026-11-11)
 
 Run once, after the pre-registration (ff96a3b). All 32 checks passed (`grow/qa/verdict_head2.py`); the fallback was not
 needed.
