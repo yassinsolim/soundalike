@@ -310,7 +310,10 @@ def test_sounds_boost_lifts_the_seed_artist_scene(tmp_path):
 def test_no_best_list_without_fused_channels(svc):
     res = {"query": {"id": 1, "artist": "A", "title": "B", "source": "catalog"}, "raw": {"sonic": [(3, 0.9)]},
            "timings_ms": {}}
-    assert list(svc._view(res, k=5, dedupe=True, cached=False)["results"]) == ["sounds", "sonic"]
+    results = svc._view(res, k=5, dedupe=True, cached=False)["results"]
+    # Without melody or samples lists there is no audio head, so the main list is Sounds like's songs.
+    assert list(results) == ["sounds", "main", "sonic"]
+    assert [x["id"] for x in results["main"]] == [x["id"] for x in results["sounds"]] == [3]
 
 
 def test_sounds_list_filters_language_keeps_one_song_per_artist_and_adds_tempo(tmp_path):
@@ -440,6 +443,70 @@ def test_listener_best_items_say_whether_audio_or_listeners_placed_them(tmp_path
     assert all("basis" not in x for x in lists(scene=False)["best"])
     del res["listener"]
     assert lists()["best"] and all("basis" not in x for x in lists()["best"])
+
+
+def test_main_list_is_the_audio_head_then_sound_and_listener_picks_get_their_own_list(tmp_path):
+    # As above, with the shipped evidence-only head: 5's melody score is cover evidence (best_head_standout=0). Daft
+    # Punk (10) is the seed's artist, Third has a sonic song (7) and a scene song (8), and Fifth's song (9) is German.
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), LISTENER_META, scene=_listener_scene_table(),
+                      copy_score=None, ranker=_stump("fwd", 0.0, 0.0), scene_params=SceneParams(head_min=1),
+                      languages=FakeLanguages({1: "en", 9: "de"}), best_head_standout=0.0,
+                      tempo=TempoTable(np.array([5, 7, 8, 10]), np.array([120, 120, 121, 120], np.float32)))
+    son = {3: 0.2, 5: 0.45, 7: 0.44, 8: 0.40, 9: 0.43, 10: 0.5}
+    res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog", "artist_id": 100},
+           "raw": {"melody": [(5, -1.0), (3, -2.0)], "samples": [(3, 0.1)],
+                   "sonic": [(10, 0.5), (5, 0.45), (7, 0.44)]},
+           "related": [], "timings_ms": {}, "vibe": {"muq": {10: 0.5, 5: 0.45, 7: 0.44, 3: 0.2}, "bpm": 120.0},
+           "listener": {"p": {3: 0.2, 5: 0.1, 7: 0.9, 8: 0.8, 9: 0.95, 10: 0.99}, "son": son, "scene": [8, 9]}}
+
+    def lists(**kw):
+        return svc._view(res, k=10, dedupe=True, cached=False, **kw)["results"]
+
+    def ids(r, name):
+        return [x["id"] for x in r[name]]
+
+    r = lists()
+    before = {name: r[name] for name in ("best", "vibe", "sounds")}
+    # Main: the cover (5), then Sounds like's order without it, one song per artist.
+    assert ids(r, "sounds") == [7, 10, 5]
+    assert [(x["id"], x["basis"]) for x in r["main"]] == [(5, "audio"), (7, "sound"), (10, "sound")]
+    assert r["main"][0]["ranks"] == {"melody": 1, "sonic": 2} and r["main"][1]["bpm"] == 120.0
+    assert [x["score"] for x in r["main"]] == [round(1.0 / (api.FUSE_K + i), 5) for i in (1, 2, 3)]
+    assert [x["match"] for x in r["main"]] == [api.sound_match(son[i]) for i in (5, 7, 10)]
+    # Listeners also play: other artists' songs by the listener blend, one per artist (Third's 7, not 8), never the
+    # seed artist's own (10); the German song only with every language.
+    assert [(x["id"], x["basis"]) for x in r["listeners"]] == [(7, "listeners"), (5, "listeners"), (3, "listeners")]
+    assert r["listeners"][-1]["ranks"] == {"melody": 2, "samples": 1}
+    assert 9 in ids(lists(lang_mode="all"), "listeners")
+    # Sound alone after the head; the main and listener options leave the other lists alone.
+    svc.main_listener_weight, svc.listeners_sound_weight = 0.0, 5.0
+    r = lists()
+    assert ids(r, "main") == [5, 10, 7] and {name: r[name] for name in before} == before
+    # The "all" pool adds Best's other candidates that sound alike enough: Third's scene song 8 at match 83, not
+    # Some Choir's 3 (match 6).
+    son[8] = 0.46
+    assert api.sound_match(son[8]) == 83 and api.sound_match(son[3]) == 6
+    svc.main_pool = "all"
+    assert ids(lists(), "main") == [5, 10, 8]
+    svc.main_match_floor = 90
+    assert ids(lists(), "main") == [5, 10, 7]
+    svc.main_pool, svc.main_match_floor = api.MAIN_POOL, api.MAIN_MATCH_FLOOR
+    svc.main_listener_weight = api.MAIN_LISTENER_WEIGHT
+    # With the shipped standout rule 5 is no likely cover: no evidence, so no head, unlike Best's bare head (3).
+    svc.best_head_standout = api.BEST_HEAD_STANDOUT
+    r = lists()
+    assert ids(r, "best")[0] == 3 and ids(r, "main") == ids(r, "sounds") == [7, 10, 5]
+    svc.main_head_bare = 1
+    assert [(x["id"], x["basis"]) for x in lists()["main"]][:2] == [(3, "audio"), (7, "sound")]
+    svc.main_head_bare = api.MAIN_HEAD_BARE
+    # Without listener data: the head, then Sounds like's order, and no Listeners also play list.
+    r = lists(scene=False)
+    assert "listeners" not in r and ids(r, "main") == ids(r, "sounds") == [10, 5, 7]
+    del res["listener"]
+    r = lists()
+    assert "listeners" not in r and ids(r, "main") == ids(r, "sounds")
+    with pytest.raises(ValueError):
+        api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, main_pool="every")
 
 
 class SonicEngine(FakeEngine):

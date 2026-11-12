@@ -15,8 +15,12 @@ GET endpoints (JSON):
   ``basis``, and its absence means audio only. With a tempo table (``--tempo``), ``vibe`` is the Same vibe list:
   Best matches that share the seed's tempo and sound, one song per artist (``samevibe``). ``sounds`` is the Sounds
   like list: the sonic channel with Best's language filter, one song per artist, each with its catalog ``bpm`` when
-  known. Every listed song with a sound score also carries ``match``: how alike it sounds to the seed, 0 to 100, the
-  percentile of its sound score among the songs these lists show for typical seeds (``sound_match``)
+  known. ``main`` and ``listeners`` serve a two-tab layout: ``main`` is the audio head, then the songs that sound
+  most alike with what the seed's listeners play blended in, one song per artist (``basis`` ``audio`` or
+  ``sound``); ``listeners``, only with the listener ranker, is other artists' songs that the seed's listeners also
+  play, one song per artist. Every listed song with a sound score also carries ``match``: how alike it sounds to the
+  seed, 0 to 100, the percentile of its sound score among the songs these lists show for typical seeds
+  (``sound_match``)
 - ``/api/anysong/similar?title=<title>&artist=<artist>&k=20``  the same for a song named by title and artist
   (``AnySong.resolve``): the catalog release of that song, else the first matching Deezer search hit
 - ``/api/anysong/similar?isrc=<ISRC>&title=<title>&artist=<artist>``  the same for the recording with that ISRC
@@ -97,6 +101,17 @@ BEST_HEAD_WINDOW = 20
 # songs; with BEST_HEAD_EVIDENCE_ONLY, a head with evidence holds only those songs (``scene.audio_head``).
 BEST_HEAD_BARE = 1
 BEST_HEAD_EVIDENCE_ONLY = True
+# Two-tab layout, served next to the lists above. Main: the audio head (Best's rules, but MAIN_HEAD_BARE songs when
+# none has cover or sample evidence), then songs by z(sound score) + MAIN_LISTENER_WEIGHT * z(listener logit), one per
+# artist. MAIN_POOL "sonic" takes them from the sonic list; "all" adds Best's other candidates (melody, samples and
+# scene songs) whose sound match is at least MAIN_MATCH_FLOOR. Without listener data: the head, then Sounds like's
+# order. Listeners also play (listener data only): Best's candidates by other artists than the seed's, by
+# z(listener logit) + LISTENERS_SOUND_WEIGHT * z(sound score), one per artist.
+MAIN_LISTENER_WEIGHT = 2.0
+MAIN_POOL = "sonic"
+MAIN_MATCH_FLOOR = 50
+MAIN_HEAD_BARE = 0
+LISTENERS_SOUND_WEIGHT = 0.5
 # Sound match (``sound_match``): sonic (MuQ-MuLan) score quantiles 0, 5, ..., 100 % over every song shown in the top
 # 20 of Best matches, Same vibe or Sounds like for the development seeds: 62,362 songs from 1,474 seeds with the
 # served lists (grow/qa/head_dev.py calib, 2026-11-11). A typical seed's median shown song scores 0.419 (50).
@@ -371,6 +386,9 @@ class AnySong:
                  best_artist_gap: int = BEST_ARTIST_GAP, best_artist_once: int = BEST_ARTIST_ONCE,
                  best_head_standout: float = BEST_HEAD_STANDOUT, best_head_window: int = BEST_HEAD_WINDOW,
                  best_head_bare: int = BEST_HEAD_BARE, best_head_evidence_only: bool = BEST_HEAD_EVIDENCE_ONLY,
+                 main_listener_weight: float = MAIN_LISTENER_WEIGHT, main_pool: str = MAIN_POOL,
+                 main_match_floor: float = MAIN_MATCH_FLOOR, main_head_bare: int = MAIN_HEAD_BARE,
+                 listeners_sound_weight: float = LISTENERS_SOUND_WEIGHT,
                  stems: stemlib.StemStore | None = None, dissector: stemlib.Dissector | None = None,
                  catalog_previews: str | Path | None = None):
         self.engine, self.deezer, self.meta, self.keep_previews = engine, deezer, meta, keep_previews
@@ -397,6 +415,11 @@ class AnySong:
         self.best_artist_gap, self.best_artist_once = best_artist_gap, best_artist_once
         self.best_head_standout, self.best_head_window = best_head_standout, best_head_window
         self.best_head_bare, self.best_head_evidence_only = best_head_bare, best_head_evidence_only
+        if main_pool not in ("sonic", "all"):
+            raise ValueError(f"main_pool must be 'sonic' or 'all', not {main_pool!r}")
+        self.main_listener_weight, self.main_pool = main_listener_weight, main_pool
+        self.main_match_floor, self.main_head_bare = main_match_floor, main_head_bare
+        self.listeners_sound_weight = listeners_sound_weight
         self._artist_tracks = listener.ArtistTracks(scene) if self.ranker is not None else None
         self._sonic_core: np.ndarray | None = None
         self.learn = learn
@@ -986,8 +1009,8 @@ class AnySong:
         if scene_state == "on" and res.get("listener") is not None:
             keep = (lambda item: self._item_language(item) in {"unknown", language}) \
                 if lang_mode == "same" and language != "unknown" and self.languages is not None else None
-            best, vibe, sounds = self._listener_lists(res, filtered, artists, profile, qkey, keep, language,
-                                                      lang_mode, k, dedupe)
+            best, vibe, sounds, main, listeners = self._listener_lists(res, filtered, artists, profile, qkey, keep,
+                                                                       language, lang_mode, k, dedupe)
         else:
             fused = rank(filtered)
             best = []
@@ -998,11 +1021,16 @@ class AnySong:
             if res.get("vibe") is not None and "sonic" in filtered:
                 vibe = self._same_vibe(res["vibe"], filtered, [key for key, _, _ in fused], language, lang_mode, k)
             sounds = self._sounds(filtered, k, profile, artists)
+            main, listeners = self._main_without_listeners(filtered, profile, artists, k), []
         lists = {"best": best} if best else {}
         if vibe:
             lists["vibe"] = vibe
         if sounds:
             lists["sounds"] = sounds
+        if main:
+            lists["main"] = main
+        if listeners:
+            lists["listeners"] = listeners
         sound_of = {int(tid): float(score) for tid, score in res["raw"].get("sonic", ())}
         sound_of |= (res.get("vibe") or {}).get("muq") or {}
         sound_of |= (res.get("listener") or {}).get("son") or {}
@@ -1016,14 +1044,18 @@ class AnySong:
 
     def _listener_lists(self, res: dict, filtered: dict[str, dict[Hashable, dict]], artists: dict[Hashable, int | None],
                         profile, qkey, keep: Callable[[dict], bool] | None, language: str, lang_mode: str, k: int,
-                        dedupe: bool) -> tuple[list[dict], list[dict], list[dict]]:
-        """Best matches, Same vibe and Sounds like with the listener ranker (``res["listener"]``, from ``_listener``).
+                        dedupe: bool) -> tuple[list[dict], list[dict], list[dict], list[dict], list[dict]]:
+        """Best matches, Same vibe, Sounds like, main and Listeners also play with the listener ranker
+        (``res["listener"]``, from ``_listener``).
 
         Best: the audio head (``scene.audio_head``, likely covers and samples), then every other candidate, the channel
         lists' songs and the scene candidates, by z(listener logit) + ``best_sound_weight`` * z(sound score), then the
         per-artist caps. Sounds like: the sonic list by z(sound score) + ``sounds_listener_weight`` * z(listener logit),
-        one song per artist. Same vibe: ``samevibe.same_vibe`` over those two orders. Songs by the seed's own artist
-        get the median listener logit, so sound alone places them.
+        one song per artist. Same vibe: ``samevibe.same_vibe`` over those two orders. Main: the audio head (with
+        ``main_head_bare``), then the ``main_pool`` songs by z(sound score) + ``main_listener_weight`` * z(listener
+        logit), one per artist. Listeners also play: Best's candidates by other artists than the seed's by z(listener
+        logit) + ``listeners_sound_weight`` * z(sound score), one per artist. Songs by the seed's own artist get the
+        median listener logit, so sound alone places them.
         """
         data = res["listener"]
         p_of, son_of = data["p"], data["son"]
@@ -1066,12 +1098,7 @@ class AnySong:
         def ordered(ks: list, score: np.ndarray) -> list:
             return [ks[i] for i in np.lexsort((np.arange(len(ks)), -score))]
 
-        orders = {channel: list(order) for channel, order in filtered.items()}
-        scores = {channel: [item["score"] for item in order.values()] for channel, order in filtered.items()}
-        head_params = replace(self.scene_params, head_bare=self.best_head_bare,
-                              head_evidence_only=self.best_head_evidence_only)
-        head = [key for key in audio_head(orders, scores, head_params, standout_min=self.best_head_standout,
-                                          standout_window=self.best_head_window) if key in shown]
+        head = [key for key in self._audio_head(filtered, self.best_head_bare) if key in shown]
         rest = [key for key in keys if key not in set(head)]
         if rest:
             item_of = lambda key: shown[key][0]  # noqa: E731
@@ -1114,7 +1141,70 @@ class AnySong:
             chosen = samevibe.same_vibe([key for key in best_order if key in rep], sonic_order, cands, inputs["bpm"],
                                         language, lang_mode, self.vibe_params)
             vibe = [rep[key] | {"score": round(1.0 / (FUSE_K + i), 5)} for i, key in enumerate(chosen[:k], 1)]
-        return best, vibe, sounds
+
+        main_head = head if self.main_head_bare == self.best_head_bare else \
+            [key for key in self._audio_head(filtered, self.main_head_bare) if key in shown]
+
+        def main_item(key: Hashable) -> dict:
+            return sonic[key] if key in sonic else shown[key][0]
+
+        def shown_item(key: Hashable) -> dict:
+            return shown[key][0]
+
+        pool = list(sonic) if self.main_pool == "sonic" else [
+            key for key in keys
+            if key in sonic or sound_match(son_of.get(int(shown[key][0]["id"]), -np.inf)) >= self.main_match_floor]
+        if pool:
+            pool = ordered(pool, listener.blend(sound(pool, main_item), logits(pool, main_item),
+                                                self.main_listener_weight))
+        main_set = set(main_head)
+        main = self._main([(shown[key][0], shown[key][1]) for key in main_head],
+                          [(main_item(key), shown[key][1]) for key in pool if key not in main_set], k)
+
+        others = [key for key in keys if artists.get(key) != profile.artist_id]
+        if others:
+            others = ordered(others, listener.zscore(logits(others, shown_item))
+                             + self.listeners_sound_weight * listener.zscore(sound(others, shown_item)))
+        picks = self._one_per_artist(
+            [(shown[key][0], {"ranks": shown[key][1], "basis": "listeners"}) for key in others], k)
+        listeners = [item | {"score": round(1.0 / (FUSE_K + i), 5)} for i, item in enumerate(picks, 1)]
+        return best, vibe, sounds, main, listeners
+
+    def _audio_head(self, view: dict[str, dict[Hashable, dict]], bare: int) -> list[Hashable]:
+        """Best's audio head (``scene.audio_head``) over the filtered channel lists, ``bare`` songs long when none of
+        them has cover or sample evidence."""
+        orders = {channel: list(order) for channel, order in view.items()}
+        scores = {channel: [item["score"] for item in order.values()] for channel, order in view.items()}
+        params = replace(self.scene_params, head_bare=bare, head_evidence_only=self.best_head_evidence_only)
+        return audio_head(orders, scores, params, standout_min=self.best_head_standout,
+                          standout_window=self.best_head_window)
+
+    def _main(self, head: Sequence[tuple[dict, dict[str, int]]], body: Sequence[tuple[dict, dict[str, int]]],
+              k: int) -> list[dict]:
+        """The main list from ``(item, channel ranks)`` pairs: the head's songs (``basis`` "audio"), then the body's
+        ("sound"), one song per artist."""
+        entries = [(item, {"ranks": ranks, "basis": "audio"}) for item, ranks in head]
+        entries += [(item, {"ranks": ranks, "basis": "sound"}) for item, ranks in body]
+        return [item | {"score": round(1.0 / (FUSE_K + i), 5)}
+                for i, item in enumerate(self._one_per_artist(entries, k), 1)]
+
+    def _main_without_listeners(self, view: dict[str, dict[Hashable, dict]], profile,
+                                artists: Mapping[Hashable, int | None], k: int) -> list[dict]:
+        """The main list without listener data (``scene=0``, an unknown artist or no ranker): the audio head, then
+        Sounds like's order."""
+        pos = {channel: {key: i for i, key in enumerate(order, 1)} for channel, order in view.items()}
+
+        def ranks(key: Hashable) -> dict[str, int]:
+            return {channel: p[key] for channel, p in pos.items() if key in p}
+
+        head_keys = self._audio_head(view, self.main_head_bare)
+        head = []
+        for key in head_keys:
+            r = ranks(key)
+            head.append((view[min(r, key=lambda name: (r[name], name))][key], r))
+        head_set = set(head_keys)
+        body = [(item, ranks(key)) for key, item in self._sound_order(view, profile, artists) if key not in head_set]
+        return self._main(head, body, k)
 
     def _item_language(self, item: dict) -> str:
         """A listed song's language: its own label, else (with ``artist_languages``) its artist's majority language."""
@@ -1153,6 +1243,12 @@ class AnySong:
         no confidently other-language song), one song per artist, each with its catalog tempo when known. With
         ``order`` (the listener ranker's), songs follow it. Otherwise, with ``sounds_boost`` and a scene profile, songs
         move up by their artist's scene affinity: 1 / (k + rank) times (1 + sounds_boost * affinity)."""
+        return self._one_per_artist([(item, {}) for _, item in self._sound_order(view, profile, artists, order)], k)
+
+    def _sound_order(self, view: dict[str, dict[Hashable, dict]], profile=None,
+                     artists: Mapping[Hashable, int | None] | None = None, order: Sequence[Hashable] | None = None
+                     ) -> list[tuple[Hashable, dict]]:
+        """Sounds like's songs in order, before one song per artist is kept (see ``_sounds``)."""
         items = list(view.get("sonic", {}).items())
         if order is not None:
             sonic = view.get("sonic", {})
@@ -1166,9 +1262,14 @@ class AnySong:
 
             lift = {key: lifted(i, key) for i, (key, _) in enumerate(items, 1)}
             items.sort(key=lambda pair: -lift[pair[0]])
+        return items
+
+    def _one_per_artist(self, entries: Sequence[tuple[dict, dict]], k: int) -> list[dict]:
+        """The first song of each artist among ``(item, fields)`` entries, in order, up to ``k``: each item with those
+        fields and its catalog tempo. An artist is the scene table's Deezer artist id, else the credited name."""
         seen: set[Hashable] = set()
-        sounds = []
-        for _, item in items:
+        out = []
+        for item, fields in entries:
             tid = int(item["id"])
             artist_id = self.scene.artist(tid) if self.scene is not None else None
             artist: Hashable = ("id", artist_id) if artist_id else ("name", (item["artist"] or "").casefold() or tid)
@@ -1176,10 +1277,10 @@ class AnySong:
                 continue
             seen.add(artist)
             bpm = self.tempo.bpm(tid) if self.tempo is not None else None
-            sounds.append(item | {"bpm": round(bpm, 1) if bpm else None})
-            if len(sounds) == k:
+            out.append(item | fields | {"bpm": round(bpm, 1) if bpm else None})
+            if len(out) == k:
                 break
-        return sounds
+        return out
 
     def _same_vibe(self, inputs: dict, view: dict[str, dict[Hashable, dict]], best_order: list, language: str,
                    lang_mode: str, k: int) -> list[dict]:
