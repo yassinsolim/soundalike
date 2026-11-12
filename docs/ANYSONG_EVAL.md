@@ -2128,6 +2128,69 @@ benchmarks' held-out split. Run once (`grow/qa/main_dev.py held w2`); checked by
 **No fallback.** If any rule fails, the two tabs are not deployed and the result goes back to Yassin. Nothing else is
 tried on held-out data.
 
+### Held-out result (2026-11-11): rules 1 to 4 passed
+
+Run once (`grow/qa/main_dev.py held w2`); `grow/qa/main_dev.py verdict` passed 25 of 25 checks. Evidence:
+`grow/qa/main_held.json`, `grow/qa/parity_held_old.json`, `grow/qa/parity_held_new.json` and `grow/qa/main_verdict.log`.
+
+**Rule 1.** For all 4,538 seeds (799 held-out, 1,000 fresh, 2,739 benchmark), Best matches, Same vibe, Sounds like,
+the channel lists and the query are byte-identical to the served code. The candidate adds Listeners also play to every
+seed and main to 4,528. The other 10 (1 fresh, 9 benchmark) have no Same vibe or Sounds like list either, so main is
+left out and the extension's main tab shows Best matches.
+
+**The lists**, held-out / fresh seeds. Other-language rows were 0.000 for every list.
+
+| List | ListenBrainz | Shared genre | Far genre | match10 |
+|---|---|---|---|---|
+| Best matches (served) | 0.522 / 0.518 | 0.569 / 0.574 | 0.116 / 0.130 | 36.7 / 38.2 |
+| Same vibe (served) | 0.462 / 0.477 | 0.565 / 0.575 | 0.107 / 0.125 | 54.3 / 55.8 |
+| Sounds like (served) | 0.456 / 0.454 | 0.566 / 0.565 | 0.108 / 0.126 | 67.1 / 69.8 |
+| **Main** | 0.447 / 0.443 | 0.557 / 0.564 | 0.117 / 0.129 | 64.8 / 67.5 |
+| **Listeners also play** | 0.595 / 0.586 | 0.597 / 0.585 | 0.094 / 0.109 | 38.0 / 39.3 |
+
+**Rules 2 and 3**, paired differences [95 % CI]:
+
+| Rule | Held-out seeds (799) | Fresh seeds (1,000) | Limit | Verdict |
+|---|---|---|---|---|
+| 2. Listeners also play − Best, ListenBrainz | +0.073 [+0.063, +0.082] | +0.068 [+0.058, +0.078] | lower bound > 0 | pass |
+| 2. match10 | +1.34 [+0.85, +1.78] | +1.15 [+0.67, +1.61] | ≥ −2.0 | pass |
+| 2. Far-genre rows | −0.023 [−0.030, −0.015] | −0.021 [−0.028, −0.013] | ≤ +0.005 | pass |
+| 2. Other-language rows | +0.0000 [+0.0000, +0.0000] | +0.0000 [+0.0000, +0.0000] | ≤ +0.005 | pass |
+| 2. Derivative uploads | −0.0003 [−0.0013, +0.0008] | −0.0007 [−0.0016, +0.0001] | ≤ +0.005 | pass |
+| 3. Main − Sounds like, match10 | −2.36 [−2.64, −2.08] | −2.29 [−2.52, −2.05] | ≥ −3.5 | pass |
+| 3. ListenBrainz | −0.009 [−0.013, −0.006] | −0.011 [−0.014, −0.008] | ≥ −0.025 | pass |
+| 3. Far-genre rows | +0.010 [+0.006, +0.014] | +0.003 [+0.001, +0.006] | ≤ +0.015 | pass |
+| 3. Other-language rows | +0.0000 [+0.0000, +0.0000] | +0.0000 [+0.0000, +0.0000] | ≤ +0.005 | pass |
+| 3. Derivative uploads | +0.0000 [+0.0000, +0.0000] | +0.0001 [−0.0002, +0.0004] | ≤ +0.005 | pass |
+
+**Rule 4**, HR@10 on the benchmarks' held-out split (queries):
+
+| List | Covers (1,170) | Samples (747) | Samples reverse (695) | Gen Alpha (59) | SampleID (43) | V4 (19) |
+|---|---|---|---|---|---|---|
+| Best matches (served) | 0.612 | 0.088 | 0.106 | 0.254 | 0.140 | 0.105 |
+| Same vibe (served) | 0.271 | 0.040 | 0.045 | 0.051 | 0.070 | 0.053 |
+| Sounds like (served) | 0.121 | 0.009 | 0.013 | 0.102 | 0.000 | 0.105 |
+| **Main** | 0.456 | 0.064 | 0.071 | 0.203 | 0.023 | 0.105 |
+| **Listeners also play** | 0.068 | 0.008 | 0.014 | 0.085 | 0.000 | 0.000 |
+
+Main against Sounds like: covers +0.335 [+0.309, +0.362], samples +0.055 [+0.040, +0.071], samples reverse
++0.058 [+0.040, +0.076]. Pass.
+
+**Reported, not gated**
+- Main against Best on the benchmarks: covers −0.156 [−0.178, −0.133], samples −0.024 [−0.035, −0.013], samples
+  reverse −0.036 [−0.050, −0.023]. Main keeps 75 % of Best's covers (development 73 %).
+- Listeners also play is not where covers are found: 0.068 against Best's 0.612.
+- SampleID, Gen Alpha and V4 are small (43, 59 and 19 queries). Main falls between Sounds like and Best on SampleID
+  and Gen Alpha and equals both on V4.
+- Head: 41.6 % of held-out and 43.0 % of fresh seeds get one, 1.29 and 1.31 songs when they do (development 45 %,
+  1.34).
+- Shared genre: Listeners also play against Best +0.028 [+0.017, +0.039] held-out and +0.011 [−0.000, +0.023]
+  fresh; main against Sounds like −0.009 [−0.013, −0.004] and −0.001 [−0.005, +0.003].
+- The costs match development. Main against Sounds like: match10 −2.4 and −2.3 (development −2.7), ListenBrainz
+  −0.009 and −0.011 (−0.013), far-genre rows +0.010 and +0.003 (+0.008).
+
+Rule 5 is the deploy.
+
 ## Stem dissection (pre-registered 2026-11-10, before any result)
 
 **What.** `soundalike.anysong.stems` splits a preview into six stems with htdemucs_6s (vocals, drums, bass, guitar,
