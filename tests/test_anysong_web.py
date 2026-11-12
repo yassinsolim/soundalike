@@ -86,11 +86,12 @@ def test_anysong_language_switch_covers_both_tabs():
     assert '<div class="language-filter" id="language" role="status">' in SCRIPT
     assert '<button id="language-toggle" type="button" aria-pressed="false" hidden>' in SCRIPT
     assert '"Show all languages"' in SCRIPT and '"Show same language"' in SCRIPT
-    assert "Number(query.hidden)" in SCRIPT
     # display:flex would otherwise beat the hidden attribute.
     assert ".language-filter[hidden]{display:none}" in HOME
-    # Listeners also play has no hidden count of its own, so it only says what it leaves out.
+    # The server's hidden count is for the fused list, not main or Listeners also play, so neither tab shows a count:
+    # both only say what they leave out.
     assert '"all languages" : "other languages left out"' in SCRIPT
+    assert "Number(query.hidden)" not in SCRIPT and "other-language matches in the top 20" not in SCRIPT
     assert "hidden_sounds" not in SCRIPT
 
 
