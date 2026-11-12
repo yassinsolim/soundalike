@@ -2208,6 +2208,87 @@ Client side, through `soundalike.yassin.app`, for the four review songs:
   (`grow/qa/main_review.json`), 20 of 20 positions each.
 - With `scene=0` main is served and Listeners also play is left out.
 
+### A sound-heavier main list? (development, 2026-11-12)
+
+Yassin asked whether main with less listener weight would really lose scene matches such as UK rap. This was
+tested on development data only, with `grow/qa/sound_order.py`. Its docstring fixed the subsets, metrics and
+claim before each run. Serving is unchanged.
+
+Out-of-fold development lists, 823 seeds, against the served weight 2. Weight 2's means are ListenBrainz 0.452,
+same country 0.598, far genre 0.104 and match10 66.3. The table gives each weight's paired change against weight 2
+[95 % interval].
+
+| Main, listener weight | ListenBrainz | Same country | Far genre | match10 |
+|---|---|---|---|---|
+| 0 | −0.231 [−0.244, −0.219] | −0.125 [−0.141, −0.109] | +0.105 [+0.091, +0.117] | +9.3 [+8.8, +9.8] |
+| 0.5 | −0.136 [−0.147, −0.127] | −0.065 [−0.076, −0.054] | +0.061 [+0.051, +0.070] | +7.9 [+7.4, +8.3] |
+| 1 | −0.055 [−0.061, −0.049] | −0.020 [−0.026, −0.013] | +0.017 [+0.012, +0.022] | +4.3 [+4.1, +4.6] |
+| 3 | +0.017 [+0.013, +0.022] | +0.002 [−0.002, +0.006] | −0.004 [−0.007, −0.001] | −1.9 [−2.0, −1.7] |
+| 5 | +0.026 [+0.021, +0.032] | +0.003 [−0.002, +0.008] | −0.005 [−0.009, −0.001] | −4.0 [−4.3, −3.8] |
+
+Lowering the weight moves every genre family the same way on every metric, and further at each step:
+
+- Families: hip-hop (157 seeds), R&B and soul (177), pop (282), electronic (128), rock (239) and Latin (58).
+- At weight 0 and 0.5 no family's interval includes 0. At weight 1 three do: electronic's same country
+  (−0.014 [−0.032, +0.004]) and shared genre (−0.011 [−0.025, +0.003]), and Latin's far genre
+  (+0.011 [−0.004, +0.028]).
+- Above weight 2 the small changes are less uniform. For example, rock's same country and Latin's far genre move
+  against the overall direction.
+
+The development seeds include only three GB hip-hop artists (Gorillaz, Rex Orange County, The Chemical Brothers), none
+of them UK rap, so a separate UK rap set was drawn:
+
+- **Seeds:** 66 GB artists whose Wikidata genre is labelled UK rap, grime, UK drill, drill, British hip hop, UK hip
+  hop, road rap, afroswing or UK trap. Each gives one song: its highest-ranked Deezer track that is not junk or a
+  version and was not a seed of any earlier set.
+- **Lists:** computed live with the served ranker and Deezer's related artists.
+- **Check against serving:** for the four catalog songs below, the lab's weight-2 lists equal the live API's, 20 of
+  20 positions; the off-catalog fifth shares 8 of its top 10.
+- **Claim:** uk10 falls below weight 2. uk10 is the share of other-artist top-10 rows by such artists. The claim holds
+  for a weight if the paired 95 % interval lies below 0.
+
+Weight 2's means, then each lower weight's paired change against it [95 % interval]:
+
+| Main, listener weight | uk10 | Same country | ListenBrainz (22 seeds) | match10 |
+|---|---|---|---|---|
+| 2 (served), mean | 0.243 | 0.636 | 0.256 | 75.7 |
+| 1 | −0.021 [−0.035, −0.007] | −0.068 [−0.094, −0.045] | −0.050 [−0.105, 0.000] | +2.9 [+2.1, +3.7] |
+| 0.5 | −0.078 [−0.110, −0.051] | −0.189 [−0.233, −0.146] | −0.094 [−0.154, −0.040] | +5.3 [+4.1, +6.6] |
+| 0 | −0.156 [−0.201, −0.114] | −0.358 [−0.426, −0.293] | −0.111 [−0.180, −0.044] | +6.4 [+5.0, +7.9] |
+
+The claim holds at all three weights. uk10 undercounts, because artists without Wikidata count as not UK rap:
+Follow My Lead's weight-2 list scores 0, as none of its other nine artists (SL, Clavish, AntsLive and others) has a
+Wikidata country or genre.
+
+The five songs Yassin raised, top 10 (`grow/qa/sound_order_uk.json`), at weight 0 compared with weight 2:
+
+- **Follow My Lead:** UK rap at 92–96 % match (SL, Clavish, A1 x J1, AntsLive) gives way to US drill and trap at
+  95–96 % (K CAMP, Future, King Von, Polo G, Lil Durk, Gunna). The sound model scores the two alike.
+- **Heartbeat:** Ravyn Lenae, Doechii and Timbaland give way to electronic tracks and remixes (Flume, Justice,
+  ODESZA), and Gost's Skull moves from third to first.
+- **icantbelieveiletyougetaway:** loses Trxy!, glaive, brakence and Jane Remover.
+- **Get Geeked:** keeps 5 of its 10 artists; Lil Pump, Smokepurpp and Famous Dex give way to ONEFOUR, Big Scarr and
+  Gucci Mane.
+- **She Will:** keeps 5 of its 10 artists and stays US rap.
+
+None of these metrics is neutral:
+
+- The listener ranker learns from ListenBrainz and reads region and genre, so same country, genre and ListenBrainz
+  favour the listener side.
+- match10 is the sound model's own score, so it favours the sound side.
+- The song lists, and a listener's ears, are the neutral check.
+
+Nothing changed in serving; weight 2 stays.
+
+The evidence head, not the weight, puts the lowest matches first:
+
+- **How often:** it leads 45.4 % of development and 74 % of UK rap seeds.
+- **How weak:** its median match is 14 and 19. More than half its songs match under 20 %. Follow My Lead's first song,
+  Rema – HOV, at 6 %, is first in the raw melody channel.
+- **Cost:** without its head, main's top 10 equals Sounds like's for 63 of the 66 UK rap seeds (763 of 823
+  development seeds), so the gap between the two lists is the head. On the UK rap set, Sounds like beats main on uk10
+  (+0.012 [+0.001, +0.025]), same country (+0.038 [+0.024, +0.054]) and match10 (+5.0 [+4.0, +5.9]).
+
 ## Stem dissection (pre-registered 2026-11-10, before any result)
 
 **What.** `soundalike.anysong.stems` splits a preview into six stems with htdemucs_6s (vocals, drums, bass, guitar,
