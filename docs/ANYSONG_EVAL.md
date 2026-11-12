@@ -2466,6 +2466,34 @@ HR@10 on the benchmarks' held-out split (2,739 seeds), hits in brackets:
 cache policies move on. A guarded deploy keeps a backup, rule 4 of the listener ranking runs unchanged, and the
 four review songs are checked through `soundalike.yassin.app`.
 
+### Serving the stricter head (2026-11-12)
+
+Yassin approved the deploy. The guarded script (`deploy_head_rule.sh`) changes only `anysong/api.py` and applies rule
+6: rule 4 of the listener ranking, unchanged, then the client-side check.
+
+**Attempt 1: rolled back on latency.** Backup `/opt/soundalike/deploy-backups/20261112-044544-headrule`. Parity,
+startup (52 s), `healthz` and the smoke test passed, and only Follow My Lead's head changed. The unseen-song check
+failed: paired median server time +1,170.9 ms (limit +100 ms), p95 1.081 → 2.790 s (limit 1.281 s). The script
+restored the served src, byte-identical to the backup, and restarted the crawl. The added time was all in the
+preview download from Deezer's CDN:
+
+| 40 unseen songs, medians | Before | After | Paired change |
+|---|---|---|---|
+| Preview download | 122.9 ms | 1,356.4 ms | +1,232.9 ms |
+| Everything else: decode, tempo, three embeddings, three searches, listener step, vibe scores | 873.7 ms | 853.9 ms | −18.4 ms |
+| Server total | 996.5 ms | 2,211.4 ms | +1,170.9 ms |
+
+- Before the swap every download took 116–128 ms. After it, 16 of the 40 took 116–183 ms and 24 took 0.79–2.80 s.
+  The service logged no retry or rate-limit warning.
+- The script warmed the CDN for these songs only before the baseline, about ten minutes before the second
+  measurement.
+- The change cannot touch the download: the `api.py` diff is confined to main's head (`_audio_head`, `_sound_of`,
+  `_main_without_listeners` and the two settings).
+
+**Attempt 2: procedure fixed before it ran.** The CDN is warmed again right before the second unseen measurement, as
+it was before the baseline. The limits are unchanged. The script also reports, not gated, the paired median change of
+the download and of the rest of the server time; on attempt 1's data that reads +1,232.9 ms and −18.4 ms.
+
 ### Blind listening check for the stricter head (pre-registered 2026-11-12, before any listening)
 
 Yassin asked to hear the change before the public release: the website's two tabs and the Spotify extension ship
