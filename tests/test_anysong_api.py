@@ -509,6 +509,45 @@ def test_main_list_is_the_audio_head_then_sound_and_listener_picks_get_their_own
         api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, main_pool="every")
 
 
+def test_main_head_can_ask_low_match_songs_to_stand_out_more(tmp_path):
+    # The setup above: 5 is cover evidence (melody score -1.0) with standout z 1.0 in the two-song melody list.
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), LISTENER_META, scene=_listener_scene_table(),
+                      copy_score=None, ranker=_stump("fwd", 0.0, 0.0), scene_params=SceneParams(head_min=1),
+                      languages=FakeLanguages({1: "en", 9: "de"}), best_head_standout=0.0,
+                      tempo=TempoTable(np.array([5, 7, 8, 10]), np.array([120, 120, 121, 120], np.float32)))
+    res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog", "artist_id": 100},
+           "raw": {"melody": [(5, -1.0), (3, -2.0)], "samples": [(3, 0.1)],
+                   "sonic": [(10, 0.5), (5, 0.45), (7, 0.44)]},
+           "related": [], "timings_ms": {}, "vibe": {"muq": {10: 0.5, 5: 0.45, 7: 0.44, 3: 0.2}, "bpm": 120.0},
+           "listener": {"p": {3: 0.2, 5: 0.1, 7: 0.9, 8: 0.8, 9: 0.95, 10: 0.99},
+                        "son": {3: 0.2, 5: 0.45, 7: 0.44, 8: 0.40, 9: 0.43, 10: 0.5}, "scene": [8, 9]}}
+
+    def lists():
+        return svc._view(res, k=10, dedupe=True, cached=False)["results"]
+
+    def main(r):
+        return [(x["id"], x["basis"]) for x in r["main"]]
+
+    assert api.sound_match(0.45) >= 50
+    r = lists()
+    others = {name: r[name] for name in ("best", "vibe", "sounds", "listeners")}
+    assert main(r) == [(5, "audio"), (7, "sound"), (10, "sound")]
+    # A head song whose match is below main_head_match (101: every song) needs z >= main_head_standout: 5 is then
+    # placed like the other sound picks, and the other lists stay as they were.
+    svc.main_head_standout = 1.5
+    r = lists()
+    assert main(r) == [(7, "sound"), (10, "sound"), (5, "sound")]
+    assert {name: r[name] for name in others} == others
+    svc.main_head_match = 50  # 5 sounds alike: Best's rule is enough
+    assert main(lists()) == [(5, "audio"), (7, "sound"), (10, "sound")]
+    svc.main_head_match = api.MAIN_HEAD_MATCH
+    del res["listener"]  # the same without listener data: no head, so main is Sounds like
+    r = lists()
+    assert [x["id"] for x in r["main"]] == [x["id"] for x in r["sounds"]] and r["main"][0]["basis"] == "sound"
+    svc.main_head_standout = api.MAIN_HEAD_STANDOUT
+    assert lists()["main"][0]["id"] == 5 and lists()["main"][0]["basis"] == "audio"
+
+
 class SonicEngine(FakeEngine):
     def __init__(self):
         super().__init__(ids=tuple(range(1, 11)))

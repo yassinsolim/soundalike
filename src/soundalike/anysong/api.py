@@ -72,7 +72,7 @@ import numpy as np
 from . import listener, samevibe
 from . import stems as stemlib
 from .deezer import version_words
-from .scene import SceneParams, SceneTable, affinity, arrange_artists, audio_head, scene_fuse
+from .scene import SceneParams, SceneTable, affinity, arrange_artists, audio_head, scene_fuse, standout
 from .tempo import TempoTable, decode22
 
 FETCH = 200  # per-channel depth ranked before de-duplication
@@ -111,6 +111,10 @@ MAIN_LISTENER_WEIGHT = 2.0
 MAIN_POOL = "sonic"
 MAIN_MATCH_FLOOR = 50
 MAIN_HEAD_BARE = 0
+# Main's head can be stricter than Best's: a song whose sound match is below MAIN_HEAD_MATCH also needs a standout
+# z-score of at least MAIN_HEAD_STANDOUT (0 = off, Best's rule alone; MAIN_HEAD_MATCH 101 = every song).
+MAIN_HEAD_STANDOUT = 0.0
+MAIN_HEAD_MATCH = 101
 LISTENERS_SOUND_WEIGHT = 0.25
 # Sound match (``sound_match``): sonic (MuQ-MuLan) score quantiles 0, 5, ..., 100 % over every song shown in the top
 # 20 of Best matches, Same vibe or Sounds like for the development seeds: 62,362 songs from 1,474 seeds with the
@@ -388,6 +392,7 @@ class AnySong:
                  best_head_bare: int = BEST_HEAD_BARE, best_head_evidence_only: bool = BEST_HEAD_EVIDENCE_ONLY,
                  main_listener_weight: float = MAIN_LISTENER_WEIGHT, main_pool: str = MAIN_POOL,
                  main_match_floor: float = MAIN_MATCH_FLOOR, main_head_bare: int = MAIN_HEAD_BARE,
+                 main_head_standout: float = MAIN_HEAD_STANDOUT, main_head_match: float = MAIN_HEAD_MATCH,
                  listeners_sound_weight: float = LISTENERS_SOUND_WEIGHT,
                  stems: stemlib.StemStore | None = None, dissector: stemlib.Dissector | None = None,
                  catalog_previews: str | Path | None = None):
@@ -419,6 +424,7 @@ class AnySong:
             raise ValueError(f"main_pool must be 'sonic' or 'all', not {main_pool!r}")
         self.main_listener_weight, self.main_pool = main_listener_weight, main_pool
         self.main_match_floor, self.main_head_bare = main_match_floor, main_head_bare
+        self.main_head_standout, self.main_head_match = main_head_standout, main_head_match
         self.listeners_sound_weight = listeners_sound_weight
         self._artist_tracks = listener.ArtistTracks(scene) if self.ranker is not None else None
         self._sonic_core: np.ndarray | None = None
@@ -1006,11 +1012,12 @@ class AnySong:
         if res.get("vibe") is not None and "sonic" in filtered:
             bpm = res["vibe"]["bpm"]
             query["bpm"] = round(bpm, 1) if bpm else None
+        sound_of = self._sound_of(res)
         if scene_state == "on" and res.get("listener") is not None:
             keep = (lambda item: self._item_language(item) in {"unknown", language}) \
                 if lang_mode == "same" and language != "unknown" and self.languages is not None else None
             best, vibe, sounds, main, listeners = self._listener_lists(res, filtered, artists, profile, qkey, keep,
-                                                                       language, lang_mode, k, dedupe)
+                                                                       language, lang_mode, k, dedupe, sound_of)
         else:
             fused = rank(filtered)
             best = []
@@ -1021,7 +1028,7 @@ class AnySong:
             if res.get("vibe") is not None and "sonic" in filtered:
                 vibe = self._same_vibe(res["vibe"], filtered, [key for key, _, _ in fused], language, lang_mode, k)
             sounds = self._sounds(filtered, k, profile, artists)
-            main, listeners = self._main_without_listeners(filtered, profile, artists, k), []
+            main, listeners = self._main_without_listeners(filtered, profile, artists, k, sound_of), []
         lists = {"best": best} if best else {}
         if vibe:
             lists["vibe"] = vibe
@@ -1031,9 +1038,6 @@ class AnySong:
             lists["main"] = main
         if listeners:
             lists["listeners"] = listeners
-        sound_of = {int(tid): float(score) for tid, score in res["raw"].get("sonic", ())}
-        sound_of |= (res.get("vibe") or {}).get("muq") or {}
-        sound_of |= (res.get("listener") or {}).get("son") or {}
         for items in (*lists.values(), *out.values()):
             for item in items:
                 score = sound_of.get(int(item["id"]))
@@ -1042,9 +1046,25 @@ class AnySong:
         return {"ok": True, "query": query, "results": lists | out, "timings_ms": res["timings_ms"],
                 "cached": cached}
 
+    @staticmethod
+    def _sound_of(res: dict) -> dict[int, float]:
+        """Each candidate's sound (sonic) score against the seed: the sonic list, then Same vibe's and the listener
+        inputs, the later winning (what ``match`` shows)."""
+        sound_of = {int(tid): float(score) for tid, score in res["raw"].get("sonic", ())}
+        sound_of |= (res.get("vibe") or {}).get("muq") or {}
+        sound_of |= (res.get("listener") or {}).get("son") or {}
+        return sound_of
+
+    @staticmethod
+    def _match(sound_of: Mapping[int, float], item: dict) -> int:
+        """``match`` of a listed song, 0 without a sound score."""
+        score = sound_of.get(int(item["id"]))
+        return sound_match(score) if score is not None else 0
+
     def _listener_lists(self, res: dict, filtered: dict[str, dict[Hashable, dict]], artists: dict[Hashable, int | None],
                         profile, qkey, keep: Callable[[dict], bool] | None, language: str, lang_mode: str, k: int,
-                        dedupe: bool) -> tuple[list[dict], list[dict], list[dict], list[dict], list[dict]]:
+                        dedupe: bool, sound_of: Mapping[int, float]
+                        ) -> tuple[list[dict], list[dict], list[dict], list[dict], list[dict]]:
         """Best matches, Same vibe, Sounds like, main and Listeners also play with the listener ranker
         (``res["listener"]``, from ``_listener``).
 
@@ -1052,10 +1072,10 @@ class AnySong:
         lists' songs and the scene candidates, by z(listener logit) + ``best_sound_weight`` * z(sound score), then the
         per-artist caps. Sounds like: the sonic list by z(sound score) + ``sounds_listener_weight`` * z(listener logit),
         one song per artist. Same vibe: ``samevibe.same_vibe`` over those two orders. Main: the audio head (with
-        ``main_head_bare``), then the ``main_pool`` songs by z(sound score) + ``main_listener_weight`` * z(listener
-        logit), one per artist. Listeners also play: Best's candidates by other artists than the seed's by z(listener
-        logit) + ``listeners_sound_weight`` * z(sound score), one per artist. Songs by the seed's own artist get the
-        median listener logit, so sound alone places them.
+        ``main_head_bare``, ``main_head_standout`` and ``main_head_match``), then the ``main_pool`` songs by z(sound
+        score) + ``main_listener_weight`` * z(listener logit), one per artist. Listeners also play: Best's candidates
+        by other artists than the seed's by z(listener logit) + ``listeners_sound_weight`` * z(sound score), one per
+        artist. Songs by the seed's own artist get the median listener logit, so sound alone places them.
         """
         data = res["listener"]
         p_of, son_of = data["p"], data["son"]
@@ -1142,8 +1162,12 @@ class AnySong:
                                         language, lang_mode, self.vibe_params)
             vibe = [rep[key] | {"score": round(1.0 / (FUSE_K + i), 5)} for i, key in enumerate(chosen[:k], 1)]
 
-        main_head = head if self.main_head_bare == self.best_head_bare else \
-            [key for key in self._audio_head(filtered, self.main_head_bare) if key in shown]
+        if self.main_head_bare == self.best_head_bare and not self.main_head_standout:
+            main_head = head
+        else:
+            main_head = [key for key in self._audio_head(
+                filtered, self.main_head_bare, lambda key: self._match(sound_of, shown[key][0]) if key in shown else 0)
+                if key in shown]
 
         def main_item(key: Hashable) -> dict:
             return sonic[key] if key in sonic else shown[key][0]
@@ -1170,14 +1194,21 @@ class AnySong:
         listeners = [item | {"score": round(1.0 / (FUSE_K + i), 5)} for i, item in enumerate(picks, 1)]
         return best, vibe, sounds, main, listeners
 
-    def _audio_head(self, view: dict[str, dict[Hashable, dict]], bare: int) -> list[Hashable]:
+    def _audio_head(self, view: dict[str, dict[Hashable, dict]], bare: int,
+                    match_of: Callable[[Hashable], float] | None = None) -> list[Hashable]:
         """Best's audio head (``scene.audio_head``) over the filtered channel lists, ``bare`` songs long when none of
-        them has cover or sample evidence."""
+        them has cover or sample evidence. With ``match_of`` (a song's sound match; main's head), a song whose match is
+        below ``main_head_match`` also needs a standout z-score of at least ``main_head_standout``."""
         orders = {channel: list(order) for channel, order in view.items()}
         scores = {channel: [item["score"] for item in order.values()] for channel, order in view.items()}
         params = replace(self.scene_params, head_bare=bare, head_evidence_only=self.best_head_evidence_only)
-        return audio_head(orders, scores, params, standout_min=self.best_head_standout,
+        head = audio_head(orders, scores, params, standout_min=self.best_head_standout,
                           standout_window=self.best_head_window)
+        if match_of is None or not self.main_head_standout:
+            return head
+        z = standout(orders, scores, self.best_head_window)
+        return [key for key in head
+                if z.get(key, -np.inf) >= self.main_head_standout or match_of(key) >= self.main_head_match]
 
     def _main(self, head: Sequence[tuple[dict, dict[str, int]]], body: Sequence[tuple[dict, dict[str, int]]],
               k: int) -> list[dict]:
@@ -1189,7 +1220,8 @@ class AnySong:
                 for i, item in enumerate(self._one_per_artist(entries, k), 1)]
 
     def _main_without_listeners(self, view: dict[str, dict[Hashable, dict]], profile,
-                                artists: Mapping[Hashable, int | None], k: int) -> list[dict]:
+                                artists: Mapping[Hashable, int | None], k: int,
+                                sound_of: Mapping[int, float]) -> list[dict]:
         """The main list without listener data (``scene=0``, an unknown artist or no ranker): the audio head, then
         Sounds like's order."""
         pos = {channel: {key: i for i, key in enumerate(order, 1)} for channel, order in view.items()}
@@ -1197,11 +1229,12 @@ class AnySong:
         def ranks(key: Hashable) -> dict[str, int]:
             return {channel: p[key] for channel, p in pos.items() if key in p}
 
-        head_keys = self._audio_head(view, self.main_head_bare)
-        head = []
-        for key in head_keys:
+        def item_of(key: Hashable) -> dict:
             r = ranks(key)
-            head.append((view[min(r, key=lambda name: (r[name], name))][key], r))
+            return view[min(r, key=lambda name: (r[name], name))][key]
+
+        head_keys = self._audio_head(view, self.main_head_bare, lambda key: self._match(sound_of, item_of(key)))
+        head = [(item_of(key), ranks(key)) for key in head_keys]
         head_set = set(head_keys)
         body = [(item, ranks(key)) for key, item in self._sound_order(view, profile, artists) if key not in head_set]
         return self._main(head, body, k)
