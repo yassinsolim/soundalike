@@ -2411,6 +2411,61 @@ covers, 3 samples and 3 samples reverse hits. The thresholds are the development
 **No fallback.** If any rule fails, main keeps its served head and the result goes back to Yassin. Nothing else is
 tried on held-out data.
 
+### Held-out result for the stricter head (2026-11-12)
+
+**All 32 checks passed** (`grow/qa/head_rule.py verdict` on the one held-out run, `grow/qa/head_held.json`).
+Serving (rule 6) waits for Yassin's OK.
+
+**Only main changes.** With both settings off, every list and the query were byte-identical to the served code
+for all 4,538 held-out seeds (799 held-out, 1,000 fresh and 2,739 benchmark seeds), with listener data and,
+as an extra check, without. With m20z3, no seed changed any list but main, or the query.
+
+**m20z3 against served main**, paired change [95 % CI]:
+
+| Measure | Held-out (799) | Change | Fresh (1,000) | Change |
+|---|---|---|---|---|
+| low1 | 0.265 → 0.095 | −0.170 [−0.196, −0.145] | 0.228 → 0.079 | −0.149 [−0.172, −0.126] |
+| match1 | 52.0 → 63.6 | +11.6 [+9.8, +13.5] | 56.4 → 66.5 | +10.1 [+8.5, +11.7] |
+| match3 | 62.4 → 67.4 | +5.0 [+4.2, +5.8] | 65.5 → 70.0 | +4.5 [+3.8, +5.2] |
+| match10 | 64.8 → 66.2 | +1.41 [+1.18, +1.64] | 67.5 → 68.7 | +1.27 [+1.09, +1.46] |
+| ListenBrainz | 0.447 → 0.451 | +0.0045 [+0.0022, +0.0068] | 0.443 → 0.447 | +0.0039 [+0.0022, +0.0058] |
+| Far-genre rows | 0.117 → 0.110 | −0.0071 [−0.0106, −0.0042] | 0.129 → 0.128 | −0.0016 [−0.0036, +0.0005] |
+| Other-language rows | 0.000 → 0.000 | 0.0000 | 0.000 → 0.000 | 0.0000 |
+| Derivative uploads | 0.0021 → 0.0021 | 0.0000 | 0.0025 → 0.0025 | 0.0000 [−0.0003, +0.0003] |
+| Seeds with a head | 41.6 % → 25.9 % | −15.6 points [−18.1, −13.3] | 43.0 % → 29.5 % | −13.5 points [−15.6, −11.4] |
+| First row changed |  | 17.5 % |  | 15.2 % |
+
+low1 fell on 136 held-out and 149 fresh seeds and rose on none. match1 rose on 139 and 151 seeds
+and fell on one in each set. Against served Sounds like (two-tab rule 3), the candidate's main is closer than served
+main was, held-out then fresh: match10 −0.95 and −1.02 (served main −2.36 and −2.29; limit −3.5),
+ListenBrainz −0.0045 and −0.0070 (−0.0089 and −0.0110; limit −0.025), far-genre rows +0.0026 and
++0.0016 (+0.0097 and +0.0032; limit +0.015).
+
+HR@10 on the benchmarks' held-out split (2,739 seeds), hits in brackets:
+
+| List | Covers (1,170) | Samples (747) | Samples reverse (695) |
+|---|---|---|---|
+| Best matches (served) | 0.612 (716) | 0.088 (66) | 0.106 (74) |
+| Sounds like (served) | 0.121 (142) | 0.009 (7) | 0.013 (9) |
+| Main (served) | 0.456 (534) | 0.064 (48) | 0.071 (49) |
+| **Main, m20z3** | **0.424 (496)** | **0.058 (43)** | **0.063 (44)** |
+| Rule 4 floor | 0.407 (476) | 0.056 (42) | 0.062 (43) |
+| m20z3 − served main | −0.032 [−0.043, −0.023] | −0.007 [−0.012, −0.001] | −0.007 [−0.014, −0.001] |
+| m20z3 − Sounds like | +0.303 [+0.277, +0.328] | +0.048 [+0.033, +0.064] | +0.050 [+0.035, +0.068] |
+
+- Main keeps 90 %, 88 % and 88 % of its lead over Sounds like: 20, 1 and 1 hits above the floors.
+- The cost is close to development's (34 covers, 3 samples and 3 samples reverse hits): 38, 5 and 5 hits.
+- Reported, not gated: Gen Alpha 12 → 10 of 59 (−0.034 [−0.102, +0.034]); SampleID 1 of 43 and V4 2 of 19,
+  both unchanged.
+- The head shrinks from 1,947 to 1,432 songs; no song enters it, here or on development
+  (`grow/qa/head_set_diff.json`). Of the 515 it drops, 82 (16 %) are labelled covers or samples of their seed;
+  of the 1,432 it keeps, 594 are (41.5 %, up from 34.7 %), lower bounds as before. low1 falls from 0.258 to 0.146,
+  and the share of seeds with a head from 54.3 % to 44.0 %.
+
+**Next: serving (rule 6).** With Yassin's OK, the defaults become Z 3.0 and M 20 and the website's and Spotify's
+cache policies move on. A guarded deploy keeps a backup, rule 4 of the listener ranking runs unchanged, and the
+four review songs are checked through `soundalike.yassin.app`.
+
 ## Stem dissection (pre-registered 2026-11-10, before any result)
 
 **What.** `soundalike.anysong.stems` splits a preview into six stems with htdemucs_6s (vocals, drums, bass, guitar,
