@@ -2466,6 +2466,34 @@ HR@10 on the benchmarks' held-out split (2,739 seeds), hits in brackets:
 cache policies move on. A guarded deploy keeps a backup, rule 4 of the listener ranking runs unchanged, and the
 four review songs are checked through `soundalike.yassin.app`.
 
+### Blind listening check for the stricter head (pre-registered 2026-11-12, before any listening)
+
+Yassin asked to hear the change before the public release: the website's two tabs and the Spotify extension ship
+together only after this check.
+
+**Songs.** Twelve seeds whose main changes in its first ten rows between cur (main as served before the stricter
+head) and m20z3: from each of the held-out and fresh sets, the first six of a seeded shuffle
+(`random.Random(20261112)`) of its changed seeds whose own Deezer preview plays. Then those of the four review songs
+whose first ten rows change. `grow/qa/ab_listen.py build` draws them once, from lists rebuilt as in the held-out run.
+
+**Blind.** For each song the page shows its preview and the first ten rows of both lists as List A and List B:
+title, artist and a 30-second Deezer preview, with no match, labels or variant names. The songs come in a seeded
+order. Each song's sides are seeded and balanced: as many songs with cur as List A as with m20z3, cur once more for
+an odd count. The page (`ab_listen.py serve`, on 127.0.0.1 only) never loads the key.
+
+**Question.** "Which list fits the song better?": A, B or about the same, with an optional note. Yassin may listen
+to as much as he likes and change a pick until he says he is done.
+
+**Decision** (`ab_listen.py score`, after every song is answered):
+- m20z3 stays, and the public release ships it, unless cur is preferred on more songs than m20z3. "About the same"
+  counts for neither.
+- If cur is preferred on more songs, main goes back to cur on the server from the deploy's backup before the public
+  release, and the result goes back to Yassin.
+- With any song unanswered there is no decision.
+
+**Reported, not gated:** the counts, a two-sided sign test, whether each song's first row changed, and his notes.
+A dozen or so songs can only show a large difference; the held-out result above stays the main evidence.
+
 ## Stem dissection (pre-registered 2026-11-10, before any result)
 
 **What.** `soundalike.anysong.stems` splits a preview into six stems with htdemucs_6s (vocals, drums, bass, guitar,
