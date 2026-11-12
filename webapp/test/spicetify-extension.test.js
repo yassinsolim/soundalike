@@ -2286,7 +2286,7 @@ const soundsFixture = [
   { title: "Take My Breath", artist: "The Weeknd", bpm: 121.7 },
 ];
 
-const bestCacheKey = "best:anysong-main-listeners-v10:listeners:same:spotify:track:test";
+const bestCacheKey = "best:anysong-main-listeners-v11:listeners:same:spotify:track:test";
 
 function bestMatchesBody(best = bestFixture, overrides = {}) {
   return {
@@ -2494,7 +2494,7 @@ test("opens on Best matches with Listeners also play one tab away", async () => 
   // A new response format gets a new URL, so HTTP-cached older responses are skipped.
   assert.equal(
     bestUrl.searchParams.get("policy"),
-    "anysong-main-listeners-v10",
+    "anysong-main-listeners-v11",
   );
   // Best matches came back, so the older Sounds like service isn't asked.
   assert.deepEqual(

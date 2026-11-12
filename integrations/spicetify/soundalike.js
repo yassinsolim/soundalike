@@ -16,7 +16,7 @@
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.13.0-local.3";
+  const RUNTIME_SEMANTIC_VERSION = "2.13.0-local.4";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -77,7 +77,7 @@
   // Songs this extension queued; Spotify keeps its queue across restarts.
   const LATE_QUEUE_KEY = "soundalike:late-queue:v1";
   const BEST_MATCHES_ENDPOINT = `${FALLBACK_HOSTED_SERVER}/api/anysong/similar`;
-  const BEST_MATCHES_POLICY = "anysong-main-listeners-v10";
+  const BEST_MATCHES_POLICY = "anysong-main-listeners-v11";
   // Audio only: the hosted lists come without the scene and listener layer
   // (scene=0), and the companion's Sounds like without related-artist ordering.
   const AUDIO_ONLY_KEY = "soundalike:audio-only:v1";
