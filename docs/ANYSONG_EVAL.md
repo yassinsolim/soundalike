@@ -2017,6 +2017,117 @@ Every shown song in Best, Same vibe and Sounds like carries a `match`, and Sound
 Deichkind, #2 in the feedback, is now #7 in the library version that Spotify opens and #16 for the album version
 answered live. Runtime 2.12.0 changes the cache policy to v8 and shows the sound match as a bar.
 
+## One main list and Listeners also play (pre-registered 2026-11-11, before any held-out result)
+
+**Why.** Feedback on 2026-11-11: the extension should show two tabs instead of Best matches, Same vibe
+and Sounds like. One main list with the best results, and Listeners also play on its own tab. On Yassin's examples
+(Childish Gambino "Heartbeat", KIRBS "Follow My Lead", trxy "icantbelieveiletyougetaway") Same vibe and Sounds like
+beat Best, whose listener blend lets in songs that sound unlike the seed.
+
+**Change under test.** The API adds two lists. Best, Same vibe, Sounds like and the channel lists stay byte-identical
+(`grow/qa/main_dev.py parity` over the 4,143 dev, sweep and bench_dev seeds).
+- `main`: Best's audio head (evidence only; `MAIN_HEAD_BARE` songs when none has evidence), then the sonic list by
+  z(sound score) + `MAIN_LISTENER_WEIGHT` z(listener logit), one song per artist. `MAIN_POOL = "all"` adds Best's
+  other candidates with a sound match of at least `MAIN_MATCH_FLOOR`. Without listener data: the head, then Sounds
+  like's order.
+- `listeners`: other artists' songs by z(listener logit) + `LISTENERS_SOUND_WEIGHT` z(sound score), one per artist,
+  never the seed's own artist. Omitted without listener data and with Audio only (`scene=0`).
+
+**Development rule**, fixed before the first development run (SL = served Sounds like, B = served Best, same seeds):
+- Main: match10 at least SL − 2.0; other-language rows, derivative uploads and far-genre rows each at most SL + 0.005;
+  HR@10 on the development covers, samples and samples reverse each at least B − 0.03. Pick the highest ListenBrainz
+  hit rate; within 0.002 of it, the higher match10.
+- Listeners: match10 at least B − 2.0; other-language rows, derivative uploads and far-genre rows each at most
+  B + 0.005. The same pick.
+- match10: the mean sound match (0 to 100, `api.sound_match`) of the first ten songs, one per artist.
+
+### Development result: no main list passed; Listeners also play at sound weight 0.25
+
+Out-of-fold lists for the 823 dev and sweep seeds; HR@10 on the 2,667 development benchmark queries with the all-dev
+ranker. Other-language rows were 0.000 for every list.
+
+| List | ListenBrainz | Far genre | match10 | Covers | Samples | Samples reverse |
+|---|---|---|---|---|---|---|
+| Best (served) | 0.526 | 0.098 | 38.6 | 0.588 | 0.077 | 0.089 |
+| Same vibe (served) | 0.486 | 0.098 | 55.2 | 0.231 | 0.036 | 0.039 |
+| Sounds like (served) | 0.465 | 0.096 | 68.9 | 0.097 | 0.010 | 0.006 |
+| Main, listener weight 0 | 0.221 | 0.209 | 75.6 | 0.432 | 0.056 | 0.062 |
+| Main, weight 1 | 0.398 | 0.121 | 70.6 | 0.432 | 0.057 | 0.061 |
+| Main, weight 2 | 0.452 | 0.104 | 66.3 | 0.432 | 0.058 | 0.057 |
+| Main, weight 3 | 0.470 | 0.100 | 64.4 | 0.433 | 0.058 | 0.057 |
+| Main, weight 2, one bare head song | 0.439 | 0.112 | 63.6 | 0.560 | 0.068 | 0.075 |
+| Main, weight 2, all pool, floor 40 | 0.471 | 0.102 | 64.8 | 0.432 | 0.062 | 0.060 |
+| Main's head, then Same vibe | 0.473 | 0.105 | 53.3 | 0.463 | 0.068 | 0.072 |
+| Listeners, sound weight 0 | 0.601 | 0.075 | 33.3 | 0.072 | 0.010 | 0.004 |
+| **Listeners, sound weight 0.25 (chosen)** | **0.601** | **0.077** | **40.9** | 0.069 | 0.007 | 0.004 |
+| Listeners, sound weight 0.5 | 0.597 | 0.076 | 46.2 | 0.075 | 0.009 | 0.003 |
+| Listeners, sound weight 1 | 0.582 | 0.077 | 52.3 | 0.085 | 0.009 | 0.001 |
+
+**Listeners also play.** Weight 0 failed match10 (−5.3 against Best). Weight 0.25 against Best, paired 95 %
+intervals: ListenBrainz +0.076 (+0.068 to +0.083), shared genre +0.034, match10 +2.3 (+1.8 to +2.7), far-genre rows
+−0.021 (−0.027 to −0.015).
+
+**Main.** No variant met both halves of the rule:
+- With an evidence-only head, covers HR@10 is 0.432, far below Best's 0.588 − 0.03.
+- One bare head song brings covers to 0.560, but costs 5.3 points of match10 against Sounds like
+  (−5.6 to −5.1), beyond the 2.0 allowed.
+- Main at weight 2 is Sounds like with the evidence head on top, because `SOUNDS_LISTENER_WEIGHT` is also 2.0.
+  45 % of seeds get a head, 1.34 songs when they do (0 songs 54.6 %, 1 song 31.1 %, 2 songs 13.4 %, 3 or more
+  1.0 %). Each head song displaces a Sounds like song that sounds far more alike: mean match 27.9 against 72.9 over the
+  360 seeds where it happens. Against Sounds like:
+  match10 −2.7 (−2.9 to −2.4), far-genre rows +0.008 (+0.005 to +0.011), ListenBrainz −0.013 (−0.016 to −0.010).
+
+The two halves conflict: a list cannot sound as alike as Sounds like and hold as many covers as Best. Choosing between
+them is a product decision, so the rule was not loosened after the fact.
+
+**Decision (2026-11-11).** Yassin chose main at listener weight 2 (option B) from the table above and the lists for four
+songs (`grow/qa/main_dev.py review`, served ranker):
+- Main is Best's evidence head, then Sounds like's order. Listener-led picks move to Listeners also play, at sound
+  weight 0.25.
+- On the development data main keeps most of Sounds like's sound (match10 −2.7) and adds what Sounds like misses:
+  covers HR@10 0.097 → 0.432, samples 0.010 → 0.058, samples reverse 0.006 → 0.057.
+- It gives up Best's listener blend (ListenBrainz 0.526 → 0.452) and about a quarter of Best's covers
+  (0.588 → 0.432).
+- The development rule was not changed.
+
+The four songs:
+- Childish Gambino "Heartbeat" and Ski Mask The Slump God "Get Geeked" get no head, so main is Sounds like.
+- Lil Wayne "She Will" gets Bryson Tiller "We Will" on top (sound match 91).
+- KIRBS "Follow My Lead" gets Rema "HOV" on top: first in the melody channel, sound match 6. The UK rap that Sounds like
+  finds follows (sound match 92 to 96). This is the head's cost.
+
+### Held-out gates (pre-registered 2026-11-11, before any held-out result)
+
+**Baseline.** The served code (b7c5d2c). **Candidate.** Main `w2` and Listeners also play `l025`, with the served
+ranker (`listener-v1.npz`). **Seeds.** The 799 held-out and 1,000 fresh seeds, all with listener inputs, and the
+benchmarks' held-out split. Run once (`grow/qa/main_dev.py held w2`); checked by `grow/qa/main_dev.py verdict`.
+
+**Must pass (all), else not deployed:**
+1. **Lists users see.** Best matches, Same vibe, Sounds like, the channel lists and the query are byte-identical to the
+   served code for every held-out, fresh and held-out benchmark seed (`main_dev.py parity`, run on both sources).
+2. **Listeners also play**, against served Best, on each seed set:
+   - The ListenBrainz hit rate rises: paired 95 % lower bound above 0.
+   - match10 at least Best − 2.0.
+   - Other-language rows, derivative uploads and far-genre rows each at most Best + 0.005.
+3. **Main**, against served Sounds like, on each seed set. The trade-off must stay near its development size:
+   - match10 at least Sounds like − 3.5 (development −2.7).
+   - ListenBrainz hit rate at least Sounds like − 0.025 (development −0.013).
+   - Far-genre rows at most Sounds like + 0.015 (development +0.008).
+   - Other-language rows and derivative uploads each at most Sounds like + 0.005.
+4. **Main keeps the relationships**, on the held-out benchmark queries, against served Sounds like:
+   - Covers HR@10 rises: paired 95 % lower bound above 0.
+   - Samples and samples reverse HR@10 do not fall (change at least 0).
+5. **Serving.** Rule 4 of the listener ranking, unchanged.
+
+**Reported, not gated:**
+- Main and Listeners also play against Best on the benchmarks.
+- SampleID, Gen Alpha and V4.
+- The share of seeds with a head and its mean length.
+- Shared genre.
+
+**No fallback.** If any rule fails, the two tabs are not deployed and the result goes back to Yassin. Nothing else is
+tried on held-out data.
+
 ## Stem dissection (pre-registered 2026-11-10, before any result)
 
 **What.** `soundalike.anysong.stems` splits a preview into six stems with htdemucs_6s (vocals, drums, bass, guitar,

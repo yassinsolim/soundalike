@@ -111,7 +111,7 @@ MAIN_LISTENER_WEIGHT = 2.0
 MAIN_POOL = "sonic"
 MAIN_MATCH_FLOOR = 50
 MAIN_HEAD_BARE = 0
-LISTENERS_SOUND_WEIGHT = 0.5
+LISTENERS_SOUND_WEIGHT = 0.25
 # Sound match (``sound_match``): sonic (MuQ-MuLan) score quantiles 0, 5, ..., 100 % over every song shown in the top
 # 20 of Best matches, Same vibe or Sounds like for the development seeds: 62,362 songs from 1,474 seeds with the
 # served lists (grow/qa/head_dev.py calib, 2026-11-11). A typical seed's median shown song scores 0.419 (50).
