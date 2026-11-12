@@ -196,6 +196,11 @@
   let persistentCache;
   let fallbackTrackSearchDefinition;
 
+  // Local experiment: Marketplace's Soundalike bootstrap can inject the signed
+  // runtime after this file. Claiming the slot before the readiness wait makes
+  // that copy step aside on every start instead of whichever polls first.
+  if (!window.__soundalikeRuntimeVersion) window.__soundalikeRuntimeVersion = RUNTIME_SEMANTIC_VERSION;
+
   // Wait until the Spicetify APIs we need are ready.
   if (!(
     window.Spicetify &&
@@ -213,8 +218,10 @@
   }
   // The signed Marketplace bootstrap may be executed more than once during
   // client navigation. Never register a second context-menu item.
-  if (window.__soundalikeRuntimeVersion || window.__soundalikeContextMenuItem) return;
-  window.__soundalikeRuntimeVersion = RUNTIME_SEMANTIC_VERSION;
+  if (
+    window.__soundalikeRuntimeVersion !== RUNTIME_SEMANTIC_VERSION ||
+    window.__soundalikeContextMenuItem
+  ) return;
   removeLegacyCaches();
   removeLegacyFeedbackSuppression();
   persistentCache = loadPersistentCache();

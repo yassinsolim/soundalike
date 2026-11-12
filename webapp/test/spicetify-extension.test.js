@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { webcrypto } from "node:crypto";
 import fs from "node:fs";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 
 const extensionSource = fs.readFileSync(
@@ -704,9 +706,23 @@ function loadExtension(fetchImpl, options = {}) {
     },
   };
   context.window = context;
+  // spicetifyLate: Spicetify is still starting when the runtime loads, until
+  // spicetifyReady() (a readiness API arrives last).
+  const readyJsx = context.Spicetify.ReactJSX;
+  if (options.spicetifyLate) delete context.Spicetify.ReactJSX;
   vm.createContext(context);
   vm.runInContext(extensionSource, context);
   return {
+    spicetifyReady() {
+      context.Spicetify.ReactJSX = readyJsx;
+    },
+    // Another script in the same page, such as a runtime Marketplace injects.
+    runScript(source) {
+      vm.runInContext(source, context);
+    },
+    get runtimeVersion() {
+      return context.__soundalikeRuntimeVersion;
+    },
     components: {
       AppProvider,
       PlatformProvider,
@@ -4607,6 +4623,48 @@ test("shows each hosted match's sound match as a bar next to Stems", async () =>
     findElement(matchOf(app.rows[1]), (node) => node.type === "i").props.style.width,
     "0%",
   );
+});
+
+// The signed runtime Marketplace's bootstrap injects (releases/stable.json).
+// Its commit can live only in a pull request ref, so fetch it if needed.
+function signedRuntimeSource() {
+  const stable = JSON.parse(fs.readFileSync(
+    new URL("../../integrations/spicetify/releases/stable.json", import.meta.url),
+    "utf8",
+  ));
+  const commit = stable.payload.runtime.url.match(/\/([a-f0-9]{40})\//)[1];
+  const spec = `${commit}:integrations/spicetify/soundalike.js`;
+  const cwd = fileURLToPath(new URL("../..", import.meta.url));
+  try {
+    return execFileSync("git", ["show", spec], { cwd, stdio: ["ignore", "pipe", "ignore"] })
+      .toString("utf8");
+  } catch {
+    execFileSync(
+      "git",
+      ["fetch", "--quiet", "--no-tags", "https://github.com/yassinsolim/soundalike.git", commit],
+      { cwd, stdio: "ignore" },
+    );
+    return execFileSync("git", ["show", spec], { cwd }).toString("utf8");
+  }
+}
+
+test("this local build keeps the runtime slot when Marketplace injects the signed runtime", async () => {
+  const localVersion = extensionSource.match(/const RUNTIME_SEMANTIC_VERSION = "([^"]+)";/)[1];
+  const app = loadExtension(async () => response(200, { ok: false }), {
+    spicetifyLate: true,
+    contextMenuV2: true,
+  });
+  assert.equal(app.registeredMenuItems, 0);
+  // Spicetify finishes starting just before the signed copy runs, which let
+  // that copy register first whenever its readiness check came first.
+  app.spicetifyReady();
+  const signed = signedRuntimeSource();
+  assert.doesNotMatch(signed, new RegExp(`RUNTIME_SEMANTIC_VERSION = "${localVersion.replace(/\./g, "\\.")}"`));
+  app.runScript(signed);
+  assert.equal(app.registeredMenuItems, 0, "the signed copy steps aside");
+  await waitFor(() => app.registeredMenuItems === 1, 1500);
+  assert.equal(app.runtimeVersion, localVersion);
+  assert.equal(app.nowPlayingMenuItems.length, 1);
 });
 
 test("refetches a saved Best matches list that predates song ids, once", async () => {
