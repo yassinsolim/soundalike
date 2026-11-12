@@ -1,19 +1,22 @@
 // soundalike — Spicetify extension
 // Adds a right-click "Find soundalikes" item to any track in the Spotify
-// desktop client. Results open on a navigable Spotify page with up to three
-// lists: "Best matches" (the hosted any-song ranking, shown by default),
-// "Same vibe" and "Sounds like" (both from the same hosted response; with the
-// local companion, Sounds like comes from the local soundalike server and
-// Same vibe is not shown). Playing a result plays the shown list on in
-// order, like a playlist that is never saved. Each hosted row's "Stems" button
-// opens the seed and that match split into instruments and compared part by
-// part (the hosted /api/anysong/dissect endpoint).
+// desktop client. Results open on a navigable Spotify page with two lists from
+// one hosted response: "Best matches" (likely covers and samples, then the
+// songs that sound most alike, shown by default) and "Listeners also play"
+// (other artists' songs this song's listeners play). With the local companion,
+// or when the hosted matcher can't take the song, a "Sounds like" list from the
+// soundalike recommender joins them. Playing a result plays the shown list on
+// in order, like a playlist that is never saved. Each hosted row's "Stems"
+// button opens the seed and that match split into instruments and compared
+// part by part (the hosted /api/anysong/dissect endpoint).
+//
+// Local experiment (branch exp/two-tabs, not published yet).
 //
 // Install (requires a patchable desktop Spotify app): follow this directory's
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.13.0";
+  const RUNTIME_SEMANTIC_VERSION = "2.13.0-local.2";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -74,7 +77,7 @@
   // Songs this extension queued; Spotify keeps its queue across restarts.
   const LATE_QUEUE_KEY = "soundalike:late-queue:v1";
   const BEST_MATCHES_ENDPOINT = `${FALLBACK_HOSTED_SERVER}/api/anysong/similar`;
-  const BEST_MATCHES_POLICY = "anysong-best-rrf-language-vibe-sounds-v9";
+  const BEST_MATCHES_POLICY = "anysong-main-listeners-v10";
   // Audio only: the hosted lists come without the scene and listener layer
   // (scene=0), and the companion's Sounds like without related-artist ordering.
   const AUDIO_ONLY_KEY = "soundalike:audio-only:v1";
@@ -124,16 +127,31 @@
   const BEST_MATCHES_PATIENCE_MS = 4000;
   const RESULT_VIEWS = [
     ["best", "Best matches"],
-    ["vibe", "Same vibe"],
+    ["listeners", "Listeners also play"],
     ["sounds", "Sounds like"],
   ];
   const BEST_MATCHES_BLURB =
-    "Likely covers, samples and shared melodies first, then similar-sounding " +
-    "songs by artists this song's listeners also play, marked Listeners also " +
-    "play. Turn on Audio only to leave those out.";
+    "Likely covers, samples and shared melodies first, then the songs that " +
+    "sound most alike, nudged toward artists this song's listeners also play. " +
+    "Turn on Audio only to rank by sound alone.";
   const AUDIO_ONLY_BEST_MATCHES_BLURB =
     "Likely covers, samples and shared melodies first, then the songs that " +
     "sound most alike.";
+  // Servers without the main list send Best matches with listener picks in it.
+  const MIXED_BEST_MATCHES_BLURB =
+    "Likely covers, samples and shared melodies first, then similar-sounding " +
+    "songs by artists this song's listeners also play, marked Listeners also " +
+    "play. Turn on Audio only to leave those out.";
+  const LISTENERS_BLURB =
+    "Songs by other artists that this song's listeners also play, one per " +
+    "artist. The likelier its listeners are to play a song, and the closer " +
+    "it sounds, the higher it ranks.";
+  const AUDIO_ONLY_LISTENERS_NOTE =
+    "Audio only is on, and this list comes from what this song's listeners " +
+    "also play. Turn Audio only off to see it.";
+  const NO_LISTENERS_NOTE =
+    "We don't know what this artist's listeners play yet, so there's no list " +
+    "here. Best matches still has the songs that sound most alike.";
   // A Best row the listener ranker placed, rather than the audio alone.
   const LISTENER_PICK_LABEL = "Listeners also play";
   const LISTENER_PICK_TITLE =
@@ -141,24 +159,13 @@
   const LISTENER_PICK_ARIA =
     "placed by what this song's listeners also play rather than by audio alone";
   const AUDIO_ONLY_TITLE =
-    "Rank by audio alone, leaving out songs placed by what this song's " +
-    "listeners also play";
-  const SAME_VIBE_BLURB =
-    "Songs from these matches that share this song's tempo and overall " +
-    "sound, one per artist.";
+    "Rank by audio alone, leaving out what this song's listeners also play";
   const BEST_MATCHES_OFFER =
     "Your local companion keeps searches on this computer. Best matches only " +
     "run on the hosted matcher, so getting them sends this song's title, " +
     "artist and recording code (ISRC) to soundalike.yassin.app.";
   const SOUNDS_LIKE_BLURB =
     "Songs with the same overall sound: low end, dynamics and tone.";
-  // The hosted Sounds like list comes from the GPU engine's MuQ-MuLan model.
-  const HOSTED_SOUNDS_LIKE_BLURB =
-    "Songs with the same overall sound (instruments, production and mood), " +
-    "favouring artists this song's listeners also play. Turn on Audio only " +
-    "to leave that out.";
-  const AUDIO_ONLY_HOSTED_SOUNDS_LIKE_BLURB =
-    "Songs with the same overall sound (instruments, production and mood).";
   const FEEDBACK_ENDPOINT =
     `${FALLBACK_HOSTED_SERVER}/api/spicetify-feedback`;
   const FEEDBACK_INSTALL_KEY = "soundalike:feedback-install:v1";
@@ -796,49 +803,44 @@
   // so a match can be dissected next to its seed (Stems).
   function compactBestMatches(body) {
     const query = body?.query || {};
-    const best = Array.isArray(body?.results?.best) ? body.results.best : [];
     const withId = (item, compact) => {
       const id = deezerId(item?.id);
       const match = matchPercent(item?.match);
       const kept = match === null ? compact : { ...compact, match };
       return id ? { id, ...kept } : kept;
     };
-    const results = best
-      .map((item) => withId(item, {
-        title: String(item?.title || "").trim(),
-        artist: String(item?.artist || "").trim(),
-        matchNote: item?.ranks && typeof item.ranks === "object"
-          ? Object.entries(item.ranks)
-            .filter(([list, rank]) =>
-              /^[a-z]{1,24}$/.test(list) && Number.isInteger(rank) && rank > 0
-            )
-            .map(([list, rank]) => `${list} #${rank}`)
-            .join(" · ")
-          : "",
-        // What placed the row: the audio head or the listener ranker.
-        ...(item?.basis === "audio" || item?.basis === "listeners"
-          ? { basis: item.basis }
-          : {}),
-      }))
-      .filter((item) => item.title && item.artist)
-      .slice(0, HOSTED_RESULT_COUNT);
-    // Servers without Same vibe send no vibe list; its rows carry no ranks.
-    const vibe = (Array.isArray(body?.results?.vibe) ? body.results.vibe : [])
-      .map((item) => withId(item, {
-        title: String(item?.title || "").trim(),
-        artist: String(item?.artist || "").trim(),
-      }))
-      .filter((item) => item.title && item.artist)
-      .slice(0, HOSTED_RESULT_COUNT);
-    // The hosted Sounds like list; servers before it send none.
-    const sounds = (Array.isArray(body?.results?.sounds) ? body.results.sounds : [])
-      .map((item) => withId(item, {
-        title: String(item?.title || "").trim(),
-        artist: String(item?.artist || "").trim(),
-        bpm: Number.isFinite(item?.bpm) && item.bpm > 0 ? item.bpm : null,
-      }))
-      .filter((item) => item.title && item.artist)
-      .slice(0, HOSTED_RESULT_COUNT);
+    const channelRanks = (item) => item?.ranks && typeof item.ranks === "object"
+      ? Object.entries(item.ranks)
+        .filter(([list, rank]) =>
+          /^[a-z]{1,24}$/.test(list) && Number.isInteger(rank) && rank > 0
+        )
+        .map(([list, rank]) => `${list} #${rank}`)
+        .join(" · ")
+      : "";
+    const compactList = (name, extra) =>
+      (Array.isArray(body?.results?.[name]) ? body.results[name] : [])
+        .map((item) => withId(item, {
+          title: String(item?.title || "").trim(),
+          artist: String(item?.artist || "").trim(),
+          ...extra(item),
+        }))
+        .filter((item) => item.title && item.artist)
+        .slice(0, HOSTED_RESULT_COUNT);
+    // What placed a row: the audio head, the sound order or the listener ranker.
+    const basis = (item, allowed) =>
+      allowed.includes(item?.basis) ? { basis: item.basis } : {};
+    // Servers before the main list send Best matches with listener picks in it;
+    // the Best matches tab falls back to that list.
+    const results = compactList("best", (item) => ({
+      matchNote: channelRanks(item),
+      ...basis(item, ["audio", "listeners"]),
+    }));
+    // Only the audio head's rows keep the channel ranks that put them there.
+    const main = compactList("main", (item) => ({
+      matchNote: item?.basis === "audio" ? channelRanks(item) : "",
+      ...basis(item, ["audio", "sound"]),
+    }));
+    const listeners = compactList("listeners", () => ({}));
     const total = Number(body?.timings_ms?.total);
     return {
       query: withId(query, {
@@ -851,11 +853,17 @@
         bpm: Number.isFinite(query.bpm) && query.bpm > 0 ? query.bpm : null,
       }),
       results,
-      vibe,
-      sounds,
+      main,
+      listeners,
       totalMs: Number.isFinite(total) && total > 0 ? Math.round(total) : 0,
       serverCached: body?.cached === true,
     };
+  }
+
+  // The Best matches tab's list: the main list, or Best matches from a server
+  // without it.
+  function bestRows(data) {
+    return data?.main?.length ? data.main : data?.results || [];
   }
 
   async function requestBestMatchesUncached(
@@ -901,7 +909,7 @@
         throw bestMatchesError(response.ok ? 0 : response.status);
       }
       const data = compactBestMatches(body);
-      if (!data.results.length) {
+      if (!bestRows(data).length) {
         throw bestMatchesError(0, "No best matches came back for this song.");
       }
       return data;
@@ -919,7 +927,7 @@
       "recommendations",
       bestMatchesCacheId(seedUri, langMode, audioOnly)
     );
-    return Array.isArray(cached?.results) && cached.results.length && deezerId(cached.query?.id)
+    return bestRows(cached).length && deezerId(cached.query?.id)
       ? { data: cached, cached: true }
       : null;
   }
@@ -1095,13 +1103,12 @@
     };
   }
 
-  // Hosted Sounds like comes with Best matches from the GPU engine. The older
-  // Sounds like service answers only when that response has no sounds list,
-  // for example because the engine couldn't get the song. Null means the
-  // Best matches response has the list.
+  // The older Sounds like service stands in when the hosted matcher can't take
+  // the song, for example because it couldn't get the audio. Null means Best
+  // matches came back, so no stand-in is needed.
   async function soundsAfterBest(best, seedTrack, artist, seedUri) {
     await best.promise;
-    if (best.ok && best.value.data.sounds?.length) return null;
+    if (best.ok) return null;
     return requestSoundsLike(seedTrack, artist, seedUri);
   }
 
@@ -1129,24 +1136,17 @@
           data: request.value.data,
           cached: request.value.cached === true,
           tracks: [],
-          vibeTracks: [],
-          soundsTracks: [],
+          listenerTracks: [],
         }
       : {
           status: "error",
           error: request.error?.message || bestMatchesMessage(0),
           tracks: [],
         };
-    // Same vibe is hosted-only. A failed language reload keeps the tab it had.
-    if (request.ok) {
-      state.hasVibe = !state.companion && Boolean(request.value.data.vibe?.length);
-      // Once the hosted response carries Sounds like, the tab stays on it.
-      if (!state.companion && request.value.data.sounds?.length) state.soundsFromBest = true;
-    }
   }
 
   function applySoundsOutcome(state, request) {
-    // Hosted Sounds like came with Best matches, so there is no separate list.
+    // Best matches came back, so no Sounds like list was asked for.
     if (request.ok && !request.value) return;
     state.sounds = request.ok
       ? {
@@ -1232,8 +1232,6 @@
       showAllLanguages: false,
       audioOnly,
       companion: askFirst,
-      hasVibe: false,
-      soundsFromBest: false,
       timing: { startedAt, initialReadyMs },
       best: best ? pendingResultList() : offeredBestList(seedUri, audioOnly),
       sounds: pendingResultList(),
@@ -1320,6 +1318,7 @@
   function settleResultsView(searchId, kind, request) {
     const state = resultsState;
     if (!state || state.searchId !== searchId) return;
+    const tabsBefore = resultViews(state).map(([view]) => view).join();
     if (kind === "best") applyBestOutcome(state, request);
     else applySoundsOutcome(state, request);
     // Failed Best matches give way to a Sounds like list, whichever came first.
@@ -1333,11 +1332,10 @@
       refreshResultsPage();
       return;
     }
-    if (state.view === "vibe" && !state.hasVibe) state.view = "best";
-    const fromBest = state.view === "vibe" || (state.view === "sounds" && state.soundsFromBest);
-    if (state.view === kind || (kind === "best" && fromBest)) {
-      refreshResultsPage();
-    }
+    // Best matches and Listeners also play share the hosted response.
+    const shown = shownView(state) === "sounds" ? "sounds" : "best";
+    const tabsAfter = resultViews(state).map(([view]) => view).join();
+    if (shown === kind || tabsBefore !== tabsAfter) refreshResultsPage();
   }
 
   // Rebuilding the page would drop focus inside it to the body, so it moves to
@@ -2559,7 +2557,7 @@
     note.hidden = false;
   }
 
-  // Best matches, Same vibe and hosted Sounds like arrive already ranked, so
+  // Best matches and Listeners also play arrive already ranked, so
   // Spotify adds artwork, album and playback, and decides what is shown: rows
   // appear in rank order once found on Spotify, a song Spotify doesn't have is
   // left out, and the next row takes its place. A row whose lookup failed, or
@@ -2696,9 +2694,12 @@
       </section>`;
   }
 
-  // Same vibe is only offered once a hosted Best matches response carried it.
+  // Sounds like is the local companion's list, or the stand-in for Best matches
+  // the hosted matcher couldn't make; hosted searches show it once it settles.
   function resultViews(state) {
-    return RESULT_VIEWS.filter(([view]) => view !== "vibe" || state.hasVibe);
+    return RESULT_VIEWS.filter(([view]) =>
+      view !== "sounds" || state.companion || state.sounds.status !== "pending"
+    );
   }
 
   function resultTabsMarkup(state) {
@@ -2765,8 +2766,8 @@
       .join("");
   }
 
-  // Best matches and Same vibe come from one response, so they share its notes,
-  // tags and language switch.
+  // Best matches and Listeners also play come from one response, so they share
+  // its notes, tags and language switch.
   function matchedToNote(state, query, seedArtists) {
     return query.title &&
       query.artist &&
@@ -2811,7 +2812,10 @@
 
   function bestPanelMarkup(state, seedArtists) {
     const best = state.best;
-    let blurb = state.audioOnly ? AUDIO_ONLY_BEST_MATCHES_BLURB : BEST_MATCHES_BLURB;
+    const mixed = best.status === "ready" && !best.data.main?.length;
+    let blurb = state.audioOnly
+      ? AUDIO_ONLY_BEST_MATCHES_BLURB
+      : mixed ? MIXED_BEST_MATCHES_BLURB : BEST_MATCHES_BLURB;
     if (best.status === "offer") {
       const note = !state.viewChosen && state.sounds.status === "error"
         ? `<p class="sa-note">${esc(state.sounds.error)}</p>`
@@ -2828,14 +2832,15 @@
         "Listening for best matches… songs outside the library take a few seconds."
       );
     }
-    const { query, results } = best.data;
+    const { query } = best.data;
+    const results = bestRows(best.data);
     blurb += matchedToNote(state, query, seedArtists);
     const hidden = Math.max(0, Number(query.hidden) || 0);
     const languageStatus = hidden
       ? `${hidden} other-language ${hidden === 1 ? "match" : "matches"} ` +
         `${query.languageMode === "all" ? "in" : "hidden from"} the top ${HOSTED_RESULT_COUNT}`
       : `no other-language matches in the top ${HOSTED_RESULT_COUNT}`;
-    const tags = tagsMarkup(["Melody + samples", ...sourceTags(best)]);
+    const tags = tagsMarkup([mixed ? "Melody + samples" : "Melody, samples + sound", ...sourceTags(best)]);
     return `<p class="sa-blurb">${esc(blurb)}</p>
       <div class="sa-tags">${tags}</div>
       ${languageFilterMarkup(query, languageStatus, state)}
@@ -2844,69 +2849,41 @@
       </div>${LIST_NOTE_MARKUP}`;
   }
 
-  // Best's hidden count doesn't describe this list, so its status only says
-  // whether other languages are left out.
-  function vibePanelMarkup(state, seedArtists) {
+  // Other artists' songs this song's listeners play, from the Best matches
+  // response. Audio only and artists without listener data leave it empty.
+  function listenersPanelMarkup(state, seedArtists) {
     const best = state.best;
-    if (best.status !== "ready") {
-      return `<p class="sa-blurb">${esc(SAME_VIBE_BLURB)}</p>${audioOnlyRowMarkup(state)}` +
-        listStateMarkup(best, "Finding songs with the same vibe…");
+    if (best.status === "offer") {
+      return `<p class="sa-blurb">${esc(LISTENERS_BLURB)}</p>${audioOnlyRowMarkup(state)}
+      <div class="sa-offer">
+        <p>${esc(BEST_MATCHES_OFFER)}</p>
+        <button class="sa-best-offer" type="button">Get best matches</button>
+      </div>`;
     }
-    const { query, vibe } = best.data;
-    const blurb = SAME_VIBE_BLURB + matchedToNote(state, query, seedArtists);
-    const tags = tagsMarkup([
-      "Tempo + sound",
-      query.bpm ? `${Math.round(query.bpm)} BPM` : "",
-      ...sourceTags(best),
-    ]);
+    if (best.status !== "ready") {
+      return `<p class="sa-blurb">${esc(LISTENERS_BLURB)}</p>${audioOnlyRowMarkup(state)}` +
+        listStateMarkup(best, "Finding songs this song's listeners also play…");
+    }
+    const { query, listeners } = best.data;
+    if (!listeners?.length) {
+      const note = state.audioOnly ? AUDIO_ONLY_LISTENERS_NOTE : NO_LISTENERS_NOTE;
+      return `<p class="sa-blurb">${esc(LISTENERS_BLURB)}</p>${audioOnlyRowMarkup(state)}` +
+        listStateMarkup({ status: "empty" }, note);
+    }
+    const blurb = LISTENERS_BLURB + matchedToNote(state, query, seedArtists);
+    const tags = tagsMarkup(["What listeners play", ...sourceTags(best)]);
     const languageStatus = query.languageMode === "all"
       ? "all languages"
       : "other languages left out";
     return `<p class="sa-blurb">${esc(blurb)}</p>
       <div class="sa-tags">${tags}</div>
       ${languageFilterMarkup(query, languageStatus, state)}
-      ${listHeadMarkup({ stems: Boolean(dissectSeed(state, vibe)) })}
-      <div class="sa-list">${resultRowsMarkup(vibe, { hidden: true, notes: false })}
-      </div>${LIST_NOTE_MARKUP}`;
-  }
-
-  // Hosted Sounds like comes with Best matches, so it shares their language
-  // switch; its rows keep the BPM column.
-  function hostedSoundsPanelMarkup(state, seedArtists) {
-    const best = state.best;
-    const baseBlurb = state.audioOnly
-      ? AUDIO_ONLY_HOSTED_SOUNDS_LIKE_BLURB
-      : HOSTED_SOUNDS_LIKE_BLURB;
-    if (best.status !== "ready") {
-      return `<p class="sa-blurb">${esc(baseBlurb)}</p>${audioOnlyRowMarkup(state)}` +
-        listStateMarkup(best, "Finding songs that sound alike…");
-    }
-    const { query, sounds } = best.data;
-    if (!sounds?.length) {
-      return `<p class="sa-blurb">${esc(baseBlurb)}</p>${audioOnlyRowMarkup(state)}` + listStateMarkup(
-        { status: "error", error: "No sound-alike songs came back for this song." },
-        ""
-      );
-    }
-    const blurb = baseBlurb + matchedToNote(state, query, seedArtists);
-    const tags = tagsMarkup([
-      "Overall sound",
-      query.bpm ? `${Math.round(query.bpm)} BPM` : "",
-      ...sourceTags(best),
-    ]);
-    const languageStatus = query.languageMode === "all"
-      ? "all languages"
-      : "other languages left out";
-    return `<p class="sa-blurb">${esc(blurb)}</p>
-      <div class="sa-tags">${tags}</div>
-      ${languageFilterMarkup(query, languageStatus, state)}
-      ${listHeadMarkup({ bpm: true, stems: Boolean(dissectSeed(state, sounds)) })}
-      <div class="sa-list">${resultRowsMarkup(sounds, { hidden: true, notes: false })}
+      ${listHeadMarkup({ stems: Boolean(dissectSeed(state, listeners)) })}
+      <div class="sa-list">${resultRowsMarkup(listeners, { hidden: true, notes: false })}
       </div>${LIST_NOTE_MARKUP}`;
   }
 
   function soundsPanelMarkup(state, seedArtists) {
-    if (state.soundsFromBest) return hostedSoundsPanelMarkup(state, seedArtists);
     const sounds = state.sounds;
     let blurb = SOUNDS_LIKE_BLURB;
     const note = state.view === "sounds" &&
@@ -2956,28 +2933,24 @@
     return resultViews(state).some(([key]) => key === state.view) ? state.view : "best";
   }
 
-  // The list a view shows. Best matches, Same vibe and hosted Sounds like all
-  // come from the Best matches response; only the companion's Sounds like (or
-  // the older hosted service, as a fallback) has its own.
+  // The list a view shows. Best matches and Listeners also play both come from
+  // the Best matches response; Sounds like (the companion's, or the older
+  // hosted service when Best matches fail) has its own.
   function viewList(state, view) {
     const best = state.best;
-    if (view === "sounds" && !state.soundsFromBest) {
+    if (view === "sounds") {
       const sounds = state.sounds;
       return { list: sounds, results: sounds.data?.results, tracks: sounds.tracks, separate: true };
     }
-    if (view === "vibe") {
-      return { list: best, results: best.data?.vibe, tracks: (best.vibeTracks ||= []), label: "Same vibe" };
-    }
-    if (view === "sounds") {
+    if (view === "listeners") {
       return {
         list: best,
-        results: best.data?.sounds,
-        tracks: (best.soundsTracks ||= []),
-        label: "Sounds like",
-        bpm: true,
+        results: best.data?.listeners,
+        tracks: (best.listenerTracks ||= []),
+        label: "Listeners also play",
       };
     }
-    return { list: best, results: best.data?.results, tracks: best.tracks, label: "Best matches" };
+    return { list: best, results: best.data && bestRows(best.data), tracks: best.tracks, label: "Best matches" };
   }
 
   function buildResultsPage(state) {
@@ -2987,17 +2960,15 @@
     const seedImage = artworkUrl(seedTrack);
     const seedArtists = seedArtistNames(seedTrack);
     const sounds = state.sounds;
-    let kicker = view === "vibe"
-      ? "SAME VIBE · HOSTED LIBRARY"
+    let kicker = view === "listeners"
+      ? "LISTENERS ALSO PLAY · HOSTED LIBRARY"
       : "BEST MATCHES · HOSTED LIBRARY";
     if (view === "sounds") {
-      kicker = state.soundsFromBest
-        ? "SOUNDS LIKE · HOSTED LIBRARY"
-        : sounds.status === "ready"
-          ? `SOUNDS LIKE · ${sounds.data.__soundalikeSource === "local"
-            ? "LOCAL ENGINE"
-            : "HOSTED LIBRARY"}`
-          : "SOUNDS LIKE";
+      kicker = sounds.status === "ready"
+        ? `SOUNDS LIKE · ${sounds.data.__soundalikeSource === "local"
+          ? "LOCAL ENGINE"
+          : "HOSTED LIBRARY"}`
+        : "SOUNDS LIKE";
     }
     wrap.className = "sa-results";
 
@@ -3099,9 +3070,9 @@
         .sa-offer p{margin:0 0 12px;color:var(--spice-subtext,#b3b3b3)}
         .sa-best-offer{min-height:36px;border:0;border-radius:999px;padding:7px 14px;background:var(--spice-button,#1ed760);color:#000;font:inherit;font-weight:700;cursor:pointer}
         .sa-best-offer:focus-visible{outline:2px solid var(--spice-text,#fff);outline-offset:2px}
-        .sa-view-best .sa-list-head,.sa-view-best .sa-row-content,.sa-view-vibe .sa-list-head,.sa-view-vibe .sa-row-content{grid-template-columns:32px 44px minmax(180px,1.6fr) minmax(120px,1fr)}
+        .sa-view-best .sa-list-head,.sa-view-best .sa-row-content,.sa-view-listeners .sa-list-head,.sa-view-listeners .sa-row-content{grid-template-columns:32px 44px minmax(180px,1.6fr) minmax(120px,1fr)}
         .sa-list-head.sa-with-stems,.sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(180px,1.6fr) minmax(120px,1fr) 64px 76px 72px}
-        .sa-view-best .sa-list-head.sa-with-stems,.sa-view-best .sa-row-stems .sa-row-content,.sa-view-vibe .sa-list-head.sa-with-stems,.sa-view-vibe .sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(180px,1.6fr) minmax(120px,1fr) 76px 72px}
+        .sa-view-best .sa-list-head.sa-with-stems,.sa-view-best .sa-row-stems .sa-row-content,.sa-view-listeners .sa-list-head.sa-with-stems,.sa-view-listeners .sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(180px,1.6fr) minmax(120px,1fr) 76px 72px}
         .sa-match{display:flex;align-items:center;gap:6px;min-width:0}
         .sa-match-bar{flex:1 1 auto;min-width:20px;height:6px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden}
         .sa-match-bar i{display:block;height:100%;border-radius:3px;background:var(--spice-button,#1ed760)}
@@ -3158,9 +3129,9 @@
         .sa-dx-foot{margin:18px 0 0;color:var(--spice-subtext,#b3b3b3);font-size:12px}
         @media(max-width:760px){
           .sa-list-head,.sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 56px}
-          .sa-view-best .sa-list-head,.sa-view-best .sa-row-content,.sa-view-vibe .sa-list-head,.sa-view-vibe .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr)}
+          .sa-view-best .sa-list-head,.sa-view-best .sa-row-content,.sa-view-listeners .sa-list-head,.sa-view-listeners .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr)}
           .sa-list-head.sa-with-stems,.sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 56px 40px 72px}
-          .sa-view-best .sa-list-head.sa-with-stems,.sa-view-best .sa-row-stems .sa-row-content,.sa-view-vibe .sa-list-head.sa-with-stems,.sa-view-vibe .sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 40px 72px}
+          .sa-view-best .sa-list-head.sa-with-stems,.sa-view-best .sa-row-stems .sa-row-content,.sa-view-listeners .sa-list-head.sa-with-stems,.sa-view-listeners .sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 40px 72px}
           .sa-match-value{display:none}
           .sa-album,.sa-list-head .sa-album-head{display:none}
           .sa-feedback-help{display:block}
@@ -3186,8 +3157,8 @@
       <div class="sa-panel sa-view-${view}" id="sa-panel" role="tabpanel" aria-labelledby="sa-tab-${view}">
         ${view === "best"
           ? bestPanelMarkup(state, seedArtists)
-          : view === "vibe"
-            ? vibePanelMarkup(state, seedArtists)
+          : view === "listeners"
+            ? listenersPanelMarkup(state, seedArtists)
             : soundsPanelMarkup(state, seedArtists)}
       </div>`;
 

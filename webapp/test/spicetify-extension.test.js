@@ -72,7 +72,7 @@ function loadExtension(fetchImpl, options = {}) {
   const tabFocus = [];
   // Indexes 0 and 1 stay Best matches and Sounds like; a page exposes only the
   // tabs its markup draws, in page order.
-  const tabs = ["best", "sounds", "vibe"].map((view) => ({
+  const tabs = ["best", "sounds", "listeners"].map((view) => ({
     dataset: { view },
     onclick: null,
     onkeydown: null,
@@ -2275,11 +2275,18 @@ const bestFixture = [
   { title: " ", artist: "Nobody", ranks: { melody: 4 } },
 ];
 
+// Best matches from a server without the main list, listener picks and all.
+const listenerBestFixture = [
+  { ...bestFixture[0], basis: "bogus" },
+  { ...bestFixture[1], basis: "listeners" },
+  { ...bestFixture[2], basis: "audio" },
+];
+
 const soundsFixture = [
   { title: "Take My Breath", artist: "The Weeknd", bpm: 121.7 },
 ];
 
-const bestCacheKey = "best:anysong-best-rrf-language-vibe-sounds-v9:listeners:same:spotify:track:test";
+const bestCacheKey = "best:anysong-main-listeners-v10:listeners:same:spotify:track:test";
 
 function bestMatchesBody(best = bestFixture, overrides = {}) {
   return {
@@ -2290,6 +2297,56 @@ function bestMatchesBody(best = bestFixture, overrides = {}) {
     timings_ms: { total: 2345 },
     ...overrides,
   };
+}
+
+// A server with the main list. Its audio head's rows keep the channel ranks
+// that put them there; the sound order's rows don't. Listeners also play holds
+// other artists' songs. Blank titles are dropped, as in Best matches.
+const mainFixture = [
+  { id: 31, title: "Save Your Tears", artist: "The Weeknd", basis: "audio",
+    ranks: { melody: 1, samples: 3 } },
+  { id: 32, title: "Chanson Proche", artist: "Artiste Deux", basis: "sound",
+    ranks: { sonic: 2 } },
+  { id: 33, title: " ", artist: "Nobody", basis: "sound", ranks: { sonic: 5 } },
+];
+
+const listenersFixture = [
+  { id: 41, title: "Take My Breath", artist: "The Weeknd", basis: "listeners" },
+  { id: 42, title: "Chanson Proche", artist: "Artiste Deux", basis: "listeners" },
+  { id: 43, title: " ", artist: "Nobody", basis: "listeners" },
+];
+
+function mainMatchesBody(langMode = "same", lists = {}) {
+  return bestMatchesBody(bestFixture, {
+    query: {
+      ...bestSeedQuery,
+      language: "en",
+      language_mode: langMode,
+      hidden: 2,
+      scene: "on",
+    },
+    results: {
+      best: listenerBestFixture,
+      main: mainFixture,
+      listeners: listenersFixture,
+      vibe: [{ id: 61, title: "Vibe Only", artist: "Somebody" }],
+      sounds: [{ id: 62, title: "Sounds Only", artist: "Somebody" }],
+      melody: [],
+      samples: [],
+      sonic: [],
+      ...lists,
+    },
+  });
+}
+
+const mainFetch = async (url) =>
+  response(200, mainMatchesBody(new URL(url).searchParams.get("lang")));
+
+// What the server sends with Audio only, or for an artist without listener
+// data: the main list and no Listeners also play.
+function withoutListeners(body) {
+  delete body.results.listeners;
+  return body;
 }
 
 function spotifyTrackFixture(title, artist, id) {
@@ -2352,6 +2409,13 @@ function errorNotifications(app) {
   return app.notifications.filter(([, isError]) => isError === true);
 }
 
+// The page from the tab panel on, leaving out the tab labels.
+function panelOf(html) {
+  const at = html.indexOf('class="sa-panel');
+  assert.ok(at >= 0, "the page has a tab panel");
+  return html.slice(at);
+}
+
 const noPreview = () => response(404, { ok: false, error: "not found" });
 const hostedMiss = async () => response(422, {
   ok: false,
@@ -2409,13 +2473,11 @@ test("stops waiting for the ISRC after a moment", async () => {
   assert.equal(new URL(app.bestRequests[0]).searchParams.get("isrc"), null);
 });
 
-test("opens on Best matches with Sounds like one tab away", async () => {
+test("opens on Best matches with Listeners also play one tab away", async () => {
   const app = loadBestMatchesExtension();
 
   await app.run();
   await waitFor(() => hasLog(app, "Best matches metadata settled"));
-  await waitFor(() =>
-    app.urls.some((url) => url.includes("/api/spicetify_recommend")));
 
   assert.equal(app.bestRequests.length, 1);
   const bestUrl = new URL(app.bestRequests[0]);
@@ -2432,11 +2494,12 @@ test("opens on Best matches with Sounds like one tab away", async () => {
   // A new response format gets a new URL, so HTTP-cached older responses are skipped.
   assert.equal(
     bestUrl.searchParams.get("policy"),
-    "anysong-best-rrf-language-vibe-sounds-v9",
+    "anysong-main-listeners-v10",
   );
-  assert.equal(
-    app.urls.filter((url) => url.includes("/api/spicetify_recommend")).length,
-    1,
+  // Best matches came back, so the older Sounds like service isn't asked.
+  assert.deepEqual(
+    app.urls.filter((url) => url.includes("/api/spicetify_recommend")),
+    [],
   );
   assert.deepEqual(app.history, ["/soundalike"]);
   assert.deepEqual(errorNotifications(app), []);
@@ -2444,8 +2507,12 @@ test("opens on Best matches with Sounds like one tab away", async () => {
   const html = app.currentPage.innerHTML;
   assert.match(html, /<div class="sa-kicker">BEST MATCHES · HOSTED LIBRARY<\/div>/);
   assert.match(html, /class="sa-panel sa-view-best"/);
-  assert.match(html, /id="sa-tab-best"[^>]*aria-selected="true" tabindex="0"/);
-  assert.match(html, /id="sa-tab-sounds"[^>]*aria-selected="false" tabindex="-1"/);
+  assert.match(
+    html,
+    /id="sa-tab-best"[^>]*aria-selected="true" tabindex="0">Best matches<\/button><button [^>]*id="sa-tab-listeners"[^>]*aria-selected="false" tabindex="-1">Listeners also play<\/button><\/div>/,
+  );
+  assert.doesNotMatch(html, /sa-tab-sounds/);
+  // A server without the main list: its Best matches, listener picks and all.
   assert.match(html, /<span class="sa-tag">Melody \+ samples<\/span>/);
   assert.match(html, /<span class="sa-tag">In our library<\/span>/);
   assert.match(html, /<span class="sa-tag">Matched in 2\.3 s<\/span>/);
@@ -2674,12 +2741,6 @@ test("switching back to same-language Best matches reuses the saved list", async
   }, 1000);
 });
 
-const listenerBestFixture = [
-  { ...bestFixture[0], basis: "bogus" },
-  { ...bestFixture[1], basis: "listeners" },
-  { ...bestFixture[2], basis: "audio" },
-];
-
 test("labels listener picks and keeps Audio only lists apart from them", async () => {
   const storage = new Map();
   const saved = () => JSON.parse(storage.get("soundalike:spicetify-cache:v9") || "{}");
@@ -2702,7 +2763,7 @@ test("labels listener picks and keeps Audio only lists apart from them", async (
   );
   assert.match(
     html,
-    /<button class="sa-audio-only" type="button" aria-pressed="false" title="Rank by audio alone, leaving out songs placed by what this song's listeners also play">Audio only<\/button>/,
+    /<button class="sa-audio-only" type="button" aria-pressed="false" title="Rank by audio alone, leaving out what this song's listeners also play">Audio only<\/button>/,
   );
   // Only an exact "listeners" basis is labelled; the label comes before the ranks.
   assert.match(
@@ -2747,7 +2808,8 @@ test("labels listener picks and keeps Audio only lists apart from them", async (
     html,
     /<p class="sa-blurb">Likely covers, samples and shared melodies first, then the songs that sound most alike\.<\/p>/,
   );
-  assert.doesNotMatch(html, /Listeners also play|class="sa-basis"/);
+  // The tab keeps its name; the list itself carries no listener picks.
+  assert.doesNotMatch(panelOf(html), /Listeners also play|class="sa-basis"/);
   assert.equal(
     findElement(app.rows[1].tree, (node) => node.props?.className === "sa-basis"),
     null,
@@ -2781,16 +2843,9 @@ test("a saved Audio only choice applies to the next search", async () => {
 });
 
 test("leaves Sounds like unfiltered and without the language switch", async () => {
-  const app = loadBestMatchesExtension({
-    bestFetch: async () => response(200, bestMatchesBody(bestFixture, {
-      query: { ...bestSeedQuery, language: "en", language_mode: "same", hidden: 2 },
-    })),
-  });
+  // Sounds like stands in when Best matches fail.
+  const app = loadBestMatchesExtension({ bestFetch: async () => noPreview() });
   await app.run();
-  await waitFor(() => hasLog(app, "Best matches metadata settled"));
-  assert.match(app.currentPage.innerHTML, /<div class="sa-language-filter" role="status">/);
-
-  app.tabs[1].onclick();
   await waitFor(() => app.feedback.panel.dataset.ready === "true");
   const html = app.currentPage.innerHTML;
   assert.match(html, /class="sa-panel sa-view-sounds"/);
@@ -2817,31 +2872,22 @@ test("shows all languages without a switch when the seed language is unknown", a
 });
 
 test("switches result lists with tabs and arrow keys and keeps the choice", async () => {
-  const app = loadBestMatchesExtension();
+  const app = loadBestMatchesExtension({ bestFetch: mainFetch });
   await app.run();
   await waitFor(() => hasLog(app, "Best matches metadata settled"));
 
-  app.tabs[1].onclick();
-  await waitFor(() => app.feedback.panel.dataset.ready === "true");
+  app.tab("listeners").onclick();
+  await waitFor(() => hasLog(app, "Listeners also play metadata settled"));
   const html = app.currentPage.innerHTML;
-  assert.match(html, /<div class="sa-kicker">SOUNDS LIKE · HOSTED LIBRARY<\/div>/);
-  assert.match(html, /class="sa-panel sa-view-sounds"/);
-  assert.match(html, /id="sa-tab-sounds"[^>]*aria-selected="true"/);
-  assert.match(html, /Dual-Sonic64/);
-  assert.match(html, /<div class="sa-bpm">BPM<\/div>/);
-  assert.match(html, /<section class="sa-feedback"/);
-  assert.doesNotMatch(html, /Showing Sounds like instead/);
-  assert.equal(app.feedback.panel.hidden, false);
+  assert.match(html, /<div class="sa-kicker">LISTENERS ALSO PLAY · HOSTED LIBRARY<\/div>/);
+  assert.match(html, /class="sa-panel sa-view-listeners"/);
+  assert.match(html, /id="sa-tab-listeners"[^>]*aria-selected="true"/);
   assert.equal(app.rows[0].dataset.uri, "spotify:track:sounds0");
-  assert.notEqual(
-    findElement(app.rows[0].tree, (node) => node.props?.className === "sa-bpm"),
-    null,
-  );
-  assert.deepEqual(app.tabFocus, ["sounds"]);
+  assert.deepEqual(app.tabFocus, ["listeners"]);
 
   const handledKeys = [];
   const press = (tab, key) => {
-    app.tabs[tab].onkeydown({
+    app.tab(tab).onkeydown({
       key,
       preventDefault() {
         handledKeys.push(key);
@@ -2850,28 +2896,36 @@ test("switches result lists with tabs and arrow keys and keeps the choice", asyn
   };
   const view = () =>
     app.currentPage.innerHTML.match(/class="sa-panel sa-view-(\w+)"/)[1];
-  press(1, "ArrowLeft");
+  press("listeners", "ArrowLeft");
   assert.equal(view(), "best");
   assert.equal(app.rows[0].dataset.uri, "spotify:track:best0");
-  press(0, "End");
-  assert.equal(view(), "sounds");
-  press(1, "Home");
+  press("best", "End");
+  assert.equal(view(), "listeners");
+  press("listeners", "Home");
   assert.equal(view(), "best");
-  press(0, "ArrowRight");
-  assert.equal(view(), "sounds");
-  press(1, "a");
-  assert.equal(view(), "sounds");
-  assert.deepEqual(handledKeys, ["ArrowLeft", "End", "Home", "ArrowRight"]);
+  press("best", "ArrowRight");
+  assert.equal(view(), "listeners");
+  // The ends wrap around.
+  press("listeners", "ArrowRight");
+  assert.equal(view(), "best");
+  press("best", "ArrowLeft");
+  assert.equal(view(), "listeners");
+  press("listeners", "a");
+  assert.equal(view(), "listeners");
+  assert.deepEqual(
+    handledKeys,
+    ["ArrowLeft", "End", "Home", "ArrowRight", "ArrowRight", "ArrowLeft"],
+  );
   assert.deepEqual(
     app.tabFocus,
-    ["sounds", "best", "sounds", "best", "sounds"],
+    ["listeners", "best", "listeners", "best", "listeners", "best", "listeners"],
   );
 
   app.navigate("/album/elsewhere");
   assert.equal(app.currentPage, undefined);
   app.navigate("/soundalike");
   await waitFor(() => app.currentPage !== undefined);
-  assert.equal(view(), "sounds");
+  assert.equal(view(), "listeners");
   assert.deepEqual(app.history, ["/soundalike", "/album/elsewhere", "/soundalike"]);
 });
 
@@ -2919,49 +2973,6 @@ test("reports both failures once without opening an empty page", async () => {
   assert.equal(errors.length, 1);
   assert.match(errors[0][0], /not in the hosted library/);
   assert.match(errors[0][0], /isn't on Deezer with a preview/);
-});
-
-test("keeps Best matches open when the hosted library misses the song", async () => {
-  const app = loadBestMatchesExtension({ soundsResponse: hostedMiss });
-
-  await app.run();
-  await waitFor(() => hasLog(app, "Best matches metadata settled"));
-
-  assert.match(app.currentPage.innerHTML, /class="sa-panel sa-view-best"/);
-  app.tabs[1].onclick();
-  await waitFor(() => /role="alert"/.test(app.currentPage.innerHTML));
-  const html = app.currentPage.innerHTML;
-  assert.match(html, /<div class="sa-kicker">SOUNDS LIKE<\/div>/);
-  assert.match(
-    html,
-    /<div class="sa-state sa-state-error" role="alert">[^<]*not in the hosted library[^<]*<\/div>/,
-  );
-  assert.doesNotMatch(html, /<section class="sa-feedback"/);
-  assert.deepEqual(errorNotifications(app), []);
-});
-
-test("shows Sounds like loading until its list arrives", async () => {
-  const gate = deferred();
-  const app = loadBestMatchesExtension({
-    soundsResponse: async () => {
-      await gate.promise;
-      return response(200, { ...recommendation, results: soundsFixture });
-    },
-  });
-
-  await app.run();
-  assert.match(app.currentPage.innerHTML, /class="sa-panel sa-view-best"/);
-  app.tabs[1].onclick();
-  assert.match(app.currentPage.innerHTML, /<div class="sa-kicker">SOUNDS LIKE<\/div>/);
-  assert.match(
-    app.currentPage.innerHTML,
-    /<div class="sa-state" role="status">Finding songs that sound alike…<\/div>/,
-  );
-
-  gate.resolve();
-  await waitFor(() => app.feedback.panel.dataset.ready === "true");
-  assert.match(app.currentPage.innerHTML, /Dual-Sonic64/);
-  assert.equal(app.rows[0].dataset.uri, "spotify:track:sounds0");
 });
 
 test("opens with Best matches still loading after a few seconds", async () => {
@@ -3094,15 +3105,16 @@ test("restores cached Best matches without asking the matcher again", async () =
   const entry = saved().recommendations[bestCacheKey].value;
   assert.deepEqual(
     Object.keys(entry).sort(),
-    ["query", "results", "serverCached", "sounds", "totalMs", "vibe"],
+    ["listeners", "main", "query", "results", "serverCached", "totalMs"],
   );
   assert.deepEqual(
     entry.query,
     { id: 908604612, title: "Blinding Lights", artist: "The Weeknd", source: "live",
       language: "unknown", languageMode: "same", hidden: 0, bpm: null },
   );
-  assert.deepEqual(entry.vibe, []);
-  assert.deepEqual(entry.sounds, []);
+  // A server without the main list: Best matches stand in for it.
+  assert.deepEqual(entry.main, []);
+  assert.deepEqual(entry.listeners, []);
   assert.equal(entry.results.length, 2);
   assert.deepEqual(entry.results[0], {
     title: "Save Your Tears",
@@ -3346,37 +3358,8 @@ test("leaves focus outside the page alone when a list arrives", async () => {
   assert.deepEqual(app.tabFocus, []);
 });
 
-// Same vibe rows carry no ranks; the blank title is dropped like Best's.
-const vibeFixture = [
-  { id: 41, title: "Take My Breath", artist: "The Weeknd", score: 0.16667 },
-  { id: 42, title: "Chanson Proche", artist: "Artiste Deux", score: 0.14286 },
-  { id: 43, title: " ", artist: "Nobody", score: 0.125 },
-];
-
-function vibeMatchesBody(langMode = "same") {
-  return bestMatchesBody(bestFixture, {
-    query: {
-      ...bestSeedQuery,
-      language: "en",
-      language_mode: langMode,
-      hidden: 2,
-      bpm: 171.4,
-    },
-    results: {
-      best: bestFixture,
-      vibe: vibeFixture,
-      melody: [],
-      samples: [],
-      sonic: [],
-    },
-  });
-}
-
-const vibeFetch = async (url) =>
-  response(200, vibeMatchesBody(new URL(url).searchParams.get("lang")));
-
-test("offers Same vibe next to Best matches from the same hosted response", async () => {
-  const app = loadBestMatchesExtension({ bestFetch: vibeFetch });
+test("shows the main list in Best matches and Listeners also play one tab away", async () => {
+  const app = loadBestMatchesExtension({ bestFetch: mainFetch });
   await app.run();
   await waitFor(() => hasLog(app, "Best matches metadata settled"));
 
@@ -3384,94 +3367,103 @@ test("offers Same vibe next to Best matches from the same hosted response", asyn
   assert.match(html, /class="sa-panel sa-view-best"/);
   assert.match(
     html,
-    />Best matches<\/button><button [^>]*id="sa-tab-vibe"[^>]*aria-selected="false" tabindex="-1">Same vibe<\/button><button [^>]*id="sa-tab-sounds"[^>]*>Sounds like<\/button>/,
+    /id="sa-tab-best"[^>]*aria-selected="true" tabindex="0">Best matches<\/button><button [^>]*id="sa-tab-listeners"[^>]*aria-selected="false" tabindex="-1">Listeners also play<\/button><\/div>/,
+  );
+  assert.match(
+    html,
+    /<p class="sa-blurb">Likely covers, samples and shared melodies first, then the songs that sound most alike, nudged toward artists this song's listeners also play\. Turn on Audio only to rank by sound alone\.<\/p>/,
+  );
+  assert.match(
+    html,
+    /<span class="sa-tag">Melody, samples \+ sound<\/span><span class="sa-tag">In our library<\/span><span class="sa-tag">Matched in 2\.3 s<\/span>/,
   );
   assert.match(html, /English · 2 other-language matches hidden from the top 30/);
+  // The audio head's rows say which channels placed them; the sound order's
+  // rows say nothing, and no row is labelled a listener pick.
+  assert.match(html, /<span class="sa-why"> · melody #1 · samples #3<\/span>/);
+  assert.equal((html.match(/class="sa-why"/g) || []).length, 1);
+  assert.doesNotMatch(html, /class="sa-basis"|Vibe Only|Sounds Only/);
+  assert.match(html, /class="sa-list-head sa-with-stems"/);
+  assert.equal((html.match(/<div class="sa-row"/g) || []).length, 2);
+  assert.equal(app.rows[0].dataset.uri, "spotify:track:best0");
+  assert.equal(app.rows[1].dataset.uri, "spotify:track:best1");
+  assert.equal(app.rows[1].hidden, false);
 
-  app.tab("vibe").onclick();
-  await waitFor(() => hasLog(app, "Same vibe metadata settled"));
+  app.tab("listeners").onclick();
+  await waitFor(() => hasLog(app, "Listeners also play metadata settled"));
   html = app.currentPage.innerHTML;
-  assert.match(html, /<div class="sa-kicker">SAME VIBE · HOSTED LIBRARY<\/div>/);
-  assert.match(html, /class="sa-panel sa-view-vibe" id="sa-panel" role="tabpanel" aria-labelledby="sa-tab-vibe"/);
-  assert.match(html, /id="sa-tab-vibe"[^>]*aria-selected="true" tabindex="0"/);
+  assert.match(html, /<div class="sa-kicker">LISTENERS ALSO PLAY · HOSTED LIBRARY<\/div>/);
   assert.match(
     html,
-    /<p class="sa-blurb">Songs from these matches that share this song's tempo and overall sound, one per artist\.<\/p>/,
+    /class="sa-panel sa-view-listeners" id="sa-panel" role="tabpanel" aria-labelledby="sa-tab-listeners"/,
+  );
+  assert.match(html, /id="sa-tab-listeners"[^>]*aria-selected="true" tabindex="0"/);
+  assert.match(
+    html,
+    /<p class="sa-blurb">Songs by other artists that this song's listeners also play, one per artist\. The likelier its listeners are to play a song, and the closer it sounds, the higher it ranks\.<\/p>/,
   );
   assert.match(
     html,
-    /<span class="sa-tag">Tempo \+ sound<\/span><span class="sa-tag">171 BPM<\/span><span class="sa-tag">In our library<\/span><span class="sa-tag">Matched in 2\.3 s<\/span>/,
+    /<span class="sa-tag">What listeners play<\/span><span class="sa-tag">In our library<\/span><span class="sa-tag">Matched in 2\.3 s<\/span>/,
   );
   assert.match(
     html,
     /<div class="sa-language-filter" role="status"><span>English · other languages left out<\/span><span class="sa-filter-actions"><button class="sa-language-toggle" type="button" aria-pressed="false">Show all languages<\/button><button class="sa-audio-only" type="button" aria-pressed="false" title="[^"]+">Audio only<\/button><\/span><\/div>/,
   );
   assert.doesNotMatch(html, /hidden from the top/);
-  assert.doesNotMatch(html, /class="sa-why"/);
+  // Every row here is a listener pick, so none is labelled as one.
+  assert.doesNotMatch(html, /class="sa-why"|class="sa-basis"/);
   assert.doesNotMatch(html, /<div class="sa-bpm">BPM<\/div>/);
   assert.doesNotMatch(html, /<section class="sa-feedback"/);
   assert.equal((html.match(/<div class="sa-row"/g) || []).length, 2);
   assert.equal(app.rows[0].dataset.uri, "spotify:track:sounds0");
   assert.equal(app.rows[1].dataset.uri, "spotify:track:best1");
-  for (const className of ["sa-why", "sa-bpm"]) {
+  // The server filtered languages; Spotify's lyrics gate would hide the French row.
+  assert.equal(app.rows[1].hidden, false);
+  for (const className of ["sa-why", "sa-bpm", "sa-basis"]) {
     assert.equal(
-      findElement(app.rows[0].tree, (node) => node.props?.className === className),
+      findElement(app.rows[1].tree, (node) => node.props?.className === className),
       null,
     );
   }
-  // Both lists come from one any-song request; Same vibe asks nothing new.
-  assert.equal(app.bestRequests.length, 1);
-  assert.deepEqual(
-    app.urls.filter((url) => !url.endsWith("/health") &&
-      !url.includes("/api/spicetify_recommend")),
-    [],
+  assert.equal(
+    findElement(app.rows[1].tree, (node) => node.props?.className === "sa-row-content")
+      .props["aria-label"],
+    "Play Chanson Proche by Artiste Deux",
   );
-  assert.deepEqual(app.tabFocus, ["vibe"]);
+  // Both lists come from one any-song request.
+  assert.equal(app.bestRequests.length, 1);
+  assert.deepEqual(app.urls.filter((url) => !url.endsWith("/health")), []);
+  assert.deepEqual(app.tabFocus, ["listeners"]);
   assert.equal(app.feedback.panel.dataset.ready, undefined);
   assert.deepEqual(errorNotifications(app), []);
-
-  const view = () =>
-    app.currentPage.innerHTML.match(/class="sa-panel sa-view-(\w+)"/)[1];
-  const press = (tab, key) => app.tab(tab).onkeydown({ key, preventDefault() {} });
-  press("vibe", "ArrowRight");
-  assert.equal(view(), "sounds");
-  press("sounds", "ArrowRight");
-  assert.equal(view(), "best");
-  press("best", "ArrowRight");
-  assert.equal(view(), "vibe");
-  press("vibe", "ArrowLeft");
-  assert.equal(view(), "best");
-  press("best", "End");
-  assert.equal(view(), "sounds");
-  press("sounds", "Home");
-  assert.equal(view(), "best");
 });
 
-test("Same vibe shares the Best matches language switch", async () => {
-  const app = loadBestMatchesExtension({ bestFetch: vibeFetch });
+test("Listeners also play shares the Best matches language switch", async () => {
+  const app = loadBestMatchesExtension({ bestFetch: mainFetch });
   await app.run();
   await waitFor(() => hasLog(app, "Best matches metadata settled"));
-  app.tab("vibe").onclick();
+  app.tab("listeners").onclick();
   app.currentPage.querySelector(".sa-language-toggle").onclick();
-  assert.match(app.currentPage.innerHTML, /class="sa-panel sa-view-vibe"/);
+  assert.match(app.currentPage.innerHTML, /class="sa-panel sa-view-listeners"/);
   assert.match(
     app.currentPage.innerHTML,
-    /<div class="sa-state" role="status">Finding songs with the same vibe…<\/div>/,
+    /<div class="sa-state" role="status">Finding songs this song's listeners also play…<\/div>/,
   );
 
   await waitFor(() => app.currentPage.innerHTML.includes("English · all languages"));
   let html = app.currentPage.innerHTML;
   assert.equal(new URL(app.bestRequests[1]).searchParams.get("lang"), "all");
-  assert.match(html, /class="sa-panel sa-view-vibe"/);
+  assert.match(html, /class="sa-panel sa-view-listeners"/);
   assert.match(html, /aria-pressed="true">Use same-language matches<\/button>/);
-  assert.equal(app.tabFocus.at(-1), "vibe");
+  assert.equal(app.tabFocus.at(-1), "listeners");
 
   app.tab("best").onclick();
   html = app.currentPage.innerHTML;
   assert.match(html, /English · 2 other-language matches in the top 30/);
   assert.match(html, /aria-pressed="true">Use same-language matches<\/button>/);
 
-  app.tab("vibe").onclick();
+  app.tab("listeners").onclick();
   app.currentPage.querySelector(".sa-language-toggle").onclick();
   await waitFor(() =>
     app.currentPage.innerHTML.includes("English · other languages left out"));
@@ -3481,95 +3473,145 @@ test("Same vibe shares the Best matches language switch", async () => {
   );
 });
 
-test("leaves Same vibe out when the matcher sends no vibe list", async () => {
-  const app = loadBestMatchesExtension();
+test("explains an empty Listeners also play when the artist has no listener data", async () => {
+  const app = loadBestMatchesExtension({
+    bestFetch: async (url) => {
+      const body = withoutListeners(mainMatchesBody(new URL(url).searchParams.get("lang")));
+      body.query.scene = "unknown_artist";
+      return response(200, body);
+    },
+  });
   await app.run();
   await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  assert.equal(app.rows[0].dataset.uri, "spotify:track:best0");
 
-  assert.doesNotMatch(app.currentPage.innerHTML, /sa-tab-vibe|Same vibe/);
-  assert.equal(app.tab("vibe").onclick, null);
-  app.tabs[0].onkeydown({ key: "ArrowRight", preventDefault() {} });
-  assert.match(app.currentPage.innerHTML, /class="sa-panel sa-view-sounds"/);
+  app.tab("listeners").onclick();
+  const html = app.currentPage.innerHTML;
+  assert.match(html, /class="sa-panel sa-view-listeners"/);
+  assert.match(
+    html,
+    /<div class="sa-state" role="status">We don't know what this artist's listeners play yet, so there's no list here\. Best matches still has the songs that sound most alike\.<\/div>/,
+  );
+  assert.match(html, /<button class="sa-audio-only" type="button" aria-pressed="false"/);
+  assert.doesNotMatch(html, /<div class="sa-row"|class="sa-language-filter"/);
+  assert.equal(app.bestRequests.length, 1);
 });
 
-test("adds the Same vibe tab once slow Best matches arrive", async () => {
+test("shows Listeners also play loading until slow Best matches arrive", async () => {
   const gate = deferred();
   const app = loadBestMatchesExtension({
     timerScale: 0.01,
     bestFetch: async (url) => {
       await gate.promise;
-      return vibeFetch(url);
+      return mainFetch(url);
     },
   });
   await app.run();
   assert.match(app.currentPage.innerHTML, /Listening for best matches/);
-  assert.doesNotMatch(app.currentPage.innerHTML, /sa-tab-vibe/);
+  assert.match(app.currentPage.innerHTML, /id="sa-tab-listeners"[^>]*aria-selected="false"/);
+  app.tab("listeners").onclick();
+  assert.match(
+    app.currentPage.innerHTML,
+    /<div class="sa-state" role="status">Finding songs this song's listeners also play…<\/div>/,
+  );
 
   gate.resolve();
-  await waitFor(() => hasLog(app, "Best matches metadata settled"));
-  assert.match(app.currentPage.innerHTML, /id="sa-tab-vibe"[^>]*aria-selected="false"/);
+  await waitFor(() => hasLog(app, "Listeners also play metadata settled"));
+  assert.match(app.currentPage.innerHTML, /class="sa-panel sa-view-listeners"/);
+  assert.equal(app.rows[0].dataset.uri, "spotify:track:sounds0");
 });
 
-test("returns to Best matches when a language reload brings no Same vibe list", async () => {
+test("Audio only empties Listeners also play with a note", async () => {
+  const storage = new Map([["soundalike:audio-only:v1", "true"]]);
   const app = loadBestMatchesExtension({
+    storage,
     bestFetch: async (url) => {
-      const langMode = new URL(url).searchParams.get("lang");
-      return response(200, langMode === "all"
-        ? bestMatchesBody(bestFixture, {
-          query: { ...bestSeedQuery, language: "en", language_mode: "all", hidden: 2 },
-        })
-        : vibeMatchesBody(langMode));
+      const params = new URL(url).searchParams;
+      const body = mainMatchesBody(params.get("lang"));
+      return response(200, params.get("scene") === "0" ? withoutListeners(body) : body);
     },
   });
   await app.run();
   await waitFor(() => hasLog(app, "Best matches metadata settled"));
-  app.tab("vibe").onclick();
-  app.currentPage.querySelector(".sa-language-toggle").onclick();
+  assert.equal(new URL(app.bestRequests[0]).searchParams.get("scene"), "0");
+  let html = app.currentPage.innerHTML;
+  assert.match(
+    html,
+    /<p class="sa-blurb">Likely covers, samples and shared melodies first, then the songs that sound most alike\.<\/p>/,
+  );
 
-  await waitFor(() => app.bestRequests.length === 2 &&
-    /class="sa-panel sa-view-best"/.test(app.currentPage.innerHTML));
-  const html = app.currentPage.innerHTML;
-  assert.doesNotMatch(html, /sa-tab-vibe/);
-  assert.match(html, /English · 2 other-language matches in the top 30/);
-  assert.equal(app.tabFocus.at(-1), "best");
+  app.tab("listeners").onclick();
+  html = app.currentPage.innerHTML;
+  assert.match(
+    html,
+    /<div class="sa-state" role="status">Audio only is on, and this list comes from what this song's listeners also play\. Turn Audio only off to see it\.<\/div>/,
+  );
+  assert.match(html, /aria-pressed="true" title="[^"]+">Audio only<\/button>/);
+  assert.doesNotMatch(html, /<div class="sa-row"/);
+
+  app.audioOnlyButton.onclick();
+  assert.equal(storage.has("soundalike:audio-only:v1"), false);
+  await waitFor(() => app.logs.some((line) =>
+    line.includes("Listeners also play metadata settled") && line.includes("(shown 2,")));
+  html = app.currentPage.innerHTML;
+  assert.equal(new URL(app.bestRequests[1]).searchParams.get("scene"), null);
+  assert.match(html, /class="sa-panel sa-view-listeners"/);
+  assert.match(html, /aria-pressed="false" title="[^"]+">Audio only<\/button>/);
+  assert.equal(app.rows[0].dataset.uri, "spotify:track:sounds0");
 });
 
-test("keeps Same vibe out of local companion searches", async () => {
-  const app = loadBestMatchesExtension({ localCompanion: true, bestFetch: vibeFetch });
+test("offers Listeners also play to local companion searches", async () => {
+  const app = loadBestMatchesExtension({ localCompanion: true, bestFetch: mainFetch });
   await app.run();
   await waitFor(() => app.feedback.panel.dataset.ready === "true");
-  assert.doesNotMatch(app.currentPage.innerHTML, /sa-tab-vibe/);
+  let html = app.currentPage.innerHTML;
+  assert.match(
+    html,
+    />Best matches<\/button><button [^>]*id="sa-tab-listeners"[^>]*>Listeners also play<\/button><button [^>]*id="sa-tab-sounds"[^>]*>Sounds like<\/button>/,
+  );
+  assert.equal(app.bestRequests.length, 0);
 
-  app.tabs[0].onclick();
+  app.tab("listeners").onclick();
+  html = app.currentPage.innerHTML;
+  assert.match(html, /class="sa-panel sa-view-listeners"/);
+  assert.match(html, /<button class="sa-best-offer" type="button">Get best matches<\/button>/);
+  assert.equal(app.bestRequests.length, 0);
+
   app.offerButton.onclick();
-  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  await waitFor(() => hasLog(app, "Listeners also play metadata settled"));
   assert.equal(app.bestRequests.length, 1);
-  const html = app.currentPage.innerHTML;
-  assert.match(html, /class="sa-panel sa-view-best"/);
-  assert.doesNotMatch(html, /sa-tab-vibe|Same vibe/);
-  assert.equal(app.tab("vibe").onclick, null);
+  assert.match(app.currentPage.innerHTML, /class="sa-panel sa-view-listeners"/);
+  assert.equal(app.rows[0].dataset.uri, "spotify:track:sounds0");
 });
 
-test("restores a saved Same vibe list without asking the matcher again", async () => {
+test("restores a saved Listeners also play list without asking the matcher again", async () => {
   const storage = new Map();
-  const first = loadBestMatchesExtension({ storage, bestFetch: vibeFetch });
+  const first = loadBestMatchesExtension({ storage, bestFetch: mainFetch });
   await first.run();
   await waitFor(() => hasLog(first, "Best matches metadata settled"));
-  first.tab("vibe").onclick();
-  await waitFor(() => hasLog(first, "Same vibe metadata settled"));
+  first.tab("listeners").onclick();
+  await waitFor(() => hasLog(first, "Listeners also play metadata settled"));
   const saved = () =>
     JSON.parse(storage.get("soundalike:spicetify-cache:v9") || "{}");
   await waitFor(() => Boolean(
     saved().recommendations?.[bestCacheKey] &&
+    saved().spotifyTracks?.["result:save your tears::the weeknd"] &&
     saved().spotifyTracks?.["result:take my breath::the weeknd"] &&
     saved().spotifyTracks?.["result:chanson proche::artiste deux"],
   ), 1000);
   const entry = saved().recommendations[bestCacheKey].value;
-  assert.deepEqual(entry.vibe, [
+  assert.deepEqual(entry.listeners, [
     { id: 41, title: "Take My Breath", artist: "The Weeknd" },
     { id: 42, title: "Chanson Proche", artist: "Artiste Deux" },
   ]);
-  assert.equal(entry.query.bpm, 171.4);
+  // Only the audio head's rows keep the channel ranks that placed them.
+  assert.deepEqual(entry.main, [
+    { id: 31, title: "Save Your Tears", artist: "The Weeknd",
+      matchNote: "melody #1 · samples #3", basis: "audio" },
+    { id: 32, title: "Chanson Proche", artist: "Artiste Deux", matchNote: "", basis: "sound" },
+  ]);
+  assert.equal(entry.vibe, undefined);
+  assert.equal(entry.sounds, undefined);
 
   const second = loadBestMatchesExtension({
     storage,
@@ -3577,15 +3619,18 @@ test("restores a saved Same vibe list without asking the matcher again", async (
   });
   await second.run();
   await waitFor(() => hasLog(second, "Best matches metadata settled"));
-  second.tab("vibe").onclick();
-  await waitFor(() => hasLog(second, "Same vibe metadata settled"));
+  second.tab("listeners").onclick();
+  await waitFor(() => hasLog(second, "Listeners also play metadata settled"));
 
   assert.deepEqual(second.bestRequests, []);
   assert.deepEqual(second.urls.filter((url) => !url.endsWith("/health")), []);
   assert.deepEqual(second.graphqlRequests, []);
   const html = second.currentPage.innerHTML;
-  assert.match(html, /class="sa-panel sa-view-vibe"/);
-  assert.match(html, /<span class="sa-tag">171 BPM<\/span><span class="sa-tag">In our library<\/span>/);
+  assert.match(html, /class="sa-panel sa-view-listeners"/);
+  assert.match(
+    html,
+    /<span class="sa-tag">What listeners play<\/span><span class="sa-tag">In our library<\/span><\/div>/,
+  );
   assert.doesNotMatch(html, /Matched in/);
   assert.equal(second.rows[0].dataset.uri, "spotify:track:sounds0");
   assert.equal(second.rows[1].dataset.uri, "spotify:track:best1");
@@ -3690,12 +3735,12 @@ test("plays Best matches on in the shown order from the chosen row", async () =>
   assert.deepEqual(errorNotifications(app), []);
 });
 
-test("plays the Same vibe list from its own tab", async () => {
-  const app = loadBestMatchesExtension({ bestFetch: vibeFetch, playerApi: true });
+test("plays the Listeners also play list from its own tab", async () => {
+  const app = loadBestMatchesExtension({ bestFetch: mainFetch, playerApi: true });
   await app.run();
   await waitFor(() => hasLog(app, "Best matches metadata settled"));
-  app.tab("vibe").onclick();
-  await waitFor(() => hasLog(app, "Same vibe metadata settled"));
+  app.tab("listeners").onclick();
+  await waitFor(() => hasLog(app, "Listeners also play metadata settled"));
 
   await rowContent(app.rows[1]).props.onDoubleClick();
   assert.deepEqual(plain(app.contextPlays), [{
@@ -4044,12 +4089,12 @@ test("Stems plays its songs inside the shown list", async () => {
   const app = loadBestMatchesExtension({
     playerApi: true,
     bestFetch: async (url) =>
-      isDissect(url) ? response(200, dissectBody(908604612, 41)) : vibeFetch(url),
+      isDissect(url) ? response(200, dissectBody(908604612, 41)) : mainFetch(url),
   });
   await app.run();
   await waitFor(() => hasLog(app, "Best matches metadata settled"));
-  app.tab("vibe").onclick();
-  await waitFor(() => hasLog(app, "Same vibe metadata settled"));
+  app.tab("listeners").onclick();
+  await waitFor(() => hasLog(app, "Listeners also play metadata settled"));
   stemsOpener(app.rows[0]).props.onClick(quietEvent());
   await waitFor(() => app.stemsPanel?.innerHTML.includes("How alike, part by part"));
 
@@ -4145,104 +4190,8 @@ test("keeps the main menu item when Spicetify has no low-level menu items", asyn
   assert.equal(app.nowPlayingMenuItems.length, 0);
 });
 
-// The GPU engine's Sounds like list: language-filtered and one song per
-// artist on the server, with catalog tempos.
-const soundsListFixture = [
-  { id: 51, title: "Take My Breath", artist: "The Weeknd", score: 0.81, bpm: 121.7 },
-  { id: 52, title: "Chanson Proche", artist: "Artiste Deux", score: 0.77, bpm: null },
-  { id: 53, title: " ", artist: "Nobody", score: 0.7, bpm: 90 },
-];
-
-const soundsFetch = async (url) => {
-  const body = vibeMatchesBody(new URL(url).searchParams.get("lang"));
-  body.results.sounds = soundsListFixture;
-  return response(200, body);
-};
-
-test("Audio only Sounds like leaves listeners out of its description", async () => {
-  const storage = new Map([["soundalike:audio-only:v1", "true"]]);
-  const app = loadBestMatchesExtension({ storage, bestFetch: soundsFetch, playerApi: true });
-  await app.run();
-  await waitFor(() => hasLog(app, "Best matches metadata settled"));
-  app.tab("sounds").onclick();
-  await waitFor(() => hasLog(app, "Sounds like metadata settled"));
-  const html = app.currentPage.innerHTML;
-  assert.equal(new URL(app.bestRequests[0]).searchParams.get("scene"), "0");
-  assert.match(
-    html,
-    /<p class="sa-blurb">Songs with the same overall sound \(instruments, production and mood\)\.<\/p>/,
-  );
-  assert.match(html, /aria-pressed="true" title="[^"]+">Audio only<\/button>/);
-  assert.doesNotMatch(html, /Listeners also play|favouring/);
-});
-
-test("serves hosted Sounds like from the Best matches response", async () => {
-  const app = loadBestMatchesExtension({ bestFetch: soundsFetch, playerApi: true });
-  await app.run();
-  await waitFor(() => hasLog(app, "Best matches metadata settled"));
-  await new Promise((resolve) => setTimeout(resolve, 10));
-  assert.deepEqual(
-    app.urls.filter((url) => !url.endsWith("/health")),
-    [],
-    "the older Sounds like service is not asked",
-  );
-
-  app.tab("sounds").onclick();
-  await waitFor(() => hasLog(app, "Sounds like metadata settled"));
-  let html = app.currentPage.innerHTML;
-  assert.match(html, /<div class="sa-kicker">SOUNDS LIKE · HOSTED LIBRARY<\/div>/);
-  assert.match(html, /class="sa-panel sa-view-sounds"/);
-  assert.match(
-    html,
-    /<p class="sa-blurb">Songs with the same overall sound \(instruments, production and mood\), favouring artists this song's listeners also play\. Turn on Audio only to leave that out\.<\/p>/,
-  );
-  assert.match(
-    html,
-    /<span class="sa-tag">Overall sound<\/span><span class="sa-tag">171 BPM<\/span><span class="sa-tag">In our library<\/span><span class="sa-tag">Matched in 2\.3 s<\/span>/,
-  );
-  assert.match(
-    html,
-    /<span>English · other languages left out<\/span><span class="sa-filter-actions"><button class="sa-language-toggle" type="button" aria-pressed="false">Show all languages<\/button>/,
-  );
-  assert.match(html, /<div class="sa-bpm">BPM<\/div>/);
-  assert.doesNotMatch(html, /Dual-Sonic64|<section class="sa-feedback"/);
-  assert.equal((html.match(/<div class="sa-row"/g) || []).length, 2);
-  assert.equal(app.rows[0].dataset.uri, "spotify:track:sounds0");
-  assert.equal(app.rows[1].dataset.uri, "spotify:track:best1");
-  // The server filtered languages; Spotify's lyrics gate would hide the French row.
-  assert.equal(app.rows[1].hidden, false);
-  const bpmOf = (row) =>
-    findElement(row.tree, (node) => node.props?.className === "sa-bpm")?.props.children;
-  assert.equal(bpmOf(app.rows[0]), "122");
-  assert.equal(bpmOf(app.rows[1]), "\u2014");
-  assert.equal(app.feedback.panel.dataset.ready, undefined);
-
-  await rowContent(app.rows[1]).props.onDoubleClick();
-  assert.deepEqual(
-    plain(app.contextPlays[0].context.pages[0].items),
-    [{ uri: "spotify:track:sounds0" }, { uri: "spotify:track:best1" }],
-  );
-
-  // One language switch reloads every hosted list and stays on Sounds like.
-  app.currentPage.querySelector(".sa-language-toggle").onclick();
-  assert.match(
-    app.currentPage.innerHTML,
-    /<div class="sa-state" role="status">Finding songs that sound alike…<\/div>/,
-  );
-  await waitFor(() => app.currentPage.innerHTML.includes("English · all languages"));
-  html = app.currentPage.innerHTML;
-  assert.equal(new URL(app.bestRequests[1]).searchParams.get("lang"), "all");
-  assert.match(html, /class="sa-panel sa-view-sounds"/);
-  assert.match(html, /aria-pressed="true">Use same-language matches<\/button>/);
-  assert.equal(app.tabFocus.at(-1), "sounds");
-  assert.deepEqual(
-    app.urls.filter((url) => !url.endsWith("/health")),
-    [],
-  );
-});
-
-test("keeps the companion's Sounds like local when Best matches carry a list", async () => {
-  const app = loadBestMatchesExtension({ localCompanion: true, bestFetch: soundsFetch });
+test("keeps the companion's Sounds like local next to Best matches", async () => {
+  const app = loadBestMatchesExtension({ localCompanion: true, bestFetch: mainFetch });
   await app.run();
   await waitFor(() => app.feedback.panel.dataset.ready === "true");
   app.tabs[0].onclick();
@@ -4253,23 +4202,31 @@ test("keeps the companion's Sounds like local when Best matches carry a list", a
   const html = app.currentPage.innerHTML;
   assert.match(html, /<div class="sa-kicker">SOUNDS LIKE · LOCAL ENGINE<\/div>/);
   assert.match(html, /Dual-Sonic64/);
-  assert.doesNotMatch(html, /id="sa-tab-vibe"/);
+  assert.doesNotMatch(html, /Sounds Only/);
+  assert.match(html, /id="sa-tab-listeners"/);
 });
 
-test("asks the older Sounds like service when Best matches carry no list", async () => {
-  const storage = new Map();
-  const first = loadBestMatchesExtension({ storage });
-  await first.run();
-  await waitFor(() => hasLog(first, "Best matches metadata settled"));
-  await waitFor(() =>
-    first.urls.some((url) => url.includes("/api/spicetify_recommend")));
+test("asks the older Sounds like service only when Best matches fail", async () => {
+  const served = loadBestMatchesExtension({ bestFetch: mainFetch });
+  await served.run();
+  await waitFor(() => hasLog(served, "Best matches metadata settled"));
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(
+    served.urls.filter((url) => !url.endsWith("/health")),
+    [],
+    "the older Sounds like service is not asked",
+  );
+  assert.doesNotMatch(served.currentPage.innerHTML, /sa-tab-sounds/);
+
+  const failed = loadBestMatchesExtension({ bestFetch: async () => noPreview() });
+  await failed.run();
+  await waitFor(() => failed.feedback.panel.dataset.ready === "true");
   assert.equal(
-    first.urls.filter((url) => url.includes("/api/spicetify_recommend")).length,
+    failed.urls.filter((url) => url.includes("/api/spicetify_recommend")).length,
     1,
   );
-  first.tab("sounds").onclick();
-  await waitFor(() => first.feedback.panel.dataset.ready === "true");
-  assert.match(first.currentPage.innerHTML, /Dual-Sonic64/);
+  assert.match(failed.currentPage.innerHTML, /id="sa-tab-sounds"[^>]*aria-selected="true"/);
+  assert.match(failed.currentPage.innerHTML, /Dual-Sonic64/);
 });
 
 // ---- Stems ----------------------------------------------------------------
@@ -4348,12 +4305,12 @@ const stemsOpener = (row) =>
   findElement(row.tree, (node) => node.props?.className === "sa-dx-open");
 const quietEvent = () => ({ stopPropagation() {} });
 
-async function openSameVibe(bestFetch, options = {}) {
+async function openListeners(bestFetch, options = {}) {
   const app = loadBestMatchesExtension({ bestFetch, ...options });
   await app.run();
   await waitFor(() => hasLog(app, "Best matches metadata settled"));
-  app.tab("vibe").onclick();
-  await waitFor(() => hasLog(app, "Same vibe metadata settled"));
+  app.tab("listeners").onclick();
+  await waitFor(() => hasLog(app, "Listeners also play metadata settled"));
   return app;
 }
 
@@ -4361,7 +4318,12 @@ test("Stems shows a hosted match next to its seed, part by part", async () => {
   const gate = deferred();
   const app = loadBestMatchesExtension({
     bestFetch: async (url) => {
-      if (!isDissect(url)) return vibeFetch(url);
+      if (!isDissect(url)) {
+        // Best matches rows without Deezer ids.
+        return response(200, mainMatchesBody(new URL(url).searchParams.get("lang"), {
+          main: bestFixture,
+        }));
+      }
       await gate.promise;
       return response(200, dissectBody(908604612, 41));
     },
@@ -4373,8 +4335,8 @@ test("Stems shows a hosted match next to its seed, part by part", async () => {
   assert.equal(stemsOpener(app.rows[0]), null);
   assert.equal(app.rows[0].classList.contains("sa-row-stems"), false);
 
-  app.tab("vibe").onclick();
-  await waitFor(() => hasLog(app, "Same vibe metadata settled"));
+  app.tab("listeners").onclick();
+  await waitFor(() => hasLog(app, "Listeners also play metadata settled"));
   const list = app.currentPage;
   assert.match(
     list.innerHTML,
@@ -4449,7 +4411,7 @@ test("Stems shows a hosted match next to its seed, part by part", async () => {
   assert.deepEqual(app.played, ["spotify:track:sounds0"]);
 
   // Back brings the list back and returns focus to where it was.
-  const openedFrom = app.tab("vibe");
+  const openedFrom = app.tab("listeners");
   app.stemsButtons.back.at(-1).onclick();
   assert.equal(app.stemsPanel, undefined);
   assert.equal(list.hidden, false);
@@ -4475,8 +4437,8 @@ test("Stems shows a hosted match next to its seed, part by part", async () => {
 
 test("Stems explains failures, waits out a busy dissector and shows raw measures", async () => {
   let dissects = 0;
-  const app = await openSameVibe(async (url) => {
-    if (!isDissect(url)) return vibeFetch(url);
+  const app = await openListeners(async (url) => {
+    if (!isDissect(url)) return mainFetch(url);
     dissects += 1;
     if (dissects === 1) {
       return response(404, { ok: false, error: "this song has not been dissected yet" });
@@ -4546,8 +4508,8 @@ test("Stems gives up on a dissector that stays busy and reads each failure", asy
   ];
   let failure;
   let calls = 0;
-  const app = await openSameVibe(async (url) => {
-    if (!isDissect(url)) return vibeFetch(url);
+  const app = await openListeners(async (url) => {
+    if (!isDissect(url)) return mainFetch(url);
     calls += 1;
     const [status, error] = failure;
     // A 200 with one song is a broken answer, not a dissection.
@@ -4568,21 +4530,23 @@ test("Stems gives up on a dissector that stays busy and reads each failure", asy
   }
 });
 
-test("Stems compares hosted Sounds like rows but never the companion's local list", async () => {
-  const hosted = await openSameVibe(async (url) => (isDissect(url)
-    ? response(200, dissectBody(908604612, 51))
-    : soundsFetch(url)));
-  hosted.tab("sounds").onclick();
-  await waitFor(() => hasLog(hosted, "Sounds like metadata settled"));
+test("Stems compares Best matches rows but never the companion's local list", async () => {
+  const hosted = loadBestMatchesExtension({
+    bestFetch: async (url) => (isDissect(url)
+      ? response(200, dissectBody(908604612, 31))
+      : mainFetch(url)),
+  });
+  await hosted.run();
+  await waitFor(() => hasLog(hosted, "Best matches metadata settled"));
   assert.match(
     hosted.currentPage.innerHTML,
-    /<div class="sa-bpm">BPM<\/div><div class="sa-match-head">Match<\/div><div class="sa-dx-head">Compare<\/div><\/div>/,
+    /<div class="sa-album-head">Album<\/div><div class="sa-match-head">Match<\/div><div class="sa-dx-head">Compare<\/div><\/div>/,
   );
   stemsOpener(hosted.rows[0]).props.onClick(quietEvent());
   await waitFor(() => hosted.stemsPanel?.innerHTML.includes("How alike, part by part"));
-  assert.equal(hosted.bestRequests.at(-1), dissectUrl(908604612, 51));
+  assert.equal(hosted.bestRequests.at(-1), dissectUrl(908604612, 31));
 
-  const local = loadBestMatchesExtension({ localCompanion: true, bestFetch: soundsFetch });
+  const local = loadBestMatchesExtension({ localCompanion: true, bestFetch: mainFetch });
   await local.run();
   await waitFor(() => local.feedback.panel.dataset.ready === "true");
   local.tabs[0].onclick();
@@ -4600,12 +4564,13 @@ test("Stems compares hosted Sounds like rows but never the companion's local lis
 });
 
 test("shows each hosted match's sound match as a bar next to Stems", async () => {
-  const app = await openSameVibe(async (url) => {
-    const body = vibeMatchesBody(new URL(url).searchParams.get("lang"));
-    body.results.vibe = vibeFixture.map((item, index) => ({ ...item, match: [87, 140, 3][index] }));
-    body.results.sounds = soundsListFixture.map((item, index) => ({ ...item, match: ["50", 0, 9][index] }));
-    return response(200, body);
-  });
+  const app = await openListeners(async (url) => response(200, mainMatchesBody(
+    new URL(url).searchParams.get("lang"),
+    {
+      listeners: listenersFixture.map((item, index) => ({ ...item, match: [87, 140, 3][index] })),
+      main: mainFixture.map((item, index) => ({ ...item, match: ["50", 0, 9][index] })),
+    },
+  )));
   const matchOf = (row) => findElement(row.tree, (node) => node.props?.className === "sa-match");
   const bar = matchOf(app.rows[0]);
   assert.equal(bar.props["aria-label"], "Sound match 87%: sounds more alike than 87% of typical matches");
@@ -4616,8 +4581,10 @@ test("shows each hosted match's sound match as a bar next to Stems", async () =>
   assert.equal(matchOf(app.rows[1]).props["aria-label"], undefined);
   assert.equal(matchOf(app.rows[1]).props.children, undefined);
 
-  app.tab("sounds").onclick();
-  await waitFor(() => hasLog(app, "Sounds like metadata settled"));
+  const settledBest = () =>
+    app.logs.filter((line) => line.includes("Best matches metadata settled")).length;
+  app.tab("best").onclick();
+  await waitFor(() => settledBest() === 2);
   assert.equal(matchOf(app.rows[0]).props["aria-label"], undefined, "a string is not a sound match");
   assert.equal(
     findElement(matchOf(app.rows[1]), (node) => node.type === "i").props.style.width,
