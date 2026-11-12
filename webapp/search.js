@@ -14,7 +14,7 @@
   const maxCacheEntries = 64;
   const bestMatchesTimeoutMs = 30000;
   const bestMatchesRetries = 3;
-  const bestMatchesPolicy = "main-listeners-v1";
+  const bestMatchesPolicy = "main-listeners-v2";
   // Audio only asks for lists without the listener ranker (scene=0).
   const audioOnlyKey = "soundalike:audio-only:v1";
   const listenerPickLabel = "Listeners also play";

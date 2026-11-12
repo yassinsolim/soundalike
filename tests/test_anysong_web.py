@@ -123,7 +123,7 @@ def test_anysong_has_the_spotify_extensions_two_tabs():
         'const tabKey = key => (key === null ? null : key === "listeners" ? "listeners" : "best");'
     ) in SCRIPT
     # A new policy keeps cached five-tab answers out of the two tabs.
-    assert 'const bestMatchesPolicy = "main-listeners-v1";' in SCRIPT
+    assert 'const bestMatchesPolicy = "main-listeners-v2";' in SCRIPT
     assert "best-vibe-sounds" not in SCRIPT
     # Audio only and artists without listener data say why Listeners also play is empty.
     assert (

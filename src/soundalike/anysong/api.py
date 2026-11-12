@@ -112,9 +112,10 @@ MAIN_POOL = "sonic"
 MAIN_MATCH_FLOOR = 50
 MAIN_HEAD_BARE = 0
 # Main's head can be stricter than Best's: a song whose sound match is below MAIN_HEAD_MATCH also needs a standout
-# z-score of at least MAIN_HEAD_STANDOUT (0 = off, Best's rule alone; MAIN_HEAD_MATCH 101 = every song).
-MAIN_HEAD_STANDOUT = 0.0
-MAIN_HEAD_MATCH = 101
+# z-score of at least MAIN_HEAD_STANDOUT (0 = off, Best's rule alone; MAIN_HEAD_MATCH 101 = every song). Z 3 and M 20
+# passed the held-out gates on 2026-11-12 (docs/ANYSONG_EVAL.md, "Held-out result for the stricter head").
+MAIN_HEAD_STANDOUT = 3.0
+MAIN_HEAD_MATCH = 20
 LISTENERS_SOUND_WEIGHT = 0.25
 # Sound match (``sound_match``): sonic (MuQ-MuLan) score quantiles 0, 5, ..., 100 % over every song shown in the top
 # 20 of Best matches, Same vibe or Sounds like for the development seeds: 62,362 songs from 1,474 seeds with the

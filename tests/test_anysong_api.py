@@ -496,8 +496,12 @@ def test_main_list_is_the_audio_head_then_sound_and_listener_picks_get_their_own
     svc.best_head_standout = api.BEST_HEAD_STANDOUT
     r = lists()
     assert ids(r, "best")[0] == 3 and ids(r, "main") == ids(r, "sounds") == [7, 10, 5]
-    svc.main_head_bare = 1
+    svc.main_head_bare, svc.main_head_standout = 1, 0.0  # Best's rule alone: main gets the bare head (3) too
     assert [(x["id"], x["basis"]) for x in lists()["main"]][:2] == [(3, "audio"), (7, "sound")]
+    # The shipped stricter head drops it: 3 is a weak match (6) without a standout z-score.
+    svc.main_head_standout = api.MAIN_HEAD_STANDOUT
+    r = lists()
+    assert api.sound_match(son[3]) < api.MAIN_HEAD_MATCH and ids(r, "main") == ids(r, "sounds") == [7, 10, 5]
     svc.main_head_bare = api.MAIN_HEAD_BARE
     # Without listener data: the head, then Sounds like's order, and no Listeners also play list.
     r = lists(scene=False)
@@ -529,6 +533,7 @@ def test_main_head_can_ask_low_match_songs_to_stand_out_more(tmp_path):
         return [(x["id"], x["basis"]) for x in r["main"]]
 
     assert api.sound_match(0.45) >= 50
+    svc.main_head_standout, svc.main_head_match = 0.0, 101  # off: Best's rule alone
     r = lists()
     others = {name: r[name] for name in ("best", "vibe", "sounds", "listeners")}
     assert main(r) == [(5, "audio"), (7, "sound"), (10, "sound")]
@@ -540,11 +545,13 @@ def test_main_head_can_ask_low_match_songs_to_stand_out_more(tmp_path):
     assert {name: r[name] for name in others} == others
     svc.main_head_match = 50  # 5 sounds alike: Best's rule is enough
     assert main(lists()) == [(5, "audio"), (7, "sound"), (10, "sound")]
-    svc.main_head_match = api.MAIN_HEAD_MATCH
+    svc.main_head_match = 101
     del res["listener"]  # the same without listener data: no head, so main is Sounds like
     r = lists()
     assert [x["id"] for x in r["main"]] == [x["id"] for x in r["sounds"]] and r["main"][0]["basis"] == "sound"
-    svc.main_head_standout = api.MAIN_HEAD_STANDOUT
+    # The shipped rule (z 3 unless the match is at least 20) keeps 5, which sounds alike although its z is only 1.0.
+    svc.main_head_standout, svc.main_head_match = api.MAIN_HEAD_STANDOUT, api.MAIN_HEAD_MATCH
+    assert api.sound_match(0.45) >= api.MAIN_HEAD_MATCH and api.MAIN_HEAD_STANDOUT > 1.0
     assert lists()["main"][0]["id"] == 5 and lists()["main"][0]["basis"] == "audio"
 
 
