@@ -679,8 +679,9 @@
   }
 
   // Both tabs hide confidently other-language songs unless the listener asks
-  // for all languages. The hidden count is Best's own, so Listeners also play
-  // only says what it leaves out.
+  // for all languages. The server's query.hidden counts them in its fused order
+  // of every channel, not in the main list or Listeners also play, so both tabs
+  // only say whether other languages are left out.
   function renderLanguage(picked, noListeners) {
     const button = document.querySelector("#language-toggle");
     const audio = document.querySelector("#audio-only");
@@ -701,19 +702,10 @@
     const query = picked.best.body.query || {};
     const code = query.language || "unknown";
     const all = query.language_mode === "all";
-    const hidden = Math.max(0, Number(query.hidden) || 0);
     document.querySelector("#language-status").textContent =
       code === "unknown"
         ? "Language uncertain; showing all languages."
-        : tab !== "best"
-          ? `${languageName(code)} · ${all ? "all languages" : "other languages left out"}`
-          : `${languageName(code)} · ${
-              hidden
-                ? `${hidden} other-language ${hidden === 1 ? "match" : "matches"} ${
-                    all ? "in" : "hidden from"
-                  } the top 20`
-                : "no other-language matches in the top 20"
-            }`;
+        : `${languageName(code)} · ${all ? "all languages" : "other languages left out"}`;
     button.hidden = code === "unknown";
     button.setAttribute("aria-pressed", String(all));
     button.textContent = all ? "Show same language" : "Show all languages";

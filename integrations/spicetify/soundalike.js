@@ -849,7 +849,6 @@
         source: query.source === "live" ? "live" : "catalog",
         language: String(query.language || "unknown"),
         languageMode: query.language_mode === "all" ? "all" : "same",
-        hidden: Number.isFinite(Number(query.hidden)) ? Math.max(0, Number(query.hidden)) : 0,
         bpm: Number.isFinite(query.bpm) && query.bpm > 0 ? query.bpm : null,
         // "unknown_artist": no listener data, so the lists are in sound order.
         ...(["on", "off", "unknown_artist"].includes(query.scene) ? { scene: query.scene } : {}),
@@ -2800,14 +2799,17 @@
     return `<div class="sa-audio-only-row">${audioOnlyToggleMarkup(state)}</div>`;
   }
 
-  function languageFilterMarkup(query, status, state) {
+  // The server's query.hidden counts other-language songs in its fused order of
+  // every channel, not in the main list or Listeners also play, so both tabs
+  // only say whether other languages are left out.
+  function languageFilterMarkup(query, state) {
     const allLanguages = query.languageMode === "all";
     const unknown = query.language === "unknown";
     const control = unknown ? "" :
       `<button class="sa-language-toggle" type="button" aria-pressed="${allLanguages}">${allLanguages ? "Use same-language matches" : "Show all languages"}</button>`;
     const text = unknown
       ? "Language uncertain; showing all languages."
-      : `${languageName(query.language)} · ${status}`;
+      : `${languageName(query.language)} · ${allLanguages ? "all languages" : "other languages left out"}`;
     return `<div class="sa-language-filter" role="status"><span>${esc(text)}</span>` +
       `<span class="sa-filter-actions">${control}${audioOnlyToggleMarkup(state)}</span></div>`;
   }
@@ -2839,15 +2841,10 @@
     const { query } = best.data;
     const results = bestRows(best.data);
     blurb += matchedToNote(state, query, seedArtists);
-    const hidden = Math.max(0, Number(query.hidden) || 0);
-    const languageStatus = hidden
-      ? `${hidden} other-language ${hidden === 1 ? "match" : "matches"} ` +
-        `${query.languageMode === "all" ? "in" : "hidden from"} the top ${HOSTED_RESULT_COUNT}`
-      : `no other-language matches in the top ${HOSTED_RESULT_COUNT}`;
     const tags = tagsMarkup([mixed ? "Melody + samples" : "Melody, samples + sound", ...sourceTags(best)]);
     return `<p class="sa-blurb">${esc(blurb)}</p>
       <div class="sa-tags">${tags}</div>
-      ${languageFilterMarkup(query, languageStatus, state)}
+      ${languageFilterMarkup(query, state)}
       ${listHeadMarkup({ stems: Boolean(dissectSeed(state, results)) })}
       <div class="sa-list">${resultRowsMarkup(results, { hidden: true, notes: true })}
       </div>${LIST_NOTE_MARKUP}`;
@@ -2876,12 +2873,9 @@
     }
     const blurb = LISTENERS_BLURB + matchedToNote(state, query, seedArtists);
     const tags = tagsMarkup(["What listeners play", ...sourceTags(best)]);
-    const languageStatus = query.languageMode === "all"
-      ? "all languages"
-      : "other languages left out";
     return `<p class="sa-blurb">${esc(blurb)}</p>
       <div class="sa-tags">${tags}</div>
-      ${languageFilterMarkup(query, languageStatus, state)}
+      ${languageFilterMarkup(query, state)}
       ${listHeadMarkup({ stems: Boolean(dissectSeed(state, listeners)) })}
       <div class="sa-list">${resultRowsMarkup(listeners, { hidden: true, notes: false })}
       </div>${LIST_NOTE_MARKUP}`;

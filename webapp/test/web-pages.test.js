@@ -785,7 +785,7 @@ test("two any-song tabs read one response, as in the Spotify extension", async (
   assert.deepEqual(page.errors, []);
 });
 
-test("Best matches read the main list, ask for one language and say what was hidden", async () => {
+test("Best matches read the main list, ask for one language and say other languages are left out", async () => {
   const page = loadAnysong();
   await waitFor(() => shown(page));
 
@@ -797,10 +797,9 @@ test("Best matches read the main list, ask for one language and say what was hid
   const box = page.document.querySelector("#language");
   assert.equal(box.hidden, false);
   assert.equal(box.getAttribute("role"), "status");
-  assert.equal(
-    page.text("#language-status"),
-    "English · 2 other-language matches hidden from the top 20",
-  );
+  // The server's hidden count (2 here) is for its fused order of every channel,
+  // not for the main list, so it is not shown.
+  assert.equal(page.text("#language-status"), "English · other languages left out");
   const toggle = page.document.querySelector("#language-toggle");
   assert.equal(toggle.hidden, false);
   assert.equal(toggle.textContent, "Show all languages");
@@ -823,7 +822,7 @@ test("the language switch reloads Best matches and keeps focus on it", async () 
   assert.equal(toggle.textContent, "Show same language");
   assert.match(page.text("#matches"), /matching…/);
   await waitFor(() =>
-    page.text("#language-status") === "English · 2 other-language matches in the top 20");
+    page.text("#language-status") === "English · all languages");
   assert.equal(page.similar()[1].get("lang"), "all");
   assert.equal(toggle.getAttribute("aria-pressed"), "true");
   assert.equal(page.document.activeElement, toggle);
@@ -831,7 +830,7 @@ test("the language switch reloads Best matches and keeps focus on it", async () 
 
   toggle.click();
   await waitFor(() => page.similar().length === 3 &&
-    page.text("#language-status")?.endsWith("hidden from the top 20"));
+    page.text("#language-status") === "English · other languages left out");
   assert.equal(page.similar()[2].get("lang"), "same");
   assert.equal(toggle.textContent, "Show all languages");
   assert.equal(page.document.activeElement, toggle);
@@ -902,10 +901,7 @@ test("the language switch on Listeners also play is shared with Best matches", a
   assert.deepEqual(page.texts("#matches .t"), ["Deep Vibe", "Wena"]);
 
   page.document.querySelector("#tab-best").click();
-  assert.equal(
-    page.text("#language-status"),
-    "English · 2 other-language matches in the top 20",
-  );
+  assert.equal(page.text("#language-status"), "English · all languages");
   assert.equal(toggle.getAttribute("aria-pressed"), "true");
   assert.deepEqual(page.texts("#matches .t"), ["Bar A Thym", "Ngiyakhuluma"]);
   assert.equal(page.similar().length, 2);
@@ -930,10 +926,7 @@ test("Best matches fall back to the older Best list from a server without main",
     labels[0].getAttribute("title"),
     "Placed by what this song's listeners also play, not by audio alone",
   );
-  assert.equal(
-    page.text("#language-status"),
-    "English · 2 other-language matches hidden from the top 20",
-  );
+  assert.equal(page.text("#language-status"), "English · other languages left out");
   // Such a server sends no listeners list either.
   page.document.querySelector("#tab-listeners").click();
   assert.equal(page.text("#matches .state"), NO_LISTENERS_NOTE);
@@ -994,10 +987,7 @@ test("an artist without listener data says so on Listeners also play", async () 
   assert.deepEqual(page.texts("#matches .t"), ["Bar A Thym", "Sunshine"]);
   assert.equal(page.text("#matchblurb"), AUDIO_BEST_CAPTION);
   assert.equal(page.document.querySelector("#language-toggle").hidden, false);
-  assert.equal(
-    page.text("#language-status"),
-    "English · 2 other-language matches hidden from the top 20",
-  );
+  assert.equal(page.text("#language-status"), "English · other languages left out");
   assert.equal(page.similar().length, 1);
   assert.deepEqual(page.errors, []);
 
@@ -1052,7 +1042,7 @@ test("Audio only reloads without the listeners and is remembered", async () => {
   page.document.querySelector("#tab-best").click();
   page.document.querySelector("#language-toggle").click();
   await waitFor(() =>
-    page.text("#language-status") === "English · 1 other-language match in the top 20");
+    page.text("#language-status") === "English · all languages");
   assert.equal(page.similar()[2].get("lang"), "all");
   assert.equal(page.similar()[2].get("scene"), "0");
 

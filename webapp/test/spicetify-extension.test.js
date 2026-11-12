@@ -2691,17 +2691,14 @@ test("Best matches language switch requests and caches all-language results sepa
   });
   await app.run();
   await waitFor(() => hasLog(app, "Best matches metadata settled"));
-  assert.match(
-    app.currentPage.innerHTML,
-    /English · 2 other-language matches hidden from the top 30/,
-  );
+  assert.match(app.currentPage.innerHTML, /English · other languages left out/);
   const toggle = app.currentPage.querySelector(".sa-language-toggle");
   assert.ok(toggle);
   toggle.onclick();
   await waitFor(() => app.bestRequests.length === 2 &&
     app.currentPage.innerHTML.includes("Use same-language matches"));
   assert.equal(new URL(app.bestRequests[1]).searchParams.get("lang"), "all");
-  assert.match(app.currentPage.innerHTML, /English · 2 other-language matches in the top 30/);
+  assert.match(app.currentPage.innerHTML, /English · all languages/);
 });
 
 test("switching back to same-language Best matches reuses the saved list", async () => {
@@ -2720,14 +2717,11 @@ test("switching back to same-language Best matches reuses the saved list", async
   const toggle = app.currentPage.querySelector(".sa-language-toggle");
   toggle.onclick();
   await waitFor(() => app.currentPage.innerHTML.includes("Use same-language matches"));
-  assert.match(app.currentPage.innerHTML, /English · 1 other-language match in the top 30/);
+  assert.match(app.currentPage.innerHTML, /English · all languages/);
   toggle.onclick();
   await waitFor(() =>
     app.currentPage.innerHTML.includes('aria-pressed="false">Show all languages'));
-  assert.match(
-    app.currentPage.innerHTML,
-    /English · 1 other-language match hidden from the top 30/,
-  );
+  assert.match(app.currentPage.innerHTML, /English · other languages left out/);
   assert.deepEqual(
     app.bestRequests.map((url) => new URL(url).searchParams.get("lang")),
     ["same", "all"],
@@ -3110,7 +3104,7 @@ test("restores cached Best matches without asking the matcher again", async () =
   assert.deepEqual(
     entry.query,
     { id: 908604612, title: "Blinding Lights", artist: "The Weeknd", source: "live",
-      language: "unknown", languageMode: "same", hidden: 0, bpm: null },
+      language: "unknown", languageMode: "same", bpm: null },
   );
   // A server without the main list: Best matches stand in for it.
   assert.deepEqual(entry.main, []);
@@ -3377,7 +3371,10 @@ test("shows the main list in Best matches and Listeners also play one tab away",
     html,
     /<span class="sa-tag">Melody, samples \+ sound<\/span><span class="sa-tag">In our library<\/span><span class="sa-tag">Matched in 2\.3 s<\/span>/,
   );
-  assert.match(html, /English · 2 other-language matches hidden from the top 30/);
+  // The server's hidden count (2 here) is for its fused order of every channel,
+  // not for the main list, so it is not shown.
+  assert.match(html, /English · other languages left out/);
+  assert.doesNotMatch(html, /other-language match/);
   // The audio head's rows say which channels placed them; the sound order's
   // rows say nothing, and no row is labelled a listener pick.
   assert.match(html, /<span class="sa-why"> · melody #1 · samples #3<\/span>/);
@@ -3410,7 +3407,7 @@ test("shows the main list in Best matches and Listeners also play one tab away",
     html,
     /<div class="sa-language-filter" role="status"><span>English · other languages left out<\/span><span class="sa-filter-actions"><button class="sa-language-toggle" type="button" aria-pressed="false">Show all languages<\/button><button class="sa-audio-only" type="button" aria-pressed="false" title="[^"]+">Audio only<\/button><\/span><\/div>/,
   );
-  assert.doesNotMatch(html, /hidden from the top/);
+  assert.doesNotMatch(html, /other-language match/);
   // Every row here is a listener pick, so none is labelled as one.
   assert.doesNotMatch(html, /class="sa-why"|class="sa-basis"/);
   assert.doesNotMatch(html, /<div class="sa-bpm">BPM<\/div>/);
@@ -3460,7 +3457,7 @@ test("Listeners also play shares the Best matches language switch", async () => 
 
   app.tab("best").onclick();
   html = app.currentPage.innerHTML;
-  assert.match(html, /English · 2 other-language matches in the top 30/);
+  assert.match(html, /English · all languages/);
   assert.match(html, /aria-pressed="true">Use same-language matches<\/button>/);
 
   app.tab("listeners").onclick();
