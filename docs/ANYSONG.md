@@ -14,15 +14,16 @@ and embedded live on a GPU; everything else is a lookup.
 Scores are only comparable within one channel and one query; the page shows relative bars, not percentages.
 Everything runs on 30-second Deezer previews, so a relationship outside the preview can be missed.
 
-The page opens on **Best matches**, one list that merges the melody and samples lists by reciprocal-rank fusion:
+The API's **Best matches** list (`best`) merges the melody and samples lists by reciprocal-rank fusion:
 a song scores `sum(1 / (5 + rank))` over the two channels' song lists, and is shown as the release found by the
 channel that ranked it higher. On held-out benchmarks it finds covers as well as the melody tab and samples better
-than the samples tab ([ANYSONG_EVAL.md](ANYSONG_EVAL.md#best-matches)). The channel tabs remain for browsing one
-relation. The same list is the default view in the
+than the samples tab ([ANYSONG_EVAL.md](ANYSONG_EVAL.md#best-matches)). The page and the
 [Spicetify extension](../integrations/spicetify/README.md), which names the song by title and artist instead of a
-Deezer id. Best matches hides confidently detected other-language songs by default (`--languages`, see
+Deezer id, show two tabs: **Best matches** (`main`: likely covers, samples and shared melodies first, then the songs
+that sound most alike) and **Listeners also play** (`listeners`); both are described with the API below. Best
+matches hides confidently detected other-language songs by default (`--languages`, see
 [Language labels](#language-labels)); a **Show all languages** switch (`lang=all`) restores the unfiltered ranking,
-and the individual melody, samples and sounds tabs are never filtered. A song without a confident label takes its
+and the individual melody, samples and sonic lists are never filtered. A song without a confident label takes its
 artist's majority language, a conservative prior from that artist's indexed songs; songs with neither (often
 instrumentals) remain visible. A live seed outside the catalog uses the same prior; if it cannot establish a
 language, the filter fails open. The filter costs some cross-language matches; the measured trade-offs are in
@@ -31,7 +32,7 @@ language, the filter fails open. The filter costs some cross-language matches; t
 Other artists' versions of the seed's own song (the same title) are limited in Best matches, Same vibe and Sounds
 like. One that scores 0.55 or more in the samples list reuses the seed's recording (a re-upload, a sped-up edit, the
 same song under another credit) and is dropped. At most three of the rest stay, the best placed first, so covers of
-a standard cannot fill the lists. The channel tabs keep them all.
+a standard cannot fill the lists. The channel lists keep them all.
 
 Best matches also weighs the **artist scene** ([`scene.py`](../src/soundalike/anysong/scene.py)). Audio still decides
 which songs can appear; the scene layer only arranges them. A candidate's affinity to the seed's artist combines the
@@ -65,7 +66,7 @@ way to a learned order whenever the seed's artist is known:
 The selection and results are in
 [ANYSONG_EVAL.md](ANYSONG_EVAL.md#listener-aware-ranking-pre-registered-2026-11-09-before-any-held-out-result).
 
-Next to Best matches, **Same vibe** ([`samevibe.py`](../src/soundalike/anysong/samevibe.py)) lists songs a listener
+**Same vibe** ([`samevibe.py`](../src/soundalike/anysong/samevibe.py)), served as `vibe`, lists songs a listener
 hears as belonging together. It keeps the Best candidates that share the seed's tempo (the same, double or half,
 within 6 %) and its overall sound, fills up from the sounds list, and takes one song per artist. Best stays the list
 for covers, samples and shared melodies, which often cross genres. On 1,000 fresh test artists, Same vibe had fewer
@@ -80,15 +81,19 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
 ```
 
 - The home page, [`webapp/index.html`](../webapp/index.html) with [`webapp/search.js`](../webapp/search.js), is the
-  any-song search: suggestions from `/api/anysong/search`, results from `/api/anysong/similar?id=` in five tabs
-  (Best matches, Same vibe, Same melody, Samples & loops, Sounds like). Share links are `/#id=<deezer id>&tab=<tab>`;
-  older `#s=<title — artist>` links still resolve by name. Previews are resolved through the existing `/api/preview`.
-  Best rows with `basis: "listeners"` are marked **Listeners also play**; the **Audio only** switch next to the
-  language switch asks with `scene=0` and is remembered in `localStorage` (`soundalike:audio-only:v1`).
+  any-song search: suggestions from `/api/anysong/search`, results from `/api/anysong/similar?id=` in the Spotify
+  extension's two tabs. **Best matches** reads `main`; from a server without it, the page shows `best` and marks its
+  rows with `basis: "listeners"` **Listeners also play**. **Listeners also play** reads `listeners`. Requests carry
+  `policy=main-listeners-v1`, which the API ignores, so HTTP-cached answers from the five-tab page are not reused.
+  Share links are `/#id=<deezer id>&tab=best|listeners`; links to the old tabs (`vibe`, `melody`, `samples`,
+  `sounds`, `sonic`) and unknown tabs open Best matches, and older `#s=<title — artist>` links still resolve by name.
+  Previews are resolved through the existing `/api/preview`. The **Audio only** switch next to the language switch
+  asks with `scene=0` and is remembered in `localStorage` (`soundalike:audio-only:v1`). With it on, or for an artist
+  without listener data, there is no `listeners` list, and Listeners also play says why.
 - `/anysong` redirects to `/` (`redirects` in [`site.json`](../webapp/site.json), temporary, query kept).
   [`webapp/anysong/index.html`](../webapp/anysong/index.html) is a stub for servers that ignore `redirects`: it
-  forwards the query and hash to `/`, where old `?id=` and `#id=` links (including `tab=sonic`, now Sounds like) open
-  the same song.
+  forwards the query and hash to `/`, where old `?id=` and `#id=` links (including `tab=sonic`) open the same song
+  on Best matches.
 - [`anysong/api.py`](../src/soundalike/anysong/api.py) serves `GET /api/anysong/search?q=&limit=` (Deezer search
   plus `in_catalog`), `GET /api/anysong/similar?id=&k=&lang=same|all&scene=1|0` and `GET /healthz`. With
   `--languages`, `lang=same` is the default and `lang=all` bypasses the Best-matches-only filter; without it, `lang`
@@ -108,7 +113,7 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   positional `score`, language-filtered like `best`), and `query.bpm` gives the seed's tempo (`null` when unknown).
   `--tempo-model` points to the Beat This! checkpoint that estimates the tempo of seeds outside the catalog; without
   it their tempo is unknown and only the sound gate applies. Whenever the sonic channel is served, `sounds` is the
-  Sounds like list that the main page and Spotify show: the sonic channel's songs, language-filtered like `best`,
+  Sounds like list: the sonic channel's songs, language-filtered like `best`,
   one song per artist (the scene table's Deezer artist, else the artist name), each with its sonic `score` and its
   catalog `bpm` (`null` when unknown or without `--tempo`). With the scene layer on, songs move up by their artist's
   scene affinity, `1 / (5 + rank) * (1 + 8 * affinity)`; with the listener ranker, they follow z(sound score) + 2
@@ -117,7 +122,7 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   item has `basis`: `audio` for the audio head (likely covers, samples and shared melodies) and `listeners` for the
   songs placed after it by the listener blend, and `timings_ms.listener` gives the time the ranker took. Without the
   ranker (or with `scene=0`) Best items have no `basis`; the list is audio only. Whenever `sounds` is served, so is
-  `main`, the Spotify extension's Best matches list: the audio head (only songs with cover or sample evidence;
+  `main`, the Best matches list the page and Spotify show: the audio head (only songs with cover or sample evidence;
   `basis` `audio`), then the sonic channel's songs in Sounds like's order (`basis` `sound`), one song per artist, each
   with `ranks` and a positional `score`. With the ranker and the scene layer on, `listeners` is the Listeners also
   play list: Best's candidates by artists other than the seed's, ordered by z(listener estimate) + 0.25 z(sound
@@ -313,9 +318,10 @@ python -m soundalike.anysong.languages `
 
 Catalog seeds use their own label. A live seed outside the catalog uses a conservative artist-majority prior
 (≥2 confidently labelled recordings and ≥80% agreement); if no prior is available, the filter fails open. Listed
-songs without a confident label take the same prior, and stay when it is unknown. The lists users see (Best
-matches, Same vibe, Sounds like) are filtered; the three channel lists are unchanged. `lang=all` returns the same
-unfiltered Best ranking and still reports the other-language count in `query.hidden`.
+songs without a confident label take the same prior, and stay when it is unknown. The ranked lists (Best matches,
+Same vibe, Sounds like, and `main` and `listeners`, which the page and the Spotify extension show) are filtered; the
+three channel lists are unchanged. `lang=all` returns the same unfiltered Best ranking and still reports the
+other-language count in `query.hidden`.
 
 ## Scene table
 

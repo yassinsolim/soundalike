@@ -35,13 +35,10 @@ representations and measured features such as tempo, dynamics, and bass
 balance. It does not use your listening history as a ranking signal.
 
 The public web app and Spicetify extension open on **Best matches**, songs that
-share a melody, sample, or loop with yours from a 999,293-song index. In the web
-app, **Same vibe**, one tab away, keeps the matches that also share your song's
-tempo and overall sound, one song per artist, and **Sounds like** lists the
-songs with the closest overall sound. In Spotify, Best matches continues with
-the songs that sound most alike, and **Listeners also play** lists similar songs
-by other artists that your song's listeners also play. Every list comes from
-the same GPU matcher, so they work for any song with a Deezer preview.
+share a melody, sample, or loop with yours from a 999,293-song index, followed by
+the songs that sound most alike. **Listeners also play**, one tab away, lists
+similar songs by other artists that your song's listeners also play. Every list
+comes from the same GPU matcher, so they work for any song with a Deezer preview.
 The repository also includes a local app, command-line tools, smaller bundled
 indexes, and the research code used to test new ranking ideas.
 
@@ -90,10 +87,11 @@ manual installation, supported Spotify builds, and troubleshooting.
 Open <https://soundalike.yassin.app>.
 
 Search any song on Deezer, even one outside the catalog, and pick it from the
-suggestions. Results open on **Best matches**, with **Same vibe**, **Same melody**,
-**Samples & loops** and **Sounds like** one tab away. A song the matcher has not
-heard before takes a few seconds the first time. The old `/anysong` address
-redirects to the home page.
+suggestions. As in Spotify, results open on **Best matches**, with **Listeners
+also play** one tab away. **Audio only** ranks by sound alone and leaves out what
+your song's listeners also play. A song the matcher has not heard before takes a
+few seconds the first time. The old `/anysong` address redirects to the home
+page, and links to the tabs the site used to have open Best matches.
 
 You do not need an account to search. Spotify login is
 optional and is only used when you ask the site to save a playlist. Spotify
@@ -272,7 +270,7 @@ songs live on a GPU. Architecture, index builds and deployment are described in
 
 The served index holds 999,293 songs: 269,278 catalog tracks plus songs crawled along Deezer's related-artist graph,
 which are recommended only for seeds in their artist's scene (see "Catalog tiers" in
-[docs/ANYSONG.md](docs/ANYSONG.md)). The page opens on a **Best matches** list that fuses the melody and
+[docs/ANYSONG.md](docs/ANYSONG.md)). The API's **Best matches** list fuses the melody and
 samples rankings. On held-out benchmarks its top 10 holds a correct song for 67% of cover queries, 44% of Gen Alpha
 songs and 15–19% of sample pairs, which is the melody tab's cover accuracy with almost twice its sample hits. "Sounds
 like" claims stay hard: about 11% in the fused list and 16–17% when all three tabs are checked. Unseen songs
@@ -286,12 +284,12 @@ within their regression limits; Gen Alpha fell from 36% to 29% on 59 queries. **
 with the same model (46%, up from 33%), as does **Same vibe** (45%, up from 34%). Other artists' copies of the seed
 (re-uploads, edits) are left out when their audio matches it closely, and at most three other versions of it stay.
 Songs in another language than yours are hidden from Best matches by default; **Show all languages** brings them back.
-In the web app, rows the listener model placed are marked **Listeners also play**, and the **Audio only** switch (in
-the web app and the Spotify extension) leaves that model out of every list.
-**Same vibe** keeps the Best candidates that share the seed's tempo and sound (one per artist). The Spotify extension
-shows two lists instead: **Best matches** starts with likely covers and samples, only when a melody or samples match
-stands out, then follows Sounds like's order, and **Listeners also play** ranks other artists' songs mostly by the
-listener model ([evaluation](docs/ANYSONG_EVAL.md#one-main-list-and-listeners-also-play-pre-registered-2026-11-11-before-any-held-out-result)).
+The **Audio only** switch (in the web app and the Spotify extension) leaves the listener model out of every list.
+The API also serves **Same vibe**, the Best candidates that share the seed's tempo and sound (one per artist), and
+the separate melody, samples and sound lists, but the web app and the Spotify extension show two lists: **Best
+matches** starts with likely covers and samples, only when a melody or samples match stands out, then follows Sounds
+like's order, and **Listeners also play** ranks other artists' songs mostly by the listener model
+([evaluation](docs/ANYSONG_EVAL.md#one-main-list-and-listeners-also-play-pre-registered-2026-11-11-before-any-held-out-result)).
 
 The experimental [`soundalike.anysong`](src/soundalike/anysong/) package compares
 MuQ-MuLan, CLAP, MuQ, MERT and MAEST with dedicated SampleID/CLEWS adapters.
