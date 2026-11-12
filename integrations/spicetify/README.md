@@ -2,10 +2,10 @@
 
 Find tracks that sound like the song you are playing, directly
 inside Spotify. Soundalike compares audio embeddings instead of using genres,
-popularity, or listening-history recommendations. Results open on **Best
-matches**, songs that share a melody, sample, or loop with yours. The **Same
-vibe** and **Sounds like** tabs list songs with the same feel and the same
-overall sound.
+popularity, or your listening history. Results open on **Best matches**: songs
+that share a melody, sample, or loop with yours, then the songs that sound most
+alike. **Listeners also play** lists similar songs by other artists that your
+song's listeners also play.
 
 ![Soundalike best matches inside Spotify](../../docs/spicetify-results.png)
 
@@ -15,7 +15,7 @@ overall sound.
 2. Right-click any track in Spotify, including the song playing in the player
    bar.
 3. Select **Find soundalikes**. Results open on **Best matches**; select
-   **Sounds like** to switch lists.
+   **Listeners also play** to switch lists.
 4. Double-click a result or use its left-side play button. The list then plays
    on in the order shown, like a playlist that is never saved. Right-click a
    result for Spotify's normal track actions.
@@ -39,83 +39,78 @@ copies cannot update themselves. After that final reinstall, runtime updates
 are automatic. Manual installs remain manual; use the current file and run
 `spicetify apply` when updating.
 
-## Best matches and Sounds like
+## Best matches and Listeners also play
 
-Results come in up to three lists. Switch between them with the tabs, or with
-the arrow, Home, and End keys. Spotify's Back and Forward buttons keep the list
-you chose.
+Results come in two lists. Switch between them with the tabs, or with the
+arrow, Home, and End keys. Spotify's Back and Forward buttons keep the list you
+chose.
 
-- **Best matches** (the default) combines two rankings from Soundalike's
-  any-song matcher: songs with the same melody (covers, interpolations, and
-  reused tunes) and songs that share a sample or loop. Each row shows where it
-  placed in those rankings, such as "melody #1 · samples #3". The matcher
-  searches a 999,293-song index and works for any song with a 30-second
-  Deezer preview, including songs outside the index, which take a few seconds
-  to analyze. Likely covers and samples lead the list: a melody or samples
-  match that clearly stands out from the song's other matches. When none
-  stands out, only the strongest melody or samples match stays on top. After
-  them, songs are ordered by how
-  likely your song's listeners are to also play their artists, as learned from
-  public listening data, and by how close they sound. Rows from that part of the
-  list are marked **Listeners also play** (hover it for why) and may show no
-  melody or samples rank. Each artist appears once in that
-  part of the top 10 and never twice in a row. Other-language songs are hidden when the seed language is known;
-  a song without a language label of its own counts in its artist's usual
-  language, and songs with neither stay visible. Use **Show all languages**
-  to restore cross-language matches. If the seed language cannot be established,
-  no language filter is applied. Close copies of your own song by other artists
+- **Best matches** (the default) starts with likely covers and samples.
+  Soundalike's any-song matcher ranks songs with the same melody (covers,
+  interpolations, and reused tunes) and songs that share a sample or loop; a
+  melody or samples match that clearly stands out from the song's other matches
+  leads the list, and its row shows where it placed in those rankings, such as
+  "melody #1 · samples #3". Many songs have none. After them come the songs that
+  sound most alike (instruments, production, and mood) by Soundalike's
+  MuQ-MuLan model, one per artist, drawn from the 200 closest and ordered by how
+  close they sound and by how likely your song's listeners are to also play
+  their artists, as learned from public listening data. The matcher searches a
+  999,293-song index and works for any song with a 30-second Deezer preview,
+  including songs outside the index, which take a few seconds to analyze.
+  Other-language songs are hidden when the seed language is known; a song
+  without a language label of its own counts in its artist's usual language,
+  and songs with neither stay visible. Use **Show all languages** to restore
+  cross-language matches. If the seed language cannot be established, no
+  language filter is applied. Close copies of your own song by other artists
   (re-uploads, edits) are left out, and at most three other versions of it are
   shown. Tags say whether your song was **In our library**,
   **Heard live just now**, or **Heard live earlier**. If the matcher used a song
   with a different title or artist, the list names it.
-- **Same vibe** comes from the same hosted response as Best matches: songs from
-  those matches that share your song's tempo and overall sound, topped up with
-  similar-sounding songs, one per artist. It follows the same **Show all
-  languages** switch. The tab only appears when the hosted matcher sends this
-  list, and not with the local companion.
-- **Sounds like** comes from the same hosted response too: songs with the same
-  overall sound (instruments, production, and mood) by Soundalike's MuQ-MuLan
-  model, one per artist, with each song's BPM. Among similar-sounding songs,
-  those by artists your song's listeners also play move up. It also follows the **Show all
-  languages** switch, and like the other two lists it works for any song with a
-  Deezer preview. Until November 2026 this tab used an older model that only
-  knew a fixed 272,853-track library; that service now only answers when the
-  hosted matcher can't, and for the local companion.
+- **Listeners also play** comes from the same hosted response: songs by other
+  artists among everything the matcher found for your song, one per artist,
+  ordered mostly by how likely your song's listeners are to also play them and
+  partly by how close they sound. It follows the same **Show all languages**
+  switch. When Soundalike has no listening data for the artist yet, this tab
+  says so, and Best matches lists the songs that sound most alike in sound
+  order.
+- **Sounds like** only appears with the [local companion](SETUP.md), or in
+  place of Best matches when the hosted matcher can't take the song (see
+  below).
 
-**Audio only**, next to **Show all languages**, leaves listening data out of
-all three lists: Best matches then put the songs that sound most alike after
-the likely covers and samples, and Sounds like ranks by sound alone. The choice
-is remembered for later searches; turn it off to get the listener-aware lists
+**Audio only**, next to **Show all languages**, leaves listening data out: Best
+matches then lists the songs that sound most alike in sound order after the
+likely covers and samples, and Listeners also play stays empty. The choice is
+remembered for later searches; turn it off to get the listener-aware lists
 back. In the companion's (or fallback) Sounds like list it also turns off the
 related-artist ordering.
 
 The page opens as soon as the hosted matcher answers, or after four seconds
 with the lists still loading. If Best matches fail, for example because Deezer
 has no preview of the song, the older Sounds like service is asked instead and
-the page shows its list with a note, unless you already picked a tab. If both
-fail, a notification explains why.
+the page shows its list in a **Sounds like** tab with a note, unless you already
+picked a tab. If both fail, a notification explains why.
 
 With a healthy [local companion](SETUP.md), results open on Sounds like, which
 stays on your computer: it comes from the companion's own engine, with BPM,
 Spotify lyrics-language filtering, related-artist ordering, and the feedback
-prompt. Best matches only run on the hosted matcher, so their tab asks before
-sending the song's title and artist. A Best matches list saved from an earlier
-search shows without asking.
+prompt. Best matches and Listeners also play only run on the hosted matcher, so
+their tabs ask before sending the song's title and artist. Lists saved from an
+earlier search show without asking.
 
 ## Match
 
-Rows in Best matches, Same vibe, and hosted Sounds like show a **Match** bar
-to the left of Stems: how alike the song sounds to yours by the MuQ-MuLan
-model, as the share of typical matches it sounds more alike than. 50 % is a
-typical match; 90 % sounds more alike than nine in ten songs Soundalike
-usually shows. A song can rank high in Best matches or Same vibe for its
-listeners or its tempo with a low bar, and a very unusual song gets low bars
+Rows in Best matches and Listeners also play show a **Match** bar to the left
+of Stems: how alike the song sounds to yours by the MuQ-MuLan model, as the
+share of typical matches it sounds more alike than. 50 % is a typical match;
+90 % sounds more alike than nine in ten songs Soundalike usually shows. A song
+can rank high with a low bar, as a likely cover or sample or because your
+song's listeners also play its artist, and a very unusual song gets low bars
 throughout. In a narrow window only the bar shows; hover it for the number.
 
 ## Stems
 
-Rows in Best matches, Same vibe, and hosted Sounds like have a **Stems**
-button. It shows your song and that match side by side, each split into vocals,
+Rows in Best matches and Listeners also play have a **Stems** button. It
+shows your song and that match side by side, each split into vocals,
 drums, bass, guitar, keys, and synths & other by the `htdemucs_6s` separation
 model, then measured part by part:
 
@@ -142,8 +137,8 @@ preview. The companion's local Sounds like list has no Stems button.
   and the list stays visible while music plays.
 - Results use a playlist-style layout with album artwork, verified artist
   names, clickable album names, and, in Sounds like, measured BPM.
-- Best matches, Same vibe, and hosted Sounds like show the first 20 songs of
-  the matcher's top 30 that Spotify has, in the matcher's order. A song
+- Best matches and Listeners also play show the first 20 songs of the
+  matcher's top 30 that Spotify has, in the matcher's order. A song
   Spotify doesn't have, such as a Deezer-only upload, is left out and the next
   one takes its place; the songs left out are named under the list, and
   clicking one searches Spotify for it in case the match was missed. A row
@@ -153,8 +148,8 @@ preview. The companion's local Sounds like list has no Stems button.
 - In the companion's Sounds like list (and the older service's fallback list),
   for a seed with a known Spotify lyrics language, only
   candidates with that exact known language are shown (English with English,
-  French with French, and so on). Best matches, Same vibe, and hosted Sounds
-  like use the server's audio-derived language gate instead: confidently
+  French with French, and so on). Best matches and Listeners also play use
+  the server's audio-derived language gate instead: confidently
   different-language songs are hidden by default (judged by the song's own
   label, else its artist's usual language),
   uncertain/instrumental rows remain, and **Show all languages** restores the
@@ -225,7 +220,7 @@ preview. The companion's local Sounds like list has no Stems button.
 
 ## Privacy
 
-For Best matches, Same vibe, and Sounds like, Soundalike sends the selected
+For Best matches and Listeners also play, Soundalike sends the selected
 track's title, artist and, when Spotify lists one, its recording code (ISRC)
 to `https://soundalike.yassin.app/api/anysong/similar`,
 which may look the song up on Deezer and analyze Deezer's public 30-second
@@ -238,8 +233,8 @@ it analyzes a song that isn't in its catalog yet, it also writes that song's
 Deezer track and artist IDs and the date to a list the catalog crawl reads, so
 the catalog grows toward songs people look up. Nothing about who asked (no
 address, account, or request details) is written. With a
-healthy local companion, Sounds like stays on your computer and Best matches
-ask first. Soundalike never sends audio, your Spotify password, access token,
+healthy local companion, Sounds like stays on your computer, and Best matches
+and Listeners also play ask first. Soundalike never sends audio, your Spotify password, access token,
 library, listening history, or artwork. Language
 labels and related-artist context come directly from Spotify inside the
 already-authenticated desktop client and are not sent to Soundalike. No
@@ -269,14 +264,15 @@ the displayed result list are not sent to Discord.
 
 ## Good to know
 
-- Hosted Sounds like comes from the same GPU matcher as Best matches. The older
-  Sounds like service it replaced is only asked when that matcher can't answer;
+- Best matches and Listeners also play come from one request to the GPU
+  matcher. The older Sounds like service is only asked when that matcher can't
+  answer;
   it quietly prewarms the web app fallback after Spotify starts, and if its
   primary service is unavailable, the first fallback request after a restart can
   take up to about 30 seconds. Repeated tracks use the local cache, and hosted
   responses can be reused by the CDN.
-- The matcher picks its Best matches, Same vibe, and Sounds like results from
-  a 999,293-song catalog. Songs added by the catalog crawl are only suggested
+- The matcher picks Best matches and Listeners also play from a 999,293-song
+  catalog. Songs added by the catalog crawl are only suggested
   for songs from their artist's scene. The older Sounds like library covers
   272,853 tracks.
 - Best matches hear only Deezer's 30-second preview, so a melody or sample
@@ -300,7 +296,7 @@ the displayed result list are not sent to Discord.
 - Spotify availability and Soundalike library coverage are different. The
   extension can now resolve recommendations through Spotify's full Songs
   search, but a Spotify seed that is absent from the 272,853-track embedding
-  index still cannot be analyzed by the hosted Sounds like model. Best matches
+  index still cannot be analyzed by the older Sounds like service. Best matches
   still analyze it live when Deezer has a preview of it.
 - If **Find soundalikes** does not appear immediately after installation,
   fully quit and reopen Spotify.
