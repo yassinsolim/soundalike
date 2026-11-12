@@ -2289,6 +2289,128 @@ The evidence head, not the weight, puts the lowest matches first:
   development seeds), so the gap between the two lists is the head. On the UK rap set, Sounds like beats main on uk10
   (+0.012 [+0.001, +0.025]), same country (+0.038 [+0.024, +0.054]) and match10 (+5.0 [+4.0, +5.9]).
 
+### A stricter head for main (development, 2026-11-12)
+
+**Why.** The evidence head opens main for 45 % of development seeds, and more than half its songs match under 20 %
+(above). Follow My Lead opens with Rema – HOV at 6 %: first in the raw melody channel, with a standout z of 2.52.
+
+**Change under test** (`AnySong.main_head_standout` Z and `main_head_match` M, commit 357c2df, off by default). Only
+main's head changes. A head song stays when its standout z is at least Z or its sound match is at least M. The
+standout z is the one Best's head uses: the larger of its melody and samples z-scores among the first 20 songs of
+those lists. A dropped song is ranked like any other sound pick. Best matches, Same vibe, Sounds like and Listeners
+also play do not change.
+
+**Selection**, on development data only (`grow/qa/head_rule.py`). Its docstring fixed the grid, the metrics and the
+rule after an exploratory look at the head (`describe`, which decides nothing) and before the first scored run.
+- **Grid:** Z of 2.25, 2.5, 2.75 or 3.0 with no match exemption (M 101); M of 20 or 30 with Z of 2.5, 3.0 or 4.0.
+- **low1:** the share of seeds whose first row in main matches under 20 % (the match users see). **match1:** that
+  row's match.
+- **Lists:** out-of-fold for the 823 labelled development seeds; the benchmarks' development split (2,667 seeds)
+  with the ranker trained on every development seed.
+- **Eligible when:**
+  1. Covers, samples and samples reverse HR@10 are each at least Sounds like + 0.85 × (served main − Sounds like):
+     main keeps 85 % of its lead.
+  2. Against served main, the ListenBrainz change is at least −0.005 and match10 falls by at most 0.5. Far-genre
+     rows, other-language rows and derivative uploads each rise by at most 0.005.
+  3. low1 falls: its paired 95 % upper bound is below 0.
+- **Pick:** the lowest low1; within 0.005 of it, the higher covers HR@10; then the longer head.
+
+With both settings off, every list and the query were byte-identical to the served code for all 4,143 development
+seeds, with listener data and without.
+
+| Variant | Z | M | low1 | match1 | Covers | Samples | Samples reverse | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| Served | – | – | 0.259 | 53.0 | 0.432 | 0.058 | 0.057 | |
+| z2.25 | 2.25 | – | 0.222 | 56.2 | 0.424 | 0.056 | 0.057 | eligible |
+| z2.5 | 2.5 | – | 0.173 | 60.7 | 0.408 | 0.056 | 0.055 | eligible |
+| z2.75 | 2.75 | – | 0.139 | 64.5 | 0.388 | 0.051 | 0.054 | out: samples |
+| z3 | 3.0 | – | 0.098 | 67.9 | 0.366 | 0.051 | 0.053 | out: covers, samples |
+| m20z2.5 | 2.5 | 20 | 0.173 | 58.8 | 0.422 | 0.058 | 0.055 | eligible |
+| **m20z3** | **3.0** | **20** | **0.098** | **63.7** | **0.401** | **0.055** | **0.053** | **chosen** |
+| m20z4 | 4.0 | 20 | 0.023 | 68.7 | 0.325 | 0.046 | 0.044 | out: all three |
+| m30z2.5 | 2.5 | 30 | 0.173 | 59.7 | 0.417 | 0.057 | 0.055 | eligible |
+| m30z3 | 3.0 | 30 | 0.098 | 65.5 | 0.390 | 0.052 | 0.053 | eligible |
+| m30z4 | 4.0 | 30 | 0.023 | 71.1 | 0.295 | 0.043 | 0.042 | out: all three |
+
+The floors were covers 0.382, samples 0.051 and samples reverse 0.049. z2.75 and z3 missed the samples floor by one
+query (41 hits of 806, floor 41.2). m20z3 and m30z3 tie on low1; m20z3 keeps more covers (0.401 against 0.390).
+
+**m20z3 against served main**, out-of-fold development seeds (823), paired change [95 % CI]:
+
+| Measure | Served | m20z3 | Change | Seeds up / same / down |
+|---|---|---|---|---|
+| low1 | 0.259 | 0.098 | −0.160 [−0.187, −0.136] | 0 / 691 / 132 |
+| match1 | 53.0 | 63.7 | +10.8 [+9.1, +12.6] | 132 / 691 / 0 |
+| match3 | 63.3 | 68.7 | +5.4 [+4.6, +6.3] | 155 / 668 / 0 |
+| match10 | 66.3 | 67.7 | +1.47 [+1.25, +1.70] | 155 / 668 / 0 |
+| ListenBrainz | 0.452 | 0.459 | +0.006 [+0.004, +0.009] | 57 / 757 / 9 |
+| Far-genre rows | 0.104 | 0.100 | −0.004 [−0.006, −0.003] | 8 / 676 / 38 |
+| Other-language rows | 0.000 | 0.000 | 0.000 | 0 / 710 / 0 |
+| Derivative uploads | 0.0016 | 0.0015 | −0.0001 [−0.0004, 0.0000] | 0 / 822 / 1 |
+| Seeds with a head | 45.4 % | 30.5 % | −14.9 points [−17.6, −12.6] | |
+| First row changed | | 16.0 % | | |
+
+HR@10 on the benchmarks' development split (queries):
+
+| List | Covers (1,066) | Samples (806) | Samples reverse (721) |
+|---|---|---|---|
+| Best matches (served) | 0.588 | 0.077 | 0.089 |
+| Sounds like (served) | 0.097 | 0.010 | 0.006 |
+| Main (served) | 0.432 | 0.058 | 0.057 |
+| **Main, m20z3** | **0.401** | **0.055** | **0.053** |
+| m20z3 − served main | −0.032 [−0.043, −0.022] | −0.004 [−0.009, 0.000] | −0.004 [−0.010, 0.000] |
+
+That is 34 covers, 3 samples and 3 samples reverse hits fewer. On this split the head shrinks from 1,769 to 1,304
+songs:
+- Of the 465 it drops, 69 (15 %) are labelled covers or samples of their seed.
+- Of the 1,304 it keeps, 525 are (40.3 %, up from 33.6 %). The labels are incomplete, so these shares are lower bounds.
+- low1 falls from 0.265 to 0.152, and the share of seeds with a head from 51.7 % to 41.5 %.
+
+**His songs** (`grow/qa/head_rule_review.json`, the served ranker):
+- **Follow My Lead:** Rema – HOV (match 6, z 2.52) leaves the head. Main opens with Ashbeck – Juice (96), Damzz –
+  Silent Approach (95) and SL – Summertime Santa (95).
+- **She Will:** keeps Bryson Tiller – We Will first (match 91, z 4.04).
+- **Heartbeat** and **Get Geeked:** no head, no change.
+
+Serving is unchanged unless the held-out gates below pass.
+
+### Held-out gates for the stricter head (pre-registered 2026-11-12, before any held-out result)
+
+**Baseline.** The served code (b5b61a8; its `anysong/api.py` is byte-identical to the server's), with main as
+served. **Candidate.** m20z3: `main_head_standout` 3.0 and `main_head_match` 20 (357c2df). Everything else as
+served: main `w2`, Listeners also play `l025` and the served ranker (`listener-v1.npz`). **Seeds.** The 799
+held-out and 1,000 fresh seeds, all with listener inputs, and the benchmarks' held-out split. Run once
+(`grow/qa/head_rule.py held`); checked by `grow/qa/head_rule.py verdict` (32 checks).
+
+**Must pass (all), else not deployed:**
+1. **Only main changes**, for every held-out, fresh and held-out benchmark seed:
+   - Settings off: every list and the query are byte-identical to the served code (`head_rule.py parity`, run on
+     both sources).
+   - Candidate: every list but main, and the query, are identical to served main's run.
+2. **The weak first rows go.** On each seed set, low1 falls against served main: paired 95 % upper bound below 0.
+3. **Nothing else gets worse**, against served main on each seed set:
+   - The ListenBrainz change is at least −0.005, and match10 falls by at most 0.5.
+   - Far-genre rows, other-language rows and derivative uploads each rise by at most 0.005.
+4. **Main keeps 85 % of its lead** on the held-out benchmark queries: covers, samples and samples reverse HR@10 are
+   each at least Sounds like + 0.85 × (served main − Sounds like), all from the same run.
+5. **The two-tab gates still hold.** Rules 3 and 4 of the two-tab gates above, unchanged, for the candidate's main
+   against served Sounds like.
+6. **Serving.** Yassin's OK, then rule 4 of the listener ranking, unchanged. Client side, through
+   `soundalike.yassin.app`, for the four review songs: main equals the lab's list, 20 of 20 positions, and the other
+   lists do not change.
+
+**Reported, not gated:** match1 and match3; the share of seeds with a head and its length; seeds whose first row
+changes; head precision on the held-out benchmark queries (a lower bound); SampleID, Gen Alpha and V4.
+
+**Known before the run.** The served lists' held-out numbers are public (the two-tab result above); the
+candidate's are not. They put rule 4's floors at 476 of 1,170 covers queries (served main has 534), 42 of 747
+samples queries (48) and 43 of 695 samples reverse queries (49). On the development split the candidate lost 34
+covers, 3 samples and 3 samples reverse hits. The thresholds are the development rule's, unchanged. `held` and
+`verdict` were dry-run on development data only: the seed-set check failed, as it must, and the other 31 passed.
+
+**No fallback.** If any rule fails, main keeps its served head and the result goes back to Yassin. Nothing else is
+tried on held-out data.
+
 ## Stem dissection (pre-registered 2026-11-10, before any result)
 
 **What.** `soundalike.anysong.stems` splits a preview into six stems with htdemucs_6s (vocals, drums, bass, guitar,
