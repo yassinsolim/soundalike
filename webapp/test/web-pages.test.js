@@ -973,7 +973,9 @@ test("an artist without listener data says so on Listeners also play", async () 
   assert.equal(selected(page, "listeners"), "true");
   assert.equal(page.hash, `#id=${AMANGA_ID}&tab=listeners`);
   assert.equal(page.text("#matches .state"), NO_LISTENERS_NOTE);
-  assert.equal(page.text("#matchblurb"), LISTENERS_CAPTION);
+  // An empty list has no ranking to describe, so only its note shows.
+  assert.equal(page.text("#matchblurb"), "");
+  assert.equal(page.document.querySelector("#matchblurb").hidden, true);
   // Only Audio only is left to change on an empty list.
   assert.equal(page.document.querySelector("#language").hidden, false);
   assert.equal(page.text("#language-status"), "");
@@ -986,6 +988,7 @@ test("an artist without listener data says so on Listeners also play", async () 
   page.document.querySelector("#tab-best").click();
   assert.deepEqual(page.texts("#matches .t"), ["Bar A Thym", "Sunshine"]);
   assert.equal(page.text("#matchblurb"), AUDIO_BEST_CAPTION);
+  assert.equal(page.document.querySelector("#matchblurb").hidden, false);
   assert.equal(page.document.querySelector("#language-toggle").hidden, false);
   assert.equal(page.text("#language-status"), "English · other languages left out");
   assert.equal(page.similar().length, 1);
@@ -1001,6 +1004,7 @@ test("an artist without listener data says so on Listeners also play", async () 
   });
   await waitFor(() => emptyList.document.querySelector("#matches .state"));
   assert.equal(emptyList.text("#matches .state"), NO_LISTENERS_NOTE);
+  assert.equal(emptyList.document.querySelector("#matchblurb").hidden, true);
   assert.deepEqual(emptyList.errors, []);
 });
 
@@ -1032,7 +1036,8 @@ test("Audio only reloads without the listeners and is remembered", async () => {
   // Listeners also play comes from the listeners, so it says how to get it back.
   page.document.querySelector("#tab-listeners").click();
   assert.equal(page.text("#matches .state"), AUDIO_ONLY_LISTENERS_NOTE);
-  assert.equal(page.text("#matchblurb"), LISTENERS_CAPTION);
+  assert.equal(page.text("#matchblurb"), "");
+  assert.equal(page.document.querySelector("#matchblurb").hidden, true);
   assert.equal(page.document.querySelector("#language").hidden, false);
   assert.equal(page.text("#language-status"), "");
   assert.equal(page.document.querySelector("#language-toggle").hidden, true);
@@ -1058,6 +1063,7 @@ test("Audio only reloads without the listeners and is remembered", async () => {
   assert.equal(page.text("#language-status"), "English · all languages");
   assert.equal(page.document.querySelector("#language-toggle").hidden, false);
   assert.equal(page.text("#matchblurb"), LISTENERS_CAPTION);
+  assert.equal(page.document.querySelector("#matchblurb").hidden, false);
   assert.equal(page.document.querySelector("#copy").disabled, false);
   assert.deepEqual(page.errors, []);
 });

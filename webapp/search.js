@@ -774,7 +774,10 @@
     document.querySelector("#seedtags").innerHTML = seedTags(picked)
       .map(([text, live]) => `<span class="tag${live ? " live" : ""}">${esc(text)}</span>`)
       .join("");
-    document.querySelector("#matchblurb").textContent = blurbText(picked);
+    // An empty Listeners also play has no ranking to describe; its note says why.
+    const blurb = document.querySelector("#matchblurb");
+    blurb.textContent = noListeners ? "" : blurbText(picked);
+    blurb.hidden = noListeners;
     renderLanguage(picked, noListeners);
     if (entry.status === "pending") {
       list.innerHTML = '<li class="state"><span class="spin"></span> matching…</li>';

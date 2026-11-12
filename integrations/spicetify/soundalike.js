@@ -2867,9 +2867,9 @@
     }
     const { query, listeners } = best.data;
     if (!listeners?.length) {
+      // An empty list has no ranking to describe; the note says why it's empty.
       const note = state.audioOnly ? AUDIO_ONLY_LISTENERS_NOTE : NO_LISTENERS_NOTE;
-      return `<p class="sa-blurb">${esc(LISTENERS_BLURB)}</p>${audioOnlyRowMarkup(state)}` +
-        listStateMarkup({ status: "empty" }, note);
+      return audioOnlyRowMarkup(state) + listStateMarkup({ status: "empty" }, note);
     }
     const blurb = LISTENERS_BLURB + matchedToNote(state, query, seedArtists);
     const tags = tagsMarkup(["What listeners play", ...sourceTags(best)]);

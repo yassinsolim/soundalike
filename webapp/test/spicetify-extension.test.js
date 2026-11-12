@@ -3491,6 +3491,8 @@ test("explains an empty Listeners also play when the artist has no listener data
   app.tab("listeners").onclick();
   const html = app.currentPage.innerHTML;
   assert.match(html, /class="sa-panel sa-view-listeners"/);
+  // An empty list has no ranking to describe, so only its note shows.
+  assert.doesNotMatch(html, /class="sa-blurb"/);
   assert.match(
     html,
     /<div class="sa-state" role="status">We don't know what this artist's listeners play yet, so there's no list here\. Best matches still has the songs that sound most alike\.<\/div>/,
@@ -3545,6 +3547,7 @@ test("Audio only empties Listeners also play with a note", async () => {
 
   app.tab("listeners").onclick();
   html = app.currentPage.innerHTML;
+  assert.doesNotMatch(html, /class="sa-blurb"/);
   assert.match(
     html,
     /<div class="sa-state" role="status">Audio only is on, and this list comes from what this song's listeners also play\. Turn Audio only off to see it\.<\/div>/,
@@ -3559,6 +3562,7 @@ test("Audio only empties Listeners also play with a note", async () => {
   html = app.currentPage.innerHTML;
   assert.equal(new URL(app.bestRequests[1]).searchParams.get("scene"), null);
   assert.match(html, /class="sa-panel sa-view-listeners"/);
+  assert.match(html, /<p class="sa-blurb">Songs by other artists that this song's listeners also play/);
   assert.match(html, /aria-pressed="false" title="[^"]+">Audio only<\/button>/);
   assert.equal(app.rows[0].dataset.uri, "spotify:track:sounds0");
 });
