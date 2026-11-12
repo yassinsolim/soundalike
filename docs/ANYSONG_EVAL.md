@@ -2494,6 +2494,34 @@ preview download from Deezer's CDN:
 it was before the baseline. The limits are unchanged. The script also reports, not gated, the paired median change of
 the download and of the rest of the server time; on attempt 1's data that reads +1,232.9 ms and −18.4 ms.
 
+**Attempt 2: deployed, 05:27:59 CST.** Backup `/opt/soundalike/deploy-backups/20261112-050924-headrule`.
+
+| Check | Result |
+|---|---|
+| Preflight | Only `anysong/api.py` differs; settings as served |
+| Parity with the new code (`serve_check`, 64 songs per index) | Melody and samples: ranks agree, self at 1 = 1.0. Sonic: ranks agree, self at 1 = 0.984, the one song at rank 2 as stored |
+| VRAM, `serve_check` loaded / peak | 5,737 / 7,141 MiB (limit 7,248) |
+| Startup and `healthz` | 56 s; ranker listener-v1, stems live |
+| Smoke: five fixed seeds, scene on and 0 | Every list but main identical; only Follow My Lead's main head changed: Rema (match 6) dropped |
+| 40 unseen songs | Paired median server time −60.9 ms (limit +100 ms); p95 2.854 → 1.330 s (limit 3.054 s); peak VRAM 7,051 MiB. Pass |
+| 40 catalog songs | Paired median +1.4 ms (limit +100 ms); p95 0.557 → 0.573 s (limit 0.757 s). Pass |
+| Captures: six seeds, scene on and 0 | Every list but main identical; main unchanged on all six |
+| Rule 6, client side (`rule6_check.py post`) | Main equals the lab's m20z3 at 20/20 positions on the four review songs; every other list unchanged. Pass |
+
+The old code's baseline was slow this time (p95 2.854 s against 1.081 s in attempt 1), so the p95 limit was loose.
+Without the download, the server time did not move in either attempt (each attempt's 40 unseen songs, paired before
+and after; server timings):
+
+| Server time without the download | p50 before → after | p95 before → after | Paired median change |
+|---|---|---|---|
+| Attempt 1 | 873.7 → 853.9 ms | 937.7 → 879.7 ms | −18.4 ms |
+| Attempt 2 | 876.2 → 888.8 ms | 991.8 → 1,006.3 ms | +8.7 ms |
+
+- In attempt 2 the download's paired median change was −52.1 ms.
+- Every restart checked from 2026-11-11 22:09 on, the old code's included, logs the same CUDA allocator OOM warnings
+  (4.76 GB and 1.23 GB requests) and the service still comes up. They are not from this change.
+- After the deploy the public site answered 200 in 0.10–0.13 s.
+
 ### Blind listening check for the stricter head (pre-registered 2026-11-12, before any listening)
 
 Yassin asked to hear the change before the public release: the website's two tabs and the Spotify extension ship
