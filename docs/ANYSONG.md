@@ -116,7 +116,15 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   Best item that came from the seed artist's neighbourhood rather than a channel list has empty `ranks`, each Best
   item has `basis`: `audio` for the audio head (likely covers, samples and shared melodies) and `listeners` for the
   songs placed after it by the listener blend, and `timings_ms.listener` gives the time the ranker took. Without the
-  ranker (or with `scene=0`) Best items have no `basis`; the list is audio only.
+  ranker (or with `scene=0`) Best items have no `basis`; the list is audio only. Whenever `sounds` is served, so is
+  `main`, the Spotify extension's Best matches list: the audio head (only songs with cover or sample evidence;
+  `basis` `audio`), then the sonic channel's songs in Sounds like's order (`basis` `sound`), one song per artist, each
+  with `ranks` and a positional `score`. With the ranker and the scene layer on, `listeners` is the Listeners also
+  play list: Best's candidates by artists other than the seed's, ordered by z(listener estimate) + 0.25 z(sound
+  score) (`LISTENERS_SOUND_WEIGHT`), one song per artist, `basis` `listeners`. Without the ranker, with `scene=0` or
+  for an unknown artist there is no `listeners`. Items whose sound score is known carry `match`, the sound match from
+  0 to 100 (`api.sound_match`). [ANYSONG_EVAL.md](ANYSONG_EVAL.md#one-main-list-and-listeners-also-play-pre-registered-2026-11-11-before-any-held-out-result)
+  has the evaluation.
 - `/similar?title=&artist=&k=` (used by Spotify, which has no Deezer id, and by old `#s=` home-page links) resolves
   the name first.
   Songs match by song key (primary artist plus title without bracketed, dashed or feat. tags), ignoring accents on

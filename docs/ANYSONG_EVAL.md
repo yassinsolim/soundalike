@@ -2189,7 +2189,24 @@ Main against Sounds like: covers +0.335 [+0.309, +0.362], samples +0.055 [+0.040
 - The costs match development. Main against Sounds like: match10 −2.4 and −2.3 (development −2.7), ListenBrainz
   −0.009 and −0.011 (−0.013), far-genre rows +0.010 and +0.003 (+0.008).
 
-Rule 5 is the deploy.
+### Deployed (2026-11-11): rule 5 passed
+
+The guarded deploy (`deploy_two_tabs.sh`, backup `/opt/soundalike/deploy-backups/20261111-220846-twotabs`) changed
+only `anysong/api.py` and applied the serving checks of the listener ranking's rule 4:
+
+| Check | Result | Limit |
+|---|---|---|
+| serve_check parity, 64 songs per channel | rank agreement 1.0 on all three channels; one sonic song second, as stored | 1.0; at most 2 not first |
+| Startup | 54 s; catalog tiers, ranker and dissector active | under 120 s |
+| 40 unseen songs | paired median server time −17.9 ms; p95 1.068 → 1.044 s | +100 ms; 1.268 s |
+| 40 catalog songs | paired median server time −10.3 ms; p95 0.543 → 0.528 s | +100 ms; 0.743 s |
+| Peak VRAM, ranking | 7,051 MiB | 7,248 MiB |
+| Served lists | every list identical, row for row, for five fixed seeds with and without listener data, and for the six capture seeds | identical |
+
+Client side, through `soundalike.yassin.app`, for the four review songs:
+- Main, Listeners also play, Best, Same vibe and Sounds like are identical to the lab lists Yassin chose from
+  (`grow/qa/main_review.json`), 20 of 20 positions each.
+- With `scene=0` main is served and Listeners also play is left out.
 
 ## Stem dissection (pre-registered 2026-11-10, before any result)
 
