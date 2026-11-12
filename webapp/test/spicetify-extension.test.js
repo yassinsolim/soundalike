@@ -3484,6 +3484,12 @@ test("explains an empty Listeners also play when the artist has no listener data
   await app.run();
   await waitFor(() => hasLog(app, "Best matches metadata settled"));
   assert.equal(app.rows[0].dataset.uri, "spotify:track:best0");
+  // Without listener data the main list is in sound order, so Best matches
+  // doesn't claim a listener nudge.
+  assert.match(
+    app.currentPage.innerHTML,
+    /<p class="sa-blurb">Likely covers, samples and shared melodies first, then the songs that sound most alike\.<\/p>/,
+  );
 
   app.tab("listeners").onclick();
   const html = app.currentPage.innerHTML;

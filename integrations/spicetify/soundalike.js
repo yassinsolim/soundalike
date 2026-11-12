@@ -16,7 +16,7 @@
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.13.0-local.2";
+  const RUNTIME_SEMANTIC_VERSION = "2.13.0-local.3";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -851,6 +851,8 @@
         languageMode: query.language_mode === "all" ? "all" : "same",
         hidden: Number.isFinite(Number(query.hidden)) ? Math.max(0, Number(query.hidden)) : 0,
         bpm: Number.isFinite(query.bpm) && query.bpm > 0 ? query.bpm : null,
+        // "unknown_artist": no listener data, so the lists are in sound order.
+        ...(["on", "off", "unknown_artist"].includes(query.scene) ? { scene: query.scene } : {}),
       }),
       results,
       main,
@@ -2813,7 +2815,9 @@
   function bestPanelMarkup(state, seedArtists) {
     const best = state.best;
     const mixed = best.status === "ready" && !best.data.main?.length;
-    let blurb = state.audioOnly
+    const soundOnly = state.audioOnly ||
+      (best.status === "ready" && best.data.query?.scene === "unknown_artist");
+    let blurb = soundOnly
       ? AUDIO_ONLY_BEST_MATCHES_BLURB
       : mixed ? MIXED_BEST_MATCHES_BLURB : BEST_MATCHES_BLURB;
     if (best.status === "offer") {
