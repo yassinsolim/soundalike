@@ -2937,6 +2937,35 @@ What it shows: the drop in other-language rows on main has now held four times (
 −0.132, retest −0.092, this run −0.109). Gating main alone leaves Listeners also play as served. The cost is
 smaller lists: 7 % of the reached seeds get fewer than ten songs on main, inside the pre-registered limit.
 
+### Deployed: the seed language guess on Best matches (2026-11-13)
+
+df81483 (`LANGUAGE_GUESS = "main"`) went live on CT 409 at 07:46, using `deploy_mainguess.sh`. The script checks that
+only `api.py` differs, with `LANGUAGE_GUESS` "main". Backup and deploy log:
+`/opt/soundalike/deploy-backups/20261113-072846-mainguess/`.
+
+| Check | Result |
+|---|---|
+| serve_check | parity as stored (sonic self@1 0.9844); startup 52 s |
+| Smoke, 5 seeds × scene on/off, plus BoA | the 5 seeds the guess does not reach: the same ids and query, no `main_language_guess`; BoA (scene on and off) gains `main_language_guess` en, keeps its query otherwise, and only main changes; BoA with lang=all keeps main |
+| Latency, unseen songs (40) | paired median −8.8 ms (limit +100); p95 1.164 → 1.032 s (limit 1.364) |
+| Latency, catalog songs (40) | paired median +14.9 ms; p95 0.547 → 0.548 s (limit 0.747) |
+| VRAM peak | 7,051 MiB (limit 7,248) |
+| Captures (12) | unchanged |
+| Client side (soundalike.yassin.app) | the same checks as the smoke test, against the deploy's before files: pass |
+| Spotify, extension 2.13.0-local.8 | BoA: Best matches reads "English (best guess) · other languages left out"; "Show all languages" brings back the earlier main (Girls' Generation, 86, first) and the toggle returns; Listeners also play reads "Language uncertain; showing all languages." Heartbeat: unchanged, "English · other languages left out" on both tabs |
+
+Seen after the deploy, not gated:
+- BoA's main now opens with Disclosure, "She's Gone, Dance On (Carlita Remix)", sound match 2, as an audio-head row
+  (melody #1), shown at overall 33 with the scene on and 87 with it off (a head row takes the next row's overall). The
+  head's standout test runs on the filtered lists, so filtering can make a weak melody match stand out.
+  `grow/qa/mainguess_head_diag.py` counts it: the guess adds a head row with a match under 20 on 10 of 1,062
+  reached unsure_held3 seeds (0.9 %) and 10 of 1,043 unsure_held2 seeds (1.0 %). Seeds whose main #1 has a match
+  under 20 go from 16.3 % to 16.0 % and from 15.4 % to 14.9 %. Testing the head on the unfiltered lists would need its
+  own development and held-out run.
+- The gate keeps songs whose language is unknown. On BoA, Stray Kids "Saiyan", BLACKPINK "Pretty Savage (Live)",
+  aespa "Rich Man" and Jay Park "Metronome" stay: none has a decided label, and Whisper's top language for them is
+  en 0.52, en 0.75, en 0.67 and ko 0.48.
+
 ## Stem dissection (pre-registered 2026-11-10, before any result)
 
 **What.** `soundalike.anysong.stems` splits a preview into six stems with htdemucs_6s (vocals, drums, bass, guitar,
