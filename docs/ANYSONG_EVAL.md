@@ -2818,6 +2818,30 @@ seed-set check failed, as it must, and it reproduced the development numbers.
 **No fallback.** If any check fails, the guess stays off in this form and the result goes back to Yassin. Nothing
 else is tried on held-out data. If it passes, it deploys with Yassin's OK and the client checks of held-out rule 6.
 
+### Retest result for the seed language guess (2026-11-13)
+
+Run once, after the pre-registration (307a94f), from 03:55 to 03:58 (`grow/qa/seedlang_retest_run.log`). **15 of 17
+checks passed. Rule 2 failed for Listeners also play, on unsure_held2 alone and pooled, so the guess stays off.**
+
+| Rule | Result | |
+|---|---|---|
+| Seed sets, candidate | unsure_held2 pooled with unsure_held; top probability 0.6, veto 0.5 | pass |
+| 1b | the guess reaches 1,043 of 2,400 unsure_held2 and 338 of 800 unsure_held seeds; 0 broken | pass |
+| 2a, main | lyr_mis 0.266 ? 0.175, ?0.092 [?0.138, ?0.050], n 124 | pass |
+| 2a, Listeners also play | lyr_mis 0.115 ? 0.123, +0.008 [?0.037, +0.052], n 125 | **fail** |
+| 2b, main | 0.274 ? 0.172, ?0.102 [?0.145, ?0.059], n 170 | pass |
+| 2b, Listeners also play | 0.122 ? 0.115, ?0.007 [?0.046, +0.036], n 167 | **fail** |
+| 3 | main under ten songs +0.058 [+0.045, +0.074]; match10 main ?1.18 [?1.47, ?0.90], Listeners also play +1.01 [+0.62, +1.42]; far main +0.009, Listeners also play +0.005; derivative uploads +0.000 for both | pass |
+| 4 (reported) | ListenBrainz, n 2: main 0.733 ? 0.417, Listeners also play 0.800 ? 0.750 | reported |
+
+Reported, not gated: the guess matches the sure lyrics language on 115 of 130 unsure_held2 seeds (88 %). It
+guesses en 891, fr 51, es 19, ru 11, pt 10 and ja 8.
+
+What it shows: the drop in other-language rows on main has now held three times (development ?0.156, held-out
+?0.132, retest ?0.092). On Listeners also play there is none: development's ?0.148 did not hold (?0.052 held-out,
++0.008 retest). That list already has fewer other-language rows (0.115 against main's 0.266), and the guess does not
+change it. As pre-registered, the guess stays off in this form and the result goes back to Yassin.
+
 ## Stem dissection (pre-registered 2026-11-10, before any result)
 
 **What.** `soundalike.anysong.stems` splits a preview into six stems with htdemucs_6s (vocals, drums, bass, guitar,
