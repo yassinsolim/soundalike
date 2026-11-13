@@ -2757,11 +2757,11 @@ Rules 1a and 1c passed, so `overall` may ship alone.
 | 1a | 5,338 seeds with and 5,338 without listener data: 0 differ from the served code | pass |
 | 1b | the guess reaches 338 of 800 unsure_held, 18 of 799 test, 22 of 1,000 fresh and 105 of 2,739 benchmark seeds; 0 broken | pass |
 | 1c | 5,325 main and 5,338 Listeners also play lists with listener data, 5,325 main lists without: lists unchanged, `overall` present, 0 to 100, never rises | pass |
-| 2, main | lyr_mis 0.296 ? 0.164, ?0.132 [?0.240, ?0.030], n 46 | pass |
-| 2, Listeners also play | lyr_mis 0.142 ? 0.089, ?0.052 [?0.143, +0.036], n 42 | **fail** |
-| 3 | main under ten songs +0.071 [+0.044, +0.101]; match10 main ?1.49 [?2.14, ?0.91], Listeners also play +1.52 [+0.81, +2.29]; far main ?0.017, Listeners also play ?0.028; derivative uploads +0.000 for both | pass |
-| 4 (reported) | ListenBrainz, n 15: main 0.395 ? 0.348, ?0.047 [?0.133, 0.000]; Listeners also play 0.547 ? 0.560, +0.013 [?0.013, +0.047] | reported |
-| 5 | Best unchanged; main covers 496 ? 494; Listeners also play covers 79 ? 81; samples and samples reverse unchanged | pass |
+| 2, main | lyr_mis 0.296 → 0.164, −0.132 [−0.240, −0.030], n 46 | pass |
+| 2, Listeners also play | lyr_mis 0.142 → 0.089, −0.052 [−0.143, +0.036], n 42 | **fail** |
+| 3 | main under ten songs +0.071 [+0.044, +0.101]; match10 main −1.49 [−2.14, −0.91], Listeners also play +1.52 [+0.81, +2.29]; far main −0.017, Listeners also play −0.028; derivative uploads +0.000 for both | pass |
+| 4 (reported) | ListenBrainz, n 15: main 0.395 → 0.348, −0.047 [−0.133, 0.000]; Listeners also play 0.547 → 0.560, +0.013 [−0.013, +0.047] | reported |
+| 5 | Best unchanged; main covers 496 → 494; Listeners also play covers 79 → 81; samples and samples reverse unchanged | pass |
 
 Reported, not gated:
 - The guess matches the sure lyrics language on 42 of 48 unsure_held seeds, 3 of 3 test and 0 of 1 fresh. On
@@ -2770,7 +2770,7 @@ Reported, not gated:
   58/89/96 (development: 18/76/98, 16/82/98, 58/89/96).
 
 What failed: Listeners also play lost other-language rows on average, but on 42 seeds the drop cannot be told apart
-from zero; on development it was ?0.148 [?0.267, ?0.039], n 39. It starts with half as many other-language rows as
+from zero; on development it was −0.148 [−0.267, −0.039], n 39. It starts with half as many other-language rows as
 main (0.142 against 0.296), so there is less to remove. Main's drop held. As pre-registered, nothing else is tried on
 held-out data, and the result goes back to Yassin.
 
@@ -2779,10 +2779,10 @@ gets a new, larger test on fresh seeds, pre-registered before it runs.
 
 ### Retest of the seed language guess (pre-registered 2026-11-13, before any retest result)
 
-**Why.** The held-out run failed only rule 2 for Listeners also play (?0.052 [?0.143, +0.036], n 42). Yassin asked
+**Why.** The held-out run failed only rule 2 for Listeners also play (−0.052 [−0.143, +0.036], n 42). Yassin asked
 for a larger test on fresh seeds.
 
-**Candidate.** Unchanged: the guess at top probability ? 0.6 with veto 0.5 (`languages.py` as in 8cb542a; 3b67714
+**Candidate.** Unchanged: the guess at top probability ≥ 0.6 with veto 0.5 (`languages.py` as in 8cb542a; 3b67714
 only turns it off by default). The baseline is the same code with the guess off, which is what is served.
 
 **Seeds.** unsure_held2: 2,400 seeds drawn the same way as unsure_held (seed 20261115) after the held-out run, one
@@ -2806,8 +2806,8 @@ Carried over, not rerun: rule 1a (with the guess off, the code is what is served
 (the benchmarks passed with this candidate on the held-out benchmark seeds).
 
 **Power.** On unsure_held, 42 reached seeds had a lyr_mis value for Listeners also play, and the 95 % interval was
-about ?0.09. Three times the seeds should give about 125 such seeds and about ?0.05. If the true drop is as small as
-the held-out estimate (?0.05), the retest passes about half the time; at ?0.10, about 97 % of the time.
+about ±0.09. Three times the seeds should give about 125 such seeds and about ±0.05. If the true drop is as small as
+the held-out estimate (−0.05), the retest passes about half the time; at −0.10, about 97 % of the time.
 
 **Why the pooled check.** Testing again after a failure raises the chance of a false pass. Rule 2b keeps the
 decision tied to every held-out unsure seed, including those that failed.
@@ -2827,18 +2827,18 @@ checks passed. Rule 2 failed for Listeners also play, on unsure_held2 alone and 
 |---|---|---|
 | Seed sets, candidate | unsure_held2 pooled with unsure_held; top probability 0.6, veto 0.5 | pass |
 | 1b | the guess reaches 1,043 of 2,400 unsure_held2 and 338 of 800 unsure_held seeds; 0 broken | pass |
-| 2a, main | lyr_mis 0.266 ? 0.175, ?0.092 [?0.138, ?0.050], n 124 | pass |
-| 2a, Listeners also play | lyr_mis 0.115 ? 0.123, +0.008 [?0.037, +0.052], n 125 | **fail** |
-| 2b, main | 0.274 ? 0.172, ?0.102 [?0.145, ?0.059], n 170 | pass |
-| 2b, Listeners also play | 0.122 ? 0.115, ?0.007 [?0.046, +0.036], n 167 | **fail** |
-| 3 | main under ten songs +0.058 [+0.045, +0.074]; match10 main ?1.18 [?1.47, ?0.90], Listeners also play +1.01 [+0.62, +1.42]; far main +0.009, Listeners also play +0.005; derivative uploads +0.000 for both | pass |
-| 4 (reported) | ListenBrainz, n 2: main 0.733 ? 0.417, Listeners also play 0.800 ? 0.750 | reported |
+| 2a, main | lyr_mis 0.266 → 0.175, −0.092 [−0.138, −0.050], n 124 | pass |
+| 2a, Listeners also play | lyr_mis 0.115 → 0.123, +0.008 [−0.037, +0.052], n 125 | **fail** |
+| 2b, main | 0.274 → 0.172, −0.102 [−0.145, −0.059], n 170 | pass |
+| 2b, Listeners also play | 0.122 → 0.115, −0.007 [−0.046, +0.036], n 167 | **fail** |
+| 3 | main under ten songs +0.058 [+0.045, +0.074]; match10 main −1.18 [−1.47, −0.90], Listeners also play +1.01 [+0.62, +1.42]; far main +0.009, Listeners also play +0.005; derivative uploads +0.000 for both | pass |
+| 4 (reported) | ListenBrainz, n 2: main 0.733 → 0.417, Listeners also play 0.800 → 0.750 | reported |
 
 Reported, not gated: the guess matches the sure lyrics language on 115 of 130 unsure_held2 seeds (88 %). It
 guesses en 891, fr 51, es 19, ru 11, pt 10 and ja 8.
 
-What it shows: the drop in other-language rows on main has now held three times (development ?0.156, held-out
-?0.132, retest ?0.092). On Listeners also play there is none: development's ?0.148 did not hold (?0.052 held-out,
+What it shows: the drop in other-language rows on main has now held three times (development −0.156, held-out
+−0.132, retest −0.092). On Listeners also play there is none: development's −0.148 did not hold (−0.052 held-out,
 +0.008 retest). That list already has fewer other-language rows (0.115 against main's 0.266), and the guess does not
 change it. As pre-registered, the guess stays off in this form and the result goes back to Yassin.
 
@@ -2851,12 +2851,12 @@ change it. As pre-registered, the guess stays off in this form and the result go
 | Check | Result |
 |---|---|
 | serve_check | parity as stored (sonic self@1 0.9844, the same song as before) |
-| Smoke, 6 seeds ? scene on/off | the same ids and query; `overall` on every main and Listeners also play row, never rising; no `language_guessed`; BoA unknown and unchanged |
-| Latency, unseen songs (40) | paired median ?18.6 ms (limit +100); p95 1.023 ? 0.996 s (limit 1.223) |
-| Latency, catalog songs (40) | paired median ?1.9 ms; p95 0.529 ? 0.535 s (limit 0.729) |
+| Smoke, 6 seeds × scene on/off | the same ids and query; `overall` on every main and Listeners also play row, never rising; no `language_guessed`; BoA unknown and unchanged |
+| Latency, unseen songs (40) | paired median −18.6 ms (limit +100); p95 1.023 → 0.996 s (limit 1.223) |
+| Latency, catalog songs (40) | paired median −1.9 ms; p95 0.529 → 0.535 s (limit 0.729) |
 | VRAM peak | 7,051 MiB (limit 7,248) |
 | Captures | unchanged |
-| Client side (soundalike.yassin.app, 6 seeds) | same main and Listeners also play ids as before the deploy; `overall` present, 0?100 and never rising |
+| Client side (soundalike.yassin.app, 6 seeds) | same main and Listeners also play ids as before the deploy; `overall` present, 0–100 and never rising |
 | Spotify, extension 2.13.0-local.6 (BoA rechecked on local.7, whose only change is the layout) | Heartbeat and BoA, both tabs: the bar shows `overall`, which equals the API's; the tooltip gives both matches; no "(best guess)" |
 
 ## Stem dissection (pre-registered 2026-11-10, before any result)
