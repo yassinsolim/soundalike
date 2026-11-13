@@ -2859,6 +2859,59 @@ change it. As pre-registered, the guess stays off in this form and the result go
 | Client side (soundalike.yassin.app, 6 seeds) | same main and Listeners also play ids as before the deploy; `overall` present, 0–100 and never rising |
 | Spotify, extension 2.13.0-local.6 (BoA rechecked on local.7, whose only change is the layout) | Heartbeat and BoA, both tabs: the bar shows `overall`, which equals the API's; the tooltip gives both matches; no "(best guess)" |
 
+### Held-out gates for the main-only seed language guess (pre-registered 2026-11-13, before any held-out result)
+
+**Why.** The guess cut other-language rows on main three times (development −0.156, held-out −0.132, retest
+−0.092) and never on Listeners also play. Yassin chose to test it on Best matches (main) alone.
+
+**Candidate.** e8f2e3f with `LANGUAGE_GUESS = "main"`: the same guess (top probability ≥ 0.6, veto 0.5), gating
+main only. Main is built exactly as with the guess on. Every other list, `query.language` and `hidden` stay as with
+the guess off, and the query adds `main_language_guess`. The baseline is the served code, with the guess off.
+
+**Seeds.**
+- unsure_held3: 2,400 seeds drawn the same way as unsure_held2 (seed 20261116) after the retest, one song per
+  artist. No artist is shared with any other seed set or a held-out benchmark song (9,652 artists banned, 14,732
+  eligible). Its search results and listener inputs were cached for this run; no list was built from them or scored
+  before this section was committed.
+- unsure_held and unsure_held2, pooled for rule 2b, and bench_held for rules 1 and 5. Main with the guess on is
+  already known to pass rule 2 on both unsure sets, so unsure_held3 is the new evidence.
+
+**Run once:** `seedlang_dev.py mainguess`, then `seedlang_dev.py mainguess_verdict` (16 checks).
+
+**Must pass (all), else the guess stays off:**
+1. The seed sets and the candidate are as above. On unsure_held3, unsure_held, unsure_held2 and bench_held, for
+   seeds the guess reaches, main equals the guess-on main, and every other list and the query, less
+   `main_language_guess`, equal guess-off. Seeds it does not reach keep every list and the query in all three modes.
+2. **Other-language rows fall on main.** lyr_mis falls, with the paired 95 % upper bound below 0:
+   - a. on unsure_held3 alone;
+   - b. on unsure_held3 pooled with unsure_held and unsure_held2.
+3. **Main does not get much worse** on the unsure_held3 seeds the guess reaches: the share under ten songs rises at most
+   0.10, match10 changes by at least −2.5, far rises at most 0.05 and derivative uploads rise at most 0.005.
+   Missing data fails.
+4. **ListenBrainz is reported, not gated,** on the same seeds.
+5. **Benchmarks.** On bench_held, main loses at most 3 hits on mb_covers, mb_samples and mb_samples_rev.
+
+Carried over, not rerun: rule 1a (e8f2e3f's default is the guess off, which is what is served) and rule 1c
+(`overall`).
+
+**Power.** The retest had 124 main seeds with a lyr_mis value and an interval of about ±0.045; unsure_held3
+should give about as many. At the retest's −0.092, rule 2a passes about 98 % of the time; at −0.05, about
+60 %.
+
+**Known before the run.** The dry run on development data (unsure_dev pooled with dev, and bench_dev) passed 14 of
+15: the seed-set check failed, as it must (the dry run has three sets for rule 1). Rule 1 held on all 4,267
+development seeds, and main's lyr_mis fell −0.156 [−0.247, −0.068], n 39, as in development.
+
+**No fallback.** If any check fails, the guess stays off and the result goes back to Yassin. If it passes, it
+deploys with Yassin's OK:
+- `LANGUAGE_GUESS = "main"`;
+- serve_check parity and the latency and VRAM limits of earlier deploys;
+- a smoke test: a seed the guess reaches (BoA) changes only main and gains `main_language_guess`, and other seeds
+  are unchanged;
+- client checks on the website and in Spotify.
+
+Published clients read neither main nor `main_language_guess`, so they see no change.
+
 ## Stem dissection (pre-registered 2026-11-10, before any result)
 
 **What.** `soundalike.anysong.stems` splits a preview into six stems with htdemucs_6s (vocals, drums, bass, guitar,
