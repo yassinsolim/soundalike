@@ -296,6 +296,9 @@ def test_seed_language_best_guess_filters_and_says_so(svc):
     svc.languages = FakeLanguages({1: "unknown", 3: "en", 7: "fr"}, guesses={1: "fr"})
     res = {"query": {"id": 1, "artist": "Unknown Artist", "title": "Seed", "source": "catalog"},
            "raw": {"melody": [(3, 0.9), (7, 0.8)]}, "timings_ms": {}}
+    # Served off (held-out rule 2 failed); the guess is opt-in.
+    assert svc._view(res, k=10, dedupe=True, cached=False)["query"]["language"] == "unknown"
+    svc.language_guess = True
     result = svc._view(res, k=10, dedupe=True, cached=False)
     assert result["query"]["language"] == "fr" and result["query"]["language_guessed"] is True
     assert [item["id"] for item in result["results"]["best"]] == [7]

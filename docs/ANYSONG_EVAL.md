@@ -2746,6 +2746,37 @@ The result is checked by `seedlang_dev.py verdict` (28 checks).
 **No fallback.** If rule 1a or 1c fails, nothing is deployed. If any other rule fails, `LANGUAGE_GUESS` stays off,
 `overall` alone may still ship, and the result goes back to Yassin. Nothing else is tried on held-out data.
 
+### Held-out result for the seed language guess and overall match (2026-11-13)
+
+Run once, after the pre-registration (8cb542a), from 02:55 to 03:17 (`grow/qa/seedlang_held_run.log`). **27 of 28
+checks passed. Rule 2 failed for Listeners also play, so the guess is not deployed: `LANGUAGE_GUESS` stays off.**
+Rules 1a and 1c passed, so `overall` may ship alone.
+
+| Rule | Result | |
+|---|---|---|
+| 1a | 5,338 seeds with and 5,338 without listener data: 0 differ from the served code | pass |
+| 1b | the guess reaches 338 of 800 unsure_held, 18 of 799 test, 22 of 1,000 fresh and 105 of 2,739 benchmark seeds; 0 broken | pass |
+| 1c | 5,325 main and 5,338 Listeners also play lists with listener data, 5,325 main lists without: lists unchanged, `overall` present, 0 to 100, never rises | pass |
+| 2, main | lyr_mis 0.296 ? 0.164, ?0.132 [?0.240, ?0.030], n 46 | pass |
+| 2, Listeners also play | lyr_mis 0.142 ? 0.089, ?0.052 [?0.143, +0.036], n 42 | **fail** |
+| 3 | main under ten songs +0.071 [+0.044, +0.101]; match10 main ?1.49 [?2.14, ?0.91], Listeners also play +1.52 [+0.81, +2.29]; far main ?0.017, Listeners also play ?0.028; derivative uploads +0.000 for both | pass |
+| 4 (reported) | ListenBrainz, n 15: main 0.395 ? 0.348, ?0.047 [?0.133, 0.000]; Listeners also play 0.547 ? 0.560, +0.013 [?0.013, +0.047] | reported |
+| 5 | Best unchanged; main covers 496 ? 494; Listeners also play covers 79 ? 81; samples and samples reverse unchanged | pass |
+
+Reported, not gated:
+- The guess matches the sure lyrics language on 42 of 48 unsure_held seeds, 3 of 3 test and 0 of 1 fresh. On
+  unsure_held it guesses en 269, fr 23, es 12, it 5, de 4 and pt 4.
+- Top-1 `overall` percentiles 10/50/90: main 19/76/98, Listeners also play 15/82/98, main without listener data
+  58/89/96 (development: 18/76/98, 16/82/98, 58/89/96).
+
+What failed: Listeners also play lost other-language rows on average, but on 42 seeds the drop cannot be told apart
+from zero; on development it was ?0.148 [?0.267, ?0.039], n 39. It starts with half as many other-language rows as
+main (0.142 against 0.296), so there is less to remove. Main's drop held. As pre-registered, nothing else is tried on
+held-out data, and the result goes back to Yassin.
+
+**Decision (Yassin, 2026-11-13).** `overall` ships alone and `LANGUAGE_GUESS` is off in the served code. The guess
+gets a new, larger test on fresh seeds, pre-registered before it runs.
+
 ## Stem dissection (pre-registered 2026-11-10, before any result)
 
 **What.** `soundalike.anysong.stems` splits a preview into six stems with htdemucs_6s (vocals, drums, bass, guitar,

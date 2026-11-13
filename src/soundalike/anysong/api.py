@@ -117,9 +117,10 @@ MAIN_HEAD_BARE = 0
 MAIN_HEAD_STANDOUT = 3.0
 MAIN_HEAD_MATCH = 20
 LISTENERS_SOUND_WEIGHT = 0.25
-# A seed without a language of its own or an artist majority gets ``LanguageTable.guess`` (docs/ANYSONG_EVAL.md,
-# "A best-guess seed language").
-LANGUAGE_GUESS = True
+# With LANGUAGE_GUESS, a seed without a language of its own or an artist majority gets ``LanguageTable.guess``
+# (docs/ANYSONG_EVAL.md, "A best-guess seed language"). Off: it failed held-out rule 2 for Listeners also play on
+# 2026-11-13 ("Held-out result for the seed language guess and overall match").
+LANGUAGE_GUESS = False
 # Sound match (``sound_match``): sonic (MuQ-MuLan) score quantiles 0, 5, ..., 100 % over every song shown in the top
 # 20 of Best matches, Same vibe or Sounds like for the development seeds: 62,362 songs from 1,474 seeds with the
 # served lists (grow/qa/head_dev.py calib, 2026-11-11). A typical seed's median shown song scores 0.419 (50).
