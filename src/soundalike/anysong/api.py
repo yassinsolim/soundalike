@@ -118,9 +118,11 @@ MAIN_HEAD_STANDOUT = 3.0
 MAIN_HEAD_MATCH = 20
 LISTENERS_SOUND_WEIGHT = 0.25
 # With LANGUAGE_GUESS, a seed without a language of its own or an artist majority gets ``LanguageTable.guess``
-# (docs/ANYSONG_EVAL.md, "A best-guess seed language"). Off: it failed held-out rule 2 for Listeners also play on
-# 2026-11-13 ("Held-out result for the seed language guess and overall match").
-LANGUAGE_GUESS = False
+# (docs/ANYSONG_EVAL.md, "A best-guess seed language"). True gates every list with it; it failed held-out rule 2 for
+# Listeners also play on 2026-11-13 ("Held-out result for the seed language guess and overall match") and again in the
+# retest. "main" gates only main (Best matches): every other list and ``query["language"]`` stay as with the guess
+# off, and ``query["main_language_guess"]`` names the guess. False: no guess.
+LANGUAGE_GUESS: bool | str = False
 # Sound match (``sound_match``): sonic (MuQ-MuLan) score quantiles 0, 5, ..., 100 % over every song shown in the top
 # 20 of Best matches, Same vibe or Sounds like for the development seeds: 62,362 songs from 1,474 seeds with the
 # served lists (grow/qa/head_dev.py calib, 2026-11-11). A typical seed's median shown song scores 0.419 (50).
@@ -438,7 +440,7 @@ class AnySong:
                  scene: SceneTable | None = None, scene_params: SceneParams | None = None,
                  related_ttl: float = 86400.0, tempo: TempoTable | None = None, tracker=None,
                  vibe_params: samevibe.SameVibeParams | None = None, learn: LearnQueue | None = None,
-                 tiers=None, artist_languages: bool = True, language_guess: bool = LANGUAGE_GUESS,
+                 tiers=None, artist_languages: bool = True, language_guess: bool | str = LANGUAGE_GUESS,
                  copy_score: float | None = COPY_SAMPLES_SCORE,
                  max_versions: int | None = MAX_VERSIONS, sounds_boost: float = SOUNDS_BOOST,
                  ranker: listener.Ranker | None = None, best_sound_weight: float = BEST_SOUND_WEIGHT,
@@ -465,7 +467,10 @@ class AnySong:
         self.languages = languages
         # Songs without a confident language label take their artist's majority language in the language gate.
         self.artist_languages = artist_languages
-        # A seed neither places gets the table's best guess (``LanguageTable.guess``); the query says so.
+        # A seed neither places gets the table's best guess (``LanguageTable.guess``); the query says so. "main": for
+        # main alone (LANGUAGE_GUESS).
+        if language_guess not in (False, True, "main"):
+            raise ValueError(f"language_guess must be False, True or 'main', not {language_guess!r}")
         self.language_guess = language_guess
         # Other artists' versions of the seed's own song: copies of its recording (samples score at least
         # ``copy_score``) dropped, at most ``max_versions`` of the rest kept.
@@ -1030,6 +1035,10 @@ class AnySong:
             songs = self._limit_versions(songs, qkey)
 
         language, guessed = self._seed_language(q)
+        # "main": the guess gates main alone, below; everything else is as with the guess off.
+        main_language = None
+        if guessed and self.language_guess == "main":
+            main_language, language, guessed = language, "unknown", False
 
         scene_state = "off"
         artists: dict[Hashable, int | None] = {}
@@ -1089,6 +1098,11 @@ class AnySong:
                 vibe = self._same_vibe(res["vibe"], filtered, [key for key, _, _ in fused], language, lang_mode, k)
             sounds = self._sounds(filtered, k, profile, artists)
             main, listeners = self._main_without_listeners(filtered, profile, artists, k, sound_of), []
+        if main_language is not None:
+            query["main_language_guess"] = main_language
+            if lang_mode == "same":
+                main = self._guessed_main(res, songs, artists, profile, qkey, main_language, scene_state, k, dedupe,
+                                          sound_of)
         lists = {"best": best} if best else {}
         if vibe:
             lists["vibe"] = vibe
@@ -1110,6 +1124,21 @@ class AnySong:
                 item["overall"] = value
         return {"ok": True, "query": query, "results": lists | out, "timings_ms": res["timings_ms"],
                 "cached": cached}
+
+    def _guessed_main(self, res: dict, songs: dict[str, dict[Hashable, dict]], artists: dict[Hashable, int | None],
+                      profile, qkey, language: str, scene_state: str, k: int, dedupe: bool,
+                      sound_of: Mapping[int, float]) -> list[dict]:
+        """Main with the seed's guessed ``language`` gating it, built exactly as with ``language_guess`` True (the
+        "main" mode keeps that list and nothing else)."""
+        def keep(item: dict) -> bool:
+            return self._item_language(item) in {"unknown", language}
+
+        filtered = {channel: {key: item for key, item in order.items() if keep(item)}
+                    for channel, order in songs.items()}
+        if scene_state == "on" and res.get("listener") is not None:
+            return self._listener_lists(res, filtered, artists, profile, qkey, keep, language, "same", k, dedupe,
+                                        sound_of)[3]
+        return self._main_without_listeners(filtered, profile, artists, k, sound_of)
 
     @staticmethod
     def _sound_of(res: dict) -> dict[int, float]:

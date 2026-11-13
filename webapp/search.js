@@ -699,7 +699,8 @@
   // Both tabs hide confidently other-language songs unless the listener asks
   // for all languages. The server's query.hidden counts them in its fused order
   // of every channel, not in the main list or Listeners also play, so both tabs
-  // only say whether other languages are left out.
+  // only say whether other languages are left out. A main-only guess
+  // (query.main_language_guess) gates Best matches alone.
   function renderLanguage(picked, noListeners) {
     const button = document.querySelector("#language-toggle");
     const audio = document.querySelector("#audio-only");
@@ -718,12 +719,17 @@
       return;
     }
     const query = picked.best.body.query || {};
-    const code = query.language || "unknown";
+    const language = query.language || "unknown";
+    const mainGuess = tab === "best" && language === "unknown" &&
+      /^[a-z]{2,3}$/.test(String(query.main_language_guess || ""))
+      ? String(query.main_language_guess) : "";
+    const code = mainGuess || language;
     const all = query.language_mode === "all";
+    const guessed = query.language_guessed === true || Boolean(mainGuess);
     document.querySelector("#language-status").textContent =
       code === "unknown"
         ? "Language uncertain; showing all languages."
-        : `${languageName(code)}${query.language_guessed === true ? " (best guess)" : ""} · ${all ? "all languages" : "other languages left out"}`;
+        : `${languageName(code)}${guessed ? " (best guess)" : ""} · ${all ? "all languages" : "other languages left out"}`;
     button.hidden = code === "unknown";
     button.setAttribute("aria-pressed", String(all));
     button.textContent = all ? "Show same language" : "Show all languages";

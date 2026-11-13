@@ -579,6 +579,48 @@ def test_main_list_is_the_audio_head_then_sound_and_listener_picks_get_their_own
         api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, main_pool="every")
 
 
+@pytest.mark.parametrize("listener_data", [True, False])
+def test_main_only_language_guess_gates_main_alone(tmp_path, listener_data):
+    # The seed (1) has no language of its own or by its artist; the table guesses English. Third's sonic song 7 and
+    # Fifth's scene song 9 are German.
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), LISTENER_META, scene=_listener_scene_table(),
+                      copy_score=None, ranker=_stump("fwd", 0.0, 0.0), scene_params=SceneParams(head_min=1),
+                      languages=FakeLanguages({7: "de", 9: "de"}, guesses={1: "en"}), best_head_standout=0.0,
+                      tempo=TempoTable(np.array([5, 7, 8, 10]), np.array([120, 120, 121, 120], np.float32)))
+    res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog", "artist_id": 100},
+           "raw": {"melody": [(5, -1.0), (3, -2.0)], "samples": [(3, 0.1)],
+                   "sonic": [(10, 0.5), (5, 0.45), (7, 0.44)]},
+           "related": [], "timings_ms": {}, "vibe": {"muq": {10: 0.5, 5: 0.45, 7: 0.44, 3: 0.2}, "bpm": 120.0},
+           "listener": {"p": {3: 0.2, 5: 0.1, 7: 0.9, 8: 0.8, 9: 0.95, 10: 0.99},
+                        "son": {3: 0.2, 5: 0.45, 7: 0.44, 8: 0.40, 9: 0.43, 10: 0.5}, "scene": [8, 9]}}
+    if not listener_data:
+        del res["listener"]
+
+    def view(mode, **kw):
+        svc.language_guess = mode
+        return svc._view(res, k=10, dedupe=True, cached=False, **kw)
+
+    def without_main(r):
+        return {name: items for name, items in r["results"].items() if name != "main"}
+
+    on, off, main_only = view(True), view(False), view("main")
+    assert 7 in [x["id"] for x in off["results"]["main"]] and 7 not in [x["id"] for x in on["results"]["main"]]
+    # Main exactly as with the guess on; every other list and the query as with it off, plus the guess's name.
+    assert main_only["results"]["main"] == on["results"]["main"]
+    assert without_main(main_only) == without_main(off) != without_main(on)
+    assert main_only["query"] == off["query"] | {"main_language_guess": "en"}
+    assert on["query"]["language_guessed"] is True and off["query"]["language"] == "unknown"
+    # Every language: nothing gated, as with the guess off; the query still names the guess.
+    every, every_off = view("main", lang_mode="all"), view(False, lang_mode="all")
+    assert every["results"] == every_off["results"]
+    assert every["query"] == every_off["query"] | {"main_language_guess": "en"}
+    # A seed with a language of its own takes no guess: the mode changes nothing.
+    svc.languages = FakeLanguages({1: "en", 7: "de", 9: "de"}, guesses={1: "fr"})
+    assert view("main") == view(True) == view(False) and "main_language_guess" not in view("main")["query"]
+    with pytest.raises(ValueError):
+        api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, language_guess="listeners")
+
+
 def test_main_head_can_ask_low_match_songs_to_stand_out_more(tmp_path):
     # The setup above: 5 is cover evidence (melody score -1.0) with standout z 1.0 in the two-song melody list.
     svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), LISTENER_META, scene=_listener_scene_table(),

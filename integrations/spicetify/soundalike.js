@@ -16,7 +16,7 @@
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.13.0-local.7";
+  const RUNTIME_SEMANTIC_VERSION = "2.13.0-local.8";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -77,7 +77,7 @@
   // Songs this extension queued; Spotify keeps its queue across restarts.
   const LATE_QUEUE_KEY = "soundalike:late-queue:v1";
   const BEST_MATCHES_ENDPOINT = `${FALLBACK_HOSTED_SERVER}/api/anysong/similar`;
-  const BEST_MATCHES_POLICY = "anysong-main-listeners-v13";
+  const BEST_MATCHES_POLICY = "anysong-main-listeners-v14";
   // Audio only: the hosted lists come without the scene and listener layer
   // (scene=0), and the companion's Sounds like without related-artist ordering.
   const AUDIO_ONLY_KEY = "soundalike:audio-only:v1";
@@ -857,6 +857,9 @@
         language: String(query.language || "unknown"),
         // The seed had no language of its own; the server guessed one.
         ...(query.language_guessed === true ? { languageGuessed: true } : {}),
+        // The server's guess gates the main list alone; the query's language stays "unknown".
+        ...(/^[a-z]{2,3}$/.test(String(query.main_language_guess || ""))
+          ? { mainLanguageGuess: String(query.main_language_guess) } : {}),
         languageMode: query.language_mode === "all" ? "all" : "same",
         bpm: Number.isFinite(query.bpm) && query.bpm > 0 ? query.bpm : null,
         // "unknown_artist": no listener data, so the lists are in sound order.
@@ -2816,15 +2819,18 @@
 
   // The server's query.hidden counts other-language songs in its fused order of
   // every channel, not in the main list or Listeners also play, so both tabs
-  // only say whether other languages are left out.
-  function languageFilterMarkup(query, state) {
+  // only say whether other languages are left out. A main-only guess
+  // (mainLanguageGuess) gates the main list alone.
+  function languageFilterMarkup(query, state, { main = false } = {}) {
     const allLanguages = query.languageMode === "all";
-    const unknown = query.language === "unknown";
+    const mainGuess = main && query.language === "unknown" ? query.mainLanguageGuess || "" : "";
+    const language = mainGuess || query.language;
+    const unknown = language === "unknown";
     const control = unknown ? "" :
       `<button class="sa-language-toggle" type="button" aria-pressed="${allLanguages}">${allLanguages ? "Use same-language matches" : "Show all languages"}</button>`;
     const text = unknown
       ? "Language uncertain; showing all languages."
-      : `${languageName(query.language)}${query.languageGuessed ? " (best guess)" : ""} · ${allLanguages ? "all languages" : "other languages left out"}`;
+      : `${languageName(language)}${query.languageGuessed || mainGuess ? " (best guess)" : ""} · ${allLanguages ? "all languages" : "other languages left out"}`;
     return `<div class="sa-language-filter" role="status"><span>${esc(text)}</span>` +
       `<span class="sa-filter-actions">${control}${audioOnlyToggleMarkup(state)}</span></div>`;
   }
@@ -2859,7 +2865,7 @@
     const tags = tagsMarkup([mixed ? "Melody + samples" : "Melody, samples + sound", ...sourceTags(best)]);
     return `<p class="sa-blurb">${esc(blurb)}</p>
       <div class="sa-tags">${tags}</div>
-      ${languageFilterMarkup(query, state)}
+      ${languageFilterMarkup(query, state, { main: true })}
       ${listHeadMarkup({ stems: Boolean(dissectSeed(state, results)) })}
       <div class="sa-list">${resultRowsMarkup(results, { hidden: true, notes: true })}
       </div>${LIST_NOTE_MARKUP}`;

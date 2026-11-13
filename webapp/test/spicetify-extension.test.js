@@ -2286,7 +2286,7 @@ const soundsFixture = [
   { title: "Take My Breath", artist: "The Weeknd", bpm: 121.7 },
 ];
 
-const bestCacheKey = "best:anysong-main-listeners-v13:listeners:same:spotify:track:test";
+const bestCacheKey = "best:anysong-main-listeners-v14:listeners:same:spotify:track:test";
 
 function bestMatchesBody(best = bestFixture, overrides = {}) {
   return {
@@ -2494,7 +2494,7 @@ test("opens on Best matches with Listeners also play one tab away", async () => 
   // A new response format gets a new URL, so HTTP-cached older responses are skipped.
   assert.equal(
     bestUrl.searchParams.get("policy"),
-    "anysong-main-listeners-v13",
+    "anysong-main-listeners-v14",
   );
   // Best matches came back, so the older Sounds like service isn't asked.
   assert.deepEqual(
@@ -2862,6 +2862,39 @@ test("shows all languages without a switch when the seed language is unknown", a
     html,
     /<div class="sa-language-filter" role="status"><span>Language uncertain; showing all languages\.<\/span><span class="sa-filter-actions"><button class="sa-audio-only" type="button" aria-pressed="false" title="[^"]+">Audio only<\/button><\/span><\/div>/,
   );
+  assert.equal(app.currentPage.querySelector(".sa-language-toggle"), null);
+});
+
+test("a main-only language guess labels Best matches and leaves Listeners also play uncertain", async () => {
+  const app = loadBestMatchesExtension({
+    bestFetch: async (url) => {
+      const body = mainMatchesBody(new URL(url).searchParams.get("lang"));
+      Object.assign(body.query, { language: "unknown", hidden: 0, main_language_guess: "en" });
+      return response(200, body);
+    },
+  });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  assert.match(app.currentPage.innerHTML, /<span>English \(best guess\) · other languages left out<\/span>/);
+  assert.notEqual(app.currentPage.querySelector(".sa-language-toggle"), null);
+
+  app.tab("listeners").onclick();
+  await waitFor(() => hasLog(app, "Listeners also play metadata settled"));
+  assert.match(app.currentPage.innerHTML, /<span>Language uncertain; showing all languages\.<\/span>/);
+  assert.equal(app.currentPage.querySelector(".sa-language-toggle"), null);
+});
+
+test("ignores a main-only language guess that is not a language code", async () => {
+  const app = loadBestMatchesExtension({
+    bestFetch: async (url) => {
+      const body = mainMatchesBody(new URL(url).searchParams.get("lang"));
+      Object.assign(body.query, { language: "unknown", hidden: 0, main_language_guess: "<b>en</b>" });
+      return response(200, body);
+    },
+  });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  assert.match(app.currentPage.innerHTML, /<span>Language uncertain; showing all languages\.<\/span>/);
   assert.equal(app.currentPage.querySelector(".sa-language-toggle"), null);
 });
 

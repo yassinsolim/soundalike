@@ -881,6 +881,28 @@ test("an uncertain language shows all languages without a switch", async () => {
   assert.equal(page.document.querySelector("#language-toggle").hidden, true);
 });
 
+test("a main-only language guess labels Best matches and leaves Listeners also play uncertain", async () => {
+  const page = loadAnysong({
+    body: ({ lang }) => {
+      const body = anysongBody({ lang, language: "unknown", hidden: 0 });
+      body.query.main_language_guess = "en";
+      return body;
+    },
+  });
+  await waitFor(() => shown(page));
+
+  assert.equal(page.text("#language-status"), "English (best guess) · other languages left out");
+  assert.equal(page.document.querySelector("#language-toggle").hidden, false);
+  page.document.querySelector("#tab-listeners").click();
+  assert.equal(page.text("#language-status"), "Language uncertain; showing all languages.");
+  assert.equal(page.document.querySelector("#language-toggle").hidden, true);
+  page.document.querySelector("#tab-best").click();
+  page.document.querySelector("#language-toggle").click();
+  await waitFor(() => page.text("#language-status") === "English (best guess) · all languages");
+  assert.equal(page.similar()[1].get("lang"), "all");
+  assert.deepEqual(page.errors, []);
+});
+
 test("Listeners also play opens from a share link and arrow keys switch tabs", async () => {
   const page = loadAnysong({ hash: `#id=${AMANGA_ID}&tab=listeners` });
   await waitFor(() => shown(page));
