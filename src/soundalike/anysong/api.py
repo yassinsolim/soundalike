@@ -121,8 +121,9 @@ LISTENERS_SOUND_WEIGHT = 0.25
 # (docs/ANYSONG_EVAL.md, "A best-guess seed language"). True gates every list with it; it failed held-out rule 2 for
 # Listeners also play on 2026-11-13 ("Held-out result for the seed language guess and overall match") and again in the
 # retest. "main" gates only main (Best matches): every other list and ``query["language"]`` stay as with the guess
-# off, and ``query["main_language_guess"]`` names the guess. False: no guess.
-LANGUAGE_GUESS: bool | str = False
+# off, and ``query["main_language_guess"]`` names the guess. It passed its held-out gates on 2026-11-13 ("Held-out
+# result for the main-only seed language guess") and is served. False: no guess.
+LANGUAGE_GUESS: bool | str = "main"
 # Sound match (``sound_match``): sonic (MuQ-MuLan) score quantiles 0, 5, ..., 100 % over every song shown in the top
 # 20 of Best matches, Same vibe or Sounds like for the development seeds: 62,362 songs from 1,474 seeds with the
 # served lists (grow/qa/head_dev.py calib, 2026-11-11). A typical seed's median shown song scores 0.419 (50).
