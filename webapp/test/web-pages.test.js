@@ -622,7 +622,7 @@ test("the one search bar suggests any song on Deezer and opens the pick", async 
   assert.equal(params.get("id"), String(EIGHT_PM_ID));
   assert.equal(params.get("k"), "20");
   assert.equal(params.get("lang"), "same");
-  assert.equal(params.get("policy"), "main-listeners-v2");
+  assert.equal(params.get("policy"), "main-listeners-v3");
   assert.equal(params.get("scene"), null);
   assert.equal(page.text(".seed h2"), "8PM");
   assert.equal(page.document.querySelector(".seed .cover img").getAttribute("src"), COVER);
@@ -791,7 +791,7 @@ test("Best matches read the main list, ask for one language and say other langua
 
   assert.equal(
     page.requests[0],
-    `/api/anysong/similar?id=${AMANGA_ID}&k=20&lang=same&policy=main-listeners-v2`,
+    `/api/anysong/similar?id=${AMANGA_ID}&k=20&lang=same&policy=main-listeners-v3`,
   );
   assert.equal(page.text("#matchblurb"), BEST_CAPTION);
   const box = page.document.querySelector("#language");
@@ -835,6 +835,36 @@ test("the language switch reloads Best matches and keeps focus on it", async () 
   assert.equal(toggle.textContent, "Show all languages");
   assert.equal(page.document.activeElement, toggle);
   assert.equal(page.document.querySelector(".seed h2").textContent, "Amanga");
+});
+
+test("bars show the overall match with the sound match in the tooltip, and a guessed language says so", async () => {
+  const page = loadAnysong({
+    body: ({ lang }) => {
+      const body = anysongBody({ lang });
+      body.query.language_guessed = true;
+      body.results.main = body.results.main.map((item, index) => ({ ...item, overall: [93, 101][index] }));
+      return body;
+    },
+  });
+  await waitFor(() => shown(page));
+
+  assert.equal(page.text("#language-status"), "English (best guess) · other languages left out");
+  const bars = page.document.querySelectorAll("#matches .bar");
+  assert.equal(
+    bars[0].getAttribute("aria-label"),
+    "Match 93%: how strongly Soundalike ranks it for this song. " +
+      "Sound match 41%: sounds more alike than 41% of typical matches",
+  );
+  assert.equal(bars[0].getAttribute("title"), bars[0].getAttribute("aria-label"));
+  assert.equal(bars[0].getAttribute("role"), "img");
+  // An overall match out of range keeps the bar relative to the list's scores.
+  assert.equal(bars[1].getAttribute("aria-label"), null);
+  assert.equal(bars[1].getAttribute("aria-hidden"), "true");
+  assert.deepEqual(
+    page.document.querySelectorAll("#matches .bar i").map((bar) => bar.getAttribute("style")),
+    ["width:93%", "width:25%"],
+  );
+  assert.deepEqual(page.errors, []);
 });
 
 test("an uncertain language shows all languages without a switch", async () => {

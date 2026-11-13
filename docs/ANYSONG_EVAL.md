@@ -2550,6 +2550,202 @@ to as much as he likes and change a pick until he says he is done.
 **Reported, not gated:** the counts, a two-sided sign test, whether each song's first row changed, and his notes.
 A dozen or so songs can only show a large difference; the held-out result above stays the main evidence.
 
+### A best-guess seed language (development, 2026-11-13)
+
+**Why.** The gate takes a seed's language from its own Whisper label (top probability ≥ 0.8, margin ≥ 0.5),
+else from its artist's majority. Without either, the seed is "unknown" and nothing is filtered. BoA's "Hypnotic
+Dancefloor" is one such seed: its preview's top language is English but under the bar, and BoA's labelled songs
+are 55 % English and 43 % Korean, so its lists mixed in songs in other languages. Yassin asked for a best guess at
+60 % or more.
+
+**The guess** (`LanguageTable.guess`, `api.LANGUAGE_GUESS`):
+- It applies to the seed only, and only when the gate cannot place it.
+- It is Whisper's top language when its probability is at least 0.6 (`languages.GUESS_MIN`).
+- It is skipped when the artist has labelled songs and fewer than half of them are in that language
+  (`GUESS_VETO` 0.5). An artist with no labelled songs has no veto.
+- Candidates keep the strict label, so a candidate without one stays visible.
+- The query says `language_guessed: true`, and the website and the extension add "(best guess)" after the language.
+- The table adds about 9 MiB to the server.
+
+**How often the guess is right.** There are no human labels, so the guess is checked against an independent signal:
+the language of the song's lyrics.
+- The lyrics are LRCLIB text embedded with bge-m3, classified by a logistic regression trained on songs Whisper is
+  sure about. It is 97.2 % accurate on its test split.
+- Held-out seeds (test, fresh) and the held-out benchmark queries are excluded.
+- Of 12,646 unsure catalog songs with lyrics, agreement is counted on those where the lyrics classifier is at least
+  90 % sure and the guess is one of its 12 languages.
+
+Results (`grow/qa/seedlang_dev.py precision`, `seedlang_precision_veto.json`):
+
+| Top probability | Artist veto | Coverage | Agreement (n) | English guesses | Other guesses |
+|---|---|---|---|---|---|
+| ≥ 0.5 | none | 75.1 % | 76.5 % (4,777) | 73.5 % | 83.5 % |
+| ≥ 0.5 | 0.3 | 59.4 % | 82.4 % (3,969) | 79.3 % | 90.2 % |
+| ≥ 0.6 | none | 55.5 % | 79.9 % (3,663) | 76.9 % | 87.1 % |
+| ≥ 0.6 | 0.3 | 44.9 % | 84.8 % (3,102) | 81.9 % | 92.5 % |
+| ≥ 0.6 | 0.4 | 41.2 % | 85.7 % (2,885) | 83.0 % | 93.1 % |
+| **≥ 0.6** | **0.5 (served)** | **38.7 %** | **86.5 % (2,683)** | **84.0 %** | **93.5 %** |
+| ≥ 0.7 | none | 32.8 % | 84.2 % (2,328) | 81.6 % | 90.7 % |
+| ≥ 0.7 | 0.3 | 27.3 % | 87.8 % (2,021) | 85.6 % | 93.8 % |
+
+- The served `LanguageTable.guess` reproduces the 0.5 row exactly.
+- The most common disagreements are English guesses on Spanish, French, Korean, Portuguese, German and Japanese
+  lyrics.
+- For 18.9 % of unsure songs the artist has no labelled song, so no veto applies.
+- These songs include the held-out unsure seeds below, which were drawn later. For the guess, only the list metrics
+  below are truly held out.
+
+**Lists on development seeds** (`seedlang_dev.py held --dry`, `seedlang_held_dry.log`):
+- Seeds: unsure_dev, which is 800 seeds the gate cannot place, one per artist, with listener data (`seedlang_dev.py
+  sample`, seed 20261113). The served ranker never trained on them. The dev, sweep and development benchmark seeds
+  were also run.
+- Comparison: the guess on against off, in the same code.
+- lyr_mis: among the top ten songs (one per artist) whose lyrics language is sure, the share in a different lyrics
+  language from the seed's. Only seeds whose own lyrics language is sure count.
+- Numbers are paired means over the seeds the guess reaches, with 95 % bootstrap intervals.
+
+| unsure_dev, guess reaches 350 of 800 | Main | Listeners also play |
+|---|---|---|
+| Other-language rows (lyr_mis, n 39) | 0.231 → 0.075 (−0.156 [−0.247, −0.068]) | 0.218 → 0.070 (−0.148 [−0.267, −0.039]) |
+| Lists under ten songs | 0 → 0.057 | 0 → 0 |
+| match10 | −1.13 [−1.61, −0.68] | +1.37 [+0.67, +2.16] |
+| Far-genre rows (n 35, 37) | +0.036 [+0.002, +0.084] | +0.022 [−0.016, +0.072] |
+| Derivative uploads | −0.001 | +0.000 |
+
+- The guess also reaches 12 of 800 dev seeds, 8 of 676 sweep seeds and 94 of 2,667 development benchmark seeds.
+- Guess against the sure lyrics language on reached seeds: unsure_dev 39/41, dev 2/2, sweep 4/5.
+- Development benchmarks: main's covers, samples and samples reverse hits are unchanged. Listeners also play covers
+  go from 74 to 76, and Best from 627 to 629.
+
+**ListenBrainz: what a correct guess costs.** ListenBrainz here means the share of other artists' songs in the top 20
+whose artist ListenBrainz listeners play with the seed's artist. Pooled over the reached seeds of unsure_dev, dev and
+sweep that have ListenBrainz data:
+
+| Veto | Seeds | Main | Listeners also play |
+|---|---|---|---|
+| 0.3 | 21 | −0.083 [−0.145, −0.029] | −0.095 [−0.157, −0.043] |
+| 0.5 | 14 | −0.050 [−0.100, −0.007] | −0.029 [−0.064, 0.000] |
+
+- At 0.5, averaged over all 21 seeds, the change is −0.033 and −0.019, because the 7 vetoed seeds no longer change.
+- The planned gate was a change of at least −0.03. At veto 0.3 it failed.
+- The diagnosis (development only, `seedlang_lb_diag.log`): the drop comes from correct English guesses on English
+  songs by K-pop and J-pop acts, such as BTS "Butter", aespa "LEMONADE" and YOASOBI "Haven't". Their listeners also
+  play Korean and Japanese artists, and an English gate hides those.
+- The gate does the same for labelled seeds, and there it costs almost nothing on this measure: main −0.000 over 797
+  seeds, −0.002 over the 109 seeds whose lists change.
+- One guess was wrong: Rvssian's "PONGO" was guessed English, but its lyrics are Spanish, and it lost 17 Spanish
+  songs.
+- Veto 0.5 leaves BTS (40 % English) unfiltered. It still filters BoA (55 % English), aespa (58 %) and YOASOBI
+  (68 %).
+- Yassin chose veto 0.5, so those acts' English songs get English-only lists, with ListenBrainz reported, not gated.
+  The choice was made after seeing these development numbers, before any held-out data was looked at, and the dry
+  run was redone at 0.5.
+
+### Overall match (development, 2026-11-13)
+
+**Why.** The bars showed the sound match, but main and Listeners also play are ordered by sound and listener
+evidence together. A list's first song could therefore show a lower percentage than songs below it.
+
+**What.** Each main and Listeners also play row gets `overall`, from 0 to 100:
+- It is the list's own ordering blend on a fixed scale (`api.OverallScale`):
+  - main: sound / 0.0138 + 2 × logit / 1.1893;
+  - Listeners also play: 0.25 × sound / 0.1768 + logit / 1.4899.
+- Each divisor is the median over seeds of that part's spread among the list's candidates.
+- The value is then turned into a percentile: the share of songs shown in that list's top 20 for the development
+  seeds that it beats.
+  - The scale uses 41 quantiles from dev + sweep: 825 seeds with listener data, out-of-fold listener probabilities
+    (`grow/qa/overall_dev.py calib`).
+- `api.overall_match` makes it non-increasing down the list:
+  - After the head, runs that are out of order share their mean (isotonic regression).
+  - Head songs, placed first on cover or sample evidence, show at least the song after them.
+- Without listener data, main's overall is its sound match, made non-increasing the same way.
+- A typical seed's first song shows 84 % (main) and 89 % (Listeners also play), and its tenth 50 %.
+- The other lists keep only `match`.
+
+**Display.**
+- The extension's bar shows `overall`. Its tooltip reads "Match N %: how strongly Soundalike ranks it for this song.
+  Sound match M %: …".
+- The website's bar takes the overall width and the same tooltip, with no number.
+- Lists without `overall` keep the sound match.
+- New cache policies (`anysong-main-listeners-v13` and `main-listeners-v3`) refetch older answers.
+
+**Checks** (`overall_dev.py check`):
+- Scope: the served ranker, with and without listener data, on unsure_dev, dev, sweep and the development benchmark
+  seeds (4,943 seeds).
+- Every id and every other field is unchanged. `overall` is on every main and Listeners also play row, between 0
+  and 100, and never rises down a list.
+- Top-1 overall, 10th, 50th and 90th percentiles over seeds:
+
+  | List | 10th | 50th | 90th |
+  |---|---|---|---|
+  | Main | 18 | 76 | 98 |
+  | Listeners also play | 16 | 82 | 98 |
+  | Main without listener data | 58 | 89 | 96 |
+
+- With the guess and overall both off (`SA_NEW_OFF=1`), every list and the query are byte-identical to the served
+  code (faf90d5) on the same 4,943 seeds, with and without listener data.
+
+### Held-out gates for the seed language guess and overall match (pre-registered 2026-11-13, before any held-out result)
+
+**Baseline.** The served code (faf90d5, main with the m20z3 head). For rules 1b to 5, the baseline is the new code
+with the guess off.
+
+**Candidate.** The guess on (top probability ≥ 0.6, veto 0.5), and `overall` on main and Listeners also play.
+
+**Seeds.**
+- unsure_held: 800 seeds the gate cannot place, drawn the same way as unsure_dev (seed 20261114) after the rule was
+  studied. No artist is shared with unsure_dev, any other seed set or a held-out benchmark song.
+- The 799 held-out seeds, the 1,000 fresh seeds and the 2,739 held-out benchmark seeds.
+
+**Run once:**
+- `head_rule.py parity` and `parity0` with `SA_NEW_OFF=1`, on the new code and on the served code;
+- `overall_dev.py check overall_check_held.json`;
+- `seedlang_dev.py held`.
+
+The result is checked by `seedlang_dev.py verdict` (28 checks).
+
+**Must pass (all), else the guess is not deployed:**
+1. **Nothing else changes.**
+   - a. With both settings off, every list and the query are byte-identical to the served code for every held-out
+     seed, with and without listener data.
+   - b. With the guess on, seeds it does not reach keep every list and the query. On seeds it reaches, the query
+     differs only in `language`, `language_guessed` and `hidden`, and the guess-off language was unknown.
+   - c. Overall, on all four sets, with and without listener data: ids and every other field are unchanged, and
+     `overall` is on every main and Listeners also play row, between 0 and 100, and never rises down a list.
+2. **Other-language rows fall.** On unsure_held, lyr_mis falls for main and for Listeners also play: the paired
+   95 % upper bound is below 0.
+3. **Nothing else gets much worse,** on the seeds of unsure_held the guess reaches. Missing data fails.
+   - Main lists under ten songs rise by at most 0.10.
+   - match10 falls by at most 2.5 for main and 1.0 for Listeners also play.
+   - Far-genre rows rise by at most 0.05, and derivative uploads by at most 0.005, each for main and for Listeners
+     also play.
+4. **ListenBrainz is reported, not gated.** It is pooled over the reached seeds of unsure_held, test and fresh, for
+   main and Listeners also play. See the development finding above.
+5. **Benchmarks.** On the held-out benchmark seeds, Best, main and Listeners also play each lose at most 3 hits on
+   covers, samples and samples reverse.
+6. **Serving.** Yassin's OK, then rule 4 of the listener ranking, unchanged. Client side, through
+   `soundalike.yassin.app`:
+   - BoA's "Hypnotic Dancefloor" gets English, marked as a guess, and its lists change.
+   - The four review songs have their own English labels, so the guess does not reach them. Each of their lists
+     keeps its ids and order.
+   - Main and Listeners also play carry `overall`.
+
+**Reported, not gated:**
+- the guess's coverage, its languages and its agreement with the lyrics;
+- Best, Same vibe and Sounds like metrics;
+- test and fresh list metrics;
+- SampleID, Gen Alpha and V4.
+
+**Known before the run.**
+- The thresholds were set on development data.
+- Veto 0.5 was chosen after the development ListenBrainz finding.
+- `held` and `verdict` were dry-run on development data only: the seed-set check failed, as it must, and the other
+  27 passed.
+- unsure_held's lists were cached but not scored.
+
+**No fallback.** If rule 1a or 1c fails, nothing is deployed. If any other rule fails, `LANGUAGE_GUESS` stays off,
+`overall` alone may still ship, and the result goes back to Yassin. Nothing else is tried on held-out data.
+
 ## Stem dissection (pre-registered 2026-11-10, before any result)
 
 **What.** `soundalike.anysong.stems` splits a preview into six stems with htdemucs_6s (vocals, drums, bass, guitar,

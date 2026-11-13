@@ -115,15 +115,19 @@ def svc(tmp_path):
 
 
 class FakeLanguages:
-    def __init__(self, track_languages, artist_languages=None):
+    def __init__(self, track_languages, artist_languages=None, guesses=None):
         self.track_languages = track_languages
         self.artist_languages = artist_languages or {}
+        self.guesses = guesses or {}
 
     def language(self, track_id):
         return self.track_languages.get(track_id, "unknown")
 
     def artist_language(self, artist):
         return self.artist_languages.get(artist.casefold(), "unknown") if artist else "unknown"
+
+    def guess(self, track_id, artist):
+        return self.guesses.get(track_id, "unknown")
 
 
 def test_language_decision_and_table_lookup(tmp_path):
@@ -142,6 +146,31 @@ def test_language_decision_and_table_lookup(tmp_path):
     assert table.artist_language("artist a") == "en"
     assert table.artist_language("Artist B") == "unknown"
     assert table.labelled(9) and not table.labelled(100)
+
+
+def test_language_table_best_guess_for_unlabelled_tracks(tmp_path):
+    # 11, 12 and 20 are unsure (top probability under 0.8); Artist B has one labelled song (French), Artist D one
+    # English and one French, Artist F one English and two French, so none has a majority; Artist E has none labelled.
+    rows = {7: (0, 0.95), 1: (0, 0.96), 9: (1, 0.94), 11: (0, 0.65), 12: (1, 0.55), 13: (0, 0.70), 14: (0, 0.70),
+            15: (0, 0.95), 16: (1, 0.95), 17: (0, 0.95), 18: (1, 0.95), 19: (1, 0.95), 20: (0, 0.70)}
+    path = tmp_path / "languages.npz"
+    np.savez(path, ids=np.asarray(list(rows)), vocab=np.asarray(["en", "fr"]),
+             top_idx=np.asarray([[c, 1 - c] for c, _ in rows.values()], dtype=np.uint8),
+             top_prob=np.asarray([[p, 1 - p] for _, p in rows.values()], dtype=np.float32), meta=np.asarray("{}"))
+    names = {1: "Artist A", 7: "Artist A", 9: "Artist B", 13: "Artist B", 11: "Artist E", 12: "Artist E",
+             14: "Artist D", 15: "Artist D", 16: "Artist D", 17: "Artist F", 18: "Artist F", 19: "Artist F",
+             20: "Artist F"}
+    table = LanguageTable.load(path, artist_names=names)
+    assert table.languages([11, 12, 13, 14, 20]) == ["unknown"] * 5
+    assert table.spread == {"artist b": ("fr",), "artist d": ("en", "fr"), "artist f": ("fr",)}
+    assert table.guess(11, "Artist E") == "en" and table.guess(11, None) == "en"
+    assert table.guess(12, "Artist E") == "unknown"  # 0.55 is under GUESS_MIN
+    assert table.guess(13, "Artist B") == "unknown"  # the artist's labelled songs are all French
+    assert table.guess(14, "Artist D") == "en" and table.guess(100, "Artist D") == "unknown"
+    assert table.guess(20, "Artist F") == "unknown"  # a third of the artist's songs are English, under GUESS_VETO
+    assert table.guess(12, "Artist E", min_prob=0.5) == "fr"
+    loose = LanguageTable.load(path, artist_names=names, guess_veto=0.3)
+    assert loose.spread["artist f"] == ("en", "fr") and loose.guess(20, "Artist F") == "en"
 
 
 @pytest.mark.parametrize("artist,title,expected", [
@@ -198,6 +227,22 @@ def test_sound_match_places_a_sonic_score_among_the_songs_shown_for_typical_seed
     assert values == sorted(values) and all(isinstance(v, int) for v in values)
 
 
+def test_overall_match_never_rises_down_a_list():
+    assert api.overall_match([]) == []
+    assert api.overall_match([90.4, 70.0, 70.0, 12.6]) == [90, 70, 70, 13]
+    # A song placed below a better-scoring one shares the mean with it (isotonic regression).
+    assert api.overall_match([50.0, 60.0, 40.0]) == [55, 55, 40]
+    assert api.overall_match([30.0, 50.0, 70.0]) == [50, 50, 50]
+    # Head songs (cover or sample evidence) show at least the song after them, or their own value when higher.
+    assert api.overall_match([30.0, 80.0, 70.0], head=1) == [80, 80, 70]
+    assert api.overall_match([95.0, 20.0, 80.0], head=1) == [95, 50, 50]
+    assert api.overall_match([10.0, 20.0], head=2) == [20, 20]
+    assert api.overall_match([120.0, -5.0]) == [100, 0]
+    for scale in (api.MAIN_OVERALL, api.LISTENERS_OVERALL):
+        assert scale.sound_sd > 0 and scale.logit_sd > 0
+        assert len(scale.quantiles) == 41 and list(scale.quantiles) == sorted(scale.quantiles)
+
+
 def test_best_list_fuses_the_song_views(svc):
     res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog"},
            "raw": {"melody": [(2, 0.99), (3, 0.9), (5, 0.8), (7, 0.7)],
@@ -242,9 +287,27 @@ def test_unknown_seed_language_fails_open(svc):
     res = {"query": {"id": 1, "artist": "Unknown Artist", "title": "Seed", "source": "catalog"},
            "raw": {"melody": [(3, 0.9), (7, 0.8)]}, "timings_ms": {}}
     result = svc._view(res, k=10, dedupe=True, cached=False)
-    assert result["query"]["language"] == "unknown"
+    assert result["query"]["language"] == "unknown" and "language_guessed" not in result["query"]
     assert result["query"]["hidden"] == 0
     assert [item["id"] for item in result["results"]["best"]] == [3, 7]
+
+
+def test_seed_language_best_guess_filters_and_says_so(svc):
+    svc.languages = FakeLanguages({1: "unknown", 3: "en", 7: "fr"}, guesses={1: "fr"})
+    res = {"query": {"id": 1, "artist": "Unknown Artist", "title": "Seed", "source": "catalog"},
+           "raw": {"melody": [(3, 0.9), (7, 0.8)]}, "timings_ms": {}}
+    result = svc._view(res, k=10, dedupe=True, cached=False)
+    assert result["query"]["language"] == "fr" and result["query"]["language_guessed"] is True
+    assert [item["id"] for item in result["results"]["best"]] == [7]
+    assert [item["id"] for item in svc._view(res, k=10, dedupe=True, cached=False, lang_mode="all")
+            ["results"]["best"]] == [3, 7]
+    # A label of its own or an artist majority wins over the guess, and the guess can be turned off.
+    svc.languages = FakeLanguages({1: "en", 3: "en", 7: "fr"}, guesses={1: "fr"})
+    result = svc._view(res, k=10, dedupe=True, cached=False)
+    assert result["query"]["language"] == "en" and "language_guessed" not in result["query"]
+    svc.languages = FakeLanguages({1: "unknown", 3: "en", 7: "fr"}, guesses={1: "fr"})
+    svc.language_guess = False
+    assert svc._view(res, k=10, dedupe=True, cached=False)["query"]["language"] == "unknown"
 
 
 def test_artist_language_fallback_filters_unseen_seed(svc):
@@ -553,6 +616,43 @@ def test_main_head_can_ask_low_match_songs_to_stand_out_more(tmp_path):
     svc.main_head_standout, svc.main_head_match = api.MAIN_HEAD_STANDOUT, api.MAIN_HEAD_MATCH
     assert api.sound_match(0.45) >= api.MAIN_HEAD_MATCH and api.MAIN_HEAD_STANDOUT > 1.0
     assert lists()["main"][0]["id"] == 5 and lists()["main"][0]["basis"] == "audio"
+
+
+def test_overall_match_follows_each_list_and_is_left_out_without_a_scale(tmp_path):
+    svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), LISTENER_META, scene=_listener_scene_table(),
+                      copy_score=None, ranker=_stump("fwd", 0.0, 0.0), scene_params=SceneParams(head_min=1),
+                      languages=FakeLanguages({1: "en", 9: "de"}), best_head_standout=0.0,
+                      tempo=TempoTable(np.array([5, 7, 8, 10]), np.array([120, 120, 121, 120], np.float32)))
+    res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog", "artist_id": 100},
+           "raw": {"melody": [(5, -1.0), (3, -2.0)], "samples": [(3, 0.1)],
+                   "sonic": [(10, 0.5), (5, 0.45), (7, 0.44)]},
+           "related": [], "timings_ms": {}, "vibe": {"muq": {10: 0.5, 5: 0.45, 7: 0.44, 3: 0.2}, "bpm": 120.0},
+           "listener": {"p": {3: 0.2, 5: 0.1, 7: 0.9, 8: 0.8, 9: 0.95, 10: 0.99},
+                        "son": {3: 0.2, 5: 0.45, 7: 0.44, 8: 0.40, 9: 0.43, 10: 0.5}, "scene": [8, 9]}}
+
+    def lists():
+        return svc._view(res, k=10, dedupe=True, cached=False)["results"]
+
+    r = lists()
+    assert svc.main_overall == api.MAIN_OVERALL and svc.listeners_overall == api.LISTENERS_OVERALL
+    for name in ("main", "listeners"):
+        values = [x["overall"] for x in r[name]]
+        assert len(values) == len(r[name]) >= 3 and values == sorted(values, reverse=True)
+        assert all(isinstance(v, int) and 0 <= v <= 100 for v in values)
+    assert not any("overall" in x for name in ("best", "vibe", "sounds") for x in r[name])
+    # Listeners also play's first song, 7, is the most likely listener link (p 0.9) and sounds alike: its blend lands
+    # in the upper half of the songs that list shows for typical seeds.
+    assert r["listeners"][0]["id"] == 7 and r["listeners"][0]["overall"] >= 50
+    # Without the scales: the same lists, without the field.
+    svc.main_overall = svc.listeners_overall = None
+    assert {name: [{key: v for key, v in x.items() if key != "overall"} for x in items]
+            for name, items in r.items()} == lists()
+    # Without listener data main follows sound alone, so its overall match is its sound match, never rising.
+    svc.main_overall = api.MAIN_OVERALL
+    del res["listener"]
+    main = lists()["main"]
+    head = sum(x["basis"] == "audio" for x in main)
+    assert [x["overall"] for x in main] == api.overall_match([x["match"] for x in main], head)
 
 
 class SonicEngine(FakeEngine):

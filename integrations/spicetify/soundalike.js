@@ -16,7 +16,7 @@
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.13.0-local.5";
+  const RUNTIME_SEMANTIC_VERSION = "2.13.0-local.6";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -77,7 +77,7 @@
   // Songs this extension queued; Spotify keeps its queue across restarts.
   const LATE_QUEUE_KEY = "soundalike:late-queue:v1";
   const BEST_MATCHES_ENDPOINT = `${FALLBACK_HOSTED_SERVER}/api/anysong/similar`;
-  const BEST_MATCHES_POLICY = "anysong-main-listeners-v12";
+  const BEST_MATCHES_POLICY = "anysong-main-listeners-v13";
   // Audio only: the hosted lists come without the scene and listener layer
   // (scene=0), and the companion's Sounds like without related-artist ordering.
   const AUDIO_ONLY_KEY = "soundalike:audio-only:v1";
@@ -794,7 +794,9 @@
   }
 
   // The server's sound match: 0 to 100, the percentile of a song's sound score
-  // among the matches its lists show for typical songs.
+  // among the matches its lists show for typical songs. Its overall match (the
+  // main list and Listeners also play) scores the list's own ranking the same
+  // way and never rises down the list.
   function matchPercent(value) {
     return Number.isInteger(value) && value >= 0 && value <= 100 ? value : null;
   }
@@ -806,7 +808,12 @@
     const withId = (item, compact) => {
       const id = deezerId(item?.id);
       const match = matchPercent(item?.match);
-      const kept = match === null ? compact : { ...compact, match };
+      const overall = matchPercent(item?.overall);
+      const kept = {
+        ...compact,
+        ...(match === null ? {} : { match }),
+        ...(overall === null ? {} : { overall }),
+      };
       return id ? { id, ...kept } : kept;
     };
     const channelRanks = (item) => item?.ranks && typeof item.ranks === "object"
@@ -848,6 +855,8 @@
         artist: String(query.artist || ""),
         source: query.source === "live" ? "live" : "catalog",
         language: String(query.language || "unknown"),
+        // The seed had no language of its own; the server guessed one.
+        ...(query.language_guessed === true ? { languageGuessed: true } : {}),
         languageMode: query.language_mode === "all" ? "all" : "same",
         bpm: Number.isFinite(query.bpm) && query.bpm > 0 ? query.bpm : null,
         // "unknown_artist": no listener data, so the lists are in sound order.
@@ -2129,19 +2138,25 @@
     );
   }
 
+  // The bar shows the overall match when the server sends it (it follows the
+  // list's order); the sound match alone moves to the tooltip.
   function matchCell(React, result) {
     const match = matchPercent(result.match);
-    if (match === null) return React.createElement("div", { className: "sa-match" });
-    const label = `Sound match ${match}%: sounds more alike than ${match}% of typical matches`;
+    const overall = matchPercent(result.overall);
+    const shown = overall ?? match;
+    if (shown === null) return React.createElement("div", { className: "sa-match" });
+    const sound = match === null ? "" : `Sound match ${match}%: sounds more alike than ${match}% of typical matches`;
+    const label = overall === null ? sound
+      : `Match ${overall}%: how strongly Soundalike ranks it for this song${sound ? `. ${sound}` : ""}`;
     return React.createElement(
       "div",
       { className: "sa-match", title: label, role: "img", "aria-label": label },
       React.createElement(
         "span",
         { className: "sa-match-bar" },
-        React.createElement("i", { style: { width: `${match}%` } })
+        React.createElement("i", { style: { width: `${shown}%` } })
       ),
-      React.createElement("span", { className: "sa-match-value" }, `${match}%`)
+      React.createElement("span", { className: "sa-match-value" }, `${shown}%`)
     );
   }
 
@@ -2809,7 +2824,7 @@
       `<button class="sa-language-toggle" type="button" aria-pressed="${allLanguages}">${allLanguages ? "Use same-language matches" : "Show all languages"}</button>`;
     const text = unknown
       ? "Language uncertain; showing all languages."
-      : `${languageName(query.language)} · ${allLanguages ? "all languages" : "other languages left out"}`;
+      : `${languageName(query.language)}${query.languageGuessed ? " (best guess)" : ""} · ${allLanguages ? "all languages" : "other languages left out"}`;
     return `<div class="sa-language-filter" role="status"><span>${esc(text)}</span>` +
       `<span class="sa-filter-actions">${control}${audioOnlyToggleMarkup(state)}</span></div>`;
   }

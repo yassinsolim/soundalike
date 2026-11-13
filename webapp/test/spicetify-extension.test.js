@@ -2286,7 +2286,7 @@ const soundsFixture = [
   { title: "Take My Breath", artist: "The Weeknd", bpm: 121.7 },
 ];
 
-const bestCacheKey = "best:anysong-main-listeners-v12:listeners:same:spotify:track:test";
+const bestCacheKey = "best:anysong-main-listeners-v13:listeners:same:spotify:track:test";
 
 function bestMatchesBody(best = bestFixture, overrides = {}) {
   return {
@@ -2494,7 +2494,7 @@ test("opens on Best matches with Listeners also play one tab away", async () => 
   // A new response format gets a new URL, so HTTP-cached older responses are skipped.
   assert.equal(
     bestUrl.searchParams.get("policy"),
-    "anysong-main-listeners-v12",
+    "anysong-main-listeners-v13",
   );
   // Best matches came back, so the older Sounds like service isn't asked.
   assert.deepEqual(
@@ -4597,6 +4597,37 @@ test("shows each hosted match's sound match as a bar next to Stems", async () =>
     findElement(matchOf(app.rows[1]), (node) => node.type === "i").props.style.width,
     "0%",
   );
+});
+
+test("the bar shows the overall match, the sound match moves to its tooltip, and a guessed language says so", async () => {
+  const app = await openListeners(async (url) => {
+    const body = mainMatchesBody(new URL(url).searchParams.get("lang"), {
+      listeners: listenersFixture.map((item, index) => ({
+        ...item, match: [40, 93, 12][index], overall: [91, 88, 101][index],
+      })),
+    });
+    body.query.language_guessed = true;
+    return response(200, body);
+  });
+  const matchOf = (row) => findElement(row.tree, (node) => node.props?.className === "sa-match");
+  const bar = matchOf(app.rows[0]);
+  assert.equal(
+    bar.props["aria-label"],
+    "Match 91%: how strongly Soundalike ranks it for this song. " +
+      "Sound match 40%: sounds more alike than 40% of typical matches",
+  );
+  assert.equal(findElement(bar, (node) => node.type === "i").props.style.width, "91%");
+  assert.equal(findElement(bar, (node) => node.props?.className === "sa-match-value").props.children, "91%");
+  // An overall match out of range falls back to the sound match.
+  assert.equal(
+    findElement(matchOf(app.rows[1]), (node) => node.props?.className === "sa-match-value").props.children,
+    "88%",
+  );
+  assert.equal(
+    findElement(matchOf(app.rows[1]), (node) => node.type === "i").props.style.width,
+    "88%",
+  );
+  assert.match(app.currentPage.innerHTML, /English \(best guess\) · other languages left out/);
 });
 
 // The signed runtime Marketplace's bootstrap injects (releases/stable.json).

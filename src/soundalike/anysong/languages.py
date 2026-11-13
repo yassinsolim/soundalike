@@ -22,7 +22,7 @@ import unicodedata
 from collections import Counter
 from collections.abc import Iterable, Sequence
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
@@ -32,6 +32,13 @@ EXCERPT_SECONDS = 30.0
 TOP = 5
 MIN_CONFIDENCE = 0.8
 MIN_MARGIN = 0.5
+# Best guess for a seed the gate cannot place (no label of its own, no artist majority): Whisper's top language when its
+# probability is at least GUESS_MIN, unless the artist has labelled songs and under GUESS_VETO of them are in that
+# language (so English songs by mostly Korean-singing acts stay unfiltered). On the catalog's unsure songs it covers
+# 39 % and matches the lyrics' language 87 % of the time (docs/ANYSONG_EVAL.md, "A best-guess seed language",
+# 2026-11-13).
+GUESS_MIN = 0.6
+GUESS_VETO = 0.5
 UNKNOWN = "unknown"
 MODEL_ID = "openai/whisper-large-v3-turbo"
 MODEL_REVISION = "41f01f3fe87f28c78e2fbf8b568835947dd65ed9"
@@ -112,18 +119,23 @@ def normalize_artist(name: str) -> str:
 
 @dataclass(frozen=True)
 class LanguageTable:
-    """Decided language per indexed track (sorted ids), plus an artist-majority fallback."""
+    """Decided language per indexed track (sorted ids), plus an artist-majority fallback and a best guess
+    (``guess``) for tracks neither places."""
 
     ids: np.ndarray
     codes: np.ndarray
     vocab: tuple[str, ...]
     artists: dict[str, str]
     meta: dict
+    top_codes: np.ndarray | None = None  # Whisper's top language per track, aligned with ``ids``
+    top_probs: np.ndarray | None = None
+    # Artists with labelled tracks but no majority: the languages of at least ``guess_veto`` of those tracks.
+    spread: dict[str, tuple[str, ...]] = field(default_factory=dict)
 
     @classmethod
     def load(cls, path: str | Path, *, min_confidence: float = MIN_CONFIDENCE, min_margin: float = MIN_MARGIN,
              artist_names: dict[int, str] | None = None, min_artist_tracks: int = 2,
-             min_artist_share: float = 0.8) -> "LanguageTable":
+             min_artist_share: float = 0.8, guess_veto: float = GUESS_VETO) -> "LanguageTable":
         with np.load(path, allow_pickle=False) as z:
             ids = z["ids"].astype(np.int64)
             vocab = tuple(str(v) for v in z["vocab"])
@@ -149,10 +161,16 @@ class LanguageTable:
         ids, codes = ids[order], codes[order]
         if len(ids) and np.any(ids[1:] == ids[:-1]):
             raise ValueError(f"duplicate track ids in {path}")
-        table = cls(ids, codes, vocab, {}, meta)
+        table = cls(ids, codes, vocab, {}, meta, top_idx[order, 0].astype(np.int16),
+                    top_prob[order, 0].astype(np.float32))
         if artist_names:
-            table.artists.update(table.artist_majority(artist_names, min_tracks=min_artist_tracks,
-                                                       min_share=min_artist_share))
+            votes = table.artist_votes(artist_names)
+            table.artists.update(table._majority(votes, min_tracks=min_artist_tracks, min_share=min_artist_share))
+            for artist, counter in votes.items():
+                if artist and artist not in table.artists:
+                    total = sum(counter.values())
+                    table.spread[artist] = tuple(sorted(table.vocab[code] for code, n in counter.items()
+                                                        if n / total >= guess_veto))
         return table
 
     def __len__(self) -> int:
@@ -178,14 +196,33 @@ class LanguageTable:
     def artist_language(self, artist: str | None) -> str:
         return self.artists.get(normalize_artist(artist), UNKNOWN) if artist else UNKNOWN
 
-    def artist_majority(self, artist_names: dict[int, str], *, min_tracks: int, min_share: float
-                        ) -> dict[str, str]:
-        """Artist -> language when >= ``min_share`` of their confidently labelled tracks agree."""
+    def guess(self, track_id: int, artist: str | None, *, min_prob: float = GUESS_MIN) -> str:
+        """A best guess for a track without a label of its own: Whisper's top language when its probability is at
+        least ``min_prob`` and the artist's labelled tracks do not rule it out (``spread``); "unknown" otherwise."""
+        if self.top_codes is None or self.top_probs is None or not len(self.ids):
+            return UNKNOWN
+        pos = min(int(np.searchsorted(self.ids, track_id)), len(self.ids) - 1)
+        if self.ids[pos] != track_id or self.top_probs[pos] < min_prob:
+            return UNKNOWN
+        language = self.vocab[int(self.top_codes[pos])]
+        allowed = self.spread.get(normalize_artist(artist)) if artist else None
+        return UNKNOWN if allowed is not None and language not in allowed else language
+
+    def artist_votes(self, artist_names: dict[int, str]) -> dict[str, Counter]:
+        """Artist -> labelled tracks per language code."""
         tids = list(artist_names)
         votes: dict[str, Counter] = {}
         for tid, code in zip(tids, self.codes_for(tids).tolist()):
             if code >= 0:
                 votes.setdefault(normalize_artist(artist_names[tid]), Counter())[code] += 1
+        return votes
+
+    def artist_majority(self, artist_names: dict[int, str], *, min_tracks: int, min_share: float
+                        ) -> dict[str, str]:
+        """Artist -> language when >= ``min_share`` of their confidently labelled tracks agree."""
+        return self._majority(self.artist_votes(artist_names), min_tracks=min_tracks, min_share=min_share)
+
+    def _majority(self, votes: dict[str, Counter], *, min_tracks: int, min_share: float) -> dict[str, str]:
         out = {}
         for artist, counter in votes.items():
             code, count = counter.most_common(1)[0]

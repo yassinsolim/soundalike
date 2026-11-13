@@ -14,7 +14,7 @@
   const maxCacheEntries = 64;
   const bestMatchesTimeoutMs = 30000;
   const bestMatchesRetries = 3;
-  const bestMatchesPolicy = "main-listeners-v2";
+  const bestMatchesPolicy = "main-listeners-v3";
   // Audio only asks for lists without the listener ranker (scene=0).
   const audioOnlyKey = "soundalike:audio-only:v1";
   const listenerPickLabel = "Listeners also play";
@@ -579,6 +579,10 @@
     return Array.isArray(results.main) && results.main.length ? "main" : "best";
   };
 
+  // The server's percentages: whole numbers from 0 to 100.
+  const percent = value =>
+    Number.isInteger(value) && value >= 0 && value <= 100 ? value : null;
+
   function listRows(body, key) {
     const results = body.results || {};
     const name = listName(results, key);
@@ -601,21 +605,33 @@
               .map(([list, rank]) => `${list} #${rank}`)
               .join(" · ")
           : "";
+      const overall = percent(x.overall);
+      const sound = percent(x.match);
       return {
         id: x.id,
         title,
         artist,
         why,
         listenerPick: name === "best" && x.basis === "listeners",
-        // Scores are only comparable within one list, so bars are relative to it.
+        // The server's overall match (main list and Listeners also play) never
+        // rises down the list. Without it, scores are only comparable within
+        // one list, so bars are relative to it.
         width:
-          high > low
-            ? Math.round(25 + (75 * (scores[index] - low)) / (high - low))
-            : 100,
+          overall !== null
+            ? overall
+            : high > low
+              ? Math.round(25 + (75 * (scores[index] - low)) / (high - low))
+              : 100,
+        label:
+          overall === null
+            ? ""
+            : `Match ${overall}%: how strongly Soundalike ranks it for this song` +
+              (sound === null ? "" : `. Sound match ${sound}%: sounds more alike than ${sound}% of typical matches`),
         url: spotifySearchUrl(title, artist),
       };
     });
   }
+
 
   // Best matches from a server without the main list mark the rows the listener
   // ranker placed before their ranks.
@@ -633,7 +649,9 @@
     `<button class="pv" type="button" aria-label="Preview ${esc(x.title)} by ${esc(x.artist)}" title="Preview" data-id="${x.id}">▶</button>` +
     `<div class="rank">${index + 1}</div>` +
     `<div class="meta"><button class="t" type="button" data-id="${x.id}" title="Find songs like this">${esc(x.title)}</button><div class="a">${esc(x.artist)}${whyHtml(x)}</div></div>` +
-    `<div class="bar" aria-hidden="true"><i style="width:${x.width}%"></i></div>` +
+    (x.label
+      ? `<div class="bar" role="img" aria-label="${esc(x.label)}" title="${esc(x.label)}"><i style="width:${x.width}%"></i></div>`
+      : `<div class="bar" aria-hidden="true"><i style="width:${x.width}%"></i></div>`) +
     `<a class="play" href="${esc(x.url)}" target="_blank" rel="noopener" aria-label="Open ${esc(x.title)} by ${esc(x.artist)} in Spotify">Open in Spotify ▸</a></li>`;
 
   function seedTags(picked) {
@@ -705,7 +723,7 @@
     document.querySelector("#language-status").textContent =
       code === "unknown"
         ? "Language uncertain; showing all languages."
-        : `${languageName(code)} · ${all ? "all languages" : "other languages left out"}`;
+        : `${languageName(code)}${query.language_guessed === true ? " (best guess)" : ""} · ${all ? "all languages" : "other languages left out"}`;
     button.hidden = code === "unknown";
     button.setAttribute("aria-pressed", String(all));
     button.textContent = all ? "Show same language" : "Show all languages";

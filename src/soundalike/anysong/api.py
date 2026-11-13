@@ -61,7 +61,7 @@ from collections.abc import Callable, Hashable, Iterator, Mapping, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
 from contextlib import contextmanager
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -117,6 +117,9 @@ MAIN_HEAD_BARE = 0
 MAIN_HEAD_STANDOUT = 3.0
 MAIN_HEAD_MATCH = 20
 LISTENERS_SOUND_WEIGHT = 0.25
+# A seed without a language of its own or an artist majority gets ``LanguageTable.guess`` (docs/ANYSONG_EVAL.md,
+# "A best-guess seed language").
+LANGUAGE_GUESS = True
 # Sound match (``sound_match``): sonic (MuQ-MuLan) score quantiles 0, 5, ..., 100 % over every song shown in the top
 # 20 of Best matches, Same vibe or Sounds like for the development seeds: 62,362 songs from 1,474 seeds with the
 # served lists (grow/qa/head_dev.py calib, 2026-11-11). A typical seed's median shown song scores 0.419 (50).
@@ -219,6 +222,56 @@ def sound_match(score: float, quantiles: Sequence[float] = MATCH_QUANTILES) -> i
     """A song's sonic score against the seed as 0 to 100: the share of songs shown for typical seeds that it sounds
     more alike than (``MATCH_QUANTILES``)."""
     return int(round(float(np.interp(score, quantiles, np.linspace(0, 100, len(quantiles))))))
+
+
+@dataclass(frozen=True)
+class OverallScale:
+    """How the blend a list is ordered by becomes its ``overall`` match. The list ranks one seed's candidates by z-scores
+    of their sound score and listener logit; ``overall`` uses the same weights on a fixed scale instead,
+    sound_weight * sound / ``sound_sd`` + listener_weight * logit / ``logit_sd`` (the typical spread of each within
+    one seed's candidates), so it can be compared across seeds. That value, as the share of songs shown in this list
+    for typical seeds that it beats (``quantiles``, 0 to 100 %), then goes through ``overall_match``."""
+
+    sound_sd: float
+    logit_sd: float
+    quantiles: tuple[float, ...]
+
+
+def overall_match(values: Sequence[float], head: int = 0) -> list[int]:
+    """A list's ``overall`` match, 0 to 100, from its songs' overall percentiles in list order: made non-increasing down
+    the list, so a song never shows a higher overall match than one placed above it. After the head, runs where the
+    order disagrees with the percentiles share their mean (isotonic regression). The first ``head`` songs, placed
+    first on cover or sample evidence, show at least the song after them."""
+    blocks: list[list[float]] = []
+    for value in values[head:]:
+        blocks.append([float(value), 1.0])
+        while len(blocks) > 1 and blocks[-2][0] / blocks[-2][1] < blocks[-1][0] / blocks[-1][1]:
+            total, count = blocks.pop()
+            blocks[-1][0] += total
+            blocks[-1][1] += count
+    body = [total / count for total, count in blocks for _ in range(int(count))]
+    floor = body[0] if body else 0.0
+    top = []
+    for value in reversed(values[:head]):
+        floor = max(float(value), floor)
+        top.append(floor)
+    return [int(round(min(100.0, max(0.0, v)))) for v in top[::-1] + body]
+
+
+# Overall match (``overall``) on main and Listeners also play: each list's own blend on a fixed scale (``OverallScale``).
+# Calibrated on the development seeds (dev + sweep, 825 with listener data) with out-of-fold listener probabilities:
+# sd = the median over seeds of each part's standard deviation among the list's candidates; quantiles 0, 2.5, ..., 100 %
+# of the blend over the songs shown in that list's top 20 (grow/qa/overall_dev.py calib, 2026-11-13). A typical seed's
+# first song shows 84 % (main) and 89 % (Listeners also play), its tenth 50 %.
+MAIN_OVERALL: OverallScale | None = OverallScale(0.0138, 1.1893, (
+    -37.1158, 22.238, 24.2477, 25.4065, 26.1839, 26.7744, 27.2681, 27.6908, 28.0597, 28.3819, 28.6687, 28.9419,
+    29.2149, 29.4891, 29.7295, 29.9864, 30.2257, 30.4553, 30.7055, 30.9401, 31.1728, 31.3906, 31.6178, 31.8479,
+    32.0672, 32.2702, 32.4923, 32.7144, 32.9226, 33.1546, 33.3879, 33.6076, 33.8413, 34.1028, 34.3816, 34.6812,
+    35.0505, 35.4527, 35.9831, 36.7741, 40.261))
+LISTENERS_OVERALL: OverallScale | None = OverallScale(0.1768, 1.4899, (
+    -4.421, -0.2872, -0.0005, 0.1452, 0.2426, 0.3238, 0.3788, 0.4231, 0.4732, 0.5133, 0.5509, 0.584, 0.6188, 0.6525,
+    0.6848, 0.7101, 0.738, 0.7652, 0.7919, 0.8206, 0.847, 0.8737, 0.9004, 0.9308, 0.9598, 0.9904, 1.0219, 1.0532,
+    1.0868, 1.1221, 1.1592, 1.2022, 1.2486, 1.3042, 1.3684, 1.4401, 1.5281, 1.6263, 1.7672, 1.9689, 2.729))
 
 
 class LRU:
@@ -384,7 +437,8 @@ class AnySong:
                  scene: SceneTable | None = None, scene_params: SceneParams | None = None,
                  related_ttl: float = 86400.0, tempo: TempoTable | None = None, tracker=None,
                  vibe_params: samevibe.SameVibeParams | None = None, learn: LearnQueue | None = None,
-                 tiers=None, artist_languages: bool = True, copy_score: float | None = COPY_SAMPLES_SCORE,
+                 tiers=None, artist_languages: bool = True, language_guess: bool = LANGUAGE_GUESS,
+                 copy_score: float | None = COPY_SAMPLES_SCORE,
                  max_versions: int | None = MAX_VERSIONS, sounds_boost: float = SOUNDS_BOOST,
                  ranker: listener.Ranker | None = None, best_sound_weight: float = BEST_SOUND_WEIGHT,
                  sounds_listener_weight: float = SOUNDS_LISTENER_WEIGHT, best_audio_weight: float = BEST_AUDIO_WEIGHT,
@@ -395,6 +449,8 @@ class AnySong:
                  main_match_floor: float = MAIN_MATCH_FLOOR, main_head_bare: int = MAIN_HEAD_BARE,
                  main_head_standout: float = MAIN_HEAD_STANDOUT, main_head_match: float = MAIN_HEAD_MATCH,
                  listeners_sound_weight: float = LISTENERS_SOUND_WEIGHT,
+                 main_overall: OverallScale | None = MAIN_OVERALL,
+                 listeners_overall: OverallScale | None = LISTENERS_OVERALL,
                  stems: stemlib.StemStore | None = None, dissector: stemlib.Dissector | None = None,
                  catalog_previews: str | Path | None = None):
         self.engine, self.deezer, self.meta, self.keep_previews = engine, deezer, meta, keep_previews
@@ -408,6 +464,8 @@ class AnySong:
         self.languages = languages
         # Songs without a confident language label take their artist's majority language in the language gate.
         self.artist_languages = artist_languages
+        # A seed neither places gets the table's best guess (``LanguageTable.guess``); the query says so.
+        self.language_guess = language_guess
         # Other artists' versions of the seed's own song: copies of its recording (samples score at least
         # ``copy_score``) dropped, at most ``max_versions`` of the rest kept.
         self.copy_score, self.max_versions = copy_score, max_versions
@@ -427,6 +485,8 @@ class AnySong:
         self.main_match_floor, self.main_head_bare = main_match_floor, main_head_bare
         self.main_head_standout, self.main_head_match = main_head_standout, main_head_match
         self.listeners_sound_weight = listeners_sound_weight
+        # ``overall`` on main and Listeners also play (``OverallScale``); None leaves it out.
+        self.main_overall, self.listeners_overall = main_overall, listeners_overall
         self._artist_tracks = listener.ArtistTracks(scene) if self.ranker is not None else None
         self._sonic_core: np.ndarray | None = None
         self.learn = learn
@@ -968,11 +1028,7 @@ class AnySong:
         if dedupe and qkey is not None and (self.copy_score is not None or self.max_versions is not None):
             songs = self._limit_versions(songs, qkey)
 
-        language = "unknown"
-        if self.languages is not None:
-            language = self.languages.language(int(q["id"]))
-            if language == "unknown":
-                language = self.languages.artist_language(q.get("artist"))
+        language, guessed = self._seed_language(q)
 
         scene_state = "off"
         artists: dict[Hashable, int | None] = {}
@@ -1010,6 +1066,8 @@ class AnySong:
                     for channel, order in songs.items()
                 }
         query = q | {"language": language, "language_mode": lang_mode, "hidden": hidden, "scene": scene_state}
+        if guessed:
+            query["language_guessed"] = True
         if res.get("vibe") is not None and "sonic" in filtered:
             bpm = res["vibe"]["bpm"]
             query["bpm"] = round(bpm, 1) if bpm else None
@@ -1044,6 +1102,11 @@ class AnySong:
                 score = sound_of.get(int(item["id"]))
                 if score is not None:
                     item["match"] = sound_match(score)
+        if self.main_overall is not None and main and "overall" not in main[0]:
+            # Without listener data main follows sound alone, so its overall match is its sound match.
+            head = next((i for i, item in enumerate(main) if item.get("basis") != "audio"), len(main))
+            for item, value in zip(main, overall_match([item.get("match", 0) for item in main], head)):
+                item["overall"] = value
         return {"ok": True, "query": query, "results": lists | out, "timings_ms": res["timings_ms"],
                 "cached": cached}
 
@@ -1179,21 +1242,55 @@ class AnySong:
         pool = list(sonic) if self.main_pool == "sonic" else [
             key for key in keys
             if key in sonic or sound_match(son_of.get(int(shown[key][0]["id"]), -np.inf)) >= self.main_match_floor]
+        raw_main: dict[int, tuple[float, float]] = {}
+        neutral = 0.0
         if pool:
-            pool = ordered(pool, listener.blend(sound(pool, main_item), logits(pool, main_item),
-                                                self.main_listener_weight))
+            pool_sound, pool_logit = sound(pool, main_item), logits(pool, main_item)
+            raw_main = {int(main_item(key)["id"]): (float(s), float(lg))
+                        for key, s, lg in zip(pool, pool_sound, pool_logit)}
+            neutral = float(np.median(pool_logit))
+            pool = ordered(pool, listener.blend(pool_sound, pool_logit, self.main_listener_weight))
         main_set = set(main_head)
         main = self._main([(shown[key][0], shown[key][1]) for key in main_head],
                           [(main_item(key), shown[key][1]) for key in pool if key not in main_set], k)
+        if self.main_overall is not None and main:
+            floor = min((s for s, _ in raw_main.values()), default=0.0)
+            for key in main_head:
+                tid = int(shown[key][0]["id"])
+                p = p_of.get(tid)
+                plain = p is None or artists.get(key) == profile.artist_id
+                raw_main.setdefault(tid, (float(son_of.get(tid, floor)),
+                                          neutral if plain else float(listener.logit(p))))
+            self._set_overall(main, raw_main, self.main_overall, 1.0, self.main_listener_weight)
 
         others = [key for key in keys if artists.get(key) != profile.artist_id]
+        raw_listeners: dict[int, tuple[float, float]] = {}
         if others:
-            others = ordered(others, listener.zscore(logits(others, shown_item))
-                             + self.listeners_sound_weight * listener.zscore(sound(others, shown_item)))
+            others_logit, others_sound = logits(others, shown_item), sound(others, shown_item)
+            raw_listeners = {int(shown_item(key)["id"]): (float(s), float(lg))
+                             for key, s, lg in zip(others, others_sound, others_logit)}
+            others = ordered(others, listener.zscore(others_logit)
+                             + self.listeners_sound_weight * listener.zscore(others_sound))
         picks = self._one_per_artist(
             [(shown[key][0], {"ranks": shown[key][1], "basis": "listeners"}) for key in others], k)
         listeners = [item | {"score": round(1.0 / (FUSE_K + i), 5)} for i, item in enumerate(picks, 1)]
+        if self.listeners_overall is not None and listeners:
+            self._set_overall(listeners, raw_listeners, self.listeners_overall, self.listeners_sound_weight, 1.0)
         return best, vibe, sounds, main, listeners
+
+    def _set_overall(self, items: list[dict], raw: Mapping[int, tuple[float, float]], scale: OverallScale,
+                     sound_weight: float, listener_weight: float) -> None:
+        """Each listed song's ``overall`` (``OverallScale``, ``overall_match``) from its (sound score, listener logit)
+        in ``raw``, the values its list was ordered by."""
+        blend = np.array([sound_weight * raw[int(item["id"])][0] / scale.sound_sd
+                          + listener_weight * raw[int(item["id"])][1] / scale.logit_sd for item in items])
+        head = next((i for i, item in enumerate(items) if item.get("basis") != "audio"), len(items))
+        for item, value in zip(items, overall_match(self._overall_percentile(blend, scale), head)):
+            item["overall"] = value
+
+    @staticmethod
+    def _overall_percentile(blend: np.ndarray, scale: OverallScale) -> list[float]:
+        return np.interp(blend, scale.quantiles, np.linspace(0, 100, len(scale.quantiles))).tolist()
 
     def _audio_head(self, view: dict[str, dict[Hashable, dict]], bare: int,
                     match_of: Callable[[Hashable], float] | None = None) -> list[Hashable]:
@@ -1239,6 +1336,19 @@ class AnySong:
         head_set = set(head_keys)
         body = [(item, ranks(key)) for key, item in self._sound_order(view, profile, artists) if key not in head_set]
         return self._main(head, body, k)
+
+    def _seed_language(self, q: dict) -> tuple[str, bool]:
+        """The seed's language for the gate and whether it is a best guess: its own label, else its artist's majority
+        language, else (with ``language_guess``) the table's guess; "unknown" (no filter) without any."""
+        if self.languages is None:
+            return "unknown", False
+        language = self.languages.language(int(q["id"]))
+        if language == "unknown":
+            language = self.languages.artist_language(q.get("artist"))
+        if language == "unknown" and self.language_guess:
+            language = self.languages.guess(int(q["id"]), q.get("artist"))
+            return language, language != "unknown"
+        return language, False
 
     def _item_language(self, item: dict) -> str:
         """A listed song's language: its own label, else (with ``artist_languages``) its artist's majority language."""
