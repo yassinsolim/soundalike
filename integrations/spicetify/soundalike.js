@@ -16,7 +16,7 @@
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.13.0-local.6";
+  const RUNTIME_SEMANTIC_VERSION = "2.13.0-local.7";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -3140,17 +3140,21 @@
         .sa-dx-step i{display:block;height:100%;background:#ef5777}
         .sa-dx-quiet{color:var(--spice-subtext,#b3b3b3);font-size:13px;margin:0}
         .sa-dx-foot{margin:18px 0 0;color:var(--spice-subtext,#b3b3b3);font-size:12px}
-        @media(max-width:760px){
+        @container (max-width:760px){
           .sa-list-head,.sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 56px}
           .sa-view-best .sa-list-head,.sa-view-best .sa-row-content,.sa-view-listeners .sa-list-head,.sa-view-listeners .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr)}
-          .sa-list-head.sa-with-stems,.sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 56px 40px 72px}
-          .sa-view-best .sa-list-head.sa-with-stems,.sa-view-best .sa-row-stems .sa-row-content,.sa-view-listeners .sa-list-head.sa-with-stems,.sa-view-listeners .sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 40px 72px}
-          .sa-match-value{display:none}
+          .sa-list-head.sa-with-stems,.sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 56px 64px 72px}
+          .sa-view-best .sa-list-head.sa-with-stems,.sa-view-best .sa-row-stems .sa-row-content,.sa-view-listeners .sa-list-head.sa-with-stems,.sa-view-listeners .sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 64px 72px}
           .sa-album,.sa-list-head .sa-album-head{display:none}
           .sa-feedback-help{display:block}
           .sa-dx-lane{grid-template-columns:72px minmax(0,1fr)}
           .sa-dx-pattern{grid-template-columns:72px repeat(16,minmax(0,1fr))}
           .sa-dx-axis{margin-left:82px}
+        }
+        @container (max-width:460px){
+          .sa-list-head.sa-with-stems,.sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 56px 40px 72px}
+          .sa-view-best .sa-list-head.sa-with-stems,.sa-view-best .sa-row-stems .sa-row-content,.sa-view-listeners .sa-list-head.sa-with-stems,.sa-view-listeners .sa-row-stems .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 40px 72px}
+          .sa-match-value{display:none}
         }
       </style>
       <div class="sa-seed">
@@ -3244,6 +3248,9 @@
       zIndex: "10",
       overflow: "auto",
       background: "var(--spice-main, #121212)",
+      // The narrow layout follows the main view's width, not the window's,
+      // so the side panels can't push the Match column out of view.
+      containerType: "inline-size",
     });
     const syncHost = () => {
       const bounds = container.getBoundingClientRect?.();
