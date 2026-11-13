@@ -2842,6 +2842,23 @@ What it shows: the drop in other-language rows on main has now held three times 
 +0.008 retest). That list already has fewer other-language rows (0.115 against main's 0.266), and the guess does not
 change it. As pre-registered, the guess stays off in this form and the result goes back to Yassin.
 
+### Deployed: the overall match, guess off (2026-11-13)
+
+3b67714 went live on CT 409 at 04:20, using `deploy_overall.sh`. The script checks that only `api.py` and
+`languages.py` differ, with `LANGUAGE_GUESS` False. Backup and deploy log:
+`/opt/soundalike/deploy-backups/20261113-040138-overall/`.
+
+| Check | Result |
+|---|---|
+| serve_check | parity as stored (sonic self@1 0.9844, the same song as before) |
+| Smoke, 6 seeds ? scene on/off | the same ids and query; `overall` on every main and Listeners also play row, never rising; no `language_guessed`; BoA unknown and unchanged |
+| Latency, unseen songs (40) | paired median ?18.6 ms (limit +100); p95 1.023 ? 0.996 s (limit 1.223) |
+| Latency, catalog songs (40) | paired median ?1.9 ms; p95 0.529 ? 0.535 s (limit 0.729) |
+| VRAM peak | 7,051 MiB (limit 7,248) |
+| Captures | unchanged |
+| Client side (soundalike.yassin.app, 6 seeds) | same main and Listeners also play ids as before the deploy; `overall` present, 0?100 and never rising |
+| Spotify, extension 2.13.0-local.6 (BoA rechecked on local.7, whose only change is the layout) | Heartbeat and BoA, both tabs: the bar shows `overall`, which equals the API's; the tooltip gives both matches; no "(best guess)" |
+
 ## Stem dissection (pre-registered 2026-11-10, before any result)
 
 **What.** `soundalike.anysong.stems` splits a preview into six stems with htdemucs_6s (vocals, drums, bass, guitar,
