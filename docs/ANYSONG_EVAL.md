@@ -2912,6 +2912,31 @@ deploys with Yassin's OK:
 
 Published clients read neither main nor `main_language_guess`, so they see no change.
 
+### Held-out result for the main-only seed language guess (2026-11-13)
+
+Run once, after the pre-registration (7f8e0a5), from 05:01 to 05:11 (`grow/qa/seedlang_mainguess_run.log`).
+**All 16 checks passed.** The guess can gate Best matches (main) alone; it deploys only with Yassin's OK.
+
+| Rule | Result | |
+|---|---|---|
+| Seed sets, candidate | unsure_held3, pooled with unsure_held and unsure_held2; bench_held; top probability 0.6, veto 0.5 | pass |
+| 1 | the guess reaches 1,062 of 2,400 unsure_held3, 338 of 800 unsure_held, 1,043 of 2,400 unsure_held2 and 105 of 2,739 bench_held seeds; 0 broken on each | pass |
+| 2a | main lyr_mis 0.266 → 0.157, −0.109 [−0.156, −0.064], n 143 | pass |
+| 2b | pooled 0.271 → 0.165, −0.106 [−0.137, −0.075], n 313 | pass |
+| 3 | under ten songs 0.000 → 0.070, +0.070 [+0.055, +0.085] (limit +0.10); match10 59.27 → 58.03, −1.24 [−1.52, −0.96] (limit −2.5); far 0.197 → 0.223, +0.025 [−0.002, +0.056] (limit +0.05); derivative uploads 0.003 → 0.003, +0.000 [−0.001, +0.001] (limit +0.005) | pass |
+| 4 (reported) | ListenBrainz, n 3: 0.104 → 0.067, −0.037 [−0.111, +0.000] | reported |
+| 5 | bench_held main hits: mb_covers 496 → 494 of 1,170, mb_samples 43 → 43 of 747, mb_samples_rev 44 → 44 of 695 (limit −3) | pass |
+
+Reported, not gated:
+- On unsure_held3, the guess agrees with the sure lyrics language on 126 of 147 seeds (86 %); across all three unsure
+  sets, 283 of 325 (87 %). It guesses en 871, fr 62, es 19, it 14, de 12 and pt 12.
+- Main keeps 18.7 songs on average on the seeds the guess reaches (20 before).
+- Other bench_held hits on main: genalpha 10 → 11, sampleid 1 → 1, v4 2 → 2.
+
+What it shows: the drop in other-language rows on main has now held four times (development −0.156, held-out
+−0.132, retest −0.092, this run −0.109). Gating main alone leaves Listeners also play as served. The cost is
+smaller lists: 7 % of the reached seeds get fewer than ten songs on main, inside the pre-registered limit.
+
 ## Stem dissection (pre-registered 2026-11-10, before any result)
 
 **What.** `soundalike.anysong.stems` splits a preview into six stems with htdemucs_6s (vocals, drums, bass, guitar,
