@@ -2777,6 +2777,47 @@ held-out data, and the result goes back to Yassin.
 **Decision (Yassin, 2026-11-13).** `overall` ships alone and `LANGUAGE_GUESS` is off in the served code. The guess
 gets a new, larger test on fresh seeds, pre-registered before it runs.
 
+### Retest of the seed language guess (pre-registered 2026-11-13, before any retest result)
+
+**Why.** The held-out run failed only rule 2 for Listeners also play (?0.052 [?0.143, +0.036], n 42). Yassin asked
+for a larger test on fresh seeds.
+
+**Candidate.** Unchanged: the guess at top probability ? 0.6 with veto 0.5 (`languages.py` as in 8cb542a; 3b67714
+only turns it off by default). The baseline is the same code with the guess off, which is what is served.
+
+**Seeds.** unsure_held2: 2,400 seeds drawn the same way as unsure_held (seed 20261115) after the held-out run, one
+song per artist. No artist is shared with unsure_dev, unsure_held, any other seed set or a held-out benchmark song
+(7,252 artists banned, 17,132 eligible). Its lists were not computed or scored before this section was committed.
+
+**Run once:** `seedlang_dev.py retest`, then `seedlang_dev.py retest_verdict` (17 checks).
+
+**Must pass (all), else the guess stays off:**
+1. The seed sets and the candidate are as above. With the guess on, seeds it does not reach keep every list and the
+   query, on unsure_held2 and on unsure_held (rule 1b as before).
+2. **Other-language rows fall.** lyr_mis falls for main and for Listeners also play, with the paired 95 % upper
+   bound below 0:
+   - a. on unsure_held2 alone;
+   - b. on unsure_held2 pooled with unsure_held.
+3. **Nothing else gets much worse,** on the seeds of unsure_held2 the guess reaches, with the limits of held-out
+   rule 3. Missing data fails.
+4. **ListenBrainz is reported, not gated,** on the seeds of unsure_held2 the guess reaches.
+
+Carried over, not rerun: rule 1a (with the guess off, the code is what is served), rule 1c (`overall`) and rule 5
+(the benchmarks passed with this candidate on the held-out benchmark seeds).
+
+**Power.** On unsure_held, 42 reached seeds had a lyr_mis value for Listeners also play, and the 95 % interval was
+about ?0.09. Three times the seeds should give about 125 such seeds and about ?0.05. If the true drop is as small as
+the held-out estimate (?0.05), the retest passes about half the time; at ?0.10, about 97 % of the time.
+
+**Why the pooled check.** Testing again after a failure raises the chance of a false pass. Rule 2b keeps the
+decision tied to every held-out unsure seed, including those that failed.
+
+**Known before the run.** The dry run on development data (unsure_dev pooled with dev) passed 16 of 17: the
+seed-set check failed, as it must, and it reproduced the development numbers.
+
+**No fallback.** If any check fails, the guess stays off in this form and the result goes back to Yassin. Nothing
+else is tried on held-out data. If it passes, it deploys with Yassin's OK and the client checks of held-out rule 6.
+
 ## Stem dissection (pre-registered 2026-11-10, before any result)
 
 **What.** `soundalike.anysong.stems` splits a preview into six stems with htdemucs_6s (vocals, drums, bass, guitar,
