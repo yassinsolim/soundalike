@@ -26,6 +26,8 @@ from .scene import ArtistProfile, SceneParams, SceneTable, affinity, components
 
 FEATURES = ("son", "r_melody", "s_melody", "r_samples", "s_samples", "r_sonic", "in_pool", "from_scene", "graph",
             "region", "genre", "aff", "fwd", "rev", "nb", "tempo_gap", "lang_known")
+# A ranker may also read the scene-head cosine between seed and candidate (anysong.scenehead), as the last column.
+FEATURES_HEAD = FEATURES + ("head",)
 SCENE_SONGS = 3  # songs per neighbour artist added as candidates: its closest in sound
 SCENE_MAX_TRACKS = 150  # catalog songs per neighbour artist scored for that choice (lowest Deezer ids first)
 CHANNELS = ("melody", "samples", "sonic")
@@ -80,9 +82,11 @@ def tempo_gap(seed_bpm: float | None, bpm: float | None) -> float:
 def features(raw: Mapping[str, Iterable[tuple[int, float]]], son: Mapping[int, float], scene: Iterable[int],
              query_id: int, profile: ArtistProfile, related: Iterable[int], table: SceneTable, params: SceneParams,
              seed_bpm: float | None, bpm_of: Callable[[int], float | None],
-             language_known: Callable[[int], bool]) -> tuple[list[int], np.ndarray]:
-    """Feature rows (``FEATURES`` order) for every candidate with a sound score: the channel lists' songs and the
-    scene candidates, except the seed itself. Missing values are NaN."""
+             language_known: Callable[[int], bool],
+             head: Mapping[int, float] | None = None) -> tuple[list[int], np.ndarray]:
+    """Feature rows (``FEATURES`` order; ``FEATURES_HEAD`` when ``head``, the scene-head cosines, is given) for
+    every candidate with a sound score: the channel lists' songs and the scene candidates, except the seed itself.
+    Missing values are NaN."""
     pool: dict[int, dict[str, float]] = {}
     for channel in CHANNELS:
         for rank, (tid, s) in enumerate(raw.get(channel, ()), 1):
@@ -106,12 +110,14 @@ def features(raw: Mapping[str, Iterable[tuple[int, float]]], son: Mapping[int, f
                              rev, float(a in profile.neighbours))
         g, rg, gn, aff, fwd, rev, nb = per_artist[a]
         entry = pool.get(tid, {})
-        rows.append((son[tid], entry.get("r_melody", math.nan), entry.get("s_melody", math.nan),
-                     entry.get("r_samples", math.nan), entry.get("s_samples", math.nan),
-                     entry.get("r_sonic", math.nan), float(tid in pool), float(tid in scene), g, rg, gn, aff, fwd,
-                     rev, nb, tempo_gap(seed_bpm, bpm_of(tid)), float(language_known(tid))))
+        row = (son[tid], entry.get("r_melody", math.nan), entry.get("s_melody", math.nan),
+               entry.get("r_samples", math.nan), entry.get("s_samples", math.nan),
+               entry.get("r_sonic", math.nan), float(tid in pool), float(tid in scene), g, rg, gn, aff, fwd,
+               rev, nb, tempo_gap(seed_bpm, bpm_of(tid)), float(language_known(tid)))
+        rows.append(row if head is None else row + (head.get(tid, math.nan),))
         tids.append(tid)
-    return tids, np.asarray(rows, dtype=np.float64).reshape(len(rows), len(FEATURES))
+    width = len(FEATURES) + (head is not None)
+    return tids, np.asarray(rows, dtype=np.float64).reshape(len(rows), width)
 
 
 def blend(primary: np.ndarray, secondary: np.ndarray, weight: float) -> np.ndarray:
@@ -142,13 +148,13 @@ class Ranker:
                  threshold: np.ndarray, missing_left: np.ndarray, left: np.ndarray, right: np.ndarray,
                  value: np.ndarray, depth: int, meta: str = ""):
         self.features = tuple(features)
-        if self.features != FEATURES:
-            raise ValueError(f"ranker features {self.features} differ from this code's {FEATURES}")
+        if self.features not in (FEATURES, FEATURES_HEAD):
+            raise ValueError(f"ranker features {self.features} differ from this code's {FEATURES} (+ 'head')")
         n = len(feature)
         if not all(len(a) == n for a in (threshold, missing_left, left, right, value)):
             raise ValueError("inconsistent ranker arrays")
         if len(roots) == 0 or roots.max() >= n or left.max() >= n or right.max() >= n or \
-                feature.max() >= len(FEATURES) or depth < 0:
+                feature.max() >= len(self.features) or depth < 0:
             raise ValueError("ranker arrays point outside the model")
         self.baseline, self.roots, self.feature = float(baseline), roots.astype(np.int64), feature.astype(np.int64)
         self.threshold, self.missing_left = threshold.astype(np.float64), missing_left.astype(bool)
@@ -183,7 +189,7 @@ class Ranker:
         return 1.0 / (1.0 + np.exp(-raw))
 
 
-def export(model, meta: str = "") -> Ranker:
+def export(model, meta: str = "", features: tuple[str, ...] = FEATURES) -> Ranker:
     """A fitted binary scikit-learn ``HistGradientBoostingClassifier`` (numeric features only) as a ``Ranker``."""
     if getattr(model, "n_trees_per_iteration_", 1) != 1:
         raise ValueError("only binary classifiers can be exported")
@@ -204,6 +210,6 @@ def export(model, meta: str = "") -> Ranker:
         right += np.where(leaf, idx, nodes["right"] + base).tolist()
         value += np.where(leaf, nodes["value"], 0.0).tolist()
         depth = max(depth, int(nodes["depth"].max()))
-    return Ranker(FEATURES, float(np.ravel(model._baseline_prediction)[0]), np.array(roots), np.array(feature),
+    return Ranker(features, float(np.ravel(model._baseline_prediction)[0]), np.array(roots), np.array(feature),
                   np.array(threshold), np.array(missing_left), np.array(left), np.array(right), np.array(value),
                   depth, meta)

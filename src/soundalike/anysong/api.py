@@ -73,6 +73,7 @@ from . import listener, samevibe
 from . import stems as stemlib
 from .deezer import version_words
 from .scene import SceneParams, SceneTable, affinity, arrange_artists, audio_head, scene_fuse, standout
+from .scenehead import SceneHead
 from .tempo import TempoTable, decode22
 
 FETCH = 200  # per-channel depth ranked before de-duplication
@@ -456,7 +457,7 @@ class AnySong:
                  main_overall: OverallScale | None = MAIN_OVERALL,
                  listeners_overall: OverallScale | None = LISTENERS_OVERALL,
                  stems: stemlib.StemStore | None = None, dissector: stemlib.Dissector | None = None,
-                 catalog_previews: str | Path | None = None):
+                 catalog_previews: str | Path | None = None, head: SceneHead | None = None):
         self.engine, self.deezer, self.meta, self.keep_previews = engine, deezer, meta, keep_previews
         # Stem dissections (``dissect``): stored rows, else (with ``dissector``) the song's preview separated on the
         # GPU, read from ``catalog_previews/<id % 1000:03d>/<id>.mp3`` when there, else fetched from Deezer.
@@ -481,6 +482,10 @@ class AnySong:
         # Listener-aware ranking (``listener``): needs the scene table; replaces the scene slots and the Sounds like
         # lift for seeds whose artist the table (or Deezer) knows.
         self.ranker = ranker if scene is not None else None
+        # The scene head feeds the rankers trained with its cosine (``listener.FEATURES_HEAD``).
+        self.head = head
+        if self.ranker is not None and (self.ranker.features == listener.FEATURES_HEAD) != (head is not None):
+            raise ValueError("a ranker with the 'head' feature and a scene head go together")
         self.best_sound_weight, self.sounds_listener_weight = best_sound_weight, sounds_listener_weight
         self.best_audio_weight = best_audio_weight
         self.best_artist_gap, self.best_artist_once = best_artist_gap, best_artist_once
@@ -763,10 +768,14 @@ class AnySong:
             scene = listener.scene_candidates(profile, self._artist_tracks, score, self.scene.artist, allowed)
         son |= scene
         seed_bpm = vibe["bpm"] if vibe is not None else (self.tempo.bpm(qid) if self.tempo is not None else None)
+        head = None
+        if self.head is not None:
+            seed_head = self.head.seed(windows, query_track)
+            head = self.head.cosines(seed_head, son) if seed_head is not None else {}
         tids, X = listener.features(
             res["raw"], son, scene, qid, profile, self.scene.related(artist_id) or res.get("related") or (),
             self.scene, self.scene_params, seed_bpm,
-            self.tempo.bpm if self.tempo is not None else (lambda tid: None), self._language_known)
+            self.tempo.bpm if self.tempo is not None else (lambda tid: None), self._language_known, head)
         p = self.ranker.predict(X)
         timings["listener"] = (time.perf_counter() - t) * 1000
         timings["listener_queue"] = waited.get("queue", 0.0)
@@ -1634,6 +1643,13 @@ def main(argv: list[str] | None = None) -> None:
                    help="append songs answered live (Deezer track and artist ids, UTC day) for anysong.crawl")
     p.add_argument("--ranker", type=Path, default=None,
                    help="listener ranker (anysong.listener) for the lists users see; needs --scene")
+    p.add_argument("--head", type=Path, default=None,
+                   help="scene head (anysong.scenehead): path prefix of <prefix>.npz and <prefix>.emb.npy; for rankers "
+                        "trained with the 'head' feature")
+    p.add_argument("--main-pool", choices=("sonic", "all"), default=MAIN_POOL,
+                   help="main's body: the sonic list, or every candidate at or above --main-match-floor")
+    p.add_argument("--main-match-floor", type=float, default=MAIN_MATCH_FLOOR)
+    p.add_argument("--main-listener-weight", type=float, default=MAIN_LISTENER_WEIGHT)
     p.add_argument("--stems", type=Path, default=None,
                    help="stem table from anysong.stems pack: stored dissections for /api/anysong/dissect")
     p.add_argument("--stems-model", type=Path, default=None,
@@ -1702,6 +1718,10 @@ def main(argv: list[str] | None = None) -> None:
                       languages=languages, scene=scene, tempo=tempo, tracker=tracker,
                       learn=LearnQueue(args.learn_queue) if args.learn_queue else None, tiers=tiers,
                       ranker=listener.Ranker.load(args.ranker) if args.ranker is not None else None,
+                      head=SceneHead(f"{args.head}.npz", f"{args.head}.emb.npy", engine.indexes["sonic"].pos)
+                      if args.head is not None else None,
+                      main_pool=args.main_pool, main_match_floor=args.main_match_floor,
+                      main_listener_weight=args.main_listener_weight,
                       stems=store, dissector=dissector, catalog_previews=args.catalog_previews)
     server = Server((args.host, args.port), service, args.search_per_min, args.similar_per_min,
                     args.cors_origin, args.client_ip_header, dissect_per_min=args.dissect_per_min)

@@ -3303,3 +3303,44 @@ holds the expected song for 5 of the 24 pairs, against 6 without the layer:
 - **Known pairs are demonstrations.** They were picked by hand to be recognisable, not sampled.
 - **Scene metrics are partly circular.** ListenBrainz and Deezer's related lists both come from listening data, so
   agreement partly re-measures the feature; see [Scene layer](#scene-layer-2026-11-04).
+
+## v8 ranker with track-level labels and a scene head (2026-11-16): local experiment, not served
+
+Lab: `anysong-lab/v8/` (`PREREG.md`, `ltr.py`, `rows.py`, `train_head.py`, `bench_build.py`). Code: `scenehead.py`,
+the optional `head` ranker feature (`listener.FEATURES_HEAD`), `--head`, `--main-pool`, `--main-match-floor`,
+`--main-listener-weight`. With the served ranker and defaults every list is unchanged.
+
+**Why.** The listener ranker's label is ListenBrainz *artist* similarity. New labels are track-level: 8,116 song
+pairs that people say sound alike (36,798 claims harvested from Sounds Just Like, Reddit, YouTube comments,
+Wikipedia, Same That Tune and others; resolved to index rows; 40 % train, 10 % val, 50 % held by pair) and
+co-occurrence in 32,098 public Deezer playlists (6.2 M edges over 108k indexed songs; a 20 % artist hold-out
+never enters the graph). The scene head is an MLP over the sonic windows trained on that graph.
+
+**Baseline on the claims.** Served lists rarely contain the song people name: on 700 seeds, top 10 of `main`
+2.4 %, `best` 3.6 %, sonic 1.1 %; any of the seven lists at depth 50: 12.4 %. Of 15,384 named songs that did not
+resolve to the index, 42 % of those looked up exist on Deezer but are not indexed (for example Queen
+"Bohemian Rhapsody", OneRepublic "Counting Stars").
+
+**Scene head alone.** Share of GB tracks among the 10 nearest rap neighbours of GB rap seeds by unseen artists
+(base rate 10.4 %): sound score 36.8 %, sound + head 50.9 %.
+
+**Pre-registered candidate** (`PREREG.md`): ranker `a17h` (17 served features + head; labels above),
+`main` pool = sonic list plus candidates with sound match >= 20, listener weight 2. Held split, 3,775 seeds,
+emulated `main` body, paired bootstrap:
+
+| metric | served | candidate | delta [95 % CI] |
+|---|---|---|---|
+| claimed song in top 10 | 0.0206 | 0.0304 | +0.0097 [+0.0059, +0.0138] |
+| claimed song in top 20 | 0.0279 | 0.0412 | +0.0133 [+0.0091, +0.0175] |
+| claimed song in top 50 | 0.0373 | 0.0526 | +0.0153 [+0.0108, +0.0201] |
+| mean sound match of top 10 | 67.6 | 64.9 | -2.8 [-3.0, -2.6] (limit -4) |
+
+All three rules pass. **Not promoted:** on the owner's own labels (12 liked and 4 disliked songs across 7 seeds,
+from his A/B notes and chat verdicts, through the built API) the candidate puts 5 of 12 liked songs in the top 10
+against 7 of 12 for the served list, lifts one disliked song to #3, and lowers mean sound match of the top 10 from
+71.8 to 64.8. Sound-heavier settings fit those labels better: `a17h`, sonic pool, listener weight 1 gives 8 of 12
+(match 78.3); the served ranker at weight 0.5 gives 8 of 12 (match 80.1). Sixteen labels cannot separate these.
+
+**Negative results.** Loudness/harshness veto: MuQ-MuLan already encodes loudness (window-level R2 0.88), and
+the owner's complaint cases have unremarkable gaps. Mean instead of max window pooling: no gain. A fusion
+embedding trained on the claims memorises them and does not transfer to unseen pairs.
