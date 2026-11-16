@@ -295,6 +295,25 @@ runs a channel's stage 1 as an fp16 GEMM against the query projection scaled to 
 made the 4-bit samples stage 1 23 % faster (196 against 256 ms per million tracks) but the 8-bit melody and sound
 stages 6 % and 14 % slower, so the service enables it for samples only. Candidates are still re-scored exactly.
 
+**Adding a few songs to a built index.** `index_build` fits the samples mean and every stage-1 basis on the rows it
+is given, so a rebuild changes all stored rows a little and needs every old shard.
+[`index_append`](../src/soundalike/anysong/index_append.py) instead copies an index and appends new tracks prepared
+with its `mu.npy` and `basis.npy` and the same quantizer, so scores between old tracks stay bit-identical:
+
+```sh
+python -m soundalike.anysong.previews --ids new_ids.txt --out previews --save-meta tracks.jsonl --adaptive
+python -m soundalike.anysong.embed_run --model muq_mulan --ids new_ids.txt --previews previews --out emb_new
+python -m soundalike.anysong.index_append --base index_1m --emb emb_new --ids new_ids.txt --out index_new
+python -m soundalike.anysong.hub_build --index index_new --meta catalog_meta.npz
+```
+
+`previews --save-meta` keeps each track's Deezer metadata (title, artist, ISRC, rank, duration) from the request
+that signs its preview link, and `--adaptive` paces downloads like the crawl. `embed_run` and `languages` take
+`--device cpu` when the GPU is busy (per song on 12 threads: CLEWS 0.4 s, SampleID 1.3 s, MuQ-MuLan 3.7 s, Whisper
+5.4 s; the vectors match the GPU's to cosine 0.99998). `hub.npy` is not copied, because new songs change their
+neighbours' hub scores; rerun `hub_build`. Songs that should reach every seed, such as well-known songs the crawl
+missed, also go into `core_ids.npy`. Refit with `index_build` once additions stop being small against the catalog.
+
 ## Language labels
 
 `python -m soundalike.anysong.languages` labels cached catalog previews with the pinned Whisper large-v3-turbo

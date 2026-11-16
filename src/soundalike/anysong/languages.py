@@ -271,6 +271,7 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--shard", type=int, default=4800)
     p.add_argument("--workers", type=int, default=12)
     p.add_argument("--limit", type=int, default=0)
+    p.add_argument("--device", default="cuda", help="torch device; cpu runs the model in float32")
     p.add_argument("--fp16-accumulation", action="store_true",
                    help="~1.2x faster on RTX 40/50; changed 1 of 480 decisions (unknown->en) in testing")
     args = p.parse_args(argv)
@@ -287,7 +288,7 @@ def main(argv: list[str] | None = None) -> None:
         todo = todo[: args.limit]
     print(f"{len(ids)} ids, {len(have)} done, {missing} without preview, {len(todo)} to label", flush=True)
 
-    lid = WhisperLanguageID(args.model_dir)
+    lid = WhisperLanguageID(args.model_dir, args.device)
     if args.fp16_accumulation:
         lid.torch.backends.cuda.matmul.allow_fp16_accumulation = True
     meta = {"model": MODEL_ID, "revision": MODEL_REVISION, "sample_rate": SAMPLE_RATE,
