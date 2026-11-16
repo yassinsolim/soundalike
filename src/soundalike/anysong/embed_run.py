@@ -77,8 +77,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--shard", type=int, default=256)
     p.add_argument("--workers", type=int, default=6)
     p.add_argument("--limit", type=int, default=0)
-    p.add_argument("--device", default="cuda", help="torch device for the model (cpu works for clews_dvi, sampleid "
-                                                   "and muq_mulan, slowly)")
+    p.add_argument("--device", default=None, help="torch device for the model instead of its default (cuda); cpu "
+                                                  "works for clews_dvi, sampleid and muq_mulan, slowly")
     args = p.parse_args(argv)
     if min(args.batch, args.shard, args.workers) < 1 or args.limit < 0:
         p.error("batch, shard and workers must be positive; limit must be non-negative")
@@ -99,7 +99,7 @@ def main(argv: list[str] | None = None) -> None:
           flush=True)
     if not todo:
         return
-    emb = REGISTRY[args.model](args.device)
+    emb = REGISTRY[args.model]() if args.device is None else REGISTRY[args.model](args.device)
     emb.load()
     sr = emb.sr
 
