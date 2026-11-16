@@ -3341,6 +3341,24 @@ against 7 of 12 for the served list, lifts one disliked song to #3, and lowers m
 71.8 to 64.8. Sound-heavier settings fit those labels better: `a17h`, sonic pool, listener weight 1 gives 8 of 12
 (match 78.3); the served ranker at weight 0.5 gives 8 of 12 (match 80.1). Sixteen labels cannot separate these.
 
+**Amendment 1 (pre-registered before its held run; the held split had been opened once).** Same ranker, sonic
+pool as served, body ordered on fixed scales: sound / 0.0130 + 2 * logit / 1.056 (`--main-scale 0.0130 1.056`)
+instead of per-seed z-scores, so sound decides where it separates a seed's candidates and the ranker where it
+does not. Held split, 3,775 seeds:
+
+| metric | served | amendment 1 | delta [95 % CI] |
+|---|---|---|---|
+| claimed song in top 10 | 0.0206 | 0.0279 | +0.0073 [+0.0042, +0.0104] |
+| claimed song in top 20 | 0.0279 | 0.0353 | +0.0074 [+0.0044, +0.0108] |
+| claimed song in top 50 | 0.0373 | 0.0436 | +0.0062 [+0.0033, +0.0095] |
+| mean sound match of top 10 | 67.6 | 71.4 | +3.8 [+3.6, +4.0] |
+
+All three rules pass (hit@10 above 0, hit@20 not lower, sound match not lower). Through the built API on the
+owner's labels: 9 of 12 liked songs in the top 10 (served 7 of 12), 1 of 4 disliked songs in the top 10 (served 0;
+Deichkind "Happy New Fear" at #6 for "Heartbeat"), mean sound match of the top 10 over 14 of his seeds 74.7
+(served 69.7); "8PM" stays all UK rap. This is the configuration of the local test build
+(`anysong-lab/v8/start_v8_api.ps1`); not deployed.
+
 **Negative results.** Loudness/harshness veto: MuQ-MuLan already encodes loudness (window-level R2 0.88), and
 the owner's complaint cases have unremarkable gaps. Mean instead of max window pooling: no gain. A fusion
 embedding trained on the claims memorises them and does not transfer to unseen pairs.

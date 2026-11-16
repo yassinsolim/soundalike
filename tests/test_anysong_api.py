@@ -558,6 +558,13 @@ def test_main_list_is_the_audio_head_then_sound_and_listener_picks_get_their_own
     assert ids(lists(), "main") == [5, 10, 7]
     svc.main_pool, svc.main_match_floor = api.MAIN_POOL, api.MAIN_MATCH_FLOOR
     svc.main_listener_weight = api.MAIN_LISTENER_WEIGHT
+    # Fixed scales instead of per-seed z-scores: with a small sound scale the 0.06 sound gap outweighs the ranker's
+    # preference for 7; with equal scales the ranker decides, as the z-scores did.
+    svc.main_scale = (0.01, 10.0)
+    assert ids(lists(), "main") == [5, 10, 7]
+    svc.main_scale = (1.0, 1.0)
+    assert ids(lists(), "main") == [5, 7, 10]
+    svc.main_scale = None
     # With the shipped standout rule 5 is no likely cover: no evidence, so no head, unlike Best's bare head (3).
     svc.best_head_standout = api.BEST_HEAD_STANDOUT
     r = lists()
@@ -577,6 +584,8 @@ def test_main_list_is_the_audio_head_then_sound_and_listener_picks_get_their_own
     assert "listeners" not in r and ids(r, "main") == ids(r, "sounds")
     with pytest.raises(ValueError):
         api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, main_pool="every")
+    with pytest.raises(ValueError):
+        api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, main_scale=(0.0, 1.0))
 
 
 @pytest.mark.parametrize("listener_data", [True, False])

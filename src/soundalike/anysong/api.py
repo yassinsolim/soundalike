@@ -107,7 +107,9 @@ BEST_HEAD_EVIDENCE_ONLY = True
 # artist. MAIN_POOL "sonic" takes them from the sonic list; "all" adds Best's other candidates (melody, samples and
 # scene songs) whose sound match is at least MAIN_MATCH_FLOOR. Without listener data: the head, then Sounds like's
 # order. Listeners also play (listener data only): Best's candidates by other artists than the seed's, by
-# z(listener logit) + LISTENERS_SOUND_WEIGHT * z(sound score), one per artist.
+# z(listener logit) + LISTENERS_SOUND_WEIGHT * z(sound score), one per artist. With ``main_scale`` (sound sd,
+# logit sd) main's body is ordered by sound / sound sd + MAIN_LISTENER_WEIGHT * logit / logit sd instead: fixed
+# scales, so sound decides where it separates a seed's candidates and the ranker where it does not.
 MAIN_LISTENER_WEIGHT = 2.0
 MAIN_POOL = "sonic"
 MAIN_MATCH_FLOOR = 50
@@ -451,7 +453,8 @@ class AnySong:
                  best_head_standout: float = BEST_HEAD_STANDOUT, best_head_window: int = BEST_HEAD_WINDOW,
                  best_head_bare: int = BEST_HEAD_BARE, best_head_evidence_only: bool = BEST_HEAD_EVIDENCE_ONLY,
                  main_listener_weight: float = MAIN_LISTENER_WEIGHT, main_pool: str = MAIN_POOL,
-                 main_match_floor: float = MAIN_MATCH_FLOOR, main_head_bare: int = MAIN_HEAD_BARE,
+                 main_match_floor: float = MAIN_MATCH_FLOOR, main_scale: tuple[float, float] | None = None,
+                 main_head_bare: int = MAIN_HEAD_BARE,
                  main_head_standout: float = MAIN_HEAD_STANDOUT, main_head_match: float = MAIN_HEAD_MATCH,
                  listeners_sound_weight: float = LISTENERS_SOUND_WEIGHT,
                  main_overall: OverallScale | None = MAIN_OVERALL,
@@ -482,10 +485,9 @@ class AnySong:
         # Listener-aware ranking (``listener``): needs the scene table; replaces the scene slots and the Sounds like
         # lift for seeds whose artist the table (or Deezer) knows.
         self.ranker = ranker if scene is not None else None
-        # The scene head feeds the rankers trained with its cosine (``listener.FEATURES_HEAD``).
+        # The scene head feeds the rankers trained with its cosine (``listener.FEATURES_HEAD``); a ranker given rows
+        # of the wrong width refuses them (``Ranker.predict``).
         self.head = head
-        if self.ranker is not None and (self.ranker.features == listener.FEATURES_HEAD) != (head is not None):
-            raise ValueError("a ranker with the 'head' feature and a scene head go together")
         self.best_sound_weight, self.sounds_listener_weight = best_sound_weight, sounds_listener_weight
         self.best_audio_weight = best_audio_weight
         self.best_artist_gap, self.best_artist_once = best_artist_gap, best_artist_once
@@ -495,6 +497,9 @@ class AnySong:
             raise ValueError(f"main_pool must be 'sonic' or 'all', not {main_pool!r}")
         self.main_listener_weight, self.main_pool = main_listener_weight, main_pool
         self.main_match_floor, self.main_head_bare = main_match_floor, main_head_bare
+        if main_scale is not None and min(main_scale) <= 0:
+            raise ValueError("main_scale needs two positive standard deviations")
+        self.main_scale = main_scale
         self.main_head_standout, self.main_head_match = main_head_standout, main_head_match
         self.listeners_sound_weight = listeners_sound_weight
         # ``overall`` on main and Listeners also play (``OverallScale``); None leaves it out.
@@ -1289,7 +1294,12 @@ class AnySong:
             raw_main = {int(main_item(key)["id"]): (float(s), float(lg))
                         for key, s, lg in zip(pool, pool_sound, pool_logit)}
             neutral = float(np.median(pool_logit))
-            pool = ordered(pool, listener.blend(pool_sound, pool_logit, self.main_listener_weight))
+            if self.main_scale is None:
+                score = listener.blend(pool_sound, pool_logit, self.main_listener_weight)
+            else:
+                score = (pool_sound / self.main_scale[0]
+                         + self.main_listener_weight * pool_logit / self.main_scale[1])
+            pool = ordered(pool, score)
         main_set = set(main_head)
         main = self._main([(shown[key][0], shown[key][1]) for key in main_head],
                           [(main_item(key), shown[key][1]) for key in pool if key not in main_set], k)
@@ -1650,6 +1660,8 @@ def main(argv: list[str] | None = None) -> None:
                    help="main's body: the sonic list, or every candidate at or above --main-match-floor")
     p.add_argument("--main-match-floor", type=float, default=MAIN_MATCH_FLOOR)
     p.add_argument("--main-listener-weight", type=float, default=MAIN_LISTENER_WEIGHT)
+    p.add_argument("--main-scale", type=float, nargs=2, default=None, metavar=("SOUND_SD", "LOGIT_SD"),
+                   help="order main's body on these fixed scales instead of per-seed z-scores")
     p.add_argument("--stems", type=Path, default=None,
                    help="stem table from anysong.stems pack: stored dissections for /api/anysong/dissect")
     p.add_argument("--stems-model", type=Path, default=None,
@@ -1722,6 +1734,7 @@ def main(argv: list[str] | None = None) -> None:
                       if args.head is not None else None,
                       main_pool=args.main_pool, main_match_floor=args.main_match_floor,
                       main_listener_weight=args.main_listener_weight,
+                      main_scale=tuple(args.main_scale) if args.main_scale else None,
                       stems=store, dissector=dissector, catalog_previews=args.catalog_previews)
     server = Server((args.host, args.port), service, args.search_per_min, args.similar_per_min,
                     args.cors_origin, args.client_ip_header, dissect_per_min=args.dissect_per_min)
