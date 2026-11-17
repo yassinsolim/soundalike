@@ -758,8 +758,6 @@ class AnySong:
             if "blend" in raw:  # not channels: only main reads them (``main_pool`` "blend" and "sonic+blend")
                 res["blend"] = raw.pop("blend")
                 res["blendz"] = {int(tid): float(score) for tid, score in raw.pop("blendz", ())}
-            if "taste" in raw:  # the blend's taste term applied to this seed (``blend.Blend.taste``)
-                query["taste"] = raw.pop("taste")
             if self.ranker is not None:
                 res["listener"] = self._listener(res, windows, timings)
             timings["total"] = (time.perf_counter() - t0) * 1000
@@ -843,7 +841,7 @@ class AnySong:
         the sonic list's own scores, and exact scores for the melody and samples tracks it does not hold."""
         t = time.perf_counter()
         muq = {int(tid): float(score) for tid, score in raw.get("sonic", ())}
-        others = {int(tid) for channel, rows in raw.items() if channel not in ("sonic", "blend", "blendz", "taste")
+        others = {int(tid) for channel, rows in raw.items() if channel not in ("sonic", "blend", "blendz")
                   for tid, _ in rows} - set(muq)
         muq |= self.engine.score_tracks("sonic", others, windows=windows, query_track=query_track)
         timings["vibe_scores"] = (time.perf_counter() - t) * 1000
@@ -1728,7 +1726,6 @@ def _overall_scales(path: Path | None) -> dict:
 def main(argv: list[str] | None = None) -> None:
     import torch
 
-    from .blend import TASTE_GATE, WEIGHTS, Blend
     from .deezer import Deezer
     from .serve import CHANNELS, Engine, load_meta
 
@@ -1778,12 +1775,6 @@ def main(argv: list[str] | None = None) -> None:
                    help="folder with cooc.npz and cf128.npy: playlist co-occurrence vectors of the blended ranking")
     p.add_argument("--blend-weights", type=float, nargs=2, default=None, metavar=("WH", "WC"),
                    help="weights of the scene head and playlist terms next to sound (default 2 1)")
-    p.add_argument("--taste", type=Path, default=None,
-                   help="npz with taste 'profiles' ([C, D] unit rows in the blend head's space) and their 'names': a "
-                        "seed near a profile gets that profile's term in the blended score (needs --blend-head)")
-    p.add_argument("--taste-weight", type=float, default=0.0, help="weight of the taste term (0: off)")
-    p.add_argument("--taste-gate", type=float, default=TASTE_GATE,
-                   help="least cosine of a seed to its nearest taste profile for the term to apply")
     p.add_argument("--main-blend-weight", type=float, default=MAIN_BLEND_WEIGHT,
                    help="--main-pool sonic+blend: weight of a song's blended score in main's order")
     p.add_argument("--main-match-floor", type=float, default=MAIN_MATCH_FLOOR)
@@ -1815,19 +1806,18 @@ def main(argv: list[str] | None = None) -> None:
         p.error(f"--main-pool {args.main_pool} needs --blend-head and --blend-cf")
     if args.blend_head is not None and "sonic" not in args.channels:
         p.error("--blend-head needs the sonic channel")
-    if args.taste is not None and args.blend_head is None:
-        p.error("--taste needs --blend-head and --blend-cf")
 
     scratch = args.preview_dir or Path(tempfile.mkdtemp(prefix="anysong-"))
     t = time.perf_counter()
     engine = Engine(args.index, args.channels, args.device, candidates=args.candidates, hub_alpha=args.hub_alpha,
                     half_stage1=args.half_stage1)
     if args.blend_head is not None:
+        from .blend import WEIGHTS, Blend
+
         t_blend = time.perf_counter()
         sonic = engine.indexes["sonic"]
         engine.blend = Blend.load(args.blend_head, args.blend_cf, sonic.pos, sonic.id_tensor.device,
-                                  tuple(args.blend_weights) if args.blend_weights else WEIGHTS,
-                                  args.taste, args.taste_weight, args.taste_gate)
+                                  tuple(args.blend_weights) if args.blend_weights else WEIGHTS)
         engine.load_secs["blend"] = round(time.perf_counter() - t_blend, 2)
     engine.warm()
     warm = _warmup(engine)

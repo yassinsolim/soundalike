@@ -126,63 +126,6 @@ def test_seed_outside_the_playlist_graph_and_live_seeds_have_no_playlist_term(se
         assert s == pytest.approx(sonic[index.pos[tid]], abs=1e-6)
 
 
-def test_taste_term_follows_the_nearest_profile_behind_a_gate(tmp_path, setup):
-    eng, index, win, table, cf = setup
-    pooled = _unit(table.mean(1))
-    # Not unit on file: the loader normalises. Rows 4 and 9 are their own profiles' centres.
-    np.savez(tmp_path / "taste.npz", profiles=(pooled[[4, 9]] * 2).astype(np.float32), names=np.array(["four", "nine"]))
-
-    def blend(weight, gate=0.999):
-        return Blend.load(tmp_path / "h", tmp_path, index.pos, taste=tmp_path / "taste.npz", taste_weight=weight,
-                          taste_gate=gate)
-
-    def search(row, **kw):
-        return eng.search_stored(int(IDS[row]), k=N, **kw)[0]
-
-    def want(row, profile, weight):
-        sonic = index.scores(index.stored_query(int(IDS[row]))).numpy().astype(np.float64)
-        order, score = _expected(index, sonic, table, table[row], cf, row, drop=[row])
-        if profile is None:
-            return order, score
-        score = score + weight * _z(pooled @ pooled[profile])
-        return [int(index.ids[i]) for i in np.argsort(-score) if i != row], score
-
-    today = {row: search(row) for row in (4, 9, 5)}
-    # Weight 0: exactly today's blend, whatever the profiles, and nothing about taste in the results.
-    eng.blend = blend(0.0)
-    assert eng.blend.pooled.shape == (N, table.shape[2]) and eng.blend.taste(eng.blend.seed_head(4)) is None
-    np.testing.assert_allclose(eng.blend.pooled.numpy(), pooled, atol=1e-5)
-    assert all(search(row) == today[row] for row in today)
-    assert eng.blend.info()["taste"] == {"profiles": 2, "weight": 0.0, "gate": 0.999}
-    # With a weight, each seed gets its nearest profile's term: z over every row of the pooled cosine to it.
-    eng.blend = blend(3.0)
-    for row, name, profile in ((4, "four", 4), (9, "nine", 9)):
-        got = search(row)
-        order, score = want(row, profile, 3.0)
-        assert got["taste"]["profile"] == name and got["taste"]["cos"] == pytest.approx(1.0, abs=1e-3)
-        assert [t for t, _ in got["blend"]] == order and order != [t for t, _ in today[row]["blend"]]
-        assert all(z == pytest.approx(score[index.pos[t]], abs=1e-4) for t, z in got["blendz"])
-        assert got["sonic"] == today[row]["sonic"]
-        for (tid, s), i in zip(got["blend"], order):  # still the exact sonic score
-            assert tid == i and s == pytest.approx(dict(today[row]["blend"])[tid], abs=1e-6)
-    # A seed under the gate gets no term; with the gate lowered it gets its nearest profile's.
-    near = pooled[5] @ pooled[[4, 9]].T
-    assert near.max() < 0.999 and search(5) == today[5]
-    eng.blend = blend(3.0, gate=float(near.max()) - 0.01)
-    got = search(5)
-    profile = (4, 9)[int(near.argmax())]
-    assert got["taste"] == {"profile": ("four", "nine")[int(near.argmax())], "cos": round(float(near.max()), 4)}
-    assert [t for t, _ in got["blend"]] == want(5, profile, 3.0)[0]
-    # A live seed's pooled vector comes from its own windows.
-    eng.blend = blend(3.0, gate=0.9)
-    live = eng.search_windows({"sonic": win[9]}, k=N)[0]
-    assert live["taste"]["profile"] == "nine"
-    with pytest.raises(ValueError, match="do not fit the head"):
-        Blend(eng.blend.head, eng.blend.table, GRAPH, cf, taste=(np.ones((2, 3), np.float32), ["a", "b"]))
-    with pytest.raises(ValueError, match="do not fit the head"):
-        Blend(eng.blend.head, eng.blend.table, GRAPH, cf, taste=(pooled[:2], ["a"]))
-
-
 def test_two_stage_index_blends_stage_one_scores_and_attaches_exact_ones(tmp_path):
     win, table, cf = _files(tmp_path)
     ch = serve.CHANNELS["sonic"]

@@ -673,12 +673,9 @@ def test_blended_ranking_is_kept_out_of_the_channel_lists(tmp_path):
             def info():
                 return {"songs": 7, "graph": 3, "weights": [2.0, 1.0]}
 
-        taste = None
-
         def _ranked(self, exclude):
             raw, t = super()._ranked(exclude)
-            extra = {"taste": self.taste} if self.taste else {}
-            return raw | {"blend": [(7, 0.5), (5, 0.7)]} | extra, t | {"search_blend": 2.0}
+            return raw | {"blend": [(7, 0.5), (5, 0.7)]}, t | {"search_blend": 2.0}
 
     svc = api.AnySong(BlendEngine(), FakeDeezer(tmp_path), META, main_pool="blend")
     plain = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META)
@@ -693,15 +690,6 @@ def test_blended_ranking_is_kept_out_of_the_channel_lists(tmp_path):
     assert plain.health()["blend"] is None
     live = svc.similar(99, k=10)  # a live seed takes the same path
     assert "blend" not in live["results"] and "main" in live["results"]
-    # The taste term's profile is named in the query when it applied, and only then.
-    assert "taste" not in r["query"] and "taste" not in live["query"]
-    engine = BlendEngine()
-    engine.taste = {"profile": "uk rap", "cos": 0.71}
-    tasted = api.AnySong(engine, FakeDeezer(tmp_path), META, main_pool="blend")
-    for seed in (1, 99):
-        got = tasted.similar(seed, k=10)
-        assert got["query"]["taste"] == {"profile": "uk rap", "cos": 0.71} and "taste" not in got["results"]
-        assert got["results"] == (r if seed == 1 else live)["results"]
 
 
 @pytest.mark.parametrize("listener_data", [True, False])
