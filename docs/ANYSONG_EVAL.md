@@ -3452,3 +3452,22 @@ result is cached with the seed. Songs with a label of their own and stored seeds
 detection leaves the seed as without the detector (`/healthz` `language_detector` counts detected, unsure,
 failed). Timings: `decode_language` (the excerpt, CPU) and `language` (the model). Not measured here: accuracy
 on live seeds, latency and GPU memory on CUDA.
+
+## Other-language songs in the audio head (2026-11-17): local experiment, not served
+
+On 2,937 fresh online claims, cross-language claims (a song said to cover, sample or copy a song in another
+language) were almost never shown, because the same-language gate removes the other song before the audio head
+is chosen, and evidence of a shared melody or sample does not depend on language. `--head-all-languages`
+(`AnySong(head_all_languages=True)`, default off) adds those songs to the audio head of main and, with the
+listener ranker, of Best matches when `lang=same` gates the lists (also the guessed-language main).
+
+`AnySong._cross_head`: the audio head of the catalog's ungated lists (the ones `lang=all` shows) is computed with
+the same evidence thresholds and standout rule (`melody_evidence`, `samples_evidence`, `best_head_standout`
+within `best_head_window`), evidence songs only and no bare head; for main also `main_head_standout` /
+`main_head_match`. Its songs that the gate removes are added to the gated head, each with
+`"other_language": true` and its channel ranks in the ungated lists, placed after the last gated head song that
+the ungated head has before it (a gated head song without evidence there comes after them). The gated head's
+own songs, every body (main's, Sounds like, Same vibe, Listeners also play), `hidden`, `lang=all` and seeds
+without a gate language do not change; an added song is in no body, since the gate keeps it out of every
+candidate list. Without the listener ranker Best is the fusion order, which has no separate head, so only main
+changes there. No held-out result yet.

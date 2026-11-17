@@ -2052,3 +2052,110 @@ def test_language_detector_applies_the_catalog_label_rule():
     # The decisions are the table's own-label rule on the same probabilities.
     probs = np.asarray([[0.04, 0.06, 0.90], [0.74, 0.20, 0.06]], dtype=np.float32)
     assert decide(*top_languages(probs)).tolist() == [2, -1]
+
+
+# ---------------------------------------------------------------- other-language songs in the audio head
+def _head_service(tmp_path, languages, **kw):
+    kw.setdefault("scene_params", SceneParams(head_min=1))
+    return api.AnySong(FakeEngine(), FakeDeezer(tmp_path), LISTENER_META, scene=_listener_scene_table(),
+                       copy_score=None, ranker=_stump("fwd", 0.0, 0.0),
+                       languages=languages, best_head_standout=0.0,
+                       tempo=TempoTable(np.array([5, 7, 8, 10]), np.array([120, 120, 121, 120], np.float32)), **kw)
+
+
+def _head_res(listener_data):
+    # Other Artist's 5 has cover evidence (melody score -1.0); Third's 7 only sounds alike; 3 is a weak melody match.
+    res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog", "artist_id": 100},
+           "raw": {"melody": [(5, -1.0), (3, -2.0)], "samples": [(3, 0.1)],
+                   "sonic": [(10, 0.5), (5, 0.45), (7, 0.44), (8, 0.40)]},
+           "related": [], "timings_ms": {}, "vibe": {"muq": {10: 0.5, 5: 0.45, 7: 0.44, 8: 0.40, 3: 0.2}, "bpm": 120.0}}
+    if listener_data:
+        res["listener"] = {"p": {3: 0.2, 5: 0.1, 7: 0.9, 8: 0.8, 9: 0.95, 10: 0.99},
+                           "son": {3: 0.2, 5: 0.45, 7: 0.44, 8: 0.40, 9: 0.43, 10: 0.5}, "scene": [8, 9]}
+    return res
+
+
+def _rows(response, name):
+    return [(x["id"], x.get("basis")) for x in response["results"].get(name, ())]
+
+
+@pytest.mark.parametrize("listener_data", [True, False])
+def test_head_all_languages_puts_other_language_covers_on_top(tmp_path, listener_data):
+    # The seed is English; the cover 5 is French, the sound-alike 7 and the scene song 9 German.
+    languages = FakeLanguages({1: "en", 5: "fr", 7: "de", 9: "de"})
+    res = _head_res(listener_data)
+    off = _head_service(tmp_path, languages)._view(res, k=10, dedupe=True, cached=False)
+    svc = _head_service(tmp_path, languages, head_all_languages=True)
+    on = svc._view(res, k=10, dedupe=True, cached=False)
+    every = svc._view(res, k=10, dedupe=True, cached=False, lang_mode="all")
+    # Off: the gate removes the cover from every list. On: it leads main as an audio row, marked; the rest of main
+    # is as before, and the German song without evidence stays out.
+    assert all(5 not in [tid for tid, _ in _rows(off, name)] for name in ("best", "main", "sounds", "listeners"))
+    assert _rows(on, "main") == [(5, "audio"), *_rows(off, "main")] and 7 not in [x["id"] for x in on["results"]["main"]]
+    top = on["results"]["main"][0]
+    assert top["other_language"] is True and top["ranks"] == {"melody": 1, "sonic": 2}
+    assert top["match"] == api.sound_match(0.45) and "overall" in top
+    assert [x for name in ("best", "main") for x in on["results"][name] if "other_language" in x and x["id"] != 5] == []
+    # The head is the one every language shows (same evidence rules), without its flag there.
+    assert _rows(every, "main")[0] == (5, "audio") and "other_language" not in every["results"]["main"][0]
+    # Sounds like, Same vibe and Listeners also play stay gated; the query, ``hidden`` included, does not change.
+    for name in ("sounds", "vibe", "listeners", "melody", "samples", "sonic"):
+        assert on["results"].get(name) == off["results"].get(name), name
+    assert on["query"] == off["query"] and on["query"]["hidden"] > 0
+    if listener_data:  # Best has the same head; without the ranker Best is the fusion order, which has no head
+        assert _rows(on, "best") == [(5, "audio"), *_rows(off, "best")]
+        assert on["results"]["best"][0]["other_language"] is True
+    else:
+        assert on["results"]["best"] == off["results"]["best"]
+    for name in ("best", "main", "sounds", "listeners"):
+        ids = [tid for tid, _ in _rows(on, name)]
+        assert len(ids) == len(set(ids)), name
+    # Main's stricter head rule applies to the added song too: a low sound match needs more standout.
+    svc.main_head_match = 101
+    assert 5 not in [tid for tid, _ in _rows(svc._view(res, k=10, dedupe=True, cached=False), "main")]
+    svc.main_head_match = api.MAIN_HEAD_MATCH
+    # Without that evidence the song is no head song: nothing is added.
+    svc.scene_params = SceneParams(head_min=1, melody_evidence=-0.5)
+    assert svc._view(res, k=10, dedupe=True, cached=False)["results"] == \
+        _head_service(tmp_path, languages, scene_params=SceneParams(head_min=1, melody_evidence=-0.5))._view(
+            res, k=10, dedupe=True, cached=False)["results"]
+    svc.scene_params = SceneParams(head_min=1)
+    # Every language and a seed without a language: the option changes nothing.
+    assert every == _head_service(tmp_path, languages)._view(res, k=10, dedupe=True, cached=False, lang_mode="all")
+    unknown = FakeLanguages({5: "fr", 7: "de", 9: "de"})
+    assert _head_service(tmp_path, unknown, head_all_languages=True)._view(res, k=10, dedupe=True, cached=False) == \
+        _head_service(tmp_path, unknown)._view(res, k=10, dedupe=True, cached=False)
+
+
+@pytest.mark.parametrize("listener_data", [True, False])
+def test_head_all_languages_applies_to_the_guessed_language_main(tmp_path, listener_data):
+    languages = FakeLanguages({5: "fr", 7: "de", 9: "de"}, guesses={1: "en"})
+    res = _head_res(listener_data)
+    off = _head_service(tmp_path, languages)._view(res, k=10, dedupe=True, cached=False)
+    on = _head_service(tmp_path, languages, head_all_languages=True)._view(res, k=10, dedupe=True, cached=False)
+    assert on["query"] == off["query"] and on["query"]["main_language_guess"] == "en"
+    assert _rows(on, "main") == [(5, "audio"), *_rows(off, "main")] and on["results"]["main"][0]["other_language"]
+    assert {name: rows for name, rows in on["results"].items() if name != "main"} == \
+        {name: rows for name, rows in off["results"].items() if name != "main"}
+
+
+def test_cross_head_keeps_the_order_of_the_ungated_head(tmp_path):
+    meta = {1: ("Seed", "Song"), 2: ("A", "Deux"), 3: ("B", "Three"), 4: ("C", "Quatre"), 5: ("D", "Five")}
+    svc = api.AnySong(FakeEngine(ids=tuple(meta)), FakeDeezer(tmp_path), meta, best_head_standout=0.0,
+                      languages=FakeLanguages({1: "en", 2: "fr", 3: "en", 4: "fr", 5: "en"}))
+    items = {tid: {"id": tid, "score": score, "artist": meta[tid][0], "title": meta[tid][1]}
+             for tid, score in ((2, -0.5), (3, -0.6), (4, -0.7), (5, -3.0))}
+    ungated = {"melody": {api.song_key(*meta[tid]): item for tid, item in items.items()}}
+    key = {tid: api.song_key(*meta[tid]) for tid in meta}
+
+    def keep(item):
+        return svc._item_language(item) in {"unknown", "en"}
+
+    head, cross = svc._cross_head(ungated, [key[3]], keep, {key[3], key[5]})
+    # French 2 and 4 have evidence like English 3 and stand around it as in the catalog's list; 5 has none.
+    assert head == [key[2], key[3], key[4]] and set(cross) == {key[2], key[4]}
+    assert cross[key[4]] == (items[4] | {"other_language": True}, {"melody": 3})
+    # A gated head song the ungated head does not hold (no evidence there) follows the added ones; a song already
+    # listed is not added again.
+    assert svc._cross_head(ungated, [key[5]], keep, {key[5]})[0] == [key[2], key[4], key[5]]
+    assert svc._cross_head(ungated, [key[3]], keep, {key[2], key[3], key[4]}) == ([key[3]], {})
