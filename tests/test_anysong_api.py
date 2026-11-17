@@ -1930,3 +1930,125 @@ def test_http_dissect_route_charges_only_live_dissections(tmp_path, stereo):
     finally:
         srv.shutdown()
         srv.server_close()
+
+
+# ---------------------------------------------------------------- live seed language
+class FakeDetector:
+    """``languages.LanguageDetector`` answering one fixed (language, probability), or raising it."""
+
+    def __init__(self, result):
+        self.result, self.calls = result, []
+
+    def excerpt(self, path):
+        self.calls.append(("excerpt", path.name))
+        if path.read_bytes() == b"bad":
+            raise RuntimeError("corrupt mp3")
+        return np.zeros(4, np.float32)
+
+    def detect(self, wave):
+        self.calls.append(("detect", len(wave)))
+        if isinstance(self.result, Exception):
+            raise self.result
+        return self.result
+
+
+def _live_track(svc, tid, artist):
+    svc.deezer.tracks[tid] = {"id": tid, "title": f"Live {tid}", "artist": {"name": artist}, "album": {},
+                              "preview": "u"}
+
+
+def test_live_seed_language_is_detected_before_the_search(tmp_path):
+    detector = FakeDetector(("ru", 0.95))
+    svc, plain = _ru_services(tmp_path, language_detector=detector)
+    for service in (svc, plain):
+        _live_track(service, 98, "New Band")
+    r, before = svc.similar(98, k=5), plain.similar(98, k=5)
+    # The rows-less service still gates with the detected language; the other also searches in that language.
+    assert detector.calls == [("excerpt", "98.mp3"), ("detect", 4)] * 2 and not (tmp_path / "98.mp3").exists()
+    for response in (r, before):
+        assert response["query"]["language"] == "ru" and response["query"]["language_source"] == "detected"
+        assert {"language", "decode_language"} <= set(response["timings_ms"])
+    assert svc.engine.within[-1] == svc.language_rows.masks("ru") and svc.results.get(98)["lang"] == "ru"
+    assert r["query"]["language_pool"] == len(RU_POOL) and r["timings_ms"]["search_lang"] == 0.5
+    for name in ("best", "sounds", "main"):
+        assert _ids(r, name) == [1, 7, 8, 9, 10] and _ids(before, name) == [1], name  # the gate alone left one song
+    assert _ids(svc.similar(98, k=5, lang_mode="all"), "sounds") == [1, 2, 3, 4, 5]
+    assert svc.health()["language_detector"] == {"detected": 1, "unsure": 0, "failed": 0}
+    # Without a detector the same seed has no language: nothing gated, no in-language search, as before.
+    off, _ = _ru_services(tmp_path)
+    _live_track(off, 98, "New Band")
+    unknown = off.similar(98, k=5)
+    assert unknown["query"]["language"] == "unknown" and "language_source" not in unknown["query"]
+    assert off.engine.within == [None] and _ids(unknown, "sounds") == [1, 2, 3, 4, 5]
+    assert "language" not in unknown["timings_ms"] and off.health()["language_detector"] is None
+    assert "detected" not in off.results.get(98)
+
+
+def test_detected_language_stands_between_the_own_label_and_the_artist(tmp_path):
+    languages = FakeLanguages(RU_LABELS | {97: "fr"}, {"kino": "ru"}, guesses={7: "en"})
+    # A confident detection wins over the artist's majority language.
+    sure = FakeDetector(("en", 0.9))
+    svc, _ = _ru_services(tmp_path, languages, language_detector=sure)
+    _live_track(svc, 98, "Kino")
+    r = svc.similar(98, k=5)
+    assert (r["query"]["language"], r["query"]["language_source"]) == ("en", "detected")
+    assert _ids(r, "sounds") == [2, 3, 4, 5, 6]
+    # An unsure one ("unknown": under the label rule's thresholds) leaves it to the artist, then to no language.
+    unsure = FakeDetector(("unknown", 0.7))
+    svc, _ = _ru_services(tmp_path, languages, language_detector=unsure)
+    _live_track(svc, 98, "Kino")
+    _live_track(svc, 96, "New Band")
+    r = svc.similar(98, k=5)
+    assert (r["query"]["language"], r["query"]["language_source"]) == ("ru", "artist")
+    assert _ids(r, "sounds") == [1, 7, 8, 9, 10] and svc.results.get(98)["detected"] == "unknown"
+    r = svc.similar(96, k=5)
+    assert r["query"]["language"] == "unknown" and "language_source" not in r["query"]
+    assert svc.engine.within[-1] is None and svc.health()["language_detector"]["unsure"] == 2
+    # A live song with a label of its own in the table is not detected; stored seeds never are.
+    _live_track(svc, 97, "New Band")
+    calls = list(unsure.calls)
+    r = svc.similar(97, k=5)
+    assert (r["query"]["language"], r["query"]["language_source"]) == ("fr", "label")
+    assert svc.similar(1, k=5)["query"]["language_source"] == "label"
+    assert svc.similar(13, k=5)["query"]["language_source"] == "artist"
+    guessed = svc.similar(7, k=5)["query"]  # the main-only guess: the query's language stays unknown
+    assert guessed["main_language_guess"] == "en" and "language_source" not in guessed
+    svc.language_guess = True
+    assert svc.similar(7, k=5)["query"]["language_source"] == "guess"
+    assert unsure.calls == calls and "detected" not in svc.results.get(1)
+    # A detector that fails (the model, or decoding the excerpt) leaves the seed as without one.
+    broken = FakeDetector(RuntimeError("CUDA out of memory"))
+    svc, _ = _ru_services(tmp_path, languages, language_detector=broken)
+    _live_track(svc, 98, "Kino")
+    assert svc.similar(98, k=5)["query"]["language_source"] == "artist"
+    svc.deezer.preview = b"bad"
+    svc.engine.decode = lambda path: ({}, {"decode": 1.0})
+    _live_track(svc, 96, "Kino")
+    assert svc.similar(96, k=5)["query"]["language_source"] == "artist"
+    assert svc.health()["language_detector"] == {"detected": 0, "unsure": 0, "failed": 2}
+    assert broken.calls == [("excerpt", "98.mp3"), ("detect", 4), ("excerpt", "96.mp3")]
+
+
+def test_language_detector_applies_the_catalog_label_rule():
+    from soundalike.anysong.languages import MIN_CONFIDENCE, MIN_MARGIN, LanguageDetector
+
+    seen = []
+
+    def identify(probabilities):
+        def run(waves):
+            seen.append(len(waves))
+            return np.asarray([probabilities], dtype=np.float32), np.asarray([0.9], dtype=np.float32)
+        return run
+
+    def detect(probabilities, **kw):
+        return LanguageDetector(identify(probabilities), ("en", "fr", "ru"), **kw).detect(np.zeros(8, np.float32))
+
+    assert (MIN_CONFIDENCE, MIN_MARGIN) == (0.8, 0.5)
+    assert detect([0.04, 0.06, 0.90]) == ("ru", pytest.approx(0.90))  # the no-speech probability plays no part
+    assert detect([0.74, 0.20, 0.06]) == ("unknown", pytest.approx(0.74))  # under the confidence
+    assert detect([0.74, 0.20, 0.06], min_confidence=0.7) == ("en", pytest.approx(0.74))
+    assert detect([0.40, 0.60, 0.0], min_confidence=0.6)[0] == "unknown"  # under the margin
+    assert seen == [1, 1, 1, 1]
+    # The decisions are the table's own-label rule on the same probabilities.
+    probs = np.asarray([[0.04, 0.06, 0.90], [0.74, 0.20, 0.06]], dtype=np.float32)
+    assert decide(*top_languages(probs)).tolist() == [2, -1]

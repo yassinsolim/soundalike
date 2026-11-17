@@ -112,6 +112,33 @@ def decide(top_idx: np.ndarray, top_prob: np.ndarray, *, min_confidence: float =
     return np.where(confident, top_idx[:, 0].astype(np.int16), np.int16(-1))
 
 
+class LanguageDetector:
+    """The language of one clip by the rule that labels the catalog: the same Whisper language identification
+    (``WhisperLanguageID``) on the same excerpt (``load_excerpt``), then ``decide`` with the table's thresholds, so a
+    detected label is as sure as a catalog song's own label; "unknown" otherwise. The no-speech probability plays no
+    part, as in ``LanguageTable.load``."""
+
+    def __init__(self, identify, vocab: Sequence[str], *, min_confidence: float = MIN_CONFIDENCE,
+                 min_margin: float = MIN_MARGIN) -> None:
+        self.identify, self.vocab = identify, tuple(vocab)
+        self.min_confidence, self.min_margin = min_confidence, min_margin
+
+    @classmethod
+    def load(cls, model_dir: str | Path, device: str = "cuda") -> "LanguageDetector":
+        """``model_dir``: the local snapshot of ``MODEL_ID`` the catalog was labelled with (fp16 on CUDA)."""
+        lid = WhisperLanguageID(model_dir, device)
+        return cls(lid, lid.vocab)
+
+    excerpt = staticmethod(load_excerpt)
+
+    def detect(self, wave: np.ndarray) -> tuple[str, float]:
+        """(language or "unknown", the top language's probability) for one ``excerpt``."""
+        probabilities, _ = self.identify([wave])
+        top_idx, top_prob = top_languages(np.asarray(probabilities))
+        code = int(decide(top_idx, top_prob, min_confidence=self.min_confidence, min_margin=self.min_margin)[0])
+        return (self.vocab[code] if code >= 0 else UNKNOWN), float(top_prob[0, 0])
+
+
 def normalize_artist(name: str) -> str:
     folded = unicodedata.normalize("NFKD", str(name)).casefold()
     return " ".join("".join(c for c in folded if not unicodedata.combining(c)).split())

@@ -3430,3 +3430,25 @@ Cost measured on CPU only, on a synthetic two-stage sonic index (300,000 songs, 
 4.9 ms) for masks passing 1 %, 10 % and 70 % of the rows, next to 9 to 10 ms for the search itself.
 `LanguageRows` for 1,000,000 rows and three channels (synthetic table, 150,000 artists) took 0.43 s and 2 MB.
 Not measured: the real index, CUDA.
+
+## Live seed language from the preview (2026-11-17): local experiment, not served
+
+A song outside the index had a language only when the table knew its artist, so 60 to 80 % of Hindi, Tamil,
+Punjabi, Mandarin and Vietnamese chart songs came back with language "unknown" and no gate. With
+`--language-model <local snapshot of openai/whisper-large-v3-turbo>` (the `--model-dir` the catalog was labelled
+with) the API labels a live seed's preview at request time exactly as the catalog was labelled
+(`languages.LanguageDetector`): `load_excerpt` (first 30 s at 16 kHz), `WhisperLanguageID` (fp16 on CUDA), then
+`decide` with the table's thresholds, top probability at least 0.8 and at least 0.5 above the second language.
+The no-speech probability is not used, as in `LanguageTable.load`. The catalog run set
+`--fp16-accumulation` (1 of 480 decisions differed in its test); the API does not, since the flag is global to
+the process.
+
+Order of a seed's language (`AnySong._seed_language`, named in `query["language_source"]`): its own table
+"label", the "detected" label, its "artist"'s majority, the table's "guess". A detected label passed the rule a
+catalog song's own label passes, and such a label already goes before the artist's majority for catalog seeds;
+a detection under the thresholds is no label, so the artist's majority (there for songs whose own clip does not
+say) decides. Detection runs inside the GPU section before the search, so the in-language lists use it; the
+result is cached with the seed. Songs with a label of their own and stored seeds are never detected; a failed
+detection leaves the seed as without the detector (`/healthz` `language_detector` counts detected, unsure,
+failed). Timings: `decode_language` (the excerpt, CPU) and `language` (the model). Not measured here: accuracy
+on live seeds, latency and GPU memory on CUDA.

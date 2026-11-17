@@ -47,7 +47,10 @@ With ``--blend-head`` and ``--blend-cf`` the sonic search also ranks the whole c
 
 With ``--languages`` the searches also rank each channel (and the blended score) among the songs of the seed's language
 alone (``languages.LanguageRows``), so the same-language lists are as full for a seed in a small language as for an
-English one; ``query["language_pool"]`` then says how many indexed songs that language has.
+English one; ``query["language_pool"]`` then says how many indexed songs that language has. With ``--language-model``
+a live seed's language is read from its preview by the model and rule that labelled the catalog
+(``languages.LanguageDetector``); ``query["language_source"]`` says where a seed's language comes from: its own
+"label", "detected", its "artist"'s majority or the table's "guess".
 """
 
 from __future__ import annotations
@@ -478,7 +481,8 @@ class AnySong:
                  main_overall: OverallScale | None = MAIN_OVERALL,
                  listeners_overall: OverallScale | None = LISTENERS_OVERALL,
                  stems: stemlib.StemStore | None = None, dissector: stemlib.Dissector | None = None,
-                 catalog_previews: str | Path | None = None, head: SceneHead | None = None):
+                 catalog_previews: str | Path | None = None, head: SceneHead | None = None,
+                 language_detector=None):
         self.engine, self.deezer, self.meta, self.keep_previews = engine, deezer, meta, keep_previews
         # Stem dissections (``dissect``): stored rows, else (with ``dissector``) the song's preview separated on the
         # GPU, read from ``catalog_previews/<id % 1000:03d>/<id>.mp3`` when there, else fetched from Deezer.
@@ -502,6 +506,10 @@ class AnySong:
         # also rank the songs of the seed's language alone, and the same-language lists are made from those instead
         # of from what the gate leaves of the whole catalog's lists. None: the gate filters the catalog's lists.
         self.language_rows = language_rows if languages is not None else None
+        # A live seed's language from its audio (``languages.LanguageDetector``: the catalog's labelling model and
+        # rule on the seed's preview), as sure as a catalog song's own label and used like one (``_seed_language``).
+        self.language_detector = language_detector if languages is not None else None
+        self.detections = {"detected": 0, "unsure": 0, "failed": 0}
         # Sounds like: lift songs by their artist's scene affinity (0 = the sonic channel's order).
         self.sounds_boost = sounds_boost
         # Listener-aware ranking (``listener``): needs the scene table; replaces the scene slots and the Sounds like
@@ -577,6 +585,7 @@ class AnySong:
         with self._lock:
             served = dict(self.served)
             dissected = dict(self.dissected)
+            detections = dict(self.detections)
         scene = None if self.scene is None else {"tracks": int((self.scene.track_artist > 0).sum()),
                                                  "artists": len(self.scene.artist_ids)}
         tempo = None if not self.vibe else {"tracks": len(self.tempo.by_id), "live": self.tracker is not None}
@@ -593,6 +602,7 @@ class AnySong:
                 "tiers": tiers, "ranker": None if self.ranker is None else self.ranker.meta or "on", "stems": stems,
                 "blend": None if blend is None else blend.info() | {"main": "blend" in self.main_pool},
                 "language_search": self.language_rows is not None,
+                "language_detector": None if self.language_detector is None else detections,
                 "gpu_mib": _gpu_mib(self.engine.device)}
 
     def search(self, q: str, limit: int = 10) -> dict:
@@ -755,13 +765,14 @@ class AnySong:
                 artist, title = self.meta.get(track_id, ("", ""))
                 query = {"id": track_id, "artist": artist, "title": title, "source": "catalog"}
                 timings: dict[str, float] = {}
+                detected = None
                 with self._gpu(timings):
                     raw, t = self.engine.search_stored(track_id, FETCH, **self._allow(query), **self._within(query))
                     vibe = self._vibe_inputs(raw, t, query_track=track_id) if self.vibe else None
                 if vibe is not None:
                     vibe["bpm"] = self.tempo.bpm(track_id)
             else:
-                query, raw, timings, t, vibe, windows = self._live(track_id)
+                query, raw, timings, t, vibe, windows, detected = self._live(track_id)
                 if self.learn is not None:
                     self.learn.add(track_id, query.get("artist_id"))
             self._count(query["source"])
@@ -769,9 +780,11 @@ class AnySong:
             related = self._scene_context(query, timings)
             within = raw.pop("within", None)
             res = {"query": query, "raw": raw, "related": related, "vibe": vibe}
+            if detected is not None:
+                res["detected"] = detected
             if within is not None:
                 # The lists among the songs of the seed's gate language alone (``_within``), next to the catalog's.
-                language = self._seed_language(query)[0]
+                language = self._seed_language(query, detected)[0]
                 res["lang"], res["lang_pool"] = language, self.language_rows.pool(language)
                 res["blend_lang"] = within.pop("blend", None)
                 res["raw_lang"] = within
@@ -860,12 +873,13 @@ class AnySong:
         artist_id = query.get("artist_id") or self.tiers.scene.artist(int(query["id"]))
         return {"allow": self.tiers.masks(self.tiers.artists(artist_id))}
 
-    def _within(self, query: dict) -> dict:
+    def _within(self, query: dict, detected: str | None = None) -> dict:
         """Engine keyword for the in-language lists: row masks of the songs the same-language gate would keep for this
-        seed (its own or its artist's language, else the guess); none without ``language_rows`` or such a language."""
+        seed (``_seed_language``; ``detected``: a live seed's detected language); none without ``language_rows`` or
+        such a language."""
         if self.language_rows is None:
             return {}
-        masks = self.language_rows.masks(self._seed_language(query)[0])
+        masks = self.language_rows.masks(self._seed_language(query, detected)[0])
         return {} if masks is None else {"within": masks}
 
     def _vibe_inputs(self, raw: dict, timings: dict[str, float], windows=None, query_track: int | None = None) -> dict:
@@ -961,7 +975,8 @@ class AnySong:
         if path is None:
             raise ApiError(404, "no preview available for this track")
         timings["fetch"] = (time.perf_counter() - t) * 1000
-        clip22 = None
+        clip22 = excerpt = None
+        detect = self.language_detector is not None and self.languages.language(track_id) == "unknown"
         try:
             clips, t_decode = self.engine.decode(path)
             if self.vibe and self.tracker is not None:
@@ -971,17 +986,33 @@ class AnySong:
                 except Exception:  # noqa: BLE001 - an unknown seed tempo lets every song pass the tempo gate
                     clip22 = None
                 timings["decode_tempo"] = (time.perf_counter() - t) * 1000
+            if detect:
+                t = time.perf_counter()
+                try:
+                    excerpt = self.language_detector.excerpt(path)
+                except Exception:  # noqa: BLE001 - without a detected language the seed is placed as before
+                    self._detection("failed")
+                timings["decode_language"] = (time.perf_counter() - t) * 1000
         except Exception as exc:
             raise ApiError(422, "could not decode the preview") from exc
         finally:
             if not self.keep_previews:
                 Path(path).unlink(missing_ok=True)
         timings |= t_decode
-        vibe = None
+        vibe = detected = None
         with self._gpu(timings):
+            if excerpt is not None:
+                # Before the search: the in-language lists need the seed's language.
+                t = time.perf_counter()
+                try:
+                    detected = self.language_detector.detect(excerpt)[0]
+                    self._detection("unsure" if detected == "unknown" else "detected")
+                except Exception:  # noqa: BLE001 - as above
+                    self._detection("failed")
+                timings["language"] = (time.perf_counter() - t) * 1000
             wins, t_embed = self.engine.embed_clips(clips)
             raw, t_search = self.engine.search_windows(wins, FETCH, [track_id], **self._allow(query),
-                                                       **self._within(query))
+                                                       **self._within(query, detected))
             if self.vibe:
                 vibe = self._vibe_inputs(raw, t_search, windows=wins["sonic"])
                 if clip22 is not None:
@@ -989,7 +1020,11 @@ class AnySong:
                     bpm = self.tracker.tempo(clip22)[0]
                     vibe["bpm"] = bpm if np.isfinite(bpm) else None
                     t_search["tempo"] = (time.perf_counter() - t) * 1000
-        return query, raw, timings | t_embed, t_search, vibe, wins.get("sonic")
+        return query, raw, timings | t_embed, t_search, vibe, wins.get("sonic"), detected
+
+    def _detection(self, outcome: str) -> None:
+        with self._lock:
+            self.detections[outcome] += 1
 
     def stems_missing(self, track_id: int) -> bool:
         """True when ``dissect`` would separate this song live (the costly case the HTTP layer rate-limits)."""
@@ -1134,11 +1169,12 @@ class AnySong:
         # not used.
         songs, blend = versions(songs, floored(res.get("blend") or ()) if "blend" in self.main_pool else None)
 
-        language, guessed = self._seed_language(q)
+        language, origin = self._seed_language(q, res.get("detected"))
+        guessed = origin == "guess"
         # "main": the guess gates main alone, below; everything else is as with the guess off.
         main_language = None
         if guessed and self.language_guess == "main":
-            main_language, language, guessed = language, "unknown", False
+            main_language, language, guessed, origin = language, "unknown", False, None
         # The in-language lists (``_compute``): the same-language lists are made from them, as they hold every song
         # the gate would leave of the catalog's lists and the language's next best ones. None: the gate filters the
         # catalog's lists (every language asked for, no gate language, or a search without them).
@@ -1188,6 +1224,8 @@ class AnySong:
                 if source_blend is not None:
                     blend_view = {key: item for key, item in source_blend.items() if keep(item)}
         query = q | {"language": language, "language_mode": lang_mode, "hidden": hidden, "scene": scene_state}
+        if origin is not None:
+            query["language_source"] = origin
         if guessed:
             query["language_guessed"] = True
         if inside is not None:
@@ -1535,18 +1573,27 @@ class AnySong:
         body = [(item, ranks(key)) for key, item in order if key not in head_set]
         return self._main(head, body, k)
 
-    def _seed_language(self, q: dict) -> tuple[str, bool]:
-        """The seed's language for the gate and whether it is a best guess: its own label, else its artist's majority
-        language, else (with ``language_guess``) the table's guess; "unknown" (no filter) without any."""
+    def _seed_language(self, q: dict, detected: str | None = None) -> tuple[str, str | None]:
+        """The seed's language for the gate and where it comes from: its own "label", else the one "detected" in a live
+        seed's audio, else its "artist"'s majority language, else (with ``language_guess``) the table's "guess";
+        "unknown" (no filter) and None without any. A detected language passed the rule a song's own label passes
+        (``languages.LanguageDetector``), so it stands where that label would: before the artist's majority, which is
+        there for songs whose own audio does not say; an unsure detection is "unknown" and leaves it to the artist."""
         if self.languages is None:
-            return "unknown", False
+            return "unknown", None
         language = self.languages.language(int(q["id"]))
-        if language == "unknown":
-            language = self.languages.artist_language(q.get("artist"))
-        if language == "unknown" and self.language_guess:
+        if language != "unknown":
+            return language, "label"
+        if detected and detected != "unknown":
+            return detected, "detected"
+        language = self.languages.artist_language(q.get("artist"))
+        if language != "unknown":
+            return language, "artist"
+        if self.language_guess:
             language = self.languages.guess(int(q["id"]), q.get("artist"))
-            return language, language != "unknown"
-        return language, False
+            if language != "unknown":
+                return language, "guess"
+        return "unknown", None
 
     def _item_language(self, item: dict) -> str:
         """A listed song's language: its own label, else (with ``artist_languages``) its artist's majority language."""
@@ -1805,6 +1852,9 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--index", required=True, help="index_build output or a shard directory (see serve)")
     p.add_argument("--meta", type=Path, default=None, help="catalog_meta npz with track_ids/artists/titles")
     p.add_argument("--languages", type=Path, default=None, help="language labels from anysong.languages")
+    p.add_argument("--language-model", type=Path, default=None,
+                   help="local snapshot of the Whisper model that labelled the catalog (anysong.languages --model-dir): "
+                        "the language of songs outside the catalog is detected from their preview (needs --languages)")
     p.add_argument("--scene", type=Path, default=None, help="scene table from anysong.scene (metadata for Best)")
     p.add_argument("--core-ids", type=Path, default=None,
                    help="npy of the core catalog's track ids: other indexed songs only for seeds in their artist's "
@@ -1870,6 +1920,8 @@ def main(argv: list[str] | None = None) -> None:
         p.error("--stems-model needs --tempo-model")
     if args.core_ids is not None and args.scene is None:
         p.error("--core-ids needs --scene")
+    if args.language_model is not None and args.languages is None:
+        p.error("--language-model needs --languages")
     if args.ranker is not None and args.scene is None:
         p.error("--ranker needs --scene")
     if (args.blend_head is None) != (args.blend_cf is None):
@@ -1905,6 +1957,14 @@ def main(argv: list[str] | None = None) -> None:
         t_rows = time.perf_counter()
         language_rows = LanguageRows(languages, engine.indexes, lambda track_id: meta.get(track_id, (None,))[0])
         engine.load_secs["language_rows"] = round(time.perf_counter() - t_rows, 2)
+    detector = None
+    if args.language_model is not None:
+        from .languages import EXCERPT_SECONDS, SAMPLE_RATE, LanguageDetector
+
+        t_detector = time.perf_counter()
+        detector = LanguageDetector.load(args.language_model, args.device)
+        detector.detect(np.zeros(int(SAMPLE_RATE * EXCERPT_SECONDS), np.float32))  # warm-up
+        engine.load_secs["language_model"] = round(time.perf_counter() - t_detector, 2)
     scene = SceneTable.load(args.scene) if args.scene is not None else None
     tiers = None
     if args.core_ids is not None:
@@ -1940,7 +2000,7 @@ def main(argv: list[str] | None = None) -> None:
     service = AnySong(engine, Deezer(scratch), meta, args.cache_size, args.max_pending,
                       languages=languages, scene=scene, tempo=tempo, tracker=tracker,
                       learn=LearnQueue(args.learn_queue) if args.learn_queue else None, tiers=tiers,
-                      language_rows=language_rows,
+                      language_rows=language_rows, language_detector=detector,
                       ranker=listener.Ranker.load(args.ranker) if args.ranker is not None else None,
                       head=SceneHead(f"{args.head}.npz", f"{args.head}.emb.npy", engine.indexes["sonic"].pos)
                       if args.head is not None else None,
@@ -1956,6 +2016,7 @@ def main(argv: list[str] | None = None) -> None:
     print(f"ready in {time.perf_counter() - t:.1f}s (warmup {warm:.1f}s) {sizes} hub_alpha={hubs} "
           f"tiers={None if tiers is None else tiers.sizes} ranker={service.health()['ranker']} "
           f"language_search={engine.load_secs.get('language_rows')}s "
+          f"language_model={engine.load_secs.get('language_model')}s "
           f"stems={service.health()['stems']} (warmup {stems_warm}s) blend={service.health()['blend']} "
           f"gpu={_gpu_mib(args.device)} "
           f"on http://{args.host}:{args.port}", flush=True)
