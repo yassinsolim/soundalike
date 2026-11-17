@@ -156,14 +156,23 @@ class ChannelIndex(_Ranked):
     def scores(self, q: torch.Tensor, chunk: int = 2048, allow: torch.Tensor | None = None) -> torch.Tensor:
         """Prepared queries [W, D] or [B, W, D] -> similarities [N] or [B, N] (higher is closer). Rows outside a
         boolean ``allow`` mask ([N] or [B, N]) score -inf."""
+        return self.scores_with_base(q, chunk, allow, base=False)[0]
+
+    @torch.inference_mode()
+    def scores_with_base(self, q: torch.Tensor, chunk: int = 2048, allow: torch.Tensor | None = None,
+                         base: bool = True) -> tuple[torch.Tensor, torch.Tensor | None]:
+        """``scores`` plus (with ``base``) every row's score before the ``allow`` mask."""
         single = q.dim() == 2
         q = q[None] if single else q
         out = torch.empty(len(q), len(self), device=self.feats.device)
         for s in range(0, len(self), chunk):
             out[:, s:s + chunk] = score_block(q, self.feats[s:s + chunk].float(), self.channel.mode)
+        kept = None
+        if base:
+            kept = out.clone() if allow is not None else out
         if allow is not None:
             out.masked_fill_(~allow, -torch.inf)
-        return out[0] if single else out
+        return (out[0], kept[0] if base else None) if single else (out, kept)
 
 
 def _to_device(arr: np.ndarray, device: str, rows: int = 16384) -> torch.Tensor:
@@ -331,11 +340,19 @@ class TwoStageIndex(_Ranked):
 
         Rows outside a boolean ``allow`` mask ([N] or [B, N]) score -inf and are skipped when candidates are
         picked, so the exact re-scoring covers the best allowed rows."""
+        return self.scores_with_base(q, chunk, allow, base=False)[0]
+
+    @torch.inference_mode()
+    def scores_with_base(self, q: torch.Tensor, chunk: int = 8192, allow: torch.Tensor | None = None,
+                         base: bool = True) -> tuple[torch.Tensor, torch.Tensor | None]:
+        """``scores`` plus (with ``base``) every row's stage-1 score less its hub penalty: before the ``allow`` mask
+        and the exact re-scoring, which moves the other rows below the candidates, so on one scale for all rows."""
         single = q.dim() == 2
         q = q[None] if single else q
         out = self.stage1(q, chunk)
         if self.penalty is not None:
             out -= self.penalty
+        kept = out.clone() if base else None
         if allow is not None:
             out.masked_fill_(~allow, -torch.inf)
         c = min(self.candidates, len(self))
@@ -351,7 +368,7 @@ class TwoStageIndex(_Ranked):
             row[cand] = exact
         if allow is not None:  # with fewer allowed rows than candidates, some re-scored rows were not allowed
             out.masked_fill_(~allow, -torch.inf)
-        return out[0] if single else out
+        return (out[0], kept[0] if base else None) if single else (out, kept)
 
 
 def _sync(device: str) -> None:
@@ -365,6 +382,9 @@ class Engine:
     ``index_dir/<channel>/meta.json`` (``index_build`` output) loads a ``TwoStageIndex``; otherwise the
     channel is brute-forced from ``index_dir/<model>/part-*.npz`` shards.
     """
+
+    # Optional ``blend.Blend`` over the sonic index: the searches then also return ``results["blend"]``.
+    blend = None
 
     def __init__(self, index_dir: Path | str, channels: Iterable[str] = tuple(CHANNELS), device: str = "cuda",
                  index_device: str | None = None, drop_text_tower: bool = True, candidates: int | None = None,
@@ -431,20 +451,44 @@ class Engine:
         wins, t_embed = self.embed_clips(clips)
         return wins, t_decode | t_embed
 
+    def _search(self, ch: Channel, q: torch.Tensor, k: int, exclude: list[int], allow, row: int | None,
+                windows: np.ndarray | None, results: dict, timings: dict[str, float]) -> None:
+        """One channel's top ``k`` for a prepared query. With a ``blend``, the sonic channel also gives
+        ``results["blend"]``: the top ``k`` rows by blended score (``blend.Blend.scores``; the same ``allow`` mask
+        and ``exclude``) in that order, each with its exact sonic score. ``row``: the seed's row in the sonic index
+        (None for a live seed, whose raw sonic ``windows`` then give its head vectors)."""
+        idx = self.indexes[ch.name]
+        mask = allow.get(ch.name) if allow else None
+        blend = self.blend if ch.name == "sonic" else None
+        _sync(self.device)
+        t = time.perf_counter()
+        scores, base = idx.scores_with_base(q, allow=mask, base=blend is not None)
+        results[ch.name] = idx.top(scores, k, exclude)
+        _sync(self.device)
+        timings[f"search_{ch.name}"] = (time.perf_counter() - t) * 1000
+        if blend is None:
+            return
+        t = time.perf_counter()
+        blended = blend.scores(base, blend.seed_head(row, windows), row)
+        if mask is not None:
+            blended = blended.masked_fill(~mask, -torch.inf)
+        tids = [tid for tid, _ in idx.top(blended, k, exclude)]
+        rows = np.array(sorted(idx.pos[tid] for tid in tids), dtype=np.int64)
+        exact = dict(zip(idx.ids[rows].tolist(), idx.score_rows(q, rows).tolist()))
+        results["blend"] = [(tid, float(exact[tid])) for tid in tids]
+        _sync(self.device)
+        timings["search_blend"] = (time.perf_counter() - t) * 1000
+
     def search_windows(self, wins: dict[str, np.ndarray], k: int = 20, exclude: Iterable[int] = (),
                        allow: Mapping[str, torch.Tensor] | None = None
                        ) -> tuple[dict[str, list[tuple[int, float]]], dict[str, float]]:
-        """Top ``k`` per channel for raw windows; ``allow`` maps channels to row masks (``TwoStageIndex.scores``)."""
+        """Top ``k`` per channel for raw windows; ``allow`` maps channels to row masks (``TwoStageIndex.scores``).
+        With a ``blend``, also ``results["blend"]`` (``_search``)."""
         results, timings = {}, {}
         exclude = list(exclude)
         for ch in self.channels:
-            idx = self.indexes[ch.name]
-            _sync(self.device)
-            t = time.perf_counter()
-            mask = allow.get(ch.name) if allow else None
-            results[ch.name] = idx.top(idx.scores(idx.prep_query(wins[ch.name]), allow=mask), k, exclude)
-            _sync(self.device)
-            timings[f"search_{ch.name}"] = (time.perf_counter() - t) * 1000
+            q = self.indexes[ch.name].prep_query(wins[ch.name])
+            self._search(ch, q, k, exclude, allow, None, wins[ch.name], results, timings)
         return results, timings
 
     def search(self, path: str | Path, k: int = 20, exclude: Iterable[int] = ()) -> dict:
@@ -476,12 +520,8 @@ class Engine:
         exclude = [int(track_id), *exclude]
         for ch in self.channels:
             idx = self.indexes[ch.name]
-            _sync(self.device)
-            t = time.perf_counter()
-            mask = allow.get(ch.name) if allow else None
-            results[ch.name] = idx.top(idx.scores(idx.stored_query(track_id), allow=mask), k, exclude)
-            _sync(self.device)
-            timings[f"search_{ch.name}"] = (time.perf_counter() - t) * 1000
+            self._search(ch, idx.stored_query(track_id), k, exclude, allow, idx.pos[int(track_id)], None, results,
+                         timings)
         return results, timings
 
 

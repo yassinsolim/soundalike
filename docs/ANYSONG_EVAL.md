@@ -3362,3 +3362,28 @@ Deichkind "Happy New Fear" at #6 for "Heartbeat"), mean sound match of the top 1
 **Negative results.** Loudness/harshness veto: MuQ-MuLan already encodes loudness (window-level R2 0.88), and
 the owner's complaint cases have unremarkable gaps. Mean instead of max window pooling: no gain. A fusion
 embedding trained on the claims memorises them and does not transfer to unseen pairs.
+
+## Blended main list (2026-11-17): local experiment, not served
+
+`anysong.blend.Blend` ranks the whole catalog for a seed by
+
+    blend = z(sonic) + wh * z(head) + wc * zcf        (wh = 2, wc = 1)
+
+- sonic: the sonic channel's stage-1 score less the hub penalty, for every row (before the exact re-scoring of the
+  candidates, which moves every other row below them);
+- head: best window-pair cosine between the seed's scene-head vectors and every row's (`h2.v8`; a live seed's
+  vectors come from its own sonic windows);
+- zcf: cosine between playlist co-occurrence vectors (`cf128.npy`, rows in `cooc.npz`), z-scored over the graph
+  songs; 0 for songs outside the graph and for seeds outside it (every live seed);
+- z: over every row of the index for that seed.
+
+In the lab benchmark at 1M songs (`anysong-lab/v8/retr/run_blend.py`) this ranking finds human-named soundalikes
+about 2.5 times as often as the served sonic search.
+
+Serving: `--blend-head <prefix> --blend-cf <dir> [--blend-weights WH WC]` loads it onto the index device, and the
+sonic search then also returns the top rows by blended score, each with its exact sonic score (timing
+`search_blend`). `--main-pool blend` makes them main's body in blended order after main's unchanged audio head:
+language gate, tiers (the sonic `allow` mask), version and re-upload dedupe and one song per artist as for the
+other lists, with or without listener data. That main carries `match` (the sound match) and no `overall`; Best
+matches, Same vibe, Sounds like and Listeners also play do not change. Cost at 1,018,838 songs: 30 to 40 ms per
+seed on CUDA (about 0.8 GB more GPU memory), 0.7 to 1.3 s on CPU.

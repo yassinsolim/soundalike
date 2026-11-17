@@ -41,6 +41,9 @@ catalog toward what people look up.
 With ``--core-ids`` (and ``--scene``), indexed songs outside the core catalog, the ones ``anysong.crawl`` added, are
 only ranked for seeds by their own artist or by an artist whose Deezer related list in the scene table names theirs
 (``tiers.TierGate``); every list, the channel lists included, is gated the same way.
+
+With ``--blend-head`` and ``--blend-cf`` the sonic search also ranks the whole catalog by a blended score
+(``blend.Blend``: sound, scene head and playlist co-occurrence); ``--main-pool blend`` makes that ranking main's body.
 """
 
 from __future__ import annotations
@@ -109,7 +112,9 @@ BEST_HEAD_EVIDENCE_ONLY = True
 # order. Listeners also play (listener data only): Best's candidates by other artists than the seed's, by
 # z(listener logit) + LISTENERS_SOUND_WEIGHT * z(sound score), one per artist. With ``main_scale`` (sound sd,
 # logit sd) main's body is ordered by sound / sound sd + MAIN_LISTENER_WEIGHT * logit / logit sd instead: fixed
-# scales, so sound decides where it separates a seed's candidates and the ranker where it does not.
+# scales, so sound decides where it separates a seed's candidates and the ranker where it does not. MAIN_POOL "blend"
+# (needs the engine's ``blend``): main's body is the catalog's blended ranking (``blend.Blend``) in its own order, with
+# or without listener data, filtered like the channel lists; main then carries ``match`` but no ``overall``.
 MAIN_LISTENER_WEIGHT = 2.0
 MAIN_POOL = "sonic"
 MAIN_MATCH_FLOOR = 50
@@ -493,8 +498,10 @@ class AnySong:
         self.best_artist_gap, self.best_artist_once = best_artist_gap, best_artist_once
         self.best_head_standout, self.best_head_window = best_head_standout, best_head_window
         self.best_head_bare, self.best_head_evidence_only = best_head_bare, best_head_evidence_only
-        if main_pool not in ("sonic", "all"):
-            raise ValueError(f"main_pool must be 'sonic' or 'all', not {main_pool!r}")
+        if main_pool not in ("sonic", "all", "blend"):
+            raise ValueError(f"main_pool must be 'sonic', 'all' or 'blend', not {main_pool!r}")
+        if main_pool == "blend" and getattr(engine, "blend", None) is None:
+            raise ValueError("main_pool 'blend' needs an engine with a blend")
         self.main_listener_weight, self.main_pool = main_listener_weight, main_pool
         self.main_match_floor, self.main_head_bare = main_match_floor, main_head_bare
         if main_scale is not None and min(main_scale) <= 0:
@@ -561,10 +568,12 @@ class AnySong:
             stems = {"songs": 0 if self.stems.table is None else len(self.stems.table),
                      "live": self.dissector is not None, "graded": self.stems.calib is not None,
                      "dissected": dissected}
+        blend = getattr(self.engine, "blend", None)
         return {"ok": True, "device": self.engine.device,
                 "channels": {name: len(ix) for name, ix in self.engine.indexes.items()},
                 "cached_results": len(self.results), "served": served, "scene": scene, "tempo": tempo,
                 "tiers": tiers, "ranker": None if self.ranker is None else self.ranker.meta or "on", "stems": stems,
+                "blend": None if blend is None else blend.info() | {"main": self.main_pool == "blend"},
                 "gpu_mib": _gpu_mib(self.engine.device)}
 
     def search(self, q: str, limit: int = 10) -> dict:
@@ -740,6 +749,8 @@ class AnySong:
             timings |= t
             related = self._scene_context(query, timings)
             res = {"query": query, "raw": raw, "related": related, "vibe": vibe}
+            if "blend" in raw:  # not a channel: only main reads it (``main_pool`` "blend")
+                res["blend"] = raw.pop("blend")
             if self.ranker is not None:
                 res["listener"] = self._listener(res, windows, timings)
             timings["total"] = (time.perf_counter() - t0) * 1000
@@ -816,7 +827,8 @@ class AnySong:
         the sonic list's own scores, and exact scores for the melody and samples tracks it does not hold."""
         t = time.perf_counter()
         muq = {int(tid): float(score) for tid, score in raw.get("sonic", ())}
-        others = {int(tid) for channel, rows in raw.items() if channel != "sonic" for tid, _ in rows} - set(muq)
+        others = {int(tid) for channel, rows in raw.items() if channel not in ("sonic", "blend")
+                  for tid, _ in rows} - set(muq)
         muq |= self.engine.score_tracks("sonic", others, windows=windows, query_track=query_track)
         timings["vibe_scores"] = (time.perf_counter() - t) * 1000
         return {"muq": muq, "bpm": None}
@@ -1034,7 +1046,8 @@ class AnySong:
         qkey = song_key(q["artist"], q["title"]) if q.get("title") else None
         out: dict[str, list[dict]] = {}
         songs: dict[str, dict[Hashable, dict]] = {}
-        for channel, rows in res["raw"].items():
+
+        def listed(rows) -> dict[Hashable, dict]:
             order: dict[Hashable, dict] = {}
             for tid, score in rows:
                 artist, title = self.meta.get(tid, (None, None))
@@ -1044,10 +1057,18 @@ class AnySong:
                     if key == qkey or key in order:
                         continue
                 order[key] = {"id": tid, "score": round(float(score), 4), "artist": artist, "title": title}
-            songs[channel] = order
-            out[channel] = list(order.values())[:k]
+            return order
+
+        for channel, rows in res["raw"].items():
+            songs[channel] = listed(rows)
+            out[channel] = list(songs[channel].values())[:k]
+        # The blended ranking (``main_pool`` "blend"), filtered below like the channel lists; None: not used.
+        blend = listed(res.get("blend") or ()) if self.main_pool == "blend" else None
         if dedupe and qkey is not None and (self.copy_score is not None or self.max_versions is not None):
-            songs = self._limit_versions(songs, qkey)
+            limited = self._limit_versions(songs, qkey)
+            if blend:
+                blend = self._limit_blend_versions(blend, songs, limited, qkey)
+            songs = limited
 
         language, guessed = self._seed_language(q)
         # "main": the guess gates main alone, below; everything else is as with the guess off.
@@ -1075,7 +1096,7 @@ class AnySong:
 
         all_fused = rank(songs)
         hidden = 0
-        filtered = songs
+        filtered, blend_view = songs, blend
         if language != "unknown" and self.languages is not None:
             def keep(item: dict) -> bool:
                 return self._item_language(item) in {"unknown", language}
@@ -1090,6 +1111,8 @@ class AnySong:
                     channel: {key: item for key, item in order.items() if keep(item)}
                     for channel, order in songs.items()
                 }
+                if blend is not None:
+                    blend_view = {key: item for key, item in blend.items() if keep(item)}
         query = q | {"language": language, "language_mode": lang_mode, "hidden": hidden, "scene": scene_state}
         if guessed:
             query["language_guessed"] = True
@@ -1101,7 +1124,8 @@ class AnySong:
             keep = (lambda item: self._item_language(item) in {"unknown", language}) \
                 if lang_mode == "same" and language != "unknown" and self.languages is not None else None
             best, vibe, sounds, main, listeners = self._listener_lists(res, filtered, artists, profile, qkey, keep,
-                                                                       language, lang_mode, k, dedupe, sound_of)
+                                                                       language, lang_mode, k, dedupe, sound_of,
+                                                                       blend_view)
         else:
             fused = rank(filtered)
             best = []
@@ -1112,12 +1136,12 @@ class AnySong:
             if res.get("vibe") is not None and "sonic" in filtered:
                 vibe = self._same_vibe(res["vibe"], filtered, [key for key, _, _ in fused], language, lang_mode, k)
             sounds = self._sounds(filtered, k, profile, artists)
-            main, listeners = self._main_without_listeners(filtered, profile, artists, k, sound_of), []
+            main, listeners = self._main_without_listeners(filtered, profile, artists, k, sound_of, blend_view), []
         if main_language is not None:
             query["main_language_guess"] = main_language
             if lang_mode == "same":
                 main = self._guessed_main(res, songs, artists, profile, qkey, main_language, scene_state, k, dedupe,
-                                          sound_of)
+                                          sound_of, blend)
         lists = {"best": best} if best else {}
         if vibe:
             lists["vibe"] = vibe
@@ -1132,7 +1156,13 @@ class AnySong:
                 score = sound_of.get(int(item["id"]))
                 if score is not None:
                     item["match"] = sound_match(score)
-        if self.main_overall is not None and main and "overall" not in main[0]:
+        if blend is not None:
+            # Blended songs outside every other list: their exact sonic score came with the ranking.
+            exact = {int(tid): float(score) for tid, score in res.get("blend") or ()}
+            for item in main:
+                if "match" not in item and int(item["id"]) in exact:
+                    item["match"] = sound_match(exact[int(item["id"])])
+        elif self.main_overall is not None and main and "overall" not in main[0]:
             # Without listener data main follows sound alone, so its overall match is its sound match.
             head = next((i for i, item in enumerate(main) if item.get("basis") != "audio"), len(main))
             for item, value in zip(main, overall_match([item.get("match", 0) for item in main], head)):
@@ -1142,7 +1172,7 @@ class AnySong:
 
     def _guessed_main(self, res: dict, songs: dict[str, dict[Hashable, dict]], artists: dict[Hashable, int | None],
                       profile, qkey, language: str, scene_state: str, k: int, dedupe: bool,
-                      sound_of: Mapping[int, float]) -> list[dict]:
+                      sound_of: Mapping[int, float], blend: dict[Hashable, dict] | None = None) -> list[dict]:
         """Main with the seed's guessed ``language`` gating it, built exactly as with ``language_guess`` True (the
         "main" mode keeps that list and nothing else)."""
         def keep(item: dict) -> bool:
@@ -1150,10 +1180,12 @@ class AnySong:
 
         filtered = {channel: {key: item for key, item in order.items() if keep(item)}
                     for channel, order in songs.items()}
+        if blend is not None:
+            blend = {key: item for key, item in blend.items() if keep(item)}
         if scene_state == "on" and res.get("listener") is not None:
             return self._listener_lists(res, filtered, artists, profile, qkey, keep, language, "same", k, dedupe,
-                                        sound_of)[3]
-        return self._main_without_listeners(filtered, profile, artists, k, sound_of)
+                                        sound_of, blend)[3]
+        return self._main_without_listeners(filtered, profile, artists, k, sound_of, blend)
 
     @staticmethod
     def _sound_of(res: dict) -> dict[int, float]:
@@ -1172,7 +1204,7 @@ class AnySong:
 
     def _listener_lists(self, res: dict, filtered: dict[str, dict[Hashable, dict]], artists: dict[Hashable, int | None],
                         profile, qkey, keep: Callable[[dict], bool] | None, language: str, lang_mode: str, k: int,
-                        dedupe: bool, sound_of: Mapping[int, float]
+                        dedupe: bool, sound_of: Mapping[int, float], blend: dict[Hashable, dict] | None = None
                         ) -> tuple[list[dict], list[dict], list[dict], list[dict], list[dict]]:
         """Best matches, Same vibe, Sounds like, main and Listeners also play with the listener ranker
         (``res["listener"]``, from ``_listener``).
@@ -1184,7 +1216,9 @@ class AnySong:
         ``main_head_bare``, ``main_head_standout`` and ``main_head_match``), then the ``main_pool`` songs by z(sound
         score) + ``main_listener_weight`` * z(listener logit), one per artist. Listeners also play: Best's candidates
         by other artists than the seed's by z(listener logit) + ``listeners_sound_weight`` * z(sound score), one per
-        artist. Songs by the seed's own artist get the median listener logit, so sound alone places them.
+        artist. Songs by the seed's own artist get the median listener logit, so sound alone places them. With
+        ``blend`` (``main_pool`` "blend": the blended ranking, filtered like the channel lists), main is the same head,
+        then those songs in their order, one per artist, without ``overall``.
         """
         data = res["listener"]
         p_of, son_of = data["p"], data["son"]
@@ -1284,7 +1318,7 @@ class AnySong:
         def shown_item(key: Hashable) -> dict:
             return shown[key][0]
 
-        pool = list(sonic) if self.main_pool == "sonic" else [
+        pool = [] if blend is not None else list(sonic) if self.main_pool == "sonic" else [
             key for key in keys
             if key in sonic or sound_match(son_of.get(int(shown[key][0]["id"]), -np.inf)) >= self.main_match_floor]
         raw_main: dict[int, tuple[float, float]] = {}
@@ -1301,9 +1335,10 @@ class AnySong:
                          + self.main_listener_weight * pool_logit / self.main_scale[1])
             pool = ordered(pool, score)
         main_set = set(main_head)
-        main = self._main([(shown[key][0], shown[key][1]) for key in main_head],
-                          [(main_item(key), shown[key][1]) for key in pool if key not in main_set], k)
-        if self.main_overall is not None and main:
+        body = [(main_item(key), shown[key][1]) for key in pool if key not in main_set] if blend is None else \
+            [(item, shown[key][1] if key in shown else {}) for key, item in blend.items() if key not in main_set]
+        main = self._main([(shown[key][0], shown[key][1]) for key in main_head], body, k)
+        if self.main_overall is not None and main and blend is None:
             floor = min((s for s, _ in raw_main.values()), default=0.0)
             for key in main_head:
                 tid = int(shown[key][0]["id"])
@@ -1369,9 +1404,9 @@ class AnySong:
 
     def _main_without_listeners(self, view: dict[str, dict[Hashable, dict]], profile,
                                 artists: Mapping[Hashable, int | None], k: int,
-                                sound_of: Mapping[int, float]) -> list[dict]:
+                                sound_of: Mapping[int, float], blend: dict[Hashable, dict] | None = None) -> list[dict]:
         """The main list without listener data (``scene=0``, an unknown artist or no ranker): the audio head, then
-        Sounds like's order."""
+        Sounds like's order, or the ``blend`` songs in theirs (``main_pool`` "blend")."""
         pos = {channel: {key: i for i, key in enumerate(order, 1)} for channel, order in view.items()}
 
         def ranks(key: Hashable) -> dict[str, int]:
@@ -1384,7 +1419,8 @@ class AnySong:
         head_keys = self._audio_head(view, self.main_head_bare, lambda key: self._match(sound_of, item_of(key)))
         head = [(item_of(key), ranks(key)) for key in head_keys]
         head_set = set(head_keys)
-        body = [(item, ranks(key)) for key, item in self._sound_order(view, profile, artists) if key not in head_set]
+        order = self._sound_order(view, profile, artists) if blend is None else blend.items()
+        body = [(item, ranks(key)) for key, item in order if key not in head_set]
         return self._main(head, body, k)
 
     def _seed_language(self, q: dict) -> tuple[str, bool]:
@@ -1407,6 +1443,29 @@ class AnySong:
             language = self.languages.artist_language(item.get("artist"))
         return language
 
+    @staticmethod
+    def _is_version(key: Hashable, qkey: tuple[str, str]) -> bool:
+        """Whether a song key names another artist's version of the seed's own song."""
+        return isinstance(key, tuple) and key[0] != "id" and key[1] == qkey[1] and key[0] != qkey[0]
+
+    def _limit_blend_versions(self, blend: dict[Hashable, dict], songs: dict[str, dict[Hashable, dict]],
+                              limited: dict[str, dict[Hashable, dict]], qkey: tuple[str, str]) -> dict[Hashable, dict]:
+        """The blended ranking under ``_limit_versions``: a version the channel lists (``songs``) dropped (``limited``
+        is what they kept) is dropped here too, and versions only this ranking holds fill what is left of
+        ``max_versions``."""
+        listed = {key for order in songs.values() for key in order if self._is_version(key, qkey)}
+        kept = {key for order in limited.values() for key in order if self._is_version(key, qkey)}
+        room = None if self.max_versions is None else max(0, self.max_versions - len(kept))
+        out: dict[Hashable, dict] = {}
+        for key, item in blend.items():
+            if self._is_version(key, qkey) and key not in kept:
+                if key in listed or room == 0:
+                    continue
+                if room is not None:
+                    room -= 1
+            out[key] = item
+        return out
+
     def _limit_versions(self, songs: dict[str, dict[Hashable, dict]], qkey: tuple[str, str]
                         ) -> dict[str, dict[Hashable, dict]]:
         """Other artists' versions of the seed's own song (same ``song_key`` title, another artist). With
@@ -1416,7 +1475,7 @@ class AnySong:
         best: dict[Hashable, int] = {}
         for order in songs.values():
             for i, key in enumerate(order, 1):
-                if isinstance(key, tuple) and key[0] != "id" and key[1] == qkey[1] and key[0] != qkey[0]:
+                if self._is_version(key, qkey):
                     best[key] = min(best.get(key, i), i)
         drop: set[Hashable] = set()
         if self.copy_score is not None:
@@ -1666,8 +1725,15 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--head", type=Path, default=None,
                    help="scene head (anysong.scenehead): path prefix of <prefix>.npz and <prefix>.emb.npy; for rankers "
                         "trained with the 'head' feature")
-    p.add_argument("--main-pool", choices=("sonic", "all"), default=MAIN_POOL,
-                   help="main's body: the sonic list, or every candidate at or above --main-match-floor")
+    p.add_argument("--main-pool", choices=("sonic", "all", "blend"), default=MAIN_POOL,
+                   help="main's body: the sonic list, every candidate at or above --main-match-floor, or the blended "
+                        "catalog ranking (needs --blend-head and --blend-cf)")
+    p.add_argument("--blend-head", type=Path, default=None,
+                   help="scene head of the blended ranking (anysong.blend): path prefix as for --head")
+    p.add_argument("--blend-cf", type=Path, default=None,
+                   help="folder with cooc.npz and cf128.npy: playlist co-occurrence vectors of the blended ranking")
+    p.add_argument("--blend-weights", type=float, nargs=2, default=None, metavar=("WH", "WC"),
+                   help="weights of the scene head and playlist terms next to sound (default 2 1)")
     p.add_argument("--main-match-floor", type=float, default=MAIN_MATCH_FLOOR)
     p.add_argument("--main-listener-weight", type=float, default=MAIN_LISTENER_WEIGHT)
     p.add_argument("--main-scale", type=float, nargs=2, default=None, metavar=("SOUND_SD", "LOGIT_SD"),
@@ -1691,11 +1757,25 @@ def main(argv: list[str] | None = None) -> None:
         p.error("--core-ids needs --scene")
     if args.ranker is not None and args.scene is None:
         p.error("--ranker needs --scene")
+    if (args.blend_head is None) != (args.blend_cf is None):
+        p.error("--blend-head and --blend-cf go together")
+    if args.main_pool == "blend" and args.blend_head is None:
+        p.error("--main-pool blend needs --blend-head and --blend-cf")
+    if args.blend_head is not None and "sonic" not in args.channels:
+        p.error("--blend-head needs the sonic channel")
 
     scratch = args.preview_dir or Path(tempfile.mkdtemp(prefix="anysong-"))
     t = time.perf_counter()
     engine = Engine(args.index, args.channels, args.device, candidates=args.candidates, hub_alpha=args.hub_alpha,
                     half_stage1=args.half_stage1)
+    if args.blend_head is not None:
+        from .blend import WEIGHTS, Blend
+
+        t_blend = time.perf_counter()
+        sonic = engine.indexes["sonic"]
+        engine.blend = Blend.load(args.blend_head, args.blend_cf, sonic.pos, sonic.id_tensor.device,
+                                  tuple(args.blend_weights) if args.blend_weights else WEIGHTS)
+        engine.load_secs["blend"] = round(time.perf_counter() - t_blend, 2)
     engine.warm()
     warm = _warmup(engine)
     meta = load_meta(args.meta)
@@ -1756,7 +1836,8 @@ def main(argv: list[str] | None = None) -> None:
     hubs = {name: getattr(ix, "hub_alpha", 0.0) for name, ix in engine.indexes.items()}
     print(f"ready in {time.perf_counter() - t:.1f}s (warmup {warm:.1f}s) {sizes} hub_alpha={hubs} "
           f"tiers={None if tiers is None else tiers.sizes} ranker={service.health()['ranker']} "
-          f"stems={service.health()['stems']} (warmup {stems_warm}s) gpu={_gpu_mib(args.device)} "
+          f"stems={service.health()['stems']} (warmup {stems_warm}s) blend={service.health()['blend']} "
+          f"gpu={_gpu_mib(args.device)} "
           f"on http://{args.host}:{args.port}", flush=True)
     try:
         server.serve_forever()

@@ -589,6 +589,99 @@ def test_main_list_is_the_audio_head_then_sound_and_listener_picks_get_their_own
 
 
 @pytest.mark.parametrize("listener_data", [True, False])
+def test_blend_main_pool_changes_main_alone(tmp_path, listener_data):
+    # The setup of the main-list test, plus the blended catalog ranking (each row with its exact sonic score): Fifth's
+    # German 9, the seed's own releases 2 and 4, Some Choir's version 3 of the seed's song, Third's 8 and 7, Daft
+    # Punk's 10, and two songs no other list holds: Other Artist's 6 (as 5: "Different Song") and Sixth's 11.
+    meta = LISTENER_META | {11: ("Sixth", "Sechs")}
+    engine = FakeEngine()
+    engine.blend = None
+
+    def service(**kw):
+        return api.AnySong(engine, FakeDeezer(tmp_path), meta, scene=_listener_scene_table(), copy_score=None,
+                           ranker=_stump("fwd", 0.0, 0.0), scene_params=SceneParams(head_min=1),
+                           languages=FakeLanguages({1: "en", 9: "de"}), best_head_standout=0.0,
+                           tempo=TempoTable(np.array([5, 7, 8, 10]), np.array([120, 120, 121, 120], np.float32)), **kw)
+
+    with pytest.raises(ValueError, match="needs an engine with a blend"):
+        service(main_pool="blend")
+    son = {3: 0.2, 5: 0.45, 7: 0.44, 8: 0.40, 9: 0.43, 10: 0.5}
+    res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog", "artist_id": 100},
+           "raw": {"melody": [(5, -1.0), (3, -2.0)], "samples": [(3, 0.1)],
+                   "sonic": [(10, 0.5), (5, 0.45), (7, 0.44)]},
+           "blend": [(9, 0.43), (2, 0.6), (11, 0.3), (3, 0.2), (8, 0.40), (6, 0.41), (7, 0.44), (4, 0.6), (10, 0.5)],
+           "related": [], "timings_ms": {}, "vibe": {"muq": {10: 0.5, 5: 0.45, 7: 0.44, 3: 0.2}, "bpm": 120.0}}
+    if listener_data:
+        res["listener"] = {"p": {3: 0.2, 5: 0.1, 7: 0.9, 8: 0.8, 9: 0.95, 10: 0.99}, "son": son, "scene": [8, 9]}
+    plain = service()._view(res, k=10, dedupe=True, cached=False)
+    assert plain["results"]["main"][0]["id"] == 5 and "overall" in plain["results"]["main"][0]
+    engine.blend = object()  # only its presence matters to the views
+    svc = service(main_pool="blend")
+    got = svc._view(res, k=10, dedupe=True, cached=False)
+    # Every other list and the query are as without the blended main.
+    assert {name: items for name, items in got["results"].items() if name != "main"} == \
+        {name: items for name, items in plain["results"].items() if name != "main"}
+    assert got["query"] == plain["query"] and ("listeners" in got["results"]) == listener_data
+    # Main: the same head (5, the cover), then the blended order after the lists' filters: no German 9, no release of
+    # the seed's own song (2, 4), one song per artist (8 before 7 for Third; 6 is the head's song again).
+    main = got["results"]["main"]
+    assert [(x["id"], x["basis"]) for x in main] == [(5, "audio"), (11, "sound"), (3, "sound"), (8, "sound"),
+                                                     (10, "sound")]
+    assert [x["score"] for x in main] == [round(1.0 / (api.FUSE_K + i), 5) for i in range(1, 6)]
+    assert main[0]["ranks"] == {"melody": 1, "sonic": 2} and main[1]["ranks"] == {} and main[3]["bpm"] == 121.0
+    # ``match`` is the sound match on every song (from the blended row's exact score where no list scored the song),
+    # and there is no ``overall``.
+    assert all("overall" not in x for x in main)
+    assert [x["match"] for x in main] == [api.sound_match(s) for s in (0.45, 0.3, 0.2, 0.40, 0.5)]
+    # Every language: the German song leads the body. Without dedupe the seed's other releases stay, as elsewhere.
+    assert [x["id"] for x in svc._view(res, k=10, dedupe=True, cached=False, lang_mode="all")["results"]["main"]] == \
+        [5, 9, 11, 3, 8, 10]
+    assert [x["id"] for x in svc._view(res, k=3, dedupe=False, cached=False)["results"]["main"]] == [5, 2, 11]
+    # Versions of the seed's song: one the channel lists dropped is dropped here too, and versions only the blended
+    # ranking holds fill what is left of max_versions.
+    svc.max_versions = 0
+    assert [x["id"] for x in svc._view(res, k=10, dedupe=True, cached=False)["results"]["main"]] == [5, 11, 8, 10]
+    svc.max_versions = 1
+    res["blend"] = [(12, 0.3), (3, 0.2), (11, 0.3)]
+    svc.meta = meta | {12: ("Choir Two", "One More Time")}
+    assert [x["id"] for x in svc._view(res, k=10, dedupe=True, cached=False)["results"]["main"]] == [5, 3, 11]
+    # Without listener data or scene (``scene=0``): the same head and body. Without a blended ranking for the seed:
+    # the head alone.
+    assert [x["id"] for x in svc._view(res, k=10, dedupe=True, cached=False, scene=False)["results"]["main"]] == \
+        [5, 3, 11]
+    del res["blend"]
+    for scene in (True, False):
+        r = svc._view(res, k=10, dedupe=True, cached=False, scene=scene)["results"]["main"]
+        assert [x["id"] for x in r] == [5] and "overall" not in r[0]
+
+
+def test_blended_ranking_is_kept_out_of_the_channel_lists(tmp_path):
+    class BlendEngine(FakeEngine):
+        class blend:
+            @staticmethod
+            def info():
+                return {"songs": 7, "graph": 3, "weights": [2.0, 1.0]}
+
+        def _ranked(self, exclude):
+            raw, t = super()._ranked(exclude)
+            return raw | {"blend": [(7, 0.5), (5, 0.7)]}, t | {"search_blend": 2.0}
+
+    svc = api.AnySong(BlendEngine(), FakeDeezer(tmp_path), META, main_pool="blend")
+    plain = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META)
+    r, want = svc.similar(1, k=10), plain.similar(1, k=10)
+    assert set(r["results"]) == set(want["results"]) | {"main"}  # no sonic channel here: main is the blend alone
+    assert {name: r["results"][name] for name in want["results"]} == want["results"]
+    assert r["timings_ms"]["search_blend"] == 2.0
+    main = r["results"]["main"]
+    assert [(x["id"], x["basis"], x["match"]) for x in main] == [(7, "sound", api.sound_match(0.5)),
+                                                                 (5, "sound", api.sound_match(0.7))]
+    assert svc.health()["blend"] == {"songs": 7, "graph": 3, "weights": [2.0, 1.0], "main": True}
+    assert plain.health()["blend"] is None
+    live = svc.similar(99, k=10)  # a live seed takes the same path
+    assert "blend" not in live["results"] and "main" in live["results"]
+
+
+@pytest.mark.parametrize("listener_data", [True, False])
 def test_main_only_language_guess_gates_main_alone(tmp_path, listener_data):
     # The seed (1) has no language of its own or by its artist; the table guesses English. Third's sonic song 7 and
     # Fifth's scene song 9 are German.
