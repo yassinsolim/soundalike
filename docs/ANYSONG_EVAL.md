@@ -3396,3 +3396,11 @@ one scored by the listener ranker (a blended-only song has no channel ranks and 
 without a probability gets the pool's median logit), ordered as `--main-pool sonic` orders them (z-scores, or
 `--main-scale`) plus `--main-blend-weight B` (default 0) times the song's blended score. `overall` is computed
 as for the sonic pool, without the blended term. Without listener data that main is the sonic one.
+
+**Taste term.** `--taste <file.npz>` (`profiles` [C, D], unit rows in the blend head's space, and `names`),
+`--taste-weight T` (default 0, off) and `--taste-gate G` (default 0.5). A song's pooled head vector is the unit
+mean of its windows' head vectors (precomputed for every row at load). For a seed whose pooled vector has a
+cosine of at least G to its nearest profile, the blended score gets + T * z(cosine of every row's pooled vector
+to that profile), z over all rows; other seeds get no term. It reaches the blended ranking and the blended score
+used by `--main-pool sonic+blend`, nothing else; the response's `query.taste` then names the profile and the
+seed's cosine to it. Reference: `anysong-lab/v8/owner/taste2.py`.

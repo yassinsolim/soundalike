@@ -456,8 +456,9 @@ class Engine:
         """One channel's top ``k`` for a prepared query. With a ``blend``, the sonic channel also gives
         ``results["blend"]``: the top ``k`` rows by blended score (``blend.Blend.scores``; the same ``allow`` mask
         and ``exclude``) in that order, each with its exact sonic score; and ``results["blendz"]``: the blended score
-        of every song of those two lists, as (track id, score). ``row``: the seed's row in the sonic index (None for
-        a live seed, whose raw sonic ``windows`` then give its head vectors)."""
+        of every song of those two lists, as (track id, score); and, for a seed the blend's taste term applied to,
+        ``results["taste"]``: the profile's name and the seed's cosine to it. ``row``: the seed's row in the sonic
+        index (None for a live seed, whose raw sonic ``windows`` then give its head vectors)."""
         idx = self.indexes[ch.name]
         mask = allow.get(ch.name) if allow else None
         blend = self.blend if ch.name == "sonic" else None
@@ -470,7 +471,11 @@ class Engine:
         if blend is None:
             return
         t = time.perf_counter()
-        blended = blend.scores(base, blend.seed_head(row, windows), row)
+        seed_head = blend.seed_head(row, windows)
+        taste = blend.taste(seed_head)
+        blended = blend.scores(base, seed_head, row, taste[0] if taste else None)
+        if taste:
+            results["taste"] = {"profile": blend.taste_names[taste[0]], "cos": round(taste[1], 4)}
         if mask is not None:
             blended = blended.masked_fill(~mask, -torch.inf)
         tids = [tid for tid, _ in idx.top(blended, k, exclude)]
