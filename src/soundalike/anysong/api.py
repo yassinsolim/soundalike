@@ -114,7 +114,8 @@ BEST_HEAD_EVIDENCE_ONLY = True
 # logit sd) main's body is ordered by sound / sound sd + MAIN_LISTENER_WEIGHT * logit / logit sd instead: fixed
 # scales, so sound decides where it separates a seed's candidates and the ranker where it does not. MAIN_POOL "blend"
 # (needs the engine's ``blend``): main's body is the catalog's blended ranking (``blend.Blend``) in its own order, with
-# or without listener data, filtered like the channel lists; main then carries ``match`` but no ``overall``.
+# or without listener data, filtered like the channel lists and without the songs whose sound match is below
+# MAIN_MATCH_FLOOR (the head is not asked); main then carries ``match`` but no ``overall``.
 MAIN_LISTENER_WEIGHT = 2.0
 MAIN_POOL = "sonic"
 MAIN_MATCH_FLOOR = 50
@@ -1062,8 +1063,14 @@ class AnySong:
         for channel, rows in res["raw"].items():
             songs[channel] = listed(rows)
             out[channel] = list(songs[channel].values())[:k]
-        # The blended ranking (``main_pool`` "blend"), filtered below like the channel lists; None: not used.
-        blend = listed(res.get("blend") or ()) if self.main_pool == "blend" else None
+        sound_of = self._sound_of(res)
+        # The blended ranking (``main_pool`` "blend") without the songs whose sound match is below
+        # ``main_match_floor``, filtered below like the channel lists; None: not used.
+        blend = None
+        if self.main_pool == "blend":
+            exact = {int(tid): float(score) for tid, score in res.get("blend") or ()}
+            blend = {key: item for key, item in listed(res.get("blend") or ()).items()
+                     if sound_match(sound_of.get(int(item["id"]), exact[int(item["id"])])) >= self.main_match_floor}
         if dedupe and qkey is not None and (self.copy_score is not None or self.max_versions is not None):
             limited = self._limit_versions(songs, qkey)
             if blend:
@@ -1119,7 +1126,6 @@ class AnySong:
         if res.get("vibe") is not None and "sonic" in filtered:
             bpm = res["vibe"]["bpm"]
             query["bpm"] = round(bpm, 1) if bpm else None
-        sound_of = self._sound_of(res)
         if scene_state == "on" and res.get("listener") is not None:
             keep = (lambda item: self._item_language(item) in {"unknown", language}) \
                 if lang_mode == "same" and language != "unknown" and self.languages is not None else None
@@ -1158,7 +1164,6 @@ class AnySong:
                     item["match"] = sound_match(score)
         if blend is not None:
             # Blended songs outside every other list: their exact sonic score came with the ranking.
-            exact = {int(tid): float(score) for tid, score in res.get("blend") or ()}
             for item in main:
                 if "match" not in item and int(item["id"]) in exact:
                     item["match"] = sound_match(exact[int(item["id"])])
@@ -1727,7 +1732,7 @@ def main(argv: list[str] | None = None) -> None:
                         "trained with the 'head' feature")
     p.add_argument("--main-pool", choices=("sonic", "all", "blend"), default=MAIN_POOL,
                    help="main's body: the sonic list, every candidate at or above --main-match-floor, or the blended "
-                        "catalog ranking (needs --blend-head and --blend-cf)")
+                        "catalog ranking at or above it (needs --blend-head and --blend-cf)")
     p.add_argument("--blend-head", type=Path, default=None,
                    help="scene head of the blended ranking (anysong.blend): path prefix as for --head")
     p.add_argument("--blend-cf", type=Path, default=None,

@@ -617,6 +617,17 @@ def test_blend_main_pool_changes_main_alone(tmp_path, listener_data):
     assert plain["results"]["main"][0]["id"] == 5 and "overall" in plain["results"]["main"][0]
     engine.blend = object()  # only its presence matters to the views
     svc = service(main_pool="blend")
+    # The blended body keeps only songs whose sound match reaches main_match_floor (the head's 5 is not asked): at
+    # the default 50, Third's 7 (0.44) and Daft Punk's 10 (0.5) stay; 11 (0.3), 3 (0.2) and Third's 8 (0.40) go.
+    floored = svc._view(res, k=10, dedupe=True, cached=False)
+    assert svc.main_match_floor == api.MAIN_MATCH_FLOOR == 50
+    assert api.sound_match(0.40) < 50 <= api.sound_match(0.44) and api.sound_match(0.3) < api.sound_match(0.40)
+    assert [x["id"] for x in floored["results"]["main"]] == [5, 7, 10]
+    assert {name: items for name, items in floored["results"].items() if name != "main"} == \
+        {name: items for name, items in plain["results"].items() if name != "main"}
+    svc.main_match_floor = api.sound_match(0.40)
+    assert [x["id"] for x in svc._view(res, k=10, dedupe=True, cached=False)["results"]["main"]] == [5, 8, 10]
+    svc.main_match_floor = 0
     got = svc._view(res, k=10, dedupe=True, cached=False)
     # Every other list and the query are as without the blended main.
     assert {name: items for name, items in got["results"].items() if name != "main"} == \

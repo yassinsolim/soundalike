@@ -3384,6 +3384,7 @@ Serving: `--blend-head <prefix> --blend-cf <dir> [--blend-weights WH WC]` loads 
 sonic search then also returns the top rows by blended score, each with its exact sonic score (timing
 `search_blend`). `--main-pool blend` makes them main's body in blended order after main's unchanged audio head:
 language gate, tiers (the sonic `allow` mask), version and re-upload dedupe and one song per artist as for the
-other lists, with or without listener data. That main carries `match` (the sound match) and no `overall`; Best
+other lists, with or without listener data, and only songs whose sound match is at least `--main-match-floor`
+(default 50; the head is not asked). That main carries `match` (the sound match) and no `overall`; Best
 matches, Same vibe, Sounds like and Listeners also play do not change. Cost at 1,018,838 songs: 30 to 40 ms per
 seed on CUDA (about 0.8 GB more GPU memory), 0.7 to 1.3 s on CPU.
