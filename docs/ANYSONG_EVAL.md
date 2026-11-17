@@ -3388,3 +3388,11 @@ other lists, with or without listener data, and only songs whose sound match is 
 (default 50; the head is not asked). That main carries `match` (the sound match) and no `overall`; Best
 matches, Same vibe, Sounds like and Listeners also play do not change. Cost at 1,018,838 songs: 30 to 40 ms per
 seed on CUDA (about 0.8 GB more GPU memory), 0.7 to 1.3 s on CPU.
+
+`--main-pool blend` alone loses to the v8 main on 1,187 val seeds (named soundalike in the top 10: 1.4 % against
+2.1 %): the listener ranker carries more than the blended score. `--main-pool sonic+blend` therefore keeps the
+v8 order and widens its pool: the sonic list's songs plus the blended ranking's (same filters and floor), every
+one scored by the listener ranker (a blended-only song has no channel ranks and is no scene candidate; one
+without a probability gets the pool's median logit), ordered as `--main-pool sonic` orders them (z-scores, or
+`--main-scale`) plus `--main-blend-weight B` (default 0) times the song's blended score. `overall` is computed
+as for the sonic pool, without the blended term. Without listener data that main is the sonic one.

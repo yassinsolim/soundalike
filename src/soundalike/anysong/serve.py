@@ -455,8 +455,9 @@ class Engine:
                 windows: np.ndarray | None, results: dict, timings: dict[str, float]) -> None:
         """One channel's top ``k`` for a prepared query. With a ``blend``, the sonic channel also gives
         ``results["blend"]``: the top ``k`` rows by blended score (``blend.Blend.scores``; the same ``allow`` mask
-        and ``exclude``) in that order, each with its exact sonic score. ``row``: the seed's row in the sonic index
-        (None for a live seed, whose raw sonic ``windows`` then give its head vectors)."""
+        and ``exclude``) in that order, each with its exact sonic score; and ``results["blendz"]``: the blended score
+        of every song of those two lists, as (track id, score). ``row``: the seed's row in the sonic index (None for
+        a live seed, whose raw sonic ``windows`` then give its head vectors)."""
         idx = self.indexes[ch.name]
         mask = allow.get(ch.name) if allow else None
         blend = self.blend if ch.name == "sonic" else None
@@ -476,6 +477,9 @@ class Engine:
         rows = np.array(sorted(idx.pos[tid] for tid in tids), dtype=np.int64)
         exact = dict(zip(idx.ids[rows].tolist(), idx.score_rows(q, rows).tolist()))
         results["blend"] = [(tid, float(exact[tid])) for tid in tids]
+        both = list(dict.fromkeys([tid for tid, _ in results[ch.name]] + tids))
+        at = torch.as_tensor([idx.pos[tid] for tid in both], dtype=torch.long, device=blended.device)
+        results["blendz"] = list(zip(both, blended[at].tolist()))
         _sync(self.device)
         timings["search_blend"] = (time.perf_counter() - t) * 1000
 

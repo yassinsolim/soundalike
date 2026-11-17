@@ -115,7 +115,11 @@ BEST_HEAD_EVIDENCE_ONLY = True
 # scales, so sound decides where it separates a seed's candidates and the ranker where it does not. MAIN_POOL "blend"
 # (needs the engine's ``blend``): main's body is the catalog's blended ranking (``blend.Blend``) in its own order, with
 # or without listener data, filtered like the channel lists and without the songs whose sound match is below
-# MAIN_MATCH_FLOOR (the head is not asked); main then carries ``match`` but no ``overall``.
+# MAIN_MATCH_FLOOR (the head is not asked); main then carries ``match`` but no ``overall``. MAIN_POOL "sonic+blend"
+# (listener data and the engine's ``blend``): the sonic list's songs plus the blended ranking's (filtered and floored
+# the same way), each with a listener probability, ordered as for "sonic" plus MAIN_BLEND_WEIGHT * the song's blended
+# score; ``overall`` as for "sonic" (the blended term is not in it). Without listener data it is the "sonic" main.
+MAIN_BLEND_WEIGHT = 0.0
 MAIN_LISTENER_WEIGHT = 2.0
 MAIN_POOL = "sonic"
 MAIN_MATCH_FLOOR = 50
@@ -460,7 +464,7 @@ class AnySong:
                  best_head_bare: int = BEST_HEAD_BARE, best_head_evidence_only: bool = BEST_HEAD_EVIDENCE_ONLY,
                  main_listener_weight: float = MAIN_LISTENER_WEIGHT, main_pool: str = MAIN_POOL,
                  main_match_floor: float = MAIN_MATCH_FLOOR, main_scale: tuple[float, float] | None = None,
-                 main_head_bare: int = MAIN_HEAD_BARE,
+                 main_head_bare: int = MAIN_HEAD_BARE, main_blend_weight: float = MAIN_BLEND_WEIGHT,
                  main_head_standout: float = MAIN_HEAD_STANDOUT, main_head_match: float = MAIN_HEAD_MATCH,
                  listeners_sound_weight: float = LISTENERS_SOUND_WEIGHT,
                  main_overall: OverallScale | None = MAIN_OVERALL,
@@ -499,11 +503,12 @@ class AnySong:
         self.best_artist_gap, self.best_artist_once = best_artist_gap, best_artist_once
         self.best_head_standout, self.best_head_window = best_head_standout, best_head_window
         self.best_head_bare, self.best_head_evidence_only = best_head_bare, best_head_evidence_only
-        if main_pool not in ("sonic", "all", "blend"):
-            raise ValueError(f"main_pool must be 'sonic', 'all' or 'blend', not {main_pool!r}")
-        if main_pool == "blend" and getattr(engine, "blend", None) is None:
-            raise ValueError("main_pool 'blend' needs an engine with a blend")
+        if main_pool not in ("sonic", "all", "blend", "sonic+blend"):
+            raise ValueError(f"main_pool must be 'sonic', 'all', 'blend' or 'sonic+blend', not {main_pool!r}")
+        if "blend" in main_pool and getattr(engine, "blend", None) is None:
+            raise ValueError(f"main_pool {main_pool!r} needs an engine with a blend")
         self.main_listener_weight, self.main_pool = main_listener_weight, main_pool
+        self.main_blend_weight = main_blend_weight
         self.main_match_floor, self.main_head_bare = main_match_floor, main_head_bare
         if main_scale is not None and min(main_scale) <= 0:
             raise ValueError("main_scale needs two positive standard deviations")
@@ -574,7 +579,7 @@ class AnySong:
                 "channels": {name: len(ix) for name, ix in self.engine.indexes.items()},
                 "cached_results": len(self.results), "served": served, "scene": scene, "tempo": tempo,
                 "tiers": tiers, "ranker": None if self.ranker is None else self.ranker.meta or "on", "stems": stems,
-                "blend": None if blend is None else blend.info() | {"main": self.main_pool == "blend"},
+                "blend": None if blend is None else blend.info() | {"main": "blend" in self.main_pool},
                 "gpu_mib": _gpu_mib(self.engine.device)}
 
     def search(self, q: str, limit: int = 10) -> dict:
@@ -750,8 +755,9 @@ class AnySong:
             timings |= t
             related = self._scene_context(query, timings)
             res = {"query": query, "raw": raw, "related": related, "vibe": vibe}
-            if "blend" in raw:  # not a channel: only main reads it (``main_pool`` "blend")
+            if "blend" in raw:  # not channels: only main reads them (``main_pool`` "blend" and "sonic+blend")
                 res["blend"] = raw.pop("blend")
+                res["blendz"] = {int(tid): float(score) for tid, score in raw.pop("blendz", ())}
             if self.ranker is not None:
                 res["listener"] = self._listener(res, windows, timings)
             timings["total"] = (time.perf_counter() - t0) * 1000
@@ -784,6 +790,12 @@ class AnySong:
                 son |= score(missing)
             scene = listener.scene_candidates(profile, self._artist_tracks, score, self.scene.artist, allowed)
         son |= scene
+        # ``main_pool`` "sonic+blend": the blended ranking's songs are candidates too, with the exact sound scores
+        # that came with them.
+        blended: dict[int, float] = {}
+        if self.main_pool == "sonic+blend":
+            blended = {int(tid): float(s) for tid, s in res.get("blend") or () if int(tid) not in son}
+            son |= blended
         seed_bpm = vibe["bpm"] if vibe is not None else (self.tempo.bpm(qid) if self.tempo is not None else None)
         head = None
         if self.head is not None:
@@ -792,7 +804,8 @@ class AnySong:
         tids, X = listener.features(
             res["raw"], son, scene, qid, profile, self.scene.related(artist_id) or res.get("related") or (),
             self.scene, self.scene_params, seed_bpm,
-            self.tempo.bpm if self.tempo is not None else (lambda tid: None), self._language_known, head)
+            self.tempo.bpm if self.tempo is not None else (lambda tid: None), self._language_known, head,
+            extra=blended)
         p = self.ranker.predict(X)
         timings["listener"] = (time.perf_counter() - t) * 1000
         timings["listener_queue"] = waited.get("queue", 0.0)
@@ -828,7 +841,7 @@ class AnySong:
         the sonic list's own scores, and exact scores for the melody and samples tracks it does not hold."""
         t = time.perf_counter()
         muq = {int(tid): float(score) for tid, score in raw.get("sonic", ())}
-        others = {int(tid) for channel, rows in raw.items() if channel not in ("sonic", "blend")
+        others = {int(tid) for channel, rows in raw.items() if channel not in ("sonic", "blend", "blendz")
                   for tid, _ in rows} - set(muq)
         muq |= self.engine.score_tracks("sonic", others, windows=windows, query_track=query_track)
         timings["vibe_scores"] = (time.perf_counter() - t) * 1000
@@ -1064,10 +1077,10 @@ class AnySong:
             songs[channel] = listed(rows)
             out[channel] = list(songs[channel].values())[:k]
         sound_of = self._sound_of(res)
-        # The blended ranking (``main_pool`` "blend") without the songs whose sound match is below
+        # The blended ranking (``main_pool`` "blend" and "sonic+blend") without the songs whose sound match is below
         # ``main_match_floor``, filtered below like the channel lists; None: not used.
         blend = None
-        if self.main_pool == "blend":
+        if "blend" in self.main_pool:
             exact = {int(tid): float(score) for tid, score in res.get("blend") or ()}
             blend = {key: item for key, item in listed(res.get("blend") or ()).items()
                      if sound_match(sound_of.get(int(item["id"]), exact[int(item["id"])])) >= self.main_match_floor}
@@ -1167,7 +1180,7 @@ class AnySong:
             for item in main:
                 if "match" not in item and int(item["id"]) in exact:
                     item["match"] = sound_match(exact[int(item["id"])])
-        elif self.main_overall is not None and main and "overall" not in main[0]:
+        if self.main_pool != "blend" and self.main_overall is not None and main and "overall" not in main[0]:
             # Without listener data main follows sound alone, so its overall match is its sound match.
             head = next((i for i, item in enumerate(main) if item.get("basis") != "audio"), len(main))
             for item, value in zip(main, overall_match([item.get("match", 0) for item in main], head)):
@@ -1223,7 +1236,8 @@ class AnySong:
         by other artists than the seed's by z(listener logit) + ``listeners_sound_weight`` * z(sound score), one per
         artist. Songs by the seed's own artist get the median listener logit, so sound alone places them. With
         ``blend`` (``main_pool`` "blend": the blended ranking, filtered like the channel lists), main is the same head,
-        then those songs in their order, one per artist, without ``overall``.
+        then those songs in their order, one per artist, without ``overall``. With ``main_pool`` "sonic+blend" they join
+        the sonic list's songs instead, and the order adds ``main_blend_weight`` * each song's blended score.
         """
         data = res["listener"]
         p_of, son_of = data["p"], data["son"]
@@ -1317,13 +1331,24 @@ class AnySong:
                 filtered, self.main_head_bare, lambda key: self._match(sound_of, shown[key][0]) if key in shown else 0)
                 if key in shown]
 
+        blend_body = blend is not None and self.main_pool == "blend"
+        blend_only: dict[Hashable, dict] = {}
+        if blend is not None and self.main_pool == "sonic+blend":
+            blend_only = {key: item for key, item in blend.items() if key not in sonic}
+            for key, item in blend_only.items():
+                artists.setdefault(key, self.scene.artist(int(item["id"])))
+
         def main_item(key: Hashable) -> dict:
-            return sonic[key] if key in sonic else shown[key][0]
+            return sonic[key] if key in sonic else shown[key][0] if key in shown else blend_only[key]
+
+        def main_ranks(key: Hashable) -> dict[str, int]:
+            return shown[key][1] if key in shown else {}
 
         def shown_item(key: Hashable) -> dict:
             return shown[key][0]
 
-        pool = [] if blend is not None else list(sonic) if self.main_pool == "sonic" else [
+        pool = [] if blend_body else list(sonic) if self.main_pool == "sonic" else [*sonic, *blend_only] \
+            if self.main_pool == "sonic+blend" else [
             key for key in keys
             if key in sonic or sound_match(son_of.get(int(shown[key][0]["id"]), -np.inf)) >= self.main_match_floor]
         raw_main: dict[int, tuple[float, float]] = {}
@@ -1338,12 +1363,21 @@ class AnySong:
             else:
                 score = (pool_sound / self.main_scale[0]
                          + self.main_listener_weight * pool_logit / self.main_scale[1])
+            if blend is not None and self.main_blend_weight:
+                # Each song's blended score (its own release's, else that of the release the blended ranking holds);
+                # a song without one gets the pool's lowest.
+                blendz = res.get("blendz") or {}
+                z = np.array([blendz.get(int(main_item(key)["id"]),
+                                         blendz.get(int(blend[key]["id"]), np.nan) if key in blend else np.nan)
+                              for key in pool], dtype=np.float64)
+                score = score + self.main_blend_weight * np.nan_to_num(
+                    z, nan=np.nanmin(z) if np.isfinite(z).any() else 0.0)
             pool = ordered(pool, score)
         main_set = set(main_head)
-        body = [(main_item(key), shown[key][1]) for key in pool if key not in main_set] if blend is None else \
-            [(item, shown[key][1] if key in shown else {}) for key, item in blend.items() if key not in main_set]
+        body = [(main_item(key), main_ranks(key)) for key in pool if key not in main_set] if not blend_body else \
+            [(item, main_ranks(key)) for key, item in blend.items() if key not in main_set]
         main = self._main([(shown[key][0], shown[key][1]) for key in main_head], body, k)
-        if self.main_overall is not None and main and blend is None:
+        if self.main_overall is not None and main and not blend_body:
             floor = min((s for s, _ in raw_main.values()), default=0.0)
             for key in main_head:
                 tid = int(shown[key][0]["id"])
@@ -1411,7 +1445,7 @@ class AnySong:
                                 artists: Mapping[Hashable, int | None], k: int,
                                 sound_of: Mapping[int, float], blend: dict[Hashable, dict] | None = None) -> list[dict]:
         """The main list without listener data (``scene=0``, an unknown artist or no ranker): the audio head, then
-        Sounds like's order, or the ``blend`` songs in theirs (``main_pool`` "blend")."""
+        Sounds like's order, or the ``blend`` songs in theirs (``main_pool`` "blend" only)."""
         pos = {channel: {key: i for i, key in enumerate(order, 1)} for channel, order in view.items()}
 
         def ranks(key: Hashable) -> dict[str, int]:
@@ -1424,7 +1458,8 @@ class AnySong:
         head_keys = self._audio_head(view, self.main_head_bare, lambda key: self._match(sound_of, item_of(key)))
         head = [(item_of(key), ranks(key)) for key in head_keys]
         head_set = set(head_keys)
-        order = self._sound_order(view, profile, artists) if blend is None else blend.items()
+        order = blend.items() if blend is not None and self.main_pool == "blend" else \
+            self._sound_order(view, profile, artists)
         body = [(item, ranks(key)) for key, item in order if key not in head_set]
         return self._main(head, body, k)
 
@@ -1730,15 +1765,18 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--head", type=Path, default=None,
                    help="scene head (anysong.scenehead): path prefix of <prefix>.npz and <prefix>.emb.npy; for rankers "
                         "trained with the 'head' feature")
-    p.add_argument("--main-pool", choices=("sonic", "all", "blend"), default=MAIN_POOL,
-                   help="main's body: the sonic list, every candidate at or above --main-match-floor, or the blended "
-                        "catalog ranking at or above it (needs --blend-head and --blend-cf)")
+    p.add_argument("--main-pool", choices=("sonic", "all", "blend", "sonic+blend"), default=MAIN_POOL,
+                   help="main's body: the sonic list, every candidate at or above --main-match-floor, the blended "
+                        "catalog ranking at or above it, or the sonic list plus that ranking in the listener order "
+                        "(the last two need --blend-head and --blend-cf)")
     p.add_argument("--blend-head", type=Path, default=None,
                    help="scene head of the blended ranking (anysong.blend): path prefix as for --head")
     p.add_argument("--blend-cf", type=Path, default=None,
                    help="folder with cooc.npz and cf128.npy: playlist co-occurrence vectors of the blended ranking")
     p.add_argument("--blend-weights", type=float, nargs=2, default=None, metavar=("WH", "WC"),
                    help="weights of the scene head and playlist terms next to sound (default 2 1)")
+    p.add_argument("--main-blend-weight", type=float, default=MAIN_BLEND_WEIGHT,
+                   help="--main-pool sonic+blend: weight of a song's blended score in main's order")
     p.add_argument("--main-match-floor", type=float, default=MAIN_MATCH_FLOOR)
     p.add_argument("--main-listener-weight", type=float, default=MAIN_LISTENER_WEIGHT)
     p.add_argument("--main-scale", type=float, nargs=2, default=None, metavar=("SOUND_SD", "LOGIT_SD"),
@@ -1764,8 +1802,8 @@ def main(argv: list[str] | None = None) -> None:
         p.error("--ranker needs --scene")
     if (args.blend_head is None) != (args.blend_cf is None):
         p.error("--blend-head and --blend-cf go together")
-    if args.main_pool == "blend" and args.blend_head is None:
-        p.error("--main-pool blend needs --blend-head and --blend-cf")
+    if "blend" in args.main_pool and args.blend_head is None:
+        p.error(f"--main-pool {args.main_pool} needs --blend-head and --blend-cf")
     if args.blend_head is not None and "sonic" not in args.channels:
         p.error("--blend-head needs the sonic channel")
 
@@ -1831,7 +1869,7 @@ def main(argv: list[str] | None = None) -> None:
                       head=SceneHead(f"{args.head}.npz", f"{args.head}.emb.npy", engine.indexes["sonic"].pos)
                       if args.head is not None else None,
                       main_pool=args.main_pool, main_match_floor=args.main_match_floor,
-                      main_listener_weight=args.main_listener_weight,
+                      main_listener_weight=args.main_listener_weight, main_blend_weight=args.main_blend_weight,
                       main_scale=tuple(args.main_scale) if args.main_scale else None,
                       stems=store, dissector=dissector, catalog_previews=args.catalog_previews,
                       **_overall_scales(args.overall))

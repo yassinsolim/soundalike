@@ -847,6 +847,67 @@ def test_listener_inputs_add_scene_songs_once_per_seed(tmp_path):
     assert api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, ranker=_stump("fwd", 0, 1)).ranker is None
 
 
+def test_sonic_plus_blend_main_pool_adds_blended_songs_to_the_listener_order(tmp_path):
+    # Sonic list: Daft Punk's 10, Other Artist's 5, Third's 7. Blended ranking: Sixth's 11 and Some Choir's 3 (in no
+    # sonic list), Third's 7, and Seventh's 12, whose sound match is under the floor.
+    meta = LISTENER_META | {11: ("Sixth", "Sechs"), 12: ("Seventh", "Sieben")}
+    engine = SonicEngine()
+    engine.blend = object()
+
+    def service(**kw):
+        return api.AnySong(engine, FakeDeezer(tmp_path), meta, scene=_listener_scene_table(), copy_score=None,
+                           ranker=_stump("fwd", -1.0, 1.0), scene_params=SceneParams(head_min=1),
+                           tempo=TempoTable(np.array([5]), np.array([120], np.float32)),
+                           best_head_standout=0.0, main_scale=(0.1, 1.0), **kw)
+
+    raw = {"melody": [(5, -1.0)], "sonic": [(10, 0.5), (5, 0.45), (7, 0.44)]}
+    res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog", "artist_id": 100},
+           "raw": raw, "blend": [(11, 0.47), (7, 0.44), (12, 0.2), (3, 0.46)],
+           "blendz": {11: 4.0, 7: 3.0, 12: 2.5, 3: 2.0, 10: 1.0, 5: 0.5}, "related": [], "timings_ms": {},
+           "vibe": {"muq": {10: 0.5, 5: 0.45, 7: 0.44}, "bpm": None}}
+    plain, svc = service(), service(main_pool="sonic+blend")
+    assert svc.main_blend_weight == 0.0
+    # The ranker scores the blended ranking's songs too, with the sound scores that came with them (no new search).
+    base = plain._listener(res, None, {})
+    scored = list(engine.scored)
+    engine.scored.clear()
+    data = svc._listener(res, None, {})
+    assert engine.scored == scored and data["scene"] == base["scene"]
+    assert set(data["p"]) == set(base["p"]) | {3, 11, 12} and {tid: data["p"][tid] for tid in base["p"]} == base["p"]
+    assert data["son"][11] == 0.47 and data["son"][3] == 0.46
+
+    def lists(service_, listener_data):
+        return service_._view(res | {"listener": listener_data}, k=10, dedupe=True, cached=False)["results"]
+
+    def body(r):
+        return [x["id"] for x in r["main"] if x["basis"] == "sound"]
+
+    want, got = lists(plain, base), lists(svc, data)
+    # Weight 0: the blended songs join the pool with their own logits, the sonic songs keep their order, and the
+    # song under the match floor stays out; every other list is unchanged and ``overall`` is there.
+    assert set(body(got)) == set(body(want)) | {11, 3} and 12 not in body(got)
+    assert [tid for tid in body(got) if tid in body(want)] == body(want)
+    assert {name: items for name, items in got.items() if name != "main"} == \
+        {name: items for name, items in want.items() if name != "main"}
+    assert all("overall" in x and "match" in x for x in got["main"])
+    assert next(x for x in got["main"] if x["id"] == 11)["ranks"] == {}
+    # A song without a listener probability gets the pool's median logit.
+    without = lists(svc, data | {"p": {tid: p for tid, p in data["p"].items() if tid != 11}})
+    assert 11 in body(without)
+    # The blended score moves its best songs up: 11 (4.0) first, then 7 (3.0) before 3 (2.0) and 10 (1.0).
+    svc.main_blend_weight = 100.0
+    moved = lists(svc, data)
+    assert body(moved)[:4] == [11, 7, 3, 10] and body(moved) != body(got)
+    assert {name: items for name, items in moved.items() if name != "main"} == \
+        {name: items for name, items in want.items() if name != "main"}
+    # Without listener data it is the sonic main.
+    no_data = {k: v for k, v in res.items()}
+    assert svc._view(no_data, k=10, dedupe=True, cached=False)["results"]["main"] == \
+        plain._view(no_data, k=10, dedupe=True, cached=False)["results"]["main"]
+    with pytest.raises(ValueError, match="needs an engine with a blend"):
+        api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, main_pool="sonic+blend")
+
+
 def test_scene_layer_lifts_related_artists_and_can_be_turned_off(tmp_path):
     # copy_score=None: the fake engine scores every row 0.9 on samples, which would read as copies of the seed
     svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, scene=_scene_table(), copy_score=None,

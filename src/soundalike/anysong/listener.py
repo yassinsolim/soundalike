@@ -83,10 +83,10 @@ def features(raw: Mapping[str, Iterable[tuple[int, float]]], son: Mapping[int, f
              query_id: int, profile: ArtistProfile, related: Iterable[int], table: SceneTable, params: SceneParams,
              seed_bpm: float | None, bpm_of: Callable[[int], float | None],
              language_known: Callable[[int], bool],
-             head: Mapping[int, float] | None = None) -> tuple[list[int], np.ndarray]:
+             head: Mapping[int, float] | None = None, extra: Iterable[int] = ()) -> tuple[list[int], np.ndarray]:
     """Feature rows (``FEATURES`` order; ``FEATURES_HEAD`` when ``head``, the scene-head cosines, is given) for
-    every candidate with a sound score: the channel lists' songs and the scene candidates, except the seed itself.
-    Missing values are NaN."""
+    every candidate with a sound score: the channel lists' songs, the scene candidates and the ``extra`` songs (in
+    neither), except the seed itself. Missing values are NaN."""
     pool: dict[int, dict[str, float]] = {}
     for channel in CHANNELS:
         for rank, (tid, s) in enumerate(raw.get(channel, ()), 1):
@@ -98,7 +98,7 @@ def features(raw: Mapping[str, Iterable[tuple[int, float]]], son: Mapping[int, f
     qa = profile.artist_id
     per_artist: dict[int, tuple[float, ...]] = {}
     tids, rows = [], []
-    for tid in sorted((set(pool) | scene) - {int(query_id)}):
+    for tid in sorted((set(pool) | scene | {int(t) for t in extra}) - {int(query_id)}):
         if tid not in son:
             continue
         a = table.artist(tid) or 0

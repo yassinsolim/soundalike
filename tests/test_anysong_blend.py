@@ -86,6 +86,10 @@ def test_blend_order_is_the_z_sum_and_carries_exact_sonic_scores(setup):
     for tid, s in results["blend"]:  # the sonic channel's own exact score, not the blended one
         assert s == pytest.approx(sonic[index.pos[tid]], abs=1e-6)
     assert results["sonic"] == index.top(index.scores(index.stored_query(int(IDS[row]))), 6, [int(IDS[row])])
+    # The blended score of every song of the two lists, for orders that mix them.
+    blendz = dict(results["blendz"])
+    assert set(blendz) == {t for t, _ in results["sonic"]} | {t for t, _ in results["blend"]}
+    assert len(blendz) > 6 and all(z == pytest.approx(score[index.pos[t]], abs=1e-4) for t, z in blendz.items())
     # ``exclude`` and the sonic ``allow`` mask apply to the blended ranking as to the channel.
     allow = torch.ones(N, dtype=torch.bool)
     allow[[index.pos[want[0]], index.pos[want[2]]]] = False
