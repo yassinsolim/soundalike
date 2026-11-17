@@ -44,6 +44,10 @@ only ranked for seeds by their own artist or by an artist whose Deezer related l
 
 With ``--blend-head`` and ``--blend-cf`` the sonic search also ranks the whole catalog by a blended score
 (``blend.Blend``: sound, scene head and playlist co-occurrence); ``--main-pool blend`` makes that ranking main's body.
+
+With ``--languages`` the searches also rank each channel (and the blended score) among the songs of the seed's language
+alone (``languages.LanguageRows``), so the same-language lists are as full for a seed in a small language as for an
+English one; ``query["language_pool"]`` then says how many indexed songs that language has.
 """
 
 from __future__ import annotations
@@ -119,6 +123,9 @@ BEST_HEAD_EVIDENCE_ONLY = True
 # (listener data and the engine's ``blend``): the sonic list's songs plus the blended ranking's (filtered and floored
 # the same way), each with a listener probability, ordered as for "sonic" plus MAIN_BLEND_WEIGHT * the song's blended
 # score; ``overall`` as for "sonic" (the blended term is not in it). Without listener data it is the "sonic" main.
+# With the in-language lists (``languages.LanguageRows``) the same-language lists take their songs from the searches
+# among the seed's language alone, and a "blend" main that the floor leaves short of songs goes on with the sonic
+# list's other songs in its order.
 MAIN_BLEND_WEIGHT = 0.0
 MAIN_LISTENER_WEIGHT = 2.0
 MAIN_POOL = "sonic"
@@ -455,6 +462,7 @@ class AnySong:
                  related_ttl: float = 86400.0, tempo: TempoTable | None = None, tracker=None,
                  vibe_params: samevibe.SameVibeParams | None = None, learn: LearnQueue | None = None,
                  tiers=None, artist_languages: bool = True, language_guess: bool | str = LANGUAGE_GUESS,
+                 language_rows=None,
                  copy_score: float | None = COPY_SAMPLES_SCORE,
                  max_versions: int | None = MAX_VERSIONS, sounds_boost: float = SOUNDS_BOOST,
                  ranker: listener.Ranker | None = None, best_sound_weight: float = BEST_SOUND_WEIGHT,
@@ -490,6 +498,10 @@ class AnySong:
         # Other artists' versions of the seed's own song: copies of its recording (samples score at least
         # ``copy_score``) dropped, at most ``max_versions`` of the rest kept.
         self.copy_score, self.max_versions = copy_score, max_versions
+        # In-language lists (``languages.LanguageRows``, built with the same ``artist_languages`` rule): the searches
+        # also rank the songs of the seed's language alone, and the same-language lists are made from those instead
+        # of from what the gate leaves of the whole catalog's lists. None: the gate filters the catalog's lists.
+        self.language_rows = language_rows if languages is not None else None
         # Sounds like: lift songs by their artist's scene affinity (0 = the sonic channel's order).
         self.sounds_boost = sounds_boost
         # Listener-aware ranking (``listener``): needs the scene table; replaces the scene slots and the Sounds like
@@ -580,6 +592,7 @@ class AnySong:
                 "cached_results": len(self.results), "served": served, "scene": scene, "tempo": tempo,
                 "tiers": tiers, "ranker": None if self.ranker is None else self.ranker.meta or "on", "stems": stems,
                 "blend": None if blend is None else blend.info() | {"main": "blend" in self.main_pool},
+                "language_search": self.language_rows is not None,
                 "gpu_mib": _gpu_mib(self.engine.device)}
 
     def search(self, q: str, limit: int = 10) -> dict:
@@ -743,7 +756,7 @@ class AnySong:
                 query = {"id": track_id, "artist": artist, "title": title, "source": "catalog"}
                 timings: dict[str, float] = {}
                 with self._gpu(timings):
-                    raw, t = self.engine.search_stored(track_id, FETCH, **self._allow(query))
+                    raw, t = self.engine.search_stored(track_id, FETCH, **self._allow(query), **self._within(query))
                     vibe = self._vibe_inputs(raw, t, query_track=track_id) if self.vibe else None
                 if vibe is not None:
                     vibe["bpm"] = self.tempo.bpm(track_id)
@@ -754,7 +767,14 @@ class AnySong:
             self._count(query["source"])
             timings |= t
             related = self._scene_context(query, timings)
+            within = raw.pop("within", None)
             res = {"query": query, "raw": raw, "related": related, "vibe": vibe}
+            if within is not None:
+                # The lists among the songs of the seed's gate language alone (``_within``), next to the catalog's.
+                language = self._seed_language(query)[0]
+                res["lang"], res["lang_pool"] = language, self.language_rows.pool(language)
+                res["blend_lang"] = within.pop("blend", None)
+                res["raw_lang"] = within
             if "blend" in raw:  # not channels: only main reads them (``main_pool`` "blend" and "sonic+blend")
                 res["blend"] = raw.pop("blend")
                 res["blendz"] = {int(tid): float(score) for tid, score in raw.pop("blendz", ())}
@@ -778,7 +798,8 @@ class AnySong:
         query_track = None if windows is not None else qid
         vibe = res.get("vibe")
         son = dict(vibe["muq"]) if vibe is not None else {}
-        missing = {int(tid) for rows in res["raw"].values() for tid, _ in rows} - set(son)
+        lang_raw = res.get("raw_lang") or {}
+        missing = {int(tid) for rows in (*res["raw"].values(), *lang_raw.values()) for tid, _ in rows} - set(son)
         allowed = self._tier_filter(artist_id)
 
         def score(tids):
@@ -794,8 +815,11 @@ class AnySong:
         # that came with them.
         blended: dict[int, float] = {}
         if self.main_pool == "sonic+blend":
-            blended = {int(tid): float(s) for tid, s in res.get("blend") or () if int(tid) not in son}
+            blended = {int(tid): float(s) for tid, s in (*(res.get("blend") or ()), *(res.get("blend_lang") or ()))
+                       if int(tid) not in son}
             son |= blended
+        # The in-language lists' songs that the catalog's lists do not hold are candidates as well.
+        inside = {int(tid) for rows in lang_raw.values() for tid, _ in rows}
         seed_bpm = vibe["bpm"] if vibe is not None else (self.tempo.bpm(qid) if self.tempo is not None else None)
         head = None
         if self.head is not None:
@@ -805,7 +829,7 @@ class AnySong:
             res["raw"], son, scene, qid, profile, self.scene.related(artist_id) or res.get("related") or (),
             self.scene, self.scene_params, seed_bpm,
             self.tempo.bpm if self.tempo is not None else (lambda tid: None), self._language_known, head,
-            extra=blended)
+            extra={*blended, *inside})
         p = self.ranker.predict(X)
         timings["listener"] = (time.perf_counter() - t) * 1000
         timings["listener_queue"] = waited.get("queue", 0.0)
@@ -836,13 +860,24 @@ class AnySong:
         artist_id = query.get("artist_id") or self.tiers.scene.artist(int(query["id"]))
         return {"allow": self.tiers.masks(self.tiers.artists(artist_id))}
 
+    def _within(self, query: dict) -> dict:
+        """Engine keyword for the in-language lists: row masks of the songs the same-language gate would keep for this
+        seed (its own or its artist's language, else the guess); none without ``language_rows`` or such a language."""
+        if self.language_rows is None:
+            return {}
+        masks = self.language_rows.masks(self._seed_language(query)[0])
+        return {} if masks is None else {"within": masks}
+
     def _vibe_inputs(self, raw: dict, timings: dict[str, float], windows=None, query_track: int | None = None) -> dict:
-        """Served MuQ-MuLan scores against the seed for every track in the channel lists (Same vibe's sound gate):
-        the sonic list's own scores, and exact scores for the melody and samples tracks it does not hold."""
+        """Served MuQ-MuLan scores against the seed for every track in the channel lists, the in-language ones
+        (``raw["within"]``) included (Same vibe's sound gate): the sonic lists' own scores, and exact scores for the
+        melody and samples tracks they do not hold."""
         t = time.perf_counter()
-        muq = {int(tid): float(score) for tid, score in raw.get("sonic", ())}
-        others = {int(tid) for channel, rows in raw.items() if channel not in ("sonic", "blend", "blendz")
-                  for tid, _ in rows} - set(muq)
+        within = raw.get("within") or {}
+        muq = {int(tid): float(score) for tid, score in (*within.get("sonic", ()), *raw.get("sonic", ()))}
+        others = {int(tid) for lists, skip in ((raw, ("sonic", "blend", "blendz", "within")),
+                                                (within, ("sonic", "blend")))
+                  for channel, rows in lists.items() if channel not in skip for tid, _ in rows} - set(muq)
         muq |= self.engine.score_tracks("sonic", others, windows=windows, query_track=query_track)
         timings["vibe_scores"] = (time.perf_counter() - t) * 1000
         return {"muq": muq, "bpm": None}
@@ -945,7 +980,8 @@ class AnySong:
         vibe = None
         with self._gpu(timings):
             wins, t_embed = self.engine.embed_clips(clips)
-            raw, t_search = self.engine.search_windows(wins, FETCH, [track_id], **self._allow(query))
+            raw, t_search = self.engine.search_windows(wins, FETCH, [track_id], **self._allow(query),
+                                                       **self._within(query))
             if self.vibe:
                 vibe = self._vibe_inputs(raw, t_search, windows=wins["sonic"])
                 if clip22 is not None:
@@ -1077,30 +1113,47 @@ class AnySong:
             songs[channel] = listed(rows)
             out[channel] = list(songs[channel].values())[:k]
         sound_of = self._sound_of(res)
-        # The blended ranking (``main_pool`` "blend" and "sonic+blend") without the songs whose sound match is below
-        # ``main_match_floor``, filtered below like the channel lists; None: not used.
-        blend = None
-        if "blend" in self.main_pool:
-            exact = {int(tid): float(score) for tid, score in res.get("blend") or ()}
-            blend = {key: item for key, item in listed(res.get("blend") or ()).items()
-                     if sound_match(sound_of.get(int(item["id"]), exact[int(item["id"])])) >= self.main_match_floor}
-        if dedupe and qkey is not None and (self.copy_score is not None or self.max_versions is not None):
-            limited = self._limit_versions(songs, qkey)
-            if blend:
-                blend = self._limit_blend_versions(blend, songs, limited, qkey)
-            songs = limited
+        exact: dict[int, float] = {}
+
+        def floored(rows) -> dict[Hashable, dict]:
+            """A blended ranking without the songs whose sound match is below ``main_match_floor``."""
+            exact.update((int(tid), float(score)) for tid, score in rows)
+            return {key: item for key, item in listed(rows).items()
+                    if sound_match(sound_of.get(int(item["id"]), exact[int(item["id"])])) >= self.main_match_floor}
+
+        def versions(lists: dict[str, dict[Hashable, dict]], ranking: dict[Hashable, dict] | None):
+            """``_limit_versions`` for channel lists and the blended ranking that came with them."""
+            if dedupe and qkey is not None and (self.copy_score is not None or self.max_versions is not None):
+                limited = self._limit_versions(lists, qkey)
+                if ranking:
+                    ranking = self._limit_blend_versions(ranking, lists, limited, qkey)
+                lists = limited
+            return lists, ranking
+
+        # The blended ranking (``main_pool`` "blend" and "sonic+blend"), filtered below like the channel lists; None:
+        # not used.
+        songs, blend = versions(songs, floored(res.get("blend") or ()) if "blend" in self.main_pool else None)
 
         language, guessed = self._seed_language(q)
         # "main": the guess gates main alone, below; everything else is as with the guess off.
         main_language = None
         if guessed and self.language_guess == "main":
             main_language, language, guessed = language, "unknown", False
+        # The in-language lists (``_compute``): the same-language lists are made from them, as they hold every song
+        # the gate would leave of the catalog's lists and the language's next best ones. None: the gate filters the
+        # catalog's lists (every language asked for, no gate language, or a search without them).
+        inside = inside_blend = None
+        if lang_mode == "same" and self.languages is not None and res.get("raw_lang") is not None \
+                and res.get("lang") == (main_language or language):
+            inside, inside_blend = versions(
+                {channel: listed(rows) for channel, rows in res["raw_lang"].items()},
+                floored(res.get("blend_lang") or ()) if "blend" in self.main_pool else None)
 
         scene_state = "off"
         artists: dict[Hashable, int | None] = {}
         profile = None
         if self.scene is not None and scene:
-            for order in songs.values():
+            for order in (*songs.values(), *(inside or {}).values()):
                 for key, item in order.items():
                     if key not in artists:
                         artists[key] = self.scene.artist(int(item["id"]))
@@ -1127,15 +1180,20 @@ class AnySong:
                 if not keep(next(songs[channel][key] for channel in songs if key in songs[channel]))
             )
             if lang_mode == "same":
+                source, source_blend = (songs, blend) if inside is None else (inside, inside_blend)
                 filtered = {
                     channel: {key: item for key, item in order.items() if keep(item)}
-                    for channel, order in songs.items()
+                    for channel, order in source.items()
                 }
-                if blend is not None:
-                    blend_view = {key: item for key, item in blend.items() if keep(item)}
+                if source_blend is not None:
+                    blend_view = {key: item for key, item in source_blend.items() if keep(item)}
         query = q | {"language": language, "language_mode": lang_mode, "hidden": hidden, "scene": scene_state}
         if guessed:
             query["language_guessed"] = True
+        if inside is not None:
+            query["language_pool"] = res["lang_pool"]
+        # With the in-language lists, a main whose body is the blended ranking is filled up from the sonic list.
+        fill = inside is not None and language != "unknown"
         if res.get("vibe") is not None and "sonic" in filtered:
             bpm = res["vibe"]["bpm"]
             query["bpm"] = round(bpm, 1) if bpm else None
@@ -1144,7 +1202,7 @@ class AnySong:
                 if lang_mode == "same" and language != "unknown" and self.languages is not None else None
             best, vibe, sounds, main, listeners = self._listener_lists(res, filtered, artists, profile, qkey, keep,
                                                                        language, lang_mode, k, dedupe, sound_of,
-                                                                       blend_view)
+                                                                       blend_view, fill)
         else:
             fused = rank(filtered)
             best = []
@@ -1155,12 +1213,14 @@ class AnySong:
             if res.get("vibe") is not None and "sonic" in filtered:
                 vibe = self._same_vibe(res["vibe"], filtered, [key for key, _, _ in fused], language, lang_mode, k)
             sounds = self._sounds(filtered, k, profile, artists)
-            main, listeners = self._main_without_listeners(filtered, profile, artists, k, sound_of, blend_view), []
+            main, listeners = self._main_without_listeners(filtered, profile, artists, k, sound_of, blend_view,
+                                                           fill), []
         if main_language is not None:
             query["main_language_guess"] = main_language
             if lang_mode == "same":
-                main = self._guessed_main(res, songs, artists, profile, qkey, main_language, scene_state, k, dedupe,
-                                          sound_of, blend)
+                main = self._guessed_main(res, songs if inside is None else inside, artists, profile, qkey,
+                                          main_language, scene_state, k, dedupe, sound_of,
+                                          blend if inside is None else inside_blend, inside is not None)
         lists = {"best": best} if best else {}
         if vibe:
             lists["vibe"] = vibe
@@ -1190,9 +1250,11 @@ class AnySong:
 
     def _guessed_main(self, res: dict, songs: dict[str, dict[Hashable, dict]], artists: dict[Hashable, int | None],
                       profile, qkey, language: str, scene_state: str, k: int, dedupe: bool,
-                      sound_of: Mapping[int, float], blend: dict[Hashable, dict] | None = None) -> list[dict]:
+                      sound_of: Mapping[int, float], blend: dict[Hashable, dict] | None = None,
+                      fill: bool = False) -> list[dict]:
         """Main with the seed's guessed ``language`` gating it, built exactly as with ``language_guess`` True (the
-        "main" mode keeps that list and nothing else)."""
+        "main" mode keeps that list and nothing else). ``songs`` and ``blend``: the in-language lists (then with
+        ``fill``), else the catalog's."""
         def keep(item: dict) -> bool:
             return self._item_language(item) in {"unknown", language}
 
@@ -1202,14 +1264,15 @@ class AnySong:
             blend = {key: item for key, item in blend.items() if keep(item)}
         if scene_state == "on" and res.get("listener") is not None:
             return self._listener_lists(res, filtered, artists, profile, qkey, keep, language, "same", k, dedupe,
-                                        sound_of, blend)[3]
-        return self._main_without_listeners(filtered, profile, artists, k, sound_of, blend)
+                                        sound_of, blend, fill)[3]
+        return self._main_without_listeners(filtered, profile, artists, k, sound_of, blend, fill)
 
     @staticmethod
     def _sound_of(res: dict) -> dict[int, float]:
-        """Each candidate's sound (sonic) score against the seed: the sonic list, then Same vibe's and the listener
-        inputs, the later winning (what ``match`` shows)."""
-        sound_of = {int(tid): float(score) for tid, score in res["raw"].get("sonic", ())}
+        """Each candidate's sound (sonic) score against the seed: the sonic lists (the catalog's and the in-language
+        one), then Same vibe's and the listener inputs, the later winning (what ``match`` shows)."""
+        sound_of = {int(tid): float(score) for tid, score in (res.get("raw_lang") or {}).get("sonic", ())}
+        sound_of |= {int(tid): float(score) for tid, score in res["raw"].get("sonic", ())}
         sound_of |= (res.get("vibe") or {}).get("muq") or {}
         sound_of |= (res.get("listener") or {}).get("son") or {}
         return sound_of
@@ -1222,7 +1285,8 @@ class AnySong:
 
     def _listener_lists(self, res: dict, filtered: dict[str, dict[Hashable, dict]], artists: dict[Hashable, int | None],
                         profile, qkey, keep: Callable[[dict], bool] | None, language: str, lang_mode: str, k: int,
-                        dedupe: bool, sound_of: Mapping[int, float], blend: dict[Hashable, dict] | None = None
+                        dedupe: bool, sound_of: Mapping[int, float], blend: dict[Hashable, dict] | None = None,
+                        fill: bool = False
                         ) -> tuple[list[dict], list[dict], list[dict], list[dict], list[dict]]:
         """Best matches, Same vibe, Sounds like, main and Listeners also play with the listener ranker
         (``res["listener"]``, from ``_listener``).
@@ -1376,6 +1440,10 @@ class AnySong:
         main_set = set(main_head)
         body = [(main_item(key), main_ranks(key)) for key in pool if key not in main_set] if not blend_body else \
             [(item, main_ranks(key)) for key, item in blend.items() if key not in main_set]
+        if blend_body and fill:
+            # ``fill`` (the in-language lists): the sonic list's other songs, in its order, follow the blended ones,
+            # so the match floor does not leave main short while the language has songs.
+            body += [(item, main_ranks(key)) for key, item in sonic.items() if key not in main_set and key not in blend]
         main = self._main([(shown[key][0], shown[key][1]) for key in main_head], body, k)
         if self.main_overall is not None and main and not blend_body:
             floor = min((s for s, _ in raw_main.values()), default=0.0)
@@ -1443,9 +1511,11 @@ class AnySong:
 
     def _main_without_listeners(self, view: dict[str, dict[Hashable, dict]], profile,
                                 artists: Mapping[Hashable, int | None], k: int,
-                                sound_of: Mapping[int, float], blend: dict[Hashable, dict] | None = None) -> list[dict]:
+                                sound_of: Mapping[int, float], blend: dict[Hashable, dict] | None = None,
+                                fill: bool = False) -> list[dict]:
         """The main list without listener data (``scene=0``, an unknown artist or no ranker): the audio head, then
-        Sounds like's order, or the ``blend`` songs in theirs (``main_pool`` "blend" only)."""
+        Sounds like's order, or the ``blend`` songs in theirs (``main_pool`` "blend" only; with ``fill``, the sonic
+        list's other songs after them)."""
         pos = {channel: {key: i for i, key in enumerate(order, 1)} for channel, order in view.items()}
 
         def ranks(key: Hashable) -> dict[str, int]:
@@ -1458,8 +1528,10 @@ class AnySong:
         head_keys = self._audio_head(view, self.main_head_bare, lambda key: self._match(sound_of, item_of(key)))
         head = [(item_of(key), ranks(key)) for key in head_keys]
         head_set = set(head_keys)
-        order = blend.items() if blend is not None and self.main_pool == "blend" else \
-            self._sound_order(view, profile, artists)
+        blend_body = blend is not None and self.main_pool == "blend"
+        order = list(blend.items()) if blend_body else self._sound_order(view, profile, artists)
+        if blend_body and fill:  # as in ``_listener_lists``
+            order += [(key, item) for key, item in view.get("sonic", {}).items() if key not in blend]
         body = [(item, ranks(key)) for key, item in order if key not in head_set]
         return self._main(head, body, k)
 
@@ -1822,14 +1894,17 @@ def main(argv: list[str] | None = None) -> None:
     engine.warm()
     warm = _warmup(engine)
     meta = load_meta(args.meta)
-    languages = None
+    languages = language_rows = None
     if args.languages is not None:
-        from .languages import LanguageTable
+        from .languages import LanguageRows, LanguageTable
 
         languages = LanguageTable.load(
             args.languages,
             artist_names={track_id: artist for track_id, (artist, _) in meta.items()},
         )
+        t_rows = time.perf_counter()
+        language_rows = LanguageRows(languages, engine.indexes, lambda track_id: meta.get(track_id, (None,))[0])
+        engine.load_secs["language_rows"] = round(time.perf_counter() - t_rows, 2)
     scene = SceneTable.load(args.scene) if args.scene is not None else None
     tiers = None
     if args.core_ids is not None:
@@ -1865,6 +1940,7 @@ def main(argv: list[str] | None = None) -> None:
     service = AnySong(engine, Deezer(scratch), meta, args.cache_size, args.max_pending,
                       languages=languages, scene=scene, tempo=tempo, tracker=tracker,
                       learn=LearnQueue(args.learn_queue) if args.learn_queue else None, tiers=tiers,
+                      language_rows=language_rows,
                       ranker=listener.Ranker.load(args.ranker) if args.ranker is not None else None,
                       head=SceneHead(f"{args.head}.npz", f"{args.head}.emb.npy", engine.indexes["sonic"].pos)
                       if args.head is not None else None,
@@ -1879,6 +1955,7 @@ def main(argv: list[str] | None = None) -> None:
     hubs = {name: getattr(ix, "hub_alpha", 0.0) for name, ix in engine.indexes.items()}
     print(f"ready in {time.perf_counter() - t:.1f}s (warmup {warm:.1f}s) {sizes} hub_alpha={hubs} "
           f"tiers={None if tiers is None else tiers.sizes} ranker={service.health()['ranker']} "
+          f"language_search={engine.load_secs.get('language_rows')}s "
           f"stems={service.health()['stems']} (warmup {stems_warm}s) blend={service.health()['blend']} "
           f"gpu={_gpu_mib(args.device)} "
           f"on http://{args.host}:{args.port}", flush=True)

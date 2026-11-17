@@ -165,3 +165,99 @@ def test_blend_rejects_files_that_do_not_fit(tmp_path):
         Blend(blend.head, blend.table, GRAPH[:3], cf)
     with pytest.raises(ValueError, match="distinct rows"):
         Blend(blend.head, blend.table, np.array([0, 0, 1, 2, 3, N]), cf)
+
+
+def test_within_mask_adds_the_lists_among_those_rows_alone(setup):
+    eng, index, win, table, cf = setup
+    row, k = 4, 4
+    tid = int(IDS[row])
+    inside = torch.zeros(N, dtype=torch.bool)
+    inside[[0, 2, 3, 4, 6, 9, 11, 13]] = True
+    plain, plain_timings = eng.search_stored(tid, k=k)
+    results, timings = eng.search_stored(tid, k=k, within={"sonic": inside})
+    # The unmasked lists are untouched; the masked ones come with their own timing.
+    assert results["sonic"] == plain["sonic"] and results["blend"] == plain["blend"]
+    assert "within" not in plain and "search_lang" not in plain_timings and timings["search_lang"] >= 0
+    sonic = index.scores(index.stored_query(tid))
+    assert results["within"]["sonic"] == index.top(sonic.masked_fill(~inside, -torch.inf), k, [tid])
+    want, score = _expected(index, sonic.numpy().astype(np.float64), table, table[row], cf, row, drop=[row])
+    want_in = [t for t in want if inside[index.pos[t]]]
+    assert [t for t, _ in results["within"]["blend"]] == want_in[:k]
+    for t, s in results["within"]["blend"]:  # exact sonic scores, as in the unmasked ranking
+        assert s == pytest.approx(float(sonic[index.pos[t]]), abs=1e-6)
+    # Every song of the unmasked lists that passes the mask is in the masked one.
+    for name in ("sonic", "blend"):
+        assert {t for t, _ in plain[name] if inside[index.pos[t]]} <= {t for t, _ in results["within"][name]}
+        assert not {t for t, _ in results["within"][name]} <= {t for t, _ in plain[name]}  # and new ones
+    blendz = dict(results["blendz"])
+    assert set(blendz) == {t for rows in (results["sonic"], results["blend"], *results["within"].values())
+                           for t, _ in rows}
+    assert all(z == pytest.approx(score[index.pos[t]], abs=1e-4) for t, z in blendz.items())
+    assert list(blendz)[:len(plain["blendz"])] == [t for t, _ in plain["blendz"]]
+    # The ``allow`` mask and ``exclude`` apply to the masked lists too.
+    allow = torch.ones(N, dtype=torch.bool)
+    allow[index.pos[want_in[0]]] = False
+    masked, _ = eng.search_stored(tid, k=N, exclude=[want_in[1]], allow={"sonic": allow}, within={"sonic": inside})
+    assert [t for t, _ in masked["within"]["blend"]] == want_in[2:]
+    assert {t for t, _ in masked["within"]["sonic"]} == set(want_in[2:])
+    # A live seed, and an engine without a blend: the channel's list alone.
+    live, live_timings = eng.search_windows({"sonic": win[row]}, k=k, exclude=[tid], within={"sonic": inside})
+    assert [t for t, _ in live["within"]["sonic"]] == [t for t, _ in results["within"]["sonic"]]
+    assert len(live["within"]["blend"]) == k and "search_lang" in live_timings
+    eng.blend = None
+    bare, _ = eng.search_stored(tid, k=k, within={"sonic": inside})
+    assert set(bare) == {"sonic", "within"} and bare["within"] == {"sonic": results["within"]["sonic"]}
+
+
+def test_two_stage_within_lists_score_only_new_rows_and_keep_the_listed_songs(tmp_path, monkeypatch):
+    win, table, cf = _files(tmp_path)
+    ch = serve.CHANNELS["sonic"]
+    (tmp_path / "emb" / ch.model).mkdir(parents=True)
+    np.savez(tmp_path / "emb" / ch.model / "part-00000.npz", ids=IDS, win=win.astype(np.float16), track=win.mean(1))
+    index_build.build_channel(ch, tmp_path / "emb", tmp_path / "ix" / "sonic", 6, None, "cpu")
+    two = serve.TwoStageIndex.load(tmp_path / "ix" / "sonic", ch, candidates=6)
+    row, k = 4, 4
+    tid = int(IDS[row])
+    q = two.stored_query(tid)
+    exact_all = two.score_rows(q, np.arange(N))
+    stage1 = two.stage1(q[None])[0]
+    scores, base, exact = two.search(q)
+    assert base is None and int(exact.sum()) == 6 and torch.equal(scores, two.scores(q))
+    assert torch.allclose(scores[exact], exact_all[exact], atol=1e-6)
+    cand = exact.nonzero().flatten().tolist()
+    # The mask: every row the search did not re-score, and three it did.
+    inside = ~exact
+    inside[cand[:3]] = True
+    eng = _engine(two)
+    plain, _ = eng.search_stored(tid, k=k)
+    passes, read = [], []
+    stage, score_rows = two.stage1, two.score_rows
+    monkeypatch.setattr(two, "stage1", lambda *a, **kw: (passes.append(1), stage(*a, **kw))[1])
+    monkeypatch.setattr(two, "score_rows", lambda q_, rows: (read.append(list(rows)), score_rows(q_, rows))[1])
+    results, timings = eng.search_stored(tid, k=k, within={"sonic": inside})
+    assert results["sonic"] == plain["sonic"] and "search_lang" in timings
+    # One pass over the index; the pool is the mask's best six rows (the search's candidates first, then by stage-1
+    # score), and only the rows the search had not scored exactly are read.
+    others = sorted((r for r in range(N) if not exact[r]), key=lambda r: -float(stage1[r]))[:3]
+    assert len(passes) == 1 and read == [sorted(others)]
+    pool = [r for r in (*cand[:3], *others) if r != row]
+    listed = [two.pos[t] for t, _ in plain["sonic"] if inside[two.pos[t]]]
+    best = sorted(pool, key=lambda r: -float(exact_all[r]))[:k]
+    want = sorted({*best, *listed}, key=lambda r: -float(exact_all[r]))
+    got = results["within"]["sonic"]
+    assert [two.pos[t] for t, _ in got] == want and set(listed) <= set(want) and set(others) & set(want)
+    for t, s in got:
+        assert s == pytest.approx(float(exact_all[two.pos[t]]), abs=1e-6)
+    # A mask of every row gives the search's own list; an empty one, nothing.
+    assert eng.search_stored(tid, k=k, within={"sonic": torch.ones(N, dtype=torch.bool)})[0]["within"]["sonic"] == \
+        plain["sonic"]
+    assert eng.search_stored(tid, k=k, within={"sonic": torch.zeros(N, dtype=torch.bool)})[0]["within"]["sonic"] == []
+    # With a blend: the masked blended order (stage-1 scores), each song with its exact sonic score.
+    monkeypatch.undo()
+    eng.blend = Blend.load(tmp_path / "h", tmp_path, two.pos)
+    order, _ = _expected(two, stage1.numpy().astype(np.float64), table, table[row], cf, row, drop=[row])
+    blended = eng.search_stored(tid, k=k, within={"sonic": inside})[0]["within"]["blend"]
+    assert [t for t, _ in blended] == [t for t in order if inside[two.pos[t]]][:k]
+    for t, s in blended:
+        assert s == pytest.approx(float(exact_all[two.pos[t]]), abs=1e-6)
+    del two, eng  # releases the memory map of full.npy

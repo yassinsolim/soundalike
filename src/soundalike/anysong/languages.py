@@ -20,7 +20,7 @@ import sys
 import time
 import unicodedata
 from collections import Counter
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -196,6 +196,28 @@ class LanguageTable:
     def artist_language(self, artist: str | None) -> str:
         return self.artists.get(normalize_artist(artist), UNKNOWN) if artist else UNKNOWN
 
+    def effective_codes(self, track_ids: np.ndarray, artist_of: Callable[[int], str | None] | None = None
+                        ) -> np.ndarray:
+        """Vocab index (-1: unknown) of each track's language as the same-language gate reads it, for many tracks at
+        once: the track's own label, else (with ``artist_of``, track id -> credited artist) its artist's majority
+        language (``artist_language``)."""
+        ids = np.asarray(track_ids, dtype=np.int64)
+        codes = self.codes_for(ids).astype(np.int16)
+        if artist_of is None or not self.artists:
+            return codes
+        code_of = {language: code for code, language in enumerate(self.vocab)}
+        by_name: dict[str, int] = {}
+        unsure = np.flatnonzero(codes < 0)
+        for i, tid in zip(unsure.tolist(), ids[unsure].tolist()):
+            name = artist_of(tid)
+            if not name:
+                continue
+            code = by_name.get(name)
+            if code is None:
+                code = by_name[name] = code_of.get(self.artist_language(name), -1)
+            codes[i] = code
+        return codes
+
     def guess(self, track_id: int, artist: str | None, *, min_prob: float = GUESS_MIN) -> str:
         """A best guess for a track without a label of its own: Whisper's top language when its probability is at
         least ``min_prob`` and the artist's labelled tracks do not rule it out (``spread``); "unknown" otherwise."""
@@ -229,6 +251,42 @@ class LanguageTable:
             if artist and count >= min_tracks and count >= min_share * sum(counter.values()):
                 out[artist] = self.vocab[code]
         return out
+
+
+class LanguageRows:
+    """The gate's language of every row of each channel index (``LanguageTable.effective_codes``), held on the
+    index's device: boolean row masks for searches among one language's songs."""
+
+    def __init__(self, table: LanguageTable, indexes: Mapping[str, object],
+                 artist_of: Callable[[int], str | None] | None = None):
+        import torch
+
+        self.vocab = {language: code for code, language in enumerate(table.vocab)}
+        self.codes: dict[str, object] = {}
+        self.counts: dict[str, np.ndarray] = {}
+        done: list[tuple[np.ndarray, np.ndarray]] = []  # channels usually share one id order
+        for name, ix in indexes.items():
+            ids = np.asarray(ix.ids, dtype=np.int64)
+            codes = next((c for other, c in done if np.array_equal(other, ids)), None)
+            if codes is None:
+                codes = table.effective_codes(ids, artist_of)
+                done.append((ids, codes))
+            self.codes[name] = torch.as_tensor(codes, device=ix.id_tensor.device)
+            self.counts[name] = np.bincount(codes.astype(np.int64) + 1, minlength=len(table.vocab) + 1)
+
+    def masks(self, language: str) -> dict[str, object] | None:
+        """Channel -> boolean row mask of the songs in ``language`` or of unknown language (what the gate keeps);
+        None for a language outside the table's vocabulary ("unknown" among them)."""
+        code = self.vocab.get(language)
+        if code is None:
+            return None
+        return {name: (codes == code) | (codes < 0) for name, codes in self.codes.items()}
+
+    def pool(self, language: str) -> int:
+        """How many songs of the sonic index (else of the first channel's) pass ``masks(language)``."""
+        counts = self.counts["sonic"] if "sonic" in self.counts else next(iter(self.counts.values()))
+        return int(counts[0] + counts[self.vocab[language] + 1])
+
 
 
 def merge_shards(out: Path, vocab: Sequence[str], meta: dict) -> Path:

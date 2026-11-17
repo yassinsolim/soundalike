@@ -3396,3 +3396,37 @@ one scored by the listener ranker (a blended-only song has no channel ranks and 
 without a probability gets the pool's median logit), ordered as `--main-pool sonic` orders them (z-scores, or
 `--main-scale`) plus `--main-blend-weight B` (default 0) times the song's blended score. `overall` is computed
 as for the sonic pool, without the blended term. Without listener data that main is the sonic one.
+
+## Same-language lists from in-language searches (2026-11-17): local experiment, not served
+
+The same-language gate used to filter each channel's top 200 of the whole catalog after the search. The catalog
+of 1,018,838 songs is 69 % English, so a seed in a small language kept few of those 200: on the world charts of
+31 countries, Russian, Arabic, Hindi and Ukrainian seeds showed 0 to 9 songs a list.
+
+With `--languages` the API now also searches among the seed's language alone. `languages.LanguageRows` holds the
+gate's language of every index row (the song's own label, else its artist's majority language, else unknown:
+`LanguageTable.effective_codes`, the rule `AnySong._item_language` applies to a listed song). For a seed whose
+gate language is known (its own, its artist's, or the main-only guess), `serve.Engine` returns, next to each
+list, the same list among the rows of that language or of unknown language, combined with the tier mask
+(`results["within"]`): melody, samples and sonic from the scores of the search (`top_within`: the best
+`candidates` rows of the mask, the search's exact candidates first and then by stage-1 score; only rows not yet
+scored exactly are read), and the blended ranking from the same blended scores. `lang=same` builds Best matches,
+Same vibe, Sounds like, main (every `--main-pool`, and the guessed-language main) and Listeners also play from
+those lists; the listener ranker scores their songs like the blended-only ones (no channel ranks). A masked list
+holds every song of its unmasked list that passes the mask, so the gate's old lists are subsets of the new
+ones, with one exception: of other artists' versions of the seed's own song still only `MAX_VERSIONS` are kept,
+now the best placed in the language. `query["language_pool"]` is the number of indexed songs the mask passes;
+`timings_ms["search_lang"]` is the added search time. With `--main-pool blend` the match floor still drops
+blended songs, and main then goes on with the in-language sonic list's other songs in its order.
+
+Unchanged: `lang=all`, seeds without a gate language, the channel lists (`melody`, `samples`, `sonic`) and
+`hidden`. Changed for every seed with a gate language, English ones included: each list's candidates are the
+language's best 200 a channel rather than what the gate left of the catalog's 200, so the listener orders
+(z-scores over the candidates) can place songs differently and new songs can enter. No held-out gate has been
+run on this.
+
+Cost measured on CPU only, on a synthetic two-stage sonic index (300,000 songs, 3 windows of 64 dimensions,
+16-dimension projection, 1,000 candidates, lists of 200): `search_lang` 2.5 to 3.3 ms a seed (median; at most
+4.9 ms) for masks passing 1 %, 10 % and 70 % of the rows, next to 9 to 10 ms for the search itself.
+`LanguageRows` for 1,000,000 rows and three channels (synthetic table, 150,000 artists) took 0.43 s and 2 MB.
+Not measured: the real index, CUDA.

@@ -908,6 +908,243 @@ def test_sonic_plus_blend_main_pool_adds_blended_songs_to_the_listener_order(tmp
         api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, main_pool="sonic+blend")
 
 
+class LangEngine(SonicEngine):
+    """A catalog ranked by one fixed score per song in every channel, ``fetch`` songs a list; the blended ranking
+    (``blend=True``) is the same songs worst first. ``within`` (channel -> track ids, from ``FakeRows``) adds the same
+    lists among those songs alone, as ``serve.Engine`` does for row masks."""
+
+    def __init__(self, scores, fetch=5, blend=False):
+        FakeEngine.__init__(self, ids=tuple(scores))
+        self.indexes["sonic"] = FakeIndex(scores)
+        self.catalog, self.fetch, self.scored, self.within = dict(scores), fetch, [], []
+        self.blend = object() if blend else None
+
+    def _lists(self, exclude, inside=None):
+        rows = sorted(((t, s) for t, s in self.catalog.items() if t not in exclude and (inside is None or t in inside)),
+                      key=lambda row: -row[1])
+        lists = {channel: rows[:self.fetch] for channel in self.indexes}
+        return lists | ({"blend": rows[::-1][:self.fetch]} if self.blend is not None else {})
+
+    def _search(self, exclude, within):
+        self.within.append(within)
+        raw = self._lists(exclude)
+        if self.blend is not None:
+            raw["blendz"] = [(t, -s) for t, s in self.catalog.items()]
+        if within is not None:
+            raw["within"] = self._lists(exclude, within["sonic"])
+        return raw, {"search_sonic": 1.0} | ({"search_lang": 0.5} if within is not None else {})
+
+    def search_stored(self, tid, k, allow=None, within=None):
+        return self._search({tid}, within)
+
+    def search_windows(self, wins, k, exclude=(), allow=None, within=None):
+        return self._search(set(exclude), within)
+
+    def score_tracks(self, channel, track_ids, windows=None, query_track=None):
+        self.scored.append(sorted(int(t) for t in track_ids))
+        return {int(t): self.catalog[int(t)] for t in track_ids if int(t) in self.catalog}
+
+
+class FakeRows:
+    """``languages.LanguageRows`` over track ids instead of row masks: each catalog song's gate language."""
+
+    def __init__(self, languages, meta, ids):
+        self.language = {}
+        for tid in ids:
+            own = languages.language(tid)
+            self.language[tid] = own if own != "unknown" else languages.artist_language(meta.get(tid, ("",))[0])
+
+    def masks(self, language):
+        if language == "unknown" or language not in self.language.values():
+            return None
+        inside = {tid for tid, lang in self.language.items() if lang in (language, "unknown")}
+        return {"melody": inside, "samples": inside, "sonic": inside}
+
+    def pool(self, language):
+        return len(self.masks(language)["sonic"])
+
+
+# A Russian seed (1) in a mostly English catalog: five English songs sound closest, then a French one (14), a song of
+# unknown language (7), five Russian ones (8-12) and an unlabelled song by the seed's artist (13).
+RU_META = {1: ("Kino", "Zvezda"), 2: ("En A", "Two"), 3: ("En B", "Three"), 4: ("En C", "Four"), 5: ("En D", "Five"),
+           6: ("En E", "Six"), 7: ("Mystery", "Hum"), 8: ("Ru A", "Vosem"), 9: ("Ru B", "Devyat"),
+           10: ("Ru C", "Desyat"), 11: ("Ru D", "Odinnadtsat"), 12: ("Ru E", "Dvenadtsat"), 13: ("Kino", "Gruppa"),
+           14: ("Fr A", "Chanson")}
+RU_SCORES = {1: 0.9, 2: 0.50, 3: 0.49, 4: 0.48, 5: 0.47, 6: 0.46, 14: 0.45, 7: 0.40, 8: 0.39, 9: 0.38, 10: 0.37,
+             11: 0.36, 12: 0.35, 13: 0.30}
+RU_LABELS = {1: "ru", 2: "en", 3: "en", 4: "en", 5: "en", 6: "en", 8: "ru", 9: "ru", 10: "ru", 11: "ru", 12: "ru",
+             14: "fr"}
+RU_POOL = {1, 7, 8, 9, 10, 11, 12, 13}
+
+
+def _ru_services(tmp_path, languages=None, scores=RU_SCORES, fetch=5, blend=False, **kw):
+    """The same service with the in-language lists and without them (the gate filters the catalog's lists)."""
+    languages = languages or FakeLanguages(RU_LABELS, {"kino": "ru"})
+    out = []
+    for rows in (FakeRows(languages, RU_META, scores), None):
+        out.append(api.AnySong(LangEngine(scores, fetch, blend), FakeDeezer(tmp_path), RU_META, languages=languages,
+                               language_rows=rows, **kw))
+    return out
+
+
+def _ids(response, name):
+    return [x["id"] for x in response["results"].get(name, ())]
+
+
+def test_rare_language_seed_gets_full_same_language_lists(tmp_path):
+    svc, plain = _ru_services(tmp_path)
+    r, before = svc.similar(1, k=5), plain.similar(1, k=5)
+    # The catalog's lists hold English songs alone, so the gate used to leave nothing to show.
+    assert _ids(before, "sonic") == [2, 3, 4, 5, 6] and not {"best", "sounds", "main"} & set(before["results"])
+    assert "language_pool" not in before["query"] and plain.engine.within == [None]
+    # Now each list has k songs of the seed's language (or of unknown language), best sounding first.
+    for name in ("best", "sounds", "main"):
+        assert _ids(r, name) == [7, 8, 9, 10, 11], name
+    assert r["query"] == before["query"] | {"language_pool": len(RU_POOL)} and r["query"]["hidden"] == 5
+    assert r["timings_ms"]["search_lang"] == 0.5 and svc.engine.within == [svc.language_rows.masks("ru")]
+    assert all(x["match"] == api.sound_match(RU_SCORES[x["id"]]) for x in r["results"]["main"])
+    # The channel lists stay the catalog's, and every language shows what it did.
+    for name in ("melody", "samples", "sonic"):
+        assert r["results"][name] == before["results"][name]
+    every, every_before = svc.similar(1, k=5, lang_mode="all"), plain.similar(1, k=5, lang_mode="all")
+    assert every["results"] == every_before["results"] and every["query"] == every_before["query"]
+    assert _ids(every, "sounds") == [2, 3, 4, 5, 6] and len(svc.engine.within) == 1  # one search serves both modes
+    # A seed of unknown language is searched and answered as before.
+    unknown, unknown_before = svc.similar(7, k=5), plain.similar(7, k=5)
+    assert svc.engine.within[-1] is None and "raw_lang" not in svc.results.get(7)
+    assert unknown["results"] == unknown_before["results"] and unknown["query"] == unknown_before["query"]
+    assert unknown["query"]["language"] == "unknown" and "search_lang" not in unknown["timings_ms"]
+    # A live seed by an artist of that language takes the same path.
+    svc.deezer.tracks[98] = {"id": 98, "title": "Novaya", "artist": {"name": "Kino"}, "album": {}, "preview": "u"}
+    live = svc.similar(98, k=5)
+    assert live["query"]["language"] == "ru" and live["query"]["language_pool"] == len(RU_POOL)
+    assert _ids(live, "sounds") == [1, 7, 8, 9, 10]  # song 1 is the artist's catalog song here, not the seed
+    assert svc.health()["language_search"] and not plain.health()["language_search"]
+
+
+def test_in_language_lists_keep_every_song_the_gate_left(tmp_path):
+    # Eight songs a list: the catalog's lists hold two songs the gate keeps (7 and 8).
+    svc, plain = _ru_services(tmp_path, fetch=8)
+    r, before = svc.similar(1, k=10), plain.similar(1, k=10)
+    for name in ("best", "sounds", "main"):
+        assert _ids(before, name) == [7, 8], name
+        assert _ids(r, name)[:2] == [7, 8] and set(_ids(r, name)) == RU_POOL - {1}, name
+    # A table that changed since the search (another gate language) falls back to filtering the catalog's lists.
+    svc.languages = FakeLanguages(RU_LABELS | {1: "fr"})
+    assert _ids(svc.similar(1, k=10), "sounds") == [14, 7] and "language_pool" not in svc.similar(1, k=10)["query"]
+
+
+def test_guessed_language_main_comes_from_the_in_language_lists(tmp_path):
+    # No label for the seed or its artist; the table guesses Russian, which gates main alone.
+    languages = FakeLanguages({tid: lang for tid, lang in RU_LABELS.items() if tid != 1}, guesses={1: "ru"})
+    svc, plain = _ru_services(tmp_path, languages)
+    r, before = svc.similar(1, k=5), plain.similar(1, k=5)
+    assert "main" not in before["results"] and _ids(r, "main") == [7, 8, 9, 10, 11]
+    assert r["query"] == before["query"] | {"language_pool": len(RU_POOL)}
+    assert r["query"]["language"] == "unknown" and r["query"]["main_language_guess"] == "ru"
+    # Every other list is as before: not gated.
+    assert {name: items for name, items in r["results"].items() if name != "main"} == before["results"]
+    assert _ids(r, "sounds") == [2, 3, 4, 5, 6]
+    every = svc.similar(1, k=5, lang_mode="all")
+    assert every["results"] == plain.similar(1, k=5, lang_mode="all")["results"]
+    assert "language_pool" not in every["query"]
+    # The guess gating every list (``language_guess`` True) reads them all from the in-language lists.
+    svc.language_guess = True
+    assert _ids(svc.similar(1, k=5), "sounds") == [7, 8, 9, 10, 11]
+    # Without the guess the seed has no gate language, and nothing is searched in a language.
+    off, off_plain = _ru_services(tmp_path, languages, language_guess=False)
+    assert off.similar(1, k=5)["results"] == off_plain.similar(1, k=5)["results"] and off.engine.within == [None]
+
+
+def test_listener_ranker_scores_the_in_language_candidates(tmp_path):
+    # Kino (100) names Ru A (300) as related; the other artists have no scene data.
+    artists = {1: 100, 13: 100, 8: 300} | {tid: 400 + tid for tid in RU_META if tid not in (1, 13, 8)}
+    scene = build_scene(artists, {100: [300], 300: [100]}, {100: ["RU"], 300: ["RU"]}, {})
+    svc, plain = _ru_services(tmp_path, scene=scene, ranker=_stump("fwd", -1.0, 1.0))
+    r, before = svc.similar(1, k=5), plain.similar(1, k=5)
+    data = svc.results.get(1)["listener"]
+    # Every song of the catalog's lists and of the in-language ones has a listener probability and a sound score.
+    assert {2, 3, 4, 5, 6} | {7, 8, 9, 10, 11} <= set(data["p"]) and data["son"][11] == RU_SCORES[11]
+    assert data["p"][8] > data["p"][9] == data["p"][2]  # the related artist's song; the feature rows are per song
+    assert {tid: p for tid, p in data["p"].items() if tid in plain.results.get(1)["listener"]["p"]} == \
+        plain.results.get(1)["listener"]["p"]
+    # Before, only the scene candidates in the seed's language were left (8, and the seed artist's 13 for main).
+    assert set(_ids(before, "best")) <= {8, 13} and "sounds" not in before["results"]
+    for name in ("best", "sounds", "main"):
+        assert len(_ids(r, name)) == 5 and set(_ids(r, name)) <= RU_POOL - {1}, name
+    assert _ids(r, "main")[0] == 8 and _ids(r, "listeners")[0] == 8  # listeners place the related artist's song first
+    assert set(_ids(r, "listeners")) <= RU_POOL - {1, 13} and len(_ids(r, "listeners")) == 5
+    assert all("overall" in x and "match" in x for x in r["results"]["main"])
+    every = svc.similar(1, k=5, lang_mode="all")
+    assert every["results"] == plain.similar(1, k=5, lang_mode="all")["results"]
+
+
+def test_blended_main_is_filled_from_the_in_language_sonic_list(tmp_path):
+    # Three Russian songs sound alike enough for the match floor (8, 9, 10); the blended ranking (worst sound first)
+    # of the seed's language holds one of them.
+    scores = RU_SCORES | {2: 0.60, 3: 0.59, 4: 0.58, 5: 0.57, 6: 0.56, 14: 0.50, 8: 0.46, 9: 0.45, 10: 0.44}
+    assert api.sound_match(0.44) >= api.MAIN_MATCH_FLOOR > api.sound_match(0.40)
+    svc, plain = _ru_services(tmp_path, scores=scores, blend=True, main_pool="blend")
+    r, before = svc.similar(1, k=5), plain.similar(1, k=5)
+    assert svc.results.get(1)["blend_lang"] == [(13, 0.30), (12, 0.35), (11, 0.36), (7, 0.40), (10, 0.44)]
+    assert _ids(before, "main") == [10]  # the catalog's blended ranking holds it; the floor leaves nothing else
+    # The blended song over the floor, then the in-language sonic list's other songs in its order.
+    assert _ids(r, "main") == [10, 8, 9, 7, 11] and all("overall" not in x for x in r["results"]["main"])
+    assert [x["match"] for x in r["results"]["main"]] == [api.sound_match(scores[t]) for t in (10, 8, 9, 7, 11)]
+    # A floor that every blended song passes: the blended order, and the sonic list's songs only after it.
+    svc.main_match_floor = 0
+    assert _ids(svc.similar(1, k=10), "main") == [13, 12, 11, 7, 10, 8, 9]
+    # Every language: the catalog's blended ranking alone, as before.
+    svc.main_match_floor = api.MAIN_MATCH_FLOOR
+    every = svc.similar(1, k=5, lang_mode="all")
+    assert every["results"] == plain.similar(1, k=5, lang_mode="all")["results"]
+    # The listener order of "sonic+blend" takes the in-language blended songs as candidates too.
+    artists = {1: 100, 13: 100, 8: 300} | {tid: 400 + tid for tid in RU_META if tid not in (1, 13, 8)}
+    scene = build_scene(artists, {100: [300], 300: [100]}, {100: ["RU"], 300: ["RU"]}, {})
+    both, _ = _ru_services(tmp_path, scores=scores, blend=True, main_pool="sonic+blend", scene=scene,
+                           ranker=_stump("fwd", -1.0, 1.0), main_match_floor=0)
+    main = both.similar(1, k=10)["results"]["main"]
+    assert {12, 13} <= set(both.results.get(1)["listener"]["p"])  # in the blended ranking alone
+    assert {x["id"] for x in main} == RU_POOL - {1} and all("overall" in x for x in main)
+
+
+def test_effective_language_rows_follow_the_gate_rule(tmp_path):
+    torch = pytest.importorskip("torch")
+    from soundalike.anysong.languages import LanguageRows
+
+    # 1, 7 (Artist A) and 15 are English, 9 and 16 French; 11 is unsure by Artist A (English by majority), 12 unsure
+    # by Artist B (one labelled song: no majority), 13 unsure without an artist name, 99 not in the table.
+    rows = {7: (0, 0.95), 1: (0, 0.96), 9: (1, 0.94), 11: (1, 0.55), 12: (0, 0.6), 13: (0, 0.6), 15: (0, 0.9),
+            16: (1, 0.9)}
+    path = tmp_path / "languages.npz"
+    np.savez(path, ids=np.asarray(list(rows)), vocab=np.asarray(["en", "fr", "de"]),
+             top_idx=np.asarray([[c, 1 - c] for c, _ in rows.values()], dtype=np.uint8),
+             top_prob=np.asarray([[p, 1 - p] for _, p in rows.values()], dtype=np.float32), meta=np.asarray("{}"))
+    names = {1: "Artist A", 7: "Artist A", 11: "ARTIST  a", 9: "Artist B", 12: "Artist B", 15: "C", 16: "D", 99: "E"}
+    table = LanguageTable.load(path, artist_names=names)
+    ids = np.array([16, 99, 11, 1, 13, 12, 9, 7, 15], dtype=np.int64)
+    codes = table.effective_codes(ids, names.get)
+    assert codes.dtype == np.int16 and codes.tolist() == [1, -1, 0, 0, -1, -1, 1, 0, 0]
+    assert table.effective_codes(ids).tolist() == [1, -1, -1, 0, -1, -1, 1, 0, 0]  # own labels alone
+    # The rule the gate applies to each listed song (``AnySong._item_language``).
+    svc = api.AnySong(FakeEngine(ids=ids.tolist()), FakeDeezer(tmp_path), {t: (a, "x") for t, a in names.items()},
+                      languages=table)
+    want = [svc._item_language({"id": int(t), "artist": svc.meta.get(int(t), (None, None))[0]}) for t in ids]
+    assert [table.vocab[c] if c >= 0 else "unknown" for c in codes.tolist()] == want
+
+    class Index:
+        def __init__(self, ids):
+            self.ids, self.id_tensor = ids, torch.as_tensor(ids)
+
+    gate = LanguageRows(table, {"melody": Index(ids), "sonic": Index(ids[::-1].copy())}, names.get)
+    masks = gate.masks("en")
+    assert masks["melody"].tolist() == [False, True, True, True, True, True, False, True, True]
+    assert masks["sonic"].tolist() == masks["melody"].tolist()[::-1] and masks["sonic"].dtype == torch.bool
+    assert gate.pool("en") == 7 and gate.pool("fr") == 5 and gate.pool("de") == 3
+    assert gate.masks("unknown") is None and gate.masks("xx") is None
+    assert int(gate.masks("de")["sonic"].sum()) == 3  # a language without songs: the unknown ones alone
+
+
 def test_scene_layer_lifts_related_artists_and_can_be_turned_off(tmp_path):
     # copy_score=None: the fake engine scores every row 0.9 on samples, which would read as copies of the seed
     svc = api.AnySong(FakeEngine(), FakeDeezer(tmp_path), META, scene=_scene_table(), copy_score=None,
