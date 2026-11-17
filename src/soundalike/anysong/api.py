@@ -1614,6 +1614,16 @@ def _warmup(engine) -> float:
     return time.perf_counter() - t
 
 
+def _overall_scales(path: Path | None) -> dict:
+    """``main_overall`` and ``listeners_overall`` from an ``--overall`` JSON file; empty (the defaults) without one."""
+    if path is None:
+        return {}
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    return {f"{name}_overall": OverallScale(float(data[name]["sound_sd"]), float(data[name]["logit_sd"]),
+                                            tuple(float(q) for q in data[name]["quantiles"]))
+            for name in ("main", "listeners")}
+
+
 def main(argv: list[str] | None = None) -> None:
     import torch
 
@@ -1662,6 +1672,9 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--main-listener-weight", type=float, default=MAIN_LISTENER_WEIGHT)
     p.add_argument("--main-scale", type=float, nargs=2, default=None, metavar=("SOUND_SD", "LOGIT_SD"),
                    help="order main's body on these fixed scales instead of per-seed z-scores")
+    p.add_argument("--overall", type=Path, default=None,
+                   help="JSON with 'main' and 'listeners' overall scales (sound_sd, logit_sd, quantiles) for a ranker "
+                        "other than the one MAIN_OVERALL and LISTENERS_OVERALL were calibrated on")
     p.add_argument("--stems", type=Path, default=None,
                    help="stem table from anysong.stems pack: stored dissections for /api/anysong/dissect")
     p.add_argument("--stems-model", type=Path, default=None,
@@ -1735,7 +1748,8 @@ def main(argv: list[str] | None = None) -> None:
                       main_pool=args.main_pool, main_match_floor=args.main_match_floor,
                       main_listener_weight=args.main_listener_weight,
                       main_scale=tuple(args.main_scale) if args.main_scale else None,
-                      stems=store, dissector=dissector, catalog_previews=args.catalog_previews)
+                      stems=store, dissector=dissector, catalog_previews=args.catalog_previews,
+                      **_overall_scales(args.overall))
     server = Server((args.host, args.port), service, args.search_per_min, args.similar_per_min,
                     args.cors_origin, args.client_ip_header, dissect_per_min=args.dissect_per_min)
     sizes = {name: len(ix) for name, ix in engine.indexes.items()}
