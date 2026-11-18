@@ -2139,7 +2139,8 @@ def test_head_all_languages_applies_to_the_guessed_language_main(tmp_path, liste
         {name: rows for name, rows in off["results"].items() if name != "main"}
 
 
-def test_cross_head_keeps_the_order_of_the_ungated_head(tmp_path):
+def test_cross_head_keeps_the_order_of_the_ungated_head(tmp_path, monkeypatch):
+    monkeypatch.setattr(api, "CROSS_HEAD_CHANNELS", 1)  # this test is about placement; one list is enough here
     meta = {1: ("Seed", "Song"), 2: ("A", "Deux"), 3: ("B", "Three"), 4: ("C", "Quatre"), 5: ("D", "Five")}
     svc = api.AnySong(FakeEngine(ids=tuple(meta)), FakeDeezer(tmp_path), meta, best_head_standout=0.0,
                       languages=FakeLanguages({1: "en", 2: "fr", 3: "en", 4: "fr", 5: "en"}))
@@ -2159,3 +2160,16 @@ def test_cross_head_keeps_the_order_of_the_ungated_head(tmp_path):
     # listed is not added again.
     assert svc._cross_head(ungated, [key[5]], keep, {key[5]})[0] == [key[2], key[4], key[5]]
     assert svc._cross_head(ungated, [key[3]], keep, {key[2], key[3], key[4]}) == ([key[3]], {})
+
+
+def test_cross_head_needs_evidence_in_two_channel_lists(tmp_path):
+    meta = {1: ("Seed", "Song"), 2: ("A", "Deux"), 4: ("C", "Quatre")}
+    svc = api.AnySong(FakeEngine(ids=tuple(meta)), FakeDeezer(tmp_path), meta, best_head_standout=0.0,
+                      languages=FakeLanguages({1: "en", 2: "fr", 4: "fr"}))
+    key = {tid: api.song_key(*meta[tid]) for tid in meta}
+    item = {tid: {"id": tid, "score": -0.5, "artist": meta[tid][0], "title": meta[tid][1]} for tid in (2, 4)}
+    # French 2 has melody evidence and is in the sonic list too; French 4 stands in the melody list alone.
+    ungated = {"melody": {key[2]: item[2], key[4]: item[4] | {"score": -0.6}},
+               "sonic": {key[2]: item[2] | {"score": 0.4}}}
+    head, cross = svc._cross_head(ungated, [], lambda it: svc._item_language(it) in {"unknown", "en"}, set())
+    assert head == [key[2]] and cross[key[2]][1] == {"melody": 1, "sonic": 1}

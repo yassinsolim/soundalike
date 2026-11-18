@@ -147,6 +147,11 @@ LISTENERS_SOUND_WEIGHT = 0.25
 # off, and ``query["main_language_guess"]`` names the guess. It passed its held-out gates on 2026-11-13 ("Held-out
 # result for the main-only seed language guess") and is served. False: no guess.
 LANGUAGE_GUESS: bool | str = "main"
+# ``head_all_languages``: an other-language song joins the audio head only when it stands in at least this many of the
+# catalog's channel lists. On 2,517 seeds of fresh online claims (2026-11-18, anysong-lab v8/retr/head_study.py) rows
+# listed in two or more channels were the song people named 13.5 % of the time (170 rows), rows in one list 2.4 %
+# (165 rows, mean sound match 21).
+CROSS_HEAD_CHANNELS = 2
 # Sound match (``sound_match``): sonic (MuQ-MuLan) score quantiles 0, 5, ..., 100 % over every song shown in the top
 # 20 of Best matches, Same vibe or Sounds like for the development seeds: 62,362 songs from 1,474 seeds with the
 # served lists (grow/qa/head_dev.py calib, 2026-11-11). A typical seed's median shown song scores 0.419 (50).
@@ -1556,7 +1561,8 @@ class AnySong:
         cross = {}
         for key in evident:
             item, ranks = entry(key)
-            if key not in listed and not keep(item):
+            # Evidence in one list alone is right too rarely across languages (CROSS_HEAD_CHANNELS).
+            if key not in listed and not keep(item) and len(ranks) >= CROSS_HEAD_CHANNELS:
                 cross[key] = (item | {"other_language": True}, ranks)
         if not cross:
             return head, {}
