@@ -3,8 +3,9 @@
 ``index_build`` fits the stage-1 basis (and, for ``center`` channels, the window mean) on every row it is given, so
 rebuilding a grown catalog changes all stored rows a little and needs every old shard. A small addition does not
 need that: this writes ``<out>/<channel>/`` as a copy of ``<base>/<channel>/`` followed by the new tracks, prepared
-with the base's ``mu.npy`` and ``basis.npy`` and quantized like the base (``index_build.quantize_windows``). Old rows
-keep their bytes, so every score between old tracks is unchanged; the basis keeps the energy it had on the base rows.
+with the base's ``mu.npy``, ``whiten.npy`` (a whitened index, ``index_whiten``) and ``basis.npy`` and quantized like
+the base (``index_build.quantize_windows``). Old rows keep their bytes, so every score between old tracks is
+unchanged; the basis keeps the energy it had on the base rows.
 
     python -m soundalike.anysong.index_append --base index_1m --emb emb_new --ids new_ids.txt --out index_v8
     python -m soundalike.anysong.hub_build --index index_v8 --meta catalog_meta.npz
@@ -27,9 +28,9 @@ import numpy as np
 import torch
 
 from .index_build import iter_windows, plan_rows, quantize_windows
-from .serve import CHANNELS, Channel, prep_windows
+from .serve import CHANNELS, Channel, built_channel, prep_windows
 
-_COPIED = ("basis.npy", "mu.npy")
+_COPIED = ("basis.npy", "mu.npy", "whiten.npy")
 _BLOCK = 64 << 20
 
 
@@ -55,15 +56,17 @@ def append_channel(channel: Channel, base: Path, emb: Path, out: Path, keep: set
                    device: str = "cpu") -> dict:
     t0 = time.time()
     meta = json.loads((base / "meta.json").read_text())
-    if (meta["model"], meta["prep"], meta["mode"]) != (channel.model, channel.prep, channel.mode):
+    if built_channel(channel, meta) is None:
         raise ValueError(f"{base} was not built for {channel}")
+    channel = built_channel(channel, meta)
     bits, dim = int(meta.get("proj_bits", 16)), int(meta["proj_dim"])
     base_ids = np.load(base / "ids.npy")
     plan, ids = plan_rows(emb / channel.model, keep, set(base_ids.tolist()))
     basis = torch.from_numpy(np.load(base / "basis.npy")).to(device)
     mu = torch.from_numpy(np.load(base / "mu.npy")).to(device) if (base / "mu.npy").exists() else None
-    if channel.prep == "center" and mu is None:
+    if channel.prep in ("center", "whiten") and mu is None:
         raise ValueError(f"{base} has no mu.npy")
+    whiten = torch.from_numpy(np.load(base / "whiten.npy")).to(device) if channel.prep == "whiten" else None
     first = next(iter_windows(plan[:1]))
     if first.shape[1:] != (meta["windows"], meta["dim"]) or tuple(basis.shape) != (meta["dim"], dim):
         raise ValueError(f"{channel.name}: new windows {first.shape[1:]} do not fit the base index")
@@ -75,7 +78,7 @@ def append_channel(channel: Channel, base: Path, emb: Path, out: Path, keep: set
     norms = np.empty((m, meta["windows"]), np.float32)
     s = 0
     for win in iter_windows(plan):
-        x16 = prep_windows(torch.from_numpy(win).to(device).float(), channel.prep, mu).half()
+        x16 = prep_windows(torch.from_numpy(win).to(device).float(), channel.prep, mu, whiten).half()
         e = s + len(x16)
         full[n0 + s:n0 + e] = x16.cpu().numpy()
         # As index_build: project and take norms from the stored fp16 values.

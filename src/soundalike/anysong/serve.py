@@ -5,7 +5,9 @@ benchmarks only (see ``evaluate``):
 
 - ``melody``  CLEWS DVI, 3x20 s shingles, normalised squared-Euclidean best pairs (covers, same melody)
 - ``samples`` SampleID, 8x6.125 s chunks, centred cosine MaxSim (shared samples)
-- ``sonic``   MuQ-MuLan, 3x10 s windows, cosine MaxSim (general sound-alike; weakest evidence)
+- ``sonic``   MuQ-MuLan, 3x10 s windows, cosine MaxSim (general sound-alike; weakest evidence). An index built
+  by ``index_whiten`` scores it in the PCA-whitened space instead (prep ``whiten``): the index stores the
+  transform and ``prep_query`` applies it to live windows, so callers pass raw windows either way.
 
     python -m soundalike.anysong.serve --index /opt/soundalike/index/research --audio song.mp3 \
         --meta /data/catalog_meta.npz
@@ -20,7 +22,7 @@ import sys
 import time
 from collections.abc import Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import numpy as np
@@ -35,7 +37,7 @@ from .evaluate import l2, load_keys, score_block, window_scores
 class Channel:
     name: str
     model: str
-    prep: str  # none | raw | center, as in evaluate.prep_features
+    prep: str  # none | raw | center as in evaluate.prep_features; whiten: see prep_windows
     mode: str  # window scoring mode understood by evaluate.score_block
 
 
@@ -46,7 +48,10 @@ CHANNELS: dict[str, Channel] = {c.name: c for c in (
 )}
 
 
-def prep_windows(x: torch.Tensor, prep: str, mu: torch.Tensor | None = None) -> torch.Tensor:
+def prep_windows(x: torch.Tensor, prep: str, mu: torch.Tensor | None = None,
+                 whiten: torch.Tensor | None = None) -> torch.Tensor:
+    """Raw windows [..., D] -> the vectors a channel scores. ``whiten``: unit windows less the index mean ``mu``,
+    times the whitening matrix [D, D] (``index_whiten``), then unit length again."""
     if prep == "none":
         return x
     if prep == "raw":
@@ -55,7 +60,23 @@ def prep_windows(x: torch.Tensor, prep: str, mu: torch.Tensor | None = None) -> 
         if mu is None:
             raise ValueError("center prep needs the index mean")
         return l2(x - mu)
+    if prep == "whiten":
+        if mu is None or whiten is None:
+            raise ValueError("whiten prep needs the index mean and whitening matrix")
+        return l2((l2(x) - mu) @ whiten)
     raise ValueError(prep)
+
+
+def built_channel(channel: Channel, meta: Mapping) -> Channel | None:
+    """``channel`` as the index with this ``meta.json`` holds it: itself, or its whitened form when a ``raw``
+    channel's index was whitened (same model, windows and scoring); None for an index of another channel."""
+    if (meta["model"], meta["mode"]) != (channel.model, channel.mode):
+        return None
+    if meta["prep"] == channel.prep:
+        return channel
+    if (channel.prep, meta["prep"]) == ("raw", "whiten"):
+        return replace(channel, prep="whiten")
+    return None
 
 
 class _Ranked:
@@ -235,7 +256,8 @@ class RowFile:
 
 
 class TwoStageIndex(_Ranked):
-    """Catalog-scale channel index written by ``index_build``.
+    """Catalog-scale channel index written by ``index_build`` (or ``index_whiten``, whose stage 1 holds every
+    dimension as 8-bit integers and whose ``whiten`` matrix and mean ``mu`` turn raw query windows into its space).
 
     Stage 1 scores every track from low-dimensional window projections held on the device (distance
     modes use exact squared norms, so only the dot product is approximated). Stage 2 re-scores the best
@@ -254,7 +276,7 @@ class TwoStageIndex(_Ranked):
     def __init__(self, channel: Channel, ids: np.ndarray, proj: torch.Tensor, basis: torch.Tensor,
                  norms: torch.Tensor, full: np.ndarray, mu: torch.Tensor | None, candidates: int = 1000,
                  hub: torch.Tensor | None = None, hub_alpha: float = 0.0, proj_scale: torch.Tensor | None = None,
-                 half_stage1: bool = False):
+                 half_stage1: bool = False, whiten: torch.Tensor | None = None):
         n, w = len(ids), full.shape[1]
         self.proj_bits = {torch.int8: 8, torch.uint8: 4}.get(proj.dtype, 16)
         stored_dim = proj.shape[2] * 2 if self.proj_bits == 4 else proj.shape[2]
@@ -264,13 +286,17 @@ class TwoStageIndex(_Ranked):
         if (self.proj_bits < 16) != (proj_scale is not None) or \
                 (proj_scale is not None and tuple(proj_scale.shape) != (n, w)):
             raise ValueError("quantized projections need one scale per window (and fp16 ones none)")
-        if channel.prep == "center" and mu is None:
-            raise ValueError("center prep needs the index mean")
+        if channel.prep in ("center", "whiten") and mu is None:
+            raise ValueError(f"{channel.prep} prep needs the index mean")
+        if (channel.prep == "whiten") != (whiten is not None) or \
+                (whiten is not None and tuple(whiten.shape) != (full.shape[2], full.shape[2])):
+            raise ValueError("a whitened index needs its [D, D] whitening matrix (and no other index has one)")
         if candidates < 1:
             raise ValueError("candidates must be positive")
         if hub_alpha and (hub is None or tuple(hub.shape) != (n,)):
             raise ValueError("a hub penalty needs one value per track")
         self.channel, self.proj, self.basis, self.norms, self.full, self.mu = channel, proj, basis, norms, full, mu
+        self.whiten = whiten
         self.proj_scale = proj_scale.to(proj.device).float() if proj_scale is not None else None
         self.candidates, self.device = candidates, proj.device
         self.half_stage1 = bool(half_stage1) and self.proj_bits < 16
@@ -285,24 +311,26 @@ class TwoStageIndex(_Ranked):
         by ``hub_build`` (0 when absent; pass 0 to disable the penalty)."""
         path = Path(path)
         meta = json.loads((path / "meta.json").read_text())
-        built = (meta["model"], meta["prep"], meta["mode"])
-        if built != (channel.model, channel.prep, channel.mode):
-            raise ValueError(f"{path} was built for {built}, not {channel}")
+        built = built_channel(channel, meta)
+        if built is None:
+            raise ValueError(f"{path} was built for {(meta['model'], meta['prep'], meta['mode'])}, not {channel}")
+        channel = built
         mu = torch.from_numpy(np.load(path / "mu.npy")).to(device) if (path / "mu.npy").exists() else None
         alpha = float(meta.get("hub", {}).get("alpha", 0.0) if hub_alpha is None else hub_alpha)
         if alpha and not (path / "hub.npy").exists():
             raise FileNotFoundError(f"{path / 'hub.npy'} is missing; run hub_build or use hub_alpha=0")
         hub = torch.from_numpy(np.load(path / "hub.npy").astype(np.float32)) if alpha else None
         scale = torch.from_numpy(np.load(path / "proj_scale.npy")) if (path / "proj_scale.npy").exists() else None
+        whiten = torch.from_numpy(np.load(path / "whiten.npy")).to(device) if channel.prep == "whiten" else None
         return cls(channel, np.load(path / "ids.npy"), _to_device(np.load(path / "proj.npy", mmap_mode="r"), device),
                    torch.from_numpy(np.load(path / "basis.npy")).to(device),
                    torch.from_numpy(np.load(path / "norms.npy")).to(device),
                    RowFile(path / "full.npy", read_threads), mu, candidates or meta.get("candidates", 1000),
-                   hub, alpha, scale, half_stage1)
+                   hub, alpha, scale, half_stage1, whiten)
 
     def prep_query(self, win: np.ndarray | torch.Tensor) -> torch.Tensor:
         x = torch.as_tensor(win).to(self.device).float()
-        return prep_windows(x, self.channel.prep, self.mu)
+        return prep_windows(x, self.channel.prep, self.mu, self.whiten)
 
     def _full(self, rows: np.ndarray) -> torch.Tensor:
         return torch.from_numpy(np.asarray(self.full[rows])).to(self.device).float()

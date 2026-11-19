@@ -3471,3 +3471,36 @@ own songs, every body (main's, Sounds like, Same vibe, Listeners also play), `hi
 without a gate language do not change; an added song is in no body, since the gate keeps it out of every
 candidate list. Without the listener ranker Best is the fusion order, which has no separate head, so only main
 changes there. No held-out result yet.
+
+## Whitened sound channel (2026-11-19): local experiment, not served
+
+**Why.** The sonic channel compared raw MuQ-MuLan windows by cosine. About 30 of the 512 principal directions hold
+90 % of the variance, so they decide every cosine. Among 1,109,024 songs a song's window found its own other
+windows first 33 % of the time, and Apple's encode of a song found the Deezer copy first 16 % of the time.
+
+**What.** `index_whiten` derives a whitened channel from a built raw one without re-embedding:
+`y = l2((l2(x) - mean) @ M)`, PCA whitening of all 512 directions, fitted on 300,000 random catalog windows
+(seed 0, float64 on the CPU, so a rerun gives the same transform). The channel directory stores `mu.npy` and
+`whiten.npy`, and `meta.json` says prep `whiten`. `TwoStageIndex.prep_query` applies the transform to live raw
+windows, `index_append` to new tracks. Callers still pass raw windows: scores come from whitened vectors, while
+the scene head and the blend's head term read a live seed's raw windows and a stored seed's head table, as
+before. No hub penalty.
+
+**Stage 1.** Whitening spreads the variance over every direction, so a 128-dimension projection would keep
+about a quarter of it. Stage 1 holds all 512 dimensions as 8-bit integers (1.66 GB on the GPU for 1.1M songs)
+and the best 1,000 are re-scored exactly, as in every other channel.
+
+**Measured on the 1,109,024-song index** (lab `anysong-lab/v8/v11/WHITEN.md`), through `TwoStageIndex`:
+
+| Test | Raw (served, cos - 0.5 hub) | Whitened |
+| --- | --- | --- |
+| A song's window finds its own other windows first (3,000 songs) | 33 % | 63.7 % |
+| Apple's encode finds the Deezer copy first (512 songs, live path) | 16 % | 60.2 % |
+
+- Against brute force for 300 stored queries: every exact top-200 song is in the served top 200, and all 300
+  top-20 lists are identical in order. A search takes 16.6 ms (median, RTX 5080).
+- A hub penalty in the whitened space (0.5 h) put 85 instead of 74 of 6,000 human-named pairs in the top 10 and
+  made their median rank worse (66,043 against 55,708). That is no clear gain, so none is used.
+
+**Not done yet.** The ranker, `MATCH_QUANTILES`, the overall scales, `--main-scale` and Same vibe's sound gate
+were fitted to raw scores and must be refitted before this is served.
