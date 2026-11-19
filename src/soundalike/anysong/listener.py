@@ -7,7 +7,8 @@ labels; ListenBrainz is never a feature. The features describe:
 - the seed artist's Deezer neighbourhood: graph overlap, whether either artist lists the other as related, shared
   region and genre, the scene affinity;
 - tempo and whether the song's language is known.
-Popularity is deliberately not a feature: with it, lists concentrate on famous artists.
+Popularity was deliberately not a feature of the first rankers: with it, lists concentrate on famous artists. A
+ranker trained with ``pop`` (``FEATURES_POP``, the candidate's Deezer popularity from a ``Popularity`` table) reads it.
 
 Candidates are the channel lists plus, for each artist in the seed artist's neighbourhood, that artist's songs closest
 in sound (``SCENE_SONGS``, chosen among at most ``SCENE_MAX_TRACKS`` of its catalog songs). The model is stored as
@@ -28,9 +29,46 @@ FEATURES = ("son", "r_melody", "s_melody", "r_samples", "s_samples", "r_sonic", 
             "region", "genre", "aff", "fwd", "rev", "nb", "tempo_gap", "lang_known")
 # A ranker may also read the scene-head cosine between seed and candidate (anysong.scenehead), as the last column.
 FEATURES_HEAD = FEATURES + ("head",)
+# ... and after it the candidate's popularity, log1p(Deezer rank), 0 for a song the table does not hold.
+FEATURES_POP = FEATURES_HEAD + ("pop",)
+FEATURE_SETS = (FEATURES, FEATURES_HEAD, FEATURES_POP)
 SCENE_SONGS = 3  # songs per neighbour artist added as candidates: its closest in sound
 SCENE_MAX_TRACKS = 150  # catalog songs per neighbour artist scored for that choice (lowest Deezer ids first)
 CHANNELS = ("melody", "samples", "sonic")
+
+
+class Popularity:
+    """Deezer popularity per track: ``pop`` = log1p(rank), higher is more popular; 0 for tracks outside the table.
+
+    File: ``.npz`` with ``ids`` (int64 Deezer track ids, ascending) and ``rank`` (float32)."""
+
+    def __init__(self, ids: np.ndarray, rank: np.ndarray):
+        ids, rank = np.asarray(ids, dtype=np.int64), np.asarray(rank, dtype=np.float32)
+        if ids.ndim != 1 or ids.shape != rank.shape or (np.diff(ids) <= 0).any():
+            raise ValueError("popularity needs one rank per track id, ids ascending and distinct")
+        if not np.isfinite(rank).all() or (rank < 0).any():
+            raise ValueError("popularity ranks must be finite and not negative")
+        self.ids, self.values = ids, np.log1p(rank.astype(np.float64))
+
+    @classmethod
+    def load(cls, path: Path | str) -> Popularity:
+        with np.load(path, allow_pickle=False) as z:
+            return cls(z["ids"], z["rank"])
+
+    def __len__(self) -> int:
+        """Songs with a popularity above 0."""
+        return int((self.values > 0).sum())
+
+    def of(self, track_ids) -> np.ndarray:
+        """``pop`` of each track id [n] as float64."""
+        query = np.asarray(track_ids, dtype=np.int64)
+        if not len(self.ids) or not len(query):
+            return np.zeros(len(query))
+        at = np.clip(np.searchsorted(self.ids, query), 0, len(self.ids) - 1)
+        return np.where(self.ids[at] == query, self.values[at], 0.0)
+
+    def pop(self, track_id: int) -> float:
+        return float(self.of([int(track_id)])[0])
 
 
 class ArtistTracks:
@@ -83,10 +121,23 @@ def features(raw: Mapping[str, Iterable[tuple[int, float]]], son: Mapping[int, f
              query_id: int, profile: ArtistProfile, related: Iterable[int], table: SceneTable, params: SceneParams,
              seed_bpm: float | None, bpm_of: Callable[[int], float | None],
              language_known: Callable[[int], bool],
-             head: Mapping[int, float] | None = None, extra: Iterable[int] = ()) -> tuple[list[int], np.ndarray]:
-    """Feature rows (``FEATURES`` order; ``FEATURES_HEAD`` when ``head``, the scene-head cosines, is given) for
-    every candidate with a sound score: the channel lists' songs, the scene candidates and the ``extra`` songs (in
-    neither), except the seed itself. Missing values are NaN."""
+             head: Mapping[int, float] | None = None, extra: Iterable[int] = (),
+             columns: Iterable[str] | None = None, pop: Callable[[int], float] | None = None
+             ) -> tuple[list[int], np.ndarray]:
+    """Feature rows for every candidate with a sound score: the channel lists' songs, the scene candidates and the
+    ``extra`` songs (in neither), except the seed itself. Missing values are NaN.
+
+    ``columns``: the ranker's feature list (one of ``FEATURE_SETS``), which decides the columns; without it,
+    ``FEATURES_HEAD`` when ``head`` is given, else ``FEATURES``. A ``head`` column needs ``head`` (the scene-head
+    cosines), a ``pop`` column ``pop`` (``Popularity.pop``)."""
+    columns = (FEATURES if head is None else FEATURES_HEAD) if columns is None else tuple(columns)
+    if columns not in FEATURE_SETS:
+        raise ValueError(f"feature columns {columns} are not one of this code's feature lists")
+    with_head, with_pop = "head" in columns, "pop" in columns
+    if with_head and head is None:
+        raise ValueError("the 'head' feature needs the scene-head cosines")
+    if with_pop and pop is None:
+        raise ValueError("the 'pop' feature needs a popularity table")
     pool: dict[int, dict[str, float]] = {}
     for channel in CHANNELS:
         for rank, (tid, s) in enumerate(raw.get(channel, ()), 1):
@@ -114,10 +165,13 @@ def features(raw: Mapping[str, Iterable[tuple[int, float]]], son: Mapping[int, f
                entry.get("r_samples", math.nan), entry.get("s_samples", math.nan),
                entry.get("r_sonic", math.nan), float(tid in pool), float(tid in scene), g, rg, gn, aff, fwd,
                rev, nb, tempo_gap(seed_bpm, bpm_of(tid)), float(language_known(tid)))
-        rows.append(row if head is None else row + (head.get(tid, math.nan),))
+        if with_head:
+            row += (head.get(tid, math.nan),)
+        if with_pop:
+            row += (float(pop(tid)),)
+        rows.append(row)
         tids.append(tid)
-    width = len(FEATURES) + (head is not None)
-    return tids, np.asarray(rows, dtype=np.float64).reshape(len(rows), width)
+    return tids, np.asarray(rows, dtype=np.float64).reshape(len(rows), len(columns))
 
 
 def blend(primary: np.ndarray, secondary: np.ndarray, weight: float) -> np.ndarray:
@@ -148,8 +202,9 @@ class Ranker:
                  threshold: np.ndarray, missing_left: np.ndarray, left: np.ndarray, right: np.ndarray,
                  value: np.ndarray, depth: int, meta: str = ""):
         self.features = tuple(features)
-        if self.features not in (FEATURES, FEATURES_HEAD):
-            raise ValueError(f"ranker features {self.features} differ from this code's {FEATURES} (+ 'head')")
+        if self.features not in FEATURE_SETS:
+            raise ValueError(f"ranker features {self.features} differ from this code's {FEATURES} "
+                             f"(+ 'head', + 'pop')")
         n = len(feature)
         if not all(len(a) == n for a in (threshold, missing_left, left, right, value)):
             raise ValueError("inconsistent ranker arrays")

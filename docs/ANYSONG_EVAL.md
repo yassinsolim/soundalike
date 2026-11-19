@@ -3504,3 +3504,21 @@ and the best 1,000 are re-scored exactly, as in every other channel.
 
 **Not done yet.** The ranker, `MATCH_QUANTILES`, the overall scales, `--main-scale` and Same vibe's sound gate
 were fitted to raw scores and must be refitted before this is served.
+
+## Popularity and custom match quantiles (2026-11-19): plumbing, no result yet
+
+- `--popularity <file.npz>` (`ids` ascending Deezer track ids, `rank` Deezer popularity): `listener.Popularity`.
+  The value used everywhere is `pop = log1p(rank)`, 0 for a song outside the table.
+- **Ranker feature.** `listener.FEATURES_POP = FEATURES_HEAD + ("pop",)`: the candidate's `pop`. The ranker
+  file's own feature list decides which columns `listener.features` builds. A ranker that names `pop` does not
+  start without `--popularity`.
+- **Blend term.** `--blend-weights WH WC [WP]` adds `WP * zpop` to the blended score, with `zpop` the z-score of
+  `pop` over every index row, computed once at load. It reaches the blended ranking, `blendz` and their
+  in-language variants and nothing else. With `WP` 0 or absent the ranking is unchanged bit for bit.
+- **Audio only stays pure sound.** Lists without the listener ranker (`scene=0`, an unknown artist, no ranker)
+  never read the ranker or, with `--main-pool sonic+blend`, the blended ranking: main is the audio head followed
+  by the sonic list in Sounds like's order. `--main-pool blend` shows the blended ranking in those lists too, so
+  it refuses a popularity weight at startup.
+- `--match-quantiles <file.json>` (21 ascending sonic-score quantiles) replaces `MATCH_QUANTILES` for one service
+  (`AnySong.sound_match`): `match`, the match floor and the head's match rule. The constant stays the default.
+- `/healthz` reports `popularity` (songs with a rank above 0) and `match_quantiles` (`custom` or `default`).

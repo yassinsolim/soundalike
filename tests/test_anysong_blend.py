@@ -261,3 +261,55 @@ def test_two_stage_within_lists_score_only_new_rows_and_keep_the_listed_songs(tm
     for t, s in blended:
         assert s == pytest.approx(float(exact_all[two.pos[t]]), abs=1e-6)
     del two, eng  # releases the memory map of full.npy
+
+
+def test_popularity_weight_adds_a_seed_independent_term_to_the_blend_alone(setup, tmp_path):
+    eng, index, win, table, cf = setup
+    plain = eng.blend
+    pop = np.log1p(np.random.default_rng(5).uniform(0, 1e6, N))
+    pop[[3, 8]] = 0.0  # songs the popularity table does not hold
+    zpop = (pop - pop.mean()) / pop.std(ddof=1)
+    row, tid = 4, int(IDS[4])
+    sonic = index.scores(index.stored_query(tid))
+    before, _ = eng.search_stored(tid, k=N)
+    assert plain.wp == 0.0 and plain.zpop is None and plain.info()["weights"] == [2.0, 1.0]
+
+    # Weight 0 (and two weights with a table at hand): today's ranking, bit for bit.
+    for weights in ((2.0, 1.0, 0.0), (2.0, 1.0)):
+        eng.blend = Blend.load(tmp_path / "h", tmp_path, index.pos, weights=weights, pop=pop)
+        assert eng.blend.zpop is None and eng.blend.info() == plain.info()
+        assert torch.equal(eng.blend.scores(sonic, eng.blend.seed_head(row), row),
+                           plain.scores(sonic, plain.seed_head(row), row))
+        assert eng.search_stored(tid, k=N)[0] == before
+
+    wp = 1.5
+    eng.blend = Blend.load(tmp_path / "h", tmp_path, index.pos, weights=(2.0, 1.0, wp), pop=pop)
+    assert eng.blend.info()["weights"] == [2.0, 1.0, wp]
+    np.testing.assert_allclose(eng.blend.zpop.numpy(), zpop, atol=1e-5)
+    _, base = _expected(index, sonic.numpy().astype(np.float64), table, table[row], cf, row, drop=[row])
+    score = base + wp * zpop
+    want = [int(IDS[i]) for i in np.argsort(-score) if i != row]
+    results, _ = eng.search_stored(tid, k=N)
+    assert [t for t, _ in results["blend"]] == want and want != [t for t, _ in before["blend"]]
+    assert results["sonic"] == before["sonic"]  # the channel list has no popularity in it
+    for t, s in results["blend"]:  # still each song's exact sonic score
+        assert s == pytest.approx(float(sonic[index.pos[t]]), abs=1e-6)
+    assert all(z == pytest.approx(score[index.pos[t]], abs=1e-4) for t, z in results["blendz"])
+    # The in-language variant and a live seed (no playlist term) carry the same term.
+    inside = torch.zeros(N, dtype=torch.bool)
+    inside[[0, 2, 3, 6, 9, 11, 13]] = True
+    masked, _ = eng.search_stored(tid, k=4, within={"sonic": inside})
+    assert [t for t, _ in masked["within"]["blend"]] == [t for t in want if inside[index.pos[t]]][:4]
+    assert all(z == pytest.approx(score[index.pos[t]], abs=1e-4) for t, z in masked["blendz"])
+    live = _unit(win[4] + 0.05 * np.random.default_rng(1).standard_normal((W, D))).astype(np.float32)
+    live_sonic = index.scores(index.prep_query(live)).numpy().astype(np.float64)
+    _, live_base = _expected(index, live_sonic, table, eng.blend.head.embed(live), cf, None, wc=0.0)
+    got, _ = eng.search_windows({"sonic": live}, k=N)
+    assert [t for t, _ in got["blend"]] == [int(IDS[i]) for i in np.argsort(-(live_base + wp * zpop))]
+
+    with pytest.raises(ValueError, match="popularity of every index row"):
+        Blend.load(tmp_path / "h", tmp_path, index.pos, weights=(2.0, 1.0, wp))
+    with pytest.raises(ValueError, match="does not fit the index"):
+        Blend.load(tmp_path / "h", tmp_path, index.pos, weights=(2.0, 1.0, wp), pop=pop[:5])
+    with pytest.raises(ValueError, match="wh, wc"):
+        Blend.load(tmp_path / "h", tmp_path, index.pos, weights=(2.0, 1.0, wp, 1.0), pop=pop)

@@ -2173,3 +2173,132 @@ def test_cross_head_needs_evidence_in_two_channel_lists(tmp_path):
                "sonic": {key[2]: item[2] | {"score": 0.4}}}
     head, cross = svc._cross_head(ungated, [], lambda it: svc._item_language(it) in {"unknown", "en"}, set())
     assert head == [key[2]] and cross[key[2]][1] == {"melody": 1, "sonic": 1}
+
+
+# ---------------------------------------------------------------- popularity and custom match quantiles
+class _FakeHead:
+    """A scene head that knows no song: every head cosine is missing."""
+
+    def seed(self, windows, track_id):
+        return np.zeros((1, 2), np.float32)
+
+    def cosines(self, seed, track_ids):
+        return {}
+
+
+def _pop_stump(left, right):
+    """A ranker of the ``FEATURES_POP`` columns: songs with pop over 1 score ``right``, the others ``left``."""
+    from soundalike.anysong.listener import FEATURES_POP, Ranker
+
+    return Ranker(FEATURES_POP, 0.0, np.array([0]), np.array([FEATURES_POP.index("pop"), 0, 0]),
+                  np.array([1.0, 0, 0]), np.array([True, True, True]), np.array([1, 1, 2]), np.array([2, 1, 2]),
+                  np.array([0.0, left, right]), depth=1, meta="pop stump")
+
+
+def _pop_setup(tmp_path):
+    from types import SimpleNamespace
+
+    from soundalike.anysong.listener import Popularity
+
+    meta = LISTENER_META | {11: ("Sixth", "Sechs"), 12: ("Seventh", "Sieben")}
+    engine = SonicEngine()
+    engine.blend = SimpleNamespace(wp=0.7, info=dict)  # a blend with a popularity weight
+    # 7 and 11 are popular, 9 has rank 0 and 3, 5, 8, 10 are not in the table.
+    popularity = Popularity(np.array([7, 9, 11]), np.array([5000.0, 0.0, 800.0], np.float32))
+
+    def service(**kw):
+        kw.setdefault("ranker", _stump("fwd", -1.0, 1.0))
+        return api.AnySong(engine, FakeDeezer(tmp_path), meta, scene=_listener_scene_table(), copy_score=None,
+                           scene_params=SceneParams(head_min=1),
+                           tempo=TempoTable(np.array([5]), np.array([120], np.float32)),
+                           best_head_standout=0.0, main_scale=(0.1, 1.0), **kw)
+
+    res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog", "artist_id": 100},
+           "raw": {"melody": [(5, -1.0)], "sonic": [(10, 0.5), (5, 0.45), (7, 0.44)]},
+           "blend": [(11, 0.47), (7, 0.44), (12, 0.2), (3, 0.46)],
+           "blendz": {11: 4.0, 7: 3.0, 12: 2.5, 3: 2.0, 10: 1.0, 5: 0.5}, "related": [], "timings_ms": {},
+           "vibe": {"muq": {10: 0.5, 5: 0.45, 7: 0.44}, "bpm": None}}
+    return engine, popularity, service, res
+
+
+def test_pop_ranker_reads_each_candidates_popularity(tmp_path):
+    engine, popularity, service, res = _pop_setup(tmp_path)
+    svc = service(ranker=_pop_stump(-1.0, 1.0), head=_FakeHead(), popularity=popularity, main_pool="sonic+blend")
+    data = svc._listener(res, None, {})
+    import math
+
+    high, low = 1 / (1 + math.exp(-1)), 1 / (1 + math.exp(1))
+    # Pool songs (5, 7, 10), scene songs (8, 9) and the blended ranking's own (3, 11, 12): popular ones score high;
+    # rank 0 (9) and songs outside the table count as unpopular.
+    assert set(data["p"]) == {3, 5, 7, 8, 9, 10, 11, 12}
+    assert {t for t, p in data["p"].items() if p == pytest.approx(high)} == {7, 11}
+    assert all(p == pytest.approx(low) for t, p in data["p"].items() if t not in (7, 11))
+    assert svc.health()["popularity"] == {"songs": 2} and service().health()["popularity"] is None
+    # A ranker that names pop cannot start without the table; one that does not ignores a table.
+    with pytest.raises(ValueError, match="needs a popularity table"):
+        service(ranker=_pop_stump(-1.0, 1.0), head=_FakeHead())
+    plain = service()
+    assert service(popularity=popularity)._listener(res, None, {})["p"] == plain._listener(res, None, {})["p"]
+    # main_pool "blend" shows the blended ranking without listener data too, so it refuses a popularity weight.
+    with pytest.raises(ValueError, match="popularity weight"):
+        service(main_pool="blend")
+    engine.blend.wp = 0.0
+    assert service(main_pool="blend").main_pool == "blend"
+
+
+def test_lists_without_the_listener_ranker_stay_free_of_popularity(tmp_path):
+    engine, popularity, service, res = _pop_setup(tmp_path)
+    svc = service(ranker=_pop_stump(-1.0, 1.0), head=_FakeHead(), popularity=popularity, main_pool="sonic+blend",
+                  main_blend_weight=100.0)
+    plain = service()  # no popularity table, no pop ranker, main from the sonic list
+    data = svc._listener(res, None, {})
+    with_listeners = svc._view(res | {"listener": data}, k=10, dedupe=True, cached=False)["results"]
+    assert [x["id"] for x in with_listeners["main"]][:2] == [5, 11]  # the head, then the popular blended song
+
+    def sound_only(view):
+        return [(x["id"], x.get("basis"), x["match"]) for x in view["main"]]
+
+    # scene=0 ("Audio only"), with or without listener data at hand: every list is the plain service's, and main is
+    # the audio head (5: cover evidence) followed by the sonic list in its own order. No blended song (3, 11), no
+    # popularity.
+    off = svc._view(res, k=10, dedupe=True, cached=False, scene=False)["results"]
+    assert off == plain._view(res, k=10, dedupe=True, cached=False, scene=False)["results"]
+    assert svc._view(res | {"listener": data}, k=10, dedupe=True, cached=False, scene=False)["results"] == \
+        plain._view(res | {"listener": plain._listener(res, None, {})}, k=10, dedupe=True, cached=False,
+                    scene=False)["results"]
+    assert [x["id"] for x in off["main"]] == [5, 10, 7] and "listeners" not in off
+    assert [x["id"] for x in off["sonic"]] == [10, 5, 7]
+    # An unknown artist (no listener data): the same.
+    unknown = res | {"query": {k: v for k, v in res["query"].items() if k != "artist_id"}}
+    assert sound_only(svc._view(unknown, k=10, dedupe=True, cached=False)["results"]) == \
+        sound_only(plain._view(unknown, k=10, dedupe=True, cached=False)["results"]) == sound_only(off)
+
+
+def test_custom_match_quantiles_replace_the_default_for_one_service(tmp_path):
+    engine, _, service, res = _pop_setup(tmp_path)
+    engine.blend.wp = 0.0
+    custom = [round(0.05 * i, 2) for i in range(21)]  # a score of 0.44 is a match of 44
+    plain, svc = service(), service(match_quantiles=custom)
+    assert svc.sound_match(0.44) == 44 == api.sound_match(0.44, custom) and plain.sound_match(0.44) == api.sound_match(0.44)
+    assert api.sound_match(0.44) == 67 and plain.match_quantiles is api.MATCH_QUANTILES  # the default is untouched
+    assert svc.health()["match_quantiles"] == "custom" and plain.health()["match_quantiles"] == "default"
+    view = svc._view(res, k=10, dedupe=True, cached=False)["results"]
+    assert {x["id"]: x["match"] for x in view["sonic"]} == {10: 50, 5: 45, 7: 44}
+    assert {x["id"]: x["match"] for x in view["main"]} == {5: 45, 10: 50, 7: 44}
+    assert {x["id"]: x["match"] for x in plain._view(res, k=10, dedupe=True, cached=False)["results"]["sonic"]} == \
+        {t: api.sound_match(s) for t, s in ((10, 0.5), (5, 0.45), (7, 0.44))}
+    # The match floor of the blended songs reads the same quantiles: with these, the blended 11 (0.47) is a match of
+    # 47 and 3 (0.46) of 46, so a floor of 47 drops 3; the default quantiles place both far above it.
+    data = plain._listener(res, None, {})
+    both = service(match_quantiles=custom, main_pool="sonic+blend", main_match_floor=46)
+    usual = service(main_pool="sonic+blend", main_match_floor=46)
+    blended = lambda s: {x["id"] for x in s._view(res | {"listener": data}, k=10, dedupe=True,  # noqa: E731
+                                                  cached=False)["results"]["main"]} & {3, 11, 12}
+    assert blended(both) == {3, 11} == blended(usual)
+    both.main_match_floor = 47
+    usual.main_match_floor = 47
+    assert blended(both) == {11} and blended(usual) == {3, 11}
+    for bad in (custom[:20], custom[::-1], [*custom[:20], float("nan")], "abc"):
+        with pytest.raises(ValueError, match="match quantiles"):
+            service(match_quantiles=bad)
+    assert api.checked_match_quantiles(tuple(custom)) == tuple(custom)

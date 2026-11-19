@@ -252,8 +252,20 @@ def fuse(orders: Mapping[str, Sequence[Hashable]], weights: dict[str, float] | N
 
 def sound_match(score: float, quantiles: Sequence[float] = MATCH_QUANTILES) -> int:
     """A song's sonic score against the seed as 0 to 100: the share of songs shown for typical seeds that it sounds
-    more alike than (``MATCH_QUANTILES``)."""
+    more alike than (``MATCH_QUANTILES``; a service with its own quantiles uses ``AnySong.sound_match``)."""
     return int(round(float(np.interp(score, quantiles, np.linspace(0, 100, len(quantiles))))))
+
+
+def checked_match_quantiles(values: Sequence[float]) -> tuple[float, ...]:
+    """Checked sound-match quantiles: as many as ``MATCH_QUANTILES`` (0, 5, ..., 100 %), finite and ascending."""
+    try:
+        out = tuple(float(v) for v in values)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("match quantiles must be a list of numbers") from exc
+    if len(out) != len(MATCH_QUANTILES) or not np.isfinite(out).all() or (np.diff(out) < 0).any():
+        raise ValueError(f"match quantiles must be {len(MATCH_QUANTILES)} finite ascending sonic scores "
+                         f"(the 0, 5, ..., 100 % quantiles)")
+    return out
 
 
 @dataclass(frozen=True)
@@ -487,7 +499,8 @@ class AnySong:
                  listeners_overall: OverallScale | None = LISTENERS_OVERALL,
                  stems: stemlib.StemStore | None = None, dissector: stemlib.Dissector | None = None,
                  catalog_previews: str | Path | None = None, head: SceneHead | None = None,
-                 language_detector=None, head_all_languages: bool = False):
+                 language_detector=None, head_all_languages: bool = False,
+                 popularity: listener.Popularity | None = None, match_quantiles: Sequence[float] | None = None):
         self.engine, self.deezer, self.meta, self.keep_previews = engine, deezer, meta, keep_previews
         # Stem dissections (``dissect``): stored rows, else (with ``dissector``) the song's preview separated on the
         # GPU, read from ``catalog_previews/<id % 1000:03d>/<id>.mp3`` when there, else fetched from Deezer.
@@ -523,9 +536,16 @@ class AnySong:
         # Listener-aware ranking (``listener``): needs the scene table; replaces the scene slots and the Sounds like
         # lift for seeds whose artist the table (or Deezer) knows.
         self.ranker = ranker if scene is not None else None
-        # The scene head feeds the rankers trained with its cosine (``listener.FEATURES_HEAD``); a ranker given rows
-        # of the wrong width refuses them (``Ranker.predict``).
+        # The scene head and the popularity table feed the rankers trained with them (``listener.FEATURES_HEAD``,
+        # ``FEATURES_POP``): the ranker's own feature list decides the columns (``listener.features``).
         self.head = head
+        self.popularity = popularity
+        if self.ranker is not None and "pop" in self.ranker.features and popularity is None:
+            raise ValueError("this ranker reads the 'pop' feature and needs a popularity table (--popularity)")
+        # ``match``: the served sound-match quantiles (``sound_match``); None: ``MATCH_QUANTILES``.
+        self.custom_match_quantiles = match_quantiles is not None
+        self.match_quantiles = MATCH_QUANTILES if match_quantiles is None else \
+            checked_match_quantiles(match_quantiles)
         self.best_sound_weight, self.sounds_listener_weight = best_sound_weight, sounds_listener_weight
         self.best_audio_weight = best_audio_weight
         self.best_artist_gap, self.best_artist_once = best_artist_gap, best_artist_once
@@ -535,6 +555,10 @@ class AnySong:
             raise ValueError(f"main_pool must be 'sonic', 'all', 'blend' or 'sonic+blend', not {main_pool!r}")
         if "blend" in main_pool and getattr(engine, "blend", None) is None:
             raise ValueError(f"main_pool {main_pool!r} needs an engine with a blend")
+        if main_pool == "blend" and getattr(engine.blend, "wp", 0.0):
+            # "blend" shows the blended ranking as main's body without listener data too (``scene=0``), which must
+            # stay free of popularity; "sonic+blend" only reads it next to the listener ranker.
+            raise ValueError("main_pool 'blend' cannot take a blend with a popularity weight: use 'sonic+blend'")
         self.main_listener_weight, self.main_pool = main_listener_weight, main_pool
         self.main_blend_weight = main_blend_weight
         self.main_match_floor, self.main_head_bare = main_match_floor, main_head_bare
@@ -589,6 +613,10 @@ class AnySong:
         with self._lock:
             self.served[kind] += 1
 
+    def sound_match(self, score: float) -> int:
+        """``sound_match`` on this service's quantiles."""
+        return sound_match(score, self.match_quantiles)
+
     def health(self) -> dict:
         with self._lock:
             served = dict(self.served)
@@ -609,6 +637,8 @@ class AnySong:
                 "cached_results": len(self.results), "served": served, "scene": scene, "tempo": tempo,
                 "tiers": tiers, "ranker": None if self.ranker is None else self.ranker.meta or "on", "stems": stems,
                 "blend": None if blend is None else blend.info() | {"main": "blend" in self.main_pool},
+                "popularity": None if self.popularity is None else {"songs": len(self.popularity)},
+                "match_quantiles": "custom" if self.custom_match_quantiles else "default",
                 "language_search": self.language_rows is not None,
                 "language_detector": None if self.language_detector is None else detections,
                 "gpu_mib": _gpu_mib(self.engine.device)}
@@ -843,14 +873,15 @@ class AnySong:
         inside = {int(tid) for rows in lang_raw.values() for tid, _ in rows}
         seed_bpm = vibe["bpm"] if vibe is not None else (self.tempo.bpm(qid) if self.tempo is not None else None)
         head = None
-        if self.head is not None:
+        if self.head is not None and "head" in self.ranker.features:
             seed_head = self.head.seed(windows, query_track)
             head = self.head.cosines(seed_head, son) if seed_head is not None else {}
         tids, X = listener.features(
             res["raw"], son, scene, qid, profile, self.scene.related(artist_id) or res.get("related") or (),
             self.scene, self.scene_params, seed_bpm,
             self.tempo.bpm if self.tempo is not None else (lambda tid: None), self._language_known, head,
-            extra={*blended, *inside})
+            extra={*blended, *inside}, columns=self.ranker.features,
+            pop=None if self.popularity is None else self.popularity.pop)
         p = self.ranker.predict(X)
         timings["listener"] = (time.perf_counter() - t) * 1000
         timings["listener_queue"] = waited.get("queue", 0.0)
@@ -1162,7 +1193,7 @@ class AnySong:
             """A blended ranking without the songs whose sound match is below ``main_match_floor``."""
             exact.update((int(tid), float(score)) for tid, score in rows)
             return {key: item for key, item in listed(rows).items()
-                    if sound_match(sound_of.get(int(item["id"]), exact[int(item["id"])])) >= self.main_match_floor}
+                    if self.sound_match(sound_of.get(int(item["id"]), exact[int(item["id"])])) >= self.main_match_floor}
 
         def versions(lists: dict[str, dict[Hashable, dict]], ranking: dict[Hashable, dict] | None):
             """``_limit_versions`` for channel lists and the blended ranking that came with them."""
@@ -1282,12 +1313,12 @@ class AnySong:
             for item in items:
                 score = sound_of.get(int(item["id"]))
                 if score is not None:
-                    item["match"] = sound_match(score)
+                    item["match"] = self.sound_match(score)
         if blend is not None:
             # Blended songs outside every other list: their exact sonic score came with the ranking.
             for item in main:
                 if "match" not in item and int(item["id"]) in exact:
-                    item["match"] = sound_match(exact[int(item["id"])])
+                    item["match"] = self.sound_match(exact[int(item["id"])])
         if self.main_pool != "blend" and self.main_overall is not None and main and "overall" not in main[0]:
             # Without listener data main follows sound alone, so its overall match is its sound match.
             head = next((i for i, item in enumerate(main) if item.get("basis") != "audio"), len(main))
@@ -1325,11 +1356,10 @@ class AnySong:
         sound_of |= (res.get("listener") or {}).get("son") or {}
         return sound_of
 
-    @staticmethod
-    def _match(sound_of: Mapping[int, float], item: dict) -> int:
+    def _match(self, sound_of: Mapping[int, float], item: dict) -> int:
         """``match`` of a listed song, 0 without a sound score."""
         score = sound_of.get(int(item["id"]))
-        return sound_match(score) if score is not None else 0
+        return self.sound_match(score) if score is not None else 0
 
     def _listener_lists(self, res: dict, filtered: dict[str, dict[Hashable, dict]], artists: dict[Hashable, int | None],
                         profile, qkey, keep: Callable[[dict], bool] | None, language: str, lang_mode: str, k: int,
@@ -1471,7 +1501,7 @@ class AnySong:
         pool = [] if blend_body else list(sonic) if self.main_pool == "sonic" else [*sonic, *blend_only] \
             if self.main_pool == "sonic+blend" else [
             key for key in keys
-            if key in sonic or sound_match(son_of.get(int(shown[key][0]["id"]), -np.inf)) >= self.main_match_floor]
+            if key in sonic or self.sound_match(son_of.get(int(shown[key][0]["id"]), -np.inf)) >= self.main_match_floor]
         raw_main: dict[int, tuple[float, float]] = {}
         neutral = 0.0
         if pool:
@@ -1946,6 +1976,12 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--head", type=Path, default=None,
                    help="scene head (anysong.scenehead): path prefix of <prefix>.npz and <prefix>.emb.npy; for rankers "
                         "trained with the 'head' feature")
+    p.add_argument("--popularity", type=Path, default=None,
+                   help="npz with ids (ascending Deezer track ids) and rank (Deezer popularity; absent songs count "
+                        "as 0): for rankers trained with the 'pop' feature and for the blend's popularity weight")
+    p.add_argument("--match-quantiles", type=Path, default=None,
+                   help="JSON list of the 21 sonic-score quantiles (0, 5, ..., 100 %%) behind 'match', for an index "
+                        "whose sonic scores MATCH_QUANTILES was not fitted on")
     p.add_argument("--main-pool", choices=("sonic", "all", "blend", "sonic+blend"), default=MAIN_POOL,
                    help="main's body: the sonic list, every candidate at or above --main-match-floor, the blended "
                         "catalog ranking at or above it, or the sonic list plus that ranking in the listener order "
@@ -1954,8 +1990,9 @@ def main(argv: list[str] | None = None) -> None:
                    help="scene head of the blended ranking (anysong.blend): path prefix as for --head")
     p.add_argument("--blend-cf", type=Path, default=None,
                    help="folder with cooc.npz and cf128.npy: playlist co-occurrence vectors of the blended ranking")
-    p.add_argument("--blend-weights", type=float, nargs=2, default=None, metavar=("WH", "WC"),
-                   help="weights of the scene head and playlist terms next to sound (default 2 1)")
+    p.add_argument("--blend-weights", type=float, nargs="+", default=None, metavar="W",
+                   help="WH WC [WP]: weights of the scene head, playlist and popularity terms next to sound "
+                        "(default 2 1 0; WP needs --popularity and never reaches lists without the listener ranker)")
     p.add_argument("--main-blend-weight", type=float, default=MAIN_BLEND_WEIGHT,
                    help="--main-pool sonic+blend: weight of a song's blended score in main's order")
     p.add_argument("--main-match-floor", type=float, default=MAIN_MATCH_FLOOR)
@@ -1992,6 +2029,21 @@ def main(argv: list[str] | None = None) -> None:
         p.error(f"--main-pool {args.main_pool} needs --blend-head and --blend-cf")
     if args.blend_head is not None and "sonic" not in args.channels:
         p.error("--blend-head needs the sonic channel")
+    if args.blend_weights is not None and len(args.blend_weights) not in (2, 3):
+        p.error("--blend-weights takes WH WC or WH WC WP")
+    blend_wp = args.blend_weights[2] if args.blend_weights is not None and len(args.blend_weights) == 3 else 0.0
+    if blend_wp and args.popularity is None:
+        p.error("a popularity weight in --blend-weights needs --popularity")
+    if blend_wp and args.main_pool == "blend":
+        p.error("--main-pool blend cannot take a popularity weight (it would reach audio-only lists): "
+                "use sonic+blend")
+    popularity = listener.Popularity.load(args.popularity) if args.popularity is not None else None
+    quantiles = None
+    if args.match_quantiles is not None:
+        try:
+            quantiles = checked_match_quantiles(json.loads(args.match_quantiles.read_text(encoding="utf-8")))
+        except ValueError as exc:
+            p.error(f"--match-quantiles {args.match_quantiles}: {exc}")
 
     scratch = args.preview_dir or Path(tempfile.mkdtemp(prefix="anysong-"))
     t = time.perf_counter()
@@ -2003,7 +2055,8 @@ def main(argv: list[str] | None = None) -> None:
         t_blend = time.perf_counter()
         sonic = engine.indexes["sonic"]
         engine.blend = Blend.load(args.blend_head, args.blend_cf, sonic.pos, sonic.id_tensor.device,
-                                  tuple(args.blend_weights) if args.blend_weights else WEIGHTS)
+                                  tuple(args.blend_weights) if args.blend_weights else WEIGHTS,
+                                  popularity.of(sonic.ids) if blend_wp else None)
         engine.load_secs["blend"] = round(time.perf_counter() - t_blend, 2)
     engine.warm()
     warm = _warmup(engine)
@@ -2067,7 +2120,7 @@ def main(argv: list[str] | None = None) -> None:
                       head=SceneHead(f"{args.head}.npz", f"{args.head}.emb.npy", engine.indexes["sonic"].pos)
                       if args.head is not None else None,
                       main_pool=args.main_pool, main_match_floor=args.main_match_floor,
-                      head_all_languages=args.head_all_languages,
+                      head_all_languages=args.head_all_languages, popularity=popularity, match_quantiles=quantiles,
                       main_listener_weight=args.main_listener_weight, main_blend_weight=args.main_blend_weight,
                       main_scale=tuple(args.main_scale) if args.main_scale else None,
                       stems=store, dissector=dissector, catalog_previews=args.catalog_previews,

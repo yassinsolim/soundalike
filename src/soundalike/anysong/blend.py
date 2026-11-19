@@ -1,13 +1,15 @@
 """Blended catalog score: one ranking of every indexed song from three views of the seed
 (docs/ANYSONG_EVAL.md, "Blended main list"):
 
-    blend = z(sonic) + wh * z(head) + wc * zcf
+    blend = z(sonic) + wh * z(head) + wc * zcf + wp * zpop
 
 - sonic: the sonic channel's score of every row before its candidates are re-scored exactly (stage 1 minus the hub
   penalty for a ``serve.TwoStageIndex``), so one scale covers the whole catalog;
 - head: the best window-pair cosine between the seed's scene-head vectors (``scenehead``) and every row's;
 - zcf: the cosine between playlist co-occurrence vectors, z-scored over the songs of the playlist graph; songs
-  outside the graph get 0, and a seed outside it (every live seed) has no such term.
+  outside the graph get 0, and a seed outside it (every live seed) has no such term;
+- zpop (optional, wp 0 by default): the song's popularity, log1p(Deezer rank) (``listener.Popularity``), z-scored
+  over every row of the index once at load. It does not depend on the seed.
 
 z(x) = (x - mean) / sd over every row of the index for that seed.
 
@@ -25,7 +27,7 @@ import torch
 from .scenehead import SceneHead
 from .serve import _to_device
 
-WEIGHTS = (2.0, 1.0)  # wh, wc
+WEIGHTS = (2.0, 1.0)  # wh, wc; a third weight is wp (0 without it)
 
 
 def zscore(x: torch.Tensor) -> torch.Tensor:
@@ -36,7 +38,7 @@ class Blend:
     """Scene-head vectors and playlist vectors on the index device; ``scores`` blends them with the sonic scores."""
 
     def __init__(self, head: SceneHead, table: torch.Tensor, cf_rows: np.ndarray, cf: np.ndarray,
-                 weights: tuple[float, float] = WEIGHTS):
+                 weights: tuple[float, ...] = WEIGHTS, pop: np.ndarray | None = None):
         n = len(table)
         cf_rows = np.asarray(cf_rows, dtype=np.int64)
         cf = np.asarray(cf, dtype=np.float32)
@@ -45,29 +47,39 @@ class Blend:
         if len(cf_rows) and (cf_rows.min() < 0 or cf_rows.max() >= n or len(np.unique(cf_rows)) != len(cf_rows)):
             raise ValueError(f"graph rows must be distinct rows of the index ({n} songs)")
         self.head, self.table = head, table
-        self.wh, self.wc = (float(w) for w in weights)
+        if len(weights) not in (2, 3):
+            raise ValueError("blend weights are (wh, wc) or (wh, wc, wp)")
+        self.wh, self.wc, self.wp = (float(w) for w in (*weights, 0.0)[:3])
+        if self.wp and pop is None:
+            raise ValueError("a popularity weight needs the popularity of every index row")
+        if pop is not None and np.shape(pop) != (n,):
+            raise ValueError(f"popularity {np.shape(pop)} does not fit the index ({n} songs)")
         device = table.device
         self.cf = torch.from_numpy(cf / np.maximum(np.linalg.norm(cf, axis=1, keepdims=True), 1e-6)).to(device)
         self.cf_rows = torch.from_numpy(cf_rows).to(device)
         # Row of the index -> row of ``cf``; -1 outside the playlist graph.
         self.graph_pos = torch.full((n,), -1, dtype=torch.long, device=device)
         self.graph_pos[self.cf_rows] = torch.arange(len(cf_rows), device=device)
+        # The popularity term of every row; None without a popularity weight.
+        self.zpop = zscore(torch.from_numpy(np.asarray(pop, dtype=np.float32)).to(device)) if self.wp else None
 
     @classmethod
     def load(cls, head: Path | str, cf_dir: Path | str, pos: dict[int, int], device: torch.device | str = "cpu",
-             weights: tuple[float, float] = WEIGHTS) -> Blend:
-        """``head``: path prefix of the scene head files; ``pos``: the sonic index's track id -> row."""
+             weights: tuple[float, ...] = WEIGHTS, pop: np.ndarray | None = None) -> Blend:
+        """``head``: path prefix of the scene head files; ``pos``: the sonic index's track id -> row; ``pop``: the
+        popularity of every index row, in row order (needed for a popularity weight)."""
         scene_head = SceneHead(f"{head}.npz", f"{head}.emb.npy", pos)
         with np.load(Path(cf_dir) / "cooc.npz", allow_pickle=False) as z:
             rows = z["rows"]
         return cls(scene_head, _to_device(scene_head.table, device), rows, np.load(Path(cf_dir) / "cf128.npy"),
-                   weights)
+                   weights, pop)
 
     def __len__(self) -> int:
         return len(self.table)
 
     def info(self) -> dict:
-        return {"songs": len(self), "graph": len(self.cf_rows), "weights": [self.wh, self.wc]}
+        return {"songs": len(self), "graph": len(self.cf_rows),
+                "weights": [self.wh, self.wc, *([self.wp] if self.wp else [])]}
 
     def seed_head(self, row: int | None, windows: np.ndarray | None = None) -> torch.Tensor:
         """The seed's head vectors [W, dim]: its stored ones, or those of a live seed's raw sonic ``windows``."""
@@ -109,4 +121,6 @@ class Blend:
             cf = self.cf_scores(row)
             if cf is not None:
                 out = out + self.wc * cf
+        if self.wp:
+            out = out + self.wp * self.zpop
         return out
