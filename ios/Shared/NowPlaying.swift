@@ -5,11 +5,16 @@ import SoundalikeKit
 /// Reads the song the user is listening to without the microphone:
 /// the Music app through MusicKit, Spotify through the Web API when connected.
 enum NowPlaying {
+    /// Reads Spotify through the Spotify app itself (App Remote) when the Web API can't:
+    /// set by the app, which links the Spotify SDK; extensions leave it nil.
+    @MainActor static var spotifyAppRemote: (() async -> Seed?)?
+
     @MainActor
     static func read() async -> Seed? {
         if let seed = await appleMusic() { return seed }
-        if SpotifyAccount().isConnected, let seed = try? await SpotifyAccount().currentlyPlaying() { return seed }
-        return nil
+        guard SpotifyAccount().isConnected else { return nil }
+        if let seed = try? await SpotifyAccount().currentlyPlaying() { return seed }
+        return await spotifyAppRemote?()
     }
 
     /// The Music app's current song when it is playing. No subscription needed.

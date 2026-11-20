@@ -12,7 +12,7 @@ public struct SpotifyAccount: Sendable {
     public static let clientID = "6aae8635d21e471cabdeacd2f226640e"
     public static let redirectURI = "soundalike://spotify-callback"
     public static let callbackScheme = "soundalike"
-    static let scopes = "user-read-currently-playing user-read-playback-state user-modify-playback-state"
+    static let scopes = "user-read-currently-playing user-read-playback-state user-modify-playback-state app-remote-control"
 
     public var http: HTTP
     let keychainGroup: String?
@@ -67,6 +67,17 @@ public struct SpotifyAccount: Sendable {
 
     public func disconnect() {
         SecItemDelete(keychainQuery() as CFDictionary)
+    }
+
+    /// A valid access token (refreshed when needed), for the Spotify app connection (App Remote).
+    public func accessToken() async throws -> String {
+        guard var token = loadToken() else { throw SpotifyError.notConnected }
+        if token.expires < Date().addingTimeInterval(60) {
+            try await requestToken(["grant_type": "refresh_token", "refresh_token": token.refresh, "client_id": Self.clientID])
+            guard let fresh = loadToken() else { throw SpotifyError.notConnected }
+            token = fresh
+        }
+        return token.access
     }
 
     // MARK: Web API

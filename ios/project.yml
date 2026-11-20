@@ -17,6 +17,9 @@ settings:
 packages:
   SoundalikeKit:
     path: SoundalikeKit
+  SpotifyiOS:
+    url: https://github.com/spotify/ios-sdk
+    exactVersion: 5.0.1
 targets:
   Soundalike:
     type: application
@@ -29,6 +32,7 @@ targets:
         product: SoundalikeKit
       - package: SoundalikeKit
         product: SoundalikeUI
+      - package: SpotifyiOS
       - target: ShareExtension
       - target: Controls
     entitlements:

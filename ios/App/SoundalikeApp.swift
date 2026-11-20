@@ -7,6 +7,10 @@ import SwiftUI
 struct SoundalikeApp: App {
     @StateObject private var router = Router()
 
+    init() {
+        NowPlaying.spotifyAppRemote = { await SpotifyRemote.shared.currentTrack() }
+    }
+
     var body: some Scene {
         WindowGroup {
             HomeView()

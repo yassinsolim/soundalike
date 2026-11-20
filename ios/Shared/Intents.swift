@@ -64,7 +64,11 @@ struct FindSoundalikesIntent: AppIntent {
             try await continueInForeground(nil, alwaysConfirm: false)
             return .result(dialog: "Listening…")
         }
-        let dialog = try await snippet(for: try await SoundalikeClient().similar(to: seed), started: started)
+        let results = try await SoundalikeClient().similar(to: seed)
+        let dialog = try await snippet(for: results, started: started)
+        // Siri and Shortcuts draw the card; the Action Button and Back Tap don't, so the
+        // Dynamic Island shows the same results everywhere.
+        await SoundalikeActivity.show(results)
         return .result(dialog: dialog, snippetIntent: SoundalikesSnippetIntent())
     }
 }
@@ -116,7 +120,9 @@ struct OpenSongIntent: AppIntent {
 }
 
 /// Adds one result to the Spotify queue without leaving the current app.
-struct QueueInSpotifyIntent: AppIntent {
+/// A `LiveActivityIntent` so it runs in the app's process, where the Spotify token lives,
+/// also when tapped in the Dynamic Island.
+struct QueueInSpotifyIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "Queue Song"
     static let isDiscoverable = false
 
@@ -126,8 +132,13 @@ struct QueueInSpotifyIntent: AppIntent {
     init(trackID: String) { self.trackID = trackID }
 
     func perform() async throws -> some IntentResult {
-        try await SpotifyAccount().queue(trackID: trackID)
-        EventLog.record("spotify-queue", ["ok": true])
+        do {
+            try await SpotifyAccount().queue(trackID: trackID)
+            EventLog.record("spotify-queue", ["ok": true, "from": "card"])
+        } catch {
+            EventLog.record("spotify-queue", ["ok": false, "from": "card", "error": "\(error)"])
+            throw error
+        }
         return .result()
     }
 }

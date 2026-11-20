@@ -14,7 +14,7 @@ struct SoundalikeControls: WidgetBundle {
 
 struct FindSoundalikesControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
-        StaticControlConfiguration(kind: "app.yassin.soundalike.control.find") {
+        StaticControlConfiguration(kind: "app.yassin.soundalike.control.island") {
             ControlWidgetButton(action: FindSoundalikesControlIntent()) {
                 Label("Soundalike", systemImage: "waveform")
             }
@@ -34,17 +34,17 @@ struct SoundalikeLiveActivity: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    Image(systemName: "waveform").foregroundStyle(.tint)
+                    Label("Sounds like", systemImage: "waveform").font(.caption2).foregroundStyle(.secondary).labelStyle(.titleAndIcon)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    Button(intent: DismissSoundalikesIntent()) { Image(systemName: "xmark") }
+                    Button(intent: DismissSoundalikesIntent()) { Image(systemName: "xmark.circle.fill") }
                         .buttonStyle(.plain).foregroundStyle(.secondary)
                 }
-                DynamicIslandExpandedRegion(.center) {
-                    Text("Sounds like \(context.state.seedTitle)").font(.caption.weight(.semibold)).lineLimit(1)
-                }
                 DynamicIslandExpandedRegion(.bottom) {
-                    Rows(rows: context.state.rows)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(context.state.seedTitle).font(.caption.weight(.semibold)).lineLimit(1)
+                        Rows(rows: context.state.rows, compact: true)
+                    }
                 }
             } compactLeading: {
                 Image(systemName: "waveform").foregroundStyle(.tint)
@@ -68,7 +68,7 @@ private struct ActivityCard: View {
                 Spacer()
                 Button(intent: DismissSoundalikesIntent()) { Image(systemName: "xmark") }.buttonStyle(.plain).foregroundStyle(.secondary)
             }
-            Rows(rows: state.rows)
+            Rows(rows: state.rows, compact: false)
         }
         .foregroundStyle(.white)
     }
@@ -76,16 +76,23 @@ private struct ActivityCard: View {
 
 private struct Rows: View {
     let rows: [SoundalikeActivityAttributes.Row]
+    /// The expanded Dynamic Island is short: one line per song so all three fit.
+    let compact: Bool
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: compact ? 3 : 6) {
             ForEach(rows, id: \.self) { row in
                 HStack(spacing: 8) {
                     Button(intent: OpenSongIntent(url: row.openURL)) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 0) {
-                                Text(row.title).font(.footnote.weight(.semibold)).lineLimit(1)
-                                Text(row.artist).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                        HStack(spacing: 6) {
+                            if compact {
+                                (Text(row.title).fontWeight(.semibold) + Text("  \(row.artist)").foregroundStyle(.secondary))
+                                    .font(.caption).lineLimit(1)
+                            } else {
+                                VStack(alignment: .leading, spacing: 0) {
+                                    Text(row.title).font(.footnote.weight(.semibold)).lineLimit(1)
+                                    Text(row.artist).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                                }
                             }
                             Spacer(minLength: 4)
                             Text("\(row.match)%").font(.caption2.monospacedDigit().weight(.bold)).foregroundStyle(.secondary)
@@ -95,9 +102,10 @@ private struct Rows: View {
                     .buttonStyle(.plain)
                     if let trackID = row.spotifyTrackID {
                         Button(intent: QueueInSpotifyIntent(trackID: trackID)) {
-                            Image(systemName: "text.line.first.and.arrowtriangle.forward").font(.caption)
+                            Image(systemName: "text.line.first.and.arrowtriangle.forward").font(.caption2)
                         }
                         .buttonStyle(.bordered)
+                        .controlSize(.mini)
                         .accessibilityLabel("Add to Spotify queue")
                     }
                 }

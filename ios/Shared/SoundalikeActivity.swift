@@ -48,7 +48,7 @@ enum SoundalikeActivity {
                 body: LocalizedStringResource(stringLiteral: rows.map { "\($0.title) · \($0.artist)" }.joined(separator: "\n")),
                 sound: .default
             ))
-            EventLog.record("live-activity", ["ok": true])
+            EventLog.record("live-activity", ["ok": true, "queueable": rows.filter { $0.spotifyTrackID != nil }.count])
         } catch {
             EventLog.record("live-activity", ["ok": false, "error": "\(error)"])
         }
