@@ -313,3 +313,54 @@ def test_popularity_weight_adds_a_seed_independent_term_to_the_blend_alone(setup
         Blend.load(tmp_path / "h", tmp_path, index.pos, weights=(2.0, 1.0, wp), pop=pop[:5])
     with pytest.raises(ValueError, match="wh, wc"):
         Blend.load(tmp_path / "h", tmp_path, index.pos, weights=(2.0, 1.0, wp, 1.0), pop=pop)
+
+
+def test_head_table_in_host_memory_gives_the_same_blend_and_the_consensus_head_scores(tmp_path, monkeypatch):
+    import gc
+
+    from soundalike.anysong import blend as blend_mod
+
+    win, table, cf = _files(tmp_path)
+    index = serve.ChannelIndex.from_windows(serve.CHANNELS["sonic"], IDS, win.astype(np.float16))
+    monkeypatch.setattr(blend_mod, "HEAD_CHUNK", 5)  # three blocks of the table
+    on_device = Blend.load(tmp_path / "h", tmp_path, index.pos)
+    host = Blend.load(tmp_path / "h", tmp_path, index.pos, host_table=True)
+    assert host.streamed and not on_device.streamed and isinstance(host.table, serve.HostTable)
+    assert host.info() == on_device.info() | {"head_table": "host"} and len(host) == N
+    row = 4
+    seed = host.seed_head(row)
+    assert torch.equal(seed, on_device.seed_head(row))
+    sonic = index.scores(index.stored_query(int(IDS[row])))
+    assert torch.equal(host.head_scores(seed), on_device.head_scores(seed, chunk=5))
+    assert torch.equal(host.scores(sonic, seed, row), on_device.scores(sonic, seed, row))
+    # The consensus's view of the table: rows at unit length again in fp16, the product in fp16; alone or in the
+    # blend's pass, from the device or from host memory.
+    unit = host.unit_seed(row, seed)
+    assert torch.equal(unit, on_device.unit_seed(row, seed)) and unit.dtype == torch.float16
+    rows = blend_mod.unit_half(torch.from_numpy(np.load(tmp_path / "h.emb.npy")))
+    want = (unit @ rows.reshape(N * W, -1).T).reshape(W, N, W).amax(dim=(0, 2)).float()
+    assert torch.equal(on_device.unit_scores(unit, chunk=N), want) and torch.equal(host.unit_scores(unit), want)
+    both = host.head_views(seed, unit)
+    assert torch.equal(both[0], host.head_scores(seed)) and torch.equal(both[1], want)
+    assert host.head_views(seed, None)[1] is None
+    assert torch.equal(host.scores(sonic, seed, row, both[0]), host.scores(sonic, seed, row))
+    live = _unit(win[4] + 0.05 * np.random.default_rng(1).standard_normal((W, D))).astype(np.float32)
+    live_seed = host.seed_head(None, live)
+    assert host.unit_seed(None, live_seed) is live_seed
+    # The engine: the same lists; with keep_base and the table in host memory, the consensus head scores come with
+    # the blend's pass (and only then).
+    eng = _engine(index)
+    eng.blend = on_device
+    plain, _ = eng.search_stored(int(IDS[row]), k=6)
+    eng.keep_base = True
+    assert "head" not in eng.search_stored(int(IDS[row]), k=6)[0]["base"]
+    eng.blend = host
+    results, _ = eng.search_stored(int(IDS[row]), k=6)
+    base = results.pop("base")
+    assert results == plain and torch.equal(base["head"], want)
+    results, _ = eng.search_windows({"sonic": live}, k=6)
+    assert torch.equal(results["base"]["head"], on_device.unit_scores(live_seed))
+    eng.keep_base = False
+    assert eng.search_stored(int(IDS[row]), k=6)[0] == plain
+    del host, eng, results, base
+    gc.collect()

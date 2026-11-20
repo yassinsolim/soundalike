@@ -658,6 +658,7 @@ class AnySong:
                 "blend": None if blend is None else blend.info() | {"main": "blend" in self.main_pool},
                 "popularity": None if self.popularity is None else {"songs": len(self.popularity)},
                 "consensus": None if self.consensus is None else self.consensus.info(),
+                "host_tables": list(getattr(self.engine, "host_tables", ())),
                 "match_quantiles": "custom" if self.custom_match_quantiles else "default",
                 "language_search": self.language_rows is not None,
                 "language_detector": None if self.language_detector is None else detections,
@@ -2038,6 +2039,13 @@ def main(argv: list[str] | None = None) -> None:
                    help="CSLS hub penalty weight (default: as recorded by hub_build; 0 disables)")
     p.add_argument("--half-stage1", nargs="*", default=[], choices=list(CHANNELS),
                    help="channels whose quantized stage 1 runs as an fp16 GEMM (serve.TwoStageIndex)")
+    p.add_argument("--host-tables", nargs="*", default=[], choices=[*CHANNELS, "head"],
+                   help="tables kept in host memory (the file cache) and read block by block for each request "
+                        "instead of living on the GPU, with the same results: a channel's stage-1 projections "
+                        "(built indexes only), 'head' = the --blend-head table. For cards the tables do not fit")
+    p.add_argument("--vram-cap-gb", type=float, default=None,
+                   help="testing: cap this process's CUDA memory (torch.cuda.set_per_process_memory_fraction), so "
+                        "a profile meant for a smaller card fails loudly when it overshoots")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     p.add_argument("--preview-dir", type=Path, default=None, help="scratch space for live previews")
     p.add_argument("--cors-origin", default=None)
@@ -2078,6 +2086,10 @@ def main(argv: list[str] | None = None) -> None:
                    help="body score = prediction - this * min(log10 sound rank, 5) (default 0.1)")
     p.add_argument("--consensus-sound-cap", type=int, default=None,
                    help="songs past this sound rank are in no consensus body (default 5000)")
+    p.add_argument("--consensus-windows", choices=("pinned", "stream"), default=None,
+                   help="the consensus body's sonic windows: 'pinned' holds them page-locked in host memory "
+                        "(default, 3 kB a song), 'stream' reads the index's full.npy for each request (no host "
+                        "memory, the same results)")
     p.add_argument("--consensus-quantiles", type=Path, default=None,
                    help="JSON list of the 21 body-score quantiles (0, 5, ..., 100 %%) behind a consensus row's "
                         "'match'")
@@ -2139,8 +2151,18 @@ def main(argv: list[str] | None = None) -> None:
         except ValueError as exc:
             p.error(f"--consensus-quantiles {args.consensus_quantiles}: {exc}")
     elif any(v is not None for v in (args.consensus_sound_weight, args.consensus_sound_cap,
-                                     args.consensus_quantiles)):
-        p.error("--consensus-sound-weight, --consensus-sound-cap and --consensus-quantiles need --consensus-model")
+                                     args.consensus_quantiles, args.consensus_windows)):
+        p.error("--consensus-sound-weight, --consensus-sound-cap, --consensus-windows and --consensus-quantiles "
+                "need --consensus-model")
+    if "head" in args.host_tables and args.blend_head is None:
+        p.error("--host-tables head needs --blend-head")
+    for channel in args.host_tables:
+        if channel != "head" and not (Path(args.index) / channel / "meta.json").exists():
+            p.error(f"--host-tables {channel} needs a built {channel} index (index_build)")
+    if args.vram_cap_gb is not None and args.device.startswith("cuda"):
+        card = torch.device(args.device).index or 0
+        torch.cuda.set_per_process_memory_fraction(
+            args.vram_cap_gb * 2**30 / torch.cuda.get_device_properties(card).total_memory, card)
     popularity = listener.Popularity.load(args.popularity) if args.popularity is not None else None
     quantiles = None
     if args.match_quantiles is not None:
@@ -2152,7 +2174,7 @@ def main(argv: list[str] | None = None) -> None:
     scratch = args.preview_dir or Path(tempfile.mkdtemp(prefix="anysong-"))
     t = time.perf_counter()
     engine = Engine(args.index, args.channels, args.device, candidates=args.candidates, hub_alpha=args.hub_alpha,
-                    half_stage1=args.half_stage1)
+                    half_stage1=args.half_stage1, host_proj=[t for t in args.host_tables if t != "head"])
     if args.blend_head is not None:
         from .blend import WEIGHTS, Blend
 
@@ -2160,7 +2182,9 @@ def main(argv: list[str] | None = None) -> None:
         sonic = engine.indexes["sonic"]
         engine.blend = Blend.load(args.blend_head, args.blend_cf, sonic.pos, sonic.id_tensor.device,
                                   tuple(args.blend_weights) if args.blend_weights else WEIGHTS,
-                                  popularity.of(sonic.ids) if blend_wp else None)
+                                  popularity.of(sonic.ids) if blend_wp else None, "head" in args.host_tables)
+        if engine.blend.streamed:
+            engine.host_tables.append("head")
         engine.load_secs["blend"] = round(time.perf_counter() - t_blend, 2)
     engine.warm()
     warm = _warmup(engine)
@@ -2224,6 +2248,7 @@ def main(argv: list[str] | None = None) -> None:
         sonic_ids = engine.indexes["sonic"].ids.tolist()
         consensus = Consensus.load(
             args.consensus_model, Path(args.index) / "sonic" / "full.npy", args.blend_cf / "cf128.npy", engine,
+            args.consensus_windows == "stream",
             artists=[meta[tid][0] if tid in meta else None for tid in sonic_ids],
             codes=None if language_rows is None else language_rows.codes["sonic"],
             bpm=None if tempo is None else np.array([tempo.by_id.get(tid, np.nan) for tid in sonic_ids], np.float32),

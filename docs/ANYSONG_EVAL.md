@@ -3591,3 +3591,40 @@ Cost, 20 stored seeds, warm file cache, `k=30`: 0.75 s median (p90 0.81) against
 launcher, of which the body is about 0.19 s (signals 95 ms, the two bodies 2 x 27 ms); 4 live seeds 1.53 s
 against 1.33 s, Deezer download included. GPU memory: 10.7 GB allocated, 11.5 GB peak (v11: 10.5 and 11.1);
 3.2 GB more host memory, page-locked.
+
+## Consensus service on an 8 GB card (2026-11-20): local measurement, not served
+
+The v12 service (consensus body, previous section) allocates 10.7 GB of VRAM at 1,109,024 songs: three stage-1
+tables (melody 0.8, samples 1.7, sonic 1.7 GB), the blend's head table (1.6), two copies of the playlist vectors
+(0.3), and the models (MuQ-MuLan 1.3, CLEWS 0.8, SampleID 0.8, Whisper 1.5, Beat This! 0.1). The production card
+has 8 GB. Two flags keep tables off the card without changing a number (`docs/ANYSONG.md`, "Deployment"):
+
+- `--host-tables <melody|samples|sonic|head> ...`: those tables stay in the file cache and are read block by block
+  for each request (`serve.HostTable`). Stage 1 and the blend multiply the same stored values in the same blocks,
+  and with the head table in host memory one pass serves the blend's head term and the consensus body's head signal;
+- `--consensus-windows stream`: the consensus body's sonic windows are read from `sonic/full.npy` for each request
+  and brought to unit length on the card, instead of being prepared once into 3.2 GB of page-locked memory.
+
+Cheaper stand-ins were measured first and rejected (`anysong-lab/v8/v12/approx_study.py`, 260 seeds, body top 10
+against the exact one): the served 8-bit sonic stage-1 scores in place of the fp16 product of the windows give
+the same top 10 for 75.8 % of seeds (mean overlap 9.93 of 10); the blend's fp32 head scores in place of the
+fp16 product of the unit table, 80.0 % (9.94); both, 63.5 % (9.88). The model splits on ranks, and scores that
+differ in the fourth decimal move ranks. So the profile stays exact.
+
+Result with `--host-tables samples sonic head --consensus-windows stream`, the process capped at 8 GB
+(`--vram-cap-gb 8`), RTX 5080, in-process service (`anysong-lab/v8/v12/mains.py`):
+
+- **Same lists.** 260 stored seeds (the 60 parity seeds and 200 of the served v12 lists): every list of every
+  seed (`best`, `vibe`, `sounds`, `main`, `listeners`, `melody`, `samples`, `sonic`) and the query block are byte
+  for byte those of the full v12; main's top 20 equals the lists the full v12 served for all 200. Four live seeds:
+  the same main ids (their scores differ in the fourth decimal between any two runs, as live embeddings do).
+- **VRAM.** 5.8 GB allocated after start, 6.0 GB at peak for stored seeds, 6.4 GB with live seeds (embedding,
+  tempo, language detection); with the Stems view (`--stems-model`) 5.9 GB allocated and 7.1 GB at peak during a
+  live dissection. With `melody` in host memory too, 0.8 GB less throughout.
+- **Host memory.** 5.3 GB private (0.4 GB of it page-locked read buffers) against 9.2 GB (3.2 GB page-locked).
+- **Latency.** Stored seeds 0.92 to 1.02 s median over two runs (p90 1.13 to 1.27) against 0.67 s for the full v12
+  in the same harness: each
+  request reads 8.1 GB of tables from the file cache (about 22 GB/s here). On the RTX 2070 SUPER the samples stage
+  1 is documented at 196 ms per million songs against 57 ms here, a factor of 3.4 for the GEMM-bound parts, and
+  PCIe 3.0 with DDR4 moves the tables at roughly a third of the rate here; expect about 2.5 to 3.5 s for a stored
+  seed there (not measured).

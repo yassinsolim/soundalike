@@ -44,7 +44,9 @@ import numpy as np
 import torch
 
 from . import listener
+from .blend import _unit_block, unit_half
 from .scene import SceneParams, SceneTable, affinity, components
+from .serve import HostTable
 
 SIGNALS = ("snd", "head", "cf", "mel", "smp")
 SIGNAL_NAMES = {"snd": "sound", "head": "head", "cf": "playlists", "mel": "melody", "smp": "samples"}
@@ -94,8 +96,9 @@ class Consensus:
     """The signals' tables next to the engine's, and the body they give a seed (``bodies``).
 
     ``cf``: the playlist vectors of the blend's graph songs, as stored (``cf128.npy``). ``windows``: the sonic
-    index's full windows [N, W, D]; they stay in host memory (page-locked for a CUDA index) and
-    cross to the index device in blocks for each seed, since the card has no room to hold them next to the engine.
+    index's full windows [N, W, D]; they stay in host memory (page-locked for a CUDA index) and cross to the index
+    device in blocks for each seed, since the card has no room to hold them next to the engine. A ``serve.HostTable``
+    of them is not held at all: its blocks are read from the file cache for each seed, with the same result.
     ``orders``: channel -> the track ids of the melody and samples indexes in their row order. ``artists``: the
     credited artist of every sonic row (None: unknown, an artist of its own). ``codes``: the gate's language code of
     every row (``languages.LanguageRows``; None: all unknown). ``bpm``: the catalog tempo of every row (NaN: none)."""
@@ -129,11 +132,16 @@ class Consensus:
             at = np.clip(np.searchsorted(scene.track_ids, self.ids), 0, len(scene.track_ids) - 1)
             self.scene_artist = np.where(scene.track_ids[at] == self.ids,
                                          np.maximum(scene.track_artist[at], 0), 0).astype(np.int64)
-        # Unit windows in fp16, normalised on the index device as the harness does it.
-        self.windows = torch.empty(tuple(windows.shape), dtype=torch.float16, pin_memory=device.type == "cuda")
-        for s in range(0, n, 16384):
-            x = torch.from_numpy(np.array(windows[s:s + 16384])).to(device).half()
-            self.windows[s:s + 16384] = self._unit(x).cpu()
+        # Unit windows in fp16, normalised on the index device as the harness does it: all of them once, into
+        # page-locked host memory, or (a ``HostTable``) block by block for each seed.
+        self.streamed = isinstance(windows, HostTable)
+        if self.streamed:
+            self.windows = windows
+        else:
+            self.windows = torch.empty(tuple(windows.shape), dtype=torch.float16, pin_memory=device.type == "cuda")
+            for s in range(0, n, 16384):
+                x = torch.from_numpy(np.array(windows[s:s + 16384])).to(device).half()
+                self.windows[s:s + 16384] = unit_half(x).cpu()
         # Primary artist name -> its number; a song without a credited artist is an artist of its own.
         self.artist_index: dict[str, int] = {}
         self.artist_np = np.array([self.artist_index.setdefault(primary_artist(a) if a is not None else f"?{i}",
@@ -166,33 +174,37 @@ class Consensus:
         self.log_rank = torch.arange(1, n + 1, device=device).float().log10()
 
     @classmethod
-    def load(cls, model: Path | str, windows: Path | str, cf: Path | str, engine, **kw) -> Consensus:
+    def load(cls, model: Path | str, windows: Path | str, cf: Path | str, engine, stream_windows: bool = False,
+             **kw) -> Consensus:
         """``model``: an exported ``listener.Regressor``; ``windows``: the sonic index's ``full.npy``; ``cf``: the
-        blend's ``cf128.npy``; ``engine``: a ``serve.Engine`` with a blend and the melody, samples and sonic indexes."""
+        blend's ``cf128.npy``; ``engine``: a ``serve.Engine`` with a blend and the melody, samples and sonic indexes.
+        ``stream_windows``: the windows stay in the file cache and are read for each seed (``serve.HostTable``)
+        instead of being held page-locked."""
         sonic = engine.indexes["sonic"]
-        return cls(listener.Regressor.load(model), sonic.ids, np.load(windows, mmap_mode="r"), engine.blend,
+        table = HostTable(windows, engine.blend.table.device, 16384) if stream_windows else \
+            np.load(windows, mmap_mode="r")
+        return cls(listener.Regressor.load(model), sonic.ids, table, engine.blend,
                    np.load(cf), {channel: engine.indexes[channel].ids for channel in CHANNELS.values()}, prep=sonic.prep_query,
                    **kw)
 
     def info(self) -> dict:
         return {"model": self.model.meta or "on", "features": len(self.model.features),
-                "sound_weight": self.sound_weight, "sound_cap": self.sound_cap}
+                "sound_weight": self.sound_weight, "sound_cap": self.sound_cap,
+                "windows": "stream" if self.streamed else "pinned"}
 
-    @staticmethod
-    def _unit(x: torch.Tensor) -> torch.Tensor:
-        return x / x.float().norm(dim=-1, keepdim=True).clamp_min(1e-6).half()
-
-    def _maxsim(self, q: torch.Tensor, table: torch.Tensor, unit: bool) -> torch.Tensor:
-        """Best window-pair product of the seed's vectors [W, D] with every row's [N], multiplied in fp16. ``unit``:
-        the table's rows are brought to unit length first (the head table, which is on the device as stored)."""
+    def _sound(self, q: torch.Tensor) -> torch.Tensor:
+        """Best window-pair product of the seed's sonic windows [W, D] with every row's unit windows [N], multiplied
+        in fp16."""
         out = torch.empty(self.n, device=self.device)
+        if self.streamed:
+            for start, block in self.windows.blocks():
+                out[start:start + len(block)] = _unit_block(q, block)
+            return out
         qf = q.half()
-        for s in range(0, self.n, CHUNK):
-            block = table[s:s + CHUNK].to(self.device, non_blocking=True)
-            if unit:
-                block = self._unit(block.half())
+        for start in range(0, self.n, CHUNK):
+            block = self.windows[start:start + CHUNK].to(self.device, non_blocking=True)
             n, w, d = block.shape
-            out[s:s + n] = (qf @ block.reshape(n * w, d).T).reshape(len(qf), n, w).amax(dim=(0, 2)).float()
+            out[start:start + n] = (qf @ block.reshape(n * w, d).T).reshape(len(qf), n, w).amax(dim=(0, 2)).float()
         return out
 
     @torch.inference_mode()
@@ -200,14 +212,19 @@ class Consensus:
                 windows: np.ndarray | None = None) -> dict[str, torch.Tensor]:
         """Each signal's score of every sonic row [N] for a stored seed (``row``) or a live one (its raw sonic
         ``windows``), -inf where the signal has none. ``bases``: channel -> the stage-1 scores less the hub penalty
-        of the seed's melody and samples searches, in those indexes' row order."""
-        if row is not None:
-            sound = self.windows[row].to(self.device)
-            head = self._unit(self.blend.table[row].half())
-        else:
+        of the seed's melody and samples searches, in those indexes' row order, and (optional) ``"head"``: the
+        head signal, when the engine computed it with the blend's."""
+        if row is None:
             sound = self.prep(windows)
-            head = self.blend.seed_head(None, windows)
-        out = {"snd": self._maxsim(sound, self.windows, False), "head": self._maxsim(head, self.blend.table, True)}
+        elif self.streamed:
+            sound = unit_half(self.windows[row].half())
+        else:
+            sound = self.windows[row].to(self.device)
+        head = bases.get("head")
+        if head is None:  # else the engine's pass over a head table in host memory gave it (``Blend.head_views``)
+            seed = self.blend.seed_head(None, windows) if row is None else None
+            head = self.blend.unit_scores(self.blend.unit_seed(row, seed))
+        out = {"snd": self._sound(sound), "head": head}
         cf = torch.full((self.n,), -torch.inf, device=self.device)
         at = int(self.blend.graph_pos[row]) if row is not None else -1
         if at >= 0:

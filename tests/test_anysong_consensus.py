@@ -308,7 +308,8 @@ def test_live_seed_uses_its_own_windows_and_has_no_playlist_view(tmp_path):
 
 def test_consensus_rejects_tables_that_do_not_fit(tmp_path):
     world = World(tmp_path)
-    assert world.cons.info() == {"model": "on", "features": 1, "sound_weight": 0.1, "sound_cap": 5000}
+    assert world.cons.info() == {"model": "on", "features": 1, "sound_weight": 0.1, "sound_cap": 5000,
+                                 "windows": "pinned"}
     with pytest.raises(ValueError, match="does not compute"):
         World(tmp_path, model=_constant(features=("pop",)))
     with pytest.raises(ValueError, match="does not hold"):
@@ -337,3 +338,25 @@ def test_engine_keeps_the_base_scores_only_when_asked(world):
     assert kept["sonic"] == index.top(index.scores(index.stored_query(tid), allow=allow), 6, [tid])
     again, _ = eng.search_stored(tid, k=6)
     assert again.pop("base") and again == plain
+
+
+def test_windows_read_from_the_file_for_each_seed_give_the_same_bodies(tmp_path):
+    import gc
+
+    world = World(tmp_path)
+    np.save(tmp_path / "full.npy", world.win)
+    streamed = World(tmp_path, windows=serve.HostTable(tmp_path / "full.npy", "cpu", rows=16)).cons
+    cons = world.cons
+    assert streamed.streamed and not cons.streamed and streamed.info()["windows"] == "stream"
+    live = _unit(world.win[7].astype(np.float32) + 0.02 * np.random.default_rng(3).standard_normal((W, D)))
+    for kw in ({"row": 4}, {"row": 11}, {"windows": live}):
+        a, b = cons.signals(world.bases, **kw), streamed.signals(world.bases, **kw)
+        assert all(torch.equal(a[key], b[key]) for key in cm.SIGNALS)
+    assert streamed.bodies(world.bases, 1, row=4) == cons.bodies(world.bases, 1, row=4)
+    assert streamed.bodies(world.bases, 2, windows=live, artist="Artist 3") == \
+        cons.bodies(world.bases, 2, windows=live, artist="Artist 3")
+    # Head scores the engine computed in the blend's pass are taken as they are.
+    given = torch.arange(N, dtype=torch.float32)
+    assert cons.signals(world.bases | {"head": given}, 4)["head"] is given
+    del streamed
+    gc.collect()

@@ -2422,3 +2422,21 @@ def test_consensus_body_is_computed_once_per_seed_from_the_searches_base_scores(
     svc.similar(99, k=5)
     bases, code, kw = FakeConsensus.calls[-1]
     assert code == -1 and kw == {"windows": "live windows", "artist": "Daft Punk", "artist_id": None, "bpm": None}
+
+
+@pytest.mark.parametrize("flags,message", [
+    (["--host-tables", "head"], "needs --blend-head"),
+    (["--host-tables", "sonic"], "needs a built sonic index"),
+    (["--consensus-windows", "stream"], "need --consensus-model"),
+])
+def test_homelab_profile_flags_are_checked_before_anything_loads(tmp_path, capsys, flags, message):
+    with pytest.raises(SystemExit):
+        api.main(["--index", str(tmp_path), *flags])
+    assert message in capsys.readouterr().err
+
+
+def test_health_names_the_tables_kept_in_host_memory(tmp_path):
+    engine = FakeEngine()
+    assert api.AnySong(engine, FakeDeezer(tmp_path), META).health()["host_tables"] == []
+    engine.host_tables = ["samples", "sonic", "head"]
+    assert api.AnySong(engine, FakeDeezer(tmp_path), META).health()["host_tables"] == ["samples", "sonic", "head"]

@@ -416,8 +416,41 @@ because each index is about 40 GB and can be rebuilt from its embeddings. The fi
 served with the catalog tiers and samples' stage 1 in fp16 (`--half-stage1 samples`). The previous grown index,
 `index-store/grown-20261108` (889,277 songs), stays as the rollback. The service is
 [`deploy/homelab/soundalike-anysong.service`](../deploy/homelab/soundalike-anysong.service) (user `anysong`,
-`MemoryMax=6G`, enabled at boot; startup loads and warms the models and index). The process itself uses about
-1.5 GB of RAM; the rest of the cap is page cache for the memory-mapped windows, which the kernel trims.
+`MemoryMax=14G` since v12, 6G before; enabled at boot; startup loads and warms the models and index). Before v12
+the process itself used about 4 GB of RAM; the rest of the cap is page cache for the memory-mapped windows, which
+the kernel trims.
+
+**v12 (consensus body) on the 8 GB card.** At 1,109,024 songs the tables of the v12 service take 6.2 GB of VRAM and
+its models 4.4 GB, so they cannot all live on the card. The unit therefore runs the service with
+
+- `--host-tables samples sonic head`: the samples and sonic stage-1 projections and the blend's head table stay in
+  host memory, in the file cache, and are read block by block for each request (`serve.HostTable`: reader threads
+  fill small page-locked buffers ahead of the GPU). The numbers are the stored ones, so every list is byte for byte
+  what the tables on the card give. `melody` can be added for 0.8 GB more room on the card;
+- `--consensus-windows stream`: the consensus body's sonic windows (`sonic/full.npy`) are read the same way instead
+  of being held page-locked (3.2 GB of host memory).
+
+Measured on the RTX 5080 with the process capped at 8 GB (`--vram-cap-gb 8`), Stems view on: 5.9 GB allocated,
+7.1 GB at peak (a live dissection; 6.4 GB for live seeds), against 10.7 and 11.5 GB without the flags; the process
+holds about 5.3 GB of host memory (0.4 GB of it page-locked buffers). Every request reads 8.1 GB from the file
+cache (`samples/proj.npy`, `sonic/proj.npy`, `sonic/full.npy`, `heads/h4.emb.npy`), so the container needs room
+to keep those cached: 16 GB with `MemoryMax=14G`. If they fall out of the cache every request waits for the disk.
+
+One directory holds everything of an index, with fixed names (the unit's flags point into `index/current`):
+`melody/`, `samples/`, `sonic/` (index_build / index_whiten output), `heads/h2.*` and `heads/h4.*`,
+`playlists/cooc.npz` and `cf128.npy`, `catalog_meta.npz`, `languages.npz`, `scene.npz`, `core_ids.npy`,
+`tempo.npz`, `ranker.npz`, `popularity.npz`, `match_quantiles.json`, `overall.json`, `consensus.npz` and
+`consensus_quantiles.json`. Before the symlink swap,
+
+```sh
+/opt/soundalike/venv/bin/python -m soundalike.anysong.index_check /opt/soundalike/index-store/NAME
+```
+
+checks, without the GPU, that every file is there and that they fit each other (rows, dimensions, track ids across
+the channels and tables, the models load); it prints one `PROBLEM` line per fault and exits 1. After the restart,
+`/healthz` shows v12 is live: `channels` with 1,109,024 songs each, a `consensus` block (model note, `sound_cap`
+5011, `windows` `stream`), `blend.head_table` `host` and `host_tables` `["samples", "sonic", "head"]`. The
+Whisper language model (`--language-model`) lives in `ckpt/whisper-large-v3-turbo`.
 
 Swapping the index:
 

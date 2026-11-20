@@ -20,7 +20,8 @@ import json
 import os
 import sys
 import time
-from collections.abc import Iterable, Mapping
+from collections import deque
+from collections.abc import Iterable, Iterator, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -215,6 +216,81 @@ def _to_device(arr: np.ndarray, device: str, rows: int = 16384) -> torch.Tensor:
     return out
 
 
+class HostTable:
+    """A C-order ``.npy`` array [N, ...] that stays in host memory, in the file cache rather than in the process, and
+    crosses to the device in row blocks each time it is used (``blocks``): for tables a small card has no room to
+    hold. The numbers are the stored ones, so whatever is computed from the blocks is what the table on the device
+    would give.
+
+    With ``threads`` (default: 3 for a CUDA device, none otherwise), reader threads fill a few buffers of ``rows``
+    rows, page-locked for CUDA, ahead of the consumer (with ``os.preadv`` where it exists, see ``RowFile``; else from
+    a memory map), so the copy to the card is not held up by the file reads. One consumer at a time."""
+
+    def __init__(self, path: Path | str, device: torch.device | str, rows: int = 16384, threads: int | None = None):
+        self.mm = np.load(path, mmap_mode="r")
+        self.shape, self.dtype = tuple(self.mm.shape), getattr(torch, self.mm.dtype.name)
+        self.device, self.rows = torch.device(device), int(rows)
+        self.threads = (3 if self.device.type == "cuda" else 0) if threads is None else int(threads)
+        self.row_bytes = int(np.prod(self.shape[1:], dtype=np.int64)) * self.mm.dtype.itemsize
+        self.fd = os.open(path, os.O_RDONLY | getattr(os, "O_BINARY", 0)) if hasattr(os, "preadv") else None
+        self._buffers: list[torch.Tensor] | None = None
+        self._pool: ThreadPoolExecutor | None = None
+
+    def __len__(self) -> int:
+        return self.shape[0]
+
+    def __getitem__(self, rows) -> torch.Tensor:
+        """A row or a few rows on the device, as stored."""
+        return torch.from_numpy(np.array(self.mm[rows])).to(self.device)
+
+    def _fill(self, buffer: torch.Tensor, start: int) -> int:
+        n = min(self.rows, len(self) - start)
+        view = buffer.numpy()[:n]
+        if self.fd is None:
+            np.copyto(view, self.mm[start:start + n])
+            return n
+        raw, off, got = memoryview(view.reshape(-1).view(np.uint8)), self.mm.offset + start * self.row_bytes, 0
+        while got < n * self.row_bytes:
+            read = os.preadv(self.fd, [raw[got:]], off + got)
+            if read <= 0:
+                raise OSError(f"short read at row {start}")
+            got += read
+        return n
+
+    def blocks(self) -> Iterator[tuple[int, torch.Tensor]]:
+        """(first row, the next ``rows`` rows on the device) over the whole table, in row order."""
+        cuda = self.device.type == "cuda"
+        if not self.threads:
+            for s in range(0, len(self), self.rows):
+                yield s, torch.from_numpy(np.array(self.mm[s:s + self.rows])).to(self.device)
+            return
+        if self._buffers is None:
+            self._buffers = [torch.empty((self.rows, *self.shape[1:]), dtype=self.dtype, pin_memory=cuda)
+                             for _ in range(self.threads + 1)]
+            self._pool = ThreadPoolExecutor(self.threads, thread_name_prefix="hosttable")
+        free, pending, starts = list(self._buffers), deque(), iter(range(0, len(self), self.rows))
+
+        def read_ahead() -> None:
+            s = next(starts, None)
+            if s is not None:
+                buffer = free.pop()
+                pending.append((s, buffer, self._pool.submit(self._fill, buffer, s)))
+
+        try:
+            for _ in range(self.threads):
+                read_ahead()
+            while pending:
+                s, buffer, job = pending.popleft()
+                # A finished copy, so the buffer is free again.
+                block = buffer[:job.result()].to(self.device) if cuda else buffer[:job.result()].clone()
+                free.append(buffer)
+                read_ahead()
+                yield s, block
+        finally:  # a consumer that stops early must not leave readers writing into the buffers
+            for _, _, job in pending:
+                job.exception()
+
+
 class RowFile:
     """Random row reads from a C-order ``.npy`` array.
 
@@ -255,6 +331,9 @@ class RowFile:
         return out
 
 
+STAGE1_CHUNK = 8192  # rows per stage-1 product
+
+
 class TwoStageIndex(_Ranked):
     """Catalog-scale channel index written by ``index_build`` (or ``index_whiten``, whose stage 1 holds every
     dimension as 8-bit integers and whose ``whiten`` matrix and mean ``mu`` turn raw query windows into its space).
@@ -263,6 +342,9 @@ class TwoStageIndex(_Ranked):
     modes use exact squared norms, so only the dot product is approximated). Stage 2 re-scores the best
     ``candidates`` exactly from memory-mapped full windows. Tracks outside the candidate set keep their
     stage-1 estimate shifted below every exact score, so ranks past ``candidates`` are approximate.
+
+    ``proj`` may be a ``HostTable`` (``load`` with ``host_proj``): the projections then stay in host memory and stage
+    1 reads them block by block, with the same result.
 
     Projections are fp16, or integers with one scale per window (``proj_scale``): int8, or uint8 holding two
     4-bit values per byte (``index_build.quantize_windows``). Integers are exact in fp16, so with ``half_stage1``
@@ -273,7 +355,7 @@ class TwoStageIndex(_Ranked):
     picked, where ``h`` is the track's mean top-k song similarity: CSLS, which demotes tracks close to everything.
     """
 
-    def __init__(self, channel: Channel, ids: np.ndarray, proj: torch.Tensor, basis: torch.Tensor,
+    def __init__(self, channel: Channel, ids: np.ndarray, proj: torch.Tensor | HostTable, basis: torch.Tensor,
                  norms: torch.Tensor, full: np.ndarray, mu: torch.Tensor | None, candidates: int = 1000,
                  hub: torch.Tensor | None = None, hub_alpha: float = 0.0, proj_scale: torch.Tensor | None = None,
                  half_stage1: bool = False, whiten: torch.Tensor | None = None):
@@ -306,9 +388,11 @@ class TwoStageIndex(_Ranked):
 
     @classmethod
     def load(cls, path: Path, channel: Channel, device: str = "cpu", candidates: int | None = None,
-             read_threads: int = 8, hub_alpha: float | None = None, half_stage1: bool = False) -> TwoStageIndex:
+             read_threads: int = 8, hub_alpha: float | None = None, half_stage1: bool = False,
+             host_proj: bool = False) -> TwoStageIndex:
         """``candidates`` defaults to the depth recorded at build time and ``hub_alpha`` to the alpha recorded
-        by ``hub_build`` (0 when absent; pass 0 to disable the penalty)."""
+        by ``hub_build`` (0 when absent; pass 0 to disable the penalty). ``host_proj``: the stage-1 projections
+        stay in host memory (``HostTable``) instead of on the device."""
         path = Path(path)
         meta = json.loads((path / "meta.json").read_text())
         built = built_channel(channel, meta)
@@ -322,7 +406,9 @@ class TwoStageIndex(_Ranked):
         hub = torch.from_numpy(np.load(path / "hub.npy").astype(np.float32)) if alpha else None
         scale = torch.from_numpy(np.load(path / "proj_scale.npy")) if (path / "proj_scale.npy").exists() else None
         whiten = torch.from_numpy(np.load(path / "whiten.npy")).to(device) if channel.prep == "whiten" else None
-        return cls(channel, np.load(path / "ids.npy"), _to_device(np.load(path / "proj.npy", mmap_mode="r"), device),
+        proj = HostTable(path / "proj.npy", device, STAGE1_CHUNK) if host_proj else \
+            _to_device(np.load(path / "proj.npy", mmap_mode="r"), device)
+        return cls(channel, np.load(path / "ids.npy"), proj,
                    torch.from_numpy(np.load(path / "basis.npy")).to(device),
                    torch.from_numpy(np.load(path / "norms.npy")).to(device),
                    RowFile(path / "full.npy", read_threads), mu, candidates or meta.get("candidates", 1000),
@@ -348,29 +434,40 @@ class TwoStageIndex(_Ranked):
             exact -= self.penalty[torch.as_tensor(rows, device=self.device)]
         return exact
 
+    def _proj_blocks(self, chunk: int) -> Iterator[tuple[int, torch.Tensor]]:
+        """(first row, stage-1 projections of the next rows) over the index: ``chunk`` rows from the device, or a
+        ``HostTable``'s own blocks; as fp32, or fp16 with ``half_stage1`` (quantized integers before their per-window
+        scale)."""
+        blocks = self.proj.blocks() if isinstance(self.proj, HostTable) else \
+            ((s, self.proj[s:s + chunk]) for s in range(0, len(self), chunk))
+        for s, p in blocks:
+            yield s, self._unpacked(p)
+
     def _proj_rows(self, a: int, b: int) -> torch.Tensor:
-        """Stage-1 projections of rows a..b as fp32, or fp16 with ``half_stage1`` (quantized integers before their
-        per-window scale)."""
-        p = self.proj[a:b]
+        """Stage-1 projections of rows a..b, as ``_proj_blocks`` gives them."""
+        return self._unpacked(self.proj[a:b])
+
+    def _unpacked(self, p: torch.Tensor) -> torch.Tensor:
         if self.proj_bits == 4:
             p = torch.stack(((p & 15).to(torch.int8) - 8, (p >> 4).to(torch.int8) - 8), -1).flatten(-2)
         return p.half() if self.half_stage1 else p.float()
 
     @torch.inference_mode()
-    def stage1(self, q: torch.Tensor, chunk: int = 8192) -> torch.Tensor:
+    def stage1(self, q: torch.Tensor, chunk: int = STAGE1_CHUNK) -> torch.Tensor:
         """Prepared queries [B, W, D] -> approximate scores [B, N]."""
         qp, qn, dim = q @ self.basis, (q ** 2).sum(-1), q.shape[-1]
         if self.half_stage1:
             qs = qp.abs().amax(dim=(1, 2)).clamp_min(1e-12)[:, None, None, None]
             qp = (qp / qs[..., 0]).half()
         out = torch.empty(len(q), len(self), device=self.device)
-        for s in range(0, len(self), chunk):
-            sims = torch.einsum("bwd,nvd->bnwv", qp, self._proj_rows(s, s + chunk))
+        for s, p in self._proj_blocks(chunk):
+            e = s + len(p)
+            sims = torch.einsum("bwd,nvd->bnwv", qp, p)
             if self.half_stage1:
                 sims = sims.float() * qs
             if self.proj_scale is not None:
-                sims *= self.proj_scale[s:s + chunk][None, :, None, :]
-            out[:, s:s + chunk] = window_scores(sims, self.channel.mode, qn, self.norms[s:s + chunk], dim)
+                sims *= self.proj_scale[s:e][None, :, None, :]
+            out[:, s:e] = window_scores(sims, self.channel.mode, qn, self.norms[s:e], dim)
         return out
 
     @torch.inference_mode()
@@ -466,19 +563,22 @@ class Engine:
 
     def __init__(self, index_dir: Path | str, channels: Iterable[str] = tuple(CHANNELS), device: str = "cuda",
                  index_device: str | None = None, drop_text_tower: bool = True, candidates: int | None = None,
-                 hub_alpha: float | None = None, half_stage1: Iterable[str] = ()):
+                 hub_alpha: float | None = None, half_stage1: Iterable[str] = (), host_proj: Iterable[str] = ()):
+        """``host_proj``: channels whose stage-1 projections stay in host memory (``TwoStageIndex.load``)."""
         self.device = device
         self.drop_text_tower = drop_text_tower
         self.channels = [CHANNELS[c] for c in channels]
         self.load_secs: dict[str, float] = {}
         self.indexes: dict[str, ChannelIndex | TwoStageIndex] = {}
-        half = set(half_stage1)
+        half, host = set(half_stage1), set(host_proj)
+        self.host_tables = sorted(host)  # what stays in host memory (``blend`` adds "head")
         for ch in self.channels:
             t = time.perf_counter()
             built = Path(index_dir) / ch.name
             if (built / "meta.json").exists():
                 self.indexes[ch.name] = TwoStageIndex.load(built, ch, index_device or device, candidates,
-                                                           hub_alpha=hub_alpha, half_stage1=ch.name in half)
+                                                           hub_alpha=hub_alpha, half_stage1=ch.name in half,
+                                                           host_proj=ch.name in host)
             else:
                 self.indexes[ch.name] = ChannelIndex.load(Path(index_dir), ch, index_device or device)
             self.load_secs[f"index:{ch.name}"] = round(time.perf_counter() - t, 2)
@@ -570,7 +670,12 @@ class Engine:
         if blend is None:
             return
         t = time.perf_counter()
-        blended = blend.scores(base, blend.seed_head(row, windows), row)
+        seed_head, head = blend.seed_head(row, windows), None
+        if self.keep_base and blend.streamed:
+            # One pass over a head table in host memory gives the blend's term and ``results["base"]["head"]``, the
+            # head scores as ``consensus.Consensus`` reads them (``Blend.head_views``).
+            head, results["base"]["head"] = blend.head_views(seed_head, blend.unit_seed(row, seed_head))
+        blended = blend.scores(base, seed_head, row, head)
         if mask is not None:
             blended = blended.masked_fill(~mask, -torch.inf)
         tids = [tid for tid, _ in idx.top(blended, k, exclude)]
