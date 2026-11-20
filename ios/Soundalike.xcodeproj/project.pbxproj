@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		0917F58F1E9AC20104E7466C /* SoundalikeUI in Frameworks */ = {isa = PBXBuildFile; productRef = B0C632114DD295E3A5C108CC /* SoundalikeUI */; };
+		11FF31F5D4E652CBFCD66694 /* SoundalikeActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 870AD65BA2B29FF1F555C4AD /* SoundalikeActivity.swift */; };
+		1DEE617E74DA2DC8CEB57933 /* SoundalikeActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 870AD65BA2B29FF1F555C4AD /* SoundalikeActivity.swift */; };
 		27F6561199787FE56BBA496E /* SoundalikeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 88E43859FD97D5F43809E1A2 /* SoundalikeKit */; };
 		28730161D71999A0E0891148 /* SoundalikeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 7F74523202D4FDBC149ECD9E /* SoundalikeKit */; };
 		4184C77D4B27FAE0F31DB861 /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 901CF37A616FDA80C38B6B48 /* AppRoute.swift */; };
@@ -81,6 +83,7 @@
 		7114C3621E1664311507C6EC /* Intents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Intents.swift; sourceTree = "<group>"; };
 		775CF1A125A1878D1DF33A4F /* ListenService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListenService.swift; sourceTree = "<group>"; };
 		79B65E36015906FD2708042D /* SoundalikeKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SoundalikeKit; path = SoundalikeKit; sourceTree = SOURCE_ROOT; };
+		870AD65BA2B29FF1F555C4AD /* SoundalikeActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundalikeActivity.swift; sourceTree = "<group>"; };
 		8F4341715E0E6A4F59AFE36A /* SoundalikeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundalikeApp.swift; sourceTree = "<group>"; };
 		901CF37A616FDA80C38B6B48 /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
 		90E45D74C76FFB29A1A05C86 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -176,6 +179,7 @@
 				901CF37A616FDA80C38B6B48 /* AppRoute.swift */,
 				7114C3621E1664311507C6EC /* Intents.swift */,
 				CEC58C0033C539E1671E2964 /* NowPlaying.swift */,
+				870AD65BA2B29FF1F555C4AD /* SoundalikeActivity.swift */,
 				3D6151AA0B81E88330927A87 /* SoundalikesSnippet.swift */,
 			);
 			path = Shared;
@@ -341,6 +345,7 @@
 				AEE2A8604705A695A19AE98C /* ListenService.swift in Sources */,
 				7327106BC8AAF0BCCD370B30 /* NowPlaying.swift in Sources */,
 				65ABAA9E8A79F08D366DFE0C /* PlaybackProbe.swift in Sources */,
+				1DEE617E74DA2DC8CEB57933 /* SoundalikeActivity.swift in Sources */,
 				E309735176FBE1F9DF25DCD5 /* SoundalikeApp.swift in Sources */,
 				C6868457783F81348587B840 /* SoundalikesSnippet.swift in Sources */,
 				E968B0B2CC91159A1CD85DE3 /* SpotifyConnector.swift in Sources */,
@@ -355,6 +360,7 @@
 				7917AFAEB8E647C442563FB1 /* Controls.swift in Sources */,
 				B13CEC4FE87889C35241DEAC /* Intents.swift in Sources */,
 				A03143EAF62F97F279A18E9E /* NowPlaying.swift in Sources */,
+				11FF31F5D4E652CBFCD66694 /* SoundalikeActivity.swift in Sources */,
 				8664724160B6A7A4B474237F /* SoundalikesSnippet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

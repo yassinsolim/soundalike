@@ -49,6 +49,7 @@ targets:
         NSAppleMusicUsageDescription: Soundalike reads the song playing in the Music app and can add songs you pick to your queue or a playlist.
         NSMicrophoneUsageDescription: Soundalike listens briefly to recognise the song that's playing. Audio is matched with ShazamKit and not saved.
         ITSAppUsesNonExemptEncryption: false
+        NSSupportsLiveActivities: true
         UILaunchScreen:
           UIColorName: ""
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
