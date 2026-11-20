@@ -2,7 +2,7 @@ name: Soundalike
 options:
   bundleIdPrefix: app.yassin
   deploymentTarget:
-    iOS: "18.0"
+    iOS: "26.0"
   createIntermediateGroups: true
   developmentLanguage: en
 settings:
@@ -11,7 +11,7 @@ settings:
     CODE_SIGN_STYLE: Automatic
     SWIFT_VERSION: "5.0"
     MARKETING_VERSION: "1.1.0"
-    CURRENT_PROJECT_VERSION: "9"
+    CURRENT_PROJECT_VERSION: "10"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
 packages:
@@ -97,6 +97,15 @@ targets:
     sources:
       - Controls
       - Shared
+    dependencies:
+      - package: SoundalikeKit
+        product: SoundalikeKit
+      - package: SoundalikeKit
+        product: SoundalikeUI
+    entitlements:
+      path: Controls/Controls.entitlements
+      properties:
+        com.apple.security.application-groups: [group.app.yassin.soundalike]
     info:
       path: Controls/Info.plist
       properties:

@@ -36,32 +36,13 @@ final class AppleMusicService {
         }
     }
 
-    /// What the Music app is playing right now.
+    /// What the Music app is playing right now (asks for access the first time).
     func currentSeed() async throws -> Seed {
         try await authorize()
-        guard let entry = SystemMusicPlayer.shared.queue.currentEntry else { throw Failure.nothingPlaying }
-        var seed = Seed(title: entry.title, artist: entry.subtitle ?? "", source: .appleMusic)
-        if case .song(let song)? = entry.item {
-            seed.title = song.title
-            seed.artist = song.artistName
-            seed.isrc = song.isrc
-            seed.artworkURL = song.artwork?.url(width: 600, height: 600)
-            // Library and queue items often lack an ISRC; the catalog copy has it.
-            if seed.isrc == nil, let catalog = try? await catalogSong(id: song.id) {
-                seed.isrc = catalog.isrc
-                seed.appleMusicID = catalog.id.rawValue
-                seed.artworkURL = seed.artworkURL ?? catalog.artwork?.url(width: 600, height: 600)
-            } else {
-                seed.appleMusicID = song.id.rawValue
-            }
-        }
-        seed.storefront = try? await MusicDataRequest.currentCountryCode
+        guard let seed = await NowPlaying.appleMusic(requireAuthorization: true) else { throw Failure.nothingPlaying }
         return seed
     }
 
-    private func catalogSong(id: MusicItemID) async throws -> Song? {
-        try await MusicCatalogResourceRequest<Song>(matching: \.id, equalTo: id).response().items.first
-    }
 
     /// The Apple Music catalog song for a result: by ISRC first, then by name.
     func song(for match: Match) async throws -> Song {

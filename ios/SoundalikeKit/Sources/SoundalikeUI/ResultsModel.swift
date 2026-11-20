@@ -47,6 +47,13 @@ public final class ResultsModel: ObservableObject {
         start(seed: seed) { try await client.similar(to: seed) }
     }
 
+    /// Shows results that were already fetched (for example by an App Intent).
+    public func show(_ results: SoundalikeResults) {
+        task?.cancel()
+        if results.seed.source != .search { target = results.seed.source }
+        state = .loaded(results)
+    }
+
     public func retry() {
         guard let lastRequest else { return }
         start(seed: nil, lastRequest)

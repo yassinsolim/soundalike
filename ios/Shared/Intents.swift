@@ -1,10 +1,11 @@
 import AppIntents
 import Foundation
+import SoundalikeKit
+import SoundalikeUI
+import SwiftUI
 
-/// Hands a route to the app. Intents run with `openAppWhenRun`, so the app comes
-/// forward; the route travels through the app group so it arrives whichever
-/// process ran `perform()` (the app for Siri and Shortcuts, the controls
-/// extension for Control Center and the Action Button).
+/// Hands a route to the app through the app group, so it arrives whichever
+/// process ran the intent (the app, or the controls extension).
 enum PendingRoute {
     static let appGroup = "group.app.yassin.soundalike"
     private static let key = "pendingRoute"
@@ -32,21 +33,46 @@ enum PendingRoute {
     }
 }
 
+/// The last results an intent showed, so "See all" opens the same list in the app.
+enum LastResults {
+    private static let key = "lastResults"
+
+    static func save(_ results: SoundalikeResults) {
+        UserDefaults(suiteName: PendingRoute.appGroup)?.set(try? JSONEncoder().encode(results), forKey: key)
+    }
+
+    static func load() -> SoundalikeResults? {
+        guard let data = UserDefaults(suiteName: PendingRoute.appGroup)?.data(forKey: key) else { return nil }
+        return try? JSONDecoder().decode(SoundalikeResults.self, from: data)
+    }
+}
+
+/// Control Center, Action Button, Siri and Back Tap: reads what's playing and shows
+/// soundalikes in a system card over the current app. Only when nothing can be read
+/// (another app playing, Spotify not connected) does it open Soundalike to listen.
 struct FindSoundalikesIntent: AppIntent {
     static let title: LocalizedStringResource = "Find Soundalikes"
-    static let description = IntentDescription("Finds songs that sound like what you're listening to: the song playing in the Music app, or the one Soundalike hears.")
-    static let openAppWhenRun = true
+    static let description = IntentDescription("Shows songs that sound like what you're listening to, right over the app you're in.")
+    static let supportedModes: IntentModes = [.background, .foreground(.dynamic)]
 
-    func perform() async throws -> some IntentResult {
-        PendingRoute.post(.auto)
-        return .result()
+    @MainActor
+    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
+        let started = Date()
+        guard let seed = await NowPlaying.read() else {
+            EventLog.record("intent", ["path": "listen", "ms": EventLog.ms(since: started)])
+            PendingRoute.post(.listen)
+            try await continueInForeground(nil, alwaysConfirm: false)
+            return .result(dialog: "Listening…", view: AnyView(EmptyView()))
+        }
+        let card = try await snippet(for: try await SoundalikeClient().similar(to: seed), started: started)
+        return .result(dialog: card.dialog, view: card.view)
     }
 }
 
 struct FindForLinkIntent: AppIntent {
     static let title: LocalizedStringResource = "Find Soundalikes for a Link"
-    static let description = IntentDescription("Finds songs that sound like a shared song link.")
-    static let openAppWhenRun = true
+    static let description = IntentDescription("Shows songs that sound like a shared song link.")
+    static let supportedModes: IntentModes = [.background, .foreground(.dynamic)]
 
     @Parameter(title: "Song link", description: "A song link from a music app, or text containing one.")
     var link: String
@@ -55,8 +81,63 @@ struct FindForLinkIntent: AppIntent {
         Summary("Find soundalikes for \(\.$link)")
     }
 
+    @MainActor
+    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
+        let started = Date()
+        let card = try await snippet(for: try await SoundalikeClient().similar(toShared: link), started: started)
+        return .result(dialog: card.dialog, view: card.view)
+    }
+}
+
+@MainActor
+private func snippet(for results: SoundalikeResults, started: Date) async throws -> (dialog: IntentDialog, view: AnyView) {
+    LastResults.save(results)
+    let rows = await SnippetRow.make(from: results)
+    EventLog.record("intent", ["path": "snippet", "ms": EventLog.ms(since: started), "source": results.seed.source.rawValue, "seed": results.seed.title])
+    return (IntentDialog(stringLiteral: "Sounds like \(results.seed.title)"), AnyView(SoundalikesSnippet(seed: results.seed, rows: rows)))
+}
+
+/// Opens one result in the music app the song came from.
+struct OpenSongIntent: AppIntent {
+    static let title: LocalizedStringResource = "Open Song"
+    static let isDiscoverable = false
+    static let openAppWhenRun = false
+
+    @Parameter(title: "URL") var url: URL
+
+    init() {}
+    init(url: URL) { self.url = url }
+
+    func perform() async throws -> some IntentResult & OpensIntent {
+        .result(opensIntent: OpenURLIntent(url))
+    }
+}
+
+/// Adds one result to the Spotify queue without leaving the current app.
+struct QueueInSpotifyIntent: AppIntent {
+    static let title: LocalizedStringResource = "Queue Song"
+    static let isDiscoverable = false
+
+    @Parameter(title: "Track") var trackID: String
+
+    init() {}
+    init(trackID: String) { self.trackID = trackID }
+
     func perform() async throws -> some IntentResult {
-        PendingRoute.post(.find(link))
+        try await SpotifyAccount().queue(trackID: trackID)
+        EventLog.record("spotify-queue", ["ok": true])
+        return .result()
+    }
+}
+
+/// Opens the full list in the app.
+struct ShowAllIntent: AppIntent {
+    static let title: LocalizedStringResource = "Show All Soundalikes"
+    static let isDiscoverable = false
+    static let supportedModes: IntentModes = .foreground(.immediate)
+
+    func perform() async throws -> some IntentResult {
+        PendingRoute.post(.last)
         return .result()
     }
 }

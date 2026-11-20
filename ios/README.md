@@ -1,6 +1,6 @@
 # Soundalike for iPhone
 
-Native Swift/SwiftUI app (iOS 18+) with a Share Extension and Control Center controls.
+Native Swift/SwiftUI app (iOS 26+) with a Share Extension and Control Center controls.
 It replaces the Expo app in `../mobile` and keeps its bundle id (`app.yassin.soundalike`),
 App Store Connect record and app group.
 
@@ -8,13 +8,16 @@ App Store Connect record and app group.
 |---|---|---|
 | `Soundalike` | `app.yassin.soundalike` | Search, recognise a song (ShazamKit), current Apple Music song, results with previews, Apple Music Play Next / Play all / Save playlist, App Intents and Siri phrases |
 | `ShareExtension` | `app.yassin.soundalike.share` | "Soundalike" in the share sheet. Takes a Spotify or Apple Music song link and shows results over the music app |
-| `Controls` | `app.yassin.soundalike.controls` | Control Center, Lock Screen and Action Button controls: Recognise Song, Soundalikes for Now Playing |
+| `Controls` | `app.yassin.soundalike.controls` | The *Soundalike* control for Control Center, the Lock Screen and the Action Button |
 | `SoundalikeKit` (package) | – | Link parsing, link-to-song lookup, API client, Deezer enrichment, open-in-app links. Unit tested on macOS |
 | `SoundalikeUI` (package) | – | Results list, preview player, shared settings, on-device event log |
 
 ## How a request flows
 
-1. The input is a shared link, a search pick, the current Music song or a ShazamKit match.
+1. The input is one of:
+   - a shared link or a search pick;
+   - the song being played, read without the microphone. `Shared/NowPlaying.swift` reads the Music app through MusicKit, and Spotify through the Web API once the user connects Spotify in the app. Connecting is limited to accounts on the Spotify app's development-mode allow list;
+   - a ShazamKit match, used only when nothing can be read.
 2. `SoundalikeClient` calls `GET /api/mobile/similar` first. If that route fails or is missing,
    it falls back to `/api/anysong/similar`, which today it always does because the route returns 404.
    - Spotify links are named from the public embed page (`open.spotify.com/embed/track/<id>`),
@@ -25,10 +28,19 @@ App Store Connect record and app group.
    - Spotify: `https://open.spotify.com/search/isrc:<ISRC>`, which returns exactly that recording.
    - Apple Music: a MusicKit catalog match by ISRC, or the iTunes Search API when MusicKit isn't authorised.
 
-Every entry point (intents, controls, Siri, links) goes through one URL scheme handled in `App/SoundalikeApp.swift`:
+**Control Center, Action Button, Siri and Back Tap** all run `FindSoundalikesIntent`:
+
+- It runs in the background, reads the playing song and shows the top five soundalikes in a system card over the current app.
+- Rows open the song in the app it came from. When Spotify is connected, a button also adds the song to the Spotify queue.
+- "See all" opens the full list in the app.
+- If nothing can be read, it calls `continueInForeground` and the app listens instead.
+
+Links and in-app routes go through one URL scheme handled in `App/SoundalikeApp.swift`:
 
 | URL | Action |
 |---|---|
+| `soundalike://auto` | Read the playing song, or listen when it can't be read |
+| `soundalike://last` | Show the list an intent just showed |
 | `soundalike://find?url=<link>` | Find soundalikes for a shared link |
 | `soundalike://now-playing` | Use the song currently playing in Music |
 | `soundalike://listen` | Recognise the song playing nearby |

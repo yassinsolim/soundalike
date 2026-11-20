@@ -4,6 +4,8 @@ import Foundation
 enum AppRoute: Equatable {
     /// soundalike://auto — whatever is playing: the Music app's song, or listen for it
     case auto
+    /// soundalike://last — the results an intent just showed
+    case last
     /// soundalike://find?url=<shared link or text>
     case find(String)
     /// soundalike://now-playing
@@ -23,6 +25,7 @@ enum AppRoute: Equatable {
         switch action {
         case "find": guard let shared = value("url"), !shared.isEmpty else { return nil }; self = .find(shared)
         case "auto": self = .auto
+        case "last": self = .last
         case "now-playing": self = .nowPlaying
         case "listen": self = .listen
         case "search": self = .search(value("q") ?? "")
@@ -38,6 +41,7 @@ enum AppRoute: Equatable {
             components.host = "find"
             components.queryItems = [URLQueryItem(name: "url", value: shared)]
         case .auto: components.host = "auto"
+        case .last: components.host = "last"
         case .nowPlaying: components.host = "now-playing"
         case .listen: components.host = "listen"
         case .search(let text):
