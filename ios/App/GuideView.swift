@@ -8,7 +8,7 @@ struct GuideView: View {
         NavigationStack {
             List {
                 Section {
-                    Step(symbol: "waveform", text: "Open Soundalike while music plays. It reads the song from Apple Music, or listens for anything playing out loud.")
+                    Step(symbol: "waveform", text: "Open Soundalike while music plays. It reads the song from Apple Music, or from Spotify once you tap Connect Spotify, and listens for anything else playing out loud.")
                     Step(symbol: "switch.2", text: "One press from anywhere: add Soundalike to Control Center, or to the Action Button in Settings › Action Button › Controls.")
                     Step(symbol: "hand.tap", text: "Or tap the back of your phone: Settings › Accessibility › Touch › Back Tap › Double Tap › Find Soundalikes.")
                 } header: {
@@ -18,9 +18,9 @@ struct GuideView: View {
                     Step(symbol: "square.and.arrow.up", text: "Spotify: tap Share › More › Soundalike. In More, tap Edit and add Soundalike to Favorites so it's always in the first row.")
                     Step(symbol: "square.and.arrow.up", text: "Apple Music: tap ••• › Share › Soundalike.")
                 } header: {
-                    Text("With headphones on")
+                    Text("Share a song")
                 } footer: {
-                    Text("iOS doesn't let apps hear headphones, so share the song instead.")
+                    Text("Handy with headphones on if you haven't connected Spotify.")
                 }
                 Section {
                     Text("Tap a cover for a 30-second preview. Tap the arrow to play the song in your music app.")
