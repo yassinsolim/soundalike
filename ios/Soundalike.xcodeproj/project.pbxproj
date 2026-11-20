@@ -1,0 +1,647 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0917F58F1E9AC20104E7466C /* SoundalikeUI in Frameworks */ = {isa = PBXBuildFile; productRef = B0C632114DD295E3A5C108CC /* SoundalikeUI */; };
+		27F6561199787FE56BBA496E /* SoundalikeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 88E43859FD97D5F43809E1A2 /* SoundalikeKit */; };
+		4184C77D4B27FAE0F31DB861 /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 901CF37A616FDA80C38B6B48 /* AppRoute.swift */; };
+		43741DFA4822229FB8807C41 /* SoundalikeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 211DF663D5ADCD2C82545A0A /* SoundalikeKit */; };
+		581C1B0757E814AECE3747E8 /* Controls.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0AE59612B8F93874612F719E /* Controls.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		65579911DB9FE58AC78400A3 /* SoundalikeUI in Frameworks */ = {isa = PBXBuildFile; productRef = CA9572F0499FE4160BA92362 /* SoundalikeUI */; };
+		7917AFAEB8E647C442563FB1 /* Controls.swift in Sources */ = {isa = PBXBuildFile; fileRef = E47C873420762430D9D27CAD /* Controls.swift */; };
+		81B22A007890995B76ADEB4E /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DDD9123532E2A1688234CF8 /* ShareViewController.swift */; };
+		88F5D74827442AEE6560A312 /* AppleMusicService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D14387CD4977ED1CA671A0 /* AppleMusicService.swift */; };
+		953453E1526A5A6B66A7FB5B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 279F0E923B6AD8C7DF3176C0 /* Assets.xcassets */; };
+		A06D8AC76C4B3B2DA980ECBF /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FF0B24F8B13B3342EDEA007 /* HomeView.swift */; };
+		AEE2A8604705A695A19AE98C /* ListenService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 775CF1A125A1878D1DF33A4F /* ListenService.swift */; };
+		B1170D4C7F9BC2A4AB7408A9 /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 901CF37A616FDA80C38B6B48 /* AppRoute.swift */; };
+		B13CEC4FE87889C35241DEAC /* Intents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7114C3621E1664311507C6EC /* Intents.swift */; };
+		DC6039CCB01C632F6C113817 /* Intents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7114C3621E1664311507C6EC /* Intents.swift */; };
+		E309735176FBE1F9DF25DCD5 /* SoundalikeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F4341715E0E6A4F59AFE36A /* SoundalikeApp.swift */; };
+		F60FFE3D91E69CACA20AC9A8 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1D82462BF49521BE80E6F3E5 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		FCA24510DD193E518F23D7D7 /* GuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70275C2B91DCF0B6FC83E35D /* GuideView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		2293404CC7263FBB35285C55 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8713D45CEE8807A5CC17F3E0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 75B567BD64F189BF49FFFB49;
+			remoteInfo = ShareExtension;
+		};
+		2D7F61CE38405E98FCFAFC2E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8713D45CEE8807A5CC17F3E0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 14A3847B3C013D009EA1E47A;
+			remoteInfo = Controls;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		886D129C7FDB376A31376D30 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				F60FFE3D91E69CACA20AC9A8 /* ShareExtension.appex in Embed Foundation Extensions */,
+				581C1B0757E814AECE3747E8 /* Controls.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		0AE59612B8F93874612F719E /* Controls.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = Controls.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		18836419FAE9917D10F93920 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		1D82462BF49521BE80E6F3E5 /* ShareExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		1DDD9123532E2A1688234CF8 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		279F0E923B6AD8C7DF3176C0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		2FF0B24F8B13B3342EDEA007 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		70275C2B91DCF0B6FC83E35D /* GuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideView.swift; sourceTree = "<group>"; };
+		7114C3621E1664311507C6EC /* Intents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Intents.swift; sourceTree = "<group>"; };
+		775CF1A125A1878D1DF33A4F /* ListenService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListenService.swift; sourceTree = "<group>"; };
+		79B65E36015906FD2708042D /* SoundalikeKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SoundalikeKit; path = SoundalikeKit; sourceTree = SOURCE_ROOT; };
+		8F4341715E0E6A4F59AFE36A /* SoundalikeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundalikeApp.swift; sourceTree = "<group>"; };
+		901CF37A616FDA80C38B6B48 /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
+		90E45D74C76FFB29A1A05C86 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		AC02359428A223C2A3E57021 /* Soundalike.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Soundalike.entitlements; sourceTree = "<group>"; };
+		B173AE08421778D58CA6B28D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		B901DDF6F927800720B2F625 /* Soundalike.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Soundalike.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C1E2DED66C8BDEDB22CECFA0 /* ShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShareExtension.entitlements; sourceTree = "<group>"; };
+		C8D14387CD4977ED1CA671A0 /* AppleMusicService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMusicService.swift; sourceTree = "<group>"; };
+		E47C873420762430D9D27CAD /* Controls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Controls.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		4BDE562D44FB231862E2D1B9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				43741DFA4822229FB8807C41 /* SoundalikeKit in Frameworks */,
+				0917F58F1E9AC20104E7466C /* SoundalikeUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F16C0EC1D2C753304F783504 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				27F6561199787FE56BBA496E /* SoundalikeKit in Frameworks */,
+				65579911DB9FE58AC78400A3 /* SoundalikeUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		347B48701FE5CCA098FB8EFE /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				0AE59612B8F93874612F719E /* Controls.appex */,
+				1D82462BF49521BE80E6F3E5 /* ShareExtension.appex */,
+				B901DDF6F927800720B2F625 /* Soundalike.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		383CB5B73E045143B7B0A176 /* Controls */ = {
+			isa = PBXGroup;
+			children = (
+				E47C873420762430D9D27CAD /* Controls.swift */,
+				B173AE08421778D58CA6B28D /* Info.plist */,
+			);
+			path = Controls;
+			sourceTree = "<group>";
+		};
+		4FA99FE9C01AE0FA0C90A43E /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				79B65E36015906FD2708042D /* SoundalikeKit */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		A886F59BDB14A321C63955F8 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				C8D14387CD4977ED1CA671A0 /* AppleMusicService.swift */,
+				279F0E923B6AD8C7DF3176C0 /* Assets.xcassets */,
+				70275C2B91DCF0B6FC83E35D /* GuideView.swift */,
+				2FF0B24F8B13B3342EDEA007 /* HomeView.swift */,
+				18836419FAE9917D10F93920 /* Info.plist */,
+				775CF1A125A1878D1DF33A4F /* ListenService.swift */,
+				AC02359428A223C2A3E57021 /* Soundalike.entitlements */,
+				8F4341715E0E6A4F59AFE36A /* SoundalikeApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		BD891F4C568AE6C3CB13FE69 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				901CF37A616FDA80C38B6B48 /* AppRoute.swift */,
+				7114C3621E1664311507C6EC /* Intents.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		C7420F981E77F581B104D69F /* ShareExtension */ = {
+			isa = PBXGroup;
+			children = (
+				90E45D74C76FFB29A1A05C86 /* Info.plist */,
+				C1E2DED66C8BDEDB22CECFA0 /* ShareExtension.entitlements */,
+				1DDD9123532E2A1688234CF8 /* ShareViewController.swift */,
+			);
+			path = ShareExtension;
+			sourceTree = "<group>";
+		};
+		EBD15627B94C87A01EA69CF0 = {
+			isa = PBXGroup;
+			children = (
+				A886F59BDB14A321C63955F8 /* App */,
+				383CB5B73E045143B7B0A176 /* Controls */,
+				4FA99FE9C01AE0FA0C90A43E /* Packages */,
+				BD891F4C568AE6C3CB13FE69 /* Shared */,
+				C7420F981E77F581B104D69F /* ShareExtension */,
+				347B48701FE5CCA098FB8EFE /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		14A3847B3C013D009EA1E47A /* Controls */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6AE4E7625501B611A7DA6DB0 /* Build configuration list for PBXNativeTarget "Controls" */;
+			buildPhases = (
+				8445DC9EE7FAC04FCFF2F329 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Controls;
+			packageProductDependencies = (
+			);
+			productName = Controls;
+			productReference = 0AE59612B8F93874612F719E /* Controls.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		75B567BD64F189BF49FFFB49 /* ShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 61C33BE08FC4E61453A8EF24 /* Build configuration list for PBXNativeTarget "ShareExtension" */;
+			buildPhases = (
+				B40F6A5B83965AB86AF13C0A /* Sources */,
+				4BDE562D44FB231862E2D1B9 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ShareExtension;
+			packageProductDependencies = (
+				211DF663D5ADCD2C82545A0A /* SoundalikeKit */,
+				B0C632114DD295E3A5C108CC /* SoundalikeUI */,
+			);
+			productName = ShareExtension;
+			productReference = 1D82462BF49521BE80E6F3E5 /* ShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		B3DE207682A8FBC67AE5279E /* Soundalike */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 090AF546FB661E817381A142 /* Build configuration list for PBXNativeTarget "Soundalike" */;
+			buildPhases = (
+				6A46FA541A210EC255A04F80 /* Sources */,
+				B7C21884A65E918DCCB78CF2 /* Resources */,
+				F16C0EC1D2C753304F783504 /* Frameworks */,
+				886D129C7FDB376A31376D30 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B37C97F90F11B40428265FA1 /* PBXTargetDependency */,
+				AD68C9E1F0F0B3832580E932 /* PBXTargetDependency */,
+			);
+			name = Soundalike;
+			packageProductDependencies = (
+				88E43859FD97D5F43809E1A2 /* SoundalikeKit */,
+				CA9572F0499FE4160BA92362 /* SoundalikeUI */,
+			);
+			productName = Soundalike;
+			productReference = B901DDF6F927800720B2F625 /* Soundalike.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		8713D45CEE8807A5CC17F3E0 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					14A3847B3C013D009EA1E47A = {
+						DevelopmentTeam = FJH4UWVC4K;
+						ProvisioningStyle = Automatic;
+					};
+					75B567BD64F189BF49FFFB49 = {
+						DevelopmentTeam = FJH4UWVC4K;
+						ProvisioningStyle = Automatic;
+					};
+					B3DE207682A8FBC67AE5279E = {
+						DevelopmentTeam = FJH4UWVC4K;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 9F6D55E0F4841A598F0CB0BE /* Build configuration list for PBXProject "Soundalike" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = EBD15627B94C87A01EA69CF0;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				FFB260347A49898DDF412263 /* XCLocalSwiftPackageReference "SoundalikeKit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 347B48701FE5CCA098FB8EFE /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B3DE207682A8FBC67AE5279E /* Soundalike */,
+				75B567BD64F189BF49FFFB49 /* ShareExtension */,
+				14A3847B3C013D009EA1E47A /* Controls */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		B7C21884A65E918DCCB78CF2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				953453E1526A5A6B66A7FB5B /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		6A46FA541A210EC255A04F80 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4184C77D4B27FAE0F31DB861 /* AppRoute.swift in Sources */,
+				88F5D74827442AEE6560A312 /* AppleMusicService.swift in Sources */,
+				FCA24510DD193E518F23D7D7 /* GuideView.swift in Sources */,
+				A06D8AC76C4B3B2DA980ECBF /* HomeView.swift in Sources */,
+				DC6039CCB01C632F6C113817 /* Intents.swift in Sources */,
+				AEE2A8604705A695A19AE98C /* ListenService.swift in Sources */,
+				E309735176FBE1F9DF25DCD5 /* SoundalikeApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8445DC9EE7FAC04FCFF2F329 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B1170D4C7F9BC2A4AB7408A9 /* AppRoute.swift in Sources */,
+				7917AFAEB8E647C442563FB1 /* Controls.swift in Sources */,
+				B13CEC4FE87889C35241DEAC /* Intents.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B40F6A5B83965AB86AF13C0A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				81B22A007890995B76ADEB4E /* ShareViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AD68C9E1F0F0B3832580E932 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 14A3847B3C013D009EA1E47A /* Controls */;
+			targetProxy = 2D7F61CE38405E98FCFAFC2E /* PBXContainerItemProxy */;
+		};
+		B37C97F90F11B40428265FA1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 75B567BD64F189BF49FFFB49 /* ShareExtension */;
+			targetProxy = 2293404CC7263FBB35285C55 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		374F91591B32792AC21778C8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INFOPLIST_FILE = Controls/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.yassin.soundalike.controls;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		8196D227FF26FA7C469EDD0A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INFOPLIST_FILE = Controls/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.yassin.soundalike.controls;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		8BCF15828040506066F6A5DB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = App/Soundalike.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.yassin.soundalike;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		9603318DCB39506A896D1D96 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = App/Soundalike.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.yassin.soundalike;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		AFEFC36E476271C59A2DD619 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.yassin.soundalike.share;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		D236AC3231C1E2689D5B2A61 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 6;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = FJH4UWVC4K;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 1.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		E1E940F2F3BA8C802EBF1CD4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 6;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = FJH4UWVC4K;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 1.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		F1FC49CBB70AA2F96835008D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.yassin.soundalike.share;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		090AF546FB661E817381A142 /* Build configuration list for PBXNativeTarget "Soundalike" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8BCF15828040506066F6A5DB /* Debug */,
+				9603318DCB39506A896D1D96 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		61C33BE08FC4E61453A8EF24 /* Build configuration list for PBXNativeTarget "ShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F1FC49CBB70AA2F96835008D /* Debug */,
+				AFEFC36E476271C59A2DD619 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		6AE4E7625501B611A7DA6DB0 /* Build configuration list for PBXNativeTarget "Controls" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				374F91591B32792AC21778C8 /* Debug */,
+				8196D227FF26FA7C469EDD0A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9F6D55E0F4841A598F0CB0BE /* Build configuration list for PBXProject "Soundalike" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E1E940F2F3BA8C802EBF1CD4 /* Debug */,
+				D236AC3231C1E2689D5B2A61 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		FFB260347A49898DDF412263 /* XCLocalSwiftPackageReference "SoundalikeKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = SoundalikeKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		211DF663D5ADCD2C82545A0A /* SoundalikeKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SoundalikeKit;
+		};
+		88E43859FD97D5F43809E1A2 /* SoundalikeKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SoundalikeKit;
+		};
+		B0C632114DD295E3A5C108CC /* SoundalikeUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SoundalikeUI;
+		};
+		CA9572F0499FE4160BA92362 /* SoundalikeUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SoundalikeUI;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 8713D45CEE8807A5CC17F3E0 /* Project object */;
+}
