@@ -26,7 +26,6 @@
 		B1170D4C7F9BC2A4AB7408A9 /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 901CF37A616FDA80C38B6B48 /* AppRoute.swift */; };
 		B13CEC4FE87889C35241DEAC /* Intents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7114C3621E1664311507C6EC /* Intents.swift */; };
 		DC6039CCB01C632F6C113817 /* Intents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7114C3621E1664311507C6EC /* Intents.swift */; };
-		DE2119A2990BACB6AB7C61D1 /* make_icon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B4C7FFC02D58EFF08079D7C /* make_icon.swift */; };
 		E309735176FBE1F9DF25DCD5 /* SoundalikeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F4341715E0E6A4F59AFE36A /* SoundalikeApp.swift */; };
 		E968B0B2CC91159A1CD85DE3 /* SpotifyConnector.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0AC6FB1EB40A7659060B5A7 /* SpotifyConnector.swift */; };
 		F60FFE3D91E69CACA20AC9A8 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1D82462BF49521BE80E6F3E5 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -83,7 +82,6 @@
 		8F4341715E0E6A4F59AFE36A /* SoundalikeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundalikeApp.swift; sourceTree = "<group>"; };
 		901CF37A616FDA80C38B6B48 /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
 		90E45D74C76FFB29A1A05C86 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		9B4C7FFC02D58EFF08079D7C /* make_icon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = make_icon.swift; sourceTree = "<group>"; };
 		AC02359428A223C2A3E57021 /* Soundalike.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Soundalike.entitlements; sourceTree = "<group>"; };
 		B173AE08421778D58CA6B28D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B901DDF6F927800720B2F625 /* Soundalike.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Soundalike.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -153,7 +151,6 @@
 				2FF0B24F8B13B3342EDEA007 /* HomeView.swift */,
 				18836419FAE9917D10F93920 /* Info.plist */,
 				775CF1A125A1878D1DF33A4F /* ListenService.swift */,
-				9B4C7FFC02D58EFF08079D7C /* make_icon.swift */,
 				7F50A3F7B221F7B91797603D /* NowPlaying.swift */,
 				15C444B436CD57A5201584A7 /* PlaybackProbe.swift */,
 				AC02359428A223C2A3E57021 /* Soundalike.entitlements */,
@@ -335,7 +332,6 @@
 				E309735176FBE1F9DF25DCD5 /* SoundalikeApp.swift in Sources */,
 				E968B0B2CC91159A1CD85DE3 /* SpotifyConnector.swift in Sources */,
 				87DEF1F413F0F7D5036D57AD /* SpotifyRemote.swift in Sources */,
-				DE2119A2990BACB6AB7C61D1 /* make_icon.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
