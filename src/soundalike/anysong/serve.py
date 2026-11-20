@@ -460,6 +460,9 @@ class Engine:
 
     # Optional ``blend.Blend`` over the sonic index: the searches then also return ``results["blend"]``.
     blend = None
+    # With ``keep_base`` the searches also return ``results["base"]``: channel -> the score of every row of its index
+    # before the ``allow`` mask and the exact re-scoring (``scores_with_base``), as a tensor on the index device.
+    keep_base = False
 
     def __init__(self, index_dir: Path | str, channels: Iterable[str] = tuple(CHANNELS), device: str = "cuda",
                  index_device: str | None = None, drop_text_tower: bool = True, candidates: int | None = None,
@@ -544,8 +547,10 @@ class Engine:
         blend = self.blend if ch.name == "sonic" else None
         _sync(self.device)
         t = time.perf_counter()
-        scores, base, exact_rows = idx.search(q, allow=mask, base=blend is not None)
+        scores, base, exact_rows = idx.search(q, allow=mask, base=blend is not None or self.keep_base)
         results[ch.name] = idx.top(scores, k, exclude)
+        if self.keep_base:
+            results.setdefault("base", {})[ch.name] = base
         _sync(self.device)
         timings[f"search_{ch.name}"] = (time.perf_counter() - t) * 1000
         if inside is not None:

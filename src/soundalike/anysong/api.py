@@ -45,6 +45,12 @@ only ranked for seeds by their own artist or by an artist whose Deezer related l
 With ``--blend-head`` and ``--blend-cf`` the sonic search also ranks the whole catalog by a blended score
 (``blend.Blend``: sound, scene head and playlist co-occurrence); ``--main-pool blend`` makes that ranking main's body.
 
+With ``--consensus-model`` (and the blend's files) main's body is the consensus body (``consensus.Consensus``): the
+songs the sound, scene head, playlist, melody and samples signals agree on, ordered by a small model; those rows
+carry ``basis`` ``consensus``, the raw body score as ``consensus``, ``match`` (its percentile on
+``--consensus-quantiles``) and each signal's rank as ``ranks_all``. Main's audio head and every other list are
+unchanged, and so is main with ``scene=0``.
+
 With ``--languages`` the searches also rank each channel (and the blended score) among the songs of the seed's language
 alone (``languages.LanguageRows``), so the same-language lists are as full for a seed in a small language as for an
 English one; ``query["language_pool"]`` then says how many indexed songs that language has. With ``--language-model``
@@ -152,6 +158,9 @@ LANGUAGE_GUESS: bool | str = "main"
 # listed in two or more channels were the song people named 13.5 % of the time (170 rows), rows in one list 2.4 %
 # (165 rows, mean sound match 21).
 CROSS_HEAD_CHANNELS = 2
+# ``ranks_all`` of a consensus row: each signal's rank among the songs the seed's body counts, in
+# ``consensus.SIGNALS`` order (0: the signal has no score for the song).
+CONSENSUS_SIGNALS = ("sound", "head", "playlists", "melody", "samples")
 # Sound match (``sound_match``): sonic (MuQ-MuLan) score quantiles 0, 5, ..., 100 % over every song shown in the top
 # 20 of Best matches, Same vibe or Sounds like for the development seeds: 62,362 songs from 1,474 seeds with the
 # served lists (grow/qa/head_dev.py calib, 2026-11-11). A typical seed's median shown song scores 0.419 (50).
@@ -500,8 +509,18 @@ class AnySong:
                  stems: stemlib.StemStore | None = None, dissector: stemlib.Dissector | None = None,
                  catalog_previews: str | Path | None = None, head: SceneHead | None = None,
                  language_detector=None, head_all_languages: bool = False,
-                 popularity: listener.Popularity | None = None, match_quantiles: Sequence[float] | None = None):
+                 popularity: listener.Popularity | None = None, match_quantiles: Sequence[float] | None = None,
+                 consensus=None, consensus_quantiles: Sequence[float] | None = None):
         self.engine, self.deezer, self.meta, self.keep_previews = engine, deezer, meta, keep_previews
+        # Consensus body of main (``consensus.Consensus``): computed once per seed from the searches' stage-1 scores
+        # (the engine's ``keep_base``); ``consensus_quantiles`` turn a body score into the row's ``match``.
+        if consensus is not None and consensus_quantiles is None:
+            raise ValueError("a consensus body needs the quantiles of its score (--consensus-quantiles)")
+        self.consensus = consensus
+        self.consensus_quantiles = None if consensus_quantiles is None else \
+            checked_match_quantiles(consensus_quantiles)
+        if consensus is not None:
+            engine.keep_base = True
         # Stem dissections (``dissect``): stored rows, else (with ``dissector``) the song's preview separated on the
         # GPU, read from ``catalog_previews/<id % 1000:03d>/<id>.mp3`` when there, else fetched from Deezer.
         self.stems = stems if stems is not None or dissector is None else stemlib.StemStore()
@@ -638,6 +657,7 @@ class AnySong:
                 "tiers": tiers, "ranker": None if self.ranker is None else self.ranker.meta or "on", "stems": stems,
                 "blend": None if blend is None else blend.info() | {"main": "blend" in self.main_pool},
                 "popularity": None if self.popularity is None else {"songs": len(self.popularity)},
+                "consensus": None if self.consensus is None else self.consensus.info(),
                 "match_quantiles": "custom" if self.custom_match_quantiles else "default",
                 "language_search": self.language_rows is not None,
                 "language_detector": None if self.language_detector is None else detections,
@@ -806,11 +826,13 @@ class AnySong:
                 detected = None
                 with self._gpu(timings):
                     raw, t = self.engine.search_stored(track_id, FETCH, **self._allow(query), **self._within(query))
+                    bases = raw.pop("base", None)
                     vibe = self._vibe_inputs(raw, t, query_track=track_id) if self.vibe else None
+                    consensus = self._consensus(query, bases, t)
                 if vibe is not None:
                     vibe["bpm"] = self.tempo.bpm(track_id)
             else:
-                query, raw, timings, t, vibe, windows, detected = self._live(track_id)
+                query, raw, timings, t, vibe, windows, detected, consensus = self._live(track_id)
                 if self.learn is not None:
                     self.learn.add(track_id, query.get("artist_id"))
             self._count(query["source"])
@@ -820,6 +842,8 @@ class AnySong:
             res = {"query": query, "raw": raw, "related": related, "vibe": vibe}
             if detected is not None:
                 res["detected"] = detected
+            if consensus is not None:
+                res["consensus"] = consensus
             if within is not None:
                 # The lists among the songs of the seed's gate language alone (``_within``), next to the catalog's.
                 language = self._seed_language(query, detected)[0]
@@ -835,6 +859,26 @@ class AnySong:
             return res | {"timings_ms": {k: round(v, 1) for k, v in timings.items()}}
         finally:
             self.pending.release()
+
+    def _consensus(self, query: dict, bases, timings: dict[str, float], detected: str | None = None, windows=None,
+                   bpm: float | None = None) -> dict | None:
+        """The seed's consensus bodies (``consensus.Consensus.bodies``), computed once per seed under the GPU lock:
+        "same" among the songs of the language that gates main (``_seed_language``, the guess included; the codes
+        are those of ``language_rows``) and "all" among every language's. ``bases``: the searches' stage-1 scores;
+        ``windows`` and ``bpm``: a live seed's raw sonic windows and tempo. None without a consensus."""
+        if self.consensus is None or bases is None:
+            return None
+        t = time.perf_counter()
+        code = -1
+        if self.language_rows is not None:
+            code = self.language_rows.vocab.get(self._seed_language(query, detected)[0], -1)
+        if query["source"] == "catalog":
+            out = self.consensus.bodies(bases, code, row=self.engine.indexes["sonic"].pos[int(query["id"])])
+        else:
+            out = self.consensus.bodies(bases, code, windows=windows, artist=query.get("artist"),
+                                        artist_id=query.get("artist_id"), bpm=bpm)
+        timings["consensus"] = (time.perf_counter() - t) * 1000
+        return out
 
     def _listener(self, res: dict, windows, timings: dict[str, float]) -> dict | None:
         """Listener-aware inputs, computed once per seed: each candidate's listener probability (``ranker``) and served
@@ -1052,6 +1096,7 @@ class AnySong:
             wins, t_embed = self.engine.embed_clips(clips)
             raw, t_search = self.engine.search_windows(wins, FETCH, [track_id], **self._allow(query),
                                                        **self._within(query, detected))
+            bases = raw.pop("base", None)
             if self.vibe:
                 vibe = self._vibe_inputs(raw, t_search, windows=wins["sonic"])
                 if clip22 is not None:
@@ -1059,7 +1104,9 @@ class AnySong:
                     bpm = self.tracker.tempo(clip22)[0]
                     vibe["bpm"] = bpm if np.isfinite(bpm) else None
                     t_search["tempo"] = (time.perf_counter() - t) * 1000
-        return query, raw, timings | t_embed, t_search, vibe, wins.get("sonic"), detected
+            consensus = self._consensus(query, bases, t_search, detected, wins.get("sonic"),
+                                        vibe["bpm"] if vibe is not None else None)
+        return query, raw, timings | t_embed, t_search, vibe, wins.get("sonic"), detected, consensus
 
     def _detection(self, outcome: str) -> None:
         with self._lock:
@@ -1206,6 +1253,7 @@ class AnySong:
 
         # The blended ranking (``main_pool`` "blend" and "sonic+blend"), filtered below like the channel lists; None:
         # not used.
+        catalog = songs
         songs, blend = versions(songs, floored(res.get("blend") or ()) if "blend" in self.main_pool else None)
 
         language, origin = self._seed_language(q, res.get("detected"))
@@ -1220,9 +1268,9 @@ class AnySong:
         inside = inside_blend = None
         if lang_mode == "same" and self.languages is not None and res.get("raw_lang") is not None \
                 and res.get("lang") == (main_language or language):
+            language_lists = {channel: listed(rows) for channel, rows in res["raw_lang"].items()}
             inside, inside_blend = versions(
-                {channel: listed(rows) for channel, rows in res["raw_lang"].items()},
-                floored(res.get("blend_lang") or ()) if "blend" in self.main_pool else None)
+                language_lists, floored(res.get("blend_lang") or ()) if "blend" in self.main_pool else None)
 
         scene_state = "off"
         artists: dict[Hashable, int | None] = {}
@@ -1277,10 +1325,27 @@ class AnySong:
         keep = (lambda item: self._item_language(item) in {"unknown", language}) \
             if lang_mode == "same" and language != "unknown" and self.languages is not None else None
         head_view = songs if self.head_all_languages and keep is not None else None
+        # The consensus body (``_consensus``) replaces main's body, not with ``scene=0``: the songs of the asked
+        # language mode, as song keys like the lists, without the seed's own song and artist, and with the seed
+        # song's versions limited as in the lists main's head comes from.
+        consensus = None
+        if scene and self.consensus_quantiles is not None and res.get("consensus") is not None:
+            consensus = {}
+            for tid, score, ranks in res["consensus"][lang_mode]:
+                for key, item in listed([(tid, score)]).items():
+                    if key not in consensus and not (q.get("artist_id") and self.scene is not None
+                                                     and self.scene.artist(tid) == q["artist_id"]):
+                        consensus[key] = item | {
+                            "consensus": item["score"], "match": sound_match(score, self.consensus_quantiles),
+                            "ranks_all": dict(zip(CONSENSUS_SIGNALS, ranks))}
+            if dedupe and qkey is not None and (self.copy_score is not None or self.max_versions is not None):
+                before, after = (catalog, songs) if inside is None or lang_mode != "same" else \
+                    (language_lists, inside)
+                consensus = self._limit_blend_versions(consensus, before, after, qkey)
         if scene_state == "on" and res.get("listener") is not None:
             best, vibe, sounds, main, listeners = self._listener_lists(res, filtered, artists, profile, qkey, keep,
                                                                        language, lang_mode, k, dedupe, sound_of,
-                                                                       blend_view, fill, head_view)
+                                                                       blend_view, fill, head_view, consensus)
         else:
             fused = rank(filtered)
             best = []
@@ -1292,14 +1357,14 @@ class AnySong:
                 vibe = self._same_vibe(res["vibe"], filtered, [key for key, _, _ in fused], language, lang_mode, k)
             sounds = self._sounds(filtered, k, profile, artists)
             main, listeners = self._main_without_listeners(filtered, profile, artists, k, sound_of, blend_view,
-                                                           fill, head_view, keep), []
+                                                           fill, head_view, keep, consensus), []
         if main_language is not None:
             query["main_language_guess"] = main_language
             if lang_mode == "same":
                 main = self._guessed_main(res, songs if inside is None else inside, artists, profile, qkey,
                                           main_language, scene_state, k, dedupe, sound_of,
                                           blend if inside is None else inside_blend, inside is not None,
-                                          songs if self.head_all_languages else None)
+                                          songs if self.head_all_languages else None, consensus)
         lists = {"best": best} if best else {}
         if vibe:
             lists["vibe"] = vibe
@@ -1312,7 +1377,7 @@ class AnySong:
         for items in (*lists.values(), *out.values()):
             for item in items:
                 score = sound_of.get(int(item["id"]))
-                if score is not None:
+                if score is not None and "consensus" not in item:  # a consensus row's match is its body score's
                     item["match"] = self.sound_match(score)
         if blend is not None:
             # Blended songs outside every other list: their exact sonic score came with the ranking.
@@ -1330,10 +1395,12 @@ class AnySong:
     def _guessed_main(self, res: dict, songs: dict[str, dict[Hashable, dict]], artists: dict[Hashable, int | None],
                       profile, qkey, language: str, scene_state: str, k: int, dedupe: bool,
                       sound_of: Mapping[int, float], blend: dict[Hashable, dict] | None = None,
-                      fill: bool = False, head_view: dict[str, dict[Hashable, dict]] | None = None) -> list[dict]:
+                      fill: bool = False, head_view: dict[str, dict[Hashable, dict]] | None = None,
+                      consensus: dict[Hashable, dict] | None = None) -> list[dict]:
         """Main with the seed's guessed ``language`` gating it, built exactly as with ``language_guess`` True (the
         "main" mode keeps that list and nothing else). ``songs`` and ``blend``: the in-language lists (then with
-        ``fill``), else the catalog's. ``head_view``: the catalog's lists for ``_cross_head``."""
+        ``fill``), else the catalog's. ``head_view``: the catalog's lists for ``_cross_head``. ``consensus``: the
+        consensus body, searched in that language already."""
         def keep(item: dict) -> bool:
             return self._item_language(item) in {"unknown", language}
 
@@ -1343,8 +1410,9 @@ class AnySong:
             blend = {key: item for key, item in blend.items() if keep(item)}
         if scene_state == "on" and res.get("listener") is not None:
             return self._listener_lists(res, filtered, artists, profile, qkey, keep, language, "same", k, dedupe,
-                                        sound_of, blend, fill, head_view)[3]
-        return self._main_without_listeners(filtered, profile, artists, k, sound_of, blend, fill, head_view, keep)
+                                        sound_of, blend, fill, head_view, consensus)[3]
+        return self._main_without_listeners(filtered, profile, artists, k, sound_of, blend, fill, head_view, keep,
+                                            consensus)
 
     @staticmethod
     def _sound_of(res: dict) -> dict[int, float]:
@@ -1364,7 +1432,8 @@ class AnySong:
     def _listener_lists(self, res: dict, filtered: dict[str, dict[Hashable, dict]], artists: dict[Hashable, int | None],
                         profile, qkey, keep: Callable[[dict], bool] | None, language: str, lang_mode: str, k: int,
                         dedupe: bool, sound_of: Mapping[int, float], blend: dict[Hashable, dict] | None = None,
-                        fill: bool = False, head_view: dict[str, dict[Hashable, dict]] | None = None
+                        fill: bool = False, head_view: dict[str, dict[Hashable, dict]] | None = None,
+                        consensus: dict[Hashable, dict] | None = None
                         ) -> tuple[list[dict], list[dict], list[dict], list[dict], list[dict]]:
         """Best matches, Same vibe, Sounds like, main and Listeners also play with the listener ranker
         (``res["listener"]``, from ``_listener``).
@@ -1379,7 +1448,9 @@ class AnySong:
         artist. Songs by the seed's own artist get the median listener logit, so sound alone places them. With
         ``blend`` (``main_pool`` "blend": the blended ranking, filtered like the channel lists), main is the same head,
         then those songs in their order, one per artist, without ``overall``. With ``main_pool`` "sonic+blend" they join
-        the sonic list's songs instead, and the order adds ``main_blend_weight`` * each song's blended score.
+        the sonic list's songs instead, and the order adds ``main_blend_weight`` * each song's blended score. With
+        ``consensus`` (the consensus body's songs by key, in its order) main is the same head, then those songs
+        (``basis`` "consensus"), one per artist; its ``overall`` then comes from each row's ``match`` (``_view``).
         """
         data = res["listener"]
         p_of, son_of = data["p"], data["son"]
@@ -1531,8 +1602,11 @@ class AnySong:
             # ``fill`` (the in-language lists): the sonic list's other songs, in its order, follow the blended ones,
             # so the match floor does not leave main short while the language has songs.
             body += [(item, main_ranks(key)) for key, item in sonic.items() if key not in main_set and key not in blend]
-        main = self._main([(shown[key][0], shown[key][1]) for key in main_head], body, k)
-        if self.main_overall is not None and main and not blend_body:
+        if consensus is not None:
+            body = [(item, main_ranks(key)) for key, item in consensus.items() if key not in main_set]
+        main = self._main([(shown[key][0], shown[key][1]) for key in main_head], body, k,
+                          "sound" if consensus is None else "consensus")
+        if self.main_overall is not None and main and not blend_body and consensus is None:
             floor = min((s for s, _ in raw_main.values()), default=0.0)
             for key in main_head:
                 tid = int(shown[key][0]["id"])
@@ -1623,11 +1697,11 @@ class AnySong:
                 if z.get(key, -np.inf) >= self.main_head_standout or match_of(key) >= self.main_head_match]
 
     def _main(self, head: Sequence[tuple[dict, dict[str, int]]], body: Sequence[tuple[dict, dict[str, int]]],
-              k: int) -> list[dict]:
+              k: int, basis: str = "sound") -> list[dict]:
         """The main list from ``(item, channel ranks)`` pairs: the head's songs (``basis`` "audio"), then the body's
-        ("sound"), one song per artist."""
+        (``basis``), one song per artist."""
         entries = [(item, {"ranks": ranks, "basis": "audio"}) for item, ranks in head]
-        entries += [(item, {"ranks": ranks, "basis": "sound"}) for item, ranks in body]
+        entries += [(item, {"ranks": ranks, "basis": basis}) for item, ranks in body]
         return [item | {"score": round(1.0 / (FUSE_K + i), 5)}
                 for i, item in enumerate(self._one_per_artist(entries, k), 1)]
 
@@ -1635,10 +1709,12 @@ class AnySong:
                                 artists: Mapping[Hashable, int | None], k: int,
                                 sound_of: Mapping[int, float], blend: dict[Hashable, dict] | None = None,
                                 fill: bool = False, head_view: dict[str, dict[Hashable, dict]] | None = None,
-                                keep: Callable[[dict], bool] | None = None) -> list[dict]:
+                                keep: Callable[[dict], bool] | None = None,
+                                consensus: dict[Hashable, dict] | None = None) -> list[dict]:
         """The main list without listener data (``scene=0``, an unknown artist or no ranker): the audio head, then
         Sounds like's order, or the ``blend`` songs in theirs (``main_pool`` "blend" only; with ``fill``, the sonic
-        list's other songs after them). ``head_view`` and ``keep``: as for ``_cross_head``."""
+        list's other songs after them), or the ``consensus`` body's songs (as in ``_listener_lists``). ``head_view``
+        and ``keep``: as for ``_cross_head``."""
         pos = {channel: {key: i for i, key in enumerate(order, 1)} for channel, order in view.items()}
 
         def ranks(key: Hashable) -> dict[str, int]:
@@ -1659,8 +1735,10 @@ class AnySong:
         order = list(blend.items()) if blend_body else self._sound_order(view, profile, artists)
         if blend_body and fill:  # as in ``_listener_lists``
             order += [(key, item) for key, item in view.get("sonic", {}).items() if key not in blend]
+        if consensus is not None:
+            order = list(consensus.items())
         body = [(item, ranks(key)) for key, item in order if key not in head_set]
-        return self._main(head, body, k)
+        return self._main(head, body, k, "sound" if consensus is None else "consensus")
 
     def _seed_language(self, q: dict, detected: str | None = None) -> tuple[str, str | None]:
         """The seed's language for the gate and where it comes from: its own "label", else the one "detected" in a live
@@ -1993,6 +2071,16 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--blend-weights", type=float, nargs="+", default=None, metavar="W",
                    help="WH WC [WP]: weights of the scene head, playlist and popularity terms next to sound "
                         "(default 2 1 0; WP needs --popularity and never reaches lists without the listener ranker)")
+    p.add_argument("--consensus-model", type=Path, default=None,
+                   help="consensus model (anysong.consensus export): main's body becomes the consensus body; needs "
+                        "--blend-head, --blend-cf, --consensus-quantiles and the three channels as built indexes")
+    p.add_argument("--consensus-sound-weight", type=float, default=None,
+                   help="body score = prediction - this * min(log10 sound rank, 5) (default 0.1)")
+    p.add_argument("--consensus-sound-cap", type=int, default=None,
+                   help="songs past this sound rank are in no consensus body (default 5000)")
+    p.add_argument("--consensus-quantiles", type=Path, default=None,
+                   help="JSON list of the 21 body-score quantiles (0, 5, ..., 100 %%) behind a consensus row's "
+                        "'match'")
     p.add_argument("--main-blend-weight", type=float, default=MAIN_BLEND_WEIGHT,
                    help="--main-pool sonic+blend: weight of a song's blended score in main's order")
     p.add_argument("--main-match-floor", type=float, default=MAIN_MATCH_FLOOR)
@@ -2037,6 +2125,22 @@ def main(argv: list[str] | None = None) -> None:
     if blend_wp and args.main_pool == "blend":
         p.error("--main-pool blend cannot take a popularity weight (it would reach audio-only lists): "
                 "use sonic+blend")
+    consensus_quantiles = None
+    if args.consensus_model is not None:
+        if args.blend_head is None or not {"melody", "samples", "sonic"} <= set(args.channels):
+            p.error("--consensus-model needs --blend-head, --blend-cf and the melody, samples and sonic channels")
+        if args.consensus_quantiles is None:
+            p.error("--consensus-model needs --consensus-quantiles")
+        if not (Path(args.index) / "sonic" / "full.npy").exists():
+            p.error("--consensus-model needs a built sonic index (its full.npy)")
+        try:
+            consensus_quantiles = checked_match_quantiles(
+                json.loads(args.consensus_quantiles.read_text(encoding="utf-8")))
+        except ValueError as exc:
+            p.error(f"--consensus-quantiles {args.consensus_quantiles}: {exc}")
+    elif any(v is not None for v in (args.consensus_sound_weight, args.consensus_sound_cap,
+                                     args.consensus_quantiles)):
+        p.error("--consensus-sound-weight, --consensus-sound-cap and --consensus-quantiles need --consensus-model")
     popularity = listener.Popularity.load(args.popularity) if args.popularity is not None else None
     quantiles = None
     if args.match_quantiles is not None:
@@ -2112,6 +2216,21 @@ def main(argv: list[str] | None = None) -> None:
         _release_cuda(args.device)
         stems_warm = round(time.perf_counter() - t_stems, 1)
         threading.Thread(target=stemlib.warm_up, name="stems-warm-up", daemon=True).start()
+    consensus = None
+    if args.consensus_model is not None:
+        from .consensus import SOUND_CAP, SOUND_WEIGHT, Consensus
+
+        t_consensus = time.perf_counter()
+        sonic_ids = engine.indexes["sonic"].ids.tolist()
+        consensus = Consensus.load(
+            args.consensus_model, Path(args.index) / "sonic" / "full.npy", args.blend_cf / "cf128.npy", engine,
+            artists=[meta[tid][0] if tid in meta else None for tid in sonic_ids],
+            codes=None if language_rows is None else language_rows.codes["sonic"],
+            bpm=None if tempo is None else np.array([tempo.by_id.get(tid, np.nan) for tid in sonic_ids], np.float32),
+            scene=scene,
+            sound_weight=SOUND_WEIGHT if args.consensus_sound_weight is None else args.consensus_sound_weight,
+            sound_cap=SOUND_CAP if args.consensus_sound_cap is None else args.consensus_sound_cap)
+        engine.load_secs["consensus"] = round(time.perf_counter() - t_consensus, 2)
     service = AnySong(engine, Deezer(scratch), meta, args.cache_size, args.max_pending,
                       languages=languages, scene=scene, tempo=tempo, tracker=tracker,
                       learn=LearnQueue(args.learn_queue) if args.learn_queue else None, tiers=tiers,
@@ -2124,6 +2243,7 @@ def main(argv: list[str] | None = None) -> None:
                       main_listener_weight=args.main_listener_weight, main_blend_weight=args.main_blend_weight,
                       main_scale=tuple(args.main_scale) if args.main_scale else None,
                       stems=store, dissector=dissector, catalog_previews=args.catalog_previews,
+                      consensus=consensus, consensus_quantiles=consensus_quantiles,
                       **_overall_scales(args.overall))
     server = Server((args.host, args.port), service, args.search_per_min, args.similar_per_min,
                     args.cors_origin, args.client_ip_header, dissect_per_min=args.dissect_per_min)
@@ -2134,6 +2254,7 @@ def main(argv: list[str] | None = None) -> None:
           f"language_search={engine.load_secs.get('language_rows')}s "
           f"language_model={engine.load_secs.get('language_model')}s "
           f"stems={service.health()['stems']} (warmup {stems_warm}s) blend={service.health()['blend']} "
+          f"consensus={service.health()['consensus']} ({engine.load_secs.get('consensus')}s) "
           f"gpu={_gpu_mib(args.device)} "
           f"on http://{args.host}:{args.port}", flush=True)
     try:

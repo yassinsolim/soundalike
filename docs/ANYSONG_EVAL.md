@@ -3522,3 +3522,72 @@ were fitted to raw scores and must be refitted before this is served.
 - `--match-quantiles <file.json>` (21 ascending sonic-score quantiles) replaces `MATCH_QUANTILES` for one service
   (`AnySong.sound_match`): `match`, the match floor and the head's match rule. The constant stays the default.
 - `/healthz` reports `popularity` (songs with a rank above 0) and `match_quantiles` (`custom` or `default`).
+
+## Consensus body of the main list (2026-11-20): local experiment, not served
+
+`anysong.consensus.Consensus` replaces the body of main (Best matches) with the songs several views of the seed
+agree on, ordered by a small model. It is the serving side of the v12 study harness (`anysong-lab/v8/v12/pool.py`,
+`fit2.py`) and follows it step by step, dtypes included, because the model's splits sit on those values.
+
+- **Signals.** Five scores of every catalog song against the seed, each on its own scale: `snd`, the best
+  window-pair cosine of the whitened sonic windows (`sonic/full.npy`, unit length again in fp16, multiplied in
+  fp16); `head`, the same between scene-head vectors (the blend's table; a live seed's come from its own
+  windows); `cf`, the cosine of playlist vectors when both songs are in the playlist graph, else no score; `mel`
+  and `smp`, the melody and samples indexes' stage-1 scores less the hub penalty.
+- **Ranks.** A song's rank under a signal is one plus the allowed songs that score higher. Allowed: the songs of
+  the seed's language or of unknown language (every song when the seed has no language or `lang=all` is asked),
+  without the seed's own artist. For this body an artist is the primary credited name (the text before the first
+  comma, lower-cased, stripped), as in the harness. The catalog tiers (`--core-ids`) do not narrow it.
+- **Pool.** The best 150 songs per signal plus the best 1,500 by consensus: the mean over the signals of
+  log10(rank), 6.3 where a signal has no score.
+- **Features** (`consensus.FEATURES`, 46). Per signal: score, z-score over the allowed songs, log10(rank), gap
+  to the best and to the tenth best score. Then how many signals rank the song in their top 10 / 50 / 200 /
+  1,000, the smallest, second smallest and mean log rank, the tempo gap (folded over an octave, and plain), the
+  language flags, the scene columns of the listener ranker (graph, region, genre, affinity, related either way,
+  neighbour) and whether the song and the seed are in the playlist graph. Missing values are NaN. No popularity.
+- **Score.** `body = prediction - L * min(log10(sound rank), 5)`; songs past sound rank `C` are left out; the
+  best song of each artist stays. The prediction is a `HistGradientBoostingRegressor` (0 to 2 rating) exported
+  to tree arrays (`python -m soundalike.anysong.consensus r3.pkl consensus-r3.npz`, `listener.Regressor`), which
+  gives scikit-learn's predictions bit for bit, NaN routing included.
+- **Live seeds.** Sound, melody and samples scores come from the live windows, head vectors from the scene head on
+  the live sonic windows; there is no playlist view (`cf_q` 0, the `cf` columns missing, rank 6.3), the scene
+  columns need an artist the scene table knows, the tempo is the live one.
+
+Serving: `--consensus-model <npz> --consensus-quantiles <json> [--consensus-sound-weight L]
+[--consensus-sound-cap C]` (defaults 0.1 and 5000; needs `--blend-head`, `--blend-cf` and the three built
+indexes). `results.main` is then today's audio head unchanged (evidence rule, `--head-all-languages`) followed by
+the consensus body: no song of the head again, one song per artist across head and body, never the seed's own
+song or artist, the seed song's versions limited as in the lists. Body rows carry `basis` `consensus`, the raw
+score as `consensus`, `match` (the score's percentile on the 21 `--consensus-quantiles`), `overall` (from `match`)
+and `ranks_all` (`sound`, `head`, `playlists`, `melody`, `samples`; 0 = no score). `lang=same` reads the body
+ranked among the seed's language (own label, live detection, artist majority or guess, as main is gated today);
+`lang=all` the body ranked among every song, which reads the seed as one of unknown language, the only case of
+an ungated search the model was fitted on. Every other list is unchanged, and so is main with `scene=0`.
+`/healthz` reports `consensus` (model note, sound weight and cap). Both bodies are computed once per seed and
+cached with its other results (200 songs each).
+
+What is reused and what is not (measured on `index_v11`, 1,109,024 songs, RTX 5080):
+
+- melody and samples: the searches' own stage-1 scores (`serve.Engine.keep_base`), no second pass;
+- sound: the served sonic stage 1 is an 8-bit projection, not the harness's fp16 product of the full windows,
+  so the body computes the harness's. The windows (3.2 GB) do not fit the card next to the engine; they stay in
+  page-locked host memory and cross to the card in blocks for each seed (about 50 ms);
+- head: the blend multiplies in fp32, the harness in fp16 after bringing the table to unit length again, which
+  ties scores and so moves ranks; the body repeats the harness's product on the blend's table (about 50 ms);
+- playlists: the harness brings every vector to unit length, the blend leaves the all-but-zero ones (45,235 of
+  291,810) near zero, so the body keeps its own unit copy (0.15 GB on the card).
+
+Parity with the harness (`anysong-lab/v8/v12/parity.py`, 60 stored seeds: 30 val, 30 world): the top 10 is
+identical for 59 seeds. Sound and head features are identical in every bit that reaches the model (scores, ranks,
+gaps: 0; z-scores within 2e-6). The harness scores 12 seeds at a time and the engine one, and the fp16 stage 1 of
+the samples index (and the fp32 one of melody) rounds differently with the batch shape: samples scores differ by
+up to 2.7e-4, melody by 4e-6, their log ranks by up to 0.005; the one differing top 10 (seed 925110) comes from
+that. Against the harness run one seed at a time those columns are identical and so are all 60 top 10s. What
+remains then is the playlist cosine, equal to 1e-6: 45,220 graph songs have an all-zero vector and tie at exactly
+0, so a song whose cosine is 1e-7 above or below 0 changes its playlist rank by that block (log rank by up to
+1.43); it changed no top 10.
+
+Cost, 20 stored seeds, warm file cache, `k=30`: 0.75 s median (p90 0.81) against 0.56 s (0.59) for the v11
+launcher, of which the body is about 0.19 s (signals 95 ms, the two bodies 2 x 27 ms); 4 live seeds 1.53 s
+against 1.33 s, Deezer download included. GPU memory: 10.7 GB allocated, 11.5 GB peak (v11: 10.5 and 11.1);
+3.2 GB more host memory, page-locked.

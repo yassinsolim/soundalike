@@ -191,8 +191,9 @@ def logit(p: np.ndarray) -> np.ndarray:
     return np.log(p / (1 - p))
 
 
-class Ranker:
-    """A binary gradient-boosted tree ensemble as arrays: P(listeners connect the artists) for feature rows.
+class Trees:
+    """A gradient-boosted tree ensemble as arrays, evaluated with numpy: ``raw`` is the baseline plus one leaf value
+    per tree for feature rows in the order of ``features``.
 
     Splits send a row left when its value is at most the threshold, and missing values (NaN) the way the tree
     learned (scikit-learn's HistGradientBoosting rules). Leaves point to themselves, so every row can descend
@@ -202,9 +203,7 @@ class Ranker:
                  threshold: np.ndarray, missing_left: np.ndarray, left: np.ndarray, right: np.ndarray,
                  value: np.ndarray, depth: int, meta: str = ""):
         self.features = tuple(features)
-        if self.features not in FEATURE_SETS:
-            raise ValueError(f"ranker features {self.features} differ from this code's {FEATURES} "
-                             f"(+ 'head', + 'pop')")
+        self._check_features()
         n = len(feature)
         if not all(len(a) == n for a in (threshold, missing_left, left, right, value)):
             raise ValueError("inconsistent ranker arrays")
@@ -216,8 +215,12 @@ class Ranker:
         self.left, self.right, self.value = left.astype(np.int64), right.astype(np.int64), value.astype(np.float64)
         self.depth, self.meta = int(depth), meta
 
+    def _check_features(self) -> None:
+        if len(set(self.features)) != len(self.features) or not self.features:
+            raise ValueError("a tree ensemble needs distinct feature names")
+
     @classmethod
-    def load(cls, path: Path | str) -> Ranker:
+    def load(cls, path: Path | str):
         with np.load(path, allow_pickle=False) as z:
             return cls([str(f) for f in z["features"]], float(z["baseline"]), z["roots"], z["feature"],
                        z["threshold"], z["missing_left"], z["left"], z["right"], z["value"], int(z["depth"]),
@@ -228,26 +231,55 @@ class Ranker:
                  feature=self.feature, threshold=self.threshold, missing_left=self.missing_left, left=self.left,
                  right=self.right, value=self.value, depth=np.int64(self.depth), meta=np.array(self.meta))
 
-    def predict(self, X: np.ndarray) -> np.ndarray:
+    def leaves(self, X: np.ndarray) -> np.ndarray:
+        """The leaf value each row reaches in each tree [rows, trees]."""
         X = np.asarray(X, dtype=np.float64)
         if X.ndim != 2 or X.shape[1] != len(self.features):
             raise ValueError(f"expected rows of {len(self.features)} features")
         if not len(X):
-            return np.zeros(0)
+            return np.zeros((0, len(self.roots)))
         node = np.broadcast_to(self.roots, (len(X), len(self.roots))).copy()
         rows = np.arange(len(X))[:, None]
         for _ in range(self.depth):
             x = X[rows, self.feature[node]]
             go_left = np.where(np.isnan(x), self.missing_left[node], x <= self.threshold[node])
             node = np.where(go_left, self.left[node], self.right[node])
-        raw = self.baseline + self.value[node].sum(axis=1)
-        return 1.0 / (1.0 + np.exp(-raw))
+        return self.value[node]
+
+    def raw(self, X: np.ndarray) -> np.ndarray:
+        return self.baseline + self.leaves(X).sum(axis=1)
 
 
-def export(model, meta: str = "", features: tuple[str, ...] = FEATURES) -> Ranker:
-    """A fitted binary scikit-learn ``HistGradientBoostingClassifier`` (numeric features only) as a ``Ranker``."""
+class Ranker(Trees):
+    """A binary classifier (``Trees``) over one of ``FEATURE_SETS``: P(listeners connect the artists) for feature
+    rows."""
+
+    def _check_features(self) -> None:
+        if self.features not in FEATURE_SETS:
+            raise ValueError(f"ranker features {self.features} differ from this code's {FEATURES} "
+                             f"(+ 'head', + 'pop')")
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        return 1.0 / (1.0 + np.exp(-self.raw(X)))
+
+
+class Regressor(Trees):
+    """A regressor (``Trees``) over any list of named features: ``predict`` is the ensemble's raw value, summed tree
+    by tree from the baseline as scikit-learn sums it, so it is that model's prediction to the last bit."""
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        leaves = self.leaves(X)
+        out = np.full(len(leaves), self.baseline)
+        for values in leaves.T:
+            out += values
+        return out
+
+
+def _arrays(model) -> tuple:
+    """The trees of a fitted scikit-learn HistGradientBoosting model with one tree per iteration (numeric features
+    only), as the array arguments of ``Trees`` after the feature names."""
     if getattr(model, "n_trees_per_iteration_", 1) != 1:
-        raise ValueError("only binary classifiers can be exported")
+        raise ValueError("only models with one tree per iteration can be exported")
     feature, threshold, missing_left, left, right, value, roots = [], [], [], [], [], [], []
     depth = 0
     for (tree,) in model._predictors:
@@ -265,6 +297,23 @@ def export(model, meta: str = "", features: tuple[str, ...] = FEATURES) -> Ranke
         right += np.where(leaf, idx, nodes["right"] + base).tolist()
         value += np.where(leaf, nodes["value"], 0.0).tolist()
         depth = max(depth, int(nodes["depth"].max()))
-    return Ranker(features, float(np.ravel(model._baseline_prediction)[0]), np.array(roots), np.array(feature),
-                  np.array(threshold), np.array(missing_left), np.array(left), np.array(right), np.array(value),
-                  depth, meta)
+    return (float(np.ravel(model._baseline_prediction)[0]), np.array(roots), np.array(feature), np.array(threshold),
+            np.array(missing_left), np.array(left), np.array(right), np.array(value), depth)
+
+
+def export(model, meta: str = "", features: tuple[str, ...] = FEATURES) -> Ranker:
+    """A fitted binary scikit-learn ``HistGradientBoostingClassifier`` (numeric features only) as a ``Ranker``."""
+    if not hasattr(model, "classes_"):
+        raise ValueError("only binary classifiers can be exported (a regressor: export_regressor)")
+    return Ranker(features, *_arrays(model), meta)
+
+
+def export_regressor(model, features: Iterable[str], meta: str = "") -> Regressor:
+    """A fitted scikit-learn ``HistGradientBoostingRegressor`` with an identity link (numeric features only) as a
+    ``Regressor`` reading ``features``, the names of the model's input columns in order."""
+    features = tuple(features)
+    if hasattr(model, "classes_") or getattr(model, "loss", "squared_error") not in ("squared_error", "absolute_error"):
+        raise ValueError("only regressors with an identity link can be exported")
+    if len(features) != model.n_features_in_:
+        raise ValueError(f"{len(features)} feature names for a model of {model.n_features_in_} columns")
+    return Regressor(features, *_arrays(model), meta)

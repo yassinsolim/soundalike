@@ -2302,3 +2302,123 @@ def test_custom_match_quantiles_replace_the_default_for_one_service(tmp_path):
         with pytest.raises(ValueError, match="match quantiles"):
             service(match_quantiles=bad)
     assert api.checked_match_quantiles(tuple(custom)) == tuple(custom)
+
+
+# ---------------------------------------------------------------- consensus body of main
+CONSENSUS_Q = [round(0.1 * i, 2) for i in range(21)]  # body score 0.1 * i shows 5 * i %
+
+
+def _consensus_res(listener_data=True):
+    # The setup of the main-list test (the cover 5 is the audio head; Daft Punk is the seed's artist) plus the
+    # consensus bodies: (track id, body score, the five signals' ranks), best first.
+    res = {"query": {"id": 1, "artist": "Daft Punk", "title": "One More Time", "source": "catalog", "artist_id": 100},
+           "raw": {"melody": [(5, -1.0), (3, -2.0)], "samples": [(3, 0.1)],
+                   "sonic": [(10, 0.5), (5, 0.45), (7, 0.44)]},
+           "related": [], "timings_ms": {}, "vibe": {"muq": {10: 0.5, 5: 0.45, 7: 0.44, 3: 0.2}, "bpm": 120.0},
+           "consensus": {
+               "same": [(5, 1.6, (1, 2, 0, 1, 9)), (11, 1.5, (3, 1, 0, 40, 50)), (7, 1.4, (2, 5, 7, 300, 20)),
+                        (8, 1.3, (9, 4, 0, 8, 8)), (10, 1.2, (1, 1, 1, 1, 1)), (3, 1.1, (70, 60, 0, 2, 1)),
+                        (2, 1.0, (4, 4, 4, 4, 4)), (12, 0.45, (5, 5, 5, 5, 5))],
+               "all": [(9, 1.7, (6, 6, 6, 6, 6)), (11, 1.5, (4, 1, 0, 41, 52))]}}
+    if listener_data:
+        res["listener"] = {"p": {3: 0.2, 5: 0.1, 7: 0.9, 8: 0.8, 9: 0.95, 10: 0.99},
+                           "son": {3: 0.2, 5: 0.45, 7: 0.44, 8: 0.40, 9: 0.43, 10: 0.5}, "scene": [8, 9]}
+    return res
+
+
+def _consensus_service(tmp_path, **kw):
+    meta = LISTENER_META | {11: ("Sixth", "Sechs"), 12: ("Seventh, Guest", "Sieben")}
+    return api.AnySong(FakeEngine(), FakeDeezer(tmp_path), meta, scene=_listener_scene_table(), copy_score=None,
+                       ranker=_stump("fwd", 0.0, 0.0), scene_params=SceneParams(head_min=1),
+                       languages=FakeLanguages({1: "en", 9: "de"}), best_head_standout=0.0,
+                       tempo=TempoTable(np.array([5, 7, 8, 10]), np.array([120, 120, 121, 120], np.float32)), **kw)
+
+
+@pytest.mark.parametrize("listener_data", [True, False])
+def test_consensus_body_follows_mains_audio_head(tmp_path, listener_data):
+    res = _consensus_res(listener_data)
+    svc, plain = _consensus_service(tmp_path, consensus_quantiles=CONSENSUS_Q), _consensus_service(tmp_path)
+    got = svc._view(res, k=10, dedupe=True, cached=False)
+    want = plain._view(res, k=10, dedupe=True, cached=False)  # no quantiles, no consensus: today's lists
+    assert want == plain._view({k: v for k, v in res.items() if k != "consensus"}, k=10, dedupe=True, cached=False)
+    # Every other list and the query are untouched.
+    assert got["query"] == want["query"]
+    assert {name: rows for name, rows in got["results"].items() if name != "main"} == \
+        {name: rows for name, rows in want["results"].items() if name != "main"}
+    main, old = got["results"]["main"], want["results"]["main"]
+    # The head is today's (the cover 5); then the body in its order: no song of the head again (5), one song per
+    # artist (Third's 7, not 8), never the seed's artist (10) or the seed's own song (2); another artist's version of
+    # it (3) counts against max_versions.
+    assert [(x["id"], x["basis"]) for x in main] == [(5, "audio"), (11, "consensus"), (7, "consensus"),
+                                                     (3, "consensus"), (12, "consensus")]
+    assert old[0]["basis"] == "audio" and {k: v for k, v in main[0].items() if k != "overall"} == \
+        {k: v for k, v in old[0].items() if k != "overall"}
+    assert "consensus" not in main[0] and "ranks_all" not in main[0]
+    # Body rows: the raw score, its percentile as match (not the sound match), every signal's rank, list ranks.
+    assert [x["consensus"] for x in main[1:]] == [1.5, 1.4, 1.1, 0.45]
+    assert [x["match"] for x in main[1:]] == [75, 70, 55, 22] == \
+        [api.sound_match(s, CONSENSUS_Q) for s in (1.5, 1.4, 1.1, 0.45)]
+    assert main[2]["match"] != api.sound_match(0.44)
+    assert main[1]["ranks_all"] == {"sound": 3, "head": 1, "playlists": 0, "melody": 40, "samples": 50}
+    assert main[1]["ranks"] == {} and main[2]["ranks"] == {"sonic": 3}
+    assert [x["score"] for x in main] == [round(1.0 / (api.FUSE_K + i), 5) for i in range(1, 6)]
+    overall = [x["overall"] for x in main]
+    assert overall == sorted(overall, reverse=True) and overall[1:] == [75, 70, 55, 22]
+    # k, the language mode (each has its own body) and the version limit.
+    assert [x["id"] for x in svc._view(res, k=2, dedupe=True, cached=False)["results"]["main"]] == [5, 11]
+    every = svc._view(res, k=10, dedupe=True, cached=False, lang_mode="all")["results"]["main"]
+    assert [x["id"] for x in every] == [5, 9, 11] and every[2]["ranks_all"]["sound"] == 4
+    # Audio only (scene=0) keeps today's main.
+    assert svc._view(res, k=10, dedupe=True, cached=False, scene=False) == \
+        plain._view(res, k=10, dedupe=True, cached=False, scene=False)
+    svc.max_versions = 0
+    assert [x["id"] for x in svc._view(res, k=10, dedupe=True, cached=False)["results"]["main"]] == [5, 11, 7, 12]
+
+
+def test_consensus_body_is_computed_once_per_seed_from_the_searches_base_scores(tmp_path):
+    class Rows(FakeRows):
+        vocab = {"en": 0, "ru": 1}
+
+    class BaseEngine(LangEngine):
+        keep_base = False
+
+        def _search(self, exclude, within):
+            raw, t = super()._search(exclude, within)
+            return raw | ({"base": {"melody": "m", "samples": "s"}} if self.keep_base else {}), t
+
+        def embed_clips(self, clips):
+            return {"sonic": "live windows"}, {}
+
+    class FakeConsensus:
+        calls = []
+
+        def bodies(self, bases, code, **kw):
+            self.calls.append((bases, code, kw))
+            return {"same": [(8, 1.2, (1, 1, 0, 1, 1)), (13, 1.1, (2, 2, 2, 2, 2))], "all": [(2, 1.3, (1, 1, 1, 1, 1))]}
+
+        def info(self):
+            return {"model": "fake", "sound_weight": 0.1, "sound_cap": 5000}
+
+    languages = FakeLanguages(RU_LABELS, {"kino": "ru"})
+    with pytest.raises(ValueError, match="quantiles"):
+        api.AnySong(BaseEngine(RU_SCORES), FakeDeezer(tmp_path), RU_META, consensus=FakeConsensus())
+    engine = BaseEngine(RU_SCORES)
+    svc = api.AnySong(engine, FakeDeezer(tmp_path), RU_META, languages=languages,
+                      language_rows=Rows(languages, RU_META, RU_SCORES), consensus=FakeConsensus(),
+                      consensus_quantiles=CONSENSUS_Q)
+    plain = api.AnySong(LangEngine(RU_SCORES), FakeDeezer(tmp_path), RU_META, languages=languages,
+                        language_rows=Rows(languages, RU_META, RU_SCORES))
+    assert engine.keep_base and svc.health()["consensus"]["model"] == "fake" and plain.health()["consensus"] is None
+    r, before = svc.similar(1, k=5), plain.similar(1, k=5)
+    # The stored seed goes in as its sonic row with its gate language's code and the searches' base scores.
+    assert FakeConsensus.calls == [({"melody": "m", "samples": "s"}, 1, {"row": 0})]
+    assert "base" not in r["results"] and "consensus" in r["timings_ms"]
+    assert {name: rows for name, rows in r["results"].items() if name != "main"} == \
+        {name: rows for name, rows in before["results"].items() if name != "main"}
+    assert [(x["id"], x["basis"]) for x in r["results"]["main"]] == [(8, "consensus"), (13, "consensus")]
+    # Cached: the other language mode and list length come from the same computation.
+    assert _ids(svc.similar(1, k=5, lang_mode="all"), "main") == [2] and len(FakeConsensus.calls) == 1
+    # A live seed: its raw sonic windows, credited artist and tempo; an unknown language is code -1.
+    svc.similar(99, k=5)
+    bases, code, kw = FakeConsensus.calls[-1]
+    assert code == -1 and kw == {"windows": "live windows", "artist": "Daft Punk", "artist_id": None, "bpm": None}
