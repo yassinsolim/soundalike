@@ -24,7 +24,8 @@ struct SoundalikeActivityAttributes: ActivityAttributes {
 }
 
 enum SoundalikeActivity {
-    static let rowCount = 3
+    /// As many as fit Apple's 160-point limit for a Live Activity with comfortable rows.
+    static let rowCount = 5
 
     /// Replaces any card already showing with the new results.
     @MainActor

@@ -50,7 +50,7 @@ enum LastResults {
 /// Control Center, Action Button, Siri and Back Tap: reads what's playing and shows
 /// soundalikes in a system card over the current app. Only when nothing can be read
 /// (another app playing, Spotify not connected) does it open Soundalike to listen.
-struct FindSoundalikesIntent: AppIntent {
+struct FindSoundalikesIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "Find Soundalikes"
     static let description = IntentDescription("Shows songs that sound like what you're listening to, right over the app you're in.")
     static let supportedModes: IntentModes = [.background, .foreground(.dynamic)]
