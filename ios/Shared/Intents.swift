@@ -25,9 +25,9 @@ struct ListenAndFindIntent: AppIntent {
 
 struct FindForLinkIntent: AppIntent {
     static let title: LocalizedStringResource = "Find Soundalikes for a Link"
-    static let description = IntentDescription("Finds songs that sound like a Spotify or Apple Music song link.")
+    static let description = IntentDescription("Finds songs that sound like a shared song link.")
 
-    @Parameter(title: "Song link", description: "A Spotify or Apple Music song link, or text containing one.")
+    @Parameter(title: "Song link", description: "A song link from a music app, or text containing one.")
     var link: String
 
     static var parameterSummary: some ParameterSummary {
