@@ -8,7 +8,6 @@ struct ResultsRequest: Identifiable, Hashable {
     enum Kind: Hashable {
         case shared(String)
         case seed(Seed)
-        case results(SoundalikeResults)
     }
 
     let id = UUID()
@@ -187,8 +186,6 @@ struct HomeView: View {
                 case .silence: if explicit { hint = .nothingPlaying }
                 }
             }
-        case .last:
-            if let results = LastResults.load() { path = [ResultsRequest(kind: .results(results))] }
         case .find(let shared):
             path = [ResultsRequest(kind: .shared(shared))]
         case .search(let text):
@@ -342,7 +339,6 @@ struct ResultsScreen: View {
                 switch request.kind {
                 case .shared(let text): model.load(shared: text)
                 case .seed(let seed): model.load(seed: seed)
-                case .results(let results): model.show(results)
                 }
             }
     }

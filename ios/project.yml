@@ -11,7 +11,7 @@ settings:
     CODE_SIGN_STYLE: Automatic
     SWIFT_VERSION: "5.0"
     MARKETING_VERSION: "1.1.0"
-    CURRENT_PROJECT_VERSION: "13"
+    CURRENT_PROJECT_VERSION: "14"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
 packages:
@@ -53,7 +53,6 @@ targets:
         NSAppleMusicUsageDescription: Soundalike reads the song playing in the Music app and can add songs you pick to your queue or a playlist.
         NSMicrophoneUsageDescription: Soundalike listens briefly to recognise the song that's playing. Audio is matched with ShazamKit and not saved.
         ITSAppUsesNonExemptEncryption: false
-        NSSupportsLiveActivities: true
         UILaunchScreen:
           UIColorName: ""
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
@@ -102,11 +101,6 @@ targets:
     sources:
       - Controls
       - Shared
-    dependencies:
-      - package: SoundalikeKit
-        product: SoundalikeKit
-      - package: SoundalikeKit
-        product: SoundalikeUI
     entitlements:
       path: Controls/Controls.entitlements
       properties:

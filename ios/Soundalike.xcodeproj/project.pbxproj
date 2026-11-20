@@ -8,30 +8,23 @@
 
 /* Begin PBXBuildFile section */
 		0917F58F1E9AC20104E7466C /* SoundalikeUI in Frameworks */ = {isa = PBXBuildFile; productRef = B0C632114DD295E3A5C108CC /* SoundalikeUI */; };
-		11FF31F5D4E652CBFCD66694 /* SoundalikeActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 870AD65BA2B29FF1F555C4AD /* SoundalikeActivity.swift */; };
-		1DEE617E74DA2DC8CEB57933 /* SoundalikeActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 870AD65BA2B29FF1F555C4AD /* SoundalikeActivity.swift */; };
 		27F6561199787FE56BBA496E /* SoundalikeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 88E43859FD97D5F43809E1A2 /* SoundalikeKit */; };
-		28730161D71999A0E0891148 /* SoundalikeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 7F74523202D4FDBC149ECD9E /* SoundalikeKit */; };
 		4184C77D4B27FAE0F31DB861 /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 901CF37A616FDA80C38B6B48 /* AppRoute.swift */; };
+		422BECB595F24BB0E16A67B7 /* NowPlaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F50A3F7B221F7B91797603D /* NowPlaying.swift */; };
 		43741DFA4822229FB8807C41 /* SoundalikeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 211DF663D5ADCD2C82545A0A /* SoundalikeKit */; };
 		581C1B0757E814AECE3747E8 /* Controls.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0AE59612B8F93874612F719E /* Controls.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		65579911DB9FE58AC78400A3 /* SoundalikeUI in Frameworks */ = {isa = PBXBuildFile; productRef = CA9572F0499FE4160BA92362 /* SoundalikeUI */; };
 		65ABAA9E8A79F08D366DFE0C /* PlaybackProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C444B436CD57A5201584A7 /* PlaybackProbe.swift */; };
-		7327106BC8AAF0BCCD370B30 /* NowPlaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEC58C0033C539E1671E2964 /* NowPlaying.swift */; };
 		7917AFAEB8E647C442563FB1 /* Controls.swift in Sources */ = {isa = PBXBuildFile; fileRef = E47C873420762430D9D27CAD /* Controls.swift */; };
 		81B22A007890995B76ADEB4E /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DDD9123532E2A1688234CF8 /* ShareViewController.swift */; };
-		8368C868E1BF1D3B5070FA6B /* SoundalikeUI in Frameworks */ = {isa = PBXBuildFile; productRef = 2C2E313FE9277AC31E34C120 /* SoundalikeUI */; };
-		8664724160B6A7A4B474237F /* SoundalikesSnippet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D6151AA0B81E88330927A87 /* SoundalikesSnippet.swift */; };
 		87DEF1F413F0F7D5036D57AD /* SpotifyRemote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E3CEEBD0F2316F6A5C52924 /* SpotifyRemote.swift */; };
 		88F5D74827442AEE6560A312 /* AppleMusicService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D14387CD4977ED1CA671A0 /* AppleMusicService.swift */; };
 		953453E1526A5A6B66A7FB5B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 279F0E923B6AD8C7DF3176C0 /* Assets.xcassets */; };
 		9FDAC6D55E4315BA1BAA0D8E /* SpotifyiOS in Frameworks */ = {isa = PBXBuildFile; productRef = 631E0907DC2750597A3B1FBA /* SpotifyiOS */; };
-		A03143EAF62F97F279A18E9E /* NowPlaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEC58C0033C539E1671E2964 /* NowPlaying.swift */; };
 		A06D8AC76C4B3B2DA980ECBF /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FF0B24F8B13B3342EDEA007 /* HomeView.swift */; };
 		AEE2A8604705A695A19AE98C /* ListenService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 775CF1A125A1878D1DF33A4F /* ListenService.swift */; };
 		B1170D4C7F9BC2A4AB7408A9 /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 901CF37A616FDA80C38B6B48 /* AppRoute.swift */; };
 		B13CEC4FE87889C35241DEAC /* Intents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7114C3621E1664311507C6EC /* Intents.swift */; };
-		C6868457783F81348587B840 /* SoundalikesSnippet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D6151AA0B81E88330927A87 /* SoundalikesSnippet.swift */; };
 		DC6039CCB01C632F6C113817 /* Intents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7114C3621E1664311507C6EC /* Intents.swift */; };
 		E309735176FBE1F9DF25DCD5 /* SoundalikeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F4341715E0E6A4F59AFE36A /* SoundalikeApp.swift */; };
 		E968B0B2CC91159A1CD85DE3 /* SpotifyConnector.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0AC6FB1EB40A7659060B5A7 /* SpotifyConnector.swift */; };
@@ -81,12 +74,11 @@
 		279F0E923B6AD8C7DF3176C0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2D05308EFC65C152F445E2F3 /* Controls.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Controls.entitlements; sourceTree = "<group>"; };
 		2FF0B24F8B13B3342EDEA007 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
-		3D6151AA0B81E88330927A87 /* SoundalikesSnippet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundalikesSnippet.swift; sourceTree = "<group>"; };
 		70275C2B91DCF0B6FC83E35D /* GuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideView.swift; sourceTree = "<group>"; };
 		7114C3621E1664311507C6EC /* Intents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Intents.swift; sourceTree = "<group>"; };
 		775CF1A125A1878D1DF33A4F /* ListenService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListenService.swift; sourceTree = "<group>"; };
 		79B65E36015906FD2708042D /* SoundalikeKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SoundalikeKit; path = SoundalikeKit; sourceTree = SOURCE_ROOT; };
-		870AD65BA2B29FF1F555C4AD /* SoundalikeActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundalikeActivity.swift; sourceTree = "<group>"; };
+		7F50A3F7B221F7B91797603D /* NowPlaying.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlaying.swift; sourceTree = "<group>"; };
 		8F4341715E0E6A4F59AFE36A /* SoundalikeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundalikeApp.swift; sourceTree = "<group>"; };
 		901CF37A616FDA80C38B6B48 /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
 		90E45D74C76FFB29A1A05C86 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -96,20 +88,10 @@
 		C0AC6FB1EB40A7659060B5A7 /* SpotifyConnector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyConnector.swift; sourceTree = "<group>"; };
 		C1E2DED66C8BDEDB22CECFA0 /* ShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShareExtension.entitlements; sourceTree = "<group>"; };
 		C8D14387CD4977ED1CA671A0 /* AppleMusicService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMusicService.swift; sourceTree = "<group>"; };
-		CEC58C0033C539E1671E2964 /* NowPlaying.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlaying.swift; sourceTree = "<group>"; };
 		E47C873420762430D9D27CAD /* Controls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Controls.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		1D3290510ADAB56DD8551885 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				28730161D71999A0E0891148 /* SoundalikeKit in Frameworks */,
-				8368C868E1BF1D3B5070FA6B /* SoundalikeUI in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		4BDE562D44FB231862E2D1B9 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -169,6 +151,7 @@
 				2FF0B24F8B13B3342EDEA007 /* HomeView.swift */,
 				18836419FAE9917D10F93920 /* Info.plist */,
 				775CF1A125A1878D1DF33A4F /* ListenService.swift */,
+				7F50A3F7B221F7B91797603D /* NowPlaying.swift */,
 				15C444B436CD57A5201584A7 /* PlaybackProbe.swift */,
 				AC02359428A223C2A3E57021 /* Soundalike.entitlements */,
 				8F4341715E0E6A4F59AFE36A /* SoundalikeApp.swift */,
@@ -183,9 +166,6 @@
 			children = (
 				901CF37A616FDA80C38B6B48 /* AppRoute.swift */,
 				7114C3621E1664311507C6EC /* Intents.swift */,
-				CEC58C0033C539E1671E2964 /* NowPlaying.swift */,
-				870AD65BA2B29FF1F555C4AD /* SoundalikeActivity.swift */,
-				3D6151AA0B81E88330927A87 /* SoundalikesSnippet.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -220,7 +200,6 @@
 			buildConfigurationList = 6AE4E7625501B611A7DA6DB0 /* Build configuration list for PBXNativeTarget "Controls" */;
 			buildPhases = (
 				8445DC9EE7FAC04FCFF2F329 /* Sources */,
-				1D3290510ADAB56DD8551885 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -228,8 +207,6 @@
 			);
 			name = Controls;
 			packageProductDependencies = (
-				7F74523202D4FDBC149ECD9E /* SoundalikeKit */,
-				2C2E313FE9277AC31E34C120 /* SoundalikeUI */,
 			);
 			productName = Controls;
 			productReference = 0AE59612B8F93874612F719E /* Controls.appex */;
@@ -350,11 +327,9 @@
 				A06D8AC76C4B3B2DA980ECBF /* HomeView.swift in Sources */,
 				DC6039CCB01C632F6C113817 /* Intents.swift in Sources */,
 				AEE2A8604705A695A19AE98C /* ListenService.swift in Sources */,
-				7327106BC8AAF0BCCD370B30 /* NowPlaying.swift in Sources */,
+				422BECB595F24BB0E16A67B7 /* NowPlaying.swift in Sources */,
 				65ABAA9E8A79F08D366DFE0C /* PlaybackProbe.swift in Sources */,
-				1DEE617E74DA2DC8CEB57933 /* SoundalikeActivity.swift in Sources */,
 				E309735176FBE1F9DF25DCD5 /* SoundalikeApp.swift in Sources */,
-				C6868457783F81348587B840 /* SoundalikesSnippet.swift in Sources */,
 				E968B0B2CC91159A1CD85DE3 /* SpotifyConnector.swift in Sources */,
 				87DEF1F413F0F7D5036D57AD /* SpotifyRemote.swift in Sources */,
 			);
@@ -367,9 +342,6 @@
 				B1170D4C7F9BC2A4AB7408A9 /* AppRoute.swift in Sources */,
 				7917AFAEB8E647C442563FB1 /* Controls.swift in Sources */,
 				B13CEC4FE87889C35241DEAC /* Intents.swift in Sources */,
-				A03143EAF62F97F279A18E9E /* NowPlaying.swift in Sources */,
-				11FF31F5D4E652CBFCD66694 /* SoundalikeActivity.swift in Sources */,
-				8664724160B6A7A4B474237F /* SoundalikesSnippet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -517,7 +489,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = FJH4UWVC4K;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -579,7 +551,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = FJH4UWVC4K;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -692,18 +664,10 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = SoundalikeKit;
 		};
-		2C2E313FE9277AC31E34C120 /* SoundalikeUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = SoundalikeUI;
-		};
 		631E0907DC2750597A3B1FBA /* SpotifyiOS */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 8325819B56CC0E6CC5340D00 /* XCRemoteSwiftPackageReference "ios-sdk" */;
 			productName = SpotifyiOS;
-		};
-		7F74523202D4FDBC149ECD9E /* SoundalikeKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = SoundalikeKit;
 		};
 		88E43859FD97D5F43809E1A2 /* SoundalikeKit */ = {
 			isa = XCSwiftPackageProductDependency;

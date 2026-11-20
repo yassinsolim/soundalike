@@ -16,7 +16,9 @@ App Store Connect record and app group.
 
 1. The input is one of:
    - a shared link or a search pick;
-   - the song being played, read without the microphone. `Shared/NowPlaying.swift` reads the Music app through MusicKit, and Spotify through the Web API once the user connects Spotify in the app. Connecting is limited to accounts on the Spotify app's development-mode allow list;
+   - the song being played, read without the microphone by `App/NowPlaying.swift`:
+     - the Music app through MusicKit, which needs no subscription;
+     - Spotify, once the user taps **Connect Spotify** (one Agree tap in the Spotify app, no password). It tries the Web API first. When that fails, because Spotify's development mode only serves 5 allow-listed accounts, it asks the Spotify app through the App Remote SDK (`App/SpotifyRemote.swift`), which worked for a non-allow-listed account in 2–150 ms;
    - a ShazamKit match, used only when nothing can be read.
 2. `SoundalikeClient` calls `GET /api/mobile/similar` first. If that route fails or is missing,
    it falls back to `/api/anysong/similar`, which today it always does because the route returns 404.
@@ -28,19 +30,19 @@ App Store Connect record and app group.
    - Spotify: `https://open.spotify.com/search/isrc:<ISRC>`, which returns exactly that recording.
    - Apple Music: a MusicKit catalog match by ISRC, or the iTunes Search API when MusicKit isn't authorised.
 
-**Control Center, Action Button, Siri and Back Tap** all run `FindSoundalikesIntent`:
+**Control Center, Action Button, Siri and Back Tap** all run `FindSoundalikesIntent`. It opens the app straight onto soundalikes for the playing song (`soundalike://auto`); the app listens only when nothing can be read.
 
-- It runs in the background, reads the playing song and shows the top five soundalikes in a system card over the current app.
-- Rows open the song in the app it came from. When Spotify is connected, a button also adds the song to the Spotify queue.
-- "See all" opens the full list in the app.
-- If nothing can be read, it calls `continueInForeground` and the app listens instead.
+Not possible on iOS 26.6, all tried on the device:
+- **A result card over the current app.** Controls never show snippets or dialogs: the intent returned a snippet every time and nothing appeared.
+- **A Live Activity.** Apple caps it at 160 points tall and collapses it after a few seconds, which was too small to use.
+
+Queueing and playing the full song in Spotify use the Web API, so for now they only work for allow-listed accounts. App Remote could do both for everyone once results carry Spotify track ids.
 
 Links and in-app routes go through one URL scheme handled in `App/SoundalikeApp.swift`:
 
 | URL | Action |
 |---|---|
 | `soundalike://auto` | Read the playing song, or listen when it can't be read |
-| `soundalike://last` | Show the list an intent just showed |
 | `soundalike://find?url=<link>` | Find soundalikes for a shared link |
 | `soundalike://now-playing` | Use the song currently playing in Music |
 | `soundalike://listen` | Recognise the song playing nearby |
