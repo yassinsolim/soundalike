@@ -129,7 +129,7 @@ struct HomeView: View {
         }
     }
 
-    private func handle(_ route: AppRoute, explicit: Bool) {
+    private func handle(_ route: AppRoute, explicit: Bool, privateOutput: Bool = false) {
         hint = nil
         switch route {
         case .auto:
@@ -139,8 +139,8 @@ struct HomeView: View {
                 EventLog.record("auto", ["finding": finding.rawValue, "explicit": explicit])
                 switch finding {
                 case .musicApp: handle(.nowPlaying, explicit: explicit)
-                case .speaker, .external: handle(.listen, explicit: explicit)
-                case .headphones: hint = .headphones
+                case .speaker: handle(.listen, explicit: explicit)
+                case .external: handle(.listen, explicit: explicit, privateOutput: true)
                 case .silence: if explicit { hint = .nothingPlaying }
                 }
             }
@@ -171,8 +171,12 @@ struct HomeView: View {
                     path = [ResultsRequest(kind: .seed(seed))]
                 } catch is CancellationError {
                 } catch {
-                    EventLog.record("listen", ["ms": EventLog.ms(since: started), "ok": false, "error": "\(error)"])
-                    self.error = error.localizedDescription
+                    EventLog.record("listen", ["ms": EventLog.ms(since: started), "ok": false, "error": "\(error)", "privateOutput": privateOutput])
+                    if privateOutput, case ListenService.Failure.noMatch = error {
+                        hint = .headphones
+                    } else {
+                        self.error = error.localizedDescription
+                    }
                 }
             }
         }
@@ -215,7 +219,7 @@ struct HintCard: View {
     private var message: String {
         switch hint {
         case .headphones:
-            "iOS doesn't let apps hear what's in your headphones. In Spotify, tap Share › Soundalike, or Share › Copy link and paste it here. Songs from Apple Music are found automatically."
+            "Soundalike couldn't hear it. iOS doesn't let apps read what other apps play into headphones. In Spotify, tap Share › Soundalike, or Share › Copy link and paste it here. Apple Music songs are found automatically."
         case .nothingPlaying:
             "Play a song in Apple Music or Spotify and try again, or search for one."
         }
