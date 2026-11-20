@@ -15,8 +15,14 @@ public struct ResultActions {
     public var open: (Match, MusicSource) async -> Void
     public var openSymbol: String
     public var openLabel: (MusicSource) -> String
-    /// Apple Music library and queue actions, only where MusicKit is available.
-    public var playNext: ((Match) async throws -> Void)?
+    /// Plays the full song in the music app without leaving Soundalike (Spotify
+    /// connected, or an Apple Music subscription). Without it, tapping plays a preview.
+    public var play: ((Match) async throws -> Void)?
+    public var playMessage: String
+    /// Adds a song to the music app's queue; offered on a right swipe and in the menu.
+    public var queue: ((Match) async throws -> Void)?
+    public var queueLabel: String
+    /// Apple Music library actions, only with a subscription.
     public var playAll: (([Match]) async throws -> Void)?
     public var saveAsPlaylist: ((String, [Match]) async throws -> Void)?
 
@@ -24,14 +30,20 @@ public struct ResultActions {
         open: @escaping (Match, MusicSource) async -> Void,
         openSymbol: String = "arrow.up.forward.app.fill",
         openLabel: @escaping (MusicSource) -> String = { "Open in \($0.displayName)" },
-        playNext: ((Match) async throws -> Void)? = nil,
+        play: ((Match) async throws -> Void)? = nil,
+        playMessage: String = "",
+        queue: ((Match) async throws -> Void)? = nil,
+        queueLabel: String = "Play Next",
         playAll: (([Match]) async throws -> Void)? = nil,
         saveAsPlaylist: ((String, [Match]) async throws -> Void)? = nil
     ) {
         self.open = open
         self.openSymbol = openSymbol
         self.openLabel = openLabel
-        self.playNext = playNext
+        self.play = play
+        self.playMessage = playMessage
+        self.queue = queue
+        self.queueLabel = queueLabel
         self.playAll = playAll
         self.saveAsPlaylist = saveAsPlaylist
     }
@@ -77,20 +89,23 @@ public struct ResultsView: View {
                     .listRowSeparator(.hidden)
                 appleMusicBar(results.matches)
                 ForEach(results.matches) { match in
-                    ResultRow(match: match, player: player, symbol: actions.openSymbol, label: actions.openLabel(target)) {
+                    ResultRow(
+                        match: match, player: player, symbol: actions.openSymbol, label: actions.openLabel(target),
+                        playFull: actions.play.map { play in { run(actions.playMessage) { try await play(match) } } }
+                    ) {
                         Task { await actions.open(match, target) }
                     }
                     .contextMenu { menu(for: match) }
                     .swipeActions(edge: .leading) {
-                        if let playNext = actions.playNext, target == .appleMusic {
-                            Button { run("Playing next") { try await playNext(match) } } label: {
-                                Label("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward")
+                        if let queue = actions.queue {
+                            Button { run("Added to your queue") { try await queue(match) } } label: {
+                                Label(actions.queueLabel, systemImage: "text.line.first.and.arrowtriangle.forward")
                             }
-                            .tint(.orange)
+                            .tint(.green)
                         }
                     }
                 }
-                Text("Tap a song for a 30-second preview.")
+                Text((actions.play == nil ? "Tap a song for a 30-second preview." : "Tap a song to play it.") + (actions.queue == nil ? "" : " Swipe right to queue it."))
                     .font(.footnote).foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity).listRowSeparator(.hidden)
             }
@@ -143,10 +158,13 @@ public struct ResultsView: View {
     private func menu(for match: Match) -> some View {
         Button { Task { await actions.open(match, .spotify) } } label: { Label(actions.openLabel(.spotify), systemImage: actions.openSymbol) }
         Button { Task { await actions.open(match, .appleMusic) } } label: { Label(actions.openLabel(.appleMusic), systemImage: actions.openSymbol) }
-        if let playNext = actions.playNext {
-            Button { run("Playing next") { try await playNext(match) } } label: {
-                Label("Play Next in Apple Music", systemImage: "text.line.first.and.arrowtriangle.forward")
+        if let queue = actions.queue {
+            Button { run("Added to your queue") { try await queue(match) } } label: {
+                Label(actions.queueLabel, systemImage: "text.line.first.and.arrowtriangle.forward")
             }
+        }
+        if actions.play != nil {
+            Button { player.toggle(match) } label: { Label("Play 30-second preview", systemImage: "play.circle") }
         }
         ShareLink(item: Destinations.spotify(match)) { Label("Share", systemImage: "square.and.arrow.up") }
     }
@@ -194,14 +212,25 @@ struct ResultRow: View {
     @ObservedObject var player: PreviewPlayer
     let symbol: String
     let label: String
+    /// Plays the whole song in the music app; when nil, tapping plays the preview here.
+    let playFull: (() -> Void)?
     let open: () -> Void
+
+    private func tap() {
+        if let playFull {
+            player.stop()
+            playFull()
+        } else {
+            player.toggle(match)
+        }
+    }
 
     private var isPlaying: Bool { player.playingID == match.id }
     private var isLoading: Bool { player.loadingID == match.id }
 
     var body: some View {
         HStack(spacing: 12) {
-            Button { player.toggle(match) } label: {
+            Button(action: tap) {
                 ZStack {
                     Artwork(url: match.artworkURL, size: 52)
                     Circle().fill(.black.opacity(isPlaying || isLoading ? 0.45 : 0.25)).frame(width: 30, height: 30)
@@ -221,8 +250,8 @@ struct ResultRow: View {
                 }
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(isPlaying ? "Stop preview" : "Play preview")
-            .disabled(match.previewURL == nil && match.deezerID == nil)
+            .accessibilityLabel(playFull != nil ? "Play" : isPlaying ? "Stop preview" : "Play preview")
+            .disabled(playFull == nil && match.previewURL == nil && match.deezerID == nil)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(match.title).font(.body.weight(.semibold)).lineLimit(1)
@@ -230,7 +259,7 @@ struct ResultRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
-            .onTapGesture { player.toggle(match) }
+            .onTapGesture(perform: tap)
 
             MatchBadge(value: match.match)
 

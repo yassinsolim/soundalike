@@ -31,7 +31,9 @@ final class Router: ObservableObject {
     }
 
     func handle(_ url: URL) {
-        if let route = AppRoute(url: url) {
+        if SpotifyAccount.isCallback(url) {
+            Task { await SpotifyConnector.shared.handleCallback(url) }
+        } else if let route = AppRoute(url: url) {
             pending = route
         } else if SharedLink.parse(url) != nil {
             // A plain Spotify or Apple Music link opened with Soundalike.

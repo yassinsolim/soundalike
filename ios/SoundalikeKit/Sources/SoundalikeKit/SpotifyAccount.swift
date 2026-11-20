@@ -26,27 +26,37 @@ public struct SpotifyAccount: Sendable {
     // MARK: Sign-in
 
     public struct Authorization: Sendable {
-        public let url: URL
+        /// Opens the Spotify app's own consent screen: no password, one tap on "Agree".
+        public let appURL: URL
+        /// The same request on accounts.spotify.com, for when Spotify isn't installed.
+        public let webURL: URL
         let verifier: String
-        let state: String
     }
 
     public static func authorization() -> Authorization {
         let verifier = randomURLSafe(64)
         let challenge = Data(SHA256.hash(data: Data(verifier.utf8))).base64URLEncoded
-        let state = randomURLSafe(16)
-        let url = URL(string: "https://accounts.spotify.com/authorize")!.appending(query: [
+        let query: [String: String?] = [
             "client_id": clientID, "response_type": "code", "redirect_uri": redirectURI,
-            "code_challenge_method": "S256", "code_challenge": challenge, "scope": scopes, "state": state,
-        ])
-        return Authorization(url: url, verifier: verifier, state: state)
+            "code_challenge_method": "S256", "code_challenge": challenge, "scope": scopes,
+            "utm_source": "app.yassin.soundalike", "nosignup": "true", "nolinks": "true",
+        ]
+        // Same URL the official SpotifyLogin SDK opens (github.com/spotify/ios-auth).
+        return Authorization(
+            appURL: URL(string: "spotify-action://authorize")!.appending(query: query),
+            webURL: URL(string: "https://accounts.spotify.com/authorize")!.appending(query: query),
+            verifier: verifier
+        )
+    }
+
+    public static func isCallback(_ url: URL) -> Bool {
+        url.absoluteString.hasPrefix(redirectURI)
     }
 
     /// Finishes sign-in with the URL Spotify redirected to.
     public func complete(_ authorization: Authorization, callback: URL) async throws {
         let items = URLComponents(url: callback, resolvingAgainstBaseURL: false)?.queryItems ?? []
-        guard items.first(where: { $0.name == "state" })?.value == authorization.state,
-              let code = items.first(where: { $0.name == "code" })?.value else { throw SpotifyError.signInFailed }
+        guard let code = items.first(where: { $0.name == "code" })?.value else { throw SpotifyError.signInFailed }
         try await requestToken([
             "grant_type": "authorization_code", "code": code, "redirect_uri": Self.redirectURI,
             "client_id": Self.clientID, "code_verifier": authorization.verifier,
@@ -87,6 +97,20 @@ public struct SpotifyAccount: Sendable {
         return (((object["tracks"] as? [String: Any])?["items"] as? [[String: Any]])?.first?["id"] as? String)
     }
 
+    /// Spotify's id for a result: from the server's link when there is one, else by ISRC.
+    public func trackID(for match: Match) async throws -> String? {
+        if let url = match.spotifyURL, case .spotifyTrack(let id, _)? = SharedLink.parse(url) { return id }
+        guard let isrc = match.isrc else { return nil }
+        return try await trackID(isrc: isrc)
+    }
+
+    /// Plays a track in Spotify on the device the user is listening on (Premium only).
+    public func play(trackID: String) async throws {
+        let body = try JSONSerialization.data(withJSONObject: ["uris": ["spotify:track:\(trackID)"]])
+        let (_, status) = try await api("PUT", "me/player/play", body: body)
+        guard (200..<300).contains(status) else { throw status == 404 ? SpotifyError.noActiveDevice : SpotifyError.requestFailed(status) }
+    }
+
     /// Adds a track to the user's Spotify queue (Premium only).
     public func queue(trackID: String) async throws {
         let (_, status) = try await api("POST", "me/player/queue?uri=spotify%3Atrack%3A\(trackID)")
@@ -101,7 +125,7 @@ public struct SpotifyAccount: Sendable {
         var expires: Date
     }
 
-    func api(_ method: String, _ path: String) async throws -> (Data, Int) {
+    func api(_ method: String, _ path: String, body: Data? = nil) async throws -> (Data, Int) {
         guard var token = loadToken() else { throw SpotifyError.notConnected }
         if token.expires < Date().addingTimeInterval(60) {
             try await requestToken(["grant_type": "refresh_token", "refresh_token": token.refresh, "client_id": Self.clientID])
@@ -111,6 +135,10 @@ public struct SpotifyAccount: Sendable {
         var request = URLRequest(url: URL(string: "https://api.spotify.com/v1/" + path)!, timeoutInterval: 10)
         request.httpMethod = method
         request.setValue("Bearer \(token.access)", forHTTPHeaderField: "Authorization")
+        if let body {
+            request.httpBody = body
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
         do {
             let (data, response) = try await http.session.data(for: request)
             return (data, (response as? HTTPURLResponse)?.statusCode ?? 0)

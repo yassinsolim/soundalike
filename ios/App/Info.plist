@@ -36,6 +36,7 @@
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>spotify</string>
+		<string>spotify-action</string>
 		<string>music</string>
 	</array>
 	<key>NSAppleMusicUsageDescription</key>

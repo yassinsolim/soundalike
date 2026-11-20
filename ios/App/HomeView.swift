@@ -31,7 +31,7 @@ struct HomeView: View {
     @State private var lastAuto = Date.distantPast
     /// The song behind results that auto-detect opened, so returning to the app can follow a song change.
     @State private var autoSeedKey: String?
-    @State private var spotifyConnected = SpotifyAccount().isConnected
+    @ObservedObject private var spotify = SpotifyConnector.shared
 
     enum Hint {
         case headphones
@@ -76,6 +76,9 @@ struct HomeView: View {
             .task(id: query) { await suggest() }
             .navigationDestination(for: ResultsRequest.self) { ResultsScreen(request: $0) }
             .overlay { if listener.isListening { ListeningOverlay { listener.cancel() } } }
+            .onChange(of: spotify.failure) { _, failure in
+                if let failure { error = failure; spotify.failure = nil }
+            }
             .alert("Soundalike", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
                 Button("OK", role: .cancel) {}
             } message: { Text(error ?? "") }
@@ -125,35 +128,18 @@ struct HomeView: View {
 
     private var spotifySection: some View {
         Section {
-            if spotifyConnected {
+            if spotify.isConnected {
                 Label("Spotify connected", systemImage: "checkmark.circle.fill")
-                Button("Disconnect Spotify", role: .destructive) {
-                    SpotifyAccount().disconnect()
-                    spotifyConnected = false
-                }
+                Button("Disconnect Spotify", role: .destructive) { spotify.disconnect() }
             } else {
-                Button { Task { await connectSpotify() } } label: {
+                Button { Task { await spotify.connect(using: webAuthenticationSession) } } label: {
                     Label("Connect Spotify", systemImage: "link")
                 }
             }
         } footer: {
-            Text("Lets Soundalike read the song Spotify is playing, even in headphones, and add results to your Spotify queue. Beta: only invited Spotify accounts can connect.")
-        }
-    }
-
-    private func connectSpotify() async {
-        let authorization = SpotifyAccount.authorization()
-        do {
-            let callback = try await webAuthenticationSession.authenticate(
-                using: authorization.url, callbackURLScheme: SpotifyAccount.callbackScheme, preferredBrowserSession: .shared
-            )
-            try await SpotifyAccount().complete(authorization, callback: callback)
-            spotifyConnected = true
-            EventLog.record("spotify-connect", ["ok": true])
-        } catch ASWebAuthenticationSessionError.canceledLogin {
-        } catch {
-            EventLog.record("spotify-connect", ["ok": false, "error": "\(error)"])
-            self.error = error.localizedDescription
+            Text(spotify.isConnected
+                 ? "Soundalike reads what Spotify is playing, plays results there and adds them to your queue."
+                 : "One tap in the Spotify app, no password. Soundalike can then read what Spotify is playing, even in headphones, and play results in Spotify.")
         }
     }
 
@@ -338,6 +324,7 @@ struct ListeningOverlay: View {
 struct ResultsScreen: View {
     let request: ResultsRequest
     @StateObject private var model = ResultsModel()
+    @ObservedObject private var spotify = SpotifyConnector.shared
     /// Queue and playlist actions need an Apple Music subscription; without one they stay hidden.
     @State private var canUseAppleMusic = false
 
@@ -362,21 +349,55 @@ struct ResultsScreen: View {
 
     private var actions: ResultActions {
         let music = AppleMusicService.shared
-        return ResultActions(
-            open: { match, target in
-                let url: URL
-                if target == .appleMusic {
-                    let viaMusicKit = MusicAuthorization.currentStatus == .authorized ? await music.url(for: match) : nil
-                    if let viaMusicKit { url = viaMusicKit } else { url = await Destinations().appleMusic(match) }
-                } else {
-                    url = Destinations.spotify(match)
-                }
-                await Opener.open(url)
-            },
-            playNext: canUseAppleMusic ? { match in try await logged("play-next") { try await music.playNext(match) } } : nil,
-            playAll: canUseAppleMusic ? { matches in try await logged("play-all") { try await music.playAll(matches) } } : nil,
-            saveAsPlaylist: canUseAppleMusic ? { name, matches in try await logged("save-playlist") { try await music.saveAsPlaylist(name: name, matches) } } : nil
-        )
+        let open: (Match, MusicSource) async -> Void = { match, target in
+            let url: URL
+            if target == .appleMusic {
+                let viaMusicKit = MusicAuthorization.currentStatus == .authorized ? await music.url(for: match) : nil
+                if let viaMusicKit { url = viaMusicKit } else { url = await Destinations().appleMusic(match) }
+            } else if spotify.isConnected, let id = try? await SpotifyAccount().trackID(for: match) {
+                url = URL(string: "https://open.spotify.com/track/\(id)")!
+            } else {
+                url = Destinations.spotify(match)
+            }
+            await Opener.open(url)
+        }
+        switch model.target {
+        case .spotify where spotify.isConnected:
+            return ResultActions(
+                open: open,
+                play: { match in
+                    try await logged("spotify-play") {
+                        guard let id = try await SpotifyAccount().trackID(for: match) else { throw SoundalikeError.notInCatalog }
+                        do {
+                            try await SpotifyAccount().play(trackID: id)
+                        } catch SpotifyError.noActiveDevice {
+                            // Spotify isn't running anywhere: open the song there instead.
+                            await Opener.open(URL(string: "https://open.spotify.com/track/\(id)")!)
+                        }
+                    }
+                },
+                playMessage: "Playing in Spotify",
+                queue: { match in
+                    try await logged("spotify-queue") {
+                        guard let id = try await SpotifyAccount().trackID(for: match) else { throw SoundalikeError.notInCatalog }
+                        try await SpotifyAccount().queue(trackID: id)
+                    }
+                },
+                queueLabel: "Add to Spotify Queue"
+            )
+        case .appleMusic where canUseAppleMusic:
+            return ResultActions(
+                open: open,
+                play: { match in try await logged("apple-play") { try await music.playNow(match) } },
+                playMessage: "Playing in Apple Music",
+                queue: { match in try await logged("play-next") { try await music.playNext(match) } },
+                queueLabel: "Play Next",
+                playAll: { matches in try await logged("play-all") { try await music.playAll(matches) } },
+                saveAsPlaylist: { name, matches in try await logged("save-playlist") { try await music.saveAsPlaylist(name: name, matches) } }
+            )
+        default:
+            return ResultActions(open: open)
+        }
     }
 }
 

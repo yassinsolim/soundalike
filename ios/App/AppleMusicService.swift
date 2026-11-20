@@ -97,6 +97,13 @@ final class AppleMusicService {
         }
     }
 
+    /// Plays a result now in the Music app.
+    func playNow(_ match: Match) async throws {
+        try await requireSubscription()
+        SystemMusicPlayer.shared.queue = [try await song(for: match)]
+        try await SystemMusicPlayer.shared.play()
+    }
+
     /// Replaces the Music app's queue with every result that is in Apple Music.
     func playAll(_ matches: [Match]) async throws {
         try await requireSubscription()
