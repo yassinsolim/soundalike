@@ -25,6 +25,17 @@ final class ListenService: ObservableObject {
     private var session: SHManagedSession?
 
     func identify() async throws -> Seed {
+        do {
+            return try await attempt()
+        } catch Failure.unavailable {
+            // Right after the app is brought forward (from Control Center or Siri) the
+            // microphone can still be busy; ShazamKit then fails within ~2 s. One retry fixes it.
+            try await Task.sleep(for: .milliseconds(800))
+            return try await attempt()
+        }
+    }
+
+    private func attempt() async throws -> Seed {
         let session = SHManagedSession()
         self.session = session
         isListening = true

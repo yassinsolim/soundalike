@@ -5,13 +5,14 @@ import UIKit
 
 /// One result, prepared ahead so the system card renders instantly: snippets can't
 /// load remote images, so the cover is fetched here.
-struct SnippetRow: Identifiable {
+struct SnippetRow: Identifiable, Codable {
     let match: Match
-    let cover: UIImage?
+    let coverData: Data?
     let openURL: URL
     let spotifyTrackID: String?
 
     var id: String { match.id }
+    var cover: UIImage? { coverData.flatMap(UIImage.init(data:)) }
 
     static let count = 5
 
@@ -35,7 +36,7 @@ struct SnippetRow: Identifiable {
                     } else {
                         url = Destinations.spotify(match)
                     }
-                    return (index, SnippetRow(match: match, cover: await cover, openURL: url, spotifyTrackID: trackID))
+                    return (index, SnippetRow(match: match, coverData: await cover, openURL: url, spotifyTrackID: trackID))
                 }
             }
             var rows: [(Int, SnippetRow)] = []
@@ -44,9 +45,44 @@ struct SnippetRow: Identifiable {
         }
     }
 
-    private static func image(_ url: URL?) async -> UIImage? {
+    private static func image(_ url: URL?) async -> Data? {
         guard let url, let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
-        return UIImage(data: data)?.preparingThumbnail(of: CGSize(width: 96, height: 96))
+        return UIImage(data: data)?.preparingThumbnail(of: CGSize(width: 96, height: 96))?.jpegData(compressionQuality: 0.8)
+    }
+}
+
+/// What the card shows, saved by `FindSoundalikesIntent` and read by the snippet
+/// intent, which the system may run again whenever it redraws the card.
+struct SnippetCard: Codable {
+    let seed: Seed
+    let rows: [SnippetRow]
+
+    private static var url: URL? {
+        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: PendingRoute.appGroup)?
+            .appendingPathComponent("Library/Caches/snippet.json")
+    }
+
+    func save() {
+        guard let url = Self.url, let data = try? JSONEncoder().encode(self) else { return }
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? data.write(to: url, options: .atomic)
+    }
+
+    static func load() -> SnippetCard? {
+        guard let url, let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONDecoder().decode(SnippetCard.self, from: data)
+    }
+}
+
+/// Draws the card over the current app (Control Center, Action Button, Siri).
+struct SoundalikesSnippetIntent: SnippetIntent {
+    static let title: LocalizedStringResource = "Soundalikes"
+    static let isDiscoverable = false
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ShowsSnippetView {
+        guard let card = SnippetCard.load() else { return .result(view: AnyView(EmptyView())) }
+        return .result(view: AnyView(SoundalikesSnippet(seed: card.seed, rows: card.rows)))
     }
 }
 

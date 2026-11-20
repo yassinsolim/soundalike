@@ -56,16 +56,16 @@ struct FindSoundalikesIntent: AppIntent {
     static let supportedModes: IntentModes = [.background, .foreground(.dynamic)]
 
     @MainActor
-    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
+    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetIntent {
         let started = Date()
         guard let seed = await NowPlaying.read() else {
             EventLog.record("intent", ["path": "listen", "ms": EventLog.ms(since: started)])
             PendingRoute.post(.listen)
             try await continueInForeground(nil, alwaysConfirm: false)
-            return .result(dialog: "Listening…", view: AnyView(EmptyView()))
+            return .result(dialog: "Listening…")
         }
-        let card = try await snippet(for: try await SoundalikeClient().similar(to: seed), started: started)
-        return .result(dialog: card.dialog, view: card.view)
+        let dialog = try await snippet(for: try await SoundalikeClient().similar(to: seed), started: started)
+        return .result(dialog: dialog, snippetIntent: SoundalikesSnippetIntent())
     }
 }
 
@@ -82,19 +82,21 @@ struct FindForLinkIntent: AppIntent {
     }
 
     @MainActor
-    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
+    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetIntent {
         let started = Date()
-        let card = try await snippet(for: try await SoundalikeClient().similar(toShared: link), started: started)
-        return .result(dialog: card.dialog, view: card.view)
+        let dialog = try await snippet(for: try await SoundalikeClient().similar(toShared: link), started: started)
+        return .result(dialog: dialog, snippetIntent: SoundalikesSnippetIntent())
     }
 }
 
+/// Prepares and saves the card, and returns what Siri says with it.
 @MainActor
-private func snippet(for results: SoundalikeResults, started: Date) async throws -> (dialog: IntentDialog, view: AnyView) {
+private func snippet(for results: SoundalikeResults, started: Date) async throws -> IntentDialog {
     LastResults.save(results)
     let rows = await SnippetRow.make(from: results)
+    SnippetCard(seed: results.seed, rows: rows).save()
     EventLog.record("intent", ["path": "snippet", "ms": EventLog.ms(since: started), "source": results.seed.source.rawValue, "seed": results.seed.title])
-    return (IntentDialog(stringLiteral: "Sounds like \(results.seed.title)"), AnyView(SoundalikesSnippet(seed: results.seed, rows: rows)))
+    return IntentDialog(stringLiteral: "Sounds like \(results.seed.title)")
 }
 
 /// Opens one result in the music app the song came from.
