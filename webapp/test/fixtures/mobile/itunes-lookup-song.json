@@ -1,0 +1,38 @@
+{
+ "resultCount": 1,
+ "results": [
+  {
+   "wrapperType": "track",
+   "kind": "song",
+   "artistId": 14430880,
+   "collectionId": 1446013584,
+   "trackId": 1446013598,
+   "artistName": "Nena",
+   "collectionName": "99 Luftballons",
+   "trackName": "99 Luftballons",
+   "collectionCensoredName": "99 Luftballons",
+   "trackCensoredName": "99 Luftballons",
+   "artistViewUrl": "https://music.apple.com/de/artist/nena/14430880?uo=4",
+   "collectionViewUrl": "https://music.apple.com/de/album/99-luftballons/1446013584?i=1446013598&uo=4",
+   "trackViewUrl": "https://music.apple.com/de/album/99-luftballons/1446013584?i=1446013598&uo=4",
+   "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/a7/6e/fb/a76efb31-b380-673f-886d-a31b8f763815/mzaf_1652288231289913225.plus.aac.p.m4a",
+   "artworkUrl30": "https://is1-ssl.mzstatic.com/image/thumb/Music128/v4/58/b3/df/58b3df70-d2e0-80e9-3f98-87d63fb9f02e/0859381162407.jpg/30x30bb.jpg",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Music128/v4/58/b3/df/58b3df70-d2e0-80e9-3f98-87d63fb9f02e/0859381162407.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music128/v4/58/b3/df/58b3df70-d2e0-80e9-3f98-87d63fb9f02e/0859381162407.jpg/100x100bb.jpg",
+   "collectionPrice": 9.99,
+   "trackPrice": 1.29,
+   "releaseDate": "1983-01-01T12:00:00Z",
+   "collectionExplicitness": "notExplicit",
+   "trackExplicitness": "notExplicit",
+   "discCount": 1,
+   "discNumber": 1,
+   "trackCount": 11,
+   "trackNumber": 11,
+   "trackTimeMillis": 233000,
+   "country": "DEU",
+   "currency": "EUR",
+   "primaryGenreName": "Pop",
+   "isStreamable": true
+  }
+ ]
+}

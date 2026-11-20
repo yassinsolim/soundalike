@@ -23,6 +23,10 @@
     { "source": "/api/ratings-v6", "destination": "/api/ratings?__soundalike_handler=ratings-v6" },
     { "source": "/api/spicetify-feedback", "destination": "/api/ratings?__soundalike_handler=spicetify-feedback" },
     { "source": "/api/feedback-digest", "destination": "/api/ratings?__soundalike_handler=feedback-digest" },
+    { "source": "/api/mobile/similar", "destination": "/api/ratings?__soundalike_handler=mobile-similar" },
+    { "source": "/api/mobile/link", "destination": "/api/ratings?__soundalike_handler=mobile-link" },
+    { "source": "/find", "destination": "/find/index.html" },
+    { "source": "/find/", "destination": "/find/index.html" },
     { "source": "/evaluate", "destination": "/evaluate/index.html" },
     { "source": "/evaluate/", "destination": "/evaluate/index.html" },
     { "source": "/evaluate-v5", "destination": "/evaluate-v5/index.html" },
@@ -59,6 +63,20 @@
       "source": "/anysong",
       "headers": [
         { "key": "Content-Security-Policy", "value": "default-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; frame-ancestors 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: https://dzcdn.net https://*.dzcdn.net; media-src https://dzcdn.net https://*.dzcdn.net; connect-src 'self'" },
+        { "key": "Cache-Control", "value": "no-cache" }
+      ]
+    },
+    {
+      "source": "/find",
+      "headers": [
+        { "key": "Content-Security-Policy", "value": "default-src 'none'; base-uri 'none'; form-action 'self'; frame-src 'none'; frame-ancestors 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: https://*.dzcdn.net https://*.spotifycdn.com https://*.scdn.co https://*.mzstatic.com; media-src https://dzcdn.net https://*.dzcdn.net; connect-src 'self'" },
+        { "key": "Cache-Control", "value": "no-cache" }
+      ]
+    },
+    {
+      "source": "/find/(.*)",
+      "headers": [
+        { "key": "Content-Security-Policy", "value": "default-src 'none'; base-uri 'none'; form-action 'self'; frame-src 'none'; frame-ancestors 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: https://*.dzcdn.net https://*.spotifycdn.com https://*.scdn.co https://*.mzstatic.com; media-src https://dzcdn.net https://*.dzcdn.net; connect-src 'self'" },
         { "key": "Cache-Control", "value": "no-cache" }
       ]
     },

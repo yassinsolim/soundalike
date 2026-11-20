@@ -139,7 +139,7 @@ webapp/
     _reco.py          # numpy recommender (fetches the index from the GitHub Release)
     recommend.py      # POST /api/recommend
     search.py         # GET  /api/search?q=
-    ratings.js        # shared ratings, feedback, and digest dispatcher
+    ratings.js        # shared ratings, feedback, digest, and mobile API dispatcher
     ratings-v2.js     # POST-only private full-track v2 ingestion
     ratings-pacing-v3.js # POST-only private pacing V3 ingestion
     ratings-v5.js     # archived V5 private ratings ingestion
@@ -148,6 +148,9 @@ webapp/
     ratings-v6.js     # active V6 development ratings ingestion
     spicetify-feedback.js # public-CORS extension feedback with private storage
     spicetify-feedback-digest.js # daily private Discord digest
+    mobile.js         # GET /api/mobile/similar and /api/mobile/link (phone clients)
+    mobile-links.js   # shared-link parsing and catalogue matching for mobile.js
+  find/               # phone page: /find?url=<shared Spotify or Apple Music link>
   evaluate/           # active blinded V6 evaluator + compatibility V5 assets
   evaluate-v5/        # byte-preserved V5 evaluator
   evaluate-semantic-v2/ # byte-preserved semantic v2 evaluator
@@ -203,7 +206,9 @@ succeeds. Any Linux host can run the same app if it provides:
 3. **Environment variables** in a root-owned file read by the service:
    `SOUNDALIKE_STORAGE_DIR` (see [Private storage setup](#private-storage-setup)),
    and optionally `CRON_SECRET` and `SOUNDALIKE_FEEDBACK_DISCORD_WEBHOOK` (see
-   [Private Discord feedback notifications](#private-discord-feedback-notifications)).
+   [Private Discord feedback notifications](#private-discord-feedback-notifications)),
+   and for the [mobile API](../docs/ANYSONG.md#mobile-api) `SOUNDALIKE_ENGINE_URL`,
+   `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` (all optional).
 4. **A scheduler** that calls each `crons` entry in `site.json` (UTC) with
    `GET <path>` and `Authorization: Bearer $CRON_SECRET`.
 5. **A hostname**, for example a Cloudflare Tunnel route to the gateway's local
