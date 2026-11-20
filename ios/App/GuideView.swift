@@ -1,27 +1,29 @@
 import SwiftUI
 
-/// First-run guide: how to reach Soundalike from the music apps people already use.
+/// First-run guide: the quickest ways to reach Soundalike from where people listen.
 struct GuideView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             List {
-                Section("From Spotify") {
-                    Step(number: 1, text: "On any song, tap ••• and then Share.")
-                    Step(number: 2, text: "Tap More, then Soundalike.")
-                    Step(number: 3, text: "Tip: in More, tap Edit and add Soundalike to Favorites so it's always first.")
-                }
-                Section("From Apple Music") {
-                    Step(number: 1, text: "On any song, tap ••• and then Share.")
-                    Step(number: 2, text: "Tap Soundalike in the row of apps.")
-                }
-                Section("Without touching your music app") {
-                    Step(number: 1, text: "Say \"Hey Siri, Soundalike this song\" to recognise what's playing.")
-                    Step(number: 2, text: "Add Recognise Song to the Action Button or Control Center: Settings › Action Button, or edit Control Center and search for Soundalike.")
+                Section {
+                    Step(symbol: "waveform", text: "Open Soundalike while music plays. It reads the song from Apple Music, or listens for anything playing out loud.")
+                    Step(symbol: "switch.2", text: "One press from anywhere: add Soundalike to Control Center, or to the Action Button in Settings › Action Button › Controls.")
+                    Step(symbol: "hand.tap", text: "Or tap the back of your phone: Settings › Accessibility › Touch › Back Tap › Double Tap › Find Soundalikes.")
+                } header: {
+                    Text("Find what's playing")
                 }
                 Section {
-                    Text("Tap a result to hear a 30-second preview. Tap the arrow to open it in your music app.")
+                    Step(symbol: "square.and.arrow.up", text: "Spotify: tap Share › More › Soundalike. In More, tap Edit and add Soundalike to Favorites so it's always in the first row.")
+                    Step(symbol: "square.and.arrow.up", text: "Apple Music: tap ••• › Share › Soundalike.")
+                } header: {
+                    Text("With headphones on")
+                } footer: {
+                    Text("iOS doesn't let apps hear headphones, so share the song instead.")
+                }
+                Section {
+                    Text("Tap a cover for a 30-second preview. Tap the arrow to play the song in your music app.")
                         .foregroundStyle(.secondary)
                 }
             }
@@ -32,14 +34,14 @@ struct GuideView: View {
 }
 
 private struct Step: View {
-    let number: Int
+    let symbol: String
     let text: String
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text("\(number)").font(.subheadline.weight(.bold)).foregroundStyle(.white)
-                .frame(width: 24, height: 24).background(Color.accentColor, in: Circle())
+        Label {
             Text(text)
+        } icon: {
+            Image(systemName: symbol).foregroundStyle(Color.accentColor)
         }
     }
 }

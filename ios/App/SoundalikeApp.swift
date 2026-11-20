@@ -11,6 +11,7 @@ struct SoundalikeApp: App {
         WindowGroup {
             HomeView()
                 .environmentObject(router)
+                .onReceive(NotificationCenter.default.publisher(for: PendingRoute.posted)) { _ in router.takePending() }
                 .onOpenURL { router.handle($0) }
                 .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
                     if let url = activity.webpageURL { router.handle(url) }
@@ -23,6 +24,11 @@ struct SoundalikeApp: App {
 @MainActor
 final class Router: ObservableObject {
     @Published var pending: AppRoute?
+
+    /// Picks up a route an App Intent or Control left in the app group.
+    func takePending() {
+        if let route = PendingRoute.take() { pending = route }
+    }
 
     func handle(_ url: URL) {
         if let route = AppRoute(url: url) {
@@ -37,23 +43,14 @@ final class Router: ObservableObject {
 struct SoundalikeShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
-            intent: ListenAndFindIntent(),
+            intent: FindSoundalikesIntent(),
             phrases: [
+                "\(.applicationName) this song",
                 "Find soundalikes with \(.applicationName)",
                 "What sounds like this in \(.applicationName)",
-                "\(.applicationName) this song",
             ],
-            shortTitle: "Recognise Song",
+            shortTitle: "Find Soundalikes",
             systemImageName: "waveform"
-        )
-        AppShortcut(
-            intent: FindForCurrentSongIntent(),
-            phrases: [
-                "Find soundalikes for the current song in \(.applicationName)",
-                "\(.applicationName) what's playing",
-            ],
-            shortTitle: "Now Playing",
-            systemImageName: "music.note"
         )
         AppShortcut(
             intent: FindForLinkIntent(),

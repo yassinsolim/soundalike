@@ -2,35 +2,22 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
-/// Control Center, Lock Screen and Action Button controls.
+/// Control Center, Lock Screen and Action Button control.
 @main
 struct SoundalikeControls: WidgetBundle {
     var body: some Widget {
-        RecogniseControl()
-        NowPlayingControl()
+        FindSoundalikesControl()
     }
 }
 
-struct RecogniseControl: ControlWidget {
+struct FindSoundalikesControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
-        StaticControlConfiguration(kind: "app.yassin.soundalike.control.recognise") {
-            ControlWidgetButton(action: ListenAndFindIntent()) {
-                Label("Recognise Song", systemImage: "waveform")
+        StaticControlConfiguration(kind: "app.yassin.soundalike.control.find") {
+            ControlWidgetButton(action: FindSoundalikesIntent()) {
+                Label("Soundalike", systemImage: "waveform")
             }
         }
-        .displayName("Recognise Song")
-        .description("Recognise the song playing around you and find soundalikes.")
-    }
-}
-
-struct NowPlayingControl: ControlWidget {
-    var body: some ControlWidgetConfiguration {
-        StaticControlConfiguration(kind: "app.yassin.soundalike.control.nowplaying") {
-            ControlWidgetButton(action: FindForCurrentSongIntent()) {
-                Label("Soundalikes for Now Playing", systemImage: "music.note")
-            }
-        }
-        .displayName("Soundalikes for Now Playing")
-        .description("Find songs that sound like what's playing in the Music app.")
+        .displayName("Find Soundalikes")
+        .description("Find songs that sound like what you're listening to.")
     }
 }

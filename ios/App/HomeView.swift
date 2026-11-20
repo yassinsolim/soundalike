@@ -15,20 +15,33 @@ struct ResultsRequest: Identifiable, Hashable {
 
 struct HomeView: View {
     @EnvironmentObject private var router: Router
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var listener = ListenService()
     @AppStorage("onboarded") private var onboarded = false
+    @AppStorage("autoDetect") private var autoDetect = true
     @State private var query = ""
     @State private var suggestions: [Seed] = []
     @State private var path: [ResultsRequest] = []
     @State private var showGuide = false
     @State private var error: String?
+    @State private var hint: Hint?
+    @State private var lastAuto = Date.distantPast
+
+    enum Hint {
+        case headphones
+        case nothingPlaying
+    }
 
     var body: some View {
         NavigationStack(path: $path) {
             List {
                 if query.isEmpty {
                     hero
+                    if let hint { HintCard(hint: hint) { self.hint = nil } }
                     quickActions
+                    Section {
+                        Toggle("Find what's playing when I open Soundalike", isOn: $autoDetect)
+                    }
                     Section {
                         Button { showGuide = true } label: {
                             Label("Use it from Spotify and Apple Music", systemImage: "square.and.arrow.up")
@@ -65,7 +78,18 @@ struct HomeView: View {
                 guard let route else { return }
                 router.pending = nil
                 EventLog.record("route", ["route": route.url.absoluteString])
-                handle(route)
+                handle(route, explicit: true)
+            }
+            .onChange(of: scenePhase, initial: true) { _, phase in
+                guard phase == .active else { return }
+                router.takePending()
+                // Opening the app finds what's playing, unless a link or intent already asked for something.
+                Task {
+                    try? await Task.sleep(for: .milliseconds(300))
+                    guard autoDetect, onboarded, !showGuide, router.pending == nil, path.isEmpty, query.isEmpty,
+                          !listener.isListening, Date().timeIntervalSince(lastAuto) > 30 else { return }
+                    handle(.auto, explicit: false)
+                }
             }
         }
     }
@@ -83,11 +107,11 @@ struct HomeView: View {
 
     private var quickActions: some View {
         Section {
-            Button { handle(.listen) } label: {
-                ActionRow(title: "Recognise what's playing", detail: "Works with any app or speaker", symbol: "waveform", tint: .blue)
+            Button { handle(.auto, explicit: true) } label: {
+                ActionRow(title: "What's playing now", detail: "From the Music app, or by listening", symbol: "waveform", tint: .blue)
             }
-            Button { handle(.nowPlaying) } label: {
-                ActionRow(title: "Current Apple Music song", detail: "What the Music app is playing", symbol: "music.note", tint: .pink)
+            Button { handle(.listen, explicit: true) } label: {
+                ActionRow(title: "Listen with the microphone", detail: "For music playing around you", symbol: "mic.fill", tint: .orange)
             }
             PasteButton(payloadType: String.self) { strings in
                 guard let text = strings.first else { return }
@@ -105,8 +129,21 @@ struct HomeView: View {
         }
     }
 
-    private func handle(_ route: AppRoute) {
+    private func handle(_ route: AppRoute, explicit: Bool) {
+        hint = nil
         switch route {
+        case .auto:
+            lastAuto = Date()
+            Task {
+                let finding = await PlaybackProbe.detect()
+                EventLog.record("auto", ["finding": finding.rawValue, "explicit": explicit])
+                switch finding {
+                case .musicApp: handle(.nowPlaying, explicit: explicit)
+                case .speaker, .external: handle(.listen, explicit: explicit)
+                case .headphones: hint = .headphones
+                case .silence: if explicit { hint = .nothingPlaying }
+                }
+            }
         case .find(let shared):
             path = [ResultsRequest(kind: .shared(shared))]
         case .search(let text):
@@ -155,6 +192,36 @@ struct HomeView: View {
     }
 }
 
+struct HintCard: View {
+    let hint: HomeView.Hint
+    let dismiss: () -> Void
+
+    var body: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 8) {
+                Label(title, systemImage: hint == .headphones ? "headphones" : "speaker.slash")
+                    .font(.headline)
+                Text(message).font(.subheadline).foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 4)
+            .swipeActions { Button("Hide", action: dismiss) }
+        }
+    }
+
+    private var title: String {
+        hint == .headphones ? "Playing in your headphones?" : "Nothing is playing"
+    }
+
+    private var message: String {
+        switch hint {
+        case .headphones:
+            "iOS doesn't let apps hear what's in your headphones. In Spotify, tap Share › Soundalike, or Share › Copy link and paste it here. Songs from Apple Music are found automatically."
+        case .nothingPlaying:
+            "Play a song in Apple Music or Spotify and try again, or search for one."
+        }
+    }
+}
+
 struct ActionRow: View {
     let title: String
     let detail: String
@@ -198,11 +265,18 @@ struct ListeningOverlay: View {
 struct ResultsScreen: View {
     let request: ResultsRequest
     @StateObject private var model = ResultsModel()
+    /// Queue and playlist actions need an Apple Music subscription; without one they stay hidden.
+    @State private var canUseAppleMusic = false
 
     var body: some View {
         ResultsView(state: model.state, target: $model.target, actions: actions, retry: { model.retry() })
             .navigationTitle("Soundalikes")
             .navigationBarTitleDisplayMode(.inline)
+            .task {
+                if MusicAuthorization.currentStatus == .authorized {
+                    canUseAppleMusic = (try? await MusicSubscription.current.canPlayCatalogContent) ?? false
+                }
+            }
             .task {
                 guard case .loading(nil) = model.state else { return }
                 switch request.kind {
@@ -225,9 +299,9 @@ struct ResultsScreen: View {
                 }
                 await Opener.open(url)
             },
-            playNext: { match in try await logged("play-next") { try await music.playNext(match) } },
-            playAll: { matches in try await logged("play-all") { try await music.playAll(matches) } },
-            saveAsPlaylist: { name, matches in try await logged("save-playlist") { try await music.saveAsPlaylist(name: name, matches) } }
+            playNext: canUseAppleMusic ? { match in try await logged("play-next") { try await music.playNext(match) } } : nil,
+            playAll: canUseAppleMusic ? { matches in try await logged("play-all") { try await music.playAll(matches) } } : nil,
+            saveAsPlaylist: canUseAppleMusic ? { name, matches in try await logged("save-playlist") { try await music.saveAsPlaylist(name: name, matches) } } : nil
         )
     }
 }

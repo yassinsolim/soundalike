@@ -14,7 +14,7 @@ final class ListenService: ObservableObject {
 
         var errorDescription: String? {
             switch self {
-            case .noMatch: "Couldn't recognise the song. Turn it up and try again."
+            case .noMatch: "Couldn't recognise the song. Turn it up and try again. With headphones on, share the song from your music app instead."
             case .microphone: "Soundalike needs the microphone to recognise songs. Allow it in Settings."
             case .unavailable: "Song recognition isn't available right now. Try again in a moment."
             }

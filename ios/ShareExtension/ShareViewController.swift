@@ -53,27 +53,20 @@ final class ShareViewController: UIViewController {
         return joined.isEmpty ? nil : joined
     }
 
+    /// iOS doesn't let share extensions open other apps (`extensionContext.open`
+    /// returned false from Spotify on iOS 26.6, 2026-11-20), so a result is copied
+    /// as "Title Artist", ready to paste into the music app's search.
     private var actions: ResultActions {
         MainActor.assumeIsolated {
-            ResultActions(open: { [weak self] match, target in
-                let url = target == .appleMusic ? await Destinations().appleMusic(match) : Destinations.spotify(match)
-                await self?.open(url)
-            })
-        }
-    }
-
-    @MainActor
-    private func open(_ url: URL) async {
-        guard let context = extensionContext else { return }
-        let opened = await withCheckedContinuation { continuation in
-            context.open(url) { continuation.resume(returning: $0) }
-        }
-        EventLog.record("open", ["url": url.absoluteString, "method": "extensionContext.open", "opened": opened])
-        if opened {
-            close()
-        } else {
-            UIPasteboard.general.url = url
-            model.notice = "Link copied. iOS doesn't let share sheets open other apps."
+            ResultActions(
+                open: { [weak self] match, target in
+                    UIPasteboard.general.string = "\(match.title) \(match.artist)"
+                    EventLog.record("copy", ["from": "share", "target": target.rawValue])
+                    self?.model.notice = "Copied \"\(match.title)\". Tap Done, then paste it into \(target.displayName) search."
+                },
+                openSymbol: "doc.on.doc.fill",
+                openLabel: { "Copy for \($0.displayName) search" }
+            )
         }
     }
 

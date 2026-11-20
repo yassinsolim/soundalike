@@ -1,8 +1,9 @@
 import Foundation
 
-/// Deep links into the app. App Intents, Controls and the share extension's
-/// fallback all speak this one URL scheme, so they work from any process.
+/// Deep links into the app. Links, App Intents and Controls all end up as one of these.
 enum AppRoute: Equatable {
+    /// soundalike://auto — whatever is playing: the Music app's song, or listen for it
+    case auto
     /// soundalike://find?url=<shared link or text>
     case find(String)
     /// soundalike://now-playing
@@ -21,6 +22,7 @@ enum AppRoute: Equatable {
         let action = isWebFind ? "find" : (url.scheme == "soundalike" ? url.host() : nil)
         switch action {
         case "find": guard let shared = value("url"), !shared.isEmpty else { return nil }; self = .find(shared)
+        case "auto": self = .auto
         case "now-playing": self = .nowPlaying
         case "listen": self = .listen
         case "search": self = .search(value("q") ?? "")
@@ -35,6 +37,7 @@ enum AppRoute: Equatable {
         case .find(let shared):
             components.host = "find"
             components.queryItems = [URLQueryItem(name: "url", value: shared)]
+        case .auto: components.host = "auto"
         case .nowPlaying: components.host = "now-playing"
         case .listen: components.host = "listen"
         case .search(let text):

@@ -13,6 +13,7 @@
 		43741DFA4822229FB8807C41 /* SoundalikeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 211DF663D5ADCD2C82545A0A /* SoundalikeKit */; };
 		581C1B0757E814AECE3747E8 /* Controls.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0AE59612B8F93874612F719E /* Controls.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		65579911DB9FE58AC78400A3 /* SoundalikeUI in Frameworks */ = {isa = PBXBuildFile; productRef = CA9572F0499FE4160BA92362 /* SoundalikeUI */; };
+		65ABAA9E8A79F08D366DFE0C /* PlaybackProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C444B436CD57A5201584A7 /* PlaybackProbe.swift */; };
 		7917AFAEB8E647C442563FB1 /* Controls.swift in Sources */ = {isa = PBXBuildFile; fileRef = E47C873420762430D9D27CAD /* Controls.swift */; };
 		81B22A007890995B76ADEB4E /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DDD9123532E2A1688234CF8 /* ShareViewController.swift */; };
 		88F5D74827442AEE6560A312 /* AppleMusicService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D14387CD4977ED1CA671A0 /* AppleMusicService.swift */; };
@@ -61,6 +62,7 @@
 
 /* Begin PBXFileReference section */
 		0AE59612B8F93874612F719E /* Controls.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = Controls.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		15C444B436CD57A5201584A7 /* PlaybackProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackProbe.swift; sourceTree = "<group>"; };
 		18836419FAE9917D10F93920 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		1D82462BF49521BE80E6F3E5 /* ShareExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		1DDD9123532E2A1688234CF8 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
@@ -139,6 +141,7 @@
 				2FF0B24F8B13B3342EDEA007 /* HomeView.swift */,
 				18836419FAE9917D10F93920 /* Info.plist */,
 				775CF1A125A1878D1DF33A4F /* ListenService.swift */,
+				15C444B436CD57A5201584A7 /* PlaybackProbe.swift */,
 				AC02359428A223C2A3E57021 /* Soundalike.entitlements */,
 				8F4341715E0E6A4F59AFE36A /* SoundalikeApp.swift */,
 			);
@@ -309,6 +312,7 @@
 				A06D8AC76C4B3B2DA980ECBF /* HomeView.swift in Sources */,
 				DC6039CCB01C632F6C113817 /* Intents.swift in Sources */,
 				AEE2A8604705A695A19AE98C /* ListenService.swift in Sources */,
+				65ABAA9E8A79F08D366DFE0C /* PlaybackProbe.swift in Sources */,
 				E309735176FBE1F9DF25DCD5 /* SoundalikeApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -465,7 +469,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = FJH4UWVC4K;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -527,7 +531,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = FJH4UWVC4K;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

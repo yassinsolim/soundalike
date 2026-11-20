@@ -10,8 +10,11 @@ public enum ResultsState: Equatable {
 /// What the host (app or share extension) can do with a result.
 @MainActor
 public struct ResultActions {
-    /// Opens a match in the given music app.
+    /// The row's trailing action: opens a match in the given music app (the app),
+    /// or copies it (the share extension, which iOS doesn't allow to open apps).
     public var open: (Match, MusicSource) async -> Void
+    public var openSymbol: String
+    public var openLabel: (MusicSource) -> String
     /// Apple Music library and queue actions, only where MusicKit is available.
     public var playNext: ((Match) async throws -> Void)?
     public var playAll: (([Match]) async throws -> Void)?
@@ -19,11 +22,15 @@ public struct ResultActions {
 
     public init(
         open: @escaping (Match, MusicSource) async -> Void,
+        openSymbol: String = "arrow.up.forward.app.fill",
+        openLabel: @escaping (MusicSource) -> String = { "Open in \($0.displayName)" },
         playNext: ((Match) async throws -> Void)? = nil,
         playAll: (([Match]) async throws -> Void)? = nil,
         saveAsPlaylist: ((String, [Match]) async throws -> Void)? = nil
     ) {
         self.open = open
+        self.openSymbol = openSymbol
+        self.openLabel = openLabel
         self.playNext = playNext
         self.playAll = playAll
         self.saveAsPlaylist = saveAsPlaylist
@@ -70,7 +77,7 @@ public struct ResultsView: View {
                     .listRowSeparator(.hidden)
                 appleMusicBar(results.matches)
                 ForEach(results.matches) { match in
-                    ResultRow(match: match, player: player, target: target) {
+                    ResultRow(match: match, player: player, symbol: actions.openSymbol, label: actions.openLabel(target)) {
                         Task { await actions.open(match, target) }
                     }
                     .contextMenu { menu(for: match) }
@@ -134,8 +141,8 @@ public struct ResultsView: View {
 
     @ViewBuilder
     private func menu(for match: Match) -> some View {
-        Button { Task { await actions.open(match, .spotify) } } label: { Label("Open in Spotify", systemImage: "arrow.up.forward.app") }
-        Button { Task { await actions.open(match, .appleMusic) } } label: { Label("Open in Apple Music", systemImage: "arrow.up.forward.app") }
+        Button { Task { await actions.open(match, .spotify) } } label: { Label(actions.openLabel(.spotify), systemImage: actions.openSymbol) }
+        Button { Task { await actions.open(match, .appleMusic) } } label: { Label(actions.openLabel(.appleMusic), systemImage: actions.openSymbol) }
         if let playNext = actions.playNext {
             Button { run("Playing next") { try await playNext(match) } } label: {
                 Label("Play Next in Apple Music", systemImage: "text.line.first.and.arrowtriangle.forward")
@@ -185,7 +192,8 @@ struct SeedHeader: View {
 struct ResultRow: View {
     let match: Match
     @ObservedObject var player: PreviewPlayer
-    let target: MusicSource
+    let symbol: String
+    let label: String
     let open: () -> Void
 
     private var isPlaying: Bool { player.playingID == match.id }
@@ -227,11 +235,11 @@ struct ResultRow: View {
             MatchBadge(value: match.match)
 
             Button(action: open) {
-                Image(systemName: "arrow.up.forward.app.fill").font(.title2)
+                Image(systemName: symbol).font(.title2)
                     .symbolRenderingMode(.hierarchical)
             }
             .buttonStyle(.borderless)
-            .accessibilityLabel("Open in \(target.displayName)")
+            .accessibilityLabel(label)
         }
         .padding(.vertical, 2)
     }
