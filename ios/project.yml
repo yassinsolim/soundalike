@@ -1,0 +1,128 @@
+name: Soundalike
+options:
+  bundleIdPrefix: app.yassin
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+settings:
+  base:
+    DEVELOPMENT_TEAM: FJH4UWVC4K
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.1.0"
+    CURRENT_PROJECT_VERSION: "18"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+packages:
+  SoundalikeKit:
+    path: SoundalikeKit
+  SpotifyiOS:
+    url: https://github.com/spotify/ios-sdk
+    exactVersion: 5.0.1
+targets:
+  Soundalike:
+    type: application
+    platform: iOS
+    sources:
+      - App
+      - Shared
+    dependencies:
+      - package: SoundalikeKit
+        product: SoundalikeKit
+      - package: SoundalikeKit
+        product: SoundalikeUI
+      - package: SpotifyiOS
+      - target: ShareExtension
+      - target: Controls
+    entitlements:
+      path: App/Soundalike.entitlements
+      properties:
+        com.apple.security.application-groups: [group.app.yassin.soundalike]
+        com.apple.developer.associated-domains: ["applinks:soundalike.yassin.app"]
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Soundalike
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSApplicationQueriesSchemes: [spotify, spotify-action, music]
+        CFBundleURLTypes:
+          - CFBundleURLName: app.yassin.soundalike
+            CFBundleURLSchemes: [soundalike]
+        NSAppleMusicUsageDescription: Soundalike reads the song playing in the Music app and can add songs you pick to your queue or a playlist.
+        NSMicrophoneUsageDescription: Soundalike listens briefly to recognise the song that's playing. Audio is matched with ShazamKit and not saved.
+        ITSAppUsesNonExemptEncryption: false
+        UILaunchScreen:
+          UIColorName: ""
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.yassin.soundalike
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+  ShareExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - ShareExtension
+    dependencies:
+      - package: SoundalikeKit
+        product: SoundalikeKit
+      - package: SoundalikeKit
+        product: SoundalikeUI
+    entitlements:
+      path: ShareExtension/ShareExtension.entitlements
+      properties:
+        com.apple.security.application-groups: [group.app.yassin.soundalike]
+    info:
+      path: ShareExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Soundalike
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsText: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.yassin.soundalike.share
+        TARGETED_DEVICE_FAMILY: "1"
+  Controls:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Controls
+      - Shared
+    entitlements:
+      path: Controls/Controls.entitlements
+      properties:
+        com.apple.security.application-groups: [group.app.yassin.soundalike]
+    info:
+      path: Controls/Info.plist
+      properties:
+        CFBundleDisplayName: Soundalike
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.yassin.soundalike.controls
+        TARGETED_DEVICE_FAMILY: "1"
+schemes:
+  Soundalike:
+    build:
+      targets:
+        Soundalike: all
+    run:
+      config: Debug
+    archive:
+      config: Release
