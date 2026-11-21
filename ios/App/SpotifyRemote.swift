@@ -5,8 +5,8 @@ import SpotifyiOS
 
 /// Asks the Spotify app on this phone what it's playing (Spotify's App Remote SDK).
 ///
-/// Experiment for agent-hub #33: App Remote talks to the Spotify app, not the Web API,
-/// so it may work for Spotify users who aren't on the development-mode allow list.
+/// App Remote talks to the Spotify app, not the Web API, so it works for Spotify users
+/// who aren't on the development-mode allow list (verified on iOS 26.6 in November 2026).
 @MainActor
 final class SpotifyRemote: NSObject, SPTAppRemoteDelegate {
     static let shared = SpotifyRemote()
