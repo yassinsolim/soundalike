@@ -16,6 +16,7 @@ import {
   pickBestMatch,
   searchTitle,
   SPOTIFY_SHORT_HOSTS,
+  spotifyIsrcUrl,
   spotifySearchUrl,
   spotifyTrackUrl,
 } from "./mobile-links.js";
@@ -47,7 +48,6 @@ const CLIENT_IP = /^[0-9a-fA-F:.]{3,45}$/;
 
 const MESSAGES = {
   missing_seed: "Name the song with url, spotify_id, apple_id, isrc, or title and artist.",
-  ambiguous_seed: "Use exactly one of url, spotify_id, apple_id, isrc, or title and artist.",
   invalid_parameter: "A parameter has an invalid value.",
   invalid_link: "This is not a Spotify or Apple Music song link.",
   not_a_track: "This link points to an album. Share a single song instead.",
@@ -228,10 +228,17 @@ function parseSimilarParams(params, headers) {
   const isrcRaw = firstParam(params, "isrc");
   const title = boundedText(params, "title");
   const artist = boundedText(params, "artist");
-  const named = title !== null || artist !== null;
-  const kinds = [url, spotifyId, appleId, isrcRaw].filter((value) => value !== null).length + (named ? 1 : 0);
-  if (kinds === 0) throw new MobileError(400, "missing_seed");
-  if (kinds > 1) throw new MobileError(400, "ambiguous_seed");
+  const named = title !== null && artist !== null;
+  if (url === null && spotifyId === null && appleId === null && isrcRaw === null && !named) {
+    if (title !== null || artist !== null) {
+      throw new MobileError(400, "invalid_parameter", { message: "title and artist are both required." });
+    }
+    throw new MobileError(400, "missing_seed");
+  }
+  const isrc = isrcRaw === null ? null : normalizeIsrc(isrcRaw);
+  if (isrcRaw !== null && !isrc) {
+    throw new MobileError(400, "invalid_parameter", { message: "isrc must be a 12-character ISRC." });
+  }
 
   const kText = firstParam(params, "k");
   let k = DEFAULT_K;
@@ -245,6 +252,8 @@ function parseSimilarParams(params, headers) {
   const platform = choice(params, "platform", ["spotify", "apple", "both"], null);
   const store = storefrontParam(params, headers);
 
+  // The most specific name wins. What else the client knows (the app's own
+  // ISRC, title and artist) is kept as a hint, see `similar`.
   let seed;
   if (url !== null) {
     const parsed = parseSharedLink(url);
@@ -260,22 +269,21 @@ function parseSimilarParams(params, headers) {
       throw new MobileError(400, "invalid_parameter", { message: "apple_id must be a numeric song id." });
     }
     seed = { kind: "apple", id: appleId, storefront: null };
-  } else if (isrcRaw !== null) {
-    const isrc = normalizeIsrc(isrcRaw);
-    if (!isrc) throw new MobileError(400, "invalid_parameter", { message: "isrc must be a 12-character ISRC." });
+  } else if (isrc !== null && !named) {
     seed = { kind: "isrc", isrc };
   } else {
-    if (title === null || artist === null) {
-      throw new MobileError(400, "invalid_parameter", { message: "title and artist are both required." });
-    }
     seed = { kind: "name", title, artist };
   }
+  const hints = {
+    isrc: seed.kind === "isrc" ? null : isrc,
+    name: named && seed.kind !== "name" ? { title, artist } : null,
+  };
   // A link's own storefront wins unless the caller names one.
   if (seed.kind === "apple" && seed.storefront && firstParam(params, "storefront") === null) {
     store.storefront = seed.storefront;
     store.guessed = false;
   }
-  return { seed, k, lang, platform, storefront: store.storefront, storefrontGuessed: store.guessed };
+  return { seed, hints, k, lang, platform, storefront: store.storefront, storefrontGuessed: store.guessed };
 }
 
 export function createMobileService({
@@ -298,6 +306,8 @@ export function createMobileService({
   const seeds = new TtlCache(5000, now);
   const engineAnswers = new TtlCache(500, now);
   const deezerTracks = new TtlCache(20000, now);
+  // What does not expire about a track (ISRC, cover, names), for when Deezer cannot be asked.
+  const deezerFacts = new TtlCache(100000, now);
   const appleLinks = new TtlCache(50000, now);
   const spotifyLinks = new TtlCache(50000, now);
   // Deezer allows 50 requests per 5 seconds per address, iTunes Search about
@@ -362,14 +372,15 @@ export function createMobileService({
   /**
    * One Deezer track by id or `isrc:<ISRC>`: the row, "missing" when Deezer
    * has no such track, or null when it could not be asked (over the rate
-   * limit, failed or timed out).
+   * limit, failed or timed out) and nothing is remembered about it. A
+   * remembered row has no preview (`stale`): preview addresses expire.
    */
   async function deezerTrack(key, signal, { force = false } = {}) {
     const cacheKey = String(key);
     try {
       const hit = deezerTracks.get(cacheKey);
       if (hit !== undefined) return await hit;
-      if (!deezerBucket.take(force)) return null;
+      if (!deezerBucket.take(force)) return deezerFacts.get(cacheKey) ?? null;
       return await cached(deezerTracks, cacheKey, async () => {
         const { ok, body } = await getJson(`https://api.deezer.com/track/${encodeURIComponent(cacheKey)}`, {
           signal,
@@ -377,10 +388,12 @@ export function createMobileService({
         });
         if (ok && body?.error?.code === 800) return { value: "missing", ttlMs: HOUR };
         if (!ok || !body || body.error || !body.id) throw new Error("deezer");
-        return { value: deezerRow(body), ttlMs: DEEZER_TTL_MS };
+        const row = deezerRow(body);
+        deezerFacts.set(cacheKey, { ...row, preview: null, stale: true }, 7 * DAY);
+        return { value: row, ttlMs: DEEZER_TTL_MS };
       });
     } catch {
-      return null;
+      return deezerFacts.get(cacheKey) ?? null;
     }
   }
 
@@ -687,7 +700,25 @@ export function createMobileService({
 
   async function similar(params, headers = {}) {
     const request = parseSimilarParams(params, headers);
-    const seed = await resolveSeed(request.seed, request.storefront);
+    const { hints } = request;
+    let seed;
+    try {
+      seed = await resolveSeed(request.seed, request.storefront);
+    } catch (error) {
+      // The link could not be read, but the client told us the song's name.
+      if (!hints.name || !(error instanceof MobileError) || error.status < 404) throw error;
+      seed = {
+        platform: request.seed.kind.startsWith("spotify") ? "spotify" : request.seed.kind === "apple" ? "apple" : null,
+        title: hints.name.title,
+        artist: hints.name.artist,
+        artistLine: hints.name.artist,
+        isrc: null,
+        artwork: null,
+        durationMs: null,
+        sourceUrl: null,
+      };
+    }
+    if (hints.isrc && !seed.isrc) seed = { ...seed, isrc: hints.isrc };
     const platform = request.platform ?? seed.platform ?? "both";
     const wantApple = platform !== "spotify";
     const wantSpotify = platform !== "apple";
@@ -749,16 +780,23 @@ export function createMobileService({
 
     const results = rows.map((row, index) => {
       const { track, apple, spotify } = details[index];
+      const isrc = track?.isrc ?? null;
+      const spotifyKind = spotify ? "track" : isrc ? "isrc_search" : "search";
       return {
         title: row.title,
         artist: row.artist,
-        match: Number.isFinite(row.match) ? row.match : null,
+        match: Number.isFinite(row.match) ? Math.round(row.match) : null,
         deezer_id: row.id,
-        isrc: track?.isrc ?? null,
+        isrc,
         artwork: track?.artwork ?? null,
         preview_url: track?.preview ?? null,
-        spotify_url: spotify ? spotifyTrackUrl(spotify) : spotifySearchUrl(row.artist, row.title),
+        spotify_url: spotify
+          ? spotifyTrackUrl(spotify)
+          : isrc
+            ? spotifyIsrcUrl(isrc)
+            : spotifySearchUrl(row.artist, row.title),
         spotify_exact: Boolean(spotify),
+        spotify_kind: spotifyKind,
         apple_music_url: apple || appleSearchUrl(storefront, row.artist, row.title),
         apple_exact: Boolean(apple),
       };
@@ -766,7 +804,7 @@ export function createMobileService({
     return {
       cacheable: !request.storefrontGuessed,
       // An answer missing Deezer's details (rate limit, time budget) is worth asking for again soon.
-      maxAge: details.every((state) => state.track) ? RESPONSE_MAX_AGE_S : 20,
+      maxAge: details.every((state) => state.track && !state.track.stale) ? RESPONSE_MAX_AGE_S : 20,
       body: {
         ok: true,
         query: {
@@ -792,6 +830,7 @@ export function createMobileService({
         },
         links: {
           spotify_exact: results.filter((row) => row.spotify_exact).length,
+          spotify_isrc: results.filter((row) => row.spotify_kind === "isrc_search").length,
           apple_exact: results.filter((row) => row.apple_exact).length,
           spotify_lookup: hasSpotifyCredentials,
           apple_eager_rows: appleEagerRows,
@@ -828,16 +867,24 @@ export function createMobileService({
 
     let url;
     let exact = false;
+    let kind = "search";
     let retryAfter = null;
     if (platform === "apple") {
       const found = await appleLink(deezerId, wanted, storefront, signal);
       if (found === undefined) retryAfter = Math.max(1, itunesBucket.retryAfter());
       exact = Boolean(found);
+      if (exact) kind = "track";
       url = found || appleSearchUrl(storefront, wanted.artist, wanted.title);
     } else {
       const found = await spotifyLink(deezerId, wanted, signal);
       exact = Boolean(found);
-      url = found ? spotifyTrackUrl(found) : spotifySearchUrl(wanted.artist, wanted.title);
+      if (exact) kind = "track";
+      else if (wanted.isrc) kind = "isrc_search";
+      url = found
+        ? spotifyTrackUrl(found)
+        : wanted.isrc
+          ? spotifyIsrcUrl(wanted.isrc)
+          : spotifySearchUrl(wanted.artist, wanted.title);
     }
     return {
       // An answer that may improve on the next call must not be cached.
@@ -851,6 +898,7 @@ export function createMobileService({
         platform,
         url,
         exact,
+        kind,
         storefront: platform === "apple" ? storefront : null,
         retry_after: retryAfter,
       },

@@ -275,3 +275,34 @@ test("coming back from the music app reuses the answer", async () => {
   const other = await open("?spotify_id=2Fxmhks0bxGSBdJ92vM42m", () => answer("spotify", [row(1), row(2)]), { session });
   assert.equal(other.requests.length, 1);
 });
+
+test("association files let /find links open the iPhone and Android apps", () => {
+  const destination = (source) => config.rewrites.find((rewrite) => rewrite.source === source)?.destination;
+  const header = (source, key) =>
+    config.headers.find((entry) => entry.source === source)?.headers.find((item) => item.key === key)?.value;
+  const load = (source) => {
+    const target = destination(source);
+    assert.match(target ?? "", /^\/well-known\/[a-z-]+\.json$/, "a plain .json file, served as application/json");
+    assert.equal(header(source, "Content-Type"), "application/json");
+    return JSON.parse(readFileSync(new URL(`..${target}`, import.meta.url), "utf8"));
+  };
+
+  assert.deepEqual(load("/.well-known/apple-app-site-association"), {
+    applinks: {
+      details: [
+        {
+          appIDs: ["FJH4UWVC4K.app.yassin.soundalike"],
+          components: [{ "/": "/find*", comment: "Soundalikes for a shared song link" }],
+        },
+      ],
+    },
+  });
+
+  const links = load("/.well-known/assetlinks.json");
+  assert.equal(links.length, 1);
+  assert.deepEqual(links[0].relation, ["delegate_permission/common.handle_all_urls"]);
+  assert.equal(links[0].target.namespace, "android_app");
+  assert.equal(links[0].target.package_name, "app.yassin.soundalike");
+  assert.equal(links[0].target.sha256_cert_fingerprints.length, 1);
+  assert.match(links[0].target.sha256_cert_fingerprints[0], /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/);
+});

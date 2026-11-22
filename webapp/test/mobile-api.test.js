@@ -156,8 +156,10 @@ test("a Spotify link returns the documented response shape", async () => {
     isrc: DEEZER_TRACK.isrc,
     artwork: DEEZER_TRACK.album.cover_medium,
     preview_url: DEEZER_TRACK.preview,
-    spotify_url: "https://open.spotify.com/search/OOMPH!%20Gekreuzigt%202006",
+    // Without credentials: a search for exactly this recording by its ISRC.
+    spotify_url: `https://open.spotify.com/search/isrc%3A${DEEZER_TRACK.isrc}`,
     spotify_exact: false,
+    spotify_kind: "isrc_search",
     apple_music_url: "https://music.apple.com/us/search?term=OOMPH!%20Gekreuzigt%202006",
     apple_exact: false,
   });
@@ -170,7 +172,7 @@ test("a Spotify link returns the documented response shape", async () => {
     matched_artist: ENGINE.query.artist,
     hidden: ENGINE.query.hidden,
   });
-  assert.deepEqual(body.links, { spotify_exact: 0, apple_exact: 0, spotify_lookup: false, apple_eager_rows: 5 });
+  assert.deepEqual(body.links, { spotify_exact: 0, spotify_isrc: 3, apple_exact: 0, spotify_lookup: false, apple_eager_rows: 5 });
 
   const engineCall = net.calls.find((url) => url.hostname === "engine.test");
   assert.equal(engineCall.pathname, "/api/anysong/similar");
@@ -210,7 +212,7 @@ test("an Apple Music link resolves through iTunes and maps the top rows", async 
   assert.equal(search.searchParams.get("term"), "OOMPH! Gekreuzigt 2006");
   assert.equal(search.searchParams.get("country"), "de");
   assert.equal(search.searchParams.get("entity"), "song");
-  assert.deepEqual(body.links, { spotify_exact: 0, apple_exact: 1, spotify_lookup: false, apple_eager_rows: 2 });
+  assert.deepEqual(body.links, { spotify_exact: 0, spotify_isrc: 3, apple_exact: 1, spotify_lookup: false, apple_eager_rows: 2 });
 });
 
 test("repeat requests are answered from memory", async () => {
@@ -261,8 +263,8 @@ test("rejects bad requests with 400 and a code", async () => {
   const { similarHandler } = service(net);
   const cases = [
     [{}, "missing_seed"],
-    [{ url: SPOTIFY_LINK, isrc: "DEC760600298" }, "ambiguous_seed"],
-    [{ spotify_id: SPOTIFY_ID, title: "x", artist: "y" }, "ambiguous_seed"],
+    [{ url: SPOTIFY_LINK, isrc: "nope" }, "invalid_parameter"],
+    [{ artist: "only an artist" }, "invalid_parameter"],
     [{ url: "https://example.com/track/1" }, "invalid_link"],
     [{ url: "https://music.apple.com/us/album/x/1559885420" }, "not_a_track"],
     [{ url: "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M" }, "unsupported_link"],
@@ -298,6 +300,60 @@ test("rejects bad requests with 400 and a code", async () => {
   const preflight = await call(similarHandler, similarPath({}), { method: "OPTIONS" });
   assert.equal(preflight.status, 204);
   assert.equal(preflight.headers["access-control-allow-methods"], "GET, OPTIONS");
+});
+
+test("several names at once: the most specific wins, the rest are hints", async () => {
+  // The iPhone app sends the id it has together with the ISRC, title and artist it knows.
+  const net = network();
+  const { similarHandler } = service(net);
+  const all = { spotify_id: SPOTIFY_ID, isrc: "GBAAA0000001", title: "Typed Title", artist: "Typed Artist", platform: "spotify", k: "3" };
+  const byId = await call(similarHandler, similarPath(all));
+  assert.equal(byId.status, 200);
+  assert.equal(byId.body.query.title, "Du hast", "the id names the song, not the typed title");
+  assert.equal(byId.body.query.source_url, `https://open.spotify.com/track/${SPOTIFY_ID}`);
+  assert.equal(byId.body.query.isrc, "GBAAA0000001", "the app's ISRC fills what Spotify's page lacks");
+  const engineCall = net.calls.find((url) => url.hostname === "engine.test");
+  assert.equal(engineCall.searchParams.get("title"), "Du hast");
+  assert.equal(engineCall.searchParams.get("isrc"), "GBAAA0000001");
+
+  const appleNet = network();
+  const byApple = await call(
+    service(appleNet).similarHandler,
+    similarPath({ apple_id: "1446013598", storefront: "de", title: "x", artist: "y", platform: "apple", k: "3" }),
+  );
+  assert.equal(byApple.body.query.title, "99 Luftballons");
+
+  const isrcNet = network();
+  // A name with its ISRC: the name is used as typed, the ISRC goes to the engine.
+  const byIsrc = await call(service(isrcNet).similarHandler, similarPath({ isrc: "DEC760600298", title: "x", artist: "y" }));
+  assert.equal(byIsrc.body.query.title, "x");
+  assert.equal(byIsrc.body.query.isrc, "DEC760600298");
+  assert.equal(isrcNet.calls.find((url) => url.hostname === "engine.test").searchParams.get("isrc"), "DEC760600298");
+  assert.equal(isrcNet.calls.some((url) => url.pathname.startsWith("/track/isrc")), false);
+
+  // When the link cannot be read, the typed name still finds the song.
+  for (const broken of [() => reply(EMBED_MISSING_HTML), () => reply("down", 503)]) {
+    const down = network({ "open.spotify.com": broken });
+    const byName = await call(service(down).similarHandler, similarPath(all));
+    assert.equal(byName.status, 200);
+    assert.equal(byName.body.query.title, "Typed Title");
+    assert.equal(byName.body.query.artist, "Typed Artist");
+    assert.equal(byName.body.query.platform, "spotify");
+    assert.equal(byName.body.query.source_url, null);
+    assert.equal(down.calls.find((url) => url.hostname === "engine.test").searchParams.get("title"), "Typed Title");
+  }
+  // A link that is not a song stays an error, whatever else is sent.
+  const wrong = await call(similarHandler, similarPath({ url: "https://example.com/x", title: "a", artist: "b" }));
+  assert.equal(wrong.status, 400);
+  assert.equal(wrong.body.error.code, "invalid_link");
+});
+
+test("the engine's match is always a whole number", async () => {
+  const engine = structuredClone(ENGINE);
+  engine.results.main[0].match = 94.6;
+  delete engine.results.main[1].match;
+  const { body } = await call(service(network({ "engine.test": () => reply(engine) })).similarHandler, similarPath({ url: SPOTIFY_LINK, k: "3" }));
+  assert.deepEqual(body.results.map((row) => row.match).slice(0, 2), [95, null]);
 });
 
 test("songs that cannot be resolved are 404, upstream failures 502", async () => {
@@ -361,7 +417,8 @@ test("failed or slow lookups degrade to search links and nulls", async () => {
     assert.equal(row.preview_url, null);
     assert.equal(row.apple_exact, false);
     assert.match(row.apple_music_url, /^https:\/\/music\.apple\.com\/de\/search\?term=/);
-    assert.match(row.spotify_url, /^https:\/\/open\.spotify\.com\/search\//);
+    assert.equal(row.spotify_kind, "search");
+    assert.equal(row.spotify_url, `https://open.spotify.com/search/${encodeURIComponent(`${row.artist} ${row.title}`)}`);
   }
 
   // Both never answer: the request still returns when the time budget ends.
@@ -386,6 +443,28 @@ test("failed or slow lookups degrade to search links and nulls", async () => {
   assert.equal(partial.body.results[0].apple_exact, false);
 });
 
+test("when Deezer cannot be asked, what is remembered about a song is still used", async () => {
+  let clock = 1_000_000;
+  let down = false;
+  const net = network({
+    "api.deezer.com": (url) => (down ? reply("down", 500) : reply(deezerTrack(url.pathname.split("/").pop()))),
+  });
+  const { similarHandler } = service(net, { now: () => clock });
+  const fresh = await call(similarHandler, similarPath({ url: SPOTIFY_LINK, k: "3" }));
+  assert.equal(fresh.body.results[0].preview_url, DEEZER_TRACK.preview);
+
+  clock += 20 * 60 * 1000; // previews and the engine answer have expired
+  down = true;
+  const later = await call(similarHandler, similarPath({ url: SPOTIFY_LINK, k: "3" }));
+  assert.equal(later.status, 200);
+  const [first] = later.body.results;
+  assert.equal(first.preview_url, null, "an old preview address is never served");
+  assert.equal(first.isrc, DEEZER_TRACK.isrc);
+  assert.equal(first.artwork, DEEZER_TRACK.album.cover_medium);
+  assert.equal(first.spotify_kind, "isrc_search");
+  assert.equal(later.headers["cache-control"], "public, max-age=20");
+});
+
 test("untrusted media addresses from Deezer are dropped", async () => {
   const net = network({
     "api.deezer.com": () =>
@@ -405,7 +484,7 @@ test("iTunes Search calls are rationed and the link endpoint says when to retry"
 
   const first = await call(linkHandler, linkPath(FIRST_ID));
   assert.equal(first.status, 200);
-  assert.deepEqual(Object.keys(first.body), ["ok", "deezer_id", "platform", "url", "exact", "storefront", "retry_after"]);
+  assert.deepEqual(Object.keys(first.body), ["ok", "deezer_id", "platform", "url", "exact", "kind", "storefront", "retry_after"]);
   assert.equal(first.body.exact, true);
   assert.match(first.body.url, /^https:\/\/music\.apple\.com\/de\/album\//);
   assert.equal(first.body.retry_after, null);
@@ -440,7 +519,8 @@ test("the link endpoint: Spotify without credentials, bad input, missing songs",
   const spotify = await call(linkHandler, `${base}deezer_id=${FIRST_ID}&platform=spotify`);
   assert.equal(spotify.status, 200);
   assert.equal(spotify.body.exact, false);
-  assert.equal(spotify.body.url, "https://open.spotify.com/search/OOMPH!%20Gekreuzigt%202006");
+  assert.equal(spotify.body.url, `https://open.spotify.com/search/isrc%3A${DEEZER_TRACK.isrc}`);
+  assert.equal(spotify.body.kind, "isrc_search");
   assert.equal(spotify.body.storefront, null);
   assert.equal(net.count("accounts.spotify.com"), 0);
 
@@ -461,6 +541,7 @@ test("the link endpoint: Spotify without credentials, bad input, missing songs",
   const named = await call(down.linkHandler, `${base}deezer_id=5&platform=spotify&title=Du+hast&artist=Rammstein`);
   assert.equal(named.status, 200);
   assert.equal(named.body.url, "https://open.spotify.com/search/Rammstein%20Du%20hast");
+  assert.equal(named.body.kind, "search");
 });
 
 test("with Spotify client credentials results carry exact track links", async () => {
@@ -504,10 +585,10 @@ test("with Spotify client credentials results carry exact track links", async ()
     [
       [true, `https://open.spotify.com/track/${exactId}`],
       [true, "https://open.spotify.com/track/9z8Y7x6W5v4U3t2S1r0Q9p"],
-      [false, "https://open.spotify.com/search/Unheilig%20Willkommen"],
+      [false, "https://open.spotify.com/search/isrc%3ADEA620000001"],
     ],
   );
-  assert.deepEqual(body.links, { spotify_exact: 2, apple_exact: 0, spotify_lookup: true, apple_eager_rows: 5 });
+  assert.deepEqual(body.links, { spotify_exact: 2, spotify_isrc: 1, apple_exact: 0, spotify_lookup: true, apple_eager_rows: 5 });
   assert.equal(net.count("accounts.spotify.com"), 1, "one token serves every lookup");
   assert.ok(seen.includes("track:Willkommen artist:Unheilig"));
 

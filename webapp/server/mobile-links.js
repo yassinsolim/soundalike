@@ -200,6 +200,14 @@ export function spotifySearchUrl(artist, title) {
   return `https://open.spotify.com/search/${encodeURIComponent(searchTerm(artist, title))}`;
 }
 
+/**
+ * A Spotify search for one recording by ISRC. It lists exactly that recording
+ * (the form the iPhone app opens), but it is a search page, not the track.
+ */
+export function spotifyIsrcUrl(isrc) {
+  return `https://open.spotify.com/search/isrc%3A${isrc}`;
+}
+
 export function appleSearchUrl(storefront, artist, title) {
   return `https://music.apple.com/${storefront}/search?term=${encodeURIComponent(searchTerm(artist, title))}`;
 }

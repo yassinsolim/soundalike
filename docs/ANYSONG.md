@@ -177,7 +177,10 @@ website's functions ([`webapp/server/mobile.js`](../webapp/server/mobile.js), ro
 
 ### `GET /api/mobile/similar`
 
-Name the song in exactly one way:
+Name the song in one of these ways. A client that knows more may send several: `url`, then `spotify_id`, then
+`apple_id` wins. An extra `isrc` is passed to the engine when the link itself has none, and an extra `title` +
+`artist` is used when the link or id cannot be read (Spotify or Apple did not answer, or do not know it). `isrc`
+together with `title` + `artist` uses the name as given and passes the ISRC to the engine.
 
 | Parameter | Value |
 |---|---|
@@ -205,13 +208,15 @@ Music country; default: the link's storefront, then the listener's country, then
       "title": "Gekreuzigt 2006", "artist": "OOMPH!", "match": 95, "deezer_id": 567060,
       "isrc": "DEC760600298", "artwork": "https://cdn-images.dzcdn.net/…/250x250-000000-80-0-0.jpg",
       "preview_url": "https://cdnt-preview.dzcdn.net/….mp3?hdnea=…",
-      "spotify_url": "https://open.spotify.com/search/OOMPH!%20Gekreuzigt%202006", "spotify_exact": false,
+      "spotify_url": "https://open.spotify.com/search/isrc%3ADEC760600298", "spotify_exact": false,
+      "spotify_kind": "isrc_search",
       "apple_music_url": "https://music.apple.com/us/search?term=OOMPH!%20Gekreuzigt%202006", "apple_exact": false
     }
   ],
   "engine": { "list": "main", "k": 20, "lang": "same", "source": "catalog",
               "matched_title": "Du hast", "matched_artist": "Rammstein", "hidden": 0 },
-  "links": { "spotify_exact": 0, "apple_exact": 0, "spotify_lookup": false, "apple_eager_rows": 5 }
+  "links": { "spotify_exact": 0, "spotify_isrc": 20, "apple_exact": 0, "spotify_lookup": false,
+             "apple_eager_rows": 5 }
 }
 ```
 
@@ -224,11 +229,17 @@ Music country; default: the link's storefront, then the listener's country, then
   30-second MP3 whose address **expires about 15 minutes after the answer was built**: play it soon, and on a
   playback error get a new one from `GET /api/preview?id=<deezer_id>` (from a browser, the website's own origin
   only) or by asking again.
-- Every result has both links, and both always open something. `spotify_exact` / `apple_exact` say whether the
-  link is the song's own page (`true`) or a search for artist and title (`false`).
-  - **Spotify**: without Spotify API credentials on the server, every `spotify_url` is a search link. With
-    `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` set (client-credentials flow, no user), results are looked up by
-    ISRC, then by title and artist, and `links.spotify_lookup` is `true`.
+- Every result has both links, and both always open something. `spotify_exact` / `apple_exact` are `true` only
+  when the link is the song's own page (`open.spotify.com/track/<id>`, `music.apple.com/…?i=<id>`); `false` means
+  a search link. A client with a better lookup of its own (MusicKit by ISRC, for example) should use it instead of
+  a link marked `false`.
+  - **Spotify**: `spotify_kind` says which of three links `spotify_url` is. `track`: the song's own page; only
+    with `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` set on the server (client-credentials flow, no user;
+    looked up by ISRC, then by title and artist; `links.spotify_lookup` is then `true`). `isrc_search`:
+    `https://open.spotify.com/search/isrc%3A<ISRC>`, a search that lists exactly that recording, used whenever
+    the result's ISRC is known; the listener taps once more to play it, and `spotify_exact` stays `false`.
+    `search`: a search for artist and title, only when Deezer gave no ISRC in time. Without credentials every link
+    is one of the last two (`links.spotify_isrc` counts the ISRC ones).
   - **Apple Music**: matched through the iTunes Search API, which allows about 20 calls a minute for the whole
     server. So only the first `links.apple_eager_rows` results (5) are matched up front, and only when `platform`
     is `apple` or `both`; results matched earlier come from memory for free. The rest carry search links: call
@@ -240,12 +251,16 @@ Music country; default: the link's storefront, then the listener's country, then
   repeated request is answered in a few milliseconds. A first request takes the engine's time (about 0.1 s for a
   cached song to several seconds for a song it has to download) plus at most 2 seconds for the lookups; whatever
   has not arrived by then is `null` or a search link, never an error.
+- Deezer allows the server 50 lookups in 5 seconds, and a new 20-row answer needs 21. Under a burst of new
+  songs the later answers therefore come back with fewer covers, previews and ISRCs (so plain search links), marked
+  `max-age=20` so that asking again shortly afterwards fills them in. ISRCs and covers seen before are remembered
+  for a week; previews never are.
 
 Errors are `{"ok": false, "error": {"code", "message"}}`; `message` is fit to show to a listener.
 
 | Status | `code` | Meaning |
 |---|---|---|
-| 400 | `missing_seed`, `ambiguous_seed`, `invalid_parameter` | No song named, more than one way used, or a bad value |
+| 400 | `missing_seed`, `invalid_parameter` | No song named, or a bad value |
 | 400 | `invalid_link`, `not_a_track`, `unsupported_link` | Not a Spotify or Apple Music link; an album link without a song; a playlist, artist, podcast or a short link that leads elsewhere |
 | 404 | `track_not_found` | Spotify, Apple Music or Deezer does not know the linked song |
 | 404 | `song_not_found` | The engine found no recording of it with a preview |
@@ -259,10 +274,12 @@ Errors are `{"ok": false, "error": {"code", "message"}}`; `message` is fit to sh
 `title=` and `artist=` (so a link can still be built if Deezer is down). Returns the best link for one result:
 
 ```json
-{ "ok": true, "deezer_id": 567060, "platform": "apple", "exact": true, "storefront": "de",
+{ "ok": true, "deezer_id": 567060, "platform": "apple", "exact": true, "kind": "track", "storefront": "de",
   "url": "https://music.apple.com/de/album/gekreuzigt-2006/…?i=…", "retry_after": null }
 ```
 
+`kind` is `track`, `isrc_search` (Spotify only) or `search`, as for `spotify_kind` above; `exact` is `true` only
+for `track`.
 `exact: false` with `retry_after: null` means the store has no clear match (the search link is the answer; this
 is remembered for a day). `retry_after: <seconds>` means the iTunes budget is spent: `url` is still a usable search
 link, and asking again after that many seconds may return the song's page. Ask for at most a screenful of rows,
@@ -293,6 +310,13 @@ Spotify or Apple Music, by default the app the link came from, with a switch for
 same tab, without `target="_blank"`, so the phone's app links hand over to the installed app from an in-app
 browser as well; coming back shows the saved list without a new request. For local work,
 `node webapp/tools/mobile-dev-server.js` serves the page and both endpoints.
+
+So that a `/find` link opens the installed app instead of the page, the site serves
+`/.well-known/apple-app-site-association` (iPhone app `FJH4UWVC4K.app.yassin.soundalike`, paths `/find*`) and
+`/.well-known/assetlinks.json` (Android package `app.yassin.soundalike` with its release key's SHA-256). Both are
+plain JSON files in [`webapp/well-known/`](../webapp/well-known), reached through `rewrites` in `site.json` so they
+are served as `application/json` without a redirect, which both platforms require. A new signing key or app id
+means editing those files.
 
 ## Growing the catalog
 

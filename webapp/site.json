@@ -27,6 +27,8 @@
     { "source": "/api/mobile/link", "destination": "/api/ratings?__soundalike_handler=mobile-link" },
     { "source": "/find", "destination": "/find/index.html" },
     { "source": "/find/", "destination": "/find/index.html" },
+    { "source": "/.well-known/apple-app-site-association", "destination": "/well-known/apple-app-site-association.json" },
+    { "source": "/.well-known/assetlinks.json", "destination": "/well-known/assetlinks.json" },
     { "source": "/evaluate", "destination": "/evaluate/index.html" },
     { "source": "/evaluate/", "destination": "/evaluate/index.html" },
     { "source": "/evaluate-v5", "destination": "/evaluate-v5/index.html" },
@@ -64,6 +66,20 @@
       "headers": [
         { "key": "Content-Security-Policy", "value": "default-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; frame-ancestors 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: https://dzcdn.net https://*.dzcdn.net; media-src https://dzcdn.net https://*.dzcdn.net; connect-src 'self'" },
         { "key": "Cache-Control", "value": "no-cache" }
+      ]
+    },
+    {
+      "source": "/.well-known/apple-app-site-association",
+      "headers": [
+        { "key": "Content-Type", "value": "application/json" },
+        { "key": "Cache-Control", "value": "public, max-age=3600" }
+      ]
+    },
+    {
+      "source": "/.well-known/assetlinks.json",
+      "headers": [
+        { "key": "Content-Type", "value": "application/json" },
+        { "key": "Cache-Control", "value": "public, max-age=3600" }
       ]
     },
     {

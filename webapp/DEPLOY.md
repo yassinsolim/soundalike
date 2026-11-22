@@ -151,6 +151,7 @@ webapp/
     mobile.js         # GET /api/mobile/similar and /api/mobile/link (phone clients)
     mobile-links.js   # shared-link parsing and catalogue matching for mobile.js
   find/               # phone page: /find?url=<shared Spotify or Apple Music link>
+  well-known/         # app association files, served at /.well-known/ (see site.json rewrites)
   evaluate/           # active blinded V6 evaluator + compatibility V5 assets
   evaluate-v5/        # byte-preserved V5 evaluator
   evaluate-semantic-v2/ # byte-preserved semantic v2 evaluator

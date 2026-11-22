@@ -21,7 +21,7 @@ App Store Connect record and app group.
      - Spotify, once the user taps **Connect Spotify** (one Agree tap in the Spotify app, no password). It tries the Web API first. When that fails, because Spotify's development mode only serves 5 allow-listed accounts, it asks the Spotify app through the App Remote SDK (`App/SpotifyRemote.swift`), which worked for a non-allow-listed account in 2–150 ms;
    - a ShazamKit match, used only when nothing can be read.
 2. `SoundalikeClient` calls `GET /api/mobile/similar` first. If that route fails or is missing,
-   it falls back to `/api/anysong/similar`, which today it always does because the route returns 404.
+   it falls back to `/api/anysong/similar` (as it does until the route is deployed).
    - Spotify links are named from the public embed page (`open.spotify.com/embed/track/<id>`),
      without sign-in.
    - Apple Music links are named from the iTunes lookup API.
@@ -48,8 +48,9 @@ Links and in-app routes go through one URL scheme handled in `App/SoundalikeApp.
 | `soundalike://listen` | Recognise the song playing nearby |
 | `soundalike://search?q=<text>` | Open search with this text |
 
-`https://soundalike.yassin.app/find?url=…` opens the app once the site serves an
-`apple-app-site-association` file for `FJH4UWVC4K.app.yassin.soundalike` with the `/find*` path.
+`https://soundalike.yassin.app/find?url=…` opens the app once the site serves
+`/.well-known/apple-app-site-association` for `FJH4UWVC4K.app.yassin.soundalike` with the `/find*` path
+(`webapp/well-known/apple-app-site-association.json`, routed in `webapp/site.json`).
 
 ## Build
 

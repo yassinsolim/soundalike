@@ -365,6 +365,8 @@ def test_site_routes_and_security_headers_cover_evaluator():
         "/api/mobile/link": "/api/ratings?__soundalike_handler=mobile-link",
         "/find": "/find/index.html",
         "/find/": "/find/index.html",
+        "/.well-known/apple-app-site-association": "/well-known/apple-app-site-association.json",
+        "/.well-known/assetlinks.json": "/well-known/assetlinks.json",
         "/evaluate": "/evaluate/index.html",
         "/evaluate/": "/evaluate/index.html",
         "/evaluate-v5": "/evaluate-v5/index.html",
