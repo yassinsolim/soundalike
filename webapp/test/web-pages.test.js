@@ -393,8 +393,13 @@ const AMANGA_ID = 2206566227;
 // listeners (Listeners also play) and ignores the other lists. Audio only
 // (scene "off") and artists without listener data ("unknown_artist") come
 // without listeners; older servers send neither, only Best matches with
-// listener picks in it.
-function anysongBody({ lang = "same", language = "en", hidden = 2, scene = "on", older = false } = {}) {
+// listener picks in it. After the audio head the main list's rows come from
+// the five-signal model (basis "consensus"), or in sound order ("sound")
+// with Audio only; `body` overrides that for other servers.
+function anysongBody({
+  lang = "same", language = "en", hidden = 2, scene = "on", older = false,
+  body = scene === "on" ? "consensus" : "sound",
+} = {}) {
   const listeners = scene === "on";
   return {
     ok: true,
@@ -414,8 +419,8 @@ function anysongBody({ lang = "same", language = "en", hidden = 2, scene = "on",
         main: [
           { id: 11, title: "Bar A Thym", artist: "Kerri Chandler", score: 0.16667, basis: "audio", match: 41, ranks: { melody: 1 } },
           lang === "all"
-            ? { id: 12, title: "Ngiyakhuluma", artist: "Mduduzi", score: 0.14286, basis: "sound", match: 88, ranks: { sonic: 2 } }
-            : { id: 13, title: "Sunshine", artist: "Robert Glasper", score: 0.14286, basis: "sound", match: 90, ranks: { sonic: 1 } },
+            ? { id: 12, title: "Ngiyakhuluma", artist: "Mduduzi", score: 0.14286, basis: body, match: 88, ranks: { sonic: 2 } }
+            : { id: 13, title: "Sunshine", artist: "Robert Glasper", score: 0.14286, basis: body, match: 90, ranks: { sonic: 1 } },
         ],
       }),
       ...(older || !listeners ? {} : {
@@ -461,8 +466,8 @@ function mainBestBody({ lang = "same", language = "en", hidden = 1, scene = "on"
       main: [
         { id: 51, title: "n.h.i.e.", artist: "21 Savage", score: 0.16667, basis: "audio", match: 35, ranks: { melody: 1 } },
         lang === "all"
-          ? { id: 52, title: "Airforce Negras", artist: "Spiff TV", score: 0.14286, basis: "sound", match: 77, ranks: { sonic: 3 } }
-          : { id: 53, title: "AHHH HA", artist: "Lil Durk", score: 0.14286, basis: "sound", match: 81, ranks: { sonic: 2 } },
+          ? { id: 52, title: "Airforce Negras", artist: "Spiff TV", score: 0.14286, basis: scene === "on" ? "consensus" : "sound", match: 77, ranks: { sonic: 3 } }
+          : { id: 53, title: "AHHH HA", artist: "Lil Durk", score: 0.14286, basis: scene === "on" ? "consensus" : "sound", match: 81, ranks: { sonic: 2 } },
       ],
       ...(scene === "on" ? {
         listeners: [
@@ -549,6 +554,9 @@ const legacyCalls = (page) =>
   page.requests.filter((url) => LEGACY_APIS.some((api) => url.startsWith(api)));
 
 const BEST_CAPTION =
+  "Likely covers, samples and shared melodies first, then other artists' songs a model ranks closest, " +
+  "from five signals: sound, scene, playlists, melody and samples. Turn on Audio only to rank by sound alone.";
+const NUDGED_BEST_CAPTION =
   "Likely covers, samples and shared melodies first, then the songs that sound most alike, " +
   "nudged toward artists this song's listeners also play. Turn on Audio only to rank by sound alone.";
 const AUDIO_BEST_CAPTION =
@@ -565,7 +573,7 @@ const AUDIO_ONLY_LISTENERS_NOTE =
   "Turn Audio only off to see it.";
 const NO_LISTENERS_NOTE =
   "We don't know what this artist's listeners play yet, so there's no list here. " +
-  "Best matches still has the songs that sound most alike.";
+  "Best matches still has this song's closest matches.";
 const AUDIO_ONLY_KEY = "soundalike:audio-only:v1";
 const TAB_LABELS = ["Best matches", "Listeners also play"];
 const DROPPED_TABS = ["vibe", "melody", "samples", "sounds", "sonic"];
@@ -622,7 +630,7 @@ test("the one search bar suggests any song on Deezer and opens the pick", async 
   assert.equal(params.get("id"), String(EIGHT_PM_ID));
   assert.equal(params.get("k"), "20");
   assert.equal(params.get("lang"), "same");
-  assert.equal(params.get("policy"), "main-listeners-v3");
+  assert.equal(params.get("policy"), "main-consensus-v4");
   assert.equal(params.get("scene"), null);
   assert.equal(page.text(".seed h2"), "8PM");
   assert.equal(page.document.querySelector(".seed .cover img").getAttribute("src"), COVER);
@@ -791,7 +799,7 @@ test("Best matches read the main list, ask for one language and say other langua
 
   assert.equal(
     page.requests[0],
-    `/api/anysong/similar?id=${AMANGA_ID}&k=20&lang=same&policy=main-listeners-v3`,
+    `/api/anysong/similar?id=${AMANGA_ID}&k=20&lang=same&policy=main-consensus-v4`,
   );
   assert.equal(page.text("#matchblurb"), BEST_CAPTION);
   const box = page.document.querySelector("#language");
@@ -810,6 +818,41 @@ test("Best matches read the main list, ask for one language and say other langua
   assert.deepEqual(page.texts("#matches .basis"), []);
   assert.deepEqual(page.texts("#seedtags .tag"), ["in our library"]);
   assert.deepEqual(page.errors, []);
+});
+
+test("the Best matches caption follows what placed the main list's rows", async () => {
+  // A server whose main list follows sound and the listener ranker.
+  const nudged = loadAnysong({ body: (options) => anysongBody({ ...options, body: "sound" }) });
+  await waitFor(() => shown(nudged));
+  assert.equal(nudged.text("#matchblurb"), NUDGED_BEST_CAPTION);
+
+  // The model needs no listener data, so an unknown artist keeps its caption.
+  const unknown = loadAnysong({
+    body: (options) => anysongBody({ ...options, scene: "unknown_artist", body: "consensus" }),
+  });
+  await waitFor(() => shown(unknown));
+  assert.equal(unknown.text("#matchblurb"), BEST_CAPTION);
+  assert.deepEqual(unknown.texts("#matches .basis"), []);
+  assert.deepEqual(unknown.texts("#matches .why"), [" · melody #1"]);
+});
+
+test("a consensus row's bar shows its match without calling it a sound match", async () => {
+  const page = loadAnysong({
+    body: (options) => {
+      const body = anysongBody(options);
+      body.results.main = body.results.main.map((item, index) => ({ ...item, overall: [93, 90][index] }));
+      return body;
+    },
+  });
+  await waitFor(() => shown(page));
+
+  const bars = page.document.querySelectorAll("#matches .bar");
+  assert.match(bars[0].getAttribute("aria-label"), /Sound match 41%/);
+  assert.equal(
+    bars[1].getAttribute("aria-label"),
+    "Match 90%: how strongly Soundalike ranks it for this song",
+  );
+  assert.equal(bars[1].getAttribute("title"), bars[1].getAttribute("aria-label"));
 });
 
 test("the language switch reloads Best matches and keeps focus on it", async () => {

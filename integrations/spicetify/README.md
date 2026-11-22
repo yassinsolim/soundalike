@@ -3,9 +3,9 @@
 Find tracks that sound like the song you are playing, directly
 inside Spotify. Soundalike compares audio embeddings instead of using genres,
 popularity, or your listening history. Results open on **Best matches**: songs
-that share a melody, sample, or loop with yours, then the songs that sound most
-alike. **Listeners also play** lists similar songs by other artists that your
-song's listeners also play.
+that share a melody, sample, or loop with yours, then the songs a model ranks
+closest to it from five signals. **Listeners also play** lists similar songs by
+other artists that your song's listeners also play.
 
 ![Soundalike best matches inside Spotify](../../docs/spicetify-results.png)
 
@@ -50,12 +50,14 @@ chose.
   interpolations, and reused tunes) and songs that share a sample or loop; a
   melody or samples match that clearly stands out from the song's other matches
   leads the list, and its row shows where it placed in those rankings, such as
-  "melody #1 · samples #3". Many songs have none. After them come the songs that
-  sound most alike (instruments, production, and mood) by Soundalike's
-  MuQ-MuLan model, one per artist, drawn from the 200 closest and ordered by how
-  close they sound and by how likely your song's listeners are to also play
-  their artists, as learned from public listening data. The matcher searches a
-  999,293-song index and works for any song with a 30-second Deezer preview,
+  "melody #1 · samples #3". Many songs have none. After them come other artists'
+  songs, one per artist, ordered by a small model that weighs five signals for
+  every song in the index: how close it sounds (instruments, production, and
+  mood, by Soundalike's MuQ-MuLan model), how close its scene is, whether
+  public playlists put the two songs together, and how it places in the melody
+  and samples rankings. The model was trained on graded examples of good and
+  poor matches; popularity is not one of its inputs. The matcher searches about
+  1.1 million songs and works for any song with a 30-second Deezer preview,
   including songs outside the index, which take a few seconds to analyze.
   Other-language songs are hidden when the seed language is known; a song
   without a language label of its own counts in its artist's usual language,
@@ -71,18 +73,17 @@ chose.
   ordered mostly by how likely your song's listeners are to also play them and
   partly by how close they sound. It follows the same **Show all languages**
   switch. When Soundalike has no listening data for the artist yet, this tab
-  says so, and Best matches lists the songs that sound most alike in sound
-  order.
+  says so; Best matches is not affected.
 - **Sounds like** only appears with the [local companion](SETUP.md), or in
   place of Best matches when the hosted matcher can't take the song (see
   below).
 
-**Audio only**, next to **Show all languages**, leaves listening data out: Best
-matches then lists the songs that sound most alike in sound order after the
-likely covers and samples, and Listeners also play stays empty. The choice is
-remembered for later searches; turn it off to get the listener-aware lists
-back. In the companion's (or fallback) Sounds like list it also turns off the
-related-artist ordering.
+**Audio only**, next to **Show all languages**, leaves scene, playlist and
+listening data out: Best matches then lists the songs that sound most alike in
+sound order after the likely covers and samples, and Listeners also play stays
+empty. The choice is remembered for later searches; turn it off to get the
+full lists back. In the companion's (or fallback) Sounds like list it also
+turns off the related-artist ordering.
 
 The page opens as soon as the hosted matcher answers, or after four seconds
 with the lists still loading. If Best matches fail, for example because Deezer
@@ -100,12 +101,13 @@ earlier search show without asking.
 ## Match
 
 Rows in Best matches and Listeners also play show a **Match** bar to the left
-of Stems: how alike the song sounds to yours by the MuQ-MuLan model, as the
-share of typical matches it sounds more alike than. 50 % is a typical match;
-90 % sounds more alike than nine in ten songs Soundalike usually shows. A song
-can rank high with a low bar, as a likely cover or sample or because your
-song's listeners also play its artist, and a very unusual song gets low bars
-throughout. In a narrow window only the bar shows; hover it for the number.
+of Stems: how strongly Soundalike ranks the song for yours, which never rises
+down a list. Hover it for the number and, on rows other than the ones the
+Best matches model placed, the sound match: how alike the song sounds to yours
+by the MuQ-MuLan model, as the share of typical matches it sounds more alike
+than (50 % is a typical match). A likely cover or sample can lead the list
+with a low sound match, and a song with few close matches gets low bars
+throughout. In a narrow window only the bar shows.
 
 ## Stems
 
@@ -227,7 +229,8 @@ which may look the song up on Deezer and analyze Deezer's public 30-second
 preview. Only when that matcher can't answer does it send the same title and
 artist to the older Sounds like service at `https://soundalike-api.yassin.app`
 (then `https://soundalike.yassin.app` as a fallback). To read the ISRC, the
-extension asks Spotify's own track metadata inside the desktop client.
+extension asks Spotify's own track metadata service from inside the desktop
+client, using the client's access token, which goes only to Spotify.
 The matcher keeps recent results in memory so repeat searches are fast. When
 it analyzes a song that isn't in its catalog yet, it also writes that song's
 Deezer track and artist IDs and the date to a list the catalog crawl reads, so
@@ -271,10 +274,10 @@ the displayed result list are not sent to Discord.
   primary service is unavailable, the first fallback request after a restart can
   take up to about 30 seconds. Repeated tracks use the local cache, and hosted
   responses can be reused by the CDN.
-- The matcher picks Best matches and Listeners also play from a 999,293-song
-  catalog. Songs added by the catalog crawl are only suggested
-  for songs from their artist's scene. The older Sounds like library covers
-  272,853 tracks.
+- The matcher picks Best matches and Listeners also play from a catalog of
+  about 1.1 million songs. Outside the model-ranked part of Best matches, songs
+  added by the catalog crawl are only suggested for songs from their artist's
+  scene. The older Sounds like library covers 272,853 tracks.
 - Best matches hear only Deezer's 30-second preview, so a melody or sample
   outside that clip can be missed.
 - The matcher allows about 20 new searches a minute. Past that, Best matches

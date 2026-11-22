@@ -129,7 +129,11 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   score) (`LISTENERS_SOUND_WEIGHT`), one song per artist, `basis` `listeners`. Without the ranker, with `scene=0` or
   for an unknown artist there is no `listeners`. Items whose sound score is known carry `match`, the sound match from
   0 to 100 (`api.sound_match`). [ANYSONG_EVAL.md](ANYSONG_EVAL.md#one-main-list-and-listeners-also-play-pre-registered-2026-11-11-before-any-held-out-result)
-  has the evaluation.
+  has the evaluation. With `--consensus-model` (the served configuration since 2026-11-22, "v12") the part of `main`
+  after the audio head is the consensus body instead: other artists' songs ordered by a small model on five
+  catalog-wide signals (`basis` `consensus`, `ranks_all` with each signal's rank, and a `match` that scores the
+  body's ranking rather than the sound); `scene=0` still gives the sound order
+  ([evaluation](ANYSONG_EVAL.md#consensus-body-of-the-main-list-2026-11-20-served-since-2026-11-22)).
 - `/similar?title=&artist=&k=` (used by Spotify, which has no Deezer id, and by old `#s=` home-page links) resolves
   the name first.
   Songs match by song key (primary artist plus title without bracketed, dashed or feat. tags), ignoring accents on
@@ -538,10 +542,11 @@ for Same vibe (`--tempo`, `--tempo-model`; about 160 MiB of VRAM, and 30 ms of G
 symlink swap therefore switches the index and its tables together. Grown indexes live on
 `/opt/soundalike/index-store`, a 96 GB NVMe volume (`mp1`, `backup=0`). The nightly vzdump to the bulk HDD skips it,
 because each index is about 40 GB and can be rebuilt from its embeddings. The first full index stays at
-`index/full-20261101` on the root disk, with its own `core_ids.npy`, as the rollback. Since 2026-11-09,
-`index/current` → `index-store/grown-20261109`: 999,293 songs, the 269,278 core songs plus 730,015 crawled ones,
-served with the catalog tiers and samples' stage 1 in fp16 (`--half-stage1 samples`). The previous grown index,
-`index-store/grown-20261108` (889,277 songs), stays as the rollback. The service is
+`index/full-20261101` on the root disk, with its own `core_ids.npy`, as the rollback. From 2026-11-09 to
+2026-11-22 `index/current` was `index-store/grown-20261109`: 999,293 songs, the 269,278 core songs plus 730,015
+crawled ones, served with the catalog tiers and samples' stage 1 in fp16 (`--half-stage1 samples`). Since
+2026-11-22 (v12) `index/current` is the 1,109,024-song index with the whitened sonic channel and the v12 tables
+listed below. The service is
 [`deploy/homelab/soundalike-anysong.service`](../deploy/homelab/soundalike-anysong.service) (user `anysong`,
 `MemoryMax=14G` since v12, 6G before; enabled at boot; startup loads and warms the models and index). Before v12
 the process itself used about 4 GB of RAM; the rest of the cap is page cache for the memory-mapped windows, which
@@ -609,8 +614,8 @@ reads it with `--keep-learning`, so it keeps running after the bulk target.
 
 ## Limitations
 
-- Coverage is limited to the indexed catalog: 999,293 songs since 2026-11-09 (269,278 core tracks plus the crawl's
-  songs, which only reach seeds in their artist's scene). Famous sources missing from it cannot be returned, however
-  good the match.
+- Coverage is limited to the indexed catalog: 1,109,024 songs since 2026-11-22 (the core catalog plus the crawl's
+  songs, which outside the consensus body only reach seeds in their artist's scene). Famous sources missing from it
+  cannot be returned, however good the match.
 - Preview-only audio: shared material outside the 30-second clip is invisible.
 - Benchmarks are small for some relations (see the held-out notes in the README); treat the channels as beta.

@@ -2430,6 +2430,7 @@ def test_consensus_body_is_computed_once_per_seed_from_the_searches_base_scores(
     (["--consensus-windows", "stream"], "need --consensus-model"),
 ])
 def test_homelab_profile_flags_are_checked_before_anything_loads(tmp_path, capsys, flags, message):
+    pytest.importorskip("torch")  # main imports it before it reads the flags
     with pytest.raises(SystemExit):
         api.main(["--index", str(tmp_path), *flags])
     assert message in capsys.readouterr().err

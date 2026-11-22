@@ -1,22 +1,21 @@
 // soundalike — Spicetify extension
 // Adds a right-click "Find soundalikes" item to any track in the Spotify
 // desktop client. Results open on a navigable Spotify page with two lists from
-// one hosted response: "Best matches" (likely covers and samples, then the
-// songs that sound most alike, shown by default) and "Listeners also play"
-// (other artists' songs this song's listeners play). With the local companion,
-// or when the hosted matcher can't take the song, a "Sounds like" list from the
+// one hosted response: "Best matches" (likely covers and samples, then other
+// artists' songs a model ranks closest from five signals, shown by default)
+// and "Listeners also play" (other artists' songs this song's listeners
+// play). With the local companion, or when the hosted matcher can't take the
+// song, a "Sounds like" list from the
 // soundalike recommender joins them. Playing a result plays the shown list on
 // in order, like a playlist that is never saved. Each hosted row's "Stems"
 // button opens the seed and that match split into instruments and compared
 // part by part (the hosted /api/anysong/dissect endpoint).
 //
-// Local experiment (branch exp/two-tabs, not published yet).
-//
 // Install (requires a patchable desktop Spotify app): follow this directory's
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.13.0-local.8";
+  const RUNTIME_SEMANTIC_VERSION = "2.14.0";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -77,7 +76,7 @@
   // Songs this extension queued; Spotify keeps its queue across restarts.
   const LATE_QUEUE_KEY = "soundalike:late-queue:v1";
   const BEST_MATCHES_ENDPOINT = `${FALLBACK_HOSTED_SERVER}/api/anysong/similar`;
-  const BEST_MATCHES_POLICY = "anysong-main-listeners-v14";
+  const BEST_MATCHES_POLICY = "anysong-main-consensus-v15";
   // Audio only: the hosted lists come without the scene and listener layer
   // (scene=0), and the companion's Sounds like without related-artist ordering.
   const AUDIO_ONLY_KEY = "soundalike:audio-only:v1";
@@ -131,6 +130,11 @@
     ["sounds", "Sounds like"],
   ];
   const BEST_MATCHES_BLURB =
+    "Likely covers, samples and shared melodies first, then other artists' " +
+    "songs a model ranks closest, from five signals: sound, scene, playlists, " +
+    "melody and samples. Turn on Audio only to rank by sound alone.";
+  // Servers whose main list follows sound and the listener ranker.
+  const NUDGED_BEST_MATCHES_BLURB =
     "Likely covers, samples and shared melodies first, then the songs that " +
     "sound most alike, nudged toward artists this song's listeners also play. " +
     "Turn on Audio only to rank by sound alone.";
@@ -151,7 +155,7 @@
     "also play. Turn Audio only off to see it.";
   const NO_LISTENERS_NOTE =
     "We don't know what this artist's listeners play yet, so there's no list " +
-    "here. Best matches still has the songs that sound most alike.";
+    "here. Best matches still has this song's closest matches.";
   // A Best row the listener ranker placed, rather than the audio alone.
   const LISTENER_PICK_LABEL = "Listeners also play";
   const LISTENER_PICK_TITLE =
@@ -203,9 +207,10 @@
   let persistentCache;
   let fallbackTrackSearchDefinition;
 
-  // Local experiment: Marketplace's Soundalike bootstrap can inject the signed
-  // runtime after this file. Claiming the slot before the readiness wait makes
-  // that copy step aside on every start instead of whichever polls first.
+  // Two copies of the runtime can load: a manual install of this file and the
+  // one Marketplace's bootstrap injects. The first to start claims the slot
+  // before the readiness wait, so the other steps aside on every start
+  // instead of whichever polls first.
   if (!window.__soundalikeRuntimeVersion) window.__soundalikeRuntimeVersion = RUNTIME_SEMANTIC_VERSION;
 
   // Wait until the Spicetify APIs we need are ready.
@@ -833,7 +838,8 @@
         }))
         .filter((item) => item.title && item.artist)
         .slice(0, HOSTED_RESULT_COUNT);
-    // What placed a row: the audio head, the sound order or the listener ranker.
+    // What placed a row: the audio head, the sound order, the five-signal
+    // model (consensus) or the listener ranker.
     const basis = (item, allowed) =>
       allowed.includes(item?.basis) ? { basis: item.basis } : {};
     // Servers before the main list send Best matches with listener picks in it;
@@ -845,7 +851,7 @@
     // Only the audio head's rows keep the channel ranks that put them there.
     const main = compactList("main", (item) => ({
       matchNote: item?.basis === "audio" ? channelRanks(item) : "",
-      ...basis(item, ["audio", "sound"]),
+      ...basis(item, ["audio", "sound", "consensus"]),
     }));
     const listeners = compactList("listeners", () => ({}));
     const total = Number(body?.timings_ms?.total);
@@ -862,7 +868,7 @@
           ? { mainLanguageGuess: String(query.main_language_guess) } : {}),
         languageMode: query.language_mode === "all" ? "all" : "same",
         bpm: Number.isFinite(query.bpm) && query.bpm > 0 ? query.bpm : null,
-        // "unknown_artist": no listener data, so the lists are in sound order.
+        // "unknown_artist": no listener data, so Listeners also play is empty.
         ...(["on", "off", "unknown_artist"].includes(query.scene) ? { scene: query.scene } : {}),
       }),
       results,
@@ -992,15 +998,40 @@
     ]).finally(() => clearTimeout(timer));
   }
 
+  // Spotify's metadata service answers in protobuf on current clients (Cosmos
+  // then fails to parse it), so read the reply as text: JSON when it is JSON,
+  // else the ISRC that follows the "isrc" tag in the binary reply.
+  async function metadataIsrc(gid) {
+    let token = Spicetify.Platform?.Session?.accessToken;
+    try {
+      const state = await Spicetify.Platform?.AuthorizationAPI?.getState?.();
+      token = state?.token?.accessToken || token;
+    } catch {
+      // keep the session token
+    }
+    if (!token || typeof fetch !== "function") return undefined;
+    const response = await fetch(
+      `https://spclient.wg.spotify.com/metadata/4/track/${gid}?market=from_token`,
+      { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }
+    );
+    if (!response.ok) return undefined;
+    const text = await response.text();
+    try {
+      const meta = JSON.parse(text);
+      return isrcFrom((meta?.external_id || []).find?.(
+        (entry) => String(entry?.type).toLowerCase() === "isrc")?.id);
+    } catch {
+      const found = text.match(/isrc[\s\S]{1,3}([A-Z]{2}[A-Z0-9]{3}[0-9]{7})/);
+      return found ? isrcFrom(found[1]) : null;
+    }
+  }
+
   // Spotify's GraphQL track query has no ISRC, so ask its metadata service
   // and the Web API at once and take the first ISRC either gives.
   async function fetchSeedIsrc(trackId) {
     const gid = spotifyIdToHex(trackId);
     const sources = [
-      gid && Spicetify.CosmosAsync.get(
-        `https://spclient.wg.spotify.com/metadata/4/track/${gid}?market=from_token`
-      ).then((meta) => isrcFrom((meta?.external_id || []).find?.(
-        (entry) => String(entry?.type).toLowerCase() === "isrc")?.id)),
+      gid && metadataIsrc(gid),
       Spicetify.CosmosAsync.get(`https://api.spotify.com/v1/tracks/${trackId}`)
         .then((track) => isrcFrom(track?.external_ids?.isrc)),
     ].filter(Boolean).map((source) => source.catch(() => undefined));
@@ -2142,13 +2173,16 @@
   }
 
   // The bar shows the overall match when the server sends it (it follows the
-  // list's order); the sound match alone moves to the tooltip.
+  // list's order); the sound match alone moves to the tooltip. A consensus
+  // row's match scores the model's ranking, not its sound, so it has none.
   function matchCell(React, result) {
+    const consensus = result.basis === "consensus";
     const match = matchPercent(result.match);
-    const overall = matchPercent(result.overall);
+    const overall = matchPercent(result.overall) ?? (consensus ? match : null);
     const shown = overall ?? match;
     if (shown === null) return React.createElement("div", { className: "sa-match" });
-    const sound = match === null ? "" : `Sound match ${match}%: sounds more alike than ${match}% of typical matches`;
+    const sound = match === null || consensus
+      ? "" : `Sound match ${match}%: sounds more alike than ${match}% of typical matches`;
     const label = overall === null ? sound
       : `Match ${overall}%: how strongly Soundalike ranks it for this song${sound ? `. ${sound}` : ""}`;
     return React.createElement(
@@ -2837,12 +2871,16 @@
 
   function bestPanelMarkup(state, seedArtists) {
     const best = state.best;
-    const mixed = best.status === "ready" && !best.data.main?.length;
+    const ready = best.status === "ready";
+    const mixed = ready && !best.data.main?.length;
+    // The five-signal model placed rows; it needs no listener data.
+    const consensus = ready && bestRows(best.data).some((row) => row.basis === "consensus");
     const soundOnly = state.audioOnly ||
-      (best.status === "ready" && best.data.query?.scene === "unknown_artist");
+      (ready && !consensus && best.data.query?.scene === "unknown_artist");
     let blurb = soundOnly
       ? AUDIO_ONLY_BEST_MATCHES_BLURB
-      : mixed ? MIXED_BEST_MATCHES_BLURB : BEST_MATCHES_BLURB;
+      : mixed ? MIXED_BEST_MATCHES_BLURB
+        : ready && !consensus ? NUDGED_BEST_MATCHES_BLURB : BEST_MATCHES_BLURB;
     if (best.status === "offer") {
       const note = !state.viewChosen && state.sounds.status === "error"
         ? `<p class="sa-note">${esc(state.sounds.error)}</p>`
@@ -2862,7 +2900,10 @@
     const { query } = best.data;
     const results = bestRows(best.data);
     blurb += matchedToNote(state, query, seedArtists);
-    const tags = tagsMarkup([mixed ? "Melody + samples" : "Melody, samples + sound", ...sourceTags(best)]);
+    const tags = tagsMarkup([
+      mixed ? "Melody + samples" : consensus ? "Five signals" : "Melody, samples + sound",
+      ...sourceTags(best),
+    ]);
     return `<p class="sa-blurb">${esc(blurb)}</p>
       <div class="sa-tags">${tags}</div>
       ${languageFilterMarkup(query, state, { main: true })}
