@@ -3523,7 +3523,7 @@ were fitted to raw scores and must be refitted before this is served.
   (`AnySong.sound_match`): `match`, the match floor and the head's match rule. The constant stays the default.
 - `/healthz` reports `popularity` (songs with a rank above 0) and `match_quantiles` (`custom` or `default`).
 
-## Consensus body of the main list (2026-11-20): local experiment, not served
+## Consensus body of the main list (2026-11-20): served since 2026-11-22
 
 `anysong.consensus.Consensus` replaces the body of main (Best matches) with the songs several views of the seed
 agree on, ordered by a small model. It is the serving side of the v12 study harness (`anysong-lab/v8/v12/pool.py`,
@@ -3592,7 +3592,7 @@ launcher, of which the body is about 0.19 s (signals 95 ms, the two bodies 2 x 2
 against 1.33 s, Deezer download included. GPU memory: 10.7 GB allocated, 11.5 GB peak (v11: 10.5 and 11.1);
 3.2 GB more host memory, page-locked.
 
-## Consensus service on an 8 GB card (2026-11-20): local measurement, not served
+## Consensus service on an 8 GB card (2026-11-20): local measurement, the served profile since 2026-11-22
 
 The v12 service (consensus body, previous section) allocates 10.7 GB of VRAM at 1,109,024 songs: three stage-1
 tables (melody 0.8, samples 1.7, sonic 1.7 GB), the blend's head table (1.6), two copies of the playlist vectors
@@ -3628,3 +3628,71 @@ Result with `--host-tables samples sonic head --consensus-windows stream`, the p
   1 is documented at 196 ms per million songs against 57 ms here, a factor of 3.4 for the GEMM-bound parts, and
   PCIe 3.0 with DDR4 moves the tables at roughly a third of the rate here; expect about 2.5 to 3.5 s for a stored
   seed there (not measured).
+
+## v12: pre-registered checks and deployment (2026-11-22)
+
+**What changed.** "v12" is the consensus body above served as the body of `main` (Best matches in the web app and
+the Spotify extension), on the 1,109,024-song index with the whitened sound channel:
+
+- the audio head (rows with cover or sample evidence) is unchanged;
+- after it come the songs that five catalog-wide signals agree on (whitened sound, scene head, playlist vectors,
+  melody model, samples model), ordered by a gradient-boosted model. It was trained on 49,737 graded labels
+  (0 clunker, 1 related, 2 strong match) for 1,806 seeds, with covers left out of training;
+- popularity is not a feature, the seed's own artist is left out, and there is one song per artist;
+- Listeners also play, the other lists and `scene=0` (Audio only) are unchanged;
+- nothing about a listener is used: every listener gets the same list.
+
+**Rules** (written 2026-11-20, before the engine build existed and before any check was run; each check run once
+through the real API, v12 against v11, the build before it on the same index):
+
+1. *Blind lists, fresh seeds.* 240 seeds never rated or shown to a judge before (100 world-chart seeds across 31
+   scenes, 140 English-heavy claim seeds). Both builds' served top 8, sides shuffled, three judges. Pass: each judge
+   prefers v12 in at least 65 % of decided lists and v12's clunker share is lower for each judge.
+2. *Human claims, sealed set* (never fetched by any build): named song in the top 10, % of directed pairs. Pass:
+   v12 minus v11 at least -0.5 points.
+3. *Any song, any language.* World charts (1,199 songs, 31 scenes): at least 10 results for at least 99 % of
+   songs; share with a known language not below v11's.
+4. *Cost.* Median seconds per catalog song at most twice v11's on the same seeds; no request error in checks 1 to 3.
+
+**Results (2026-11-21)**, engine at 5f5c7eb, 59 of 60 top 10s identical to the study harness:
+
+| Check | v11 | v12 | Verdict |
+| --- | --- | --- | --- |
+| 1. Preferred in decided lists (three judges) | | 84 %, 88 %, 82 % | pass |
+| 1. Clunkers | 7 %, 14 %, 14 % | 2 %, 2 %, 3 % | pass |
+| 1. Strong matches (reported) | 43 %, 25 %, 27 % | 61 %, 37 %, 40 % | |
+| 2. Sealed claims in top 10 (5,041 directed pairs) | 2.38 % | 2.02 % (-0.36 [-0.75, +0.00]) | pass |
+| 3. At least 10 results / language known | 99.92 % / 88.0 % | 99.92 % / 88.0 % | pass |
+| 4. Median seconds per catalog song | 0.53 | 0.50 | pass |
+
+Check 1 on the world-chart seeds alone: 82 %, 81 %, 76 %. Songs outside the catalog took 3.0 s against 1.95 s.
+Reported, not gated: 67.8 % of the top 10 is inside the 200 closest by whitened sound (v11 76.4 %); the median
+Deezer rank of shown songs is 153,399 against 311,976, so v12 shows less famous songs; the top 10 shares 3.0 of 10
+songs with v11's. After the checks, and without changing any order, a row's `match` was set to map the body score
+linearly (0.2 to 0 %, 1.6 to 100 %), so that a list of weak matches reads 40 to 50 % rather than 5 %.
+
+**Deployed (2026-11-22).** 904f9c0 went live on the homelab GPU host with the unit in
+`deploy/homelab/soundalike-anysong.service` (`--host-tables samples sonic head --consensus-windows stream`); the
+container's memory went from 8 to 16 GB. The service was down for 61 s. The deploy gate compared the lists of 14
+songs with those of the tested build: 14 of 14 identical. Median time per song on the RTX 2070 SUPER: 2.72 s,
+inside the 2.5 to 3.5 s expected above.
+
+**Clients.** The web app and the Spotify extension (runtime 2.14.0) describe Best matches accordingly and show two
+tabs, Best matches and Listeners also play. The extension also reads the seed's ISRC from Spotify's metadata
+service again: on current Spotify clients the old lookup failed, every request went out without `isrc`, and songs
+titled in non-Latin scripts resolved to nothing.
+
+**Limits.**
+
+- The judges in check 1 and the labels the model was trained on come from AI models (Claude Opus, Claude Sonnet,
+  GPT; pairwise correlation 0.56 to 0.72) rating from what they know of the songs and artists. They did not listen
+  to the audio. No panel of people rated the lists.
+- Those judges and people's online claims measure different things: pairs that people name online get low ratings
+  from the judges (18 % strong, 33 to 37 % clunker), because the claims are mostly about a shared hook and the
+  judges rate the overall sound.
+- English online claims are found less often than before: 3.36 % to 2.39 % in the top 10 (-0.98 [-1.64, -0.33]),
+  a real loss. Non-English claims: 1.71 % to 1.77 %. Check 2 passed only by its stated margin.
+- The owner's 21 earlier verdicts on catalog songs, top 30 of v12: 1 of 6 liked songs shown, 2 of 15 rejected
+  songs shown.
+- A request takes about 2.7 s at the median on the production card; the 999k index before v12 measured 1.0 s there
+  (2026-11-09).

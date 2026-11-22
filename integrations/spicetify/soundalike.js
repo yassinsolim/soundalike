@@ -207,9 +207,10 @@
   let persistentCache;
   let fallbackTrackSearchDefinition;
 
-  // Local experiment: Marketplace's Soundalike bootstrap can inject the signed
-  // runtime after this file. Claiming the slot before the readiness wait makes
-  // that copy step aside on every start instead of whichever polls first.
+  // Two copies of the runtime can load: a manual install of this file and the
+  // one Marketplace's bootstrap injects. The first to start claims the slot
+  // before the readiness wait, so the other steps aside on every start
+  // instead of whichever polls first.
   if (!window.__soundalikeRuntimeVersion) window.__soundalikeRuntimeVersion = RUNTIME_SEMANTIC_VERSION;
 
   // Wait until the Spicetify APIs we need are ready.
@@ -867,7 +868,7 @@
           ? { mainLanguageGuess: String(query.main_language_guess) } : {}),
         languageMode: query.language_mode === "all" ? "all" : "same",
         bpm: Number.isFinite(query.bpm) && query.bpm > 0 ? query.bpm : null,
-        // "unknown_artist": no listener data, so the lists are in sound order.
+        // "unknown_artist": no listener data, so Listeners also play is empty.
         ...(["on", "off", "unknown_artist"].includes(query.scene) ? { scene: query.scene } : {}),
       }),
       results,

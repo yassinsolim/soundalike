@@ -4820,20 +4820,25 @@ function signedRuntimeSource() {
   }
 }
 
-test("this local build keeps the runtime slot when Marketplace injects the signed runtime", async () => {
-  const localVersion = extensionSource.match(/const RUNTIME_SEMANTIC_VERSION = "([^"]+)";/)[1];
+test("the first runtime copy keeps the slot when Marketplace injects another version", async () => {
+  const versionLine = /const RUNTIME_SEMANTIC_VERSION = "([^"]+)";/;
+  const localVersion = extensionSource.match(versionLine)[1];
   const app = loadExtension(async () => response(200, { ok: false }), {
     spicetifyLate: true,
     contextMenuV2: true,
   });
   assert.equal(app.registeredMenuItems, 0);
-  // Spicetify finishes starting just before the signed copy runs, which let
+  // Spicetify finishes starting just before the other copy runs, which let
   // that copy register first whenever its readiness check came first.
   app.spicetifyReady();
+  // The signed runtime, or once this file is the signed release, a renamed copy.
   const signed = signedRuntimeSource();
-  assert.doesNotMatch(signed, new RegExp(`RUNTIME_SEMANTIC_VERSION = "${localVersion.replace(/\./g, "\\.")}"`));
-  app.runScript(signed);
-  assert.equal(app.registeredMenuItems, 0, "the signed copy steps aside");
+  const other = signed.match(versionLine)[1] === localVersion
+    ? extensionSource.replace(versionLine, `const RUNTIME_SEMANTIC_VERSION = "${localVersion}-other";`)
+    : signed;
+  assert.notEqual(other.match(versionLine)[1], localVersion);
+  app.runScript(other);
+  assert.equal(app.registeredMenuItems, 0, "the other copy steps aside");
   await waitFor(() => app.registeredMenuItems === 1, 1500);
   assert.equal(app.runtimeVersion, localVersion);
   assert.equal(app.nowPlayingMenuItems.length, 1);
