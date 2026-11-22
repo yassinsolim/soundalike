@@ -7,14 +7,15 @@
   // One search bar for any song on Deezer: suggestions come from
   // /api/anysong/search. Two tabs read one /api/anysong/similar answer, as in
   // the Spotify extension: "Best matches" (likely covers, samples and shared
-  // melodies, then the songs that sound most alike; shown by default) and
-  // "Listeners also play" (other artists' songs this song's listeners play).
+  // melodies, then other artists' songs a model ranks closest from five
+  // signals; shown by default) and "Listeners also play" (other artists'
+  // songs this song's listeners play).
   const ID_RE = /^[1-9][0-9]{0,15}$/;
   const suggestDelayMs = 220;
   const maxCacheEntries = 64;
   const bestMatchesTimeoutMs = 30000;
   const bestMatchesRetries = 3;
-  const bestMatchesPolicy = "main-listeners-v3";
+  const bestMatchesPolicy = "main-consensus-v4";
   // Audio only asks for lists without the listener ranker (scene=0).
   const audioOnlyKey = "soundalike:audio-only:v1";
   const listenerPickLabel = "Listeners also play";
@@ -25,6 +26,9 @@
       key: "best",
       label: "Best matches",
       blurb:
+        "Likely covers, samples and shared melodies first, then other artists' songs a model ranks closest, from five signals: sound, scene, playlists, melody and samples. Turn on Audio only to rank by sound alone.",
+      // Servers whose main list follows sound and the listener ranker.
+      nudgedBlurb:
         "Likely covers, samples and shared melodies first, then the songs that sound most alike, nudged toward artists this song's listeners also play. Turn on Audio only to rank by sound alone.",
       audioBlurb:
         "Likely covers, samples and shared melodies first, then the songs that sound most alike.",
@@ -43,7 +47,7 @@
   const audioOnlyListenersNote =
     "Audio only is on, and this list comes from what this song's listeners also play. Turn Audio only off to see it.";
   const noListenersNote =
-    "We don't know what this artist's listeners play yet, so there's no list here. Best matches still has the songs that sound most alike.";
+    "We don't know what this artist's listeners play yet, so there's no list here. Best matches still has this song's closest matches.";
   const DEMO = [
     ["Plastic Love", "Mariya Takeuchi"],
     ["Redbone", "Childish Gambino"],
@@ -605,8 +609,9 @@
               .map(([list, rank]) => `${list} #${rank}`)
               .join(" · ")
           : "";
+      // A consensus row's match scores the model's ranking, not its sound.
       const overall = percent(x.overall);
-      const sound = percent(x.match);
+      const sound = name === "main" && x.basis === "consensus" ? null : percent(x.match);
       return {
         id: x.id,
         title,
@@ -670,11 +675,15 @@
     const entry = resultTabs.find(candidate => candidate.key === tab);
     if (tab !== "best") return entry.blurb;
     const body = picked.body || {};
+    const results = body.results || {};
+    const main = listName(results, "best") === "main";
+    // The five-signal model placed rows; it needs no listener data.
+    const consensus = main && results.main.some(x => x && x.basis === "consensus");
     // Audio only, and artists without listener data, leave the listeners out.
-    if (picked.audioOnly || (body.query || {}).scene === "unknown_artist") {
+    if (picked.audioOnly || (!consensus && (body.query || {}).scene === "unknown_artist")) {
       return entry.audioBlurb;
     }
-    return listName(body.results || {}, "best") === "main" ? entry.blurb : entry.mixedBlurb;
+    return !main ? entry.mixedBlurb : consensus ? entry.blurb : entry.nudgedBlurb;
   }
 
   function languageName(code) {

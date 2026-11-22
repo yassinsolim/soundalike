@@ -95,7 +95,13 @@ def test_anysong_language_switch_covers_both_tabs():
     assert "hidden_sounds" not in SCRIPT
 
 
-def test_anysong_best_caption_puts_covers_first_then_the_listeners():
+def test_anysong_best_caption_puts_covers_first_then_the_model():
+    assert (
+        "\"Likely covers, samples and shared melodies first, then other artists' songs a model ranks closest, "
+        "from five signals: sound, scene, playlists, melody and samples. "
+        'Turn on Audio only to rank by sound alone."'
+    ) in SCRIPT
+    # Servers whose main list follows sound and the listener ranker.
     assert (
         '"Likely covers, samples and shared melodies first, then the songs that sound most alike, '
         "nudged toward artists this song's listeners also play. "
@@ -122,8 +128,8 @@ def test_anysong_has_the_spotify_extensions_two_tabs():
     assert (
         'const tabKey = key => (key === null ? null : key === "listeners" ? "listeners" : "best");'
     ) in SCRIPT
-    # A new policy keeps cached answers from before the two tabs and the overall match out.
-    assert 'const bestMatchesPolicy = "main-listeners-v3";' in SCRIPT
+    # A new policy keeps cached answers from before the consensus body out.
+    assert 'const bestMatchesPolicy = "main-consensus-v4";' in SCRIPT
     assert "best-vibe-sounds" not in SCRIPT
     # Audio only and artists without listener data say why Listeners also play is empty.
     assert (
@@ -132,5 +138,5 @@ def test_anysong_has_the_spotify_extensions_two_tabs():
     ) in SCRIPT
     assert (
         "\"We don't know what this artist's listeners play yet, so there's no list here. "
-        'Best matches still has the songs that sound most alike."'
+        "Best matches still has this song's closest matches.\""
     ) in SCRIPT

@@ -65,6 +65,7 @@ function loadExtension(fetchImpl, options = {}) {
   const graphqlRequests = [];
   const cosmosRequests = [];
   const isrcRequests = [];
+  const metadataRequests = [];
   const logs = [];
   const historyListeners = [];
   const storage = options.storage || new Map();
@@ -116,12 +117,26 @@ function loadExtension(fetchImpl, options = {}) {
   const stemsButtons = { back: [], retry: [], play: [] };
   // Best matches are offline unless a test opts in, so the older tests keep
   // exercising the Sounds like flow they were written for.
-  function fetchWithBestMatches(url, init) {
+  async function fetchWithBestMatches(url, init) {
     if (String(url).startsWith("https://soundalike.yassin.app/api/anysong/")) {
       bestRequests.push(String(url));
       return options.bestFetch
         ? options.bestFetch(String(url), init)
         : Promise.reject(new TypeError("Best matches are offline in this test"));
+    }
+    // The seed's ISRC from Spotify's metadata service: an ISRC (answered as
+    // JSON), { text } for a raw reply, { status } for a refusal, or an Error.
+    if (String(url).startsWith("https://spclient.wg.spotify.com/metadata/4/track/")) {
+      isrcRequests.push(String(url));
+      metadataRequests.push({ url: String(url), headers: { ...init?.headers } });
+      const answer = await options.isrc?.metadata;
+      if (answer instanceof Error) throw answer;
+      const status = answer?.status || 200;
+      const text = typeof answer?.text === "string"
+        ? answer.text
+        : JSON.stringify(
+          typeof answer === "string" ? { external_id: [{ type: "isrc", id: answer }] } : {});
+      return { ok: status >= 200 && status < 300, status, async text() { return text; } };
     }
     return fetchImpl(url, init);
   }
@@ -590,15 +605,11 @@ function loadExtension(fetchImpl, options = {}) {
     ...((options.languageByTrackId || options.isrc) ? {
       CosmosAsync: {
         async get(url) {
-          // The seed's ISRC: Spotify's metadata service, then the Web API.
-          if (url.includes("/metadata/4/track/") || url.includes("api.spotify.com/v1/tracks/")) {
+          // The seed's ISRC from the Web API; the metadata service is fetched.
+          if (url.includes("api.spotify.com/v1/tracks/")) {
             isrcRequests.push(url);
-            const source = url.includes("/metadata/4/track/") ? "metadata" : "webApi";
-            const answer = await options.isrc?.[source];
+            const answer = await options.isrc?.webApi;
             if (answer instanceof Error) throw answer;
-            if (source === "metadata") {
-              return answer ? { external_id: [{ type: "isrc", id: answer }] } : {};
-            }
             return answer ? { external_ids: { isrc: answer } } : {};
           }
           cosmosRequests.push(url);
@@ -617,6 +628,16 @@ function loadExtension(fetchImpl, options = {}) {
       },
     } : {}),
     Platform: {
+      // spotifyToken: null leaves the client without an access token.
+      ...(options.spotifyToken !== null ? {
+        AuthorizationAPI: {
+          async getState() {
+            if (options.authorizationFails) throw new Error("no state");
+            return { token: { accessToken: options.spotifyToken || "spotify-token" } };
+          },
+        },
+      } : {}),
+      ...(options.sessionToken ? { Session: { accessToken: options.sessionToken } } : {}),
       History: {
         location: { pathname: "/" },
         listen(callback) {
@@ -756,6 +777,7 @@ function loadExtension(fetchImpl, options = {}) {
     rows,
     bestRequests,
     isrcRequests,
+    metadataRequests,
     tabs,
     tab(view) {
       return tabs.find((item) => item.dataset.view === view);
@@ -2286,7 +2308,7 @@ const soundsFixture = [
   { title: "Take My Breath", artist: "The Weeknd", bpm: 121.7 },
 ];
 
-const bestCacheKey = "best:anysong-main-listeners-v14:listeners:same:spotify:track:test";
+const bestCacheKey = "best:anysong-main-consensus-v15:listeners:same:spotify:track:test";
 
 function bestMatchesBody(best = bestFixture, overrides = {}) {
   return {
@@ -2434,6 +2456,57 @@ test("sends the seed's ISRC from Spotify's metadata service", async () => {
   // "test" in Spotify's base 62, as the metadata service's hex id.
   assert.ok(app.isrcRequests.includes(
     "https://spclient.wg.spotify.com/metadata/4/track/000000000000000000000000006a4f35?market=from_token"));
+  // Read with the client's own token, asking for JSON.
+  assert.deepEqual(app.metadataRequests[0].headers, {
+    Authorization: "Bearer spotify-token",
+    Accept: "application/json",
+  });
+});
+
+test("reads the seed's ISRC from a metadata reply that isn't JSON", async () => {
+  // Protobuf as text: the "isrc" tag, a length byte, then the code.
+  const app = loadBestMatchesExtension({
+    isrc: {
+      metadata: { text: "\n\u0010\u00e6\u0099\u00b4\u00e5\u00a4\u00a9R\u0014\n\u0004isrc\u0012\fTWK970000603\u0001" },
+      webApi: new Error("unavailable"),
+    },
+  });
+
+  await app.run();
+  await waitFor(() => app.bestRequests.length === 1);
+
+  assert.equal(new URL(app.bestRequests[0]).searchParams.get("isrc"), "TWK970000603");
+});
+
+test("falls back to the session's token for the metadata service", async () => {
+  const app = loadBestMatchesExtension({
+    isrc: { metadata: "USUM71703861" },
+    authorizationFails: true,
+    sessionToken: "session-token",
+  });
+
+  await app.run();
+  await waitFor(() => app.bestRequests.length === 1);
+
+  assert.equal(app.metadataRequests[0].headers.Authorization, "Bearer session-token");
+  assert.equal(new URL(app.bestRequests[0]).searchParams.get("isrc"), "USUM71703861");
+});
+
+test("asks by title and artist when Spotify gives the client no token", async () => {
+  const app = loadBestMatchesExtension({
+    isrc: { metadata: "USUM71703861", webApi: new Error("unavailable") },
+    spotifyToken: null,
+  });
+
+  await app.run();
+  await waitFor(() => app.bestRequests.length === 1);
+
+  const bestUrl = new URL(app.bestRequests[0]);
+  assert.deepEqual(app.metadataRequests, []);
+  assert.equal(bestUrl.searchParams.get("isrc"), null);
+  assert.equal(bestUrl.searchParams.get("title"), "Blinding Lights");
+  assert.equal(bestUrl.searchParams.get("artist"), "The Weeknd");
+  assert.deepEqual(errorNotifications(app), []);
 });
 
 test("takes the seed's ISRC from the Web API when the metadata service fails", async () => {
@@ -2448,17 +2521,19 @@ test("takes the seed's ISRC from the Web API when the metadata service fails", a
 });
 
 test("asks by title and artist when Spotify gives no usable ISRC", async () => {
-  const app = loadBestMatchesExtension({
-    isrc: { metadata: "not-an-isrc", webApi: new Error("429") },
-  });
+  for (const metadata of ["not-an-isrc", { status: 401 }, { text: "\u0001\u0002 no code here" }]) {
+    const app = loadBestMatchesExtension({
+      isrc: { metadata, webApi: new Error("429") },
+    });
 
-  await app.run();
-  await waitFor(() => app.bestRequests.length === 1);
+    await app.run();
+    await waitFor(() => app.bestRequests.length === 1);
 
-  const bestUrl = new URL(app.bestRequests[0]);
-  assert.equal(bestUrl.searchParams.get("isrc"), null);
-  assert.equal(bestUrl.searchParams.get("artist"), "The Weeknd");
-  assert.deepEqual(errorNotifications(app), []);
+    const bestUrl = new URL(app.bestRequests[0]);
+    assert.equal(bestUrl.searchParams.get("isrc"), null);
+    assert.equal(bestUrl.searchParams.get("artist"), "The Weeknd");
+    assert.deepEqual(errorNotifications(app), []);
+  }
 });
 
 test("stops waiting for the ISRC after a moment", async () => {
@@ -2494,7 +2569,7 @@ test("opens on Best matches with Listeners also play one tab away", async () => 
   // A new response format gets a new URL, so HTTP-cached older responses are skipped.
   assert.equal(
     bestUrl.searchParams.get("policy"),
-    "anysong-main-listeners-v14",
+    "anysong-main-consensus-v15",
   );
   // Best matches came back, so the older Sounds like service isn't asked.
   assert.deepEqual(
@@ -3528,11 +3603,70 @@ test("explains an empty Listeners also play when the artist has no listener data
   assert.doesNotMatch(html, /class="sa-blurb"/);
   assert.match(
     html,
-    /<div class="sa-state" role="status">We don't know what this artist's listeners play yet, so there's no list here\. Best matches still has the songs that sound most alike\.<\/div>/,
+    /<div class="sa-state" role="status">We don't know what this artist's listeners play yet, so there's no list here\. Best matches still has this song's closest matches\.<\/div>/,
   );
   assert.match(html, /<button class="sa-audio-only" type="button" aria-pressed="false"/);
   assert.doesNotMatch(html, /<div class="sa-row"|class="sa-language-filter"/);
   assert.equal(app.bestRequests.length, 1);
+});
+
+test("describes Best matches the five-signal model ranked, with or without listener data", async () => {
+  // After the audio head the server's rows come from the model (basis "consensus").
+  const consensusBody = (url, scene) => {
+    const body = mainMatchesBody(new URL(url).searchParams.get("lang"), {
+      main: mainFixture.map((item, index) => ({
+        ...item,
+        ...(item.basis === "sound" ? { basis: "consensus", ranks_all: { sound: 3, head: 37 } } : {}),
+        match: [97, 82, 60][index],
+        overall: [97, 82, 60][index],
+      })),
+    });
+    body.query.scene = scene;
+    return scene === "on" ? body : withoutListeners(body);
+  };
+  const storage = new Map();
+  for (const scene of ["on", "unknown_artist"]) {
+    const app = loadBestMatchesExtension({
+      storage: scene === "on" ? storage : new Map(),
+      bestFetch: async (url) => response(200, consensusBody(url, scene)),
+    });
+    await app.run();
+    await waitFor(() => hasLog(app, "Best matches metadata settled"));
+
+    const html = app.currentPage.innerHTML;
+    assert.match(
+      html,
+      /<p class="sa-blurb">Likely covers, samples and shared melodies first, then other artists' songs a model ranks closest, from five signals: sound, scene, playlists, melody and samples\. Turn on Audio only to rank by sound alone\.<\/p>/,
+    );
+    assert.match(html, /<span class="sa-tag">Five signals<\/span>/);
+    // Only the audio head's rows say which channels placed them; no row is labelled.
+    assert.equal((html.match(/class="sa-why"/g) || []).length, 1);
+    assert.doesNotMatch(html, /class="sa-basis"/);
+    const matchOf = (row) => findElement(row.tree, (node) => node.props?.className === "sa-match");
+    assert.equal(
+      matchOf(app.rows[0]).props["aria-label"],
+      "Match 97%: how strongly Soundalike ranks it for this song. " +
+        "Sound match 97%: sounds more alike than 97% of typical matches",
+    );
+    // A consensus row's match scores the model's ranking, not its sound.
+    assert.equal(
+      matchOf(app.rows[1]).props["aria-label"],
+      "Match 82%: how strongly Soundalike ranks it for this song",
+    );
+    assert.equal(
+      findElement(matchOf(app.rows[1]), (node) => node.type === "i").props.style.width,
+      "82%",
+    );
+    assert.deepEqual(errorNotifications(app), []);
+  }
+  await waitFor(() => Boolean(
+    JSON.parse(storage.get("soundalike:spicetify-cache:v9") || "{}").recommendations?.[bestCacheKey],
+  ), 1000);
+  assert.deepEqual(
+    JSON.parse(storage.get("soundalike:spicetify-cache:v9"))
+      .recommendations[bestCacheKey].value.main.map((row) => row.basis),
+    ["audio", "consensus"],
+  );
 });
 
 test("shows Listeners also play loading until slow Best matches arrive", async () => {
