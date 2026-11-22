@@ -39,6 +39,10 @@ struct SettingsView: View {
                 }
             }
             .sheet(isPresented: $showGuide) { GuideView() }
+            // The home screen's alert can't show over this sheet, so Spotify failures surface here.
+            .alert("Spotify", isPresented: Binding(get: { spotify.failure != nil }, set: { if !$0 { spotify.failure = nil } })) {
+                Button("OK", role: .cancel) {}
+            } message: { Text(spotify.failure ?? "") }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -95,7 +95,7 @@ struct HomeView: View {
             }
             .overlay { if listener.isListening { ListeningOverlay { listener.cancel() } } }
             .onChange(of: spotify.failure) { _, failure in
-                if let failure { error = failure; spotify.failure = nil }
+                if let failure, !showSettings { error = failure; spotify.failure = nil }
             }
             .alert("Soundalike", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
                 Button("OK", role: .cancel) {}
