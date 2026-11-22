@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import app.yassin.soundalike.NowPlaying
+import app.yassin.soundalike.QuickTile
 import app.yassin.soundalike.R
 
 /** First-run guide: the two quickest ways from a playing song to its soundalikes. */
@@ -42,19 +44,24 @@ fun GuideScreen(modifier: Modifier, onDone: () -> Unit) {
         modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Section("Share a song", "Works straight away, for any song you can see.") {
-            Step(R.drawable.ic_share, "In Spotify, YouTube Music or Apple Music, open a song's ⋮ menu and tap Share.")
-            Step(R.drawable.ic_mark, "Pick Find soundalikes. In Spotify it is behind More. After a few uses Android keeps it in the first row.")
-            Step(R.drawable.ic_open, "The list opens over your music app. Tap a cover to hear 30 seconds, tap a song to open it there.")
-        }
-        Section("One tap for what's playing", "Needs notification access: that is how Android lets an app see the playing song. Soundalike reads the title and artist, never your notifications.") {
+        Section("Set up one tap for what's playing", "Android shows the playing song only to apps with notification access. Soundalike uses it to read the song's title and artist from your music app; it does not read your notifications.") {
             if (access) {
                 Step(R.drawable.ic_note, "Notification access is on.")
             } else {
                 Button(onClick = { context.startActivity(NowPlaying.accessSettingsIntent(context)) }) { Text("Allow notification access") }
             }
-            Step(R.drawable.ic_settings, "Quick Settings: swipe down twice, tap the pencil, drag Soundalikes into your tiles. Then it is swipe down, tap.")
+            if (QuickTile.canAskToAdd) {
+                Step(R.drawable.ic_settings, "Quick Settings tile: then it is swipe down, tap, from inside any music app.")
+                OutlinedButton(onClick = { QuickTile.askToAdd(context) }) { Text("Add the Soundalikes tile") }
+            } else {
+                Step(R.drawable.ic_settings, "Quick Settings: swipe down twice, tap the pencil, drag Soundalikes into your tiles. Then it is swipe down, tap.")
+            }
             Step(R.drawable.ic_mark, "Home screen: hold an empty spot, Widgets, Soundalike. Or hold the app icon and tap Find soundalikes.")
+        }
+        Section("Or share any song", "Needs no setup, and works for any song you can see, not only the one playing.") {
+            Step(R.drawable.ic_share, "In Spotify, YouTube Music or Apple Music, open a song's ⋮ menu and tap Share.")
+            Step(R.drawable.ic_mark, "Pick Find soundalikes. In Spotify it is behind More. After a few uses Android keeps it in the first row.")
+            Step(R.drawable.ic_open, "The list opens over your music app. Tap a cover to hear 30 seconds, tap a song to open it there.")
         }
         Button(onClick = onDone) { Text("Done") }
         Spacer(Modifier.size(24.dp))

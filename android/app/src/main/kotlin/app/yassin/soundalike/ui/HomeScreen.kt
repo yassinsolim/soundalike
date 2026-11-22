@@ -71,7 +71,8 @@ fun HomeScreen(
     var hits by remember { mutableStateOf<List<Seed>?>(null) }
     var searchFailed by remember { mutableStateOf(false) }
     var access by remember { mutableStateOf(NowPlaying.hasAccess(context)) }
-    var playing by remember { mutableStateOf(NowPlaying.read(context)) }
+    // Kept current by the listener while notification access is on, so the card follows the player.
+    val playing = NowPlaying.current
 
     LaunchedEffect(incomingSearch) {
         if (incomingSearch != null) {
@@ -82,7 +83,7 @@ fun HomeScreen(
     // Coming back from the music app or from the access screen: look again.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         access = NowPlaying.hasAccess(context)
-        playing = NowPlaying.read(context)
+        NowPlaying.current = NowPlaying.read(context)
     }
     val pastedLink = remember(query) { SharedLink.find(query) }
     LaunchedEffect(query) {

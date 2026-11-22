@@ -105,6 +105,8 @@ class MainActivity : ComponentActivity() {
                     missingApp = model.missingApp,
                     onGetApp = model::installMissingApp,
                     onDismissMissingApp = { model.missingApp = null },
+                    changedSong = model.changedSong,
+                    onFollowSong = { model.load(Request.Playing) },
                     failureActions = FailureActions(allowAccess = { startActivity(NowPlaying.accessSettingsIntent(this)) }),
                     modifier = modifier.fillMaxSize(),
                 )

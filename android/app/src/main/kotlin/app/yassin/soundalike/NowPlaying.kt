@@ -10,6 +10,9 @@ import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.os.Build
 import android.provider.Settings as SystemSettings
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import app.yassin.soundalike.core.MusicSource
@@ -28,9 +31,14 @@ data class PlayingSong(
     val playing: Boolean,
     /** `spotify:track:<id>` when the session or Spotify's broadcast names it. */
     val spotifyUri: String?,
+    /** A web address of the cover, when the player publishes one (Spotify does). */
+    val artworkUrl: String? = null,
 ) {
+    /** Two reports of the same song compare equal whatever else changed (position, play state). */
+    val key: String get() = spotifyUri ?: "$packageName|$title|$artist"
+
     fun toSeed() = Seed(
-        title = title, artist = artist,
+        title = title, artist = artist, artworkUrl = artworkUrl,
         source = MusicSource.fromPackage(packageName) ?: MusicSource.SEARCH,
         spotifyId = spotifyUri?.substringAfterLast(':'),
     )
@@ -45,12 +53,18 @@ data class PlayingSong(
  */
 object NowPlaying {
     const val SPOTIFY_METADATA_CHANGED = "com.spotify.music.metadatachanged"
+    /** Set to 1 by players (Spotify among them) while an advert plays; there is no song to match then. */
+    private const val ADVERTISEMENT = "android.media.metadata.ADVERTISEMENT"
+    private const val SPOTIFY_ART_URL = "com.spotify.music.extra.ART_HTTPS_URI"
     private const val LEGACY_PACKAGE = "com.android.music"
     private const val LEGACY_PLAY_STATE = "com.android.music.playstatechanged"
     /** Sent with `track`, `artist` and `playing` extras; all three are sticky in the AOSP player. */
     val LEGACY_ACTIONS = listOf("com.android.music.metadatachanged", "com.android.music.metachanged", LEGACY_PLAY_STATE)
     private const val SPOTIFY_PACKAGE = "com.spotify.music"
     private val spotifyTrackUri = Regex("""^spotify:track:[A-Za-z0-9]{22}$""")
+
+    /** The song as the surfaces last saw it; Compose screens observe it to notice a song change. */
+    var current: PlayingSong? by mutableStateOf(null)
 
     fun hasAccess(context: Context): Boolean =
         context.packageName in NotificationManagerCompat.getEnabledListenerPackages(context)
@@ -93,13 +107,15 @@ object NowPlaying {
         val broadcast = spotifyBroadcast(context)?.takeIf {
             session.packageName == SPOTIFY_PACKAGE && it.track.equals(title, ignoreCase = true)
         }
-        return PlayingSong(title.withoutAudioExtension(), artist, session.packageName, session.isPlaying, named ?: broadcast?.uri)
+        val artwork = metadata?.getString(SPOTIFY_ART_URL)?.takeIf { it.startsWith("https://") }
+        return PlayingSong(title.withoutAudioExtension(), artist, session.packageName, session.isPlaying, named ?: broadcast?.uri, artwork)
     }
 
     private val MediaController.isPlaying get() = playbackState?.state == PlaybackState.STATE_PLAYING
 
     private fun MediaController.song(): Pair<String, String>? {
         val metadata = metadata ?: return null
+        if (metadata.getLong(ADVERTISEMENT) != 0L) return null
         val title = metadata.text(MediaMetadata.METADATA_KEY_TITLE, MediaMetadata.METADATA_KEY_DISPLAY_TITLE) ?: return null
         val artist = metadata.text(
             MediaMetadata.METADATA_KEY_ARTIST, MediaMetadata.METADATA_KEY_ALBUM_ARTIST, MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE,
@@ -148,6 +164,13 @@ object NowPlaying {
         return LegacyBroadcast(song.track, song.artist, state?.playing ?: song.playing)
     }
 
+    /** A metadata value of whatever type the player stored. */
+    private fun MediaMetadata.describe(key: String): String =
+        runCatching { getText(key)?.toString() }.getOrNull()
+            ?: runCatching { getBitmap(key)?.let { "bitmap ${it.width}x${it.height}" } }.getOrNull()
+            ?: runCatching { getRating(key)?.toString() }.getOrNull()
+            ?: runCatching { getLong(key).toString() }.getOrDefault("?")
+
     /** Everything the players expose, for the diagnostics box in Settings. */
     fun report(context: Context): String = buildString {
         if (!hasAccess(context)) return "Notification access is off."
@@ -157,10 +180,12 @@ object NowPlaying {
             appendLine("${session.packageName}  state=${session.playbackState?.state}")
             val metadata = session.metadata
             for (key in metadata?.keySet().orEmpty().sorted()) {
-                val value = runCatching { metadata?.getText(key) }.getOrNull() ?: continue
-                appendLine("  ${key.removePrefix("android.media.metadata.")} = $value")
+                appendLine("  ${key.removePrefix("android.media.metadata.")} = ${metadata?.describe(key)}")
             }
-            session.extras?.let { extras -> appendLine("  session extras: ${extras.keySet().sorted().joinToString()}") }
+            session.extras?.let { extras ->
+                @Suppress("DEPRECATION")
+                appendLine("  session extras: " + extras.keySet().sorted().joinToString { "$it=${extras.get(it)}" })
+            }
         }
         val broadcast = spotifyBroadcast(context)
         appendLine(if (broadcast == null) "Spotify broadcast: none received" else "Spotify broadcast: ${broadcast.uri}  ${broadcast.track} / ${broadcast.artist}")

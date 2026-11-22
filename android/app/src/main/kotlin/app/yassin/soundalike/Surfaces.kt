@@ -8,6 +8,7 @@ import android.content.Intent
 object Surfaces {
     fun update(context: Context) {
         val song = NowPlaying.read(context)
+        NowPlaying.current = song
         PlayingWidget.update(context, song)
         QuickTile.requestUpdate(context)
         PlayingNotification.update(context, song)

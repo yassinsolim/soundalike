@@ -17,6 +17,7 @@ import app.yassin.soundalike.core.Seed
 import app.yassin.soundalike.core.SharedLink
 import app.yassin.soundalike.core.SoundalikeError
 import app.yassin.soundalike.core.SoundalikeResults
+import app.yassin.soundalike.core.TextMatch
 import java.util.Locale
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -81,10 +82,18 @@ class ResultsViewModel(application: Application) : AndroidViewModel(application)
         missingApp = null
     }
 
+    /** The playing song this list was made for; null when it was made for some other song. */
+    private var followed: String? = null
+
+    /** Set once the player has moved on to another song than the one listed: the screen offers to follow it. */
+    val changedSong: PlayingSong?
+        get() = NowPlaying.current?.takeIf { followed != null && it.key != followed && state is ResultsState.Loaded }
+
     val player = PreviewPlayer(app, viewModelScope)
 
     fun load(request: Request) {
         this.request = request
+        followed = null
         job?.cancel()
         player.stop()
         job = viewModelScope.launch {
@@ -116,6 +125,7 @@ class ResultsViewModel(application: Application) : AndroidViewModel(application)
                             return@launch
                         }
                         val song = NowPlaying.read(app)
+                        NowPlaying.report(app).lines().forEach { Log.i("Soundalike", it) }
                         if (song == null) {
                             state = ResultsState.Failed("Nothing is playing. Start a song in your music app, then try again.", ResultsState.Reason.NOTHING_PLAYING)
                             return@launch
@@ -128,6 +138,9 @@ class ResultsViewModel(application: Application) : AndroidViewModel(application)
                     }
                 }
                 app.history.add(results.seed)
+                followed = NowPlaying.read(app)?.takeIf {
+                    request == Request.Playing || TextMatch.normalize(it.title) == TextMatch.normalize(results.seed.title)
+                }?.key
                 state = ResultsState.Loaded(results)
                 app.lastAnswer = "${results.matches.size} results from the ${results.route} route in ${SystemClock.elapsedRealtime() - started} ms"
                 Log.i("Soundalike", app.lastAnswer!!)

@@ -40,6 +40,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import app.yassin.soundalike.BuildConfig
 import app.yassin.soundalike.FloatingButton
+import app.yassin.soundalike.ForegroundApp
+import app.yassin.soundalike.QuickTile
 import app.yassin.soundalike.NowPlaying
 import app.yassin.soundalike.Surfaces
 import app.yassin.soundalike.app
@@ -54,11 +56,13 @@ fun SettingsScreen(modifier: Modifier, onGuide: () -> Unit) {
     var notification by remember { mutableStateOf(settings.playingNotification) }
     var floating by remember { mutableStateOf(settings.floatingButton && FloatingButton.canDraw(context)) }
     var access by remember { mutableStateOf(NowPlaying.hasAccess(context)) }
+    var usage by remember { mutableStateOf(ForegroundApp.hasAccess(context)) }
     var report by remember { mutableStateOf<String?>(null) }
     var server by remember { mutableStateOf(settings.baseUrl) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         access = NowPlaying.hasAccess(context)
+        usage = ForegroundApp.hasAccess(context)
         // Back from "Display over other apps": the switch follows what was granted.
         floating = settings.floatingButton && FloatingButton.canDraw(context)
         Surfaces.update(context)
@@ -104,6 +108,9 @@ fun SettingsScreen(modifier: Modifier, onGuide: () -> Unit) {
             )
         }
         Card("One-tap shortcuts", "A Quick Settings tile and a home-screen widget are always available; see How to use Soundalike.") {
+            if (QuickTile.canAskToAdd) {
+                OutlinedButton(onClick = { QuickTile.askToAdd(context) }) { Text("Add the Soundalikes tile") }
+            }
             Toggle("Notification while music plays", "A quiet notification; tap it for soundalikes.", notification) { on ->
                 if (on && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     askToNotify.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -113,13 +120,26 @@ fun SettingsScreen(modifier: Modifier, onGuide: () -> Unit) {
                     Surfaces.update(context)
                 }
             }
-            Toggle("Floating button while music plays", "Experimental. Shows over every app, and needs “Display over other apps”.", floating) { on ->
+            Toggle("Floating button while music plays", "One tap inside your music app. Drag it anywhere; hold it to hide it until the next song. Needs “Display over other apps”.", floating) { on ->
                 settings.floatingButton = on
                 if (on && !FloatingButton.canDraw(context)) {
                     context.startActivity(Intent(SystemSettings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}")))
                 } else {
                     floating = on
                     Surfaces.update(context)
+                }
+            }
+        }
+        if (floating) {
+            Card("Floating button: where it shows") {
+                if (usage) {
+                    Text("Only over the app that is playing.")
+                } else {
+                    Text(
+                        "Over every app while music plays. Android only tells an app which app is in front with “Usage access”; allow it and the button shows only over your music app. Soundalike uses it for nothing else.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium,
+                    )
+                    OutlinedButton(onClick = { context.startActivity(ForegroundApp.accessSettingsIntent(context)) }) { Text("Allow usage access") }
                 }
             }
         }

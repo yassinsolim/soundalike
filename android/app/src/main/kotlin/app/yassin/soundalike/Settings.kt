@@ -32,6 +32,11 @@ class Settings(private val context: Context) {
         get() = prefs.getBoolean("floating_button", false)
         set(value) = prefs.edit().putBoolean("floating_button", value).apply()
 
+    /** Where the user dragged the floating button: offset from the right edge and from the vertical centre, in pixels. */
+    var floatingPosition: Pair<Int, Int>?
+        get() = if (prefs.contains("floating_x")) prefs.getInt("floating_x", 0) to prefs.getInt("floating_y", 0) else null
+        set(value) = prefs.edit().putInt("floating_x", value?.first ?: 0).putInt("floating_y", value?.second ?: 0).apply()
+
     /** Debug builds can point at another engine, for example http://10.0.2.2:8792 from the emulator. */
     var baseUrl: String
         get() = prefs.getString("base_url", null)?.takeIf { BuildConfig.DEBUG && it.isNotBlank() } ?: SoundalikeClient.DEFAULT_BASE

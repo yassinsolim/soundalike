@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import app.yassin.soundalike.PlayingSong
 import app.yassin.soundalike.PreviewPlayer
 import app.yassin.soundalike.R
 import app.yassin.soundalike.ResultsState
@@ -75,6 +76,8 @@ fun ResultsList(
     missingApp: MusicSource? = null,
     onGetApp: () -> Unit = {},
     onDismissMissingApp: () -> Unit = {},
+    changedSong: PlayingSong? = null,
+    onFollowSong: () -> Unit = {},
 ) {
     if (missingApp != null) {
         AlertDialog(
@@ -111,6 +114,7 @@ fun ResultsList(
                 item { Failure(state, onRetry, failureActions) }
             }
             is ResultsState.Loaded -> {
+                if (changedSong != null) item { SongChanged(changedSong, onFollowSong) }
                 if (wide) {
                     item {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -157,6 +161,27 @@ private fun Failure(state: ResultsState.Failed, onRetry: () -> Unit, actions: Fa
                 actions.searchInstead?.let { search -> Button(onClick = search) { Text("Search in Soundalike") } }
             else -> Button(onClick = onRetry) { Text("Try again") }
         }
+    }
+}
+
+/** The player moved on while the list was open. */
+@Composable
+private fun SongChanged(song: PlayingSong, onFollow: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(14.dp))
+            .clickable(onClick = onFollow)
+            .padding(start = 14.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            "Now playing: ${song.title} · ${song.artist}",
+            Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        TextButton(onClick = onFollow) { Text("Show soundalikes") }
     }
 }
 

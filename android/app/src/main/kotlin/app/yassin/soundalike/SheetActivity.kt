@@ -5,6 +5,7 @@ import android.content.res.Configuration
 import android.graphics.Color.TRANSPARENT
 import android.os.Bundle
 import android.os.PowerManager
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -56,7 +57,7 @@ class SheetActivity : ComponentActivity() {
         enableEdgeToEdge(SystemBarStyle.dark(TRANSPARENT), SystemBarStyle.dark(TRANSPARENT))
         super.onCreate(savedInstanceState)
         // After a rotation the view model still holds the list; only a fresh start loads.
-        if (model.request == null) model.load(Request.from(intent, referrer))
+        if (model.request == null) load(intent)
         setContent {
             SoundalikeTheme { Sheet() }
         }
@@ -65,6 +66,16 @@ class SheetActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        load(intent)
+    }
+
+    private fun load(intent: Intent) {
+        if (intent.action == Intent.ACTION_SEND) {
+            // What a music app really hands over differs per app and version; keep it readable in logcat.
+            @Suppress("DEPRECATION")
+            val extras = intent.extras?.let { bundle -> bundle.keySet().joinToString { "$it=${bundle.get(it)}" } }
+            Log.i("Soundalike", "share from $referrer type=${intent.type} flags=0x${Integer.toHexString(intent.flags)} extras: $extras")
+        }
         model.load(Request.from(intent, referrer))
     }
 
@@ -134,6 +145,8 @@ class SheetActivity : ComponentActivity() {
                     missingApp = model.missingApp,
                     onGetApp = model::installMissingApp,
                     onDismissMissingApp = { model.missingApp = null },
+                    changedSong = model.changedSong,
+                    onFollowSong = { model.load(Request.Playing) },
                     failureActions = FailureActions(
                         allowAccess = ::allowAccess,
                         // Shared words can be searched; a link to an album or playlist can't.

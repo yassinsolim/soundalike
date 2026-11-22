@@ -40,24 +40,40 @@ request flow, the same fallbacks, the same look.
 | Surface | What it does | Taps from a playing song | Needs |
 |---|---|---|---|
 | **Share target** "Find soundalikes" | Results as a bottom sheet over the music app. Also registered as a Sharing Shortcut, so it sits in the direct-share row of Android's share sheet | Spotify: Share › More › Find soundalikes = 3 from Now Playing, 4 from a song's ⋮ menu. 1 tap once Android's share sheet is open | Nothing |
-| **Quick Settings tile** "Soundalikes" | Opens the sheet for the playing song | Swipe down + 1 tap | Notification access; tile added once |
+| **Quick Settings tile** "Soundalikes" | Opens the sheet for the playing song | Swipe down + 1 tap | Notification access; tile added once (on Android 13+ the guide offers it in a system dialog: 2 taps) |
 | **Home-screen widget** | Shows the playing song; tap opens the sheet | 1 tap on the home screen | Notification access |
 | **Notification while music plays** (off by default) | Quiet ongoing notification; tap opens the sheet | Swipe down + 1 tap | Notification access, notification permission |
 | **App shortcuts** | Long-press the icon: Find soundalikes (playing song), Search a song | Long-press + 1 tap | Notification access for the first |
-| **Floating button** (experimental, off by default) | Draggable button over other apps while music plays; tap opens the sheet | 1 tap, without leaving the music app | Notification access, "Display over other apps" |
+| **Floating button** (off by default) | Small draggable button over the music app while it plays; tap opens the sheet, hold hides it until the next song, it remembers where it was dragged | 1 tap, without leaving the music app | Notification access, "Display over other apps"; with "Usage access" it shows only while the playing app is in front |
 | **The app** | Playing-now card, search (Deezer), pasted links, history, settings, guide | Open app + 1 tap | Notification access for the card |
 
-Recommended default: the **share target** is what the first-run guide teaches first, because it needs no permission
-and works for any song on screen, not only the playing one. For the playing song, the **Quick Settings tile** is the
-recommended one-tap route: always one swipe away, nothing on screen otherwise. The floating button is the only
-route with a single tap inside the music app, but it stays opt-in: Android cannot tell an app which app is in front
-without accessibility or usage access, so it shows over every app while music plays, and Android adds its own
-"displaying over other apps" notification.
+Measured in Spotify 9.2.0 on a real device, from "listening" to the list and on to hearing a soundalike:
+
+| Route | Taps to the list | Then to hear one |
+|---|---|---|
+| Floating button | 1 | +1 preview in the sheet, or +2 in Spotify (row, then the one search hit); +1 when the server sends the track's own link |
+| Quick Settings tile | swipe + 1 | same |
+| Share from Now Playing (share icon › More › Find soundalikes) | 3 | same |
+| Share from a song's ⋮ menu (⋮ › Share › More › Find soundalikes) | 4 | same |
+
+Recommended default: the first-run guide sets up **notification access and the tile** (three taps on Android 13+),
+which gives swipe + tap from inside any music app with nothing on screen otherwise. **Share** needs no setup and is
+the route for a song that is not the one playing. The **floating button** is the closest thing to a button inside
+Spotify and is offered in Settings, not switched on by default: it needs "Display over other apps", Android shows
+its own "displaying over other apps" notification, and without the extra "Usage access" it shows over every app
+while music plays.
+
+While the list is open and the player moves to another song, a line at the top offers "Show soundalikes" for the
+new song.
 
 What is playing comes from two sources:
 - `MediaSessionManager.getActiveSessions`, which Android allows for apps with notification access.
   `NowPlayingListener` is an empty `NotificationListenerService`; no notification is read. It gives title, artist
-  and the player's package for any player. If a session's media id or media URI is a `spotify:track:` URI it is used.
+  and the player's package for any player. **Spotify puts the track URI in the session** (`METADATA_KEY_MEDIA_ID` =
+  `spotify:track:<id>`, measured with Spotify 9.2.0, no setting and no Spotify API involved), so for Spotify the
+  server gets the exact `spotify_id`. Spotify also publishes the cover's https address
+  (`com.spotify.music.extra.ART_HTTPS_URI`, shown while the list loads) and marks adverts (`ADVERTISEMENT` = 1,
+  treated as nothing playing).
 - The `com.android.music.metadatachanged` / `metachanged` / `playstatechanged` broadcasts (extras `track`,
   `artist`, `playing`). The AOSP Music app and players built on it keep a media session but put no song in it;
   they name the song only in these broadcasts. Used when no session names a song, and only for a session that
@@ -73,6 +89,21 @@ logcat under the tag `Soundalike` (`adb logcat -s Soundalike:I`), in release bui
 The sheet closes when the user leaves it, so a stale list never comes back; it stays through a rotation, through
 the screen turning off and on, and while the user is on the notification-access screen. Held sideways, the song
 and the app picker share one row, and the sheet stops below the status bar.
+
+What Spotify for Android does with each way of opening a result (measured, Premium account):
+
+| Sent to `com.spotify.music` | Result |
+|---|---|
+| `spotify:track:<id>` (VIEW) | Opens the album at that track and **starts playing it** |
+| `https://open.spotify.com/search/isrc%3A<ISRC>` (VIEW) | Search page with exactly that recording as the only song: one more tap plays it. Used when no track id is known |
+| `spotify:search:isrc:<ISRC>` (VIEW) | Worse: searches the bare code as text and lists unrelated things |
+| `android.media.action.MEDIA_PLAY_FROM_SEARCH` with title and artist | Opens a search page for the words; plays nothing |
+| `playFromSearch` / `playFromUri` on Spotify's media session (through notification access) | Ignored |
+| Connecting to Spotify's `MediaBrowserService` | Refused ("No root for client") |
+
+So a tap plays at once only with a track id. The phone has no credential-free way to turn an ISRC into an id; the
+server can (`spotify_kind: track` when it has Spotify API credentials), and the app already uses such a link as
+`spotify:track:`. There is no login-free way to queue a song or play the whole list in Spotify.
 
 Not built:
 - **AccessibilityService**: not used anywhere, by decision.
@@ -172,18 +203,30 @@ Not possible on that device: its launcher hosts no widgets and shows no app shor
 screen stays in landscape (portrait was only run in the emulator), the notification was checked in
 `dumpsys notification` but not tapped, and the device was not rebooted.
 
-Needs a real phone or a Spotify login (not tested):
-- Spotify's own share flow: where "Find soundalikes" appears, the exact shared text, the tap counts above.
-- That the sheet stays over Spotify when shared from it, and what Spotify does with it after a result is opened.
-- What Spotify puts in its media session (media id / URI), and whether its broadcast is still sticky.
-- `spotify:track:` and `open.spotify.com/search/isrc:` opening the right song in Spotify for Android (the second
-  is verified on iOS only).
+With Spotify logged in on the same device (2026-11-22, release build unless noted):
+
+| Verified with a logged-in Spotify | Result |
+|---|---|
+| Playing song | Read from the session with its track URI; sent as `spotify_id`; list in 117 to 592 ms for songs the engine knew, about 4 s for new ones |
+| Device Broadcast Status (off by default, turned on for the test, then off again) | `com.spotify.music.metadatachanged` is delivered and sticky on Android 13 with the track URI. Not needed, since the session already has it |
+| Share from Now Playing | Share icon › More › Android's sheet with "Find soundalikes" first in the direct-share row. Spotify's own sheet lists only its friends, Copy link and More. Payload: `EXTRA_TEXT` = `https://open.spotify.com/track/<id>?si=…&utm_source=native-share-menu&sci=…`, referrer `android-app://com.spotify.music`, no subject. The sheet opens half height over Spotify (portrait there), in its own task |
+| A song's ⋮ menu | Share is its first entry |
+| Row tapped | Spotify shows the ISRC search with that one song; the sheet is gone |
+| Preview | Spotify pauses for it and resumes afterwards |
+| Tile, notification (follows the song, goes when paused), floating button, playing card | All work while Spotify plays |
+| Floating button (debug build) | Hidden over Soundalike's own screens; one tap inside Spotify opens the sheet; drag position kept; hold hides it until the next song; with usage access it is hidden over other apps |
+| Song change with the sheet open (debug build) | "Now playing: … Show soundalikes" appears; tapping it reloads |
+| Add-tile dialog (debug build) | Guide button › system dialog › Add tile |
+
+Needs a real phone (not tested):
+- A Spotify Free account: whether `spotify:track:` still starts playback there.
 - Apple Music for Android, and YouTube Music signed in (the search link was only seen to reach the app).
 - Other Android versions and manufacturer skins; the minimum, Android 8.0, was not run.
 
 Play Store notes: the share target, tile, widget and shortcuts need no declaration. Notification access needs a
 prominent in-app disclosure (the guide and the sheet explain it before sending the user to the system screen) and
 a privacy policy that says title and artist of the playing song are sent to the Soundalike server.
-`SYSTEM_ALERT_WINDOW` is allowed but draws review attention; drop the floating button if it causes trouble. No
+`SYSTEM_ALERT_WINDOW` and the optional `PACKAGE_USAGE_STATS` (usage access) are allowed but draw review attention;
+both serve only the floating button and can go with it. No
 Spotify name or logo is used in the app's name or icon. These points are a reading of the policy research in the
 project notes, not a confirmed review outcome.
