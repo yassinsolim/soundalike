@@ -1,0 +1,10 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["FJH4UWVC4K.app.yassin.soundalike"],
+        "components": [{ "/": "/find*", "comment": "Soundalikes for a shared song link" }]
+      }
+    ]
+  }
+}

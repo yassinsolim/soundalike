@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.yassin.soundalike",
+      "sha256_cert_fingerprints": [
+        "1E:CE:72:59:6B:BF:02:D1:61:FE:8E:6F:83:EA:31:70:F5:69:C4:65:A7:79:21:60:80:D3:45:BC:34:48:EF:3B"
+      ]
+    }
+  }
+]

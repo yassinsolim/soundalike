@@ -798,6 +798,10 @@ export function createDispatchHandler(
       (await import("../server/spicetify-feedback.js")).default,
     "feedback-digest": async () =>
       (await import("../server/spicetify-feedback-digest.js")).default,
+    "mobile-similar": async () =>
+      (await import("../server/mobile.js")).sharedMobileService().similarHandler,
+    "mobile-link": async () =>
+      (await import("../server/mobile.js")).sharedMobileService().linkHandler,
   },
 ) {
   return async function dispatchedRatingsHandler(request, response) {

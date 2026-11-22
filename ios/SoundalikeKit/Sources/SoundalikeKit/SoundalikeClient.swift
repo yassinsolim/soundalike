@@ -87,10 +87,13 @@ public struct SoundalikeClient: Sendable {
         )
         let matches = rows.compactMap { row -> Match? in
             guard let title = row["title"] as? String, let artist = row["artist"] as? String else { return nil }
+            // Without an exact match the server sends an Apple Music search link (`apple_exact` false).
+            // Dropping it lets the on-device MusicKit or iTunes lookup find the song itself.
+            let appleExact = row["apple_exact"] as? Bool ?? true
             return Match(
                 title: title, artist: artist, match: int(row["match"]) ?? 0,
                 isrc: row["isrc"] as? String, deezerID: int(row["deezer_id"]),
-                spotifyURL: url(row["spotify_url"]), appleMusicURL: url(row["apple_music_url"]),
+                spotifyURL: url(row["spotify_url"]), appleMusicURL: appleExact ? url(row["apple_music_url"]) : nil,
                 artworkURL: url(row["artwork"]), previewURL: url(row["preview_url"])
             )
         }

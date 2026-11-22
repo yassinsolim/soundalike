@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>soundalike — songs that sound like this one</title>
+<meta name="description" content="Share a song from Spotify or Apple Music and get songs that sound like it, with links that open in the same app."/>
+<meta name="theme-color" content="#0a0d12"/>
+<meta name="robots" content="noindex"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231db954'/%3E%3Ctext x='16' y='22' font-size='18' text-anchor='middle' fill='%230a0d12'%3E%E2%97%88%3C/text%3E%3C/svg%3E"/>
+<style>
+:root{color-scheme:dark;--bg:#0a0d12;--card:#12161d;--card2:#171c24;--line:#232a34;--txt:#eef1f5;--mut:#8b93a1;--grn:#1db954;--vio:#8b6cff}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;max-width:100%}
+body{background:radial-gradient(1200px 600px at 70% -10%,#15202c 0%,var(--bg) 55%);color:var(--txt);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;overflow-wrap:anywhere;-webkit-text-size-adjust:100%}
+button,input,a{font:inherit}
+[hidden]{display:none!important}
+.wrap{width:100%;max-width:640px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(40px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
+.brand{display:inline-flex;align-items:center;gap:10px;color:inherit;text-decoration:none}
+.logo{width:30px;height:30px;flex:none;border-radius:8px;background:linear-gradient(135deg,var(--grn),var(--vio));display:grid;place-items:center;font-weight:800;color:#0a0d12}
+.brand b{font-size:18px}
+form{display:flex;gap:8px;margin:14px 0 4px}
+input{flex:1;min-width:0;background:var(--card);border:1px solid var(--line);color:var(--txt);min-height:48px;padding:10px 12px;border-radius:12px;font-size:16px;outline:none}
+input:focus{border-color:var(--grn)}
+.go{flex:none;min-height:48px;padding:0 16px;border-radius:12px;border:0;background:var(--grn);color:#06210f;font-weight:700;cursor:pointer}
+:is(a,button,input):focus-visible{outline:3px solid var(--vio);outline-offset:2px}
+.hint{color:var(--mut);font-size:13px;margin:6px 2px}
+.err{color:#ff8a8a}
+.seed{display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:16px;padding:12px;margin:14px 0 10px}
+.cover{width:64px;height:64px;flex:none;border-radius:10px;background:#0e1319;object-fit:cover}
+.seed .info{flex:1;min-width:0}
+.seed .label{color:var(--mut);font-size:12px}
+.seed h1{margin:0;font-size:17px;line-height:1.25}
+.by{color:var(--mut)}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 2px}
+.bar span{color:var(--mut);font-size:13px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;flex:none}
+.seg button{min-height:40px;padding:0 12px;border:0;background:var(--card);color:var(--mut);cursor:pointer;font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--grn);color:#06210f;font-weight:700}
+ol{list-style:none;margin:0;padding:0}
+.row{display:flex;align-items:center;gap:8px;margin:6px 0;padding:6px;background:rgba(18,22,29,.55);border:1px solid rgba(35,42,52,.75);border-radius:12px}
+.row.playing{border-color:var(--grn)}
+.pv{position:relative;width:52px;height:52px;flex:none;padding:0;border:0;border-radius:8px;background:#0e1319;overflow:hidden;cursor:pointer;color:#fff}
+.pv img{display:block;width:100%;height:100%;object-fit:cover}
+.pv i{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-size:18px;background:rgba(0,0,0,.38)}
+.pv:disabled{cursor:default}
+.pv:disabled i{display:none}
+.hit{flex:1;min-width:0;display:flex;align-items:center;gap:8px;min-height:52px;color:inherit;text-decoration:none}
+.hit .t{flex:1;min-width:0}
+.hit b{display:block;font-weight:600;line-height:1.3}
+.hit .by{display:block;font-size:13px;line-height:1.3}
+.m{flex:none;font-size:12px;color:var(--grn);border:1px solid rgba(29,185,84,.4);border-radius:999px;padding:2px 8px}
+.open{flex:none;color:var(--mut);padding-right:4px}
+.sk{height:66px;margin:6px 0;border-radius:12px;background:linear-gradient(90deg,var(--card),var(--card2),var(--card));background-size:200% 100%;animation:sk 1.2s linear infinite}
+@keyframes sk{to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.sk{animation:none}}
+footer{margin:22px 2px 0;color:var(--mut);font-size:12px}
+footer a{color:var(--mut)}
+</style>
+</head>
+<body>
+<main class="wrap">
+<a class="brand" href="/"><span class="logo">◈</span><b>soundalike</b></a>
+<form id="form" action="/find" method="get" autocomplete="off">
+<input id="link" name="url" type="text" inputmode="url" enterkeyhint="search" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Paste a Spotify or Apple Music song link" aria-label="Song link"/>
+<button class="go" type="submit">Find</button>
+</form>
+<p class="hint" id="status" role="status" aria-live="polite">Share a song from Spotify or Apple Music, or paste its link, to get songs that sound like it.</p>
+<section class="seed" id="seed" hidden>
+<img class="cover" id="seed-art" alt="" width="64" height="64" hidden/>
+<div class="info"><div class="label">Songs that sound like</div><h1 id="seed-title"></h1><div class="by" id="seed-artist"></div></div>
+</section>
+<div class="bar" id="bar" hidden>
+<span id="count"></span>
+<div class="seg" role="group" aria-label="Open songs in">
+<button type="button" id="p-spotify" data-platform="spotify" aria-pressed="false">Spotify</button>
+<button type="button" id="p-apple" data-platform="apple" aria-pressed="false">Apple Music</button>
+</div>
+</div>
+<ol id="list" aria-label="Soundalikes"></ol>
+<footer>Previews by Deezer. <a href="/">soundalike</a> matches songs by how they sound.</footer>
+</main>
+<script>
+(() => {
+"use strict";
+const API = "/api/mobile/similar";
+const LINK_API = "/api/mobile/link";
+const PREVIEW_API = "/api/preview";
+const SEED_PARAMS = ["url", "spotify_id", "apple_id", "isrc", "title", "artist"];
+const PASS_PARAMS = ["storefront", "platform", "k", "lang"];
+const PLATFORM_KEY = "soundalike:find:platform:v1";
+const ANSWER_KEY = "soundalike:find:answer:v1";
+const ANSWER_MAX_AGE_MS = 4 * 60 * 1000;
+const UPGRADE_LIMIT = 12;
+const $ = (id) => document.getElementById(id);
+const form = $("form"), input = $("link"), status = $("status"), list = $("list");
+const state = { answer: null, platform: "spotify", rows: [], upgrades: 0, queue: [], busy: false, token: 0 };
+const audio = new Audio();
+audio.preload = "none";
+let playing = null;
+
+const safeUrl = (value) => (typeof value === "string" && value.startsWith("https://") ? value : null);
+const store = (area) => { try { return window[area]; } catch { return null; } };
+const remember = (area, key, value) => { try { store(area)?.setItem(key, value); } catch {} };
+const recall = (area, key) => { try { return store(area)?.getItem(key) ?? null; } catch { return null; } };
+
+/** The API query for this page's address; null when it names no song. */
+function apiQuery(search) {
+  const page = new URLSearchParams(search);
+  const query = new URLSearchParams();
+  // Share sheets and Shortcuts often pass the link inside free text.
+  const shared = page.get("url") || page.get("text");
+  if (shared) query.set("url", shared.trim());
+  else for (const name of SEED_PARAMS) if (page.get(name)) query.set(name, page.get(name));
+  if (![...query.keys()].length) return null;
+  for (const name of PASS_PARAMS) if (page.get(name)) query.set(name, page.get(name));
+  return query;
+}
+
+function setStatus(text, isError) {
+  status.textContent = text;
+  status.className = isError ? "hint err" : "hint";
+  status.hidden = !text;
+}
+
+function showSkeleton() {
+  list.replaceChildren(...Array.from({ length: 6 }, () => {
+    const item = document.createElement("li");
+    item.className = "sk";
+    return item;
+  }));
+}
+
+function defaultPlatform(answer) {
+  const fromLink = answer.query.platform;
+  if (fromLink === "spotify" || fromLink === "apple") return fromLink;
+  const saved = recall("localStorage", PLATFORM_KEY);
+  if (saved === "spotify" || saved === "apple") return saved;
+  return /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent) ? "apple" : "spotify";
+}
+
+function rowLink(row) {
+  return state.platform === "apple"
+    ? { url: safeUrl(row.apple_music_url), exact: row.apple_exact }
+    : { url: safeUrl(row.spotify_url), exact: row.spotify_exact };
+}
+
+function applyPlatform() {
+  for (const name of ["spotify", "apple"]) $(`p-${name}`).setAttribute("aria-pressed", String(state.platform === name));
+  const app = state.platform === "apple" ? "Apple Music" : "Spotify";
+  for (const entry of state.rows) {
+    const link = rowLink(entry.row);
+    if (link.url) entry.anchor.href = link.url;
+    entry.anchor.setAttribute("aria-label", `${entry.row.title} by ${entry.row.artist}, open in ${app}`);
+  }
+  state.queue = [];
+  for (const entry of state.rows) if (entry.visible) wantExact(entry);
+}
+
+function stopPreview() {
+  audio.pause();
+  if (playing) {
+    playing.item.classList.remove("playing");
+    playing.icon.textContent = "▶";
+    playing.button.setAttribute("aria-label", `Play a preview of ${playing.row.title}`);
+  }
+  playing = null;
+}
+
+async function freshPreview(row) {
+  try {
+    const response = await fetch(`${PREVIEW_API}?id=${row.deezer_id}`);
+    const body = await response.json();
+    return body && body.ok ? safeUrl(body.preview) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function togglePreview(entry) {
+  if (playing === entry) return stopPreview();
+  stopPreview();
+  playing = entry;
+  entry.item.classList.add("playing");
+  entry.icon.textContent = "❚❚";
+  entry.button.setAttribute("aria-label", `Stop the preview of ${entry.row.title}`);
+  const start = async (url) => {
+    audio.src = url;
+    await audio.play();
+  };
+  try {
+    if (!safeUrl(entry.row.preview_url)) throw new Error("no preview");
+    await start(entry.row.preview_url);
+  } catch (error) {
+    if (playing !== entry || error?.name === "AbortError") return;
+    // Preview addresses expire after a few minutes: ask for a new one once.
+    const url = await freshPreview(entry.row);
+    if (playing !== entry) return;
+    if (!url) {
+      stopPreview();
+      entry.button.disabled = true;
+      return;
+    }
+    entry.row.preview_url = url;
+    try { await start(url); } catch { if (playing === entry) stopPreview(); }
+  }
+}
+audio.addEventListener("ended", stopPreview);
+
+/** Asks for the song's own page when a row only has a search link. */
+function wantExact(entry) {
+  const answer = state.answer;
+  if (!answer || rowLink(entry.row).exact || entry.asked?.[state.platform]) return;
+  if (state.platform === "spotify" && !answer.links?.spotify_lookup) return;
+  if (state.upgrades >= UPGRADE_LIMIT) return;
+  state.queue.push(entry);
+  pump();
+}
+
+async function pump() {
+  if (state.busy) return;
+  state.busy = true;
+  const token = state.token;
+  while (state.queue.length && state.upgrades < UPGRADE_LIMIT && token === state.token) {
+    const entry = state.queue.shift();
+    const platform = state.platform;
+    if (rowLink(entry.row).exact || entry.asked?.[platform]) continue;
+    (entry.asked ??= {})[platform] = true;
+    state.upgrades += 1;
+    const query = new URLSearchParams({ deezer_id: String(entry.row.deezer_id), platform, title: entry.row.title, artist: entry.row.artist });
+    if (state.answer.query.storefront) query.set("storefront", state.answer.query.storefront);
+    let body = null;
+    try { body = await (await fetch(`${LINK_API}?${query}`)).json(); } catch {}
+    if (token !== state.token) break;
+    if (body && body.ok && body.exact && safeUrl(body.url)) {
+      entry.row[platform === "apple" ? "apple_music_url" : "spotify_url"] = body.url;
+      entry.row[platform === "apple" ? "apple_exact" : "spotify_exact"] = true;
+      if (state.platform === platform) entry.anchor.href = body.url;
+    } else if (!body || !body.ok || body.retry_after) {
+      // Throttled or failing: keep the search links and stop asking.
+      state.upgrades = UPGRADE_LIMIT;
+    }
+  }
+  state.busy = false;
+}
+
+function buildRow(row, observer) {
+  const item = document.createElement("li");
+  item.className = "row";
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "pv";
+  button.setAttribute("aria-label", `Play a preview of ${row.title}`);
+  if (safeUrl(row.artwork)) {
+    const art = document.createElement("img");
+    art.alt = "";
+    art.loading = "lazy";
+    art.decoding = "async";
+    art.width = 52;
+    art.height = 52;
+    art.src = row.artwork;
+    button.append(art);
+  }
+  const icon = document.createElement("i");
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = "▶";
+  button.append(icon);
+
+  const anchor = document.createElement("a");
+  anchor.className = "hit";
+  anchor.rel = "noopener noreferrer";
+  const words = document.createElement("span");
+  words.className = "t";
+  const title = document.createElement("b");
+  title.textContent = row.title;
+  const artist = document.createElement("span");
+  artist.className = "by";
+  artist.textContent = row.artist;
+  words.append(title, artist);
+  anchor.append(words);
+  if (Number.isFinite(row.match)) {
+    const match = document.createElement("span");
+    match.className = "m";
+    match.textContent = `${Math.round(row.match)}%`;
+    match.title = "Sound match";
+    anchor.append(match);
+  }
+  const open = document.createElement("span");
+  open.className = "open";
+  open.setAttribute("aria-hidden", "true");
+  open.textContent = "›";
+  anchor.append(open);
+
+  item.append(button, anchor);
+  const entry = { row, item, button, icon, anchor, visible: !observer };
+  button.addEventListener("click", () => togglePreview(entry));
+  item.soundalikeEntry = entry;
+  observer?.observe(item);
+  return entry;
+}
+
+function render(answer) {
+  stopPreview();
+  state.token += 1;
+  state.answer = answer;
+  state.upgrades = 0;
+  state.queue = [];
+  const query = answer.query;
+  $("seed-title").textContent = query.title;
+  $("seed-artist").textContent = query.artist;
+  const art = $("seed-art");
+  art.hidden = !safeUrl(query.artwork);
+  if (!art.hidden) art.src = query.artwork;
+  $("seed").hidden = false;
+  document.title = `Songs like ${query.title} — soundalike`;
+
+  const observer = "IntersectionObserver" in window
+    ? new IntersectionObserver((seen) => {
+        for (const item of seen) {
+          if (!item.isIntersecting) continue;
+          observer.unobserve(item.target);
+          const entry = item.target.soundalikeEntry;
+          entry.visible = true;
+          wantExact(entry);
+        }
+      }, { rootMargin: "200px" })
+    : null;
+  state.rows = answer.results.map((row) => buildRow(row, observer));
+  list.replaceChildren(...state.rows.map((entry) => entry.item));
+  state.platform = defaultPlatform(answer);
+  applyPlatform();
+  $("bar").hidden = !state.rows.length;
+  $("count").textContent = state.rows.length === 1 ? "1 song" : `${state.rows.length} songs`;
+  setStatus(state.rows.length ? "" : "No soundalikes were found for this song.", false);
+}
+
+async function load(query) {
+  const key = query.toString();
+  const saved = recall("sessionStorage", ANSWER_KEY);
+  if (saved) {
+    // Coming back from the music app must not wait for the network again.
+    try {
+      const kept = JSON.parse(saved);
+      if (kept.key === key && Date.now() - kept.at < ANSWER_MAX_AGE_MS && kept.answer?.ok) return render(kept.answer);
+    } catch {}
+  }
+  stopPreview();
+  state.token += 1;
+  $("seed").hidden = true;
+  $("bar").hidden = true;
+  setStatus("Finding songs that sound like this one…", false);
+  showSkeleton();
+  const mine = state.token;
+  let body = null;
+  try {
+    body = await (await fetch(`${API}?${key}`)).json();
+  } catch {}
+  if (mine !== state.token) return; // a newer search replaced this one
+  if (!body || !body.ok || !body.query || !Array.isArray(body.results)) {
+    list.replaceChildren();
+    const message = body?.error?.message || "Soundalike could not be reached. Check your connection and try again.";
+    return setStatus(message, true);
+  }
+  remember("sessionStorage", ANSWER_KEY, JSON.stringify({ key, at: Date.now(), answer: body }));
+  render(body);
+}
+
+for (const name of ["spotify", "apple"]) {
+  $(`p-${name}`).addEventListener("click", () => {
+    if (state.platform === name) return;
+    state.platform = name;
+    remember("localStorage", PLATFORM_KEY, name);
+    applyPlatform();
+  });
+}
+
+form.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const value = input.value.trim();
+  if (!value) return input.focus();
+  const search = `?url=${encodeURIComponent(value)}`;
+  try { history.pushState(null, "", `/find${search}`); } catch {}
+  input.blur();
+  load(apiQuery(search));
+});
+
+function start() {
+  const query = apiQuery(location.search);
+  if (!query) {
+    stopPreview();
+    list.replaceChildren();
+    $("seed").hidden = true;
+    $("bar").hidden = true;
+    return;
+  }
+  if (query.get("url")) input.value = query.get("url");
+  load(query);
+}
+window.addEventListener("popstate", start);
+// A page restored from the back/forward cache keeps its list; only stop audio.
+window.addEventListener("pagehide", stopPreview);
+start();
+})();
+</script>
+</body>
+</html>
