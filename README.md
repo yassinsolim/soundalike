@@ -6,7 +6,7 @@
 
 **Find songs that sound like a track you already enjoy.**
 
-Open-source, audio-based music discovery across a 999,293-song index.<br>
+Open-source, audio-based music discovery across about 1.1 million songs.<br>
 Use it inside Spotify, in your browser, or on your phone.
 
 [![CI](https://github.com/yassinsolim/soundalike/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/yassinsolim/soundalike/actions/workflows/ci.yml)
@@ -34,12 +34,14 @@ recommender built around audio similarity. It compares precomputed audio
 representations and measured features such as tempo, dynamics, and bass
 balance. It does not use your listening history as a ranking signal.
 
-The public web app and Spicetify extension open on **Best matches**, songs that
-share a melody, sample, or loop with yours from a 999,293-song index. **Same vibe**,
-one tab away, keeps the matches that also share your song's tempo and overall
-sound, one song per artist, and **Sounds like** lists the songs with the closest
-overall sound. All three come from the same GPU matcher, so they work for any
-song with a Deezer preview.
+The public web app and Spicetify extension open on **Best matches**: likely
+covers, samples, and shared melodies first, then the songs a small model ranks
+closest to yours from five signals (sound, scene, playlists, melody, and
+samples), drawn from about 1.1 million songs. **Listeners also play**, one tab
+away, lists similar songs by other artists that your song's listeners also
+play. Every list comes from the same GPU matcher, which hears 30-second Deezer
+previews, so they work for any song Deezer has a preview of. Searching needs no
+login.
 The repository also includes a local app, command-line tools, smaller bundled
 indexes, and the research code used to test new ranking ideas.
 
@@ -60,7 +62,7 @@ This is the easiest way to use Soundalike regularly.
    **Find soundalikes**.
 
 Results open on their own Spotify page, starting with **Best matches**, with
-**Same vibe** and **Sounds like** one tab away. You can play a result, and the
+**Listeners also play** one tab away. You can play a result, and the
 songs after it follow in the order shown without creating a playlist. You can
 also open a result's album, use Spotify's normal track menu, or search for
 another set of matches.
@@ -88,10 +90,11 @@ manual installation, supported Spotify builds, and troubleshooting.
 Open <https://soundalike.yassin.app>.
 
 Search any song on Deezer, even one outside the catalog, and pick it from the
-suggestions. Results open on **Best matches**, with **Same vibe**, **Same melody**,
-**Samples & loops** and **Sounds like** one tab away. A song the matcher has not
-heard before takes a few seconds the first time. The old `/anysong` address
-redirects to the home page.
+suggestions. As in Spotify, results open on **Best matches**, with **Listeners
+also play** one tab away. **Audio only** ranks by sound alone and leaves out what
+your song's listeners also play. A song the matcher has not heard before takes a
+few seconds the first time. The old `/anysong` address redirects to the home
+page, and links to the tabs the site used to have open Best matches.
 
 You do not need an account to search. Spotify login is
 optional and is only used when you ask the site to save a playlist. Spotify
@@ -103,16 +106,23 @@ password.
 ### On a phone
 
 Spotify does not allow anything to modify its mobile apps, so there is no mobile
-equivalent of the Spicetify extension. There is a companion app instead. You
-share a track from Spotify, pick Soundalike, and get the same twenty matches.
-Tapping a result opens it back in Spotify.
+equivalent of the Spicetify extension. There are companion apps instead.
 
-It does not ask you to sign in and it has no Spotify credentials in it. It reads
-the public page for the track you shared and searches the same catalog as the
+On an iPhone, the native app in [`ios/`](ios/README.md) finds soundalikes for
+the song that is playing (Apple Music, or Spotify once you connect it), for a
+song it recognises nearby, or for a link shared from Spotify or Apple Music,
+from the share sheet, Control Center, or the Action Button. It replaces the
+older cross-platform app on iOS.
+
+The cross-platform app in [`mobile/`](mobile/README.md) (Expo, iOS and Android)
+works from the share sheet: you share a track from Spotify, pick Soundalike, and
+get the same twenty matches. Tapping a result opens it back in Spotify. It does
+not ask you to sign in and it has no Spotify credentials in it. It reads the
+public page for the track you shared and searches the same catalog as the
 website.
 
-The app is not on the App Store or Google Play yet. To build and run it now, see
-the [mobile guide](mobile/README.md).
+Neither app is on the App Store or Google Play yet. To build and run them now,
+see the [iPhone guide](ios/README.md) and the [mobile guide](mobile/README.md).
 
 ### As a local app or command-line tool
 
@@ -199,8 +209,9 @@ track and artist IDs and the date, nothing about who asked, so the catalog can
 grow toward songs people look up.
 
 The extension does not send your Spotify password, access token, library,
-listening history, or artwork. Lyrics-language and related-artist lookups happen
-inside your authenticated Spotify client.
+listening history, or artwork to Soundalike. Lyrics-language, related-artist
+and recording-code (ISRC) lookups happen inside your authenticated Spotify
+client and go only to Spotify.
 
 After results settle, the extension may show a short **Good**, **Mixed**, or
 **Off** survey. Nothing is submitted until you press **Send feedback**. A
@@ -217,13 +228,18 @@ Good/Mixed/Off selection, seed title and artist, selected reasons, number of
 displayed results, and a short receipt. Optional notes, anonymous nonces, and
 the displayed result list are not sent to Discord.
 
-The mobile companion app has no Spotify sign-in at all. When you share a track
+The iPhone app's data use is described in its [privacy policy](ios/PRIVACY.md):
+it sends the song's title, artist and, when known, its ISRC or shared link, and
+a Spotify token, if you connect Spotify, stays in the iOS Keychain and goes only
+to Spotify.
+
+The cross-platform companion app has no Spotify sign-in at all. When you share a track
 it reads that track's public Spotify page for the title, artist, and cover, then
 sends only the title and artist to the recommendation service. It does not read
 your library, history, or playlists. Its feedback survey follows the same rules
 as the extension.
 
-The mobile app can also update its own JavaScript without a store release, so
+The cross-platform app can also update its own JavaScript without a store release, so
 fixes can ship in minutes rather than days. That check runs in the background at
 launch, goes to Expo's update service, and carries the platform, a runtime
 version, and the IP address any web request would carry. It does not carry an
@@ -268,9 +284,10 @@ songs live on a GPU. Architecture, index builds and deployment are described in
 [docs/ANYSONG.md](docs/ANYSONG.md), and measured accuracy in
 [docs/ANYSONG_EVAL.md](docs/ANYSONG_EVAL.md); the research behind it follows.
 
-The served index holds 999,293 songs: 269,278 catalog tracks plus songs crawled along Deezer's related-artist graph,
-which are recommended only for seeds in their artist's scene (see "Catalog tiers" in
-[docs/ANYSONG.md](docs/ANYSONG.md)). The page opens on a **Best matches** list that fuses the melody and
+The served index holds 1,109,024 songs (since 2026-11-22): the original catalog of about 269,000 tracks plus songs
+crawled along Deezer's related-artist graph. Outside the main list's model-ranked part (below), crawled songs are
+recommended only for seeds in their artist's scene (see "Catalog tiers" in [docs/ANYSONG.md](docs/ANYSONG.md)). The
+API's fused list (`results.best`) combines the melody and
 samples rankings. On held-out benchmarks its top 10 holds a correct song for 67% of cover queries, 44% of Gen Alpha
 songs and 15–19% of sample pairs, which is the melody tab's cover accuracy with almost twice its sample hits. "Sounds
 like" claims stay hard: about 11% in the fused list and 16–17% when all three tabs are checked. Unseen songs
@@ -284,9 +301,19 @@ within their regression limits; Gen Alpha fell from 36% to 29% on 59 queries. **
 with the same model (46%, up from 33%), as does **Same vibe** (45%, up from 34%). Other artists' copies of the seed
 (re-uploads, edits) are left out when their audio matches it closely, and at most three other versions of it stay.
 Songs in another language than yours are hidden from Best matches by default; **Show all languages** brings them back.
-Rows the listener model placed are marked **Listeners also play**, and the **Audio only** switch (in the web app and
-the Spotify extension) leaves that model out of all three lists.
-**Same vibe** keeps the Best candidates that share the seed's tempo and sound (one per artist).
+The **Audio only** switch (in the web app and the Spotify extension) leaves the listener model, the scene and the
+playlists out of every list.
+The API also serves **Same vibe**, the Best candidates that share the seed's tempo and sound (one per artist), and
+the separate melody, samples and sound lists, but the web app and the Spotify extension show two lists
+([evaluation](docs/ANYSONG_EVAL.md#one-main-list-and-listeners-also-play-pre-registered-2026-11-11-before-any-held-out-result)).
+**Listeners also play** ranks other artists' songs mostly by the listener model. **Best matches** (`results.main`)
+starts with likely covers and samples, only when a melody or samples match stands out. Since 2026-11-22 (v12) the rest
+of it is the consensus body: five catalog-wide signals score every song against the seed (whitened sound, a scene head
+on the sound embedding, playlist co-occurrence vectors, the melody model and the samples model), and a
+gradient-boosted model trained on graded examples orders the songs they agree on, one per artist. Popularity is not
+an input, and the seed's own artist is left out. With Audio only the list follows Sounds like's order instead. The
+checks it had to pass before going live, their results and its limits are in
+[docs/ANYSONG_EVAL.md](docs/ANYSONG_EVAL.md#v12-pre-registered-checks-and-deployment-2026-11-22).
 
 The experimental [`soundalike.anysong`](src/soundalike/anysong/) package compares
 MuQ-MuLan, CLAP, MuQ, MERT and MAEST with dedicated SampleID/CLEWS adapters.
@@ -414,11 +441,17 @@ npm --prefix webapp install
 npm --prefix webapp test
 ```
 
-Run the mobile tests:
+Run the cross-platform mobile app's tests:
 
 ```bash
 npm --prefix mobile install
 npm --prefix mobile test
+```
+
+Run the iPhone app's package tests (macOS with Xcode; not part of CI):
+
+```bash
+(cd ios/SoundalikeKit && swift test)
 ```
 
 Keep changes focused and add tests for behavior changes. For a large feature or
@@ -432,7 +465,8 @@ The main directories are:
 src/soundalike/          Python package, CLI, audio tools, and ranking code
 webapp/                  Hosted app, API handlers, evaluator, and Node tests
 integrations/spicetify/  Spotify extension, signed updater, and setup guides
-mobile/                  iOS and Android companion app
+mobile/                  Cross-platform (Expo) companion app
+ios/                     Native iPhone app, share extension, and controls
 deploy/homelab/          Always-on service, monitoring, deployment, and rollback
 benchmarks/              Frozen evaluation inputs
 docs/                    Research notes, results, and the case study

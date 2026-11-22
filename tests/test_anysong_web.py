@@ -81,22 +81,33 @@ def test_home_page_footer_links_evaluation_in_new_tab_safely():
     assert 'rel="noopener"' in link.group(2)
 
 
-def test_anysong_language_switch_covers_best_same_vibe_and_sounds_like():
+def test_anysong_language_switch_covers_both_tabs():
     assert 'params.set("lang", lang);' in SCRIPT
-    assert 'id="language" role="status" hidden' in SCRIPT
+    assert '<div class="language-filter" id="language" role="status">' in SCRIPT
     assert '<button id="language-toggle" type="button" aria-pressed="false" hidden>' in SCRIPT
     assert '"Show all languages"' in SCRIPT and '"Show same language"' in SCRIPT
-    assert "Number(query.hidden)" in SCRIPT
     # display:flex would otherwise beat the hidden attribute.
     assert ".language-filter[hidden]{display:none}" in HOME
-    # Same vibe has no hidden count of its own, so it only says what it leaves out.
+    # The server's hidden count is for the fused list, not main or Listeners also play, so neither tab shows a count:
+    # both only say what they leave out.
     assert '"all languages" : "other languages left out"' in SCRIPT
-    # The raw sound channel stays unfiltered.
-    assert 'const sonicBlurb = "A similar overall sound: production, instruments and mood.";' in SCRIPT
+    assert "Number(query.hidden)" not in SCRIPT and "other-language matches in the top 20" not in SCRIPT
     assert "hidden_sounds" not in SCRIPT
 
 
-def test_anysong_best_caption_puts_covers_first_then_the_listeners():
+def test_anysong_best_caption_puts_covers_first_then_the_model():
+    assert (
+        "\"Likely covers, samples and shared melodies first, then other artists' songs a model ranks closest, "
+        "from five signals: sound, scene, playlists, melody and samples. "
+        'Turn on Audio only to rank by sound alone."'
+    ) in SCRIPT
+    # Servers whose main list follows sound and the listener ranker.
+    assert (
+        '"Likely covers, samples and shared melodies first, then the songs that sound most alike, '
+        "nudged toward artists this song's listeners also play. "
+        'Turn on Audio only to rank by sound alone."'
+    ) in SCRIPT
+    # Servers without the main list send Best matches with listener picks in it.
     assert (
         '"Likely covers, samples and shared melodies first, then similar-sounding songs '
         "by artists this song's listeners also play, marked Listeners also play. "
@@ -108,22 +119,24 @@ def test_anysong_best_caption_puts_covers_first_then_the_listeners():
     ) in SCRIPT
 
 
-def test_anysong_same_vibe_tab_follows_best_and_needs_a_vibe_list():
+def test_anysong_has_the_spotify_extensions_two_tabs():
     keys = re.findall(r'key: "(\w+)",\s*label: "([^"]+)"', SCRIPT)
-    assert keys == [
-        ("best", "Best matches"),
-        ("vibe", "Same vibe"),
-        ("melody", "Same melody"),
-        ("samples", "Samples & loops"),
-        ("sounds", "Sounds like"),
-    ]
+    assert keys == [("best", "Best matches"), ("listeners", "Listeners also play")]
+    # Best matches read the main list, or Best matches from a server without it.
+    assert 'Array.isArray(results.main) && results.main.length ? "main" : "best"' in SCRIPT
+    # Links to the old tabs, and unknown tabs, open Best matches.
     assert (
-        "\"Songs from these matches that share this song's tempo and overall sound, "
-        'one per artist."'
+        'const tabKey = key => (key === null ? null : key === "listeners" ? "listeners" : "best");'
     ) in SCRIPT
-    # Older servers send no vibe list: the tab is hidden and its links open Best.
-    assert "picked.hasVibe = Array.isArray(vibe) && vibe.length > 0;" in SCRIPT
-    assert 'if (tab === "vibe" && !picked.hasVibe) {' in SCRIPT
-    # The seed's tempo is a rounded tag, only when the server knows it.
-    assert 'typeof query.bpm === "number" ? Math.round(query.bpm) : 0' in SCRIPT
-    assert '[tab !== "best" && bpm > 0 ? `${bpm} BPM` : "", false]' in SCRIPT
+    # A new policy keeps cached answers from before the consensus body out.
+    assert 'const bestMatchesPolicy = "main-consensus-v4";' in SCRIPT
+    assert "best-vibe-sounds" not in SCRIPT
+    # Audio only and artists without listener data say why Listeners also play is empty.
+    assert (
+        "\"Audio only is on, and this list comes from what this song's listeners also play. "
+        'Turn Audio only off to see it."'
+    ) in SCRIPT
+    assert (
+        "\"We don't know what this artist's listeners play yet, so there's no list here. "
+        "Best matches still has this song's closest matches.\""
+    ) in SCRIPT

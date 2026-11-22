@@ -5,54 +5,49 @@
   if (!input || !ac || !out) return;
 
   // One search bar for any song on Deezer: suggestions come from
-  // /api/anysong/search and every tab reads one /api/anysong/similar answer.
+  // /api/anysong/search. Two tabs read one /api/anysong/similar answer, as in
+  // the Spotify extension: "Best matches" (likely covers, samples and shared
+  // melodies, then other artists' songs a model ranks closest from five
+  // signals; shown by default) and "Listeners also play" (other artists'
+  // songs this song's listeners play).
   const ID_RE = /^[1-9][0-9]{0,15}$/;
   const suggestDelayMs = 220;
   const maxCacheEntries = 64;
   const bestMatchesTimeoutMs = 30000;
   const bestMatchesRetries = 3;
-  const bestMatchesPolicy = "best-vibe-sounds-v4";
+  const bestMatchesPolicy = "main-consensus-v4";
   // Audio only asks for lists without the listener ranker (scene=0).
   const audioOnlyKey = "soundalike:audio-only:v1";
   const listenerPickLabel = "Listeners also play";
   const listenerPickTitle = "Placed by what this song's listeners also play, not by audio alone";
-  const audioOnlyTitle =
-    "Rank by audio alone, leaving out songs placed by what this song's listeners also play";
+  const audioOnlyTitle = "Rank by audio alone, leaving out what this song's listeners also play";
   const resultTabs = [
     {
       key: "best",
       label: "Best matches",
       blurb:
-        "Likely covers, samples and shared melodies first, then similar-sounding songs by artists this song's listeners also play, marked Listeners also play. Turn on Audio only to leave those out.",
+        "Likely covers, samples and shared melodies first, then other artists' songs a model ranks closest, from five signals: sound, scene, playlists, melody and samples. Turn on Audio only to rank by sound alone.",
+      // Servers whose main list follows sound and the listener ranker.
+      nudgedBlurb:
+        "Likely covers, samples and shared melodies first, then the songs that sound most alike, nudged toward artists this song's listeners also play. Turn on Audio only to rank by sound alone.",
       audioBlurb:
         "Likely covers, samples and shared melodies first, then the songs that sound most alike.",
+      // Servers without the main list send Best matches with listener picks in it.
+      mixedBlurb:
+        "Likely covers, samples and shared melodies first, then similar-sounding songs by artists this song's listeners also play, marked Listeners also play. Turn on Audio only to leave those out.",
     },
     {
-      key: "vibe",
-      label: "Same vibe",
+      key: "listeners",
+      label: "Listeners also play",
       blurb:
-        "Songs from these matches that share this song's tempo and overall sound, one per artist.",
-    },
-    {
-      key: "melody",
-      label: "Same melody",
-      blurb: "Covers, interpolations and songs that reuse the tune.",
-    },
-    {
-      key: "samples",
-      label: "Samples & loops",
-      blurb: "Songs that may share a sample, a loop or a chopped-up section.",
-    },
-    {
-      key: "sounds",
-      label: "Sounds like",
-      blurb:
-        "Songs with the same overall sound (instruments, production and mood), favouring artists this song's listeners also play. Turn on Audio only to leave that out.",
-      audioBlurb: "Songs with the same overall sound (instruments, production and mood).",
+        "Songs by other artists that this song's listeners also play, one per artist. The likelier its listeners are to play a song, and the closer it sounds, the higher it ranks.",
     },
   ];
-  // Servers without the fused Sounds like list send only the raw sound channel.
-  const sonicBlurb = "A similar overall sound: production, instruments and mood.";
+  // Audio only and artists without listener data leave Listeners also play empty.
+  const audioOnlyListenersNote =
+    "Audio only is on, and this list comes from what this song's listeners also play. Turn Audio only off to see it.";
+  const noListenersNote =
+    "We don't know what this artist's listeners play yet, so there's no list here. Best matches still has this song's closest matches.";
   const DEMO = [
     ["Plastic Love", "Mariya Takeuchi"],
     ["Redbone", "Childish Gambino"],
@@ -138,11 +133,11 @@
   const spotifySearchUrl = (title, artist) =>
     `https://open.spotify.com/search/${encodeURIComponent(`${title} ${artist}`.trim())}`;
 
-  // Old any-song links call Sounds like "sonic".
-  const tabKey = key => {
-    const name = key === "sonic" ? "sounds" : key;
-    return resultTabs.some(candidate => candidate.key === name) ? name : null;
-  };
+  // Links from before the two tabs name Same vibe, Same melody, Samples &
+  // loops or Sounds like ("sounds", or "sonic" on older any-song links); they
+  // open Best matches, as do unknown names. A link without a tab keeps the
+  // current one.
+  const tabKey = key => (key === null ? null : key === "listeners" ? "listeners" : "best");
 
   function safeImg(url) {
     try {
@@ -533,7 +528,6 @@
         lang: "same",
         audioOnly: savedAudioOnly(),
         bestSequence: 0,
-        hasVibe: false,
         best: { status: "pending" },
         body: null,
       };
@@ -582,12 +576,20 @@
     }
   }
 
-  const soundsList = results =>
-    Array.isArray(results.sounds) && results.sounds.length ? "sounds" : "sonic";
+  // The Best matches tab reads the main list, or Best matches from a server
+  // without it.
+  const listName = (results, key) => {
+    if (key !== "best") return key;
+    return Array.isArray(results.main) && results.main.length ? "main" : "best";
+  };
+
+  // The server's percentages: whole numbers from 0 to 100.
+  const percent = value =>
+    Number.isInteger(value) && value >= 0 && value <= 100 ? value : null;
 
   function listRows(body, key) {
     const results = body.results || {};
-    const name = key === "sounds" ? soundsList(results) : key;
+    const name = listName(results, key);
     const rows = (Array.isArray(results[name]) ? results[name] : []).filter(
       x => Number.isInteger(x.id) && x.id > 0
     );
@@ -597,30 +599,47 @@
     return rows.map((x, index) => {
       const title = x.title || `Deezer track ${x.id}`;
       const artist = x.artist || "";
+      // Of the main list, only the audio head's rows keep the channel ranks that
+      // put them there; Listeners also play rows show none.
+      const ranked = name === "best" || (name === "main" && x.basis === "audio");
       const why =
-        x.ranks && typeof x.ranks === "object"
+        ranked && x.ranks && typeof x.ranks === "object"
           ? Object.entries(x.ranks)
               .filter(([, rank]) => Number.isInteger(rank))
               .map(([list, rank]) => `${list} #${rank}`)
               .join(" · ")
           : "";
+      // A consensus row's match scores the model's ranking, not its sound.
+      const overall = percent(x.overall);
+      const sound = name === "main" && x.basis === "consensus" ? null : percent(x.match);
       return {
         id: x.id,
         title,
         artist,
         why,
-        listenerPick: key === "best" && x.basis === "listeners",
-        // Scores are only comparable within one list, so bars are relative to it.
+        listenerPick: name === "best" && x.basis === "listeners",
+        // The server's overall match (main list and Listeners also play) never
+        // rises down the list. Without it, scores are only comparable within
+        // one list, so bars are relative to it.
         width:
-          high > low
-            ? Math.round(25 + (75 * (scores[index] - low)) / (high - low))
-            : 100,
+          overall !== null
+            ? overall
+            : high > low
+              ? Math.round(25 + (75 * (scores[index] - low)) / (high - low))
+              : 100,
+        label:
+          overall === null
+            ? ""
+            : `Match ${overall}%: how strongly Soundalike ranks it for this song` +
+              (sound === null ? "" : `. Sound match ${sound}%: sounds more alike than ${sound}% of typical matches`),
         url: spotifySearchUrl(title, artist),
       };
     });
   }
 
-  // Best rows placed by the listener ranker say so before their ranks.
+
+  // Best matches from a server without the main list mark the rows the listener
+  // ranker placed before their ranks.
   const whyHtml = x => {
     const pick = x.listenerPick
       ? ` · <span class="basis" title="${esc(listenerPickTitle)}">${esc(listenerPickLabel)}</span>`
@@ -635,7 +654,9 @@
     `<button class="pv" type="button" aria-label="Preview ${esc(x.title)} by ${esc(x.artist)}" title="Preview" data-id="${x.id}">▶</button>` +
     `<div class="rank">${index + 1}</div>` +
     `<div class="meta"><button class="t" type="button" data-id="${x.id}" title="Find songs like this">${esc(x.title)}</button><div class="a">${esc(x.artist)}${whyHtml(x)}</div></div>` +
-    `<div class="bar" aria-hidden="true"><i style="width:${x.width}%"></i></div>` +
+    (x.label
+      ? `<div class="bar" role="img" aria-label="${esc(x.label)}" title="${esc(x.label)}"><i style="width:${x.width}%"></i></div>`
+      : `<div class="bar" aria-hidden="true"><i style="width:${x.width}%"></i></div>`) +
     `<a class="play" href="${esc(x.url)}" target="_blank" rel="noopener" aria-label="Open ${esc(x.title)} by ${esc(x.artist)} in Spotify">Open in Spotify ▸</a></li>`;
 
   function seedTags(picked) {
@@ -643,21 +664,26 @@
     if (!body) return [];
     const query = body.query || {};
     const total = (body.timings_ms || {}).total;
-    const bpm = typeof query.bpm === "number" ? Math.round(query.bpm) : 0;
     const live = query.source === "live";
     return [
       [live ? (body.cached ? "heard live earlier" : "heard live just now") : "in our library", live],
-      [tab !== "best" && bpm > 0 ? `${bpm} BPM` : "", false],
       [!body.cached && total ? `matched in ${(total / 1000).toFixed(1)} s` : "", false],
     ].filter(([text]) => text);
   }
 
   function blurbText(picked) {
     const entry = resultTabs.find(candidate => candidate.key === tab);
-    if (tab === "sounds" && picked.body && soundsList(picked.body.results || {}) === "sonic") {
-      return sonicBlurb;
+    if (tab !== "best") return entry.blurb;
+    const body = picked.body || {};
+    const results = body.results || {};
+    const main = listName(results, "best") === "main";
+    // The five-signal model placed rows; it needs no listener data.
+    const consensus = main && results.main.some(x => x && x.basis === "consensus");
+    // Audio only, and artists without listener data, leave the listeners out.
+    if (picked.audioOnly || (!consensus && (body.query || {}).scene === "unknown_artist")) {
+      return entry.audioBlurb;
     }
-    return picked.audioOnly && entry.audioBlurb ? entry.audioBlurb : entry.blurb;
+    return !main ? entry.mixedBlurb : consensus ? entry.blurb : entry.nudgedBlurb;
   }
 
   function languageName(code) {
@@ -679,28 +705,19 @@
     }
   }
 
-  // Best matches, Same vibe and the fused Sounds like hide confidently
-  // other-language songs unless the listener asks for all languages; Same
-  // melody, Samples & loops and the raw sound channel are not filtered. The
-  // hidden count is Best's own, so the others only say what they leave out.
-  function languageFiltered(picked) {
-    if (tab === "best" || tab === "vibe") return true;
-    return (
-      tab === "sounds" &&
-      (!picked.body || soundsList(picked.body.results || {}) === "sounds")
-    );
-  }
-
-  function renderLanguage(picked) {
-    const box = document.querySelector("#language");
+  // Both tabs hide confidently other-language songs unless the listener asks
+  // for all languages. The server's query.hidden counts them in its fused order
+  // of every channel, not in the main list or Listeners also play, so both tabs
+  // only say whether other languages are left out. A main-only guess
+  // (query.main_language_guess) gates Best matches alone.
+  function renderLanguage(picked, noListeners) {
     const button = document.querySelector("#language-toggle");
     const audio = document.querySelector("#audio-only");
-    if (!box || !button || !audio) return;
-    box.hidden = !languageFiltered(picked);
-    if (box.hidden) return;
+    if (!button || !audio) return;
     audio.setAttribute("aria-pressed", String(picked.audioOnly));
-    // After a failed reload only Audio only is left, so the switch can be undone.
-    if (picked.best.status === "failed") {
+    // After a failed reload, and on an empty Listeners also play, only Audio
+    // only is left, so the switch can be undone.
+    if (picked.best.status === "failed" || noListeners) {
       document.querySelector("#language-status").textContent = "";
       button.hidden = true;
       return;
@@ -711,21 +728,17 @@
       return;
     }
     const query = picked.best.body.query || {};
-    const code = query.language || "unknown";
+    const language = query.language || "unknown";
+    const mainGuess = tab === "best" && language === "unknown" &&
+      /^[a-z]{2,3}$/.test(String(query.main_language_guess || ""))
+      ? String(query.main_language_guess) : "";
+    const code = mainGuess || language;
     const all = query.language_mode === "all";
-    const hidden = Math.max(0, Number(query.hidden) || 0);
+    const guessed = query.language_guessed === true || Boolean(mainGuess);
     document.querySelector("#language-status").textContent =
       code === "unknown"
         ? "Language uncertain; showing all languages."
-        : tab !== "best"
-          ? `${languageName(code)} · ${all ? "all languages" : "other languages left out"}`
-          : `${languageName(code)} · ${
-              hidden
-                ? `${hidden} other-language ${hidden === 1 ? "match" : "matches"} ${
-                    all ? "in" : "hidden from"
-                  } the top 20`
-                : "no other-language matches in the top 20"
-            }`;
+        : `${languageName(code)}${guessed ? " (best guess)" : ""} · ${all ? "all languages" : "other languages left out"}`;
     button.hidden = code === "unknown";
     button.setAttribute("aria-pressed", String(all));
     button.textContent = all ? "Show same language" : "Show all languages";
@@ -780,40 +793,32 @@
     });
   }
 
-  // Servers without Same vibe send no vibe list, so its tab stays hidden. A
-  // language switch keeps the tab while the list reloads.
-  function syncVibeTab(picked) {
-    if (picked.best.status === "ready") {
-      const vibe = (picked.best.body.results || {}).vibe;
-      picked.hasVibe = Array.isArray(vibe) && vibe.length > 0;
-    }
-    const button = document.querySelector("#tab-vibe");
-    if (button) button.hidden = !picked.hasVibe;
-    if (tab === "vibe" && !picked.hasVibe) {
-      tab = "best";
-      markTabs();
-      if (picked.seed && picked.seed.id) writeHash(picked.seed.id, false);
-    }
-  }
-
   function renderTab(picked) {
     const list = document.querySelector("#matches");
     if (shownPick !== picked || !list) return;
-    syncVibeTab(picked);
     const entry = picked.best;
     const rows = entry.status === "ready" ? listRows(entry.body, tab) : [];
+    // Audio only and artists without listener data leave Listeners also play
+    // empty, so it says why instead.
+    const noListeners = entry.status === "ready" && tab === "listeners" && !rows.length;
     lastResults = rows;
     list.dataset.tab = tab;
     list.setAttribute("aria-labelledby", `tab-${tab}`);
     document.querySelector("#seedtags").innerHTML = seedTags(picked)
       .map(([text, live]) => `<span class="tag${live ? " live" : ""}">${esc(text)}</span>`)
       .join("");
-    document.querySelector("#matchblurb").textContent = blurbText(picked);
-    renderLanguage(picked);
+    // An empty Listeners also play has no ranking to describe; its note says why.
+    const blurb = document.querySelector("#matchblurb");
+    blurb.textContent = noListeners ? "" : blurbText(picked);
+    blurb.hidden = noListeners;
+    renderLanguage(picked, noListeners);
     if (entry.status === "pending") {
       list.innerHTML = '<li class="state"><span class="spin"></span> matching…</li>';
     } else if (entry.status === "failed") {
       list.innerHTML = `<li class="state err">${esc(errorText(entry.error))}</li>`;
+    } else if (noListeners) {
+      const note = picked.audioOnly ? audioOnlyListenersNote : noListenersNote;
+      list.innerHTML = `<li class="state">${esc(note)}</li>`;
     } else if (!rows.length) {
       list.innerHTML = '<li class="state">No matches in this list.</li>';
     } else {
@@ -849,10 +854,8 @@
 
   function showPick(picked) {
     const seed = picked.seed;
-    const results = picked.body.results || {};
     shownPick = picked;
     lastSeed = seed;
-    if (tab === "best" && !Array.isArray(results.best)) tab = "melody";
     out.innerHTML =
       '<section class="seed" aria-label="Selected song">' +
       `<div class="cover">${seed.cover ? `<img alt="" src="${esc(seed.cover)}">` : ""}</div>` +
@@ -868,7 +871,7 @@
             `<button class="tab" type="button" role="tab" id="tab-${entry.key}" data-tab="${entry.key}" aria-controls="matches" aria-selected="false" tabindex="-1">${esc(entry.label)}</button>`
         )
         .join("")}</div>` +
-      '<div class="language-filter" id="language" role="status" hidden><span id="language-status"></span><span class="filter-actions"><button id="language-toggle" type="button" aria-pressed="false" hidden></button>' +
+      '<div class="language-filter" id="language" role="status"><span id="language-status"></span><span class="filter-actions"><button id="language-toggle" type="button" aria-pressed="false" hidden></button>' +
       `<button id="audio-only" type="button" aria-pressed="false" title="${esc(audioOnlyTitle)}">Audio only</button></span></div>` +
       '<p class="blurb" id="matchblurb"></p><ol id="matches" role="tabpanel"></ol>';
     document.querySelector("#copy").onclick = copyList;
@@ -883,9 +886,8 @@
       button.onkeydown = event => {
         if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
         event.preventDefault?.();
-        const shown = tabs.filter(candidate => !candidate.hidden);
-        const step = event.key === "ArrowRight" ? 1 : shown.length - 1;
-        const next = shown[(shown.indexOf(button) + step) % shown.length];
+        const step = event.key === "ArrowRight" ? 1 : tabs.length - 1;
+        const next = tabs[(tabs.indexOf(button) + step) % tabs.length];
         next.focus();
         selectTab(next.dataset.tab, true);
       };

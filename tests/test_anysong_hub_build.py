@@ -47,6 +47,15 @@ def test_hub_scores_are_song_level_and_exclude_own_song(tmp_path, name):
     assert hub["min"] == pytest.approx(float(h.min()), abs=1e-5)
 
 
+def test_hub_scores_for_selected_rows_match_the_full_table(tmp_path):
+    ch, ids, _ = build(tmp_path)
+    two = serve.TwoStageIndex.load(tmp_path / "ix" / "sonic", ch, hub_alpha=0)
+    keys = hub_build.SongKeys(serve.load_meta(tmp_path / "meta.npz"))
+    full = hub_build.hub_scores(two, keys, k=3, batch=7)
+    rows = np.array([31, 4, 39, 12, 5, 0, 18, 22, 9])
+    np.testing.assert_allclose(hub_build.hub_scores(two, keys, k=3, batch=4, rows=rows), full[rows], rtol=1e-6)
+
+
 def test_far_outlier_stays_out_of_results(tmp_path):
     ch = serve.CHANNELS["melody"]
     rng = np.random.default_rng(2)

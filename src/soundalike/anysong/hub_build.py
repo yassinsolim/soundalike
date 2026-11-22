@@ -35,7 +35,10 @@ from .serve import CHANNELS, TwoStageIndex, load_meta
 DEFAULT_ALPHA = {"melody": 0.0, "samples": 0.5, "sonic": 0.5}
 
 @torch.inference_mode()
-def hub_scores(ix: TwoStageIndex, keys: SongKeys, k: int = 10, batch: int = 128, log=None) -> np.ndarray:
+def hub_scores(ix: TwoStageIndex, keys: SongKeys, k: int = 10, batch: int = 128, log=None,
+               rows: np.ndarray | None = None) -> np.ndarray:
+    """``h`` for every track, or for the index rows in ``rows`` only (one value each, in that order), so a long
+    build can run in resumable pieces."""
     dev = ix.id_tensor.device
     ids = ix.ids.tolist()
     rowkey = keys.rows(ix.ids, dev)
@@ -43,18 +46,20 @@ def hub_scores(ix: TwoStageIndex, keys: SongKeys, k: int = 10, batch: int = 128,
     k = min(k, nsongs - 1)
     if k < 1:
         raise ValueError("hub scores need at least two songs")
-    h = np.empty(len(ids), dtype=np.float32)
+    todo = np.arange(len(ids)) if rows is None else np.asarray(rows, dtype=np.int64)
+    h = np.empty(len(todo), dtype=np.float32)
     t0 = time.perf_counter()
-    for s in range(0, len(ids), batch):
-        b = ids[s:s + batch]
+    for s in range(0, len(todo), batch):
+        r = torch.as_tensor(todo[s:s + batch], device=dev)
+        b = [ids[i] for i in todo[s:s + batch].tolist()]
         sc = ix.stage1(stored_batch(ix, b))
         best = torch.full((len(b), nsongs), -torch.inf, device=dev)
         best.scatter_reduce_(1, rowkey.expand(len(b), -1), sc, reduce="amax")
-        best[torch.arange(len(b), device=dev), rowkey[s:s + len(b)]] = -torch.inf
+        best[torch.arange(len(b), device=dev), rowkey[r]] = -torch.inf
         h[s:s + len(b)] = best.topk(k, dim=1).values.mean(1).cpu().numpy()
         if log and (s // batch) % 200 == 0:
             done = s + len(b)
-            log(f"{ix.channel.name}: {done}/{len(ids)} "
+            log(f"{ix.channel.name}: {done}/{len(todo)} "
                 f"({done / max(time.perf_counter() - t0, 1e-9):.0f} tracks/s)")
     if not np.isfinite(h).all():
         raise ValueError(f"{ix.channel.name}: non-finite hub scores")
