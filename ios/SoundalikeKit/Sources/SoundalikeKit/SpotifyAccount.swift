@@ -128,6 +128,64 @@ public struct SpotifyAccount: Sendable {
         guard (200..<300).contains(status) else { throw status == 404 ? SpotifyError.noActiveDevice : SpotifyError.requestFailed(status) }
     }
 
+    /// What the Spotify player is doing, for a remote control.
+    public struct PlaybackState: Equatable, Sendable {
+        public var seed: Seed
+        public var isPlaying: Bool
+        /// Seconds into the song.
+        public var position: TimeInterval
+        public var duration: TimeInterval
+        /// The device Spotify is playing on. Commands name it, because a backgrounded
+        /// Spotify app doesn't count as the active device and would get a 404.
+        public var deviceID: String?
+    }
+
+    /// The Spotify player on any of the user's devices, playing or paused; nil when there is none.
+    public func playbackState() async throws -> PlaybackState? {
+        let (data, status) = try await api("GET", "me/player?additional_types=track")
+        guard status == 200, let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let item = object["item"] as? [String: Any], let title = item["name"] as? String else { return nil }
+        let artist = ((item["artists"] as? [[String: Any]])?.map { $0["name"] as? String ?? "" } ?? []).joined(separator: ", ")
+        let images = ((item["album"] as? [String: Any])?["images"] as? [[String: Any]]) ?? []
+        let id = item["id"] as? String
+        let seed = Seed(
+            title: title, artist: artist,
+            isrc: (item["external_ids"] as? [String: Any])?["isrc"] as? String,
+            artworkURL: (images.first?["url"] as? String).flatMap(URL.init(string:)),
+            source: .spotify,
+            sharedURL: id.map { URL(string: "https://open.spotify.com/track/\($0)")! },
+            spotifyID: id
+        )
+        return PlaybackState(
+            seed: seed,
+            isPlaying: object["is_playing"] as? Bool ?? false,
+            position: TimeInterval(object["progress_ms"] as? Int ?? 0) / 1000,
+            duration: TimeInterval(item["duration_ms"] as? Int ?? 0) / 1000,
+            deviceID: (object["device"] as? [String: Any])?["id"] as? String
+        )
+    }
+
+    public enum Command: Sendable {
+        case play, pause, next, previous
+        case seek(TimeInterval)
+    }
+
+    /// Sends a player command to the device Spotify is playing on (Premium only).
+    public func send(_ command: Command, deviceID: String? = nil) async throws {
+        var (method, path): (String, String) = switch command {
+        case .play: ("PUT", "me/player/play")
+        case .pause: ("PUT", "me/player/pause")
+        case .next: ("POST", "me/player/next")
+        case .previous: ("POST", "me/player/previous")
+        case .seek(let seconds): ("PUT", "me/player/seek?position_ms=\(Int(seconds * 1000))")
+        }
+        if let deviceID, let encoded = deviceID.addingPercentEncoding(withAllowedCharacters: .alphanumerics) {
+            path += (path.contains("?") ? "&" : "?") + "device_id=" + encoded
+        }
+        let (_, status) = try await api(method, path)
+        guard (200..<300).contains(status) else { throw status == 404 ? SpotifyError.noActiveDevice : SpotifyError.requestFailed(status) }
+    }
+
     // MARK: Plumbing
 
     struct Token: Codable {

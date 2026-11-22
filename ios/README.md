@@ -20,8 +20,8 @@ App Store Connect record and app group.
      - the Music app through MusicKit, which needs no subscription;
      - Spotify, once the user taps **Connect Spotify** (one Agree tap in the Spotify app, no password). It tries the Web API first. When that fails, because Spotify's development mode only serves 5 allow-listed accounts, it asks the Spotify app through the App Remote SDK (`App/SpotifyRemote.swift`), which worked for a non-allow-listed account in 2–150 ms;
    - a ShazamKit match, used only when nothing can be read.
-2. `SoundalikeClient` calls `GET /api/mobile/similar` first. If that route fails or is missing,
-   it falls back to `/api/anysong/similar`, which today it always does because the route returns 404.
+2. `SoundalikeClient` calls `GET /api/mobile/similar` first and falls back to `/api/anysong/similar`
+   if that route fails or is missing.
    - Spotify links are named from the public embed page (`open.spotify.com/embed/track/<id>`),
      without sign-in.
    - Apple Music links are named from the iTunes lookup API.
@@ -50,6 +50,20 @@ Links and in-app routes go through one URL scheme handled in `App/SoundalikeApp.
 
 `https://soundalike.yassin.app/find?url=…` opens the app once the site serves an
 `apple-app-site-association` file for `FJH4UWVC4K.app.yassin.soundalike` with the `/find*` path.
+
+## History
+
+Every song that returns results is saved in `Library/history.json` in the app group (`SoundalikeUI/History.swift`), newest first. Each song is kept once and the list is capped at 200. The share extension writes to the same file, so its lookups appear in the app too. The home screen shows the last four under **Recent**; **See All** lists them by day, with swipe to delete and **Clear**. Nothing leaves the phone.
+
+## Player bar
+
+The bar at the bottom of every screen (`App/PlayerBar.swift`, `App/PlayerController.swift`) is a remote for the song playing in Spotify or the Music app, like the one in Control Center. It shows the cover, title, previous / play-pause / next and a scrubber; tapping the song finds its soundalikes. Soundalike plays nothing through it.
+
+- **Music app:** MusicKit's `SystemMusicPlayer`, live.
+- **Spotify:** App Remote when the Spotify app accepts the connection. Otherwise the Web API: it polls the player every 4 s and sends commands with the device id, because a backgrounded Spotify app doesn't count as the active device. The Web API part works only for allow-listed accounts and Premium.
+- When both apps have a song, it shows the one that is playing; when neither plays, it keeps the last one shown.
+
+Auto-detect runs at launch and after the app comes back from the background. Pulling down Control Center or a notification only makes the app inactive, so they don't re-run it.
 
 ## Build
 

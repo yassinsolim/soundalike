@@ -1,6 +1,6 @@
 # Soundalike for iPhone: privacy policy
 
-Last updated: 20 November 2026
+Last updated: 22 November 2026
 
 Soundalike has no accounts, no ads and no analytics. Nothing about you is sold or shared for tracking.
 
@@ -14,7 +14,7 @@ Soundalike has no accounts, no ads and no analytics. Nothing about you is sold o
 
 ## What stays on your phone
 
-Your settings, your last results and a small diagnostic log of what the app did and how long it took. None of it is uploaded. Deleting the app deletes it.
+Your settings, the songs you looked up (your history), your last results and a small diagnostic log of what the app did and how long it took. None of it is uploaded. Deleting the app deletes it.
 
 ## Children
 

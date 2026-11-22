@@ -14,6 +14,12 @@ struct ResultsRequest: Identifiable, Hashable {
     let kind: Kind
 }
 
+/// Screens pushed on the home navigation stack.
+enum Screen: Hashable {
+    case results(ResultsRequest)
+    case history
+}
+
 struct HomeView: View {
     @EnvironmentObject private var router: Router
     @Environment(\.scenePhase) private var scenePhase
@@ -23,14 +29,19 @@ struct HomeView: View {
     @AppStorage("autoDetect") private var autoDetect = true
     @State private var query = ""
     @State private var suggestions: [Seed] = []
-    @State private var path: [ResultsRequest] = []
+    @State private var path: [Screen] = []
     @State private var showGuide = false
+    @State private var showSettings = false
     @State private var error: String?
     @State private var hint: Hint?
     @State private var lastAuto = Date.distantPast
+    /// True at launch and after the app was in the background; Control Center or a
+    /// notification only make it inactive, which shouldn't re-run auto-detect.
+    @State private var returning = true
     /// The song behind results that auto-detect opened, so returning to the app can follow a song change.
     @State private var autoSeedKey: String?
     @ObservedObject private var spotify = SpotifyConnector.shared
+    @ObservedObject private var history = HistoryStore.shared
 
     enum Hint {
         case headphones
@@ -41,21 +52,16 @@ struct HomeView: View {
         NavigationStack(path: $path) {
             List {
                 if query.isEmpty {
-                    hero
                     if let hint { HintCard(hint: hint) { self.hint = nil } }
                     quickActions
-                    Section {
-                        Toggle("Find what's playing when I open Soundalike", isOn: $autoDetect)
-                    }
-                    spotifySection
-                    Section {
-                        Button { showGuide = true } label: {
-                            Label("Use it from Spotify and Apple Music", systemImage: "square.and.arrow.up")
-                        }
+                    recent
+                } else if SharedLink.find(in: query) != nil {
+                    Button { path.append(.results(ResultsRequest(kind: .shared(query)))) } label: {
+                        ActionRow(title: "Find soundalikes for this link", detail: "Spotify or Apple Music song", symbol: "link", tint: .indigo)
                     }
                 } else {
                     ForEach(suggestions, id: \.self) { seed in
-                        Button { path.append(ResultsRequest(kind: .seed(seed))) } label: {
+                        Button { path.append(.results(ResultsRequest(kind: .seed(seed)))) } label: {
                             HStack(spacing: 12) {
                                 Artwork(url: seed.artworkURL, size: 44)
                                 VStack(alignment: .leading) {
@@ -67,13 +73,26 @@ struct HomeView: View {
                     }
                 }
             }
+            .tint(.primary)
             .navigationTitle("Soundalike")
-            .searchable(text: $query, prompt: "Song or artist")
+            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Song, artist or link")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showSettings = true } label: { Image(systemName: "gearshape") }
+                        .accessibilityLabel("Settings")
+                }
+            }
+            .sheet(isPresented: $showSettings) { SettingsView(autoDetect: $autoDetect) }
             .onSubmit(of: .search) {
-                if SharedLink.find(in: query) != nil { path.append(ResultsRequest(kind: .shared(query))) }
+                if SharedLink.find(in: query) != nil { path.append(.results(ResultsRequest(kind: .shared(query)))) }
             }
             .task(id: query) { await suggest() }
-            .navigationDestination(for: ResultsRequest.self) { ResultsScreen(request: $0) }
+            .navigationDestination(for: Screen.self) { screen in
+                switch screen {
+                case .results(let request): ResultsScreen(request: request)
+                case .history: HistoryView { path.append(.results(ResultsRequest(kind: .seed($0)))) }
+                }
+            }
             .overlay { if listener.isListening { ListeningOverlay { listener.cancel() } } }
             .onChange(of: spotify.failure) { _, failure in
                 if let failure { error = failure; spotify.failure = nil }
@@ -93,7 +112,14 @@ struct HomeView: View {
                 handle(route, explicit: true)
             }
             .onChange(of: scenePhase, initial: true) { _, phase in
-                guard phase == .active else { return }
+                if phase == .background {
+                    returning = true
+                    PlayerController.shared.deactivate()
+                }
+                guard phase == .active, returning else { return }
+                returning = false
+                PlayerController.shared.activate()
+                history.reload()
                 router.takePending()
                 // Opening the app finds what's playing, unless a link or intent already asked for something.
                 Task {
@@ -112,33 +138,8 @@ struct HomeView: View {
                 }
             }
         }
-    }
-
-    private var hero: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Find songs that sound like the ones you love.")
-                .font(.title2.weight(.bold))
-            Text("Search for a song, recognise one that's playing, or share one from your music app.")
-                .foregroundStyle(.secondary)
-        }
-        .padding(.vertical, 8)
-        .listRowSeparator(.hidden)
-    }
-
-    private var spotifySection: some View {
-        Section {
-            if spotify.isConnected {
-                Label("Spotify connected", systemImage: "checkmark.circle.fill")
-                Button("Disconnect Spotify", role: .destructive) { spotify.disconnect() }
-            } else {
-                Button { Task { await spotify.connect(using: webAuthenticationSession) } } label: {
-                    Label("Connect Spotify", systemImage: "link")
-                }
-            }
-        } footer: {
-            Text(spotify.isConnected
-                 ? "Soundalike reads what Spotify is playing, plays results there and adds them to your queue."
-                 : "One tap in the Spotify app, no password. Soundalike can then read what Spotify is playing, even in headphones, and play results in Spotify.")
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            PlayerBar(findSoundalikes: findForPlayer)
         }
     }
 
@@ -150,19 +151,28 @@ struct HomeView: View {
             Button { handle(.listen, explicit: true) } label: {
                 ActionRow(title: "Listen with the microphone", detail: "For music playing around you", symbol: "mic.fill", tint: .orange)
             }
-            PasteButton(payloadType: String.self) { strings in
-                guard let text = strings.first else { return }
-                Task { @MainActor in
-                    if SharedLink.find(in: text) != nil {
-                        path.append(ResultsRequest(kind: .shared(text)))
-                    } else {
-                        error = SoundalikeError.unsupportedLink.localizedDescription
-                    }
+            if !spotify.isConnected {
+                Button { Task { await spotify.connect(using: webAuthenticationSession) } } label: {
+                    ActionRow(title: "Connect Spotify", detail: "Read Spotify songs, even in headphones", symbol: "link", tint: .green)
                 }
             }
-            .labelStyle(.titleAndIcon)
-        } footer: {
-            Text("Paste a Spotify or Apple Music song link.")
+        }
+    }
+
+    @ViewBuilder
+    private var recent: some View {
+        if !history.entries.isEmpty {
+            Section {
+                ForEach(history.entries.prefix(4)) { entry in
+                    Button { path.append(.results(ResultsRequest(kind: .seed(entry.seed)))) } label: { HistoryRow(entry: entry) }
+                }
+            } header: {
+                HStack {
+                    Text("Recent")
+                    Spacer()
+                    Button("See All") { path.append(.history) }.font(.subheadline).textCase(nil).foregroundStyle(Color.accentColor)
+                }
+            }
         }
     }
 
@@ -187,7 +197,7 @@ struct HomeView: View {
                 }
             }
         case .find(let shared):
-            path = [ResultsRequest(kind: .shared(shared))]
+            path = [.results(ResultsRequest(kind: .shared(shared)))]
         case .search(let text):
             path = []
             query = text
@@ -210,7 +220,7 @@ struct HomeView: View {
                 do {
                     let seed = try await listener.identify()
                     EventLog.record("listen", ["ms": EventLog.ms(since: started), "ok": true, "seed": "\(seed.title) — \(seed.artist)"])
-                    path = [ResultsRequest(kind: .seed(seed))]
+                    path = [.results(ResultsRequest(kind: .seed(seed)))]
                 } catch is CancellationError {
                 } catch {
                     EventLog.record("listen", ["ms": EventLog.ms(since: started), "ok": false, "error": "\(error)", "privateOutput": privateOutput])
@@ -231,7 +241,19 @@ struct HomeView: View {
     /// Results for a song that was read or heard rather than picked.
     private func show(_ seed: Seed) {
         autoSeedKey = key(seed)
-        path = [ResultsRequest(kind: .seed(seed))]
+        path = [.results(ResultsRequest(kind: .seed(seed)))]
+    }
+
+    /// Soundalikes for the song in the player bar.
+    private func findForPlayer() {
+        guard let player = PlayerController.shared.now else { return }
+        Task {
+            if PlayerController.shared.source == .appleMusic, let seed = await NowPlaying.appleMusic(requireAuthorization: true) {
+                show(seed)
+            } else if let seed = player.track.seed {
+                show(seed)
+            }
+        }
     }
 
     private func suggest() async {

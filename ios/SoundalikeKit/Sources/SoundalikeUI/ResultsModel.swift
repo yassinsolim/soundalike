@@ -64,7 +64,10 @@ public final class ResultsModel: ObservableObject {
                     "ms": EventLog.ms(since: started), "route": results.route, "count": results.matches.count,
                     "seed": "\(results.seed.title) — \(results.seed.artist)", "source": results.seed.source.rawValue,
                 ])
-                if !Task.isCancelled { state = .loaded(results) }
+                if !Task.isCancelled {
+                    state = .loaded(results)
+                    HistoryStore.shared.add(results.seed)
+                }
             } catch is CancellationError {
             } catch {
                 EventLog.record("results-failed", ["ms": EventLog.ms(since: started), "error": "\(error)"])

@@ -9,12 +9,16 @@
 /* Begin PBXBuildFile section */
 		0917F58F1E9AC20104E7466C /* SoundalikeUI in Frameworks */ = {isa = PBXBuildFile; productRef = B0C632114DD295E3A5C108CC /* SoundalikeUI */; };
 		27F6561199787FE56BBA496E /* SoundalikeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 88E43859FD97D5F43809E1A2 /* SoundalikeKit */; };
+		28C4A2BAFA4C3A8627ECE346 /* PlayerBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 342F44BA61D10BC561960996 /* PlayerBar.swift */; };
 		4184C77D4B27FAE0F31DB861 /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 901CF37A616FDA80C38B6B48 /* AppRoute.swift */; };
 		422BECB595F24BB0E16A67B7 /* NowPlaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F50A3F7B221F7B91797603D /* NowPlaying.swift */; };
 		43741DFA4822229FB8807C41 /* SoundalikeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 211DF663D5ADCD2C82545A0A /* SoundalikeKit */; };
+		4744E8826B3957F7422279E9 /* PlayerController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 983847EF5A8ADE27F3829467 /* PlayerController.swift */; };
 		581C1B0757E814AECE3747E8 /* Controls.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0AE59612B8F93874612F719E /* Controls.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		5F28B048EAF5BE6D73E316E5 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3014A04700FF8F743FC28F5B /* HistoryView.swift */; };
 		65579911DB9FE58AC78400A3 /* SoundalikeUI in Frameworks */ = {isa = PBXBuildFile; productRef = CA9572F0499FE4160BA92362 /* SoundalikeUI */; };
 		65ABAA9E8A79F08D366DFE0C /* PlaybackProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C444B436CD57A5201584A7 /* PlaybackProbe.swift */; };
+		74B757013E47037069B903A2 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C15D7FD2972F4E637EB330C0 /* SettingsView.swift */; };
 		7917AFAEB8E647C442563FB1 /* Controls.swift in Sources */ = {isa = PBXBuildFile; fileRef = E47C873420762430D9D27CAD /* Controls.swift */; };
 		81B22A007890995B76ADEB4E /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DDD9123532E2A1688234CF8 /* ShareViewController.swift */; };
 		87DEF1F413F0F7D5036D57AD /* SpotifyRemote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E3CEEBD0F2316F6A5C52924 /* SpotifyRemote.swift */; };
@@ -74,6 +78,8 @@
 		279F0E923B6AD8C7DF3176C0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2D05308EFC65C152F445E2F3 /* Controls.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Controls.entitlements; sourceTree = "<group>"; };
 		2FF0B24F8B13B3342EDEA007 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		3014A04700FF8F743FC28F5B /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		342F44BA61D10BC561960996 /* PlayerBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerBar.swift; sourceTree = "<group>"; };
 		70275C2B91DCF0B6FC83E35D /* GuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideView.swift; sourceTree = "<group>"; };
 		7114C3621E1664311507C6EC /* Intents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Intents.swift; sourceTree = "<group>"; };
 		775CF1A125A1878D1DF33A4F /* ListenService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListenService.swift; sourceTree = "<group>"; };
@@ -82,10 +88,12 @@
 		8F4341715E0E6A4F59AFE36A /* SoundalikeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundalikeApp.swift; sourceTree = "<group>"; };
 		901CF37A616FDA80C38B6B48 /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
 		90E45D74C76FFB29A1A05C86 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		983847EF5A8ADE27F3829467 /* PlayerController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerController.swift; sourceTree = "<group>"; };
 		AC02359428A223C2A3E57021 /* Soundalike.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Soundalike.entitlements; sourceTree = "<group>"; };
 		B173AE08421778D58CA6B28D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B901DDF6F927800720B2F625 /* Soundalike.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Soundalike.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C0AC6FB1EB40A7659060B5A7 /* SpotifyConnector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyConnector.swift; sourceTree = "<group>"; };
+		C15D7FD2972F4E637EB330C0 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		C1E2DED66C8BDEDB22CECFA0 /* ShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShareExtension.entitlements; sourceTree = "<group>"; };
 		C8D14387CD4977ED1CA671A0 /* AppleMusicService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMusicService.swift; sourceTree = "<group>"; };
 		E47C873420762430D9D27CAD /* Controls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Controls.swift; sourceTree = "<group>"; };
@@ -148,11 +156,15 @@
 				C8D14387CD4977ED1CA671A0 /* AppleMusicService.swift */,
 				279F0E923B6AD8C7DF3176C0 /* Assets.xcassets */,
 				70275C2B91DCF0B6FC83E35D /* GuideView.swift */,
+				3014A04700FF8F743FC28F5B /* HistoryView.swift */,
 				2FF0B24F8B13B3342EDEA007 /* HomeView.swift */,
 				18836419FAE9917D10F93920 /* Info.plist */,
 				775CF1A125A1878D1DF33A4F /* ListenService.swift */,
 				7F50A3F7B221F7B91797603D /* NowPlaying.swift */,
 				15C444B436CD57A5201584A7 /* PlaybackProbe.swift */,
+				342F44BA61D10BC561960996 /* PlayerBar.swift */,
+				983847EF5A8ADE27F3829467 /* PlayerController.swift */,
+				C15D7FD2972F4E637EB330C0 /* SettingsView.swift */,
 				AC02359428A223C2A3E57021 /* Soundalike.entitlements */,
 				8F4341715E0E6A4F59AFE36A /* SoundalikeApp.swift */,
 				C0AC6FB1EB40A7659060B5A7 /* SpotifyConnector.swift */,
@@ -324,11 +336,15 @@
 				4184C77D4B27FAE0F31DB861 /* AppRoute.swift in Sources */,
 				88F5D74827442AEE6560A312 /* AppleMusicService.swift in Sources */,
 				FCA24510DD193E518F23D7D7 /* GuideView.swift in Sources */,
+				5F28B048EAF5BE6D73E316E5 /* HistoryView.swift in Sources */,
 				A06D8AC76C4B3B2DA980ECBF /* HomeView.swift in Sources */,
 				DC6039CCB01C632F6C113817 /* Intents.swift in Sources */,
 				AEE2A8604705A695A19AE98C /* ListenService.swift in Sources */,
 				422BECB595F24BB0E16A67B7 /* NowPlaying.swift in Sources */,
 				65ABAA9E8A79F08D366DFE0C /* PlaybackProbe.swift in Sources */,
+				28C4A2BAFA4C3A8627ECE346 /* PlayerBar.swift in Sources */,
+				4744E8826B3957F7422279E9 /* PlayerController.swift in Sources */,
+				74B757013E47037069B903A2 /* SettingsView.swift in Sources */,
 				E309735176FBE1F9DF25DCD5 /* SoundalikeApp.swift in Sources */,
 				E968B0B2CC91159A1CD85DE3 /* SpotifyConnector.swift in Sources */,
 				87DEF1F413F0F7D5036D57AD /* SpotifyRemote.swift in Sources */,
@@ -489,7 +505,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 19;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = FJH4UWVC4K;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -551,7 +567,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 19;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = FJH4UWVC4K;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

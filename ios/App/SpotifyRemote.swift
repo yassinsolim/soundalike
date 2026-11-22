@@ -2,14 +2,19 @@ import Foundation
 import SoundalikeKit
 import SoundalikeUI
 import SpotifyiOS
+import UIKit
 
-/// Asks the Spotify app on this phone what it's playing (Spotify's App Remote SDK).
+/// Talks to the Spotify app on this phone (Spotify's App Remote SDK): what it's playing,
+/// and play, pause, skip and seek for the player bar.
 ///
 /// App Remote talks to the Spotify app, not the Web API, so it works for Spotify users
 /// who aren't on the development-mode allow list (verified on iOS 26.6 in November 2026).
 @MainActor
-final class SpotifyRemote: NSObject, SPTAppRemoteDelegate {
+final class SpotifyRemote: NSObject, SPTAppRemoteDelegate, SPTAppRemotePlayerStateDelegate {
     static let shared = SpotifyRemote()
+
+    /// Called with every player change while observing.
+    var onState: ((SPTAppRemotePlayerState) -> Void)?
 
     private lazy var remote: SPTAppRemote = {
         let configuration = SPTConfiguration(clientID: SpotifyAccount.clientID, redirectURL: URL(string: SpotifyAccount.redirectURI)!)
@@ -21,20 +26,20 @@ final class SpotifyRemote: NSObject, SPTAppRemoteDelegate {
 
     func currentTrack() async -> Seed? {
         let started = Date()
-        guard let token = try? await SpotifyAccount().accessToken() else { return nil }
-        remote.connectionParameters.accessToken = token
         guard await connect() else {
             EventLog.record("app-remote", ["ok": false, "stage": "connect", "ms": EventLog.ms(since: started)])
             return nil
         }
-        let state: SPTAppRemotePlayerState? = await withCheckedContinuation { continuation in
-            remote.playerAPI?.getPlayerState { result, _ in continuation.resume(returning: result as? SPTAppRemotePlayerState) }
-        }
+        let state = await playerState()
         guard let track = state?.track, state?.isPaused == false else {
             EventLog.record("app-remote", ["ok": false, "stage": "state", "ms": EventLog.ms(since: started)])
             return nil
         }
         EventLog.record("app-remote", ["ok": true, "ms": EventLog.ms(since: started)])
+        return Self.seed(for: track)
+    }
+
+    static func seed(for track: SPTAppRemoteTrack) -> Seed {
         let id = track.uri.components(separatedBy: ":").last
         return Seed(
             title: track.name, artist: track.artist.name, source: .spotify,
@@ -42,8 +47,51 @@ final class SpotifyRemote: NSObject, SPTAppRemoteDelegate {
         )
     }
 
+    var isConnected: Bool { remote.isConnected }
+
+    /// Follows the Spotify player until `stopObserving`. Returns false when Spotify
+    /// isn't connected in Soundalike or the Spotify app won't take the connection.
+    func startObserving() async -> Bool {
+        guard SpotifyAccount().isConnected, await connect() else { return false }
+        remote.playerAPI?.delegate = self
+        remote.playerAPI?.subscribe(toPlayerState: nil)
+        if let state = await playerState() { onState?(state) }
+        return true
+    }
+
+    /// App Remote must not stay connected while Soundalike is in the background.
+    func stopObserving() {
+        if remote.isConnected { remote.disconnect() }
+    }
+
+    func setPlaying(_ playing: Bool) {
+        if playing { remote.playerAPI?.resume(nil) } else { remote.playerAPI?.pause(nil) }
+    }
+
+    func skipToNext() { remote.playerAPI?.skip(toNext: nil) }
+    func skipToPrevious() { remote.playerAPI?.skip(toPrevious: nil) }
+    func seek(to seconds: TimeInterval) { remote.playerAPI?.seek(toPosition: Int(seconds * 1000), callback: nil) }
+
+    func image(for track: SPTAppRemoteTrack) async -> UIImage? {
+        guard let imageAPI = remote.imageAPI else { return nil }
+        return await withCheckedContinuation { continuation in
+            imageAPI.fetchImage(forItem: track, with: CGSize(width: 240, height: 240)) { image, _ in
+                continuation.resume(returning: image as? UIImage)
+            }
+        }
+    }
+
+    private func playerState() async -> SPTAppRemotePlayerState? {
+        guard let playerAPI = remote.playerAPI else { return nil }
+        return await withCheckedContinuation { continuation in
+            playerAPI.getPlayerState { result, _ in continuation.resume(returning: result as? SPTAppRemotePlayerState) }
+        }
+    }
+
     private func connect() async -> Bool {
         if remote.isConnected { return true }
+        guard let token = try? await SpotifyAccount().accessToken() else { return false }
+        remote.connectionParameters.accessToken = token
         return await withCheckedContinuation { continuation in
             waiting.append(continuation)
             if waiting.count == 1 { remote.connect() }
@@ -72,4 +120,8 @@ final class SpotifyRemote: NSObject, SPTAppRemoteDelegate {
     }
 
     nonisolated func appRemote(_ appRemote: SPTAppRemote, didDisconnectWithError error: Error?) {}
+
+    nonisolated func playerStateDidChange(_ playerState: SPTAppRemotePlayerState) {
+        Task { @MainActor in onState?(playerState) }
+    }
 }
