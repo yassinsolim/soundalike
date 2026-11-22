@@ -237,11 +237,17 @@ final class PlayerController: ObservableObject {
 
     private func isFromList(_ list: FollowedList) -> Bool {
         if Date().timeIntervalSince(list.startedAt) < 8 { return true }
-        guard let title = now?.track.title else { return false }
-        let playing = TextMatch.normalize(title)
-        let expected = TextMatch.normalize(list.matches[list.index].title)
-        return !playing.isEmpty && !expected.isEmpty
-            && (playing == expected || playing.hasPrefix(expected) || expected.hasPrefix(playing))
+        guard let track = now?.track else { return false }
+        let match = list.matches[list.index]
+        // Lists are full of same-title covers, so the artist has to agree too.
+        return Self.similar(track.title, match.title) && Self.similar(track.artist, match.artist)
+    }
+
+    /// Equal after normalising, or one starts with the other ("Song" / "Song - Remastered",
+    /// "Artist" / "Artist, Guest").
+    private static func similar(_ a: String, _ b: String) -> Bool {
+        let a = TextMatch.normalize(a), b = TextMatch.normalize(b)
+        return !a.isEmpty && !b.isEmpty && (a == b || a.hasPrefix(b) || b.hasPrefix(a))
     }
 
     // MARK: - Spotify
@@ -297,6 +303,8 @@ final class PlayerController: ObservableObject {
                 try await SpotifyAccount().send(command, deviceID: spotifyDevice)
             } catch {
                 EventLog.record("player-command", ["ok": false, "error": "\(error)"])
+                // A song started on its own has nothing before it, and Spotify answers 403: restart it instead.
+                if case .previous = command { try? await SpotifyAccount().send(.seek(0), deviceID: spotifyDevice) }
             }
             try? await Task.sleep(for: .milliseconds(500))
             await refreshSpotifyWebAPI()
