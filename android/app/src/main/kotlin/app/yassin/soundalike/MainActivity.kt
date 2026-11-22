@@ -57,9 +57,17 @@ class MainActivity : ComponentActivity() {
         incomingSearch = searchText(intent)
     }
 
+    override fun onStart() {
+        super.onStart()
+        FloatingButton.ownScreens += 1
+        Surfaces.update(this)
+    }
+
     override fun onStop() {
         super.onStop()
         model.player.stop()
+        FloatingButton.ownScreens -= 1
+        Surfaces.update(this)
     }
 
     private fun searchText(intent: Intent): String? =
@@ -94,6 +102,9 @@ class MainActivity : ComponentActivity() {
                     player = model.player,
                     onOpen = model::open,
                     onRetry = model::retry,
+                    missingApp = model.missingApp,
+                    onGetApp = model::installMissingApp,
+                    onDismissMissingApp = { model.missingApp = null },
                     failureActions = FailureActions(allowAccess = { startActivity(NowPlaying.accessSettingsIntent(this)) }),
                     modifier = modifier.fillMaxSize(),
                 )

@@ -4,6 +4,7 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Color.TRANSPARENT
 import android.os.Bundle
+import android.os.PowerManager
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -71,11 +73,17 @@ class SheetActivity : ComponentActivity() {
         model.player.stop()
         // The sheet belongs to the moment it was asked for. Left behind in a hidden task, Android
         // could bring it back with an old list instead of starting it for the next request.
-        if (!isChangingConfigurations && !grantingAccess) finish()
+        // The screen turning off is not leaving: the list is still there when it comes back on.
+        val screenOn = getSystemService(PowerManager::class.java).isInteractive
+        if (!isChangingConfigurations && !grantingAccess && screenOn) finish()
+        FloatingButton.ownScreens -= 1
+        Surfaces.update(this)
     }
 
     override fun onStart() {
         super.onStart()
+        FloatingButton.ownScreens += 1
+        Surfaces.update(this)
         if (grantingAccess) {
             grantingAccess = false
             model.retry()
@@ -101,7 +109,9 @@ class SheetActivity : ComponentActivity() {
         ModalBottomSheet(
             onDismissRequest = ::finish,
             sheetState = sheetState,
-            sheetMaxWidth = 640.dp,
+            // Opened fully, the sheet stops below the status bar instead of sliding under its icons.
+            modifier = Modifier.statusBarsPadding(),
+            sheetMaxWidth = 760.dp,
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             containerColor = MaterialTheme.colorScheme.surface,
             scrimColor = Color.Black.copy(alpha = 0.45f),
@@ -121,12 +131,15 @@ class SheetActivity : ComponentActivity() {
                     player = model.player,
                     onOpen = model::open,
                     onRetry = model::retry,
+                    missingApp = model.missingApp,
+                    onGetApp = model::installMissingApp,
+                    onDismissMissingApp = { model.missingApp = null },
                     failureActions = FailureActions(
                         allowAccess = ::allowAccess,
                         // Shared words can be searched; a link to an album or playlist can't.
                         searchInstead = (::searchInApp).takeIf { "://" !in sharedText },
                     ),
-                    modifier = Modifier.widthIn(max = 640.dp),
+                    modifier = Modifier.widthIn(max = 760.dp),
                     contentPadding = WindowInsets.navigationBars.asPaddingValues(),
                 )
             }

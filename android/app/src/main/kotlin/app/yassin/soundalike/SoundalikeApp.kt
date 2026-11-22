@@ -15,6 +15,9 @@ class SoundalikeApp : Application() {
     lateinit var history: History
         private set
 
+    /** Which server route answered the last request and how long it took; shown in Settings and logged. */
+    @Volatile var lastAnswer: String? = null
+
     /** Built per request so a changed language or server applies at once. */
     fun client() = SoundalikeClient(http, settings.baseUrl, settings.language)
 

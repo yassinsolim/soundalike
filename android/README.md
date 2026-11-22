@@ -17,8 +17,8 @@ request flow, the same fallbacks, the same look.
    - the song a music app is playing, read from its media session (`NowPlaying.kt`), with no login;
    - a search pick or a pasted link inside the app.
 2. `SoundalikeClient` calls `GET /api/mobile/similar` first, naming the song in exactly one way (`url`, `spotify_id`,
-   `apple_id`, `isrc`, or `title` + `artist`). If that route is missing (404 today) or fails, it falls back to
-   `/api/anysong/similar`:
+   `apple_id`, `isrc`, or `title` + `artist`). The route is live since 2026-11-22 and answers every request the
+   app made on a real device. If it is missing or fails, the app falls back to `/api/anysong/similar`:
    - Spotify links are named from the public embed page (`open.spotify.com/embed/track/<id>`), without sign-in;
      `spotify.link` short links are expanded first.
    - Apple Music links are named from the iTunes lookup API.
@@ -31,7 +31,9 @@ request flow, the same fallbacks, the same look.
      `https://open.spotify.com/search/isrc:<ISRC>` (lands on exactly that recording), else a title and artist search.
    - Apple Music: the server's link, else the best iTunes Search match, else a search link.
    - YouTube Music: `https://music.youtube.com/search?q=<title artist>`.
-   - If the app is not installed, the same address opens in the browser.
+   - If the app is not installed, the same address opens in the browser, with one exception: Spotify's web
+     player drops a search link on phones (it lands on an empty search page), so without the Spotify app a
+     search link is not opened. A dialog offers "Get Spotify" (Play Store) or picking another app.
 
 ## Surfaces
 
@@ -56,12 +58,21 @@ What is playing comes from two sources:
 - `MediaSessionManager.getActiveSessions`, which Android allows for apps with notification access.
   `NowPlayingListener` is an empty `NotificationListenerService`; no notification is read. It gives title, artist
   and the player's package for any player. If a session's media id or media URI is a `spotify:track:` URI it is used.
+- The `com.android.music.metadatachanged` / `metachanged` / `playstatechanged` broadcasts (extras `track`,
+  `artist`, `playing`). The AOSP Music app and players built on it keep a media session but put no song in it;
+  they name the song only in these broadcasts. Used when no session names a song, and only for a session that
+  belongs to such a player. A title that is a file name loses its audio extension.
 - Spotify's `com.spotify.music.metadatachanged` broadcast (extra `id` = track URI), which Spotify only sends when
   the user turns on **Device Broadcast Status** in Spotify's settings. Read as a sticky broadcast and through a
   runtime receiver. It is used when its track name matches the Spotify session's title.
 
-Settings › "Show what my player reports" prints every text field of the active sessions and the last Spotify
-broadcast; use it to see what a real player exposes.
+Settings › "Show what my player reports" prints every text field of the active sessions, the last broadcasts, the
+song the app would use, and which server route answered the last request and how fast. The same two lines go to
+logcat under the tag `Soundalike` (`adb logcat -s Soundalike:I`), in release builds too.
+
+The sheet closes when the user leaves it, so a stale list never comes back; it stays through a rotation, through
+the screen turning off and on, and while the user is on the notification-access screen. Held sideways, the song
+and the app picker share one row, and the sheet stops below the status bar.
 
 Not built:
 - **AccessibilityService**: not used anywhere, by decision.
@@ -78,7 +89,7 @@ Links handled:
 | `soundalike://auto`, `soundalike://now-playing` | Sheet for the playing song |
 | `soundalike://find?url=<link>` | Sheet for a shared link |
 | `soundalike://search?q=<text>` | The app's search with this text |
-| `https://soundalike.yassin.app/find?url=…` | Sheet for the link. Opens the app without asking only once the site serves `/.well-known/assetlinks.json` for `app.yassin.soundalike` with the release key's SHA-256 (`1E:CE:72:59:6B:BF:02:D1:61:FE:8E:6F:83:EA:31:70:F5:69:C4:65:A7:79:21:60:80:D3:45:BC:34:48:EF:3B`) |
+| `https://soundalike.yassin.app/find?url=…` | Sheet for the link. The site serves `/.well-known/assetlinks.json` with the release key's SHA-256 (`1E:CE:72:59:6B:BF:02:D1:61:FE:8E:6F:83:EA:31:70:F5:69:C4:65:A7:79:21:60:80:D3:45:BC:34:48:EF:3B`); with the release build Android 13 reports the domain `verified` and opens the app without asking. A debug build is signed with another key, so it is not expected to verify (not measured) |
 
 ## Build
 
@@ -140,6 +151,27 @@ unless noted:
 | In-app search, results, history, settings, guide | Work |
 | Release APK (minified, signed) against the production engine | Share, list, preview, app screens work |
 
+Run on 2026-11-22 on a real device, a Retroid Pocket Flip 2 (Android 13, arm64, landscape handheld, Wi-Fi), against
+the production engine:
+
+| Verified on the Flip 2 | Result |
+|---|---|
+| Install, cold start | Debug: first start 729 ms. Release: 158 to 165 ms (`am start -W`, three cold starts) |
+| Share intents (Spotify, Apple Music, YouTube Music links) | Sheet with results; all from `/api/mobile/similar`: 649 to 878 ms for known songs, 5.1 s for a song the engine had not seen, about 100 ms when repeated |
+| Android 13 share sheet (debug `FakeShareActivity`) | "Find soundalikes" is in the direct-share row and Soundalike is first in the app row; one tap opens the sheet |
+| Preview | Plays (MediaPlayer started, transient audio focus held), stops when a row is opened |
+| Row tapped without Spotify | Was: Chrome on an empty Spotify search page. Now: "Spotify isn't installed" dialog; Get Spotify opens the Play Store page |
+| Notification access | The real system screen and its Allow dialog walked once; back in the sheet the request is retried by itself |
+| Playing song from a real player (AOSP Music playing a tagged silent file) | Its session carries no song; found through the `com.android.music` broadcasts after the fix. Tile (shows the title), notification (posted with the title), floating button (over the launcher and over Spotify) and the app's playing card all work |
+| Screen off and on, force-stop of the app | The sheet survives screen off/on. After a force-stop Android restarts the listener by itself and the notification comes back |
+| Official Spotify 9.2.0.2053 (arm64 splits copied from another of the owner's devices) | Installs and starts to its login screen. A tapped result is handed to `com.spotify.music` (`SpotifyMainActivity`), which shows the login screen. An idle, logged-out Spotify session is no longer mistaken for the player |
+| `https://soundalike.yassin.app/find?url=…` with the release build | Domain `verified`; the link opens the sheet directly, 183 ms to the activity, list in 242 ms |
+| In-app search and results | Work |
+
+Not possible on that device: its launcher hosts no widgets and shows no app shortcuts (both are registered), the
+screen stays in landscape (portrait was only run in the emulator), the notification was checked in
+`dumpsys notification` but not tapped, and the device was not rebooted.
+
 Needs a real phone or a Spotify login (not tested):
 - Spotify's own share flow: where "Find soundalikes" appears, the exact shared text, the tap counts above.
 - That the sheet stays over Spotify when shared from it, and what Spotify does with it after a result is opened.
@@ -148,7 +180,6 @@ Needs a real phone or a Spotify login (not tested):
   is verified on iOS only).
 - Apple Music for Android, and YouTube Music signed in (the search link was only seen to reach the app).
 - Other Android versions and manufacturer skins; the minimum, Android 8.0, was not run.
-- `/api/mobile/similar`: covered by unit tests only, the route is not deployed.
 
 Play Store notes: the share target, tile, widget and shortcuts need no declaration. Notification access needs a
 prominent in-app disclosure (the guide and the sheet explain it before sending the user to the system screen) and

@@ -1,5 +1,6 @@
 package app.yassin.soundalike
 
+import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -18,6 +19,8 @@ object PlayingNotification {
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
+    // areNotificationsEnabled() below is the permission check; lint only recognises checkSelfPermission.
+    @SuppressLint("MissingPermission")
     fun update(context: Context, song: PlayingSong?) {
         val manager = NotificationManagerCompat.from(context)
         if (song == null || !song.playing || !context.app.settings.playingNotification || !manager.areNotificationsEnabled()) {

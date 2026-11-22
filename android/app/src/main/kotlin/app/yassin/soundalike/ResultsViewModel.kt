@@ -3,6 +3,8 @@ package app.yassin.soundalike
 import android.app.Application
 import android.content.Intent
 import android.net.Uri
+import android.os.SystemClock
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,7 +56,8 @@ sealed interface Request {
 sealed interface ResultsState {
     data class Loading(val seed: Seed?) : ResultsState
     data class Loaded(val results: SoundalikeResults) : ResultsState
-    data class Failed(val message: String, val reason: Reason = Reason.OTHER) : ResultsState
+    /** `seed` is the song that was asked about, when it got that far, so the user can see what was understood. */
+    data class Failed(val message: String, val reason: Reason = Reason.OTHER, val seed: Seed? = null) : ResultsState
 
     enum class Reason { NO_ACCESS, NOTHING_PLAYING, NOT_A_SONG_LINK, OTHER }
 }
@@ -70,6 +73,14 @@ class ResultsViewModel(application: Application) : AndroidViewModel(application)
     /** The app a tapped result opens in: where the request came from, else the user's default. */
     var target: MusicSource by mutableStateOf(app.settings.defaultTarget)
 
+    /** Set when a result was tapped but its music app isn't installed and the web can't show the song. */
+    var missingApp: MusicSource? by mutableStateOf(null)
+
+    fun installMissingApp() {
+        missingApp?.let { Opener.openStore(app, it) }
+        missingApp = null
+    }
+
     val player = PreviewPlayer(app, viewModelScope)
 
     fun load(request: Request) {
@@ -77,6 +88,7 @@ class ResultsViewModel(application: Application) : AndroidViewModel(application)
         job?.cancel()
         player.stop()
         job = viewModelScope.launch {
+            val started = SystemClock.elapsedRealtime()
             try {
                 val results = when (request) {
                     is Request.Shared -> {
@@ -109,6 +121,7 @@ class ResultsViewModel(application: Application) : AndroidViewModel(application)
                             return@launch
                         }
                         val seed = song.toSeed()
+                        Log.i("Soundalike", "playing: ${song.title} / ${song.artist} from ${song.packageName}")
                         target = targetFor(seed.source)
                         state = ResultsState.Loading(seed)
                         app.client().similar(seed)
@@ -116,8 +129,10 @@ class ResultsViewModel(application: Application) : AndroidViewModel(application)
                 }
                 app.history.add(results.seed)
                 state = ResultsState.Loaded(results)
+                app.lastAnswer = "${results.matches.size} results from the ${results.route} route in ${SystemClock.elapsedRealtime() - started} ms"
+                Log.i("Soundalike", app.lastAnswer!!)
             } catch (error: SoundalikeError) {
-                state = ResultsState.Failed(error.message!!)
+                state = ResultsState.Failed(error.message!!, seed = (state as? ResultsState.Loading)?.seed)
             }
         }
     }
@@ -135,9 +150,16 @@ class ResultsViewModel(application: Application) : AndroidViewModel(application)
         val storefront = (state as? ResultsState.Loaded)?.results?.seed?.storefront
             ?: Locale.getDefault().country.lowercase().takeIf { it.length == 2 } ?: "us"
         viewModelScope.launch {
-            if (!Opener.open(app, match, target, storefront)) {
-                Toast.makeText(app, "Couldn't open ${target.displayName}.", Toast.LENGTH_SHORT).show()
+            val message = when (Opener.open(app, match, target, storefront)) {
+                Opener.Outcome.IN_APP -> return@launch
+                Opener.Outcome.APP_MISSING -> {
+                    missingApp = target
+                    return@launch
+                }
+                Opener.Outcome.IN_BROWSER -> "${target.displayName} isn't installed. Opening it in the browser."
+                Opener.Outcome.FAILED -> "Couldn't open ${target.displayName}."
             }
+            Toast.makeText(app, message, Toast.LENGTH_LONG).show()
         }
     }
 

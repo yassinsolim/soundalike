@@ -32,9 +32,14 @@ class NowPlayingListener : NotificationListenerService() {
         override fun onPlaybackStateChanged(state: PlaybackState?) = Surfaces.update(this@NowPlayingListener)
     }
 
-    private val spotifyReceiver = object : BroadcastReceiver() {
+    /** Spotify's track broadcast and the older players' scrobble broadcasts. */
+    private val playerBroadcasts = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            NowPlaying.lastBroadcast = NowPlaying.fromBroadcast(intent) ?: return
+            if (intent.action == NowPlaying.SPOTIFY_METADATA_CHANGED) {
+                NowPlaying.lastBroadcast = NowPlaying.fromBroadcast(intent) ?: return
+            } else {
+                NowPlaying.lastLegacy = NowPlaying.fromLegacy(intent) ?: return
+            }
             Surfaces.update(context)
         }
     }
@@ -44,9 +49,8 @@ class NowPlayingListener : NotificationListenerService() {
         val manager = getSystemService(MediaSessionManager::class.java)
         val self = ComponentName(this, NowPlayingListener::class.java)
         manager.addOnActiveSessionsChangedListener(sessionsChanged, self, main)
-        ContextCompat.registerReceiver(
-            this, spotifyReceiver, IntentFilter(NowPlaying.SPOTIFY_METADATA_CHANGED), ContextCompat.RECEIVER_EXPORTED,
-        )
+        val actions = IntentFilter(NowPlaying.SPOTIFY_METADATA_CHANGED).apply { NowPlaying.LEGACY_ACTIONS.forEach(::addAction) }
+        ContextCompat.registerReceiver(this, playerBroadcasts, actions, ContextCompat.RECEIVER_EXPORTED)
         watch(manager.getActiveSessions(self))
     }
 
@@ -54,7 +58,7 @@ class NowPlayingListener : NotificationListenerService() {
         if (!connected) return
         connected = false
         getSystemService(MediaSessionManager::class.java).removeOnActiveSessionsChangedListener(sessionsChanged)
-        unregisterReceiver(spotifyReceiver)
+        unregisterReceiver(playerBroadcasts)
         watch(emptyList())
     }
 

@@ -18,7 +18,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import android.content.res.Configuration
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -68,7 +72,21 @@ fun ResultsList(
     failureActions: FailureActions,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
+    missingApp: MusicSource? = null,
+    onGetApp: () -> Unit = {},
+    onDismissMissingApp: () -> Unit = {},
 ) {
+    if (missingApp != null) {
+        AlertDialog(
+            onDismissRequest = onDismissMissingApp,
+            title = { Text("${missingApp.displayName} isn't installed") },
+            text = { Text("Install ${missingApp.displayName} to open songs there, or pick another app above the list.") },
+            confirmButton = { TextButton(onClick = onGetApp) { Text("Get ${missingApp.displayName}") } },
+            dismissButton = { TextButton(onClick = onDismissMissingApp) { Text("Not now") } },
+        )
+    }
+    // Held sideways there is little height: the song and the app picker share one row.
+    val wide = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     LazyColumn(modifier = modifier, contentPadding = contentPadding) {
         when (state) {
             is ResultsState.Loading -> {
@@ -88,10 +106,22 @@ fun ResultsList(
                     }
                 }
             }
-            is ResultsState.Failed -> item { Failure(state, onRetry, failureActions) }
+            is ResultsState.Failed -> {
+                state.seed?.let { seed -> item { SeedHeader(seed) } }
+                item { Failure(state, onRetry, failureActions) }
+            }
             is ResultsState.Loaded -> {
-                item { SeedHeader(state.results.seed) }
-                item { TargetPicker(target, onTarget) }
+                if (wide) {
+                    item {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            SeedHeader(state.results.seed, Modifier.weight(1f))
+                            TargetPicker(target, onTarget, Modifier.width(400.dp))
+                        }
+                    }
+                } else {
+                    item { SeedHeader(state.results.seed) }
+                    item { TargetPicker(target, onTarget) }
+                }
                 items(state.results.matches, key = { it.id }) { match ->
                     ResultRow(match, player, target, onOpen = { onOpen(match) })
                 }
@@ -131,9 +161,9 @@ private fun Failure(state: ResultsState.Failed, onRetry: () -> Unit, actions: Fa
 }
 
 @Composable
-fun SeedHeader(seed: Seed) {
+fun SeedHeader(seed: Seed, modifier: Modifier = Modifier) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp).semantics(mergeDescendants = true) {},
+        modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp).semantics(mergeDescendants = true) {},
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Artwork(seed.artworkUrl, 72.dp)
@@ -151,8 +181,8 @@ fun SeedHeader(seed: Seed) {
 }
 
 @Composable
-private fun TargetPicker(target: MusicSource, onTarget: (MusicSource) -> Unit) {
-    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+private fun TargetPicker(target: MusicSource, onTarget: (MusicSource) -> Unit, modifier: Modifier = Modifier) {
+    SingleChoiceSegmentedButtonRow(modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
         MusicSource.targets.forEachIndexed { index, source ->
             SegmentedButton(
                 selected = source == target,

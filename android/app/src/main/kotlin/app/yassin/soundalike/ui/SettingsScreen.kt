@@ -125,7 +125,9 @@ fun SettingsScreen(modifier: Modifier, onGuide: () -> Unit) {
         }
         Card("Help") {
             OutlinedButton(onClick = onGuide) { Text("How to use Soundalike") }
-            OutlinedButton(onClick = { report = NowPlaying.report(context) }) { Text("Show what my player reports") }
+            OutlinedButton(onClick = {
+                report = NowPlaying.report(context) + "\nLast answer: " + (context.app.lastAnswer ?: "none since the app started")
+            }) { Text("Show what my player reports") }
             report?.let { Text(it, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall) }
         }
         if (BuildConfig.DEBUG) {

@@ -20,10 +20,13 @@ import kotlin.math.abs
 object FloatingButton {
     private var view: View? = null
 
+    /** How many Soundalike screens are showing. Over its own screens the button would only be in the way. */
+    var ownScreens = 0
+
     fun canDraw(context: Context): Boolean = SystemSettings.canDrawOverlays(context)
 
     fun update(context: Context, song: PlayingSong?) {
-        val show = song?.playing == true && context.app.settings.floatingButton && canDraw(context)
+        val show = song?.playing == true && ownScreens == 0 && context.app.settings.floatingButton && canDraw(context)
         if (show && view == null) show(context.applicationContext)
         if (!show) hide(context)
     }
