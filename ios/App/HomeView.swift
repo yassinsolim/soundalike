@@ -367,6 +367,22 @@ struct ResultsScreen: View {
 
     private var actions: ResultActions {
         let music = AppleMusicService.shared
+        let matches: [Match] = if case .loaded(let results) = model.state { results.matches } else { [] }
+        // Playing a result lets the player bar's Next and Previous walk this list.
+        let following: (@escaping (Match) async throws -> Void) -> (Match) async throws -> Void = { play in
+            @Sendable func playFromList(_ match: Match) async throws {
+                try await play(match)
+                guard let index = matches.firstIndex(of: match) else { return }
+                await PlayerController.shared.follow(matches, at: index, play: playFromList)
+                // Look up the neighbours' Spotify ids now, so Next and Previous start at once.
+                if SpotifyAccount().isConnected {
+                    for neighbour in [index + 1, index - 1] where matches.indices.contains(neighbour) {
+                        Task { _ = try? await SpotifyAccount().trackID(for: matches[neighbour]) }
+                    }
+                }
+            }
+            return playFromList
+        }
         let open: (Match, MusicSource) async -> Void = { match, target in
             let url: URL
             if target == .appleMusic {
@@ -383,7 +399,7 @@ struct ResultsScreen: View {
         case .spotify where spotify.isConnected:
             return ResultActions(
                 open: open,
-                play: { match in
+                play: following { match in
                     try await logged("spotify-play") {
                         guard let id = try await SpotifyAccount().trackID(for: match) else { throw SoundalikeError.notInCatalog }
                         do {
@@ -406,7 +422,7 @@ struct ResultsScreen: View {
         case .appleMusic where canUseAppleMusic:
             return ResultActions(
                 open: open,
-                play: { match in try await logged("apple-play") { try await music.playNow(match) } },
+                play: following { match in try await logged("apple-play") { try await music.playNow(match) } },
                 playMessage: "Playing in Apple Music",
                 queue: { match in try await logged("play-next") { try await music.playNext(match) } },
                 queueLabel: "Play Next",

@@ -102,10 +102,14 @@ public struct SpotifyAccount: Sendable {
     }
 
     /// Spotify's own id for a result, by ISRC.
+    /// Cached, so the player bar can look up the next song ahead of time and Next plays at once.
     public func trackID(isrc: String) async throws -> String? {
+        if let cached = TrackIDCache.shared.id(for: isrc) { return cached }
         let (data, status) = try await api("GET", "search?type=track&limit=1&q=" + ("isrc:" + isrc).addingPercentEncoding(withAllowedCharacters: .alphanumerics)!)
         guard status == 200, let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
-        return (((object["tracks"] as? [String: Any])?["items"] as? [[String: Any]])?.first?["id"] as? String)
+        let id = (((object["tracks"] as? [String: Any])?["items"] as? [[String: Any]])?.first?["id"] as? String)
+        if let id { TrackIDCache.shared.store(id, for: isrc) }
+        return id
     }
 
     /// Spotify's id for a result: from the server's link when there is one, else by ISRC.
@@ -288,5 +292,20 @@ public enum SpotifyError: LocalizedError, Equatable {
 extension Data {
     var base64URLEncoded: String {
         base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
+    }
+}
+
+/// Spotify track ids by ISRC for this run of the app.
+final class TrackIDCache: @unchecked Sendable {
+    static let shared = TrackIDCache()
+    private let lock = NSLock()
+    private var ids: [String: String] = [:]
+
+    func id(for isrc: String) -> String? {
+        lock.withLock { ids[isrc] }
+    }
+
+    func store(_ id: String, for isrc: String) {
+        lock.withLock { ids[isrc] = id }
     }
 }

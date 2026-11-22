@@ -40,6 +40,10 @@ final class PlayerController: ObservableObject {
 
     @Published private(set) var source: Source?
     @Published private(set) var now: Snapshot?
+    /// Spotify is connected in Soundalike but neither App Remote nor the Web API can see
+    /// its player (App Remote refused, and the account isn't on the Web API allow list).
+    /// One tap on `wakeSpotify()` fixes it.
+    @Published private(set) var spotifyNeedsWake = false
 
     private var spotify: Snapshot?
     private var appleMusic: Snapshot?
@@ -49,6 +53,19 @@ final class PlayerController: ObservableObject {
     /// Reads Spotify through the Web API when App Remote can't connect.
     private var spotifyPoll: Task<Void, Never>?
     private var spotifyDevice: String?
+    /// When each app's song or play state last changed, to pick between two paused apps.
+    private var changedAt: [Source: Date] = [:]
+    /// The soundalike list the playing song was started from, so Next and Previous walk it.
+    private var list: FollowedList?
+
+    private struct FollowedList {
+        var matches: [Match]
+        var index: Int
+        var play: (Match) async throws -> Void
+        /// When Soundalike last started a song from the list; the app's report lags behind.
+        var startedAt = Date()
+    }
+    private var lastSeen: [Source: String] = [:]
 
     private init() {
         SpotifyRemote.shared.onState = { [weak self] state in self?.update(spotify: state) }
@@ -63,17 +80,34 @@ final class PlayerController: ObservableObject {
                 .store(in: &observers)
         }
         scheduleAppleRefresh()
-        Task {
-            let live = await SpotifyRemote.shared.startObserving()
-            if !live, SpotifyAccount().isConnected, spotifyPoll == nil {
-                spotifyPoll = Task {
-                    while !Task.isCancelled {
-                        await refreshSpotifyWebAPI()
-                        try? await Task.sleep(for: .seconds(4))
-                    }
+        Task { await reconnectSpotify() }
+    }
+
+    func reconnectSpotify() async {
+        let live = await SpotifyRemote.shared.startObserving()
+        if live {
+            spotifyPoll?.cancel()
+            spotifyPoll = nil
+            spotifyNeedsWake = false
+            return
+        }
+        guard SpotifyAccount().isConnected else { return }
+        // App Remote refused: read through the Web API, which works for allow-listed accounts.
+        await refreshSpotifyWebAPI()
+        spotifyNeedsWake = spotify == nil
+        if spotifyPoll == nil {
+            spotifyPoll = Task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(4))
+                    await refreshSpotifyWebAPI()
                 }
             }
         }
+    }
+
+    /// Opens Spotify for a moment so App Remote works; Spotify sends the user straight back.
+    func wakeSpotify() {
+        Task { await SpotifyConnector.shared.wakeSpotifyApp() }
     }
 
     func deactivate() {
@@ -109,7 +143,14 @@ final class PlayerController: ObservableObject {
         }
     }
 
+    /// Remembers the list a result was played from. Next and Previous then move through
+    /// it for as long as that result is the song playing.
+    func follow(_ matches: [Match], at index: Int, play: @escaping (Match) async throws -> Void) {
+        list = FollowedList(matches: matches, index: index, play: play)
+    }
+
     func skipToNext() {
+        if step(1) { return }
         switch source {
         case .spotify: SpotifyRemote.shared.isConnected ? SpotifyRemote.shared.skipToNext() : sendWebAPI(.next)
         case .appleMusic: Task { try? await SystemMusicPlayer.shared.skipToNextEntry() }
@@ -117,16 +158,17 @@ final class PlayerController: ObservableObject {
         }
     }
 
-    /// Like Control Center: restarts the song after its first few seconds, otherwise goes back one.
+    /// Like Control Center: restarts the song after its first few seconds, otherwise goes back one
+    /// (in the soundalike list when the song came from it).
     func skipToPrevious() {
+        if position(at: Date()) > 3 {
+            seek(to: 0)
+            return
+        }
+        if step(-1) { return }
         switch source {
         case .spotify: SpotifyRemote.shared.isConnected ? SpotifyRemote.shared.skipToPrevious() : sendWebAPI(.previous)
-        case .appleMusic:
-            if position(at: Date()) > 3 {
-                seek(to: 0)
-            } else {
-                Task { try? await SystemMusicPlayer.shared.skipToPreviousEntry() }
-            }
+        case .appleMusic: Task { try? await SystemMusicPlayer.shared.skipToPreviousEntry() }
         case nil: break
         }
     }
@@ -142,10 +184,72 @@ final class PlayerController: ObservableObject {
         }
     }
 
+    /// Plays the next (or previous) song in the followed list. False when the playing song
+    /// isn't from the list or the list ends, so the music app's own skip runs instead.
+    private func step(_ offset: Int) -> Bool {
+        guard var list, isFromList(list) else {
+            list = nil
+            return false
+        }
+        var index = list.index + offset
+        guard list.matches.indices.contains(index) else { return false }
+        list.index = index
+        list.startedAt = Date()
+        self.list = list
+        let matches = list.matches
+        let play = list.play
+        show(matches[index])
+        Task {
+            // Songs missing from the music app's catalog are skipped over.
+            while matches.indices.contains(index) {
+                do {
+                    try await play(matches[index])
+                    EventLog.record("player-list", ["index": index, "ok": true])
+                    break
+                } catch {
+                    EventLog.record("player-list", ["index": index, "ok": false, "error": "\(error)"])
+                    index += offset
+                    self.list?.index = index
+                }
+            }
+            if source == .spotify, !SpotifyRemote.shared.isConnected {
+                for delay in [250, 900] {
+                    try? await Task.sleep(for: .milliseconds(delay))
+                    await refreshSpotifyWebAPI()
+                }
+            }
+        }
+        return true
+    }
+
+    /// Shows a list song in the bar straight away, before the music app reports it.
+    private func show(_ match: Match) {
+        guard let source, var snapshot = now else { return }
+        snapshot.track = Track(
+            id: "pending:\(match.id)", title: match.title, artist: match.artist,
+            cover: match.artworkURL.map { .url($0) }, duration: 0, seed: nil
+        )
+        snapshot.isPlaying = true
+        snapshot.position = 0
+        snapshot.at = Date()
+        store(snapshot, for: source)
+    }
+
+    private func isFromList(_ list: FollowedList) -> Bool {
+        if Date().timeIntervalSince(list.startedAt) < 8 { return true }
+        guard let title = now?.track.title else { return false }
+        let playing = TextMatch.normalize(title)
+        let expected = TextMatch.normalize(list.matches[list.index].title)
+        return !playing.isEmpty && !expected.isEmpty
+            && (playing == expected || playing.hasPrefix(expected) || expected.hasPrefix(playing))
+    }
+
     // MARK: - Spotify
 
     private func update(spotify state: SPTAppRemotePlayerState) {
         let track = state.track
+        // Between songs App Remote reports a placeholder ("--", no length); skip it.
+        guard track.duration > 0, !track.uri.isEmpty else { return }
         let id = track.uri
         let cover = spotify?.track.id == id ? spotify?.track.cover : nil
         spotify = Snapshot(
@@ -173,6 +277,7 @@ final class PlayerController: ObservableObject {
 
     private func refreshSpotifyWebAPI() async {
         guard let state = try? await SpotifyAccount().playbackState() else { return }
+        spotifyNeedsWake = false
         spotifyDevice = state.deviceID
         let id = state.seed.spotifyID ?? state.seed.title
         spotify = Snapshot(
@@ -251,17 +356,24 @@ final class PlayerController: ObservableObject {
         choose()
     }
 
-    /// Shows whichever app is playing; when neither is, keeps the one shown last.
+    /// Shows whichever app is playing; when neither is, the one that changed most recently.
     private func choose() {
+        for candidate in [Source.spotify, .appleMusic] {
+            let seen = snapshot(for: candidate).map { "\($0.track.id)|\($0.isPlaying)" }
+            if seen != lastSeen[candidate] {
+                lastSeen[candidate] = seen
+                changedAt[candidate] = Date()
+            }
+        }
         let pick: Source?
         if spotify?.isPlaying == true {
             pick = .spotify
         } else if appleMusic?.isPlaying == true {
             pick = .appleMusic
-        } else if let source, snapshot(for: source) != nil {
-            pick = source
         } else {
-            pick = spotify != nil ? .spotify : (appleMusic != nil ? .appleMusic : nil)
+            pick = [Source.spotify, .appleMusic]
+                .filter { snapshot(for: $0) != nil }
+                .max { (changedAt[$0] ?? .distantPast) < (changedAt[$1] ?? .distantPast) }
         }
         let snapshot = pick.flatMap(snapshot(for:))
         if source != pick || now?.track.id != snapshot?.track.id || now?.isPlaying != snapshot?.isPlaying {

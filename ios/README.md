@@ -61,7 +61,9 @@ The bar at the bottom of every screen (`App/PlayerBar.swift`, `App/PlayerControl
 
 - **Music app:** MusicKit's `SystemMusicPlayer`, live.
 - **Spotify:** App Remote when the Spotify app accepts the connection. Otherwise the Web API: it polls the player every 4 s and sends commands with the device id, because a backgrounded Spotify app doesn't count as the active device. The Web API part works only for allow-listed accounts and Premium.
-- When both apps have a song, it shows the one that is playing; when neither plays, it keeps the last one shown.
+- When both apps have a song, it shows the one that is playing; when neither plays, the one that changed most recently.
+- **Next and Previous follow the soundalike list.** After the user plays a result, Next plays the next result in that list and Previous the one before, for as long as that result is the song playing. Otherwise they are the music app's own skips. After 3 seconds Previous restarts the song, like Control Center. The bar switches to the new song at once, and the neighbours' Spotify ids are looked up ahead of time (`TrackIDCache`), so Spotify starts in about 0.2 s.
+- **Show Spotify controls.** After a restart the Spotify app refuses App Remote connections until it handles an authorization. When App Remote refuses and the Web API can't see the player (accounts not on the allow list), the bar offers this row. It runs the Spotify app's authorization again: Spotify opens for a moment, the user confirms if asked, and Spotify returns to Soundalike, after which App Remote connects. Spotify's SDK call `authorizeAndPlayURI` reported "Spotify not installed" on iOS 26.6, so the app opens the authorize URL itself.
 
 Auto-detect runs at launch and after the app comes back from the background. Pulling down Control Center or a notification only makes the app inactive, so they don't re-run it.
 

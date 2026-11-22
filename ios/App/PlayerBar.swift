@@ -12,9 +12,15 @@ struct PlayerBar: View {
 
     var body: some View {
         VStack {
-            if let now = player.now { bar(now) }
+            // A song playing in the Music app wins; otherwise offer Spotify before a paused Music song.
+            if player.spotifyNeedsWake, player.now?.isPlaying != true {
+                wakeRow
+            } else if let now = player.now {
+                bar(now)
+            }
         }
         .animation(.spring(duration: 0.35), value: player.now == nil)
+        .animation(.spring(duration: 0.35), value: player.spotifyNeedsWake)
     }
 
     private func bar(_ now: PlayerController.Snapshot) -> some View {
@@ -56,6 +62,31 @@ struct PlayerBar: View {
             .padding(.bottom, 4)
             .transition(.move(edge: .bottom).combined(with: .opacity))
         }
+    }
+
+    /// Shown when Spotify is connected but its player can't be reached yet.
+    private var wakeRow: some View {
+        Button { player.wakeSpotify() } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "playpause.fill").font(.system(size: 18, weight: .semibold))
+                    .frame(width: 44, height: 44)
+                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Show Spotify controls").font(.subheadline.weight(.semibold))
+                    Text("Opens Spotify for a moment, then comes back").font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .glassEffect(.regular, in: .rect(cornerRadius: 24))
+        .padding(.horizontal, 12)
+        .padding(.bottom, 4)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
     private func subtitle(_ now: PlayerController.Snapshot) -> String {
