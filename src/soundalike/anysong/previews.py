@@ -87,6 +87,21 @@ def load_ids(args: argparse.Namespace) -> list[int]:
     return out
 
 
+def track_row(tid: int, data: dict) -> dict:
+    """What ``--save-meta`` keeps of a Deezer ``/track/{id}`` answer (``missing`` when Deezer has no such track)."""
+    if not data or not data.get("id"):
+        return {"id": tid, "missing": True}
+    artist, album = data.get("artist") or {}, data.get("album") or {}
+    return {"id": tid, "title": data.get("title"), "title_short": data.get("title_short"),
+            "title_version": data.get("title_version"), "artist_id": artist.get("id"),
+            "artist_name": artist.get("name"), "isrc": data.get("isrc"), "rank": data.get("rank"),
+            "duration": data.get("duration"), "album_id": album.get("id"), "album_title": album.get("title"),
+            "release_date": data.get("release_date"), "readable": data.get("readable"),
+            "explicit_lyrics": data.get("explicit_lyrics"), "bpm": data.get("bpm"),
+            "contributors": [[c.get("id"), c.get("name")] for c in data.get("contributors") or []],
+            "has_preview": bool(data.get("preview"))}
+
+
 def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser(prog="previews")
     p.add_argument("--ids")
@@ -99,6 +114,12 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--workers", type=int, default=8)
     p.add_argument("--artist-map", help="JSON track ID -> artist ID map for batched preview metadata")
     p.add_argument("--write-ids")
+    p.add_argument("--save-meta", type=Path, default=None,
+                   help="append each looked-up track's Deezer metadata (title, artist, ISRC, rank, duration) here "
+                        "as JSONL, from the same request that signs its preview link")
+    p.add_argument("--adaptive", action="store_true",
+                   help="pace preview downloads like the crawl: a fifth slower after each burst of HTTP 429s (down "
+                        "to 1 per second), recovering while quiet")
     args = p.parse_args(argv)
     if not args.ids and not args.random_catalog:
         p.error("provide --ids or --random-catalog")
@@ -109,6 +130,10 @@ def main(argv: list[str] | None = None) -> None:
     if args.write_ids:
         Path(args.write_ids).write_text("\n".join(map(str, ids)) + "\n")
     dz = Deezer(args.out, rate_per_s=args.rate, preview_rate_per_s=args.preview_rate)
+    if args.adaptive:
+        from .crawl import AdaptiveLimiter
+
+        dz.preview_limiter = AdaptiveLimiter(args.preview_rate, floor_per_s=min(1.0, args.preview_rate), quiet_s=30.0)
     manifest = Path(args.out) / "manifest.jsonl"
     done: set[int] = set()
     if manifest.exists():
@@ -143,7 +168,13 @@ def main(argv: list[str] | None = None) -> None:
         tid, meta = item
         size = 0
         try:
-            path = dz.fetch_preview(tid, meta=meta) if meta is not None else dz.fetch_preview(tid)
+            if args.save_meta is not None and meta is None:
+                meta = dz.track(tid)
+                with lock, args.save_meta.open("a", encoding="utf-8") as fh:
+                    fh.write(json.dumps(track_row(tid, meta), ensure_ascii=False) + "\n")
+                path = dz.fetch_preview(tid, meta=meta) if meta.get("preview") else None
+            else:
+                path = dz.fetch_preview(tid, meta=meta) if meta is not None else dz.fetch_preview(tid)
             size = path.stat().st_size if path else 0
             rec = {"id": tid, "ok": bool(path), **({"path": str(path)} if path else {"reason": "no_preview"})}
             key = "ok" if path else "miss"

@@ -269,3 +269,72 @@ def test_row_file_parallel_reads_match_memory_map(tmp_path, monkeypatch):
     assert np.array_equal(rf[np.array([7])], arr[[7]])
     serve.os.close(rf.fd)
     assert np.array_equal(serve.RowFile(path, threads=1)[rows], arr[rows])
+
+
+@pytest.mark.parametrize("bits,half", [(8, False), (4, True), (16, False)])
+def test_projections_in_host_memory_give_the_same_search(tmp_path, monkeypatch, bits, half):
+    ch = channel("center", "maxsim")
+    ids, win = write_shards(tmp_path / "emb" / "fake", n=120, d=16, dup=False, rank=6)
+    index_build.build_channel(ch, tmp_path / "emb", tmp_path / "ix", 8, None, "cpu", bits=bits)
+    monkeypatch.setattr(serve, "STAGE1_CHUNK", 50)  # three blocks
+    on_device = serve.TwoStageIndex.load(tmp_path / "ix", ch, candidates=25, half_stage1=half)
+    host = serve.TwoStageIndex.load(tmp_path / "ix", ch, candidates=25, half_stage1=half, host_proj=True)
+    assert isinstance(host.proj, serve.HostTable) and host.proj_bits == on_device.proj_bits == bits
+    assert [(s, len(b)) for s, b in host.proj.blocks()] == [(0, 50), (50, 50), (100, 20)]
+    assert torch.equal(torch.cat([b for _, b in host.proj.blocks()]), on_device.proj)
+    assert torch.equal(host._proj_rows(0, len(ids)), on_device._proj_rows(0, len(ids)))
+    q = on_device.stored_query(int(ids[7]))
+    for chunk in (50, 8192):  # the device index in the host table's blocks, and in one
+        assert torch.equal(host.stage1(q[None]), on_device.stage1(q[None], chunk=chunk))
+    allow = torch.zeros(len(ids), dtype=torch.bool)
+    allow[::2] = True
+    for a, b in zip(host.search(q, allow=allow, base=True), on_device.search(q, allow=allow, base=True)):
+        assert torch.equal(a, b)
+    eng = serve.Engine.__new__(serve.Engine)
+    assert host.top(host.scores(q), 20, [int(ids[7])]) == on_device.top(on_device.scores(q), 20, [int(ids[7])])
+    del eng, host, on_device  # releases the memory maps
+    gc.collect()
+
+
+@pytest.mark.parametrize("threads", [0, 2])
+def test_host_table_reads_ahead_in_row_order(tmp_path, threads):
+    data = np.arange(37 * 2 * 3, dtype=np.int16).reshape(37, 2, 3)
+    np.save(tmp_path / "t.npy", data)
+    table = serve.HostTable(tmp_path / "t.npy", "cpu", rows=8, threads=threads)
+    assert len(table) == 37 and table.shape == (37, 2, 3) and table.dtype == torch.int16
+    assert table.device == torch.device("cpu") and serve.HostTable(tmp_path / "t.npy", "cpu").threads == 0
+    for _ in range(2):  # the buffers are used again
+        blocks = list(table.blocks())
+        assert [s for s, _ in blocks] == [0, 8, 16, 24, 32] and [len(b) for _, b in blocks] == [8, 8, 8, 8, 5]
+        assert np.array_equal(torch.cat([b for _, b in blocks]).numpy(), data)  # every block its own copy
+    assert np.array_equal(table[5].numpy(), data[5]) and np.array_equal(table[3:9].numpy(), data[3:9])
+    # A consumer that stops early leaves no reader behind, and the next pass is whole again.
+    for s, block in table.blocks():
+        if s == 8:
+            break
+    assert np.array_equal(torch.cat([b for _, b in table.blocks()]).numpy(), data)
+    del table, blocks, block
+    gc.collect()
+
+
+def test_host_table_reads_with_preadv_where_the_system_has_it(tmp_path, monkeypatch):
+    import os
+
+    data = np.random.default_rng(0).integers(0, 255, (41, 3, 7)).astype(np.uint8)
+    np.save(tmp_path / "t.npy", data)
+    calls = []
+
+    def preadv(fd, buffers, offset):  # short reads, as the system call may give them
+        os.lseek(fd, offset, os.SEEK_SET)
+        got = os.read(fd, min(50, len(buffers[0])))
+        buffers[0][:len(got)] = got
+        calls.append(len(got))
+        return len(got)
+
+    monkeypatch.setattr(os, "preadv", preadv, raising=False)
+    table = serve.HostTable(tmp_path / "t.npy", "cpu", rows=16, threads=1)
+    assert table.fd is not None
+    assert np.array_equal(torch.cat([b for _, b in table.blocks()]).numpy(), data) and max(calls) == 50
+    os.close(table.fd)
+    del table
+    gc.collect()

@@ -1,0 +1,366 @@
+import numpy as np
+import pytest
+
+torch = pytest.importorskip("torch")
+from soundalike.anysong import index_build, serve
+from soundalike.anysong.blend import Blend
+from soundalike.anysong.scenehead import SceneHead
+
+N, W, D = 14, 3, 16
+IDS = np.arange(100, 100 + N, dtype=np.int64)
+GRAPH = np.array([9, 0, 4, 7, 2, 12], dtype=np.int64)  # sonic-index rows of the playlist graph, in cf order
+
+
+def _unit(x):
+    return x / np.linalg.norm(x, axis=-1, keepdims=True)
+
+
+def _files(tmp_path, seed=0):
+    """Sonic windows, a scene head with its table, and playlist vectors for the GRAPH rows."""
+    rng = np.random.default_rng(seed)
+    win = _unit(rng.standard_normal((N, W, D))).astype(np.float32)
+    np.savez(tmp_path / "h.npz", w1=rng.standard_normal((D, 8)).astype(np.float32),
+             b1=rng.standard_normal(8).astype(np.float32), w2=rng.standard_normal((8, 6)).astype(np.float32),
+             b2=rng.standard_normal(6).astype(np.float32))
+    np.save(tmp_path / "h.emb.npy", np.zeros((N, W, 6), np.float16))
+    head = SceneHead(tmp_path / "h.npz", tmp_path / "h.emb.npy", {int(t): i for i, t in enumerate(IDS)})
+    table = np.stack([head.embed(w) for w in win]).astype(np.float16)
+    del head  # releases the memory map, which Windows will not replace while it is open
+    np.save(tmp_path / "h.emb.npy", table)
+    cf = rng.standard_normal((len(GRAPH), 5)).astype(np.float32) * 3  # not unit: the loader normalises
+    np.savez(tmp_path / "cooc.npz", rows=GRAPH)
+    np.save(tmp_path / "cf128.npy", cf)
+    return win, table.astype(np.float32), cf
+
+
+def _engine(index):
+    eng = serve.Engine.__new__(serve.Engine)
+    eng.device, eng.channels, eng.indexes = "cpu", [serve.CHANNELS["sonic"]], {"sonic": index}
+    return eng
+
+
+def _z(x):
+    return (x - x.mean()) / x.std(ddof=1)
+
+
+def _zcf(cf, seed_row):
+    """Hand-computed playlist term: cosines z-scored over the graph songs, 0 elsewhere and for seeds outside."""
+    out = np.zeros(N)
+    if seed_row in GRAPH:
+        unit = _unit(cf.astype(np.float64))
+        c = unit @ unit[list(GRAPH).index(seed_row)]
+        out[GRAPH] = (c - c.mean()) / c.std()
+    return out
+
+
+def _head_cos(table, seed_vecs):
+    return np.einsum("wd,nvd->nwv", seed_vecs, table).max(axis=(1, 2))
+
+
+@pytest.fixture
+def setup(tmp_path):
+    win, table, cf = _files(tmp_path)
+    index = serve.ChannelIndex.from_windows(serve.CHANNELS["sonic"], IDS, win.astype(np.float16))
+    eng = _engine(index)
+    eng.blend = Blend.load(tmp_path / "h", tmp_path, index.pos, weights=(2.0, 1.0))
+    return eng, index, win, table, cf
+
+
+def _expected(index, sonic, table, seed_vecs, cf, seed_row, drop=(), wh=2.0, wc=1.0):
+    score = _z(sonic) + wh * _z(_head_cos(table, seed_vecs)) + wc * _zcf(cf, seed_row)
+    order = [int(i) for i in np.argsort(-score) if int(i) not in set(drop)]
+    return [int(index.ids[i]) for i in order], score
+
+
+def test_blend_order_is_the_z_sum_and_carries_exact_sonic_scores(setup):
+    eng, index, _, table, cf = setup
+    row = 4  # in the playlist graph
+    sonic = index.scores(index.stored_query(int(IDS[row]))).numpy().astype(np.float64)
+    want, score = _expected(index, sonic, table, table[row], cf, row, drop=[row])
+    got = eng.blend.scores(torch.from_numpy(sonic).float(), eng.blend.seed_head(row), row).numpy()
+    np.testing.assert_allclose(got, score, atol=1e-4)
+    assert _zcf(cf, row).any() and want != [int(index.ids[i]) for i in np.argsort(-sonic) if i != row]
+
+    results, timings = eng.search_stored(int(IDS[row]), k=6)
+    assert [t for t, _ in results["blend"]] == want[:6] and "search_blend" in timings
+    for tid, s in results["blend"]:  # the sonic channel's own exact score, not the blended one
+        assert s == pytest.approx(sonic[index.pos[tid]], abs=1e-6)
+    assert results["sonic"] == index.top(index.scores(index.stored_query(int(IDS[row]))), 6, [int(IDS[row])])
+    # The blended score of every song of the two lists, for orders that mix them.
+    blendz = dict(results["blendz"])
+    assert set(blendz) == {t for t, _ in results["sonic"]} | {t for t, _ in results["blend"]}
+    assert len(blendz) > 6 and all(z == pytest.approx(score[index.pos[t]], abs=1e-4) for t, z in blendz.items())
+    # ``exclude`` and the sonic ``allow`` mask apply to the blended ranking as to the channel.
+    allow = torch.ones(N, dtype=torch.bool)
+    allow[[index.pos[want[0]], index.pos[want[2]]]] = False
+    masked, _ = eng.search_stored(int(IDS[row]), k=N, exclude=[want[1]], allow={"sonic": allow})
+    assert [t for t, _ in masked["blend"]] == want[3:]
+    assert {t for t, _ in masked["sonic"]} == set(want[3:])
+    # Other weights; without a blend the engine returns the channels alone.
+    eng.blend.wh, eng.blend.wc = 0.5, 3.0
+    assert [t for t, _ in eng.search_stored(int(IDS[row]), k=N)[0]["blend"]] == \
+        _expected(index, sonic, table, table[row], cf, row, drop=[row], wh=0.5, wc=3.0)[0]
+    eng.blend = None
+    plain, timings = eng.search_stored(int(IDS[row]), k=6)
+    assert set(plain) == {"sonic"} and plain["sonic"] == results["sonic"] and "search_blend" not in timings
+
+
+def test_seed_outside_the_playlist_graph_and_live_seeds_have_no_playlist_term(setup):
+    eng, index, win, table, cf = setup
+    row = 5
+    assert row not in GRAPH and eng.blend.cf_scores(row) is None and eng.blend.cf_scores(None) is None
+    sonic = index.scores(index.stored_query(int(IDS[row]))).numpy().astype(np.float64)
+    want, _ = _expected(index, sonic, table, table[row], cf, row, drop=[row], wc=0.0)
+    assert [t for t, _ in eng.search_stored(int(IDS[row]), k=N)[0]["blend"]] == want
+    in_graph = eng.blend.cf_scores(4).numpy()
+    assert not in_graph[[i for i in range(N) if i not in GRAPH]].any() and in_graph[GRAPH].any()
+    np.testing.assert_allclose(in_graph, _zcf(cf, 4), atol=1e-4)
+
+    # A live seed: head vectors from its raw sonic windows, no playlist term even for a song of the graph.
+    live = _unit(win[4] + 0.05 * np.random.default_rng(1).standard_normal((W, D))).astype(np.float32)
+    sonic = index.scores(index.prep_query(live)).numpy().astype(np.float64)
+    want, _ = _expected(index, sonic, table, eng.blend.head.embed(live), cf, None, wc=0.0)
+    results, timings = eng.search_windows({"sonic": live}, k=5, exclude=[want[1]])
+    assert [t for t, _ in results["blend"]] == [want[0], *want[2:6]] and "search_blend" in timings
+    for tid, s in results["blend"]:
+        assert s == pytest.approx(sonic[index.pos[tid]], abs=1e-6)
+
+
+def test_two_stage_index_blends_stage_one_scores_and_attaches_exact_ones(tmp_path):
+    win, table, cf = _files(tmp_path)
+    ch = serve.CHANNELS["sonic"]
+    (tmp_path / "emb" / ch.model).mkdir(parents=True)
+    np.savez(tmp_path / "emb" / ch.model / "part-00000.npz", ids=IDS, win=win.astype(np.float16), track=win.mean(1))
+    index_build.build_channel(ch, tmp_path / "emb", tmp_path / "ix" / "sonic", 6, None, "cpu")
+    hub = torch.linspace(0.0, 0.3, N)
+    two = serve.TwoStageIndex.load(tmp_path / "ix" / "sonic", ch, candidates=3)
+    two.hub_alpha, two.penalty = 0.5, 0.5 * hub
+    q = two.stored_query(int(IDS[4]))
+    scores, base = two.scores_with_base(q)
+    stage1 = two.stage1(q[None])[0] - 0.5 * hub
+    assert torch.allclose(base, stage1, atol=1e-6) and torch.equal(scores, two.scores(q))
+    exact = two.score_rows(q, np.arange(N))
+    assert not torch.allclose(stage1, exact, atol=1e-3)  # the short projection only approximates
+
+    eng = _engine(two)
+    eng.blend = Blend.load(tmp_path / "h", tmp_path, two.pos)
+    want, _ = _expected(two, stage1.numpy().astype(np.float64), table, table[4], cf, 4, drop=[4])
+    results, _ = eng.search_stored(int(IDS[4]), k=8)
+    assert [t for t, _ in results["blend"]] == want[:8]  # deeper than the three exact candidates
+    for tid, s in results["blend"]:
+        assert s == pytest.approx(float(exact[two.pos[tid]]), abs=1e-6)
+    assert results["sonic"] == two.top(two.scores(q), 8, [int(IDS[4])])
+    del two, eng  # releases the memory map of full.npy
+
+
+def test_blend_rejects_files_that_do_not_fit(tmp_path):
+    _, table, cf = _files(tmp_path)
+    pos = {int(t): i for i, t in enumerate(IDS)}
+    blend = Blend.load(tmp_path / "h", tmp_path, pos)
+    assert blend.info() == {"songs": N, "graph": len(GRAPH), "weights": [2.0, 1.0]}
+    assert torch.allclose(blend.cf.norm(dim=1), torch.ones(len(GRAPH)), atol=1e-5)
+    with pytest.raises(ValueError, match="does not fit"):
+        Blend.load(tmp_path / "h", tmp_path, {1: 0})
+    with pytest.raises(ValueError, match="do not fit"):
+        Blend(blend.head, blend.table, GRAPH[:3], cf)
+    with pytest.raises(ValueError, match="distinct rows"):
+        Blend(blend.head, blend.table, np.array([0, 0, 1, 2, 3, N]), cf)
+
+
+def test_within_mask_adds_the_lists_among_those_rows_alone(setup):
+    eng, index, win, table, cf = setup
+    row, k = 4, 4
+    tid = int(IDS[row])
+    inside = torch.zeros(N, dtype=torch.bool)
+    inside[[0, 2, 3, 4, 6, 9, 11, 13]] = True
+    plain, plain_timings = eng.search_stored(tid, k=k)
+    results, timings = eng.search_stored(tid, k=k, within={"sonic": inside})
+    # The unmasked lists are untouched; the masked ones come with their own timing.
+    assert results["sonic"] == plain["sonic"] and results["blend"] == plain["blend"]
+    assert "within" not in plain and "search_lang" not in plain_timings and timings["search_lang"] >= 0
+    sonic = index.scores(index.stored_query(tid))
+    assert results["within"]["sonic"] == index.top(sonic.masked_fill(~inside, -torch.inf), k, [tid])
+    want, score = _expected(index, sonic.numpy().astype(np.float64), table, table[row], cf, row, drop=[row])
+    want_in = [t for t in want if inside[index.pos[t]]]
+    assert [t for t, _ in results["within"]["blend"]] == want_in[:k]
+    for t, s in results["within"]["blend"]:  # exact sonic scores, as in the unmasked ranking
+        assert s == pytest.approx(float(sonic[index.pos[t]]), abs=1e-6)
+    # Every song of the unmasked lists that passes the mask is in the masked one.
+    for name in ("sonic", "blend"):
+        assert {t for t, _ in plain[name] if inside[index.pos[t]]} <= {t for t, _ in results["within"][name]}
+        assert not {t for t, _ in results["within"][name]} <= {t for t, _ in plain[name]}  # and new ones
+    blendz = dict(results["blendz"])
+    assert set(blendz) == {t for rows in (results["sonic"], results["blend"], *results["within"].values())
+                           for t, _ in rows}
+    assert all(z == pytest.approx(score[index.pos[t]], abs=1e-4) for t, z in blendz.items())
+    assert list(blendz)[:len(plain["blendz"])] == [t for t, _ in plain["blendz"]]
+    # The ``allow`` mask and ``exclude`` apply to the masked lists too.
+    allow = torch.ones(N, dtype=torch.bool)
+    allow[index.pos[want_in[0]]] = False
+    masked, _ = eng.search_stored(tid, k=N, exclude=[want_in[1]], allow={"sonic": allow}, within={"sonic": inside})
+    assert [t for t, _ in masked["within"]["blend"]] == want_in[2:]
+    assert {t for t, _ in masked["within"]["sonic"]} == set(want_in[2:])
+    # A live seed, and an engine without a blend: the channel's list alone.
+    live, live_timings = eng.search_windows({"sonic": win[row]}, k=k, exclude=[tid], within={"sonic": inside})
+    assert [t for t, _ in live["within"]["sonic"]] == [t for t, _ in results["within"]["sonic"]]
+    assert len(live["within"]["blend"]) == k and "search_lang" in live_timings
+    eng.blend = None
+    bare, _ = eng.search_stored(tid, k=k, within={"sonic": inside})
+    assert set(bare) == {"sonic", "within"} and bare["within"] == {"sonic": results["within"]["sonic"]}
+
+
+def test_two_stage_within_lists_score_only_new_rows_and_keep_the_listed_songs(tmp_path, monkeypatch):
+    win, table, cf = _files(tmp_path)
+    ch = serve.CHANNELS["sonic"]
+    (tmp_path / "emb" / ch.model).mkdir(parents=True)
+    np.savez(tmp_path / "emb" / ch.model / "part-00000.npz", ids=IDS, win=win.astype(np.float16), track=win.mean(1))
+    index_build.build_channel(ch, tmp_path / "emb", tmp_path / "ix" / "sonic", 6, None, "cpu")
+    two = serve.TwoStageIndex.load(tmp_path / "ix" / "sonic", ch, candidates=6)
+    row, k = 4, 4
+    tid = int(IDS[row])
+    q = two.stored_query(tid)
+    exact_all = two.score_rows(q, np.arange(N))
+    stage1 = two.stage1(q[None])[0]
+    scores, base, exact = two.search(q)
+    assert base is None and int(exact.sum()) == 6 and torch.equal(scores, two.scores(q))
+    assert torch.allclose(scores[exact], exact_all[exact], atol=1e-6)
+    cand = exact.nonzero().flatten().tolist()
+    # The mask: every row the search did not re-score, and three it did.
+    inside = ~exact
+    inside[cand[:3]] = True
+    eng = _engine(two)
+    plain, _ = eng.search_stored(tid, k=k)
+    passes, read = [], []
+    stage, score_rows = two.stage1, two.score_rows
+    monkeypatch.setattr(two, "stage1", lambda *a, **kw: (passes.append(1), stage(*a, **kw))[1])
+    monkeypatch.setattr(two, "score_rows", lambda q_, rows: (read.append(list(rows)), score_rows(q_, rows))[1])
+    results, timings = eng.search_stored(tid, k=k, within={"sonic": inside})
+    assert results["sonic"] == plain["sonic"] and "search_lang" in timings
+    # One pass over the index; the pool is the mask's best six rows (the search's candidates first, then by stage-1
+    # score), and only the rows the search had not scored exactly are read.
+    others = sorted((r for r in range(N) if not exact[r]), key=lambda r: -float(stage1[r]))[:3]
+    assert len(passes) == 1 and read == [sorted(others)]
+    pool = [r for r in (*cand[:3], *others) if r != row]
+    listed = [two.pos[t] for t, _ in plain["sonic"] if inside[two.pos[t]]]
+    best = sorted(pool, key=lambda r: -float(exact_all[r]))[:k]
+    want = sorted({*best, *listed}, key=lambda r: -float(exact_all[r]))
+    got = results["within"]["sonic"]
+    assert [two.pos[t] for t, _ in got] == want and set(listed) <= set(want) and set(others) & set(want)
+    for t, s in got:
+        assert s == pytest.approx(float(exact_all[two.pos[t]]), abs=1e-6)
+    # A mask of every row gives the search's own list; an empty one, nothing.
+    assert eng.search_stored(tid, k=k, within={"sonic": torch.ones(N, dtype=torch.bool)})[0]["within"]["sonic"] == \
+        plain["sonic"]
+    assert eng.search_stored(tid, k=k, within={"sonic": torch.zeros(N, dtype=torch.bool)})[0]["within"]["sonic"] == []
+    # With a blend: the masked blended order (stage-1 scores), each song with its exact sonic score.
+    monkeypatch.undo()
+    eng.blend = Blend.load(tmp_path / "h", tmp_path, two.pos)
+    order, _ = _expected(two, stage1.numpy().astype(np.float64), table, table[row], cf, row, drop=[row])
+    blended = eng.search_stored(tid, k=k, within={"sonic": inside})[0]["within"]["blend"]
+    assert [t for t, _ in blended] == [t for t in order if inside[two.pos[t]]][:k]
+    for t, s in blended:
+        assert s == pytest.approx(float(exact_all[two.pos[t]]), abs=1e-6)
+    del two, eng  # releases the memory map of full.npy
+
+
+def test_popularity_weight_adds_a_seed_independent_term_to_the_blend_alone(setup, tmp_path):
+    eng, index, win, table, cf = setup
+    plain = eng.blend
+    pop = np.log1p(np.random.default_rng(5).uniform(0, 1e6, N))
+    pop[[3, 8]] = 0.0  # songs the popularity table does not hold
+    zpop = (pop - pop.mean()) / pop.std(ddof=1)
+    row, tid = 4, int(IDS[4])
+    sonic = index.scores(index.stored_query(tid))
+    before, _ = eng.search_stored(tid, k=N)
+    assert plain.wp == 0.0 and plain.zpop is None and plain.info()["weights"] == [2.0, 1.0]
+
+    # Weight 0 (and two weights with a table at hand): today's ranking, bit for bit.
+    for weights in ((2.0, 1.0, 0.0), (2.0, 1.0)):
+        eng.blend = Blend.load(tmp_path / "h", tmp_path, index.pos, weights=weights, pop=pop)
+        assert eng.blend.zpop is None and eng.blend.info() == plain.info()
+        assert torch.equal(eng.blend.scores(sonic, eng.blend.seed_head(row), row),
+                           plain.scores(sonic, plain.seed_head(row), row))
+        assert eng.search_stored(tid, k=N)[0] == before
+
+    wp = 1.5
+    eng.blend = Blend.load(tmp_path / "h", tmp_path, index.pos, weights=(2.0, 1.0, wp), pop=pop)
+    assert eng.blend.info()["weights"] == [2.0, 1.0, wp]
+    np.testing.assert_allclose(eng.blend.zpop.numpy(), zpop, atol=1e-5)
+    _, base = _expected(index, sonic.numpy().astype(np.float64), table, table[row], cf, row, drop=[row])
+    score = base + wp * zpop
+    want = [int(IDS[i]) for i in np.argsort(-score) if i != row]
+    results, _ = eng.search_stored(tid, k=N)
+    assert [t for t, _ in results["blend"]] == want and want != [t for t, _ in before["blend"]]
+    assert results["sonic"] == before["sonic"]  # the channel list has no popularity in it
+    for t, s in results["blend"]:  # still each song's exact sonic score
+        assert s == pytest.approx(float(sonic[index.pos[t]]), abs=1e-6)
+    assert all(z == pytest.approx(score[index.pos[t]], abs=1e-4) for t, z in results["blendz"])
+    # The in-language variant and a live seed (no playlist term) carry the same term.
+    inside = torch.zeros(N, dtype=torch.bool)
+    inside[[0, 2, 3, 6, 9, 11, 13]] = True
+    masked, _ = eng.search_stored(tid, k=4, within={"sonic": inside})
+    assert [t for t, _ in masked["within"]["blend"]] == [t for t in want if inside[index.pos[t]]][:4]
+    assert all(z == pytest.approx(score[index.pos[t]], abs=1e-4) for t, z in masked["blendz"])
+    live = _unit(win[4] + 0.05 * np.random.default_rng(1).standard_normal((W, D))).astype(np.float32)
+    live_sonic = index.scores(index.prep_query(live)).numpy().astype(np.float64)
+    _, live_base = _expected(index, live_sonic, table, eng.blend.head.embed(live), cf, None, wc=0.0)
+    got, _ = eng.search_windows({"sonic": live}, k=N)
+    assert [t for t, _ in got["blend"]] == [int(IDS[i]) for i in np.argsort(-(live_base + wp * zpop))]
+
+    with pytest.raises(ValueError, match="popularity of every index row"):
+        Blend.load(tmp_path / "h", tmp_path, index.pos, weights=(2.0, 1.0, wp))
+    with pytest.raises(ValueError, match="does not fit the index"):
+        Blend.load(tmp_path / "h", tmp_path, index.pos, weights=(2.0, 1.0, wp), pop=pop[:5])
+    with pytest.raises(ValueError, match="wh, wc"):
+        Blend.load(tmp_path / "h", tmp_path, index.pos, weights=(2.0, 1.0, wp, 1.0), pop=pop)
+
+
+def test_head_table_in_host_memory_gives_the_same_blend_and_the_consensus_head_scores(tmp_path, monkeypatch):
+    import gc
+
+    from soundalike.anysong import blend as blend_mod
+
+    win, table, cf = _files(tmp_path)
+    index = serve.ChannelIndex.from_windows(serve.CHANNELS["sonic"], IDS, win.astype(np.float16))
+    monkeypatch.setattr(blend_mod, "HEAD_CHUNK", 5)  # three blocks of the table
+    on_device = Blend.load(tmp_path / "h", tmp_path, index.pos)
+    host = Blend.load(tmp_path / "h", tmp_path, index.pos, host_table=True)
+    assert host.streamed and not on_device.streamed and isinstance(host.table, serve.HostTable)
+    assert host.info() == on_device.info() | {"head_table": "host"} and len(host) == N
+    row = 4
+    seed = host.seed_head(row)
+    assert torch.equal(seed, on_device.seed_head(row))
+    sonic = index.scores(index.stored_query(int(IDS[row])))
+    assert torch.equal(host.head_scores(seed), on_device.head_scores(seed, chunk=5))
+    assert torch.equal(host.scores(sonic, seed, row), on_device.scores(sonic, seed, row))
+    # The consensus's view of the table: rows at unit length again in fp16, the product in fp16; alone or in the
+    # blend's pass, from the device or from host memory.
+    unit = host.unit_seed(row, seed)
+    assert torch.equal(unit, on_device.unit_seed(row, seed)) and unit.dtype == torch.float16
+    rows = blend_mod.unit_half(torch.from_numpy(np.load(tmp_path / "h.emb.npy")))
+    want = (unit @ rows.reshape(N * W, -1).T).reshape(W, N, W).amax(dim=(0, 2)).float()
+    assert torch.equal(on_device.unit_scores(unit, chunk=N), want) and torch.equal(host.unit_scores(unit), want)
+    both = host.head_views(seed, unit)
+    assert torch.equal(both[0], host.head_scores(seed)) and torch.equal(both[1], want)
+    assert host.head_views(seed, None)[1] is None
+    assert torch.equal(host.scores(sonic, seed, row, both[0]), host.scores(sonic, seed, row))
+    live = _unit(win[4] + 0.05 * np.random.default_rng(1).standard_normal((W, D))).astype(np.float32)
+    live_seed = host.seed_head(None, live)
+    assert host.unit_seed(None, live_seed) is live_seed
+    # The engine: the same lists; with keep_base and the table in host memory, the consensus head scores come with
+    # the blend's pass (and only then).
+    eng = _engine(index)
+    eng.blend = on_device
+    plain, _ = eng.search_stored(int(IDS[row]), k=6)
+    eng.keep_base = True
+    assert "head" not in eng.search_stored(int(IDS[row]), k=6)[0]["base"]
+    eng.blend = host
+    results, _ = eng.search_stored(int(IDS[row]), k=6)
+    base = results.pop("base")
+    assert results == plain and torch.equal(base["head"], want)
+    results, _ = eng.search_windows({"sonic": live}, k=6)
+    assert torch.equal(results["base"]["head"], on_device.unit_scores(live_seed))
+    eng.keep_base = False
+    assert eng.search_stored(int(IDS[row]), k=6)[0] == plain
+    del host, eng, results, base
+    gc.collect()

@@ -14,15 +14,16 @@ and embedded live on a GPU; everything else is a lookup.
 Scores are only comparable within one channel and one query; the page shows relative bars, not percentages.
 Everything runs on 30-second Deezer previews, so a relationship outside the preview can be missed.
 
-The page opens on **Best matches**, one list that merges the melody and samples lists by reciprocal-rank fusion:
+The API's **Best matches** list (`best`) merges the melody and samples lists by reciprocal-rank fusion:
 a song scores `sum(1 / (5 + rank))` over the two channels' song lists, and is shown as the release found by the
 channel that ranked it higher. On held-out benchmarks it finds covers as well as the melody tab and samples better
-than the samples tab ([ANYSONG_EVAL.md](ANYSONG_EVAL.md#best-matches)). The channel tabs remain for browsing one
-relation. The same list is the default view in the
+than the samples tab ([ANYSONG_EVAL.md](ANYSONG_EVAL.md#best-matches)). The page and the
 [Spicetify extension](../integrations/spicetify/README.md), which names the song by title and artist instead of a
-Deezer id. Best matches hides confidently detected other-language songs by default (`--languages`, see
+Deezer id, show two tabs: **Best matches** (`main`: likely covers, samples and shared melodies first, then the songs
+that sound most alike) and **Listeners also play** (`listeners`); both are described with the API below. Best
+matches hides confidently detected other-language songs by default (`--languages`, see
 [Language labels](#language-labels)); a **Show all languages** switch (`lang=all`) restores the unfiltered ranking,
-and the individual melody, samples and sounds tabs are never filtered. A song without a confident label takes its
+and the individual melody, samples and sonic lists are never filtered. A song without a confident label takes its
 artist's majority language, a conservative prior from that artist's indexed songs; songs with neither (often
 instrumentals) remain visible. A live seed outside the catalog uses the same prior; if it cannot establish a
 language, the filter fails open. The filter costs some cross-language matches; the measured trade-offs are in
@@ -31,7 +32,7 @@ language, the filter fails open. The filter costs some cross-language matches; t
 Other artists' versions of the seed's own song (the same title) are limited in Best matches, Same vibe and Sounds
 like. One that scores 0.55 or more in the samples list reuses the seed's recording (a re-upload, a sped-up edit, the
 same song under another credit) and is dropped. At most three of the rest stay, the best placed first, so covers of
-a standard cannot fill the lists. The channel tabs keep them all.
+a standard cannot fill the lists. The channel lists keep them all.
 
 Best matches also weighs the **artist scene** ([`scene.py`](../src/soundalike/anysong/scene.py)). Audio still decides
 which songs can appear; the scene layer only arranges them. A candidate's affinity to the seed's artist combines the
@@ -65,7 +66,7 @@ way to a learned order whenever the seed's artist is known:
 The selection and results are in
 [ANYSONG_EVAL.md](ANYSONG_EVAL.md#listener-aware-ranking-pre-registered-2026-11-09-before-any-held-out-result).
 
-Next to Best matches, **Same vibe** ([`samevibe.py`](../src/soundalike/anysong/samevibe.py)) lists songs a listener
+**Same vibe** ([`samevibe.py`](../src/soundalike/anysong/samevibe.py)), served as `vibe`, lists songs a listener
 hears as belonging together. It keeps the Best candidates that share the seed's tempo (the same, double or half,
 within 6 %) and its overall sound, fills up from the sounds list, and takes one song per artist. Best stays the list
 for covers, samples and shared melodies, which often cross genres. On 1,000 fresh test artists, Same vibe had fewer
@@ -80,15 +81,19 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
 ```
 
 - The home page, [`webapp/index.html`](../webapp/index.html) with [`webapp/search.js`](../webapp/search.js), is the
-  any-song search: suggestions from `/api/anysong/search`, results from `/api/anysong/similar?id=` in five tabs
-  (Best matches, Same vibe, Same melody, Samples & loops, Sounds like). Share links are `/#id=<deezer id>&tab=<tab>`;
-  older `#s=<title — artist>` links still resolve by name. Previews are resolved through the existing `/api/preview`.
-  Best rows with `basis: "listeners"` are marked **Listeners also play**; the **Audio only** switch next to the
-  language switch asks with `scene=0` and is remembered in `localStorage` (`soundalike:audio-only:v1`).
+  any-song search: suggestions from `/api/anysong/search`, results from `/api/anysong/similar?id=` in the Spotify
+  extension's two tabs. **Best matches** reads `main`; from a server without it, the page shows `best` and marks its
+  rows with `basis: "listeners"` **Listeners also play**. **Listeners also play** reads `listeners`. Requests carry
+  `policy=main-listeners-v1`, which the API ignores, so HTTP-cached answers from the five-tab page are not reused.
+  Share links are `/#id=<deezer id>&tab=best|listeners`; links to the old tabs (`vibe`, `melody`, `samples`,
+  `sounds`, `sonic`) and unknown tabs open Best matches, and older `#s=<title — artist>` links still resolve by name.
+  Previews are resolved through the existing `/api/preview`. The **Audio only** switch next to the language switch
+  asks with `scene=0` and is remembered in `localStorage` (`soundalike:audio-only:v1`). With it on, or for an artist
+  without listener data, there is no `listeners` list, and Listeners also play says why.
 - `/anysong` redirects to `/` (`redirects` in [`site.json`](../webapp/site.json), temporary, query kept).
   [`webapp/anysong/index.html`](../webapp/anysong/index.html) is a stub for servers that ignore `redirects`: it
-  forwards the query and hash to `/`, where old `?id=` and `#id=` links (including `tab=sonic`, now Sounds like) open
-  the same song.
+  forwards the query and hash to `/`, where old `?id=` and `#id=` links (including `tab=sonic`) open the same song
+  on Best matches.
 - [`anysong/api.py`](../src/soundalike/anysong/api.py) serves `GET /api/anysong/search?q=&limit=` (Deezer search
   plus `in_catalog`), `GET /api/anysong/similar?id=&k=&lang=same|all&scene=1|0` and `GET /healthz`. With
   `--languages`, `lang=same` is the default and `lang=all` bypasses the Best-matches-only filter; without it, `lang`
@@ -108,7 +113,7 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   positional `score`, language-filtered like `best`), and `query.bpm` gives the seed's tempo (`null` when unknown).
   `--tempo-model` points to the Beat This! checkpoint that estimates the tempo of seeds outside the catalog; without
   it their tempo is unknown and only the sound gate applies. Whenever the sonic channel is served, `sounds` is the
-  Sounds like list that the main page and Spotify show: the sonic channel's songs, language-filtered like `best`,
+  Sounds like list: the sonic channel's songs, language-filtered like `best`,
   one song per artist (the scene table's Deezer artist, else the artist name), each with its sonic `score` and its
   catalog `bpm` (`null` when unknown or without `--tempo`). With the scene layer on, songs move up by their artist's
   scene affinity, `1 / (5 + rank) * (1 + 8 * affinity)`; with the listener ranker, they follow z(sound score) + 2
@@ -116,7 +121,19 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   Best item that came from the seed artist's neighbourhood rather than a channel list has empty `ranks`, each Best
   item has `basis`: `audio` for the audio head (likely covers, samples and shared melodies) and `listeners` for the
   songs placed after it by the listener blend, and `timings_ms.listener` gives the time the ranker took. Without the
-  ranker (or with `scene=0`) Best items have no `basis`; the list is audio only.
+  ranker (or with `scene=0`) Best items have no `basis`; the list is audio only. Whenever `sounds` is served, so is
+  `main`, the Best matches list the page and Spotify show: the audio head (only songs with cover or sample evidence;
+  `basis` `audio`), then the sonic channel's songs in Sounds like's order (`basis` `sound`), one song per artist, each
+  with `ranks` and a positional `score`. With the ranker and the scene layer on, `listeners` is the Listeners also
+  play list: Best's candidates by artists other than the seed's, ordered by z(listener estimate) + 0.25 z(sound
+  score) (`LISTENERS_SOUND_WEIGHT`), one song per artist, `basis` `listeners`. Without the ranker, with `scene=0` or
+  for an unknown artist there is no `listeners`. Items whose sound score is known carry `match`, the sound match from
+  0 to 100 (`api.sound_match`). [ANYSONG_EVAL.md](ANYSONG_EVAL.md#one-main-list-and-listeners-also-play-pre-registered-2026-11-11-before-any-held-out-result)
+  has the evaluation. With `--consensus-model` (the served configuration since 2026-11-22, "v12") the part of `main`
+  after the audio head is the consensus body instead: other artists' songs ordered by a small model on five
+  catalog-wide signals (`basis` `consensus`, `ranks_all` with each signal's rank, and a `match` that scores the
+  body's ranking rather than the sound); `scene=0` still gives the sound order
+  ([evaluation](ANYSONG_EVAL.md#consensus-body-of-the-main-list-2026-11-20-served-since-2026-11-22)).
 - `/similar?title=&artist=&k=` (used by Spotify, which has no Deezer id, and by old `#s=` home-page links) resolves
   the name first.
   Songs match by song key (primary artist plus title without bracketed, dashed or feat. tags), ignoring accents on
@@ -282,6 +299,25 @@ runs a channel's stage 1 as an fp16 GEMM against the query projection scaled to 
 made the 4-bit samples stage 1 23 % faster (196 against 256 ms per million tracks) but the 8-bit melody and sound
 stages 6 % and 14 % slower, so the service enables it for samples only. Candidates are still re-scored exactly.
 
+**Adding a few songs to a built index.** `index_build` fits the samples mean and every stage-1 basis on the rows it
+is given, so a rebuild changes all stored rows a little and needs every old shard.
+[`index_append`](../src/soundalike/anysong/index_append.py) instead copies an index and appends new tracks prepared
+with its `mu.npy` and `basis.npy` and the same quantizer, so scores between old tracks stay bit-identical:
+
+```sh
+python -m soundalike.anysong.previews --ids new_ids.txt --out previews --save-meta tracks.jsonl --adaptive
+python -m soundalike.anysong.embed_run --model muq_mulan --ids new_ids.txt --previews previews --out emb_new
+python -m soundalike.anysong.index_append --base index_1m --emb emb_new --ids new_ids.txt --out index_new
+python -m soundalike.anysong.hub_build --index index_new --meta catalog_meta.npz
+```
+
+`previews --save-meta` keeps each track's Deezer metadata (title, artist, ISRC, rank, duration) from the request
+that signs its preview link, and `--adaptive` paces downloads like the crawl. `embed_run` and `languages` take
+`--device cpu` when the GPU is busy (per song on 12 threads: CLEWS 0.4 s, SampleID 1.3 s, MuQ-MuLan 3.7 s, Whisper
+5.4 s; the vectors match the GPU's to cosine 0.99998). `hub.npy` is not copied, because new songs change their
+neighbours' hub scores; rerun `hub_build`. Songs that should reach every seed, such as well-known songs the crawl
+missed, also go into `core_ids.npy`. Refit with `index_build` once additions stop being small against the catalog.
+
 ## Language labels
 
 `python -m soundalike.anysong.languages` labels cached catalog previews with the pinned Whisper large-v3-turbo
@@ -305,9 +341,10 @@ python -m soundalike.anysong.languages `
 
 Catalog seeds use their own label. A live seed outside the catalog uses a conservative artist-majority prior
 (≥2 confidently labelled recordings and ≥80% agreement); if no prior is available, the filter fails open. Listed
-songs without a confident label take the same prior, and stay when it is unknown. The lists users see (Best
-matches, Same vibe, Sounds like) are filtered; the three channel lists are unchanged. `lang=all` returns the same
-unfiltered Best ranking and still reports the other-language count in `query.hidden`.
+songs without a confident label take the same prior, and stay when it is unknown. The ranked lists (Best matches,
+Same vibe, Sounds like, and `main` and `listeners`, which the page and the Spotify extension show) are filtered; the
+three channel lists are unchanged. `lang=all` returns the same unfiltered Best ranking and still reports the
+other-language count in `query.hidden`.
 
 ## Scene table
 
@@ -378,13 +415,47 @@ for Same vibe (`--tempo`, `--tempo-model`; about 160 MiB of VRAM, and 30 ms of G
 symlink swap therefore switches the index and its tables together. Grown indexes live on
 `/opt/soundalike/index-store`, a 96 GB NVMe volume (`mp1`, `backup=0`). The nightly vzdump to the bulk HDD skips it,
 because each index is about 40 GB and can be rebuilt from its embeddings. The first full index stays at
-`index/full-20261101` on the root disk, with its own `core_ids.npy`, as the rollback. Since 2026-11-09,
-`index/current` → `index-store/grown-20261109`: 999,293 songs, the 269,278 core songs plus 730,015 crawled ones,
-served with the catalog tiers and samples' stage 1 in fp16 (`--half-stage1 samples`). The previous grown index,
-`index-store/grown-20261108` (889,277 songs), stays as the rollback. The service is
+`index/full-20261101` on the root disk, with its own `core_ids.npy`, as the rollback. From 2026-11-09 to
+2026-11-22 `index/current` was `index-store/grown-20261109`: 999,293 songs, the 269,278 core songs plus 730,015
+crawled ones, served with the catalog tiers and samples' stage 1 in fp16 (`--half-stage1 samples`). Since
+2026-11-22 (v12) `index/current` is the 1,109,024-song index with the whitened sonic channel and the v12 tables
+listed below. The service is
 [`deploy/homelab/soundalike-anysong.service`](../deploy/homelab/soundalike-anysong.service) (user `anysong`,
-`MemoryMax=6G`, enabled at boot; startup loads and warms the models and index). The process itself uses about
-1.5 GB of RAM; the rest of the cap is page cache for the memory-mapped windows, which the kernel trims.
+`MemoryMax=14G` since v12, 6G before; enabled at boot; startup loads and warms the models and index). Before v12
+the process itself used about 4 GB of RAM; the rest of the cap is page cache for the memory-mapped windows, which
+the kernel trims.
+
+**v12 (consensus body) on the 8 GB card.** At 1,109,024 songs the tables of the v12 service take 6.2 GB of VRAM and
+its models 4.4 GB, so they cannot all live on the card. The unit therefore runs the service with
+
+- `--host-tables samples sonic head`: the samples and sonic stage-1 projections and the blend's head table stay in
+  host memory, in the file cache, and are read block by block for each request (`serve.HostTable`: reader threads
+  fill small page-locked buffers ahead of the GPU). The numbers are the stored ones, so every list is byte for byte
+  what the tables on the card give. `melody` can be added for 0.8 GB more room on the card;
+- `--consensus-windows stream`: the consensus body's sonic windows (`sonic/full.npy`) are read the same way instead
+  of being held page-locked (3.2 GB of host memory).
+
+Measured on the RTX 5080 with the process capped at 8 GB (`--vram-cap-gb 8`), Stems view on: 5.9 GB allocated,
+7.1 GB at peak (a live dissection; 6.4 GB for live seeds), against 10.7 and 11.5 GB without the flags; the process
+holds about 5.3 GB of host memory (0.4 GB of it page-locked buffers). Every request reads 8.1 GB from the file
+cache (`samples/proj.npy`, `sonic/proj.npy`, `sonic/full.npy`, `heads/h4.emb.npy`), so the container needs room
+to keep those cached: 16 GB with `MemoryMax=14G`. If they fall out of the cache every request waits for the disk.
+
+One directory holds everything of an index, with fixed names (the unit's flags point into `index/current`):
+`melody/`, `samples/`, `sonic/` (index_build / index_whiten output), `heads/h2.*` and `heads/h4.*`,
+`playlists/cooc.npz` and `cf128.npy`, `catalog_meta.npz`, `languages.npz`, `scene.npz`, `core_ids.npy`,
+`tempo.npz`, `ranker.npz`, `popularity.npz`, `match_quantiles.json`, `overall.json`, `consensus.npz` and
+`consensus_quantiles.json`. Before the symlink swap,
+
+```sh
+/opt/soundalike/venv/bin/python -m soundalike.anysong.index_check /opt/soundalike/index-store/NAME
+```
+
+checks, without the GPU, that every file is there and that they fit each other (rows, dimensions, track ids across
+the channels and tables, the models load); it prints one `PROBLEM` line per fault and exits 1. After the restart,
+`/healthz` shows v12 is live: `channels` with 1,109,024 songs each, a `consensus` block (model note, `sound_cap`
+5011, `windows` `stream`), `blend.head_table` `host` and `host_tables` `["samples", "sonic", "head"]`. The
+Whisper language model (`--language-model`) lives in `ckpt/whisper-large-v3-turbo`.
 
 Swapping the index:
 
@@ -416,8 +487,8 @@ reads it with `--keep-learning`, so it keeps running after the bulk target.
 
 ## Limitations
 
-- Coverage is limited to the indexed catalog: 999,293 songs since 2026-11-09 (269,278 core tracks plus the crawl's
-  songs, which only reach seeds in their artist's scene). Famous sources missing from it cannot be returned, however
-  good the match.
+- Coverage is limited to the indexed catalog: 1,109,024 songs since 2026-11-22 (the core catalog plus the crawl's
+  songs, which outside the consensus body only reach seeds in their artist's scene). Famous sources missing from it
+  cannot be returned, however good the match.
 - Preview-only audio: shared material outside the 30-second clip is invisible.
 - Benchmarks are small for some relations (see the held-out notes in the README); treat the channels as beta.
