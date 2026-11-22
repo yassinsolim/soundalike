@@ -1,0 +1,19 @@
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="search"
+        android:enabled="true"
+        android:icon="@drawable/shortcut_search"
+        android:shortcutShortLabel="@string/shortcut_search">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="soundalike://search"
+            android:targetClass="app.yassin.soundalike.MainActivity"
+            android:targetPackage="app.yassin.soundalike" />
+    </shortcut>
+
+    <!-- Lets the dynamic "Find soundalikes" shortcut appear as a direct-share target. -->
+    <share-target android:targetClass="app.yassin.soundalike.SheetActivity">
+        <data android:mimeType="text/plain" />
+        <category android:name="app.yassin.soundalike.category.SHARE_TARGET" />
+    </share-target>
+</shortcuts>
