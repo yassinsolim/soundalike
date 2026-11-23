@@ -157,14 +157,39 @@ class ResultsViewModel(application: Application) : AndroidViewModel(application)
     private fun targetFor(source: MusicSource?): MusicSource =
         source?.takeIf { it in MusicSource.targets } ?: app.settings.defaultTarget
 
-    /** Opens a result in the chosen music app. */
-    fun open(match: Match) {
+    /** The Spotify track id of the row tapped last, to mark it before Spotify reports the song itself. */
+    private var startedId: String? by mutableStateOf(null)
+
+    /** True for the row whose song Spotify is playing: what the player reports, else the row tapped last. */
+    fun isPlayingInSpotify(match: Match): Boolean {
+        val id = match.spotifyId ?: return false
+        val reported = NowPlaying.current?.takeIf { it.playing }?.spotifyUri
+        return if (reported != null) reported == "spotify:track:$id" else startedId == id
+    }
+
+    /** True when tapping the row starts the song itself in Spotify instead of opening a search for it. */
+    fun playsAtOnce(match: Match): Boolean =
+        target == MusicSource.SPOTIFY && match.spotifyId != null && app.settings.isInstalled(MusicSource.SPOTIFY)
+
+    /**
+     * Opens a result in the chosen music app. `onPlaying` runs when the song itself was started
+     * in Spotify, which is the moment the sheet may come back in front of it.
+     */
+    fun open(match: Match, onPlaying: () -> Unit = {}) {
         player.stop()
+        val playsAtOnce = playsAtOnce(match)
         val storefront = (state as? ResultsState.Loaded)?.results?.seed?.storefront
             ?: Locale.getDefault().country.lowercase().takeIf { it.length == 2 } ?: "us"
         viewModelScope.launch {
             val message = when (Opener.open(app, match, target, storefront)) {
-                Opener.Outcome.IN_APP -> return@launch
+                Opener.Outcome.IN_APP -> {
+                    if (playsAtOnce) {
+                        startedId = match.spotifyId
+                        followed = "spotify:track:${match.spotifyId}" // the user chose this song: no "song changed" prompt for it
+                        onPlaying()
+                    }
+                    return@launch
+                }
                 Opener.Outcome.APP_MISSING -> {
                     missingApp = target
                     return@launch

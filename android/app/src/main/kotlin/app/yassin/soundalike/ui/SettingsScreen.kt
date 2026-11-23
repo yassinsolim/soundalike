@@ -102,10 +102,6 @@ fun SettingsScreen(modifier: Modifier, onGuide: () -> Unit) {
             OutlinedButton(onClick = { context.startActivity(NowPlaying.accessSettingsIntent(context)) }) {
                 Text(if (access) "Manage access" else "Allow notification access")
             }
-            Text(
-                "Spotify tip: turn on Device Broadcast Status in Spotify's settings and Soundalike gets the exact track, not only its name.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium,
-            )
         }
         Card("One-tap shortcuts", "A Quick Settings tile and a home-screen widget are always available; see How to use Soundalike.") {
             if (QuickTile.canAskToAdd) {

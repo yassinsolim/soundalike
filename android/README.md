@@ -102,8 +102,27 @@ What Spotify for Android does with each way of opening a result (measured, Premi
 | Connecting to Spotify's `MediaBrowserService` | Refused ("No root for client") |
 
 So a tap plays at once only with a track id. The phone has no credential-free way to turn an ISRC into an id; the
-server can (`spotify_kind: track` when it has Spotify API credentials), and the app already uses such a link as
-`spotify:track:`. There is no login-free way to queue a song or play the whole list in Spotify.
+server does it for the rows it can (`spotify_kind: "track"`, `spotify_id`). In the list those rows carry a play
+mark and the others an open mark:
+
+- **A row with a track id**: the tap starts the song in Spotify and the sheet comes back in front 0.3 s later, so
+  the list stays, the row reads "Playing in Spotify", and the next tap switches song. Android lets the sheet come
+  back only while it still counts as visible, which is why it waits that short moment and no longer; if Android
+  ever refuses, the sheet closes and Spotify stays in front.
+- **A row without one**: the tap opens the ISRC search in Spotify, one more tap there.
+
+There is no login-free way to queue a song or play the whole list in Spotify.
+
+**Spotify App Remote** (the SDK the iPhone app uses to play and queue without leaving) was tried on the device with
+the site's client id (`6aae8635d21e471cabdeacd2f226640e`, redirect `soundalike://spotify-callback`): the connection
+fails with `UserNotAuthorizedException` before any consent screen, because Spotify only talks to Android apps whose
+package and signing fingerprint are registered for the client id. It is not in the app. To enable it, the owner of
+the Spotify developer app adds under Android packages: package `app.yassin.soundalike` with SHA-1
+`7B:31:86:2B:7E:60:E7:AC:BA:9F:B6:83:04:B9:6E:7D:F8:54:CB:7A` (release key) and, for debug builds from the
+development PC, `70:73:78:31:1E:0D:04:9B:14:51:58:17:FC:2A:A1:CE:FC:08:76:DD`. The SDK is an Apache-2.0 AAR on
+Spotify's GitHub (`spotify-app-remote-release-0.8.0.aar`, last release July 2023), used under Spotify's Developer
+Terms; it would be fetched at build time, not committed. Whether Spotify's five-user development limit applies to
+App Remote on Android is not known until a second account tries.
 
 Not built:
 - **AccessibilityService**: not used anywhere, by decision.
@@ -121,6 +140,13 @@ Links handled:
 | `soundalike://find?url=<link>` | Sheet for a shared link |
 | `soundalike://search?q=<text>` | The app's search with this text |
 | `https://soundalike.yassin.app/find?url=…` | Sheet for the link. The site serves `/.well-known/assetlinks.json` with the release key's SHA-256 (`1E:CE:72:59:6B:BF:02:D1:61:FE:8E:6F:83:EA:31:70:F5:69:C4:65:A7:79:21:60:80:D3:45:BC:34:48:EF:3B`); with the release build Android 13 reports the domain `verified` and opens the app without asking. A debug build is signed with another key, so it is not expected to verify (not measured) |
+
+## Privacy, release, licences
+
+[`PRIVACY.md`](PRIVACY.md) is the privacy policy; [`RELEASE.md`](RELEASE.md) is how to cut a release and what Google
+Play asks for. The app's dependencies are all Apache-2.0: Kotlin and kotlinx (coroutines, serialization), AndroidX
+and Jetpack Compose, Coil with OkHttp and Okio, and the Gradle wrapper; the icons are Material Symbols paths
+(Apache-2.0). No binaries other than the Gradle wrapper jar are in the tree.
 
 ## Build
 
@@ -217,6 +243,16 @@ With Spotify logged in on the same device (2026-11-22, release build unless note
 | Floating button (debug build) | Hidden over Soundalike's own screens; one tap inside Spotify opens the sheet; drag position kept; hold hides it until the next song; with usage access it is hidden over other apps |
 | Song change with the sheet open (debug build) | "Now playing: … Show soundalikes" appears; tapping it reloads |
 | Add-tile dialog (debug build) | Guide button › system dialog › Add tile |
+
+Tap = plays (2026-11-22, debug build against a local stand-in for the server that returned track ids, because the
+live route did not send any yet): a row with an id switched Spotify to that song on each of four taps, the sheet
+was the front activity again afterwards, and the row read "Playing in Spotify". Asked back in the same instant
+instead of 0.3 s later, the sheet stayed in front but Spotify did not switch until it was next opened. Not tried:
+Spotify not running at the moment of the tap, and the live route.
+
+Re-run on the release build the same day: the add-tile dialog from the guide, the playing card following the
+player, the floating button (only over Spotify with usage access, hidden over Soundalike's own screens, one tap
+opens the sheet, hold hides it), and the song-change line.
 
 Needs a real phone (not tested):
 - A Spotify Free account: whether `spotify:track:` still starts playback there.

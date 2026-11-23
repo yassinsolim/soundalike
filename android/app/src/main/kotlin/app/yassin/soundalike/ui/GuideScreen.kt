@@ -61,7 +61,7 @@ fun GuideScreen(modifier: Modifier, onDone: () -> Unit) {
         Section("Or share any song", "Needs no setup, and works for any song you can see, not only the one playing.") {
             Step(R.drawable.ic_share, "In Spotify, YouTube Music or Apple Music, open a song's ⋮ menu and tap Share.")
             Step(R.drawable.ic_mark, "Pick Find soundalikes. In Spotify it is behind More. After a few uses Android keeps it in the first row.")
-            Step(R.drawable.ic_open, "The list opens over your music app. Tap a cover to hear 30 seconds, tap a song to open it there.")
+            Step(R.drawable.ic_open, "The list opens over your music app. Tap a cover to hear 30 seconds, tap a song to play it there.")
         }
         Button(onClick = onDone) { Text("Done") }
         Spacer(Modifier.size(24.dp))

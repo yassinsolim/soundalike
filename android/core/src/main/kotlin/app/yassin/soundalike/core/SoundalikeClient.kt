@@ -111,7 +111,9 @@ class SoundalikeClient(
                     artist = row.string("artist") ?: return@mapNotNull null,
                     match = row.long("match")?.toInt(),
                     isrc = row.string("isrc"), deezerId = row.long("deezer_id"),
-                    spotifyUrl = row.string("spotify_url"), appleMusicUrl = row.string("apple_music_url"),
+                    spotifyUrl = row.string("spotify_url"),
+                    spotifyId = row.string("spotify_id") ?: row.string("spotify_url")?.let(Destinations::spotifyTrackId),
+                    appleMusicUrl = row.string("apple_music_url"),
                     artworkUrl = row.string("artwork"), previewUrl = row.string("preview_url"),
                 )
             }

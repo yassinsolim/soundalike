@@ -10,11 +10,14 @@ object Destinations {
      * `isrc:<code>`, which lands on exactly that recording, then for title and artist.
      */
     fun spotify(match: Match): List<String> {
-        val id = match.spotifyUrl?.let { spotifyTrackPath.find(it) }?.groupValues?.get(1)
+        val id = match.spotifyId ?: match.spotifyUrl?.let(::spotifyTrackId)
         if (id != null) return listOf("spotify:track:$id", "https://open.spotify.com/track/$id")
         if (!match.isrc.isNullOrEmpty()) return listOf(spotifySearch("isrc:${match.isrc}"))
         return listOf(match.spotifyUrl ?: spotifySearch("${match.title} ${match.artist}"))
     }
+
+    /** The track id in a link to a song's own Spotify page; null for search and other links. */
+    fun spotifyTrackId(url: String): String? = spotifyTrackPath.find(url)?.groupValues?.get(1)
 
     fun spotifySearch(text: String): String = "https://open.spotify.com/search/${percentEncode(text)}"
 

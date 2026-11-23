@@ -70,6 +70,8 @@ class ParsingTest {
         assertNull(match.appleMusicUrl)
         assertNull(match.artworkUrl)
         assertEquals(listOf("spotify:track:2WfaOiMkCvy7F5fcp2zZ8L", "https://open.spotify.com/track/2WfaOiMkCvy7F5fcp2zZ8L"), Destinations.spotify(match))
+        assertEquals("2WfaOiMkCvy7F5fcp2zZ8L", match.spotifyId)
+        assertNull(results.matches[1].spotifyId)
         assertNull(results.matches[1].match)
         assertEquals(12L, results.matches[1].deezerId)
     }

@@ -65,8 +65,37 @@ class SheetActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        if (intent.action == ACTION_STAY) return
         setIntent(intent)
         load(intent)
+    }
+
+    /**
+     * A song was just started in Spotify, which brings Spotify to the front. Spotify only acts on
+     * the link once its screen is up, so the sheet waits a moment and then asks to be in front
+     * again, while Android still counts it as visible and allows that. The song plays, the list
+     * stays, and the next tap can switch song. (Asked for in the same instant, the sheet never
+     * leaves the front and Spotify holds the link until it is next opened: tried on a device.)
+     */
+    private fun stayInFront() {
+        staying = true
+        val view = window.decorView
+        view.postDelayed({
+            startActivity(
+                Intent(this, SheetActivity::class.java).setAction(ACTION_STAY)
+                    .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+            )
+        }, RETURN_AFTER_MS)
+        // If Android refused, the sheet is hidden behind Spotify: close it rather than leave it there.
+        view.postDelayed({ if (staying) finish() }, GIVE_UP_AFTER_MS)
+    }
+
+    /** True from starting a song until the sheet is in front again; it must not close itself in between. */
+    private var staying = false
+
+    override fun onResume() {
+        super.onResume()
+        staying = false
     }
 
     private fun load(intent: Intent) {
@@ -86,7 +115,7 @@ class SheetActivity : ComponentActivity() {
         // could bring it back with an old list instead of starting it for the next request.
         // The screen turning off is not leaving: the list is still there when it comes back on.
         val screenOn = getSystemService(PowerManager::class.java).isInteractive
-        if (!isChangingConfigurations && !grantingAccess && screenOn) finish()
+        if (!isChangingConfigurations && !grantingAccess && !staying && screenOn) finish()
         FloatingButton.ownScreens -= 1
         Surfaces.update(this)
     }
@@ -140,7 +169,9 @@ class SheetActivity : ComponentActivity() {
                     target = model.target,
                     onTarget = { model.target = it },
                     player = model.player,
-                    onOpen = model::open,
+                    onOpen = { match -> model.open(match, onPlaying = ::stayInFront) },
+                    playsAtOnce = model::playsAtOnce,
+                    isPlaying = model::isPlayingInSpotify,
                     onRetry = model::retry,
                     missingApp = model.missingApp,
                     onGetApp = model::installMissingApp,
@@ -167,6 +198,9 @@ class SheetActivity : ComponentActivity() {
     }
 
     companion object {
+        private const val RETURN_AFTER_MS = 300L
+        private const val GIVE_UP_AFTER_MS = 2000L
+        private const val ACTION_STAY = "app.yassin.soundalike.action.STAY"
         const val ACTION_NOW_PLAYING = "app.yassin.soundalike.action.NOW_PLAYING"
         const val EXTRA_FROM = "from"
     }

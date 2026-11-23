@@ -78,6 +78,8 @@ fun ResultsList(
     onDismissMissingApp: () -> Unit = {},
     changedSong: PlayingSong? = null,
     onFollowSong: () -> Unit = {},
+    playsAtOnce: (Match) -> Boolean = { false },
+    isPlaying: (Match) -> Boolean = { false },
 ) {
     if (missingApp != null) {
         AlertDialog(
@@ -127,11 +129,15 @@ fun ResultsList(
                     item { TargetPicker(target, onTarget) }
                 }
                 items(state.results.matches, key = { it.id }) { match ->
-                    ResultRow(match, player, target, onOpen = { onOpen(match) })
+                    ResultRow(match, player, target, playsAtOnce(match), isPlaying(match), onOpen = { onOpen(match) })
                 }
                 item {
                     Text(
-                        "Tap a cover for a 30-second preview. Tap a song to open it in ${target.displayName}.",
+                        if (state.results.matches.any(playsAtOnce)) {
+                            "Tap a cover for a 30-second preview. Tap a song to play it in ${target.displayName}; songs marked ↗ open a search for it there."
+                        } else {
+                            "Tap a cover for a 30-second preview. Tap a song to open it in ${target.displayName}."
+                        },
                         Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
@@ -221,13 +227,20 @@ private fun TargetPicker(target: MusicSource, onTarget: (MusicSource) -> Unit, m
 }
 
 @Composable
-private fun ResultRow(match: Match, player: PreviewPlayer, target: MusicSource, onOpen: () -> Unit) {
+private fun ResultRow(
+    match: Match, player: PreviewPlayer, target: MusicSource,
+    /** Tapping starts the song itself in the music app, instead of opening a search for it. */
+    playsAtOnce: Boolean,
+    /** The music app is playing this song now. */
+    nowPlaying: Boolean,
+    onOpen: () -> Unit,
+) {
     val playing = player.playingId == match.id
     val loading = player.loadingId == match.id
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(onClickLabel = "Open in ${target.displayName}", onClick = onOpen)
+            .clickable(onClickLabel = (if (playsAtOnce) "Play in " else "Open in ") + target.displayName, onClick = onOpen)
             .padding(horizontal = 20.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -260,9 +273,13 @@ private fun ResultRow(match: Match, player: PreviewPlayer, target: MusicSource, 
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(match.title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                match.artist,
+                match.title,
+                color = if (nowPlaying) Palette.green else MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                if (nowPlaying) "Playing in ${target.displayName} · ${match.artist}" else match.artist,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
@@ -272,7 +289,11 @@ private fun ResultRow(match: Match, player: PreviewPlayer, target: MusicSource, 
             MatchBadge(value)
         }
         Spacer(Modifier.width(10.dp))
-        Icon(painterResource(R.drawable.ic_open), null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+        Icon(
+            painterResource(if (playsAtOnce) R.drawable.ic_play else R.drawable.ic_open), null,
+            Modifier.size(if (playsAtOnce) 24.dp else 20.dp),
+            tint = if (nowPlaying) Palette.green else MaterialTheme.colorScheme.primary,
+        )
     }
 }
 

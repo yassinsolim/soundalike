@@ -30,6 +30,11 @@ class MatchingTest {
         assertEquals(listOf("https://open.spotify.com/search/isrc%3AGBAYE8500001"),
             Destinations.spotify(Match("a", "b", 80, isrc = "GBAYE8500001", spotifyUrl = "https://open.spotify.com/search/b%20a")))
         assertEquals("https://open.spotify.com/search/%C3%89t%C3%A9%20x", Destinations.spotifySearch("Été x"))
+        // The server's own id field wins over whatever link came with it.
+        assertEquals(listOf("spotify:track:2WfaOiMkCvy7F5fcp2zZ8L", "https://open.spotify.com/track/2WfaOiMkCvy7F5fcp2zZ8L"),
+            Destinations.spotify(Match("a", "b", 80, isrc = "GBAYE8500001", spotifyId = "2WfaOiMkCvy7F5fcp2zZ8L", spotifyUrl = "https://open.spotify.com/search/x")))
+        assertEquals("2WfaOiMkCvy7F5fcp2zZ8L", Destinations.spotifyTrackId("https://open.spotify.com/intl-de/track/2WfaOiMkCvy7F5fcp2zZ8L?si=1"))
+        assertEquals(null, Destinations.spotifyTrackId("https://open.spotify.com/search/isrc%3AGBAYE8500001"))
     }
 
     @Test fun otherDestinations() = runTest {

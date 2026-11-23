@@ -43,6 +43,8 @@ data class Match(
     val isrc: String? = null,
     val deezerId: Long? = null,
     val spotifyUrl: String? = null,
+    /** The Spotify track id, when the server found the song itself: such a row plays at once. */
+    val spotifyId: String? = null,
     val appleMusicUrl: String? = null,
     val artworkUrl: String? = null,
     val previewUrl: String? = null,
