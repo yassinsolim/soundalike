@@ -2459,6 +2459,7 @@ def test_health_names_the_tables_kept_in_host_memory(tmp_path):
 
 # ---------------------------------------------------------------- a part of the preview, and excerpts of own audio
 def test_part_windows_follow_each_models_windowing():
+    pytest.importorskip("torch")  # the embedders module imports it
     from soundalike.anysong import audio
     from soundalike.anysong.embedders import SampleIDEmb
 
