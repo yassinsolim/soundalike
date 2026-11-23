@@ -39,11 +39,11 @@ copies cannot update themselves. After that final reinstall, runtime updates
 are automatic. Manual installs remain manual; use the current file and run
 `spicetify apply` when updating.
 
-## Best matches and Listeners also play
+## Best matches, Listeners also play and Melody match
 
-Results come in two lists. Switch between them with the tabs, or with the
-arrow, Home, and End keys. Spotify's Back and Forward buttons keep the list you
-chose.
+Results come in three lists from one answer. Switch between them with the
+tabs, or with the arrow, Home, and End keys. The tab you chose last is where
+the next search opens.
 
 - **Best matches** (the default) starts with likely covers and samples.
   Soundalike's any-song matcher ranks songs with the same melody (covers,
@@ -74,6 +74,13 @@ chose.
   partly by how close they sound. It follows the same **Show all languages**
   switch. When Soundalike has no listening data for the artist yet, this tab
   says so; Best matches is not affected.
+- **Melody match** is the list Best matches showed before November 2026: likely
+  covers, samples and shared melodies first, from the melody and sample
+  matches fused into one ranking, each row saying where it placed ("melody #1
+  · samples #3"), then similar-sounding songs by artists your song's listeners
+  also play, marked **Listeners also play**. With Audio only it is the fused
+  melody and sample ranking alone. It follows the same **Show all languages**
+  switch and needs no extra request.
 - **Sounds like** only appears with the [local companion](SETUP.md), or in
   place of Best matches when the hosted matcher can't take the song (see
   below).
@@ -97,6 +104,30 @@ Spotify lyrics-language filtering, related-artist ordering, and the feedback
 prompt. Best matches and Listeners also play only run on the hosted matcher, so
 their tabs ask before sending the song's title and artist. Lists saved from an
 earlier search show without asking.
+
+## Show more, Recent, and coming back to a list
+
+- Each list shows 20 songs. **Show more** under it adds the next 20, up to the
+  50 the matcher returns for a song. The first answer already holds all of
+  them, so Show more asks the matcher nothing; it only looks the new songs up
+  on Spotify.
+- The page is a place you can return to. A **Soundalike results** button in
+  Spotify's top bar, next to Back and Forward, reopens it from anywhere, as you
+  left it: the same tab, the songs you added with Show more, and the scroll
+  position. Spotify's own Back and Forward step through your earlier searches.
+- **Recent**, at the top right of the page, lists your last 20 searches. A
+  search reopens from the lists saved on this computer (kept for a week), so
+  nothing is asked of the matcher again; **Clear** empties the list. After a
+  Spotify restart the top bar button opens your latest search.
+- Playing a song never closes or changes the page.
+
+## Themes
+
+The page sits inside Spotify's main view and takes its colours from the
+theme. Checked on Spotify 1.3.10 with Spicetify 2.46.4: no theme, the
+Marketplace default, Lucid, DefaultDynamic, Comfy, Bloom, Catppuccin (mocha
+and the light latte), Sleek, text and Dribbblish. With Lucid, releases up to
+2.14.0 showed an empty page; 2.15.0 fixes that.
 
 ## Match
 
@@ -139,14 +170,18 @@ preview. The companion's local Sounds like list has no Stems button.
   and the list stays visible while music plays.
 - Results use a playlist-style layout with album artwork, verified artist
   names, clickable album names, and, in Sounds like, measured BPM.
-- Best matches and Listeners also play show the first 20 songs of the
-  matcher's top 30 that Spotify has, in the matcher's order. A song
+- Best matches, Listeners also play and Melody match show the first 20 songs
+  of the matcher's top 50 that Spotify has, in the matcher's order, and 20
+  more with each **Show more**. A song
   Spotify doesn't have, such as a Deezer-only upload, is left out and the next
   one takes its place; the songs left out are named under the list, and
   clicking one searches Spotify for it in case the match was missed. A row
   whose Spotify lookup fails, or takes more than five seconds, still shows,
   with a Spotify search instead of playback; a slow one becomes playable when
-  its song arrives. If Spotify finds none of the songs, they all show this way.
+  its song arrives. Once one lookup is that slow, the remaining rows no longer
+  wait for theirs, so a Spotify search that is slow or stuck can't leave the
+  list empty. If Spotify finds none of the songs, they all show this way. A
+  row whose right-click menu Spotify fails to draw shows without that menu.
 - In the companion's Sounds like list (and the older service's fallback list),
   for a seed with a known Spotify lyrics language, only
   candidates with that exact known language are shown (English with English,

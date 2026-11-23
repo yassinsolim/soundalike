@@ -433,8 +433,24 @@ who asked is kept.
   and reopen Spotify, then retry. If it repeats, run `spicetify update` and
   `spicetify backup apply` before reopening Spotify.
 - **Spotify shows an error after leaving Soundalike:** update Soundalike in
-  Marketplace and fully restart Spotify. Current releases render in an
-  extension-owned overlay and never remove Spotify's React-owned page nodes.
+  Marketplace and fully restart Spotify. Current releases add their own
+  element to Spotify's main view and never remove Spotify's React-owned page
+  nodes.
+- **The results page is empty with a theme (Lucid and others):** runtimes up
+  to 2.14.0 sized the page from an element that some themes collapse on
+  current Spotify clients. 2.15.0 sits inside Spotify's main view panel and
+  takes its colours from the theme; it was checked with no theme, the
+  Marketplace default, Lucid, DefaultDynamic, Comfy, Bloom, Catppuccin, Sleek,
+  text and Dribbblish. Update Soundalike and restart Spotify.
+- **The page has its header but no rows:** two causes are fixed in 2.15.0. A
+  Spotify song search that was slow or never answered held the rows back; rows
+  now show after five seconds at the latest, with a Spotify search instead of
+  playback until their song arrives. And a row whose native right-click menu
+  failed to draw was dropped whole; it now shows without that menu.
+- **Getting back to a list:** the **Soundalike results** button in Spotify's
+  top bar reopens the page as you left it, Spotify's Back and Forward step
+  through earlier searches, and **Recent** on the page lists the last 20.
+  **Show more** under a list adds the next 20 songs, up to 50.
 - **Right-click menus open empty, or Spotify says “Find soundalikes is off”:**
   Spicetify releases before 2.46.1 can't draw extension menu items on Spotify
   1.3.5 or newer, and one registered item leaves the whole menu empty.

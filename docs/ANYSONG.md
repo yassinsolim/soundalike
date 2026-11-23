@@ -19,8 +19,9 @@ a song scores `sum(1 / (5 + rank))` over the two channels' song lists, and is sh
 channel that ranked it higher. On held-out benchmarks it finds covers as well as the melody tab and samples better
 than the samples tab ([ANYSONG_EVAL.md](ANYSONG_EVAL.md#best-matches)). The page and the
 [Spicetify extension](../integrations/spicetify/README.md), which names the song by title and artist instead of a
-Deezer id, show two tabs: **Best matches** (`main`: likely covers, samples and shared melodies first, then the songs
-that sound most alike) and **Listeners also play** (`listeners`); both are described with the API below. Best
+Deezer id, show three tabs: **Best matches** (`main`: likely covers, samples and shared melodies first, then the songs
+that sound most alike), **Listeners also play** (`listeners`) and **Melody match** (`best`, the fused list above with
+its listener picks); all are described with the API below. Best
 matches hides confidently detected other-language songs by default (`--languages`, see
 [Language labels](#language-labels)); a **Show all languages** switch (`lang=all`) restores the unfiltered ranking,
 and the individual melody, samples and sonic lists are never filtered. A song without a confident label takes its
@@ -82,11 +83,14 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
 
 - The home page, [`webapp/index.html`](../webapp/index.html) with [`webapp/search.js`](../webapp/search.js), is the
   any-song search: suggestions from `/api/anysong/search`, results from `/api/anysong/similar?id=` in the Spotify
-  extension's two tabs. **Best matches** reads `main`; from a server without it, the page shows `best` and marks its
-  rows with `basis: "listeners"` **Listeners also play**. **Listeners also play** reads `listeners`. Requests carry
+  extension's three tabs. **Best matches** reads `main`; from a server without it, the page shows `best` and marks its
+  rows with `basis: "listeners"` **Listeners also play**. **Listeners also play** reads `listeners`, and **Melody
+  match** reads `best`. Requests carry
   `policy=main-listeners-v1`, which the API ignores, so HTTP-cached answers from the five-tab page are not reused.
-  Share links are `/#id=<deezer id>&tab=best|listeners`; links to the old tabs (`vibe`, `melody`, `samples`,
-  `sounds`, `sonic`) and unknown tabs open Best matches, and older `#s=<title — artist>` links still resolve by name.
+  Share links are `/#id=<deezer id>&tab=best|listeners|melody`; links to the old tabs (`vibe`, `samples`,
+  `sounds`, `sonic`) and unknown tabs open Best matches, old `tab=melody` links open Melody match, and older
+  `#s=<title — artist>` links still resolve by name. The tab chosen last is kept in `localStorage`
+  (`soundalike:tab:v1`) for the next visit; a link's tab wins for that visit.
   Previews are resolved through the existing `/api/preview`. The **Audio only** switch next to the language switch
   asks with `scene=0` and is remembered in `localStorage` (`soundalike:audio-only:v1`). With it on, or for an artist
   without listener data, there is no `listeners` list, and Listeners also play says why.
@@ -191,7 +195,10 @@ together with `title` + `artist` uses the name as given and passes the ISRC to t
 | `title` + `artist` | Both, 1 to 300 characters each |
 
 Optional: `platform=spotify\|apple\|both` (default: the platform of the link, otherwise `both`), `k` (1 to 50,
-default 20), `lang=same\|all` (default `same`: Best matches in the seed's language), `storefront` (two-letter Apple
+default 20), `lang=same\|all` (default `same`: Best matches in the seed's language), `list=main\|best\|listeners`
+(default `main`; `best` is the fused melody and samples list the site calls Melody match, `listeners` is Listeners
+also play; a list the answer lacks falls back to `main`, and `engine.list` names the one served; `/find` passes
+`?list=` on), `storefront` (two-letter Apple
 Music country; default: the link's storefront, then the listener's country, then `us`).
 
 ```json

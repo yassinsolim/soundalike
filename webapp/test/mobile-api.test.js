@@ -1168,3 +1168,43 @@ test("the engine being down during the fallback is an error, not a wrong answer"
   assert.equal(answer.status, 502);
   assert.equal(answer.body.error.code, "engine_unavailable");
 });
+
+test("list= picks the melody list or what listeners also play from the same answer", async () => {
+  const titles = (list) => list.slice(0, 2).map((row) => row.title);
+  const engine = {
+    ...ENGINE,
+    results: {
+      ...ENGINE.results,
+      best: [...ENGINE.results.main].reverse(),
+      listeners: ENGINE.results.main.slice(1),
+    },
+  };
+  const net = network({ "engine.test": () => reply(engine) });
+  const { similarHandler } = service(net);
+  const ask = (list) => call(similarHandler, similarPath({ url: SPOTIFY_LINK, k: "2", ...(list ? { list } : {}) }));
+
+  const main = await ask();
+  assert.equal(main.body.engine.list, "main");
+  assert.deepEqual(titles(main.body.results), titles(engine.results.main));
+  const best = await ask("best");
+  assert.equal(best.body.engine.list, "best");
+  assert.deepEqual(titles(best.body.results), titles(engine.results.best));
+  const listeners = await ask("listeners");
+  assert.equal(listeners.body.engine.list, "listeners");
+  assert.deepEqual(titles(listeners.body.results), titles(engine.results.listeners));
+  // One ranking serves all three.
+  assert.equal(net.count("engine.test"), 1);
+
+  const refused = await ask("vibe");
+  assert.equal(refused.status, 400);
+  assert.equal(refused.body.error.code, "invalid_parameter");
+});
+
+test("a list the answer lacks falls back to the main one and says so", async () => {
+  const { listeners: _none, ...results } = ENGINE.results;
+  const net = network({ "engine.test": () => reply({ ...ENGINE, results }) });
+  const { similarHandler } = service(net);
+  const { body } = await call(similarHandler, similarPath({ url: SPOTIFY_LINK, k: "2", list: "listeners" }));
+  assert.equal(body.engine.list, "main");
+  assert.equal(body.results[0].deezer_id, FIRST_ID);
+});

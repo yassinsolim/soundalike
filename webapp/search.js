@@ -5,11 +5,12 @@
   if (!input || !ac || !out) return;
 
   // One search bar for any song on Deezer: suggestions come from
-  // /api/anysong/search. Two tabs read one /api/anysong/similar answer, as in
-  // the Spotify extension: "Best matches" (likely covers, samples and shared
-  // melodies, then other artists' songs a model ranks closest from five
-  // signals; shown by default) and "Listeners also play" (other artists'
-  // songs this song's listeners play).
+  // /api/anysong/search. Three tabs read one /api/anysong/similar answer, as
+  // in the Spotify extension: "Best matches" (likely covers, samples and
+  // shared melodies, then other artists' songs a model ranks closest from five
+  // signals; shown by default), "Listeners also play" (other artists' songs
+  // this song's listeners play) and "Melody match" (the melody and sample
+  // matches fused into one ranking, the server's "best" list).
   const ID_RE = /^[1-9][0-9]{0,15}$/;
   const suggestDelayMs = 220;
   const maxCacheEntries = 64;
@@ -18,6 +19,8 @@
   const bestMatchesPolicy = "main-consensus-v4";
   // Audio only asks for lists without the listener ranker (scene=0).
   const audioOnlyKey = "soundalike:audio-only:v1";
+  // The tab last chosen, kept for later visits.
+  const tabStoreKey = "soundalike:tab:v1";
   const listenerPickLabel = "Listeners also play";
   const listenerPickTitle = "Placed by what this song's listeners also play, not by audio alone";
   const audioOnlyTitle = "Rank by audio alone, leaving out what this song's listeners also play";
@@ -41,6 +44,14 @@
       label: "Listeners also play",
       blurb:
         "Songs by other artists that this song's listeners also play, one per artist. The likelier its listeners are to play a song, and the closer it sounds, the higher it ranks.",
+    },
+    {
+      key: "melody",
+      label: "Melody match",
+      blurb:
+        "Likely covers, samples and shared melodies first, from the melody and sample matches fused into one ranking, then similar-sounding songs by artists this song's listeners also play, marked Listeners also play. Turn on Audio only to leave those out.",
+      audioBlurb:
+        "Likely covers, samples and shared melodies: the melody and sample matches fused into one ranking, by audio alone.",
     },
   ];
   // Audio only and artists without listener data leave Listeners also play empty.
@@ -88,7 +99,7 @@
   let timer = null;
   let controller = null;
   let requestSequence = 0;
-  let tab = "best";
+  let tab = savedTab();
   let loadSequence = 0;
   let currentKey = null;
   let shownPick = null;
@@ -119,6 +130,21 @@
     } catch {}
   }
 
+  function savedTab() {
+    try {
+      const key = window.localStorage.getItem(tabStoreKey);
+      return resultTabs.some(entry => entry.key === key) ? key : "best";
+    } catch {
+      return "best";
+    }
+  }
+
+  function saveTab(key) {
+    try {
+      window.localStorage.setItem(tabStoreKey, key);
+    } catch {}
+  }
+
   const normalize = value =>
     value.trim().toLocaleLowerCase().replace(/\s+/g, " ");
 
@@ -133,11 +159,12 @@
   const spotifySearchUrl = (title, artist) =>
     `https://open.spotify.com/search/${encodeURIComponent(`${title} ${artist}`.trim())}`;
 
-  // Links from before the two tabs name Same vibe, Same melody, Samples &
-  // loops or Sounds like ("sounds", or "sonic" on older any-song links); they
-  // open Best matches, as do unknown names. A link without a tab keeps the
-  // current one.
-  const tabKey = key => (key === null ? null : key === "listeners" ? "listeners" : "best");
+  // Links from before these tabs name Same vibe, Samples & loops or Sounds
+  // like ("sounds", or "sonic" on older any-song links); they open Best
+  // matches, as do unknown names. Old Same melody links open Melody match. A
+  // link without a tab keeps the current one.
+  const tabKey = key =>
+    key === null ? null : resultTabs.some(entry => entry.key === key) ? key : "best";
 
   function safeImg(url) {
     try {
@@ -577,8 +604,9 @@
   }
 
   // The Best matches tab reads the main list, or Best matches from a server
-  // without it.
+  // without it. Melody match is the server's "best" list.
   const listName = (results, key) => {
+    if (key === "melody") return "best";
     if (key !== "best") return key;
     return Array.isArray(results.main) && results.main.length ? "main" : "best";
   };
@@ -673,8 +701,12 @@
 
   function blurbText(picked) {
     const entry = resultTabs.find(candidate => candidate.key === tab);
-    if (tab !== "best") return entry.blurb;
     const body = picked.body || {};
+    if (tab === "melody") {
+      const soundOnly = picked.audioOnly || (body.query || {}).scene === "unknown_artist";
+      return soundOnly ? entry.audioBlurb : entry.blurb;
+    }
+    if (tab !== "best") return entry.blurb;
     const results = body.results || {};
     const main = listName(results, "best") === "main";
     // The five-signal model placed rows; it needs no listener data.
@@ -705,9 +737,9 @@
     }
   }
 
-  // Both tabs hide confidently other-language songs unless the listener asks
+  // Every tab hides confidently other-language songs unless the listener asks
   // for all languages. The server's query.hidden counts them in its fused order
-  // of every channel, not in the main list or Listeners also play, so both tabs
+  // of every channel, not in the main list or Listeners also play, so the tabs
   // only say whether other languages are left out. A main-only guess
   // (query.main_language_guess) gates Best matches alone.
   function renderLanguage(picked, noListeners) {
@@ -842,11 +874,13 @@
     openId(row.id);
   }
 
+  // updateHash: the listener chose the tab, so it is also kept for next time.
   function selectTab(key, updateHash) {
     if (key === tab && document.querySelector("#matches")?.dataset.tab === key) {
       return;
     }
     tab = key;
+    if (updateHash) saveTab(key);
     if (updateHash && shownPick && shownPick.seed.id) writeHash(shownPick.seed.id, false);
     markTabs();
     if (shownPick) renderTab(shownPick);
