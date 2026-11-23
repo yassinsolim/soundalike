@@ -3697,12 +3697,24 @@ titled in non-Latin scripts resolved to nothing.
 - A request takes about 2.7 s at the median on the production card; the 999k index before v12 measured 1.0 s there
   (2026-11-09).
 
-## A part of a song as the seed (2026-11-23): local prototype, not served
+## A part of a song as the seed (2026-11-23)
 
-Code: `--parts` and `--excerpts` ([ANYSONG.md](ANYSONG.md#a-part-of-a-song-prototype-off-by-default)). Lab:
-`anysong-lab/partmatch/` (`REPORT.md`, scripts and raw results), index of 1,109,024 songs, v12 homelab profile on
-the RTX 5080. Quality here means the engine's own measures; nobody listened to these lists.
+Code: `--parts` (in the production unit from engine update 1) and `--excerpts` (not served)
+([ANYSONG.md](ANYSONG.md#a-part-of-a-song)). Lab: `anysong-lab/partmatch/` (`REPORT.md`, scripts and raw results),
+index of 1,109,024 songs, v12 homelab profile on the RTX 5080. Quality here means the engine's own measures.
+**Nobody has listened to part lists yet: listening validation is pending**, and the numbers below say that the
+lists change and stay well-formed, not that they are better matches for the part.
 
+- **Sanity of the served form** (engine update 1 in the production profile, 30 catalog seeds in 28 languages, the
+  spans 0-10, 10-20, 20-30, 5-25 and 0-20, 150 answers, `anysong-lab/update1/parity.py parts`): every answer has
+  the eight lists of the whole-preview answer, none shorter; the same seed language, source and language pool; no
+  row outside the seed's language in main, Best, Sounds like, Same vibe or Listeners also play; never the seed's
+  own song; no song by the seed's artist in main's body or in Listeners also play. Main's top 10 shares with the
+  whole-preview list 5.2 (0-10), 6.6 (10-20), 5.8 (20-30), 6.8 (5-25) and 7.7 (0-20) songs on average; single
+  seeds range from 0 to 10, the lowest where one window is unlike the rest of the preview. A part answer took 0.7
+  to 0.9 s at the median on that PC. Whole-preview answers are untouched: main's top 10 and all eight lists' top
+  20 were identical to production's for 40 of 40 catalog seeds with `--parts` on, and peak VRAM under an 8 GB cap
+  with part requests, live seeds and Stems dissections running together was 7.2 GB allocated (7.1 GB before).
 - **Where the preview sits.** 17 Deezer previews aligned against the full recordings (Jamendo tracks that are also
   on Deezer, raw cross-correlation): 16 begin 47.5 to 48.0 s into the song, one at 59.4 s. Not 0:30 to 1:00, as an
   old answer on Stack Overflow says.

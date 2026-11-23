@@ -79,6 +79,10 @@ class FakeDeezer:
         self.fail = False
         self.searches = 0
         self.lookups = 0
+        self.artist_searches = 0
+        self.languages = []
+        self.artists = {}
+        self.top = {}
         self.related = {}
         self.related_calls = []
 
@@ -101,12 +105,22 @@ class FakeDeezer:
         path.write_bytes(self.preview)
         return path
 
-    def search(self, q, limit):
+    def search(self, q, limit, language=None):
         self.searches += 1
+        self.languages.append(language)
         if self.fail:
             raise RuntimeError("down")
         return [self.tracks[99], {"id": 5, "title": "Different Song", "artist": {"name": "Other Artist"},
                                   "album": {}, "preview": ""}, {"no": "id"}][:limit]
+
+    def search_artists(self, name, limit=5):
+        self.artist_searches += 1
+        if self.fail:
+            raise RuntimeError("down")
+        return self.artists.get(name, [])[:limit]
+
+    def artist_top_tracks(self, artist_id, limit=100, language=None):
+        return self.top.get((artist_id, language), [])[:limit]
 
 
 @pytest.fixture
@@ -1499,14 +1513,14 @@ class QueryDeezer(FakeDeezer):
         self.by_query, self.by_isrc = by_query, by_isrc or {}
         self.queries, self.isrc_lookups = [], 0
 
-    def search(self, q, limit):
+    def search(self, q, limit, language=None):
         if self.by_query is None:
-            return super().search(q, limit)
+            return super().search(q, limit, language)
         self.searches += 1
-        self.queries.append(q)
+        self.queries.append(q if language is None else (q, language))
         if self.fail:
             raise RuntimeError("down")
-        return self.by_query.get(q, [])[:limit]
+        return self.by_query.get(q if language is None else (q, language), [])[:limit]
 
     def track_by_isrc(self, isrc):
         self.isrc_lookups += 1
@@ -2461,7 +2475,8 @@ def test_part_windows_follow_each_models_windowing():
                                                               "sonic": [10.0, 20.0]}
 
 
-@pytest.mark.parametrize("text", ["", "10", "10-", "a-b", "20-10", "0-31", "10-14", "-5-10", "1e1-20", "0-10-20"])
+@pytest.mark.parametrize("text", ["", "10", "10-", "a-b", "20-10", "0-31", "10-14", "10-19.9", "-5-10", "1e1-20",
+                                  "0-10-20"])
 def test_parse_part_rejects_spans_outside_the_preview(text):
     with pytest.raises(api.ApiError) as err:
         api.parse_part(text)
@@ -2513,7 +2528,8 @@ def test_part_is_off_unless_enabled(svc):
     with pytest.raises(api.ApiError) as err:
         svc.similar(1, part=(10.0, 20.0))
     assert err.value.status == 404 and svc.engine.calls == []
-    assert "part" not in svc.similar(1)["query"] and "preview" not in svc.similar(1)["query"]
+    assert "part" not in svc.similar(1)["query"] and "parts" not in svc.similar(1)["query"]
+    assert svc.health()["parts"] is False and svc.health()["excerpts"] is False
 
 
 def test_part_of_a_catalog_seed_searches_its_stored_windows_and_is_cached_apart(tmp_path):
@@ -2523,15 +2539,41 @@ def test_part_of_a_catalog_seed_searches_its_stored_windows_and_is_cached_apart(
     r = svc.similar(1, part=(10.0, 20.0))
     assert engine.parts == [None, {"melody": [1], "samples": [3, 4, 5], "sonic": [1]}]
     assert r["cached"] is False and "part" not in whole["query"]
-    assert r["query"]["part"] == {"melody": [5.0, 25.0], "samples": [9.19, 21.44], "sonic": [10.0, 20.0]}
-    # Spans that choose the same windows share a result; the whole preview is the plain seed.
-    assert svc.similar(1, part=(10.5, 20.0))["cached"] is True and svc.cached(1, (10.5, 20.0))
+    heard = {"melody": [5.0, 25.0], "samples": [9.19, 21.44], "sonic": [10.0, 20.0]}
+    assert r["query"]["part"] == {"start": 10.0, "end": 20.0, "heard": heard}
+    # Every answer says what a span may be; where the preview sits in the song needs the song's length.
+    limits = {"min_s": 10.0, "max_s": 30.0, "preview_s": 30.0, "song_offset_s": None}
+    assert whole["query"]["parts"] == limits and r["query"]["parts"] == limits and svc.health()["parts"] is True
+    # Spans that choose the same windows share a result, and each answer echoes its own span.
+    again = svc.similar(1, part=(10.0, 20.5))
+    assert again["cached"] is True and svc.cached(1, (10.0, 20.5))
+    assert again["query"]["part"] == {"start": 10.0, "end": 20.5, "heard": heard}
+    # The whole preview is the plain seed: its cached result, never one of a part.
     whole_again = svc.similar(1, part=(0.0, 30.0))
-    assert whole_again["cached"] is True and "part" not in whole_again["query"]
+    assert whole_again["cached"] is True and whole_again["results"] == whole["results"]
+    assert whole_again["query"]["part"] == {"start": 0.0, "end": 30.0, "heard": {
+        "melody": [0.0, 30.0], "samples": [0.0, 27.56], "sonic": [0.0, 30.0]}}
+    assert "part" not in svc.similar(1)["query"] and "part" not in svc.results.get(1)["query"]
     assert len(engine.parts) == 2 and not svc.cached(1, (0.0, 10.0))
     # The song's length, known from a search, places the preview in the song.
     svc.known.put(5, {"id": 5, "duration": 200})
-    assert svc.similar(5, part=(0.0, 10.0))["query"]["preview"] == {"start": 48.0, "end": 78.0}
+    assert svc.similar(5, part=(0.0, 10.0))["query"]["parts"]["song_offset_s"] == 48.0
+    svc.known.put(1, {"id": 1, "duration": 80})  # too short a song for the measured place
+    assert svc.similar(1)["query"]["parts"]["song_offset_s"] is None
+
+
+def test_part_answers_take_the_list_parameters_and_leave_the_other_lists_alone(tmp_path):
+    languages = FakeLanguages({1: "en", 2: "en", 3: "fr", 4: "en", 5: "en", 6: "en", 7: "unknown"})
+    svc = api.AnySong(PartEngine(), FakeDeezer(tmp_path), META, parts=True, languages=languages, copy_score=None)
+    whole, part = svc.similar(1, k=3), svc.similar(1, k=3, part=(0.0, 10.0))
+    # The fake engine ranks alike for every window choice: the lists must then be the whole preview's.
+    assert part["results"] == whole["results"] and set(part["results"]) == set(whole["results"])
+    assert all(len(rows) <= 3 for rows in part["results"].values())
+    same = svc.similar(1, part=(0.0, 10.0))
+    every = svc.similar(1, part=(0.0, 10.0), lang_mode="all", dedupe=False, scene=False)
+    assert 3 not in _ids(same, "best") and 3 in _ids(every, "best")  # the language gate holds for a part
+    assert 2 not in _ids(same, "melody") and 2 in _ids(every, "melody")  # and so does hiding the seed's own song
+    assert every["query"]["language_mode"] == "all" and every["query"]["scene"] == "off" and every["cached"] is True
 
 
 def test_part_of_a_live_seed_cuts_its_embedded_windows(tmp_path):
@@ -2541,9 +2583,11 @@ def test_part_of_a_live_seed_cuts_its_embedded_windows(tmp_path):
     svc = api.AnySong(engine, deezer, META, parts=True)
     r = svc.similar(99, part=(20.0, 30.0))
     assert engine.windows == {"melody": [2.0], "samples": [6.0, 7.0], "sonic": [2.0]}
-    assert r["query"]["source"] == "live" and r["query"]["part"]["sonic"] == [20.0, 30.0]
-    assert r["query"]["preview"] == {"start": 48.0, "end": 78.0}
-    svc.similar(99)
+    assert r["query"]["source"] == "live" and r["query"]["part"]["heard"]["sonic"] == [20.0, 30.0]
+    assert (r["query"]["part"]["start"], r["query"]["part"]["end"]) == (20.0, 30.0)
+    assert r["query"]["parts"]["song_offset_s"] == 48.0
+    svc.known = api.LRU(4)  # the Deezer object is forgotten: the result remembers the song's length
+    assert svc.similar(99)["query"]["parts"]["song_offset_s"] == 48.0
     assert engine.windows["sonic"] == [0.0, 1.0, 2.0]
 
 
@@ -2700,6 +2744,94 @@ def test_excerpt_route_is_off_unless_enabled(server):
     code, _, body = get(server, "/api/anysong/similar?id=1&part=0-10")
     assert code == 404 and "not enabled" in body["error"]
     assert get(server, "/api/anysong/similar?id=1&part=nope")[0] == 400
+
+
+def test_part_off_answers_before_any_lookup_is_spent(server):
+    code, _, body = get(server, "/api/anysong/similar?title=Third%20Song&artist=Nobody&part=0-10")
+    assert code == 404 and "not enabled" in body["error"] and server.service.deezer.searches == 0
+    assert get(server, "/healthz")[2]["parts"] is False
+
+
+@pytest.fixture
+def part_server(tmp_path):
+    svc = api.AnySong(PartEngine(), FakeDeezer(tmp_path, tracks=NEW_SONG), META, copy_score=None, parts=True)
+    srv = api.Server(("127.0.0.1", 0), svc, search_per_min=600, similar_per_min=8, cors_origin="https://yassin.app",
+                     client_header="CF-Connecting-IP")
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    yield srv
+    srv.shutdown()
+    srv.server_close()
+
+
+def test_http_part_is_advertised_validated_and_limited_like_a_new_ranking(part_server):
+    health = get(part_server, "/healthz")[2]
+    assert health["parts"] is True and health["excerpts"] is False
+    ip = {"CF-Connecting-IP": "203.0.113.7"}
+    code, _, body = get(part_server, "/api/anysong/similar?id=1&part=10-20&k=3&lang=all&scene=0&dedupe=0", ip)
+    assert code == 200 and body["cached"] is False and len(body["results"]["melody"]) == 3
+    assert body["query"]["part"] == {"start": 10.0, "end": 20.0, "heard": {
+        "melody": [5.0, 25.0], "samples": [9.19, 21.44], "sonic": [10.0, 20.0]}}
+    assert body["query"]["parts"] == {"min_s": 10.0, "max_s": 30.0, "preview_s": 30.0, "song_offset_s": None}
+    assert body["query"]["language_mode"] == "all" and body["query"]["scene"] == "off"
+    # The whole preview and each new span are rankings of their own for the limiter (similar_per_min=8: burst of 2);
+    # a span that picks windows already ranked is free, as any cached answer.
+    whole = get(part_server, "/api/anysong/similar?id=1", ip)
+    assert whole[0] == 200 and whole[2]["cached"] is False and "part" not in whole[2]["query"]
+    assert get(part_server, "/api/anysong/similar?id=1&part=20-30", ip)[0] == 429
+    assert [get(part_server, "/api/anysong/similar?id=1&part=10-20.4&k=5", ip)[0] for _ in range(3)] == [200] * 3
+    assert get(part_server, "/api/anysong/similar?id=1&part=0-30", ip)[2]["cached"] is True
+    # A span that cannot be is refused before the song is looked up.
+    named = "/api/anysong/similar?title=Brand%20New%20Song&artist=New%20Artist"
+    for span in ("5-9", "0-9.99", "25-35", "20-10", "x"):
+        code, _, body = get(part_server, f"{named}&part={span}")
+        assert code == 400 and "at least 10 apart" in body["error"]
+    assert part_server.service.deezer.searches == 0
+    # A song named by title and artist takes a span too.
+    code, _, body = get(part_server, f"{named}&part=0-10")
+    assert code == 200 and body["query"]["source"] == "live" and body["query"]["part"]["heard"]["sonic"] == [0.0, 10.0]
+
+
+def test_parts_alone_do_not_open_the_excerpt_route(part_server):
+    assert post(part_server, "/api/anysong/excerpt", _wav(6))[0] == 404
+    assert post(part_server, "/api/anysong/excerpt", None, method="OPTIONS")[0] == 404
+    assert post(part_server, "/api/anysong/excerpt?title=x&artist=y", _wav(12))[0] == 404
+    assert "excerpt" not in part_server.service.health()["served"]
+
+
+def test_production_unit_serves_parts_but_neither_excerpts_nor_identification():
+    from pathlib import Path
+
+    unit = (Path(__file__).parents[1] / "deploy" / "homelab" / "soundalike-anysong.service").read_text(encoding="utf-8")
+    start = unit[unit.index("ExecStart="):unit.index("\nRestart=")]
+    flags = [word for word in start.replace("\\\n", " ").split() if word.startswith("--")]
+    assert "--parts" in flags and len(flags) == len(set(flags))
+    assert not [flag for flag in flags if flag.startswith(("--excerpt", "--identify", "--part-sound"))]
+
+
+def test_identify_score_cannot_be_set_without_excerpts(capsys):
+    pytest.importorskip("torch")
+    with pytest.raises(SystemExit):
+        api.main(["--index", "nowhere", "--identify-score", "0.55"])
+    assert "--identify-score" in capsys.readouterr().err
+
+
+def test_the_seeds_own_song_is_hidden_under_another_spelling_of_its_names(tmp_path):
+    # Deezer names the live seed with the accent; the catalog's releases of the song are spelled without it.
+    meta = {1: ("Khruangbin", "Maria Tambien (Live at Sydney Opera House)"), 2: ("Khruangbin", "Mary Always"),
+            3: ("Other Band", "Maria Tambi\u00e9n"), 4: ("The Khruangbin", "MARIA TAMBIE\u0301N - Remastered"),
+            5: ("Other Artist", "Different Song")}
+    seed = {99: {"id": 99, "title": "Maria Tambi\u00e9n", "artist": {"name": "Khruangbin"}, "album": {},
+                 "duration": 200, "preview": "u"}}
+    engine = FakeEngine(ids=tuple(meta), rows=[(1, 0.9), (2, 0.8), (3, 0.7), (4, 0.6), (5, 0.5)])
+    svc = api.AnySong(engine, FakeDeezer(tmp_path, tracks=seed), meta, copy_score=None)
+    r = svc.similar(99)
+    # Its own song goes, whatever the spelling; the artist's other song and another artist's version stay.
+    assert _ids(r, "melody") == [2, 3, 5] and _ids(r, "best") == [2, 3, 5]
+    assert _ids(svc.similar(99, dedupe=False), "melody") == [1, 2, 3, 4, 5]
+    # A catalog seed spelled without the accent hides the accented releases the same way.
+    assert _ids(svc.similar(1), "melody") == [2, 3, 5]
+    # Names that differ in more than spelling are other songs, and other songs keep their own releases apart.
+    assert _ids(svc.similar(2), "melody") == [1, 3, 4, 5]
 
 
 def test_engine_part_of_a_stored_seed_matches_a_live_search_on_those_windows():

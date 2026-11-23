@@ -117,15 +117,18 @@ class Deezer:
         self.preview_limiter = RateLimiter(preview_rate_per_s)
         self.timeout = timeout
 
-    def _get(self, path: str, params: dict | None = None, retries: int = 4) -> dict:
+    def _get(self, path: str, params: dict | None = None, retries: int = 4, language: str | None = None) -> dict:
+        """``language``: an Accept-Language value; Deezer then names tracks and artists as it holds them for that
+        language ("Zankyosanka" is 残響散歌 for "ja")."""
         url = f"{API}/{path.lstrip('/')}"
         if params:
             url += "?" + urllib.parse.urlencode(params)
+        headers = {"User-Agent": USER_AGENT} | ({"Accept-Language": language} if language else {})
         last_err: Exception | None = None
         for attempt in range(retries):
             self.limiter.wait()
             try:
-                req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+                req = urllib.request.Request(url, headers=headers)
                 with urllib.request.urlopen(req, timeout=self.timeout) as resp:
                     data = json.load(resp)
                 err = data.get("error") if isinstance(data, dict) else None
@@ -155,8 +158,9 @@ class Deezer:
     def track(self, track_id: int) -> dict:
         return self._get(f"track/{int(track_id)}")
 
-    def artist_top_tracks(self, artist_id: int, limit: int = 100) -> list[dict]:
-        response = self._get(f"artist/{int(artist_id)}/top", {"limit": limit})
+    def artist_top_tracks(self, artist_id: int, limit: int = 100, language: str | None = None) -> list[dict]:
+        response = self._get(f"artist/{int(artist_id)}/top", {"limit": limit},
+                             **({"language": language} if language else {}))
         if not isinstance(response, dict):
             raise ValueError(f"Invalid track metadata for artist {artist_id}")
         data = response.get("data", [])
@@ -179,8 +183,14 @@ class Deezer:
     def track_by_isrc(self, isrc: str) -> dict:
         return self._get(f"track/isrc:{isrc.strip().upper()}")
 
-    def search(self, query: str, limit: int = 25) -> list[dict]:
-        return self._get("search", {"q": query, "limit": limit}).get("data", [])
+    def search(self, query: str, limit: int = 25, language: str | None = None) -> list[dict]:
+        return self._get("search", {"q": query, "limit": limit},
+                         **({"language": language} if language else {})).get("data", [])
+
+    def search_artists(self, name: str, limit: int = 5) -> list[dict]:
+        """Deezer's artist search, which knows other spellings and scripts of a name (周杰倫 finds Jay Chou)."""
+        data = self._get("search/artist", {"q": name, "limit": limit}).get("data", [])
+        return [item for item in data if isinstance(item, dict) and type(item.get("id")) is int]
 
     def match(self, title: str, artists: list[str], duration_s: float | None = None,
               allow_versions: bool = False) -> Match | None:

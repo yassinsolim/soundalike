@@ -306,7 +306,7 @@ async function openSong(t) {
   loadWhole();
 }
 function describeHeard(q) {
-  const p = q.preview;
+  const at = q.parts ? q.parts.song_offset_s : null, p = at == null ? null : {start: at, end: at + q.parts.preview_s};
   song.offset = p ? p.start : null;
   $("heard").innerHTML = p
     ? `Soundalike hears only Deezer's 30-second preview of this song: about <strong>${fmt(p.start)} to ${fmt(p.end)}</strong> of it (where Deezer's previews usually sit; in a few songs it is elsewhere). The times under the waveform are song times.`
@@ -328,9 +328,9 @@ function showPreviewLists() {
   $("partTitle").textContent = `Your part (${songTime(a)} – ${songTime(b)})`;
   renderList($("wholeList"), whole ? whole.results[name] : [], part ? ids(part.results[name]) : null);
   renderList($("partList"), part ? part.results[name] : [], whole ? ids(whole.results[name]) : null);
-  const h = part && part.query.part;
+  const h = part && part.query.part && part.query.part.heard;
   $("partHeard").textContent = !part ? (b - a >= PREVIEW ? "The whole preview is selected." : "Press the green button.")
-    : h ? `Heard: sound ${h.sonic[0]}–${h.sonic[1]} s, samples ${Math.round(h.samples[0])}–${Math.round(h.samples[1])} s, melody ${h.melody[0]}–${h.melody[1]} s of the preview (the melody model listens in 20-second pieces). Rows on a green ground are in both lists.`
+    : h && b - a < PREVIEW ? `Heard: sound ${h.sonic[0]}–${h.sonic[1]} s, samples ${Math.round(h.samples[0])}–${Math.round(h.samples[1])} s, melody ${h.melody[0]}–${h.melody[1]} s of the preview (the melody model listens in 20-second pieces). Rows on a green ground are in both lists.`
     : "This span is the whole preview.";
 }
 $("plist").onchange = showPreviewLists;
