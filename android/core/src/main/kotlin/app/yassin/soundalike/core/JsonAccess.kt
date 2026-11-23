@@ -22,6 +22,10 @@ internal fun JsonObject.string(key: String): String? =
 /** A whole number given as a number or as digits in a string. */
 internal fun JsonObject.long(key: String): Long? = (this[key] as? JsonPrimitive)?.asLong()
 
+/** A number given as a number or as digits in a string. */
+internal fun JsonObject.double(key: String): Double? =
+    (this[key] as? JsonPrimitive)?.content?.toDoubleOrNull()?.takeIf { it.isFinite() }
+
 internal fun JsonElement.asLong(): Long? {
     val content = (this as? JsonPrimitive)?.content ?: return null
     return content.toLongOrNull() ?: content.toDoubleOrNull()?.takeIf { it.isFinite() }?.roundToLong()

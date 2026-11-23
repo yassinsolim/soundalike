@@ -16,6 +16,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import android.content.res.Configuration
@@ -52,6 +56,7 @@ import app.yassin.soundalike.R
 import app.yassin.soundalike.ResultsState
 import app.yassin.soundalike.core.Match
 import app.yassin.soundalike.core.MusicSource
+import app.yassin.soundalike.core.Part
 import app.yassin.soundalike.core.Seed
 import coil.compose.AsyncImage
 
@@ -80,6 +85,7 @@ fun ResultsList(
     onFollowSong: () -> Unit = {},
     playsAtOnce: (Match) -> Boolean = { false },
     isPlaying: (Match) -> Boolean = { false },
+    onMatchPart: (Part?) -> Unit = {},
 ) {
     if (missingApp != null) {
         AlertDialog(
@@ -92,7 +98,16 @@ fun ResultsList(
     }
     // Held sideways there is little height: the song and the app picker share one row.
     val wide = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-    LazyColumn(modifier = modifier, contentPadding = contentPadding) {
+    val list = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    // Rows above the first result: the song-change line, the song and the app picker (one row when wide).
+    val partIndex = (if (changedSong != null) 1 else 0) + (if (wide) 1 else 2)
+    // Turning the screen keeps the list at the same row number, which is then another row. Near
+    // the top that would hide the part picker the user may be in the middle of using.
+    LaunchedEffect(wide) {
+        if (list.firstVisibleItemIndex in 1..3) list.scrollToItem(partIndex)
+    }
+    LazyColumn(modifier = modifier, state = list, contentPadding = contentPadding) {
         when (state) {
             is ResultsState.Loading -> {
                 state.seed?.let { seed -> item { SeedHeader(seed) } }
@@ -105,7 +120,11 @@ fun ResultsList(
                         CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.5.dp)
                         Spacer(Modifier.width(12.dp))
                         Text(
-                            if (state.seed == null) "Finding the song…" else "Listening for soundalikes…",
+                            when {
+                                state.seed == null -> "Finding the song…"
+                                state.part != null -> "Listening to that part…"
+                                else -> "Listening for soundalikes…"
+                            },
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -127,6 +146,14 @@ fun ResultsList(
                 } else {
                     item { SeedHeader(state.results.seed) }
                     item { TargetPicker(target, onTarget) }
+                }
+                state.results.parts?.forSongOf(state.results.seed.durationSeconds)?.let { limits ->
+                    item(key = "part") {
+                        PartControl(
+                            state.results, limits, player, onMatchPart,
+                            onOpened = { scope.launch { list.animateScrollToItem(partIndex) } },
+                        )
+                    }
                 }
                 items(state.results.matches, key = { it.id }) { match ->
                     ResultRow(match, player, target, playsAtOnce(match), isPlaying(match), onOpen = { onOpen(match) })

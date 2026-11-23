@@ -59,7 +59,10 @@ class DeezerCatalog(private val http: Http) {
             val title = row.string("title") ?: return@mapNotNull null
             val artist = row.obj("artist")?.string("name") ?: return@mapNotNull null
             if (!seen.add(TextMatch.normalize(title) + "|" + TextMatch.normalize(artist))) return@mapNotNull null
-            Seed(title = title, artist = artist, artworkUrl = row.obj("album")?.string("cover_medium"), source = MusicSource.SEARCH)
+            Seed(
+                title = title, artist = artist, artworkUrl = row.obj("album")?.string("cover_medium"),
+                source = MusicSource.SEARCH, durationSeconds = row.long("duration")?.toInt()?.takeIf { it > 0 },
+            )
         }
     }
 }

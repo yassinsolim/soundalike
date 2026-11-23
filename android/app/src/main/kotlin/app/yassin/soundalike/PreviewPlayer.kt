@@ -9,6 +9,8 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import app.yassin.soundalike.core.Match
+import app.yassin.soundalike.core.Part
+import app.yassin.soundalike.core.Seed
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -33,43 +35,67 @@ class PreviewPlayer(private val app: SoundalikeApp, private val scope: Coroutine
         .setOnAudioFocusChangeListener { change -> if (change < 0) stop() }
         .build()
 
-    fun toggle(match: Match) {
-        val wasThis = playingId == match.id || loadingId == match.id
+    /** Seconds into the preview while a part of the seed's preview plays, for the picker's playhead. */
+    var partPosition: Float? by mutableStateOf(null)
+        private set
+
+    fun toggle(match: Match) = toggle(match.id, match.previewUrl, match.deezerId, part = null)
+
+    /** Plays just that part of the song's own preview, or stops it when it is playing. */
+    fun togglePart(seed: Seed, part: Part) = toggle(PART_ID, previewUrl = null, seed.deezerId, part)
+
+    private fun toggle(id: String, previewUrl: String?, deezerId: Long?, part: Part?) {
+        val wasThis = playingId == id || loadingId == id
         stop()
         if (wasThis) return
-        loadingId = match.id
+        loadingId = id
+        val startMs = (part?.start ?: 0) * 1000
         job = scope.launch {
             // Preview addresses expire after a few minutes: fall back to a fresh one from Deezer.
-            val started = match.previewUrl?.let { play(it) } ?: false
+            val started = previewUrl?.let { play(it, startMs) } ?: false
             if (!started) {
-                val fresh = match.deezerId?.let { app.deezer.track(it)?.previewUrl }
-                if (fresh == null || fresh == match.previewUrl || !play(fresh)) {
+                val fresh = deezerId?.let { app.deezer.track(it)?.previewUrl }
+                if (fresh == null || fresh == previewUrl || !play(fresh, startMs)) {
                     stop()
                     return@launch
                 }
             }
             loadingId = null
-            playingId = match.id
+            playingId = id
             val playing = player ?: return@launch
-            while (playingId == match.id) {
-                progress = playing.currentPosition.toFloat() / playing.duration.coerceAtLeast(1)
-                delay(100)
+            while (playingId == id) {
+                val position = playing.currentPosition
+                if (part != null && position >= part.end * 1000) {
+                    stop()
+                    break
+                }
+                progress = position.toFloat() / playing.duration.coerceAtLeast(1)
+                if (part != null) partPosition = position / 1000f
+                delay(if (part != null) 40 else 100)
             }
         }
     }
 
-    /** Suspends until the stream starts; false when it can't be played. */
-    private suspend fun play(url: String): Boolean {
+    /** Suspends until the stream plays from `startMs`; false when it can't be played. */
+    private suspend fun play(url: String, startMs: Int): Boolean {
         val result = kotlinx.coroutines.CompletableDeferred<Boolean>()
         val next = MediaPlayer()
         player = next
+        fun start() {
+            audio.requestAudioFocus(focus)
+            next.start()
+            result.complete(true)
+        }
         try {
             next.setAudioAttributes(attributes)
             next.setDataSource(url)
             next.setOnPreparedListener {
-                audio.requestAudioFocus(focus)
-                it.start()
-                result.complete(true)
+                if (startMs > 0) {
+                    next.setOnSeekCompleteListener { start() }
+                    next.seekTo(startMs.toLong(), MediaPlayer.SEEK_CLOSEST)
+                } else {
+                    start()
+                }
             }
             next.setOnErrorListener { _, _, _ ->
                 if (!result.complete(false)) stop()
@@ -97,5 +123,11 @@ class PreviewPlayer(private val app: SoundalikeApp, private val scope: Coroutine
         playingId = null
         loadingId = null
         progress = 0f
+        partPosition = null
+    }
+
+    companion object {
+        /** What [playingId] and [loadingId] hold while a part of the seed's preview plays. */
+        const val PART_ID = "seed-part"
     }
 }

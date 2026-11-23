@@ -33,12 +33,13 @@ data class PlayingSong(
     val spotifyUri: String?,
     /** A web address of the cover, when the player publishes one (Spotify does). */
     val artworkUrl: String? = null,
+    val durationSeconds: Int? = null,
 ) {
     /** Two reports of the same song compare equal whatever else changed (position, play state). */
     val key: String get() = spotifyUri ?: "$packageName|$title|$artist"
 
     fun toSeed() = Seed(
-        title = title, artist = artist, artworkUrl = artworkUrl,
+        title = title, artist = artist, artworkUrl = artworkUrl, durationSeconds = durationSeconds,
         source = MusicSource.fromPackage(packageName) ?: MusicSource.SEARCH,
         spotifyId = spotifyUri?.substringAfterLast(':'),
     )
@@ -108,7 +109,8 @@ object NowPlaying {
             session.packageName == SPOTIFY_PACKAGE && it.track.equals(title, ignoreCase = true)
         }
         val artwork = metadata?.getString(SPOTIFY_ART_URL)?.takeIf { it.startsWith("https://") }
-        return PlayingSong(title.withoutAudioExtension(), artist, session.packageName, session.isPlaying, named ?: broadcast?.uri, artwork)
+        val seconds = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION)?.takeIf { it > 0 }?.let { (it / 1000).toInt() }
+        return PlayingSong(title.withoutAudioExtension(), artist, session.packageName, session.isPlaying, named ?: broadcast?.uri, artwork, seconds)
     }
 
     private val MediaController.isPlaying get() = playbackState?.state == PlaybackState.STATE_PLAYING

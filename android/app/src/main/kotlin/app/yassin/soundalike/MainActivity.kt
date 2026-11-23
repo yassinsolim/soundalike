@@ -104,6 +104,7 @@ class MainActivity : ComponentActivity() {
                     playsAtOnce = model::playsAtOnce,
                     isPlaying = model::isPlayingInSpotify,
                     onRetry = model::retry,
+                    onMatchPart = model::matchPart,
                     missingApp = model.missingApp,
                     onGetApp = model::installMissingApp,
                     onDismissMissingApp = { model.missingApp = null },

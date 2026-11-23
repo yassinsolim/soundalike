@@ -32,6 +32,8 @@ data class Seed(
     val spotifyId: String? = null,
     /** The recording the engine ranked from, once it has answered. */
     val deezerId: Long? = null,
+    /** The song's length, when the player or the search result gave it. */
+    val durationSeconds: Int? = null,
 )
 
 /** One soundalike. */
@@ -57,6 +59,10 @@ data class SoundalikeResults(
     val matches: List<Match>,
     /** Which server route answered, for diagnostics. */
     val route: String,
+    /** Set when the server can match a part of the preview: what it takes. */
+    val parts: PartLimits? = null,
+    /** The part of the preview these matches are for; null when they are for the whole preview. */
+    val part: Part? = null,
 )
 
 sealed class SoundalikeError(message: String) : Exception(message) {

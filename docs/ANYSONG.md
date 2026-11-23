@@ -534,7 +534,14 @@ parameter (400 or 404) is asked once more without it.
   pauses when it is over. Saved lists are kept per part (`…:part:<start>-<end>` in the cache id), and nothing is
   remembered from one search to the next.
 - **Phones**: `/api/mobile/similar` takes `part=` and reports `query.part` and `query.parts`
-  ([Mobile API](#mobile-api)). The `/find` page and the apps have no control yet.
+  ([Mobile API](#mobile-api)).
+  - **Android app** (2.1.0, [`android/`](../android/README.md#match-a-part)): "Match a part" sits under the song in
+    the results sheet and in the app. It opens a bar of the preview with the part on it: drag the part, drag an
+    edge, tap elsewhere, or use the −5 s / +5 s and 10 / 15 / 20 s buttons. "Play this part" plays the span from the
+    preview and Apply reloads the list; a chip ("Matching 0:58–1:08 of the song", then "Whole preview") leads back.
+    Song times are used when the server gives the preview's place or the song is known to be 90 s or longer. The
+    part stays while the player moves on to other songs and ends when another song's list is loaded.
+  - The `/find` page and the iPhone app have no control yet.
 - **Which lists follow.** Best matches, Listeners also play and Melody match are read from the one answer, so all
   three follow the part; Listeners also play still starts from the whole song's listeners. The extension's Sounds
   like list (local companion or the older hosted library) always uses the whole song.
