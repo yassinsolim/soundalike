@@ -79,6 +79,10 @@ class FakeDeezer:
         self.fail = False
         self.searches = 0
         self.lookups = 0
+        self.artist_searches = 0
+        self.languages = []
+        self.artists = {}
+        self.top = {}
         self.related = {}
         self.related_calls = []
 
@@ -101,12 +105,22 @@ class FakeDeezer:
         path.write_bytes(self.preview)
         return path
 
-    def search(self, q, limit):
+    def search(self, q, limit, language=None):
         self.searches += 1
+        self.languages.append(language)
         if self.fail:
             raise RuntimeError("down")
         return [self.tracks[99], {"id": 5, "title": "Different Song", "artist": {"name": "Other Artist"},
                                   "album": {}, "preview": ""}, {"no": "id"}][:limit]
+
+    def search_artists(self, name, limit=5):
+        self.artist_searches += 1
+        if self.fail:
+            raise RuntimeError("down")
+        return self.artists.get(name, [])[:limit]
+
+    def artist_top_tracks(self, artist_id, limit=100, language=None):
+        return self.top.get((artist_id, language), [])[:limit]
 
 
 @pytest.fixture
@@ -1499,14 +1513,14 @@ class QueryDeezer(FakeDeezer):
         self.by_query, self.by_isrc = by_query, by_isrc or {}
         self.queries, self.isrc_lookups = [], 0
 
-    def search(self, q, limit):
+    def search(self, q, limit, language=None):
         if self.by_query is None:
-            return super().search(q, limit)
+            return super().search(q, limit, language)
         self.searches += 1
-        self.queries.append(q)
+        self.queries.append(q if language is None else (q, language))
         if self.fail:
             raise RuntimeError("down")
-        return self.by_query.get(q, [])[:limit]
+        return self.by_query.get(q if language is None else (q, language), [])[:limit]
 
     def track_by_isrc(self, isrc):
         self.isrc_lookups += 1
@@ -2441,3 +2455,412 @@ def test_health_names_the_tables_kept_in_host_memory(tmp_path):
     assert api.AnySong(engine, FakeDeezer(tmp_path), META).health()["host_tables"] == []
     engine.host_tables = ["samples", "sonic", "head"]
     assert api.AnySong(engine, FakeDeezer(tmp_path), META).health()["host_tables"] == ["samples", "sonic", "head"]
+
+
+# ---------------------------------------------------------------- a part of the preview, and excerpts of own audio
+def test_part_windows_follow_each_models_windowing():
+    pytest.importorskip("torch")  # the embedders module imports it
+    from soundalike.anysong import audio
+    from soundalike.anysong.embedders import SampleIDEmb
+
+    hop, length, count = audio.WINDOW_LAYOUT["samples"]
+    assert (hop, length) == (SampleIDEmb.hop / SampleIDEmb.sr, SampleIDEmb.chunk / SampleIDEmb.sr)
+    assert count == len(range(0, 30 * SampleIDEmb.sr - SampleIDEmb.chunk + 1, SampleIDEmb.hop))
+    assert audio.part_windows(0, 10) == {"melody": [0], "samples": [0, 1], "sonic": [0]}
+    assert audio.part_windows(10, 20) == {"melody": [1], "samples": [3, 4, 5], "sonic": [1]}
+    assert audio.part_windows(20, 30) == {"melody": [2], "samples": [6, 7], "sonic": [2]}
+    assert audio.part_windows(0, 20) == {"melody": [0, 1], "samples": [0, 1, 2, 3, 4, 5], "sonic": [0, 1]}
+    assert audio.part_windows(12, 18)["sonic"] == [1]  # a short span is the window it lies in
+    assert audio.part_windows(0, 30) == {"melody": [0, 1, 2], "samples": list(range(8)), "sonic": [0, 1, 2]}
+    assert audio.window_spans(audio.part_windows(10, 20)) == {"melody": [5.0, 25.0], "samples": [9.19, 21.44],
+                                                              "sonic": [10.0, 20.0]}
+
+
+@pytest.mark.parametrize("text", ["", "10", "10-", "a-b", "20-10", "0-31", "10-14", "10-19.9", "-5-10", "1e1-20",
+                                  "0-10-20"])
+def test_parse_part_rejects_spans_outside_the_preview(text):
+    with pytest.raises(api.ApiError) as err:
+        api.parse_part(text)
+    assert err.value.status == 400
+
+
+def test_parse_part_and_preview_span():
+    assert api.parse_part("10-20") == (10.0, 20.0) and api.parse_part(" 2.5-17.25 ") == (2.5, 17.25)
+    assert api.preview_span(200) == (48.0, 78.0)
+    assert api.preview_span(None) is None and api.preview_span(0) is None and api.preview_span(75) is None
+
+
+class PartEngine(FakeEngine):
+    """An engine whose stored search takes ``part`` and whose embeddings number their windows."""
+
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self.indexes["sonic"] = FakeIndex(self.indexes["melody"].pos)
+        self.parts, self.windows = [], None
+
+    def search_stored(self, tid, k, part=None):
+        self.parts.append(part)
+        return super().search_stored(tid, k)
+
+    def embed_clips(self, clips):
+        self.calls.append(("embed",))
+        return {"melody": np.arange(3)[:, None] * np.ones((3, 4)), "samples": np.arange(8)[:, None] * np.ones((8, 4)),
+                "sonic": np.arange(3)[:, None] * np.ones((3, 4))}, {"embed_clews_dvi": 3.0}
+
+    def excerpt_clips(self, mono, sr):
+        self.peak = float(np.abs(mono).max())
+        self.calls.append(("clips", len(mono), sr))
+        return {"melody": mono, "samples": mono, "sonic": mono}, {"resample": 1.0}
+
+    def embed_channel_clips(self, clips):
+        self.calls.append(("embed_excerpt", sorted(clips)))
+        return {name: np.zeros((1, 4)) for name in clips}, {"embed_clews_dvi": 3.0}
+
+    def search_windows(self, wins, k, exclude=()):
+        self.windows = {name: w[:, 0].tolist() for name, w in wins.items()}
+        return super().search_windows(wins, k, exclude)
+
+    def top_match(self, channel, windows):
+        self.calls.append(("top", channel))
+        return self.rows[0]
+
+
+def test_part_is_off_unless_enabled(svc):
+    with pytest.raises(api.ApiError) as err:
+        svc.similar(1, part=(10.0, 20.0))
+    assert err.value.status == 404 and svc.engine.calls == []
+    assert "part" not in svc.similar(1)["query"] and "parts" not in svc.similar(1)["query"]
+    assert svc.health()["parts"] is False and svc.health()["excerpts"] is False
+
+
+def test_part_of_a_catalog_seed_searches_its_stored_windows_and_is_cached_apart(tmp_path):
+    engine = PartEngine()
+    svc = api.AnySong(engine, FakeDeezer(tmp_path), META, parts=True)
+    whole = svc.similar(1)
+    r = svc.similar(1, part=(10.0, 20.0))
+    assert engine.parts == [None, {"melody": [1], "samples": [3, 4, 5], "sonic": [1]}]
+    assert r["cached"] is False and "part" not in whole["query"]
+    heard = {"melody": [5.0, 25.0], "samples": [9.19, 21.44], "sonic": [10.0, 20.0]}
+    assert r["query"]["part"] == {"start": 10.0, "end": 20.0, "heard": heard}
+    # Every answer says what a span may be; where the preview sits in the song needs the song's length.
+    limits = {"min_s": 10.0, "max_s": 30.0, "preview_s": 30.0, "song_offset_s": None}
+    assert whole["query"]["parts"] == limits and r["query"]["parts"] == limits and svc.health()["parts"] is True
+    # Spans that choose the same windows share a result, and each answer echoes its own span.
+    again = svc.similar(1, part=(10.0, 20.5))
+    assert again["cached"] is True and svc.cached(1, (10.0, 20.5))
+    assert again["query"]["part"] == {"start": 10.0, "end": 20.5, "heard": heard}
+    # The whole preview is the plain seed: its cached result, never one of a part.
+    whole_again = svc.similar(1, part=(0.0, 30.0))
+    assert whole_again["cached"] is True and whole_again["results"] == whole["results"]
+    assert whole_again["query"]["part"] == {"start": 0.0, "end": 30.0, "heard": {
+        "melody": [0.0, 30.0], "samples": [0.0, 27.56], "sonic": [0.0, 30.0]}}
+    assert "part" not in svc.similar(1)["query"] and "part" not in svc.results.get(1)["query"]
+    assert len(engine.parts) == 2 and not svc.cached(1, (0.0, 10.0))
+    # The song's length, known from a search, places the preview in the song.
+    svc.known.put(5, {"id": 5, "duration": 200})
+    assert svc.similar(5, part=(0.0, 10.0))["query"]["parts"]["song_offset_s"] == 48.0
+    svc.known.put(1, {"id": 1, "duration": 80})  # too short a song for the measured place
+    assert svc.similar(1)["query"]["parts"]["song_offset_s"] is None
+
+
+def test_part_answers_take_the_list_parameters_and_leave_the_other_lists_alone(tmp_path):
+    languages = FakeLanguages({1: "en", 2: "en", 3: "fr", 4: "en", 5: "en", 6: "en", 7: "unknown"})
+    svc = api.AnySong(PartEngine(), FakeDeezer(tmp_path), META, parts=True, languages=languages, copy_score=None)
+    whole, part = svc.similar(1, k=3), svc.similar(1, k=3, part=(0.0, 10.0))
+    # The fake engine ranks alike for every window choice: the lists must then be the whole preview's.
+    assert part["results"] == whole["results"] and set(part["results"]) == set(whole["results"])
+    assert all(len(rows) <= 3 for rows in part["results"].values())
+    same = svc.similar(1, part=(0.0, 10.0))
+    every = svc.similar(1, part=(0.0, 10.0), lang_mode="all", dedupe=False, scene=False)
+    assert 3 not in _ids(same, "best") and 3 in _ids(every, "best")  # the language gate holds for a part
+    assert 2 not in _ids(same, "melody") and 2 in _ids(every, "melody")  # and so does hiding the seed's own song
+    assert every["query"]["language_mode"] == "all" and every["query"]["scene"] == "off" and every["cached"] is True
+
+
+def test_part_of_a_live_seed_cuts_its_embedded_windows(tmp_path):
+    engine = PartEngine()
+    deezer = FakeDeezer(tmp_path)
+    deezer.tracks[99]["duration"] = 240
+    svc = api.AnySong(engine, deezer, META, parts=True)
+    r = svc.similar(99, part=(20.0, 30.0))
+    assert engine.windows == {"melody": [2.0], "samples": [6.0, 7.0], "sonic": [2.0]}
+    assert r["query"]["source"] == "live" and r["query"]["part"]["heard"]["sonic"] == [20.0, 30.0]
+    assert (r["query"]["part"]["start"], r["query"]["part"]["end"]) == (20.0, 30.0)
+    assert r["query"]["parts"]["song_offset_s"] == 48.0
+    svc.known = api.LRU(4)  # the Deezer object is forgotten: the result remembers the song's length
+    assert svc.similar(99)["query"]["parts"]["song_offset_s"] == 48.0
+    assert engine.windows["sonic"] == [0.0, 1.0, 2.0]
+
+
+def _wav(seconds, sr=8000, channels=1, value=0.1):
+    import io
+
+    import soundfile as sf
+
+    rng = np.random.default_rng(0)
+    buf = io.BytesIO()
+    sf.write(buf, (rng.standard_normal((int(seconds * sr), channels)) * value).astype(np.float32), sr, format="WAV",
+             subtype="PCM_16")
+    return buf.getvalue()
+
+
+def test_decode_bytes_reads_clips_in_memory_and_refuses_the_rest():
+    from soundalike.anysong.audio import decode_bytes
+
+    mono, sr = decode_bytes(_wav(6, 8000, channels=2), 30, 5)
+    assert sr == 8000 and mono.shape == (48000,) and mono.dtype == np.float32
+    for data, message in ((b"not audio at all", "could not decode"), (_wav(40), "longer than 30 s"),
+                          (_wav(2), "shorter than 5 s"), (_wav(6, sr=4000), "sample rate"), (b"", "could not decode")):
+        with pytest.raises(ValueError, match=message):
+            decode_bytes(data, 30, 5)
+    # A header that understates its length cannot smuggle in more audio than the limit.
+    assert len(decode_bytes(_wav(30.4), 30)[0]) == 30 * 8000
+
+
+def test_excerpt_clips_hold_only_the_windows_an_excerpt_fills():
+    from soundalike.anysong.audio import excerpt_clips
+
+    rates = {"melody": 16000, "samples": 16000, "sonic": 24000}
+
+    def seconds(length):
+        clips = excerpt_clips(np.arange(int(length * 8000), dtype=np.float32), 8000, rates)
+        return {name: round(len(c) / rates[name], 3) for name, c in clips.items()}
+
+    assert seconds(5) == {"melody": 20.0, "samples": 6.125, "sonic": 10.0}  # repeated to one window each
+    assert seconds(10) == {"melody": 20.0, "samples": 9.188, "sonic": 10.0}
+    assert seconds(15) == {"melody": 20.0, "samples": 12.25, "sonic": 20.0}  # two sound windows, 0-10 and 5-15
+    assert seconds(20) == {"melody": 20.0, "samples": 18.375, "sonic": 20.0}
+    assert seconds(30) == {"melody": 30.0, "samples": 27.562, "sonic": 30.0}  # the windows of a preview
+    ramp = excerpt_clips(np.arange(15 * 8000, dtype=np.float32), 8000, {"sonic": 8000})["sonic"]
+    assert ramp[0] == 0 and ramp[80000] == 5 * 8000 and ramp[-1] == 15 * 8000 - 1
+    with pytest.raises(ValueError):
+        excerpt_clips(np.zeros(0, np.float32), 8000, rates)
+
+
+@pytest.fixture
+def excerpt_server(tmp_path):
+    queue = api.LearnQueue(tmp_path / "queue.jsonl")
+    svc = api.AnySong(PartEngine(), FakeDeezer(tmp_path), META, copy_score=None, excerpts=True, learn=queue,
+                      identify_score=0.95)
+    srv = api.Server(("127.0.0.1", 0), svc, search_per_min=600, similar_per_min=600, excerpt_per_min=12,
+                     cors_origin="https://yassin.app", client_header="CF-Connecting-IP", excerpt_max_bytes=600_000)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    yield srv
+    srv.shutdown()
+    srv.server_close()
+
+
+def post(srv, path, data, headers=None, method="POST"):
+    req = urllib.request.Request(f"http://127.0.0.1:{srv.server_address[1]}{path}", data=data, method=method,
+                                 headers={"Content-Type": "audio/wav"} | (headers or {}))
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            body = resp.read()
+            return resp.status, dict(resp.headers), json.loads(body) if body else None
+    except urllib.error.HTTPError as err:
+        body = err.read()
+        return err.code, dict(err.headers), json.loads(body) if body else None
+
+
+def test_excerpt_ranks_a_clip_and_keeps_nothing(excerpt_server, tmp_path):
+    svc = excerpt_server.service
+    code, headers, body = post(excerpt_server, "/api/anysong/excerpt?k=3", _wav(6))
+    assert code == 200 and headers["Cache-Control"] == "no-store"
+    # The clip is recognised as a recording of song 2 (samples score 0.99 >= 0.95), which then stands for the seed:
+    # it and its other releases (1 and 4) are left out.
+    assert body["query"] == {"id": 2, "artist": "Daft Punk", "title": "One More Time (Radio Edit)",
+                             "source": "excerpt", "seconds": 6.0, "language": "unknown",
+                             "language_mode": "same", "hidden": 0, "scene": "off",
+                             "identified": {"id": 2, "artist": "Daft Punk", "title": "One More Time (Radio Edit)",
+                                            "score": 0.99}}
+    assert [x["id"] for x in body["results"]["melody"]] == [3, 5, 7] and body["cached"] is False
+    assert svc.engine.calls == [("clips", 48000, 8000), ("embed_excerpt", ["melody", "samples", "sonic"]),
+                                ("top", "samples"), ("windows", (2,), api.FETCH)]
+    # A clip the samples model does not place that surely is ranked as it is, against the whole catalog.
+    svc.identify_score = 0.995
+    code, _, body = post(excerpt_server, "/api/anysong/excerpt?k=3", _wav(6))
+    assert "identified" not in body["query"] and "id" not in body["query"]
+    assert [x["id"] for x in body["results"]["melody"]] == [2, 3, 5]
+    assert svc.engine.calls[-1] == ("windows", (), api.FETCH)
+    svc.identify_score = 0.95
+    assert svc.engine.peak == pytest.approx(1.0)  # the quiet clip (peak under 0.5) reaches the models at full scale
+    # No file, no cached result, no learn-queue line: a second upload is computed again.
+    assert len(svc.results) == 0 and not (tmp_path / "queue.jsonl").exists()
+    assert [p.name for p in tmp_path.iterdir()] == []
+    assert post(excerpt_server, "/api/anysong/excerpt", _wav(6))[2]["cached"] is False
+    assert svc.health()["served"]["excerpt"] == 3
+
+
+def test_excerpt_hints_name_the_song_to_leave_out(excerpt_server):
+    svc = excerpt_server.service
+    code, _, body = post(excerpt_server, "/api/anysong/excerpt?artist=Other%20Artist&title=Different%20Song", _wav(6))
+    assert code == 200 and body["query"]["id"] == 5 and body["query"]["title"] == "Different Song"
+    assert svc.engine.calls[-1] == ("windows", (5,), api.FETCH) and "identified" not in body["query"]
+    assert ("top", "samples") not in svc.engine.calls  # a named song is not looked for
+    assert not {5, 6} & {x["id"] for x in body["results"]["melody"]}
+    # A name nothing knows is no error: the clip is ranked as it is, under the names given.
+    svc.deezer.tracks.clear()
+    svc.deezer.search = lambda q, limit: []
+    svc.identify_score = None
+    code, _, body = post(excerpt_server, "/api/anysong/excerpt?artist=Nobody&title=Nothing", _wav(6))
+    assert code == 200 and "id" not in body["query"] and body["query"]["artist"] == "Nobody"
+    assert post(excerpt_server, "/api/anysong/excerpt?isrc=nope", _wav(6))[0] == 400
+
+
+@pytest.mark.parametrize("path,data,status", [
+    ("/api/anysong/excerpt", b"", 411),
+    ("/api/anysong/excerpt", b"x" * 600_001, 413),
+    ("/api/anysong/excerpt", b"garbage" * 100, 422),
+    ("/api/anysong/excerpt", "long", 422),
+    ("/api/anysong/excerpt", "short", 422),
+    ("/api/anysong/excerpt", "silent", 422),
+    ("/api/anysong/excerpt?lang=xx", "ok", 400),
+    ("/api/anysong/excerpt?k=0", "ok", 400),
+    ("/api/anysong/similar?id=1", "ok", 404),
+])
+def test_excerpt_errors(excerpt_server, path, data, status):
+    clips = {"long": lambda: _wav(31, sr=8000), "short": lambda: _wav(3), "silent": lambda: _wav(6, value=0.0),
+             "ok": lambda: _wav(6)}
+    code, headers, body = post(excerpt_server, path, clips[data]() if isinstance(data, str) else data)
+    assert code == status and body["ok"] is False and body["error"] and headers["Cache-Control"] == "no-store"
+    assert excerpt_server.service.pending.acquire(blocking=False)  # no slot is left taken
+    excerpt_server.service.pending.release()
+
+
+def test_excerpt_has_its_own_rate_limit_and_cors_preflight(excerpt_server):
+    ip = {"CF-Connecting-IP": "203.0.113.9"}
+    codes = [post(excerpt_server, "/api/anysong/excerpt", _wav(6), ip)[0] for _ in range(4)]
+    assert codes == [200, 200, 200, 429]  # excerpt_per_min=12 -> burst of 3
+    assert get(excerpt_server, "/api/anysong/similar?id=1", ip)[0] == 200  # the other budgets are untouched
+    code, headers, _ = post(excerpt_server, "/api/anysong/excerpt", None, method="OPTIONS")
+    assert code == 204 and headers["Access-Control-Allow-Origin"] == "https://yassin.app"
+    assert "POST" in headers["Access-Control-Allow-Methods"]
+    assert post(excerpt_server, "/api/anysong/similar", None, method="OPTIONS")[0] == 404
+
+
+def test_excerpt_route_is_off_unless_enabled(server):
+    assert post(server, "/api/anysong/excerpt", _wav(6))[0] == 404
+    assert post(server, "/api/anysong/excerpt", None, method="OPTIONS")[0] == 404
+    assert "excerpt" not in server.service.health()["served"]
+    code, _, body = get(server, "/api/anysong/similar?id=1&part=0-10")
+    assert code == 404 and "not enabled" in body["error"]
+    assert get(server, "/api/anysong/similar?id=1&part=nope")[0] == 400
+
+
+def test_part_off_answers_before_any_lookup_is_spent(server):
+    code, _, body = get(server, "/api/anysong/similar?title=Third%20Song&artist=Nobody&part=0-10")
+    assert code == 404 and "not enabled" in body["error"] and server.service.deezer.searches == 0
+    assert get(server, "/healthz")[2]["parts"] is False
+
+
+@pytest.fixture
+def part_server(tmp_path):
+    svc = api.AnySong(PartEngine(), FakeDeezer(tmp_path, tracks=NEW_SONG), META, copy_score=None, parts=True)
+    srv = api.Server(("127.0.0.1", 0), svc, search_per_min=600, similar_per_min=8, cors_origin="https://yassin.app",
+                     client_header="CF-Connecting-IP")
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    yield srv
+    srv.shutdown()
+    srv.server_close()
+
+
+def test_http_part_is_advertised_validated_and_limited_like_a_new_ranking(part_server):
+    health = get(part_server, "/healthz")[2]
+    assert health["parts"] is True and health["excerpts"] is False
+    ip = {"CF-Connecting-IP": "203.0.113.7"}
+    code, _, body = get(part_server, "/api/anysong/similar?id=1&part=10-20&k=3&lang=all&scene=0&dedupe=0", ip)
+    assert code == 200 and body["cached"] is False and len(body["results"]["melody"]) == 3
+    assert body["query"]["part"] == {"start": 10.0, "end": 20.0, "heard": {
+        "melody": [5.0, 25.0], "samples": [9.19, 21.44], "sonic": [10.0, 20.0]}}
+    assert body["query"]["parts"] == {"min_s": 10.0, "max_s": 30.0, "preview_s": 30.0, "song_offset_s": None}
+    assert body["query"]["language_mode"] == "all" and body["query"]["scene"] == "off"
+    # The whole preview and each new span are rankings of their own for the limiter (similar_per_min=8: burst of 2);
+    # a span that picks windows already ranked is free, as any cached answer.
+    whole = get(part_server, "/api/anysong/similar?id=1", ip)
+    assert whole[0] == 200 and whole[2]["cached"] is False and "part" not in whole[2]["query"]
+    assert get(part_server, "/api/anysong/similar?id=1&part=20-30", ip)[0] == 429
+    assert [get(part_server, "/api/anysong/similar?id=1&part=10-20.4&k=5", ip)[0] for _ in range(3)] == [200] * 3
+    assert get(part_server, "/api/anysong/similar?id=1&part=0-30", ip)[2]["cached"] is True
+    # A span that cannot be is refused before the song is looked up.
+    named = "/api/anysong/similar?title=Brand%20New%20Song&artist=New%20Artist"
+    for span in ("5-9", "0-9.99", "25-35", "20-10", "x"):
+        code, _, body = get(part_server, f"{named}&part={span}")
+        assert code == 400 and "at least 10 apart" in body["error"]
+    assert part_server.service.deezer.searches == 0
+    # A song named by title and artist takes a span too.
+    code, _, body = get(part_server, f"{named}&part=0-10")
+    assert code == 200 and body["query"]["source"] == "live" and body["query"]["part"]["heard"]["sonic"] == [0.0, 10.0]
+
+
+def test_parts_alone_do_not_open_the_excerpt_route(part_server):
+    assert post(part_server, "/api/anysong/excerpt", _wav(6))[0] == 404
+    assert post(part_server, "/api/anysong/excerpt", None, method="OPTIONS")[0] == 404
+    assert post(part_server, "/api/anysong/excerpt?title=x&artist=y", _wav(12))[0] == 404
+    assert "excerpt" not in part_server.service.health()["served"]
+
+
+def test_production_unit_serves_parts_but_neither_excerpts_nor_identification():
+    from pathlib import Path
+
+    unit = (Path(__file__).parents[1] / "deploy" / "homelab" / "soundalike-anysong.service").read_text(encoding="utf-8")
+    start = unit[unit.index("ExecStart="):unit.index("\nRestart=")]
+    flags = [word for word in start.replace("\\\n", " ").split() if word.startswith("--")]
+    assert "--parts" in flags and len(flags) == len(set(flags))
+    assert not [flag for flag in flags if flag.startswith(("--excerpt", "--identify", "--part-sound"))]
+
+
+def test_identify_score_cannot_be_set_without_excerpts(capsys):
+    pytest.importorskip("torch")
+    with pytest.raises(SystemExit):
+        api.main(["--index", "nowhere", "--identify-score", "0.55"])
+    assert "--identify-score" in capsys.readouterr().err
+
+
+def test_the_seeds_own_song_is_hidden_under_another_spelling_of_its_names(tmp_path):
+    # Deezer names the live seed with the accent; the catalog's releases of the song are spelled without it.
+    meta = {1: ("Khruangbin", "Maria Tambien (Live at Sydney Opera House)"), 2: ("Khruangbin", "Mary Always"),
+            3: ("Other Band", "Maria Tambi\u00e9n"), 4: ("The Khruangbin", "MARIA TAMBIE\u0301N - Remastered"),
+            5: ("Other Artist", "Different Song")}
+    seed = {99: {"id": 99, "title": "Maria Tambi\u00e9n", "artist": {"name": "Khruangbin"}, "album": {},
+                 "duration": 200, "preview": "u"}}
+    engine = FakeEngine(ids=tuple(meta), rows=[(1, 0.9), (2, 0.8), (3, 0.7), (4, 0.6), (5, 0.5)])
+    svc = api.AnySong(engine, FakeDeezer(tmp_path, tracks=seed), meta, copy_score=None)
+    r = svc.similar(99)
+    # Its own song goes, whatever the spelling; the artist's other song and another artist's version stay.
+    assert _ids(r, "melody") == [2, 3, 5] and _ids(r, "best") == [2, 3, 5]
+    assert _ids(svc.similar(99, dedupe=False), "melody") == [1, 2, 3, 4, 5]
+    # A catalog seed spelled without the accent hides the accented releases the same way.
+    assert _ids(svc.similar(1), "melody") == [2, 3, 5]
+    # Names that differ in more than spelling are other songs, and other songs keep their own releases apart.
+    assert _ids(svc.similar(2), "melody") == [1, 3, 4, 5]
+
+
+def test_engine_part_of_a_stored_seed_matches_a_live_search_on_those_windows():
+    pytest.importorskip("torch")
+    from soundalike.anysong import serve
+    from soundalike.anysong.audio import part_windows
+
+    rng = np.random.default_rng(4)
+    ids = np.arange(500, 560, dtype=np.int64)
+    eng = serve.Engine.__new__(serve.Engine)
+    eng.device, eng.indexes, eng.channels = "cpu", {}, []
+    raw = {}
+    for name, count in (("melody", 3), ("samples", 8), ("sonic", 3)):
+        ch = serve.CHANNELS[name]
+        raw[name] = rng.standard_normal((len(ids), count, 16)).astype(np.float16)
+        eng.channels.append(ch)
+        eng.indexes[name] = serve.ChannelIndex.from_windows(ch, ids, raw[name])
+    tid, part = int(ids[11]), part_windows(10, 20)
+    stored, _ = eng.search_stored(tid, 10, part=part)
+    live, _ = eng.search_windows({n: w[11][part[n]] for n, w in raw.items()}, 10, [tid])
+    whole, _ = eng.search_stored(tid, 10)
+    for name in raw:
+        assert [t for t, _ in stored[name]] == [t for t, _ in live[name]]
+        np.testing.assert_allclose([s for _, s in stored[name]], [s for _, s in live[name]], atol=2e-3)
+    assert [t for t, _ in stored["sonic"]] != [t for t, _ in whole["sonic"]]
+    scores = eng.score_tracks("sonic", ids[:5], query_track=tid, part=part["sonic"])
+    assert scores == pytest.approx(eng.score_tracks("sonic", ids[:5], windows=raw["sonic"][11][part["sonic"]]),
+                                   abs=2e-3)
+    # The best song of the whole index for a clip of a stored song is that song.
+    best = eng.top_match("sonic", raw["sonic"][11][:1])
+    assert best[0] == tid and best[1] == pytest.approx(1.0, abs=2e-3)
