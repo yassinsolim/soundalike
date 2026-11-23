@@ -114,15 +114,23 @@ song it recognises nearby, or for a link shared from Spotify or Apple Music,
 from the share sheet, Control Center, or the Action Button. It replaces the
 older cross-platform app on iOS.
 
-The cross-platform app in [`mobile/`](mobile/README.md) (Expo, iOS and Android)
-works from the share sheet: you share a track from Spotify, pick Soundalike, and
+On Android, the native app in [`android/`](android/README.md) does the same
+without touching Spotify: share a song from Spotify, Apple Music or YouTube
+Music and the matches open as a sheet over the music app, or reach the song that
+is playing in one tap from a Quick Settings tile, a widget or an optional
+floating button. It needs no sign-in. It replaces the older cross-platform app
+on Android.
+
+The older cross-platform app in [`mobile/`](mobile/README.md) (Expo, iOS and
+Android) works from the share sheet: you share a track from Spotify, pick Soundalike, and
 get the same twenty matches. Tapping a result opens it back in Spotify. It does
 not ask you to sign in and it has no Spotify credentials in it. It reads the
 public page for the track you shared and searches the same catalog as the
 website.
 
-Neither app is on the App Store or Google Play yet. To build and run them now,
-see the [iPhone guide](ios/README.md) and the [mobile guide](mobile/README.md).
+None of the apps is on the App Store or Google Play yet. To build and run them
+now, see the [iPhone guide](ios/README.md), the [Android guide](android/README.md)
+and the [mobile guide](mobile/README.md).
 
 ### As a local app or command-line tool
 
@@ -231,7 +239,9 @@ the displayed result list are not sent to Discord.
 The iPhone app's data use is described in its [privacy policy](ios/PRIVACY.md):
 it sends the song's title, artist and, when known, its ISRC or shared link, and
 a Spotify token, if you connect Spotify, stays in the iOS Keychain and goes only
-to Spotify.
+to Spotify. The Android app's is in its [privacy policy](android/PRIVACY.md): it
+sends the same song details, has no sign-in, and uses notification access only
+to read the playing song from the music app.
 
 The cross-platform companion app has no Spotify sign-in at all. When you share a track
 it reads that track's public Spotify page for the title, artist, and cover, then
@@ -448,6 +458,12 @@ npm --prefix mobile install
 npm --prefix mobile test
 ```
 
+Run the Android app's unit tests and lint (JDK 17 and the Android SDK):
+
+```bash
+(cd android && ./gradlew :core:test :app:lintDebug)
+```
+
 Run the iPhone app's package tests (macOS with Xcode; not part of CI):
 
 ```bash
@@ -467,6 +483,7 @@ webapp/                  Hosted app, API handlers, evaluator, and Node tests
 integrations/spicetify/  Spotify extension, signed updater, and setup guides
 mobile/                  Cross-platform (Expo) companion app
 ios/                     Native iPhone app, share extension, and controls
+android/                 Native Android app: share sheet, playing song, tile, widget
 deploy/homelab/          Always-on service, monitoring, deployment, and rollback
 benchmarks/              Frozen evaluation inputs
 docs/                    Research notes, results, and the case study

@@ -1,0 +1,25 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Debug builds may talk to a local engine over plain http (http://10.0.2.2:8792 from the emulator). -->
+    <application
+        android:usesCleartextTraffic="true"
+        tools:ignore="UnusedAttribute">
+
+        <!-- Stands in for a music player in tests: publishes a media session with the given song. -->
+        <activity
+            android:name=".debug.FakePlayerActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay" />
+
+        <!-- Stands in for a music app's Share button: opens the system share sheet with a song link. -->
+        <activity
+            android:name=".debug.FakeShareActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay" />
+    </application>
+</manifest>
