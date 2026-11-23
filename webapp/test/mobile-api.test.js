@@ -21,6 +21,15 @@ const ITUNES_LOOKUP = JSON.parse(fixture("itunes-lookup-song.json"));
 const ITUNES_SEARCH = JSON.parse(fixture("itunes-search-song.json"));
 const DEEZER_TRACK = JSON.parse(fixture("deezer-track.json"));
 const ENGINE = JSON.parse(fixture("engine-similar.json"));
+// Recorded on 2026-11-23: ListenBrainz's Spotify ids for the engine fixture's
+// three results and for "99 Luftballons", and Spotify's embed pages of the ids
+// it gave for the first two results.
+const LISTENBRAINZ = JSON.parse(fixture("listenbrainz-spotify-ids.json"));
+const OOMPH_IDS = ["4dpWUmLyYPo4vMk5FTMnMv", "0v7uLvgfSSwPuEtLg4eSGt"];
+const EISBRECHER_ID = "5zP1tnylWUoVgfdQZiyACB";
+const CANDIDATE_PAGES = Object.fromEntries(
+  [...OOMPH_IDS, EISBRECHER_ID].map((id) => [id, fixture(`spotify-embed-${id}.html`)]),
+);
 
 const SPOTIFY_ID = "5awDvzxWfd53SSrsRZ8pXO";
 const SPOTIFY_LINK = `https://open.spotify.com/intl-de/track/${SPOTIFY_ID}?si=abc`;
@@ -66,6 +75,9 @@ function network(routes = {}) {
       reply(url.pathname === "/lookup" ? ITUNES_LOOKUP : ITUNES_SEARCH),
     "api.deezer.com": (url) => reply(deezerTrack(url.pathname.split("/").pop())),
     "engine.test": () => reply(ENGINE),
+    // ListenBrainz knows none of the songs unless a test says otherwise.
+    "labs.api.listenbrainz.org": (_, options) =>
+      reply(JSON.parse(options.body).map((query) => ({ ...query, spotify_track_ids: [] }))),
   };
   const fetch = async (input, options = {}) => {
     const url = new URL(input);
@@ -77,6 +89,28 @@ function network(routes = {}) {
   return { fetch, calls, count: (host) => calls.filter((url) => url.hostname === host).length };
 }
 
+/** ListenBrainz and Spotify's embed pages as recorded; `pages` replaces or adds embed pages by track id. */
+function trackLookup(pages = {}) {
+  return {
+    "labs.api.listenbrainz.org": (_, options) =>
+      reply(
+        JSON.parse(options.body).map((query) => ({
+          ...query,
+          spotify_track_ids:
+            LISTENBRAINZ.find(
+              (known) => known.artist_name === query.artist_name && known.track_name === query.track_name,
+            )?.spotify_track_ids ?? [],
+        })),
+      ),
+    "open.spotify.com": (url, options) => {
+      const id = url.pathname.split("/").pop();
+      const page = { ...CANDIDATE_PAGES, ...pages }[id];
+      if (typeof page === "function") return page(url, options);
+      return reply(page ?? EMBED_HTML);
+    },
+  };
+}
+
 function service(net, options = {}) {
   return createMobileService({
     fetch: net.fetch,
@@ -86,6 +120,8 @@ function service(net, options = {}) {
     engineTimeoutMs: 200,
     now: options.now,
     appleEagerRows: options.appleEagerRows,
+    lookupTimeoutMs: 200,
+    verifyWaitMs: options.verifyWaitMs ?? 200,
   });
 }
 
@@ -142,6 +178,7 @@ test("a Spotify link returns the documented response shape", async () => {
     artwork: body.query.artwork,
     platform: "spotify",
     source_url: `https://open.spotify.com/track/${SPOTIFY_ID}`,
+    spotify_id: SPOTIFY_ID,
     language: "de",
     storefront: "us",
     deezer_id: ENGINE.query.id,
@@ -160,6 +197,7 @@ test("a Spotify link returns the documented response shape", async () => {
     spotify_url: `https://open.spotify.com/search/isrc%3A${DEEZER_TRACK.isrc}`,
     spotify_exact: false,
     spotify_kind: "isrc_search",
+    spotify_id: null,
     apple_music_url: "https://music.apple.com/us/search?term=OOMPH!%20Gekreuzigt%202006",
     apple_exact: false,
   });
@@ -172,7 +210,14 @@ test("a Spotify link returns the documented response shape", async () => {
     matched_artist: ENGINE.query.artist,
     hidden: ENGINE.query.hidden,
   });
-  assert.deepEqual(body.links, { spotify_exact: 0, spotify_isrc: 3, apple_exact: 0, spotify_lookup: false, apple_eager_rows: 5 });
+  assert.deepEqual(body.links, {
+    spotify_exact: 0,
+    spotify_isrc: 3,
+    apple_exact: 0,
+    spotify_lookup: true,
+    spotify_source: "metadata",
+    apple_eager_rows: 5,
+  });
 
   const engineCall = net.calls.find((url) => url.hostname === "engine.test");
   assert.equal(engineCall.pathname, "/api/anysong/similar");
@@ -212,7 +257,14 @@ test("an Apple Music link resolves through iTunes and maps the top rows", async 
   assert.equal(search.searchParams.get("term"), "OOMPH! Gekreuzigt 2006");
   assert.equal(search.searchParams.get("country"), "de");
   assert.equal(search.searchParams.get("entity"), "song");
-  assert.deepEqual(body.links, { spotify_exact: 0, spotify_isrc: 3, apple_exact: 1, spotify_lookup: false, apple_eager_rows: 2 });
+  assert.deepEqual(body.links, {
+    spotify_exact: 0,
+    spotify_isrc: 3,
+    apple_exact: 1,
+    spotify_lookup: true,
+    spotify_source: "metadata",
+    apple_eager_rows: 2,
+  });
 });
 
 test("repeat requests are answered from memory", async () => {
@@ -588,7 +640,14 @@ test("with Spotify client credentials results carry exact track links", async ()
       [false, "https://open.spotify.com/search/isrc%3ADEA620000001"],
     ],
   );
-  assert.deepEqual(body.links, { spotify_exact: 2, spotify_isrc: 1, apple_exact: 0, spotify_lookup: true, apple_eager_rows: 5 });
+  assert.deepEqual(body.links, {
+    spotify_exact: 2,
+    spotify_isrc: 1,
+    apple_exact: 0,
+    spotify_lookup: true,
+    spotify_source: "credentials",
+    apple_eager_rows: 5,
+  });
   assert.equal(net.count("accounts.spotify.com"), 1, "one token serves every lookup");
   assert.ok(seen.includes("track:Willkommen artist:Unheilig"));
 
@@ -699,4 +758,265 @@ test("TtlCache expires and evicts; the bucket refills over its window", () => {
   assert.equal(bucket.take(), false, "a forced call is paid back first");
   clock += 500;
   assert.equal(bucket.take(), true);
+});
+
+// ---- Spotify track ids without credentials ----------------------------------
+
+const lookups = (net) => net.calls.filter((url) => url.hostname === "labs.api.listenbrainz.org").length;
+const embeds = (net) => net.calls.filter((url) => url.pathname.startsWith("/embed/track/")).map((url) => url.pathname.split("/").pop());
+const trackRows = (body) => body.results.map((row) => [row.spotify_kind, row.spotify_exact, row.spotify_id, row.spotify_url]);
+
+test("without credentials one ListenBrainz call gives the rows their Spotify tracks", async () => {
+  const sent = [];
+  const routes = trackLookup();
+  const net = network({
+    ...routes,
+    "labs.api.listenbrainz.org": (url, options) => {
+      assert.equal(url.pathname, "/spotify-id-from-metadata/json");
+      assert.equal(options.method, "POST");
+      assert.equal(options.headers["Content-Type"], "application/json");
+      assert.match(options.headers["User-Agent"], /^soundalike-mobile-api\/\d+\.\d+ \(\+https:\/\/soundalike\.yassin\.app; /);
+      sent.push(JSON.parse(options.body));
+      return routes["labs.api.listenbrainz.org"](url, options);
+    },
+  });
+  const { similarHandler } = service(net);
+  const { status, headers, body } = await call(similarHandler, similarPath({ url: SPOTIFY_LINK, k: "3" }));
+  assert.equal(status, 200);
+  assert.deepEqual(trackRows(body), [
+    ["track", true, OOMPH_IDS[0], `https://open.spotify.com/track/${OOMPH_IDS[0]}`],
+    ["track", true, EISBRECHER_ID, `https://open.spotify.com/track/${EISBRECHER_ID}`],
+    ["isrc_search", false, null, "https://open.spotify.com/search/isrc%3ADEA620000001"],
+  ]);
+  assert.deepEqual(body.links, {
+    spotify_exact: 2,
+    spotify_isrc: 1,
+    apple_exact: 0,
+    spotify_lookup: true,
+    spotify_source: "metadata",
+    apple_eager_rows: 5,
+  });
+  assert.equal(headers["cache-control"], "public, max-age=300");
+  // One call for the whole list. The seed came with its Spotify id, so it is not asked about.
+  assert.deepEqual(sent, [
+    [
+      { artist_name: "OOMPH!", release_name: DEEZER_TRACK.album.title, track_name: "Gekreuzigt 2006" },
+      { artist_name: "Eisbrecher", release_name: DEEZER_TRACK.album.title, track_name: "1000 Flammen" },
+      { artist_name: "Unheilig", release_name: DEEZER_TRACK.album.title, track_name: "Willkommen" },
+    ],
+  ]);
+  // Only each row's first candidate is checked on Spotify's embed page.
+  assert.deepEqual(embeds(net).sort(), [SPOTIFY_ID, OOMPH_IDS[0], EISBRECHER_ID].sort());
+
+  // Hits, misses and checks are remembered: the same answer again asks nobody.
+  const before = net.calls.length;
+  const again = await call(similarHandler, similarPath({ url: SPOTIFY_LINK, k: "3" }));
+  assert.deepEqual(again.body, body);
+  assert.equal(net.calls.length, before);
+});
+
+test("a seed that came without a Spotify id is looked up with the rows", async () => {
+  const sent = [];
+  const routes = trackLookup({ "2BYgWai3FjLyyikzlzKfQf": EMBED_HTML.replaceAll("Du hast", "99 Luftballons") });
+  const net = network({
+    ...routes,
+    "labs.api.listenbrainz.org": (url, options) => {
+      sent.push(JSON.parse(options.body));
+      return routes["labs.api.listenbrainz.org"](url, options);
+    },
+  });
+  const { body } = await call(service(net, { appleEagerRows: 0 }).similarHandler, similarPath({ url: APPLE_LINK, platform: "both", k: "3" }));
+  assert.equal(body.query.platform, "both");
+  assert.equal(body.query.spotify_id, "2BYgWai3FjLyyikzlzKfQf");
+  assert.equal(sent.length, 1);
+  assert.deepEqual(sent[0].at(-1), { artist_name: "Nena", release_name: "", track_name: "99 Luftballons" });
+  assert.equal(body.results[0].spotify_id, OOMPH_IDS[0]);
+
+  // An Apple-only answer needs no Spotify links, so nothing is asked.
+  const appleOnly = network(trackLookup());
+  const apple = await call(service(appleOnly).similarHandler, similarPath({ url: APPLE_LINK, k: "3" }));
+  assert.equal(lookups(appleOnly), 0);
+  assert.equal(apple.body.query.spotify_id, null);
+  assert.equal(apple.body.results.every((row) => row.spotify_id === null), true);
+});
+
+test("a candidate that is not the song is dropped, and the link endpoint checks the others", async () => {
+  const other = EMBED_HTML; // "Du hast": another song
+  const unplayable = CANDIDATE_PAGES[EISBRECHER_ID].replace('"isPlayable":true', '"isPlayable":false');
+  assert.notEqual(unplayable, CANDIDATE_PAGES[EISBRECHER_ID]);
+  const net = network(trackLookup({ [OOMPH_IDS[0]]: other, [EISBRECHER_ID]: unplayable }));
+  const { similarHandler, linkHandler } = service(net);
+  const { body } = await call(similarHandler, similarPath({ url: SPOTIFY_LINK, k: "3" }));
+  assert.deepEqual(trackRows(body).map((row) => row.slice(0, 3)), [
+    ["isrc_search", false, null],
+    ["isrc_search", false, null],
+    ["isrc_search", false, null],
+  ]);
+
+  const base = "/api/ratings?__soundalike_handler=mobile-link&";
+  const harder = await call(linkHandler, `${base}deezer_id=${FIRST_ID}&platform=spotify`);
+  assert.equal(harder.status, 200);
+  assert.deepEqual(harder.body, {
+    ok: true,
+    deezer_id: FIRST_ID,
+    platform: "spotify",
+    url: `https://open.spotify.com/track/${OOMPH_IDS[1]}`,
+    exact: true,
+    kind: "track",
+    spotify_id: OOMPH_IDS[1],
+    storefront: null,
+    retry_after: null,
+  });
+  assert.equal(harder.headers["cache-control"], "public, max-age=86400");
+  // The next answer has it too.
+  const next = await call(similarHandler, similarPath({ url: SPOTIFY_LINK, k: "3" }));
+  assert.equal(next.body.results[0].spotify_id, OOMPH_IDS[1]);
+  assert.equal(next.body.results[1].spotify_id, null);
+});
+
+test("of several candidates the link endpoint picks the closest in length, and never another version", async () => {
+  const page = (id, changes) => {
+    let html = CANDIDATE_PAGES[id];
+    for (const [from, to] of changes) {
+      assert.ok(html.includes(from), from);
+      html = html.replaceAll(from, to);
+    }
+    return html;
+  };
+  // Deezer says 217 s. The first candidate is 215.1 s, the second 216.1 s.
+  const closest = network(trackLookup());
+  const base = "/api/ratings?__soundalike_handler=mobile-link&";
+  const picked = await call(service(closest).linkHandler, `${base}deezer_id=${FIRST_ID}&platform=spotify`);
+  assert.equal(picked.body.spotify_id, OOMPH_IDS[1]);
+  assert.deepEqual(embeds(closest).sort(), [...OOMPH_IDS].sort());
+
+  // A live recording is another version, however close its length.
+  const live = network(
+    trackLookup({ [OOMPH_IDS[1]]: page(OOMPH_IDS[1], [['"name":"Gekreuzigt 2006"', '"name":"Gekreuzigt 2006 - Live"']]) }),
+  );
+  const studio = await call(service(live).linkHandler, `${base}deezer_id=${FIRST_ID}&platform=spotify`);
+  assert.equal(studio.body.spotify_id, OOMPH_IDS[0]);
+
+  // Nothing known: the ISRC search, as before.
+  const none = network();
+  const fallback = await call(service(none).linkHandler, `${base}deezer_id=${FIRST_ID}&platform=spotify`);
+  assert.deepEqual(
+    [fallback.body.kind, fallback.body.exact, fallback.body.spotify_id, fallback.body.url],
+    ["isrc_search", false, null, `https://open.spotify.com/search/isrc%3A${DEEZER_TRACK.isrc}`],
+  );
+});
+
+test("a check that is slow does not hold the answer: the first candidate stands until it is checked", async () => {
+  let release;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+  const slow = async (url) => {
+    await gate;
+    return reply(CANDIDATE_PAGES[url.pathname.split("/").pop()]);
+  };
+  const net = network(trackLookup({ [OOMPH_IDS[0]]: slow, [EISBRECHER_ID]: slow }));
+  const { similarHandler } = service(net, { verifyWaitMs: 30 });
+  const started = Date.now();
+  const first = await call(similarHandler, similarPath({ url: SPOTIFY_LINK, k: "3" }));
+  assert.ok(Date.now() - started < 400, "did not wait for the embed pages");
+  assert.deepEqual(first.body.results.map((row) => row.spotify_id), [OOMPH_IDS[0], EISBRECHER_ID, null]);
+  assert.equal(first.headers["cache-control"], "public, max-age=20", "an unchecked answer is not kept for long");
+
+  release();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const before = net.calls.length;
+  const second = await call(similarHandler, similarPath({ url: SPOTIFY_LINK, k: "3" }));
+  assert.equal(second.headers["cache-control"], "public, max-age=300");
+  assert.equal(net.calls.length, before, "the check finished in the background");
+});
+
+test("ListenBrainz failing, throttling or answering nonsense leaves search links and is not hammered", async () => {
+  const fallback = [
+    ["isrc_search", false, null],
+    ["isrc_search", false, null],
+    ["isrc_search", false, null],
+  ];
+  const kinds = (body) => trackRows(body).map((row) => row.slice(0, 3));
+  for (const broken of [
+    () => reply("not json"),
+    () => reply([{ spotify_track_ids: [OOMPH_IDS[0]] }]), // not one answer per question
+    () => reply({ error: "no" }, 400),
+    () => { throw new TypeError("network"); },
+    (_, options) => hang(options),
+  ]) {
+    const net = network({ ...trackLookup(), "labs.api.listenbrainz.org": broken });
+    const answer = await call(service(net).similarHandler, similarPath({ url: SPOTIFY_LINK, k: "3" }));
+    assert.equal(answer.status, 200);
+    assert.deepEqual(kinds(answer.body), fallback);
+  }
+  // Ids that are not Spotify track ids are ignored.
+  const odd = network({
+    ...trackLookup(),
+    "labs.api.listenbrainz.org": (_, options) =>
+      reply(JSON.parse(options.body).map(() => ({ spotify_track_ids: ["javascript:alert(1)", 7, null, "short"] }))),
+  });
+  assert.deepEqual(kinds((await call(service(odd).similarHandler, similarPath({ url: SPOTIFY_LINK, k: "3" }))).body), fallback);
+
+  // 429 and 5xx pause the lookups: for Retry-After, else for a minute.
+  for (const [response, pauseMs] of [
+    [() => reply("slow down", 429, { "retry-after": "120" }), 120_000],
+    [() => reply("down", 503), 60_000],
+  ]) {
+    let clock = 1_000_000;
+    let failing = true;
+    const routes = trackLookup();
+    const net = network({
+      ...routes,
+      "labs.api.listenbrainz.org": (url, options) => (failing ? response() : routes["labs.api.listenbrainz.org"](url, options)),
+    });
+    const { similarHandler } = service(net, { now: () => clock });
+    assert.deepEqual(kinds((await call(similarHandler, similarPath({ url: SPOTIFY_LINK, k: "3" }))).body), fallback);
+    assert.equal(lookups(net), 1);
+    failing = false;
+    clock += pauseMs - 1000;
+    assert.deepEqual(kinds((await call(similarHandler, similarPath({ url: SPOTIFY_LINK, k: "3" }))).body), fallback);
+    assert.equal(lookups(net), 1, "not asked again while paused");
+    clock += 2000;
+    const resumed = await call(similarHandler, similarPath({ url: SPOTIFY_LINK, k: "3" }));
+    assert.equal(lookups(net), 2);
+    assert.equal(resumed.body.results[0].spotify_id, OOMPH_IDS[0]);
+  }
+});
+
+test("Spotify refusing its embed pages pauses the checks and the first candidate stands", async () => {
+  let clock = 1_000_000;
+  const refuse = () => reply("too many", 429);
+  const net = network(trackLookup({ [OOMPH_IDS[0]]: refuse, [EISBRECHER_ID]: refuse }));
+  const { similarHandler } = service(net, { now: () => clock });
+  const first = await call(similarHandler, similarPath({ url: SPOTIFY_LINK, k: "3" }));
+  assert.deepEqual(first.body.results.map((row) => row.spotify_id), [OOMPH_IDS[0], EISBRECHER_ID, null]);
+  assert.equal(first.headers["cache-control"], "public, max-age=20");
+  const asked = embeds(net).length;
+  clock += 30_000;
+  await call(similarHandler, similarPath({ url: SPOTIFY_LINK, k: "3" }));
+  assert.equal(embeds(net).length, asked, "no embed page is fetched while paused");
+});
+
+test("with credentials Spotify's own search comes first and ListenBrainz gets only the rest", async () => {
+  const sent = [];
+  const routes = trackLookup();
+  const net = network({
+    ...routes,
+    "accounts.spotify.com": () => reply({ access_token: "token-1", expires_in: 3600 }),
+    "api.spotify.com": (url) => {
+      if (url.pathname.startsWith("/v1/tracks/")) return reply({ external_ids: {} });
+      const found = url.searchParams.get("q") === `isrc:${DEEZER_TRACK.isrc}`;
+      return reply({ tracks: { items: found ? [{ id: "1a2B3c4D5e6F7g8H9i0J1k", name: "Gekreuzigt 2006", artists: [{ name: "OOMPH!" }] }] : [] } });
+    },
+    "labs.api.listenbrainz.org": (url, options) => {
+      sent.push(JSON.parse(options.body).map((query) => query.artist_name));
+      return routes["labs.api.listenbrainz.org"](url, options);
+    },
+  });
+  const { similarHandler } = service(net, { env: { SPOTIFY_CLIENT_ID: "client", SPOTIFY_CLIENT_SECRET: "secret" } });
+  const { body } = await call(similarHandler, similarPath({ url: SPOTIFY_LINK, k: "3" }));
+  assert.deepEqual(body.results.map((row) => row.spotify_id), ["1a2B3c4D5e6F7g8H9i0J1k", EISBRECHER_ID, null]);
+  assert.deepEqual(sent, [["Eisbrecher", "Unheilig"]]);
+  assert.equal(body.links.spotify_source, "credentials");
 });

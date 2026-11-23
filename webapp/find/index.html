@@ -211,7 +211,8 @@ audio.addEventListener("ended", stopPreview);
 function wantExact(entry) {
   const answer = state.answer;
   if (!answer || rowLink(entry.row).exact || entry.asked?.[state.platform]) return;
-  if (state.platform === "spotify" && !answer.links?.spotify_lookup) return;
+  // Without Spotify credentials the server already asked for every row's track in one call.
+  if (state.platform === "spotify" && answer.links?.spotify_source !== "credentials") return;
   if (state.upgrades >= UPGRADE_LIMIT) return;
   state.queue.push(entry);
   pump();

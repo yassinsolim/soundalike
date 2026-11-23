@@ -201,27 +201,29 @@ Music country; default: the link's storefront, then the listener's country, then
     "title": "Du hast", "artist": "Rammstein", "isrc": "DED579704010",
     "artwork": "https://image-cdn-ak.spotifycdn.com/image/…", "platform": "spotify",
     "source_url": "https://open.spotify.com/track/5awDvzxWfd53SSrsRZ8pXO",
-    "language": "de", "storefront": "us", "deezer_id": 630595142
+    "spotify_id": "5awDvzxWfd53SSrsRZ8pXO", "language": "de", "storefront": "us", "deezer_id": 630595142
   },
   "results": [
     {
       "title": "Gekreuzigt 2006", "artist": "OOMPH!", "match": 95, "deezer_id": 567060,
       "isrc": "DEC760600298", "artwork": "https://cdn-images.dzcdn.net/…/250x250-000000-80-0-0.jpg",
       "preview_url": "https://cdnt-preview.dzcdn.net/….mp3?hdnea=…",
-      "spotify_url": "https://open.spotify.com/search/isrc%3ADEC760600298", "spotify_exact": false,
-      "spotify_kind": "isrc_search",
+      "spotify_url": "https://open.spotify.com/track/4dpWUmLyYPo4vMk5FTMnMv", "spotify_exact": true,
+      "spotify_kind": "track", "spotify_id": "4dpWUmLyYPo4vMk5FTMnMv",
       "apple_music_url": "https://music.apple.com/us/search?term=OOMPH!%20Gekreuzigt%202006", "apple_exact": false
     }
   ],
   "engine": { "list": "main", "k": 20, "lang": "same", "source": "catalog",
               "matched_title": "Du hast", "matched_artist": "Rammstein", "hidden": 0 },
-  "links": { "spotify_exact": 0, "spotify_isrc": 20, "apple_exact": 0, "spotify_lookup": false,
-             "apple_eager_rows": 5 }
+  "links": { "spotify_exact": 13, "spotify_isrc": 7, "apple_exact": 0, "spotify_lookup": true,
+             "spotify_source": "metadata", "apple_eager_rows": 5 }
 }
 ```
 
 - `query`: the shared song. `artist` lists every artist; `isrc` and `artwork` are `null` when unknown; `platform`
-  is the app the result links are meant for; `source_url` is the song's own page (`null` for `isrc` and
+  is the app the result links are meant for; `spotify_id` is the seed's Spotify track (from the link, otherwise
+  looked up like a result's; `null` when unknown or when `platform` is `apple`); `source_url` is the song's own
+  page (`null` for `isrc` and
   `title`+`artist` seeds); `language` is the engine's label (`unknown` possible); `deezer_id` is the recording the
   engine ranked from (`engine.matched_title` / `matched_artist` name it, and may be another release of the song).
 - `results`: in rank order. `match` is the sound match from 0 to 100 (`null` when the engine has none). `isrc`,
@@ -233,13 +235,21 @@ Music country; default: the link's storefront, then the listener's country, then
   when the link is the song's own page (`open.spotify.com/track/<id>`, `music.apple.com/…?i=<id>`); `false` means
   a search link. A client with a better lookup of its own (MusicKit by ISRC, for example) should use it instead of
   a link marked `false`.
-  - **Spotify**: `spotify_kind` says which of three links `spotify_url` is. `track`: the song's own page; only
-    with `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` set on the server (client-credentials flow, no user;
-    looked up by ISRC, then by title and artist; `links.spotify_lookup` is then `true`). `isrc_search`:
-    `https://open.spotify.com/search/isrc%3A<ISRC>`, a search that lists exactly that recording, used whenever
-    the result's ISRC is known; the listener taps once more to play it, and `spotify_exact` stays `false`.
-    `search`: a search for artist and title, only when Deezer gave no ISRC in time. Without credentials every link
-    is one of the last two (`links.spotify_isrc` counts the ISRC ones).
+  - **Spotify**: `spotify_kind` says which of three links `spotify_url` is, and `spotify_id` is the track id or
+    `null`.
+    - `track`: `https://open.spotify.com/track/<spotify_id>`. On a phone with Spotify this opens the song and
+      starts playing it (as does `spotify:track:<spotify_id>`). The id comes from one of two places
+      (`links.spotify_source`): `credentials`, Spotify's own search by ISRC, then by title and artist, when
+      `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` are set on the server (client-credentials flow, no user);
+      otherwise `metadata`, described under [Spotify tracks without credentials](#spotify-tracks-without-credentials).
+      A `metadata` id is matched on artist and title, so it **can be another release of the same song** (the
+      album cut instead of the single, a remaster) than the recording the engine ranked; `isrc` still names that
+      one.
+    - `isrc_search`: `https://open.spotify.com/search/isrc%3A<ISRC>`, a search that lists exactly that recording,
+      used when no track id was found but the ISRC is known. The listener taps once more to play it.
+    - `search`: a search for artist and title, only when Deezer gave no ISRC in time.
+
+    `links.spotify_exact` and `links.spotify_isrc` count the first two kinds.
   - **Apple Music**: matched through the iTunes Search API, which allows about 20 calls a minute for the whole
     server. So only the first `links.apple_eager_rows` results (5) are matched up front, and only when `platform`
     is `apple` or `both`; results matched earlier come from memory for free. The rest carry search links: call
@@ -279,12 +289,58 @@ Errors are `{"ok": false, "error": {"code", "message"}}`; `message` is fit to sh
 ```
 
 `kind` is `track`, `isrc_search` (Spotify only) or `search`, as for `spotify_kind` above; `exact` is `true` only
-for `track`.
+for `track`. With `platform=spotify` the answer also has `spotify_id` (the track id or `null`), and the server
+tries harder than for a whole list: it checks up to five of the candidates it knows instead of the first, and
+takes the one closest in length to Deezer's recording.
 `exact: false` with `retry_after: null` means the store has no clear match (the search link is the answer; this
 is remembered for a day). `retry_after: <seconds>` means the iTunes budget is spent: `url` is still a usable search
 link, and asking again after that many seconds may return the song's page. Ask for at most a screenful of rows,
 one at a time, and stop at the first `retry_after`. Errors: 400 `invalid_parameter`, 404 `track_not_found`,
 502 `lookup_unavailable`.
+
+### Spotify tracks without credentials
+
+Opening `open.spotify.com/track/<id>` on a phone plays the song at once; an ISRC search needs one more tap, and
+nothing on a phone can turn an ISRC into a track id without Spotify credentials. The website has none (only a
+public PKCE client id), so the server finds track ids like this:
+
+1. **One call per answer** to ListenBrainz Labs, `POST https://labs.api.listenbrainz.org/spotify-id-from-metadata/json`,
+   with every result (and the seed, when it did not come as a Spotify link) as `{artist_name, release_name,
+   track_name}`. It matches names as written, so each song is asked in up to four spellings in that same call:
+   Deezer's full artist credit or the result's artist, with the title as given or without its bracketed and
+   dashed tags. Deezer's album name is passed as `release_name`; in the sample below it changed nothing.
+2. **Each first candidate is checked** on Spotify's public page `open.spotify.com/embed/track/<id>`: the title must
+   be the same song and the same kind of version (live, remix, acoustic, ...), and the track must be playable.
+   Artist names are not compared, because Spotify romanises them (Кино is "Kino" there). An answer waits 0.3 s
+   for these checks; a candidate not yet checked is served as it is, the answer is marked `max-age=20`, and the
+   check finishes for the next answer.
+3. Candidates, misses and checked picks are remembered like the other link matches (a week for a hit, a day for a
+   miss), so a repeated answer asks nobody. On 429 or a 5xx, ListenBrainz (or Spotify's embed pages) is left alone
+   for `Retry-After`, else a minute, and rows fall back to ISRC search links. Embed checks are capped at 40 per
+   10 seconds.
+
+Measured on 2026-11-23 with the production engine's top 20 for 12 seeds in 12 languages (240 results):
+
+| | Results with a track id |
+|---|---|
+| All 240 | 157 served on a first request (65%), 152 after the checks (63%) |
+| By seed language | ko 16, ja 16, es 16, fr 15, de 14, tr 14, en 12, ru 12, hi 12, it 11, ar 9, pt 5 (of 20, after checks) |
+| The result's own artist and title only | 123 (51%); Deezer's full credit adds the rest |
+
+- **Right song:** all 154 ids of an earlier run of the same lists were compared with Spotify's page: 154 the same
+  title, 147 the same artist text and the other 7 the same artist romanised or respelled; no wrong song. Two were
+  another version (a studio cut for a live recording and the reverse), which the version rule now drops, and 3
+  differed from Deezer's length by more than 5 seconds (another release). The checks also drop about 2% that
+  Spotify marks unplayable, and a few right songs whose titles are written differently (`Ijazat From "One Night
+  Stand"`); those keep their ISRC search link.
+- **Time:** a first answer took a median 1.5 s after the engine (maximum 1.7 s), against 0.3 s before: 0.7 s is the
+  ListenBrainz call, which can only start once Deezer has named the artists, and 0.3 s the wait for the checks. A
+  repeated answer took 0 ms (maximum 0.3 s while checks were still running).
+- **Not used:** MusicBrainz `GET /ws/2/isrc/<ISRC>?inc=url-rels`. Of 30 results ListenBrainz missed, it knew 8
+  ISRCs and had a Spotify link for 1, at one request a second and with 503s at that pace.
+
+ListenBrainz Labs is an experimental service without a stated limit or guarantee, and Spotify's embed page is
+not a documented API; when either fails the links are what they were before, never an error.
 
 ### Where the song's identity comes from
 
