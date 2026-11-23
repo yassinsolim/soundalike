@@ -314,8 +314,10 @@ Songs in another language than yours are hidden from Best matches by default; **
 The **Audio only** switch (in the web app and the Spotify extension) leaves the listener model, the scene and the
 playlists out of every list.
 The API also serves **Same vibe**, the Best candidates that share the seed's tempo and sound (one per artist), and
-the separate melody, samples and sound lists, but the web app and the Spotify extension show two lists
-([evaluation](docs/ANYSONG_EVAL.md#one-main-list-and-listeners-also-play-pre-registered-2026-11-11-before-any-held-out-result)).
+the separate melody, samples and sound lists. The web app and the Spotify extension show three lists
+([evaluation of the first two](docs/ANYSONG_EVAL.md#one-main-list-and-listeners-also-play-pre-registered-2026-11-11-before-any-held-out-result)):
+Best matches, Listeners also play and, since extension 2.15.0, **Melody match**, the fused melody and samples list
+(`results.best`) that Best matches showed before v12.
 **Listeners also play** ranks other artists' songs mostly by the listener model. **Best matches** (`results.main`)
 starts with likely covers and samples, only when a melody or samples match stands out. Since 2026-11-22 (v12) the rest
 of it is the consensus body: five catalog-wide signals score every song against the seed (whitened sound, a scene head

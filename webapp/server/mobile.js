@@ -266,6 +266,9 @@ function parseSimilarParams(params, headers) {
     k = Number(kText);
   }
   const lang = choice(params, "lang", ["same", "all"], "same");
+  // Which of the answer's lists: the main ranking, the fused melody and
+  // sample matches ("best"), or what the song's listeners also play.
+  const list = choice(params, "list", ["main", "best", "listeners"], "main");
   const platform = choice(params, "platform", ["spotify", "apple", "both"], null);
   const store = storefrontParam(params, headers);
 
@@ -300,7 +303,7 @@ function parseSimilarParams(params, headers) {
     store.storefront = seed.storefront;
     store.guessed = false;
   }
-  return { seed, hints, k, lang, platform, storefront: store.storefront, storefrontGuessed: store.guessed };
+  return { seed, hints, k, lang, list, platform, storefront: store.storefront, storefrontGuessed: store.guessed };
 }
 
 export function createMobileService({
@@ -1003,7 +1006,11 @@ export function createMobileService({
 
     const clientIp = String(headers["cf-connecting-ip"] ?? "");
     const answer = await engineAnswer(seed, request.k, request.lang, CLIENT_IP.test(clientIp) ? clientIp : null);
-    const list = Array.isArray(answer.results.main) ? "main" : "best";
+    // A list the answer doesn't have (no listener data, an older engine)
+    // falls back to the main one; `engine.list` says which was served.
+    const list = request.list !== "main" && Array.isArray(answer.results[request.list])
+      ? request.list
+      : Array.isArray(answer.results.main) ? "main" : "best";
     const rows = (Array.isArray(answer.results[list]) ? answer.results[list] : [])
       .filter((row) => Number.isSafeInteger(row?.id) && text(row.title) && text(row.artist))
       .slice(0, request.k);

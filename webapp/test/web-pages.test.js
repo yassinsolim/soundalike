@@ -575,8 +575,16 @@ const NO_LISTENERS_NOTE =
   "We don't know what this artist's listeners play yet, so there's no list here. " +
   "Best matches still has this song's closest matches.";
 const AUDIO_ONLY_KEY = "soundalike:audio-only:v1";
-const TAB_LABELS = ["Best matches", "Listeners also play"];
-const DROPPED_TABS = ["vibe", "melody", "samples", "sounds", "sonic"];
+const TAB_KEY = "soundalike:tab:v1";
+const TAB_LABELS = ["Best matches", "Listeners also play", "Melody match"];
+const DROPPED_TABS = ["vibe", "samples", "sounds", "sonic"];
+const MELODY_CAPTION =
+  "Likely covers, samples and shared melodies first, from the melody and sample matches " +
+  "fused into one ranking, then similar-sounding songs by artists this song's listeners " +
+  "also play, marked Listeners also play. Turn on Audio only to leave those out.";
+const AUDIO_MELODY_CAPTION =
+  "Likely covers, samples and shared melodies: the melody and sample matches fused into " +
+  "one ranking, by audio alone.";
 
 test("home page has one any-song search bar and no library promo or size line", async () => {
   const page = loadMain();
@@ -716,7 +724,7 @@ test("old #id= links to the five tabs, and unknown tabs, open Best matches", asy
   await waitFor(() => shown(page));
   assert.equal(selected(page, "listeners"), "true");
   assert.equal(page.hash, `#id=${AMANGA_ID}&tab=listeners`);
-  page.context.location.hash = `#id=${AMANGA_ID}&tab=melody`;
+  page.context.location.hash = `#id=${AMANGA_ID}&tab=samples`;
   await waitFor(() => selected(page, "best") === "true");
   assert.deepEqual(page.texts("#matches .t"), ["Bar A Thym", "Sunshine"]);
   assert.equal(page.similar().length, 1);
@@ -758,7 +766,7 @@ test("example chips and Surprise me open songs through the any-song search", asy
   assert.deepEqual(page.errors, []);
 });
 
-test("two any-song tabs read one response, as in the Spotify extension", async () => {
+test("three any-song tabs read one response, as in the Spotify extension", async () => {
   const page = loadAnysong();
   await waitFor(() => shown(page));
 
@@ -789,8 +797,65 @@ test("two any-song tabs read one response, as in the Spotify extension", async (
       "https://open.spotify.com/search/Kitchen%20Floor%20Moodymann",
     ],
   );
+  // Melody match is the server's "best" list: the fused melody and sample
+  // matches with their ranks, then the listener picks, marked.
+  page.document.querySelector("#tab-melody").click();
+  assert.equal(selected(page, "melody"), "true");
+  assert.equal(page.document.querySelector("#matches").getAttribute("aria-labelledby"), "tab-melody");
+  assert.deepEqual(page.texts("#matches .t"), ["Bar A Thym", "Listener Pick"]);
+  assert.equal(page.text("#matchblurb"), MELODY_CAPTION);
+  assert.deepEqual(page.texts("#matches .why"), [
+    " · melody #1",
+    " · Listeners also play · samples #1",
+  ]);
+  assert.equal(page.document.querySelector("#language").hidden, false);
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=melody`);
   assert.equal(page.similar().length, 1);
   assert.deepEqual(page.errors, []);
+});
+
+test("the tab chosen last is where the next visit opens", async () => {
+  const first = loadAnysong();
+  await waitFor(() => shown(first));
+  assert.equal(first.kept.has(TAB_KEY), false);
+  first.document.querySelector("#tab-melody").click();
+  assert.equal(first.kept.get(TAB_KEY), "melody");
+
+  const next = loadAnysong({ local: { [TAB_KEY]: "melody" } });
+  await waitFor(() => shown(next));
+  assert.equal(selected(next, "melody"), "true");
+  assert.equal(next.hash, `#id=${AMANGA_ID}&tab=melody`);
+  assert.deepEqual(next.texts("#matches .t"), ["Bar A Thym", "Listener Pick"]);
+
+  // A share link's tab wins for that visit and isn't kept.
+  const linked = loadAnysong({ hash: `#id=${AMANGA_ID}&tab=listeners`, local: { [TAB_KEY]: "melody" } });
+  await waitFor(() => shown(linked));
+  assert.equal(selected(linked, "listeners"), "true");
+  assert.equal(linked.kept.get(TAB_KEY), "melody");
+
+  const unknown = loadAnysong({ local: { [TAB_KEY]: "vibe" } });
+  await waitFor(() => shown(unknown));
+  assert.equal(selected(unknown, "best"), "true");
+});
+
+test("Melody match says it ranks by audio alone with Audio only or no listener data", async () => {
+  const audio = loadAnysong({
+    hash: `#id=${AMANGA_ID}&tab=melody`,
+    local: { [AUDIO_ONLY_KEY]: "true" },
+    body: (options) => anysongBody({ ...options, scene: "off" }),
+  });
+  await waitFor(() => shown(audio));
+  assert.equal(audio.similar()[0].get("scene"), "0");
+  assert.equal(audio.text("#matchblurb"), AUDIO_MELODY_CAPTION);
+  assert.deepEqual(audio.texts("#matches .t"), ["Bar A Thym", "Sunshine"]);
+  assert.deepEqual(audio.texts("#matches .why"), [" · melody #1", " · samples #1"]);
+
+  const unknown = loadAnysong({
+    hash: `#id=${AMANGA_ID}&tab=melody`,
+    body: (options) => anysongBody({ ...options, scene: "unknown_artist" }),
+  });
+  await waitFor(() => shown(unknown));
+  assert.equal(unknown.text("#matchblurb"), AUDIO_MELODY_CAPTION);
 });
 
 test("Best matches read the main list, ask for one language and say other languages are left out", async () => {
@@ -975,9 +1040,11 @@ test("Listeners also play opens from a share link and arrow keys switch tabs", a
   assert.equal(page.document.activeElement, page.document.querySelector("#tab-listeners"));
   assert.equal(page.hash, `#id=${AMANGA_ID}&tab=listeners`);
   page.document.querySelector("#tab-listeners").onkeydown({ key: "ArrowRight", preventDefault() {} });
+  assert.equal(selected(page, "melody"), "true");
+  page.document.querySelector("#tab-melody").onkeydown({ key: "ArrowRight", preventDefault() {} });
   assert.equal(selected(page, "best"), "true");
   page.document.querySelector("#tab-best").onkeydown({ key: "ArrowLeft", preventDefault() {} });
-  assert.equal(selected(page, "listeners"), "true");
+  assert.equal(selected(page, "melody"), "true");
 });
 
 test("the language switch on Listeners also play is shared with Best matches", async () => {
