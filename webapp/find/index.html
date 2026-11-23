@@ -54,6 +54,21 @@ ol{list-style:none;margin:0;padding:0}
 .sk{height:66px;margin:6px 0;border-radius:12px;background:linear-gradient(90deg,var(--card),var(--card2),var(--card));background-size:200% 100%;animation:sk 1.2s linear infinite}
 @keyframes sk{to{background-position:-200% 0}}
 @media (prefers-reduced-motion:reduce){.sk{animation:none}}
+.pt{margin:0 2px 10px}
+.pb,.pc button{min-height:40px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--txt);cursor:pointer;font-size:13px}
+.beta{font-size:11px;color:var(--vio);border:1px solid var(--vio);border-radius:999px;padding:0 6px;margin-left:4px}
+.chip{margin:8px 0 0;font-size:13px;color:var(--mut)}
+.chip button{border:0;background:none;color:var(--grn);padding:10px 0;cursor:pointer;text-decoration:underline}
+.pp{margin-top:8px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.pp p{margin:0;font-size:13px;color:var(--mut)}
+.trk{position:relative;height:52px;margin:10px 0 4px;border-radius:10px;background:#0e1319;border:1px solid var(--line);touch-action:none;cursor:pointer;overflow:hidden;user-select:none;-webkit-user-select:none}
+.spn{position:absolute;top:0;bottom:0;background:rgba(29,185,84,.35);border:2px solid var(--grn);border-radius:8px;cursor:grab}
+.hd{position:absolute;top:0;bottom:0;width:2px;background:#fff;pointer-events:none}
+.tk{display:flex;justify-content:space-between;font-size:11px;color:var(--mut)}
+.pp .pl{margin-top:6px;color:var(--txt);font-size:14px}
+.pc{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.pc [aria-pressed="true"],.pc .ap{background:var(--grn);color:#06210f;font-weight:700;border-color:var(--grn)}
+.pc .ap{margin-left:auto}
 footer{margin:22px 2px 0;color:var(--mut);font-size:12px}
 footer a{color:var(--mut)}
 </style>
@@ -70,6 +85,17 @@ footer a{color:var(--mut)}
 <img class="cover" id="seed-art" alt="" width="64" height="64" hidden/>
 <div class="info"><div class="label">Songs that sound like</div><h1 id="seed-title"></h1><div class="by" id="seed-artist"></div></div>
 </section>
+<div class="pt" id="part" hidden>
+<button type="button" class="pb" id="part-open" aria-expanded="false" aria-controls="part-panel">Match a part <span class="beta">beta</span></button>
+<p class="chip" id="part-chip" hidden><span id="part-chip-text"></span> · <button type="button" id="part-clear" title="Match the whole preview again">whole preview</button></p>
+<section class="pp" id="part-panel" aria-label="Match a part of the preview" hidden>
+<p>Soundalike hears a 30-second preview. Drag to pick the part of it you care about.</p>
+<div class="trk" id="part-track"><div class="spn" id="part-span" role="slider" tabindex="0" aria-label="Part of the preview to match" aria-valuemin="0"></div><i class="hd" id="part-head" hidden></i></div>
+<div class="tk" aria-hidden="true"><span id="part-from"></span><span id="part-to"></span></div>
+<p class="pl" id="part-label"></p>
+<div class="pc"><span role="group" aria-label="Length of the part"><button type="button" id="part-10">10 s</button> <button type="button" id="part-15">15 s</button> <button type="button" id="part-20">20 s</button></span><button type="button" id="part-play">▶ Play this part</button><button type="button" class="ap" id="part-apply">Apply</button></div>
+</section>
+</div>
 <div class="bar" id="bar" hidden>
 <span id="count"></span>
 <div class="seg" role="group" aria-label="Open songs in">
@@ -88,16 +114,32 @@ const LINK_API = "/api/mobile/link";
 const PREVIEW_API = "/api/preview";
 const SEED_PARAMS = ["url", "spotify_id", "apple_id", "isrc", "title", "artist"];
 const PASS_PARAMS = ["storefront", "platform", "k", "lang", "list"];
+// Match a part: spans of the 30-second preview on a 5-second grid, 10 to 20 seconds long.
+const PART_STEP = 5;
+const PART_LONGEST = 20;
+const PART_DEFAULT = [10, 20];
+const PART_LENGTHS = [10, 15, 20];
 const PLATFORM_KEY = "soundalike:find:platform:v1";
 const ANSWER_KEY = "soundalike:find:answer:v1";
 const ANSWER_MAX_AGE_MS = 4 * 60 * 1000;
 const UPGRADE_LIMIT = 12;
 const $ = (id) => document.getElementById(id);
 const form = $("form"), input = $("link"), status = $("status"), list = $("list");
-const state = { answer: null, platform: "spotify", rows: [], upgrades: 0, queue: [], busy: false, token: 0 };
+const state = { answer: null, platform: "spotify", rows: [], upgrades: 0, queue: [], busy: false, token: 0, search: "", part: null, limits: null, draft: null, seedPreview: null };
 const audio = new Audio();
 audio.preload = "none";
 let playing = null;
+// While a part of the seed's preview plays: the second it stops at.
+let partEnd = null;
+
+const partText = (part) => `${part[0]}-${part[1]}`;
+/** "<start>-<end>" in seconds of the preview, at least 10 apart and within 30; else null. */
+function parsePart(text) {
+  const found = /^(\d{1,2}(?:\.\d{1,3})?)-(\d{1,2}(?:\.\d{1,3})?)$/.exec(text || "");
+  if (!found) return null;
+  const start = Number(found[1]), end = Number(found[2]);
+  return end <= 30 && end - start >= 10 ? [start, end] : null;
+}
 
 const safeUrl = (value) => (typeof value === "string" && value.startsWith("https://") ? value : null);
 const store = (area) => { try { return window[area]; } catch { return null; } };
@@ -114,6 +156,8 @@ function apiQuery(search) {
   else for (const name of SEED_PARAMS) if (page.get(name)) query.set(name, page.get(name));
   if (![...query.keys()].length) return null;
   for (const name of PASS_PARAMS) if (page.get(name)) query.set(name, page.get(name));
+  const part = parsePart(page.get("part"));
+  if (part) query.set("part", partText(part));
   return query;
 }
 
@@ -165,6 +209,9 @@ function stopPreview() {
     playing.button.setAttribute("aria-label", `Play a preview of ${playing.row.title}`);
   }
   playing = null;
+  partEnd = null;
+  $("part-play").textContent = "▶ Play this part";
+  $("part-head").hidden = true;
 }
 
 async function freshPreview(row) {
@@ -206,6 +253,150 @@ async function togglePreview(entry) {
   }
 }
 audio.addEventListener("ended", stopPreview);
+audio.addEventListener("timeupdate", () => {
+  if (partEnd === null || !state.limits) return;
+  if (audio.currentTime >= partEnd) return stopPreview();
+  $("part-head").style.left = `${(100 * audio.currentTime) / state.limits.total}%`;
+  $("part-head").hidden = false;
+});
+
+// ---- Match a part ----
+// Shown only when the answer says the server can match a part of the preview
+// (query.parts), so it costs no request of its own.
+
+/** The preview's length and the shortest and longest part, or null. */
+function partLimits(answer) {
+  const parts = answer.query.parts;
+  if (!parts || typeof parts !== "object") return null;
+  const total = Number(parts.preview_s) || 30;
+  const min = Math.max(PART_STEP, Number(parts.min_s) || 10);
+  const max = Math.min(PART_LONGEST, Number(parts.max_s) || PART_LONGEST);
+  return min <= max && max <= total ? { total, min, max } : null;
+}
+
+/** Keeps a span on the grid, inside the preview and within the lengths. */
+function fitSpan(start, end, limits) {
+  const snap = (value) => Math.round(value / PART_STEP) * PART_STEP;
+  const length = Math.min(limits.max, Math.max(limits.min, snap(end - start)));
+  const from = Math.min(limits.total - length, Math.max(0, snap(start)));
+  return [from, from + length];
+}
+
+const clock = (seconds) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+/** Where the preview starts in the song, when the server knows it. */
+function songOffset() {
+  const offset = state.answer?.query.parts?.song_offset_s;
+  return Number.isFinite(offset) && offset >= 0 ? offset : null;
+}
+/** "0:58–1:13 of the song", or of the preview when its place is unknown. */
+function spanLabel(part) {
+  const offset = songOffset();
+  return `${clock((offset ?? 0) + part[0])}–${clock((offset ?? 0) + part[1])} of the ${offset === null ? "preview" : "song"}`;
+}
+
+function closePanel() {
+  if (partEnd !== null) stopPreview();
+  state.draft = null;
+  $("part-panel").hidden = true;
+  $("part-open").setAttribute("aria-expanded", "false");
+}
+
+function drawDraft() {
+  const { start, end } = state.draft, { total } = state.limits, span = $("part-span");
+  span.style.left = `${(100 * start) / total}%`;
+  span.style.width = `${(100 * (end - start)) / total}%`;
+  span.setAttribute("aria-valuemax", String(total - (end - start)));
+  span.setAttribute("aria-valuenow", String(start));
+  span.setAttribute("aria-valuetext", spanLabel([start, end]));
+  $("part-label").textContent = `${spanLabel([start, end])} · ${end - start} seconds`;
+  for (const length of PART_LENGTHS) $(`part-${length}`).setAttribute("aria-pressed", String(end - start === length));
+}
+
+function moveDraft(start, length = state.draft.end - state.draft.start) {
+  const [from, to] = fitSpan(start, start + length, state.limits);
+  if (from === state.draft.start && to === state.draft.end) return;
+  if (partEnd !== null) stopPreview();
+  state.draft = { start: from, end: to };
+  drawDraft();
+}
+
+function togglePanel() {
+  if (!state.limits || !$("part-panel").hidden) return closePanel();
+  const [start, end] = fitSpan(...(state.part || PART_DEFAULT), state.limits);
+  state.draft = { start, end };
+  for (const length of PART_LENGTHS) $(`part-${length}`).hidden = length < state.limits.min || length > state.limits.max;
+  $("part-play").hidden = !Number.isSafeInteger(state.answer.query.deezer_id);
+  $("part-from").textContent = clock(songOffset() ?? 0);
+  $("part-to").textContent = clock((songOffset() ?? 0) + state.limits.total);
+  $("part-panel").hidden = false;
+  $("part-open").setAttribute("aria-expanded", "true");
+  drawDraft();
+}
+
+/** Loads the lists for a part (null: the whole preview) and puts it in the page's address. */
+function goPart(part) {
+  const params = new URLSearchParams(state.search);
+  if (part) params.set("part", partText(part));
+  else params.delete("part");
+  state.search = `?${params}`;
+  try { history.pushState(null, "", `/find${state.search}`); } catch {}
+  load(apiQuery(state.search));
+}
+
+async function playPart() {
+  if (partEnd !== null) return stopPreview();
+  stopPreview();
+  const { start, end } = state.draft, token = state.token;
+  partEnd = end;
+  $("part-play").textContent = "❚❚ Stop";
+  const stillWanted = () => token === state.token && partEnd === end && state.draft?.start === start;
+  state.seedPreview ??= await freshPreview({ deezer_id: state.answer.query.deezer_id });
+  if (!stillWanted()) return;
+  try {
+    if (!state.seedPreview) throw new Error("no preview");
+    audio.src = state.seedPreview;
+    audio.currentTime = start;
+    await audio.play();
+  } catch (error) {
+    if (error?.name === "AbortError" || !stillWanted()) return;
+    state.seedPreview = null;
+    stopPreview();
+    $("part-play").disabled = true;
+  }
+}
+
+{
+  const track = $("part-track");
+  let grab = null;
+  const at = (event) => {
+    const box = track.getBoundingClientRect();
+    return ((event.clientX - box.left) / box.width) * state.limits.total;
+  };
+  track.addEventListener("pointerdown", (event) => {
+    if (!state.draft) return;
+    const second = at(event), { start, end } = state.draft;
+    // Inside the span: drag it from where it was touched. Elsewhere: bring its middle there.
+    grab = second >= start && second <= end ? second - start : (end - start) / 2;
+    try { track.setPointerCapture(event.pointerId); } catch {}
+    moveDraft(second - grab);
+    event.preventDefault();
+  });
+  track.addEventListener("pointermove", (event) => {
+    if (grab !== null && state.draft) moveDraft(at(event) - grab);
+  });
+  for (const type of ["pointerup", "pointercancel"]) track.addEventListener(type, () => { grab = null; });
+  $("part-span").addEventListener("keydown", (event) => {
+    const step = { ArrowLeft: -PART_STEP, ArrowRight: PART_STEP }[event.key];
+    if (!step || !state.draft) return;
+    event.preventDefault();
+    moveDraft(state.draft.start + step);
+  });
+  for (const length of PART_LENGTHS) $(`part-${length}`).addEventListener("click", () => moveDraft(state.draft.start, length));
+  $("part-open").addEventListener("click", togglePanel);
+  $("part-play").addEventListener("click", playPart);
+  $("part-apply").addEventListener("click", () => goPart([state.draft.start, state.draft.end]));
+  $("part-clear").addEventListener("click", () => goPart(null));
+}
 
 /** Asks for the song's own page when a row only has a search link. */
 function wantExact(entry) {
@@ -302,11 +493,28 @@ function buildRow(row, observer) {
 
 function render(answer) {
   stopPreview();
+  closePanel();
   state.token += 1;
   state.answer = answer;
   state.upgrades = 0;
   state.queue = [];
+  state.seedPreview = null;
+  $("part-play").disabled = false;
   const query = answer.query;
+  state.limits = partLimits(answer);
+  const got = query.part;
+  state.part = state.limits && got && Number.isFinite(got.start) && Number.isFinite(got.end) ? [got.start, got.end] : null;
+  const params = new URLSearchParams(state.search);
+  if (params.has("part") && !state.part) {
+    // The lists are for the whole preview (a server without Match a part, or a part
+    // that is not one): the address must not say otherwise.
+    params.delete("part");
+    state.search = `?${params}`;
+    try { history.replaceState(null, "", `/find${state.search}`); } catch {}
+  }
+  $("part").hidden = !state.limits;
+  $("part-chip").hidden = !state.part;
+  if (state.part) $("part-chip-text").textContent = `Matching ${spanLabel(state.part)}`;
   $("seed-title").textContent = query.title;
   $("seed-artist").textContent = query.artist;
   const art = $("seed-art");
@@ -346,23 +554,33 @@ async function load(query) {
     } catch {}
   }
   stopPreview();
+  closePanel();
   state.token += 1;
   $("seed").hidden = true;
+  $("part").hidden = true;
   $("bar").hidden = true;
   setStatus("Finding songs that sound like this one…", false);
   showSkeleton();
   const mine = state.token;
   let body = null;
   try {
-    body = await (await fetch(`${API}?${key}`)).json();
-  } catch {}
+    let response = await fetch(`${API}?${key}`);
+    body = await response.json();
+    if (query.has("part") && response.status === 400) {
+      // A server that refuses the part is asked once more for the whole preview.
+      const whole = new URLSearchParams(query);
+      whole.delete("part");
+      response = await fetch(`${API}?${whole}`);
+      body = await response.json();
+    }
+  } catch { body = null; }
   if (mine !== state.token) return; // a newer search replaced this one
   if (!body || !body.ok || !body.query || !Array.isArray(body.results)) {
     list.replaceChildren();
     const message = body?.error?.message || "Soundalike could not be reached. Check your connection and try again.";
     return setStatus(message, true);
   }
-  remember("sessionStorage", ANSWER_KEY, JSON.stringify({ key, at: Date.now(), answer: body }));
+  if (!query.has("part") || body.query.part) remember("sessionStorage", ANSWER_KEY, JSON.stringify({ key, at: Date.now(), answer: body }));
   render(body);
 }
 
@@ -379,18 +597,22 @@ form.addEventListener("submit", (event) => {
   event.preventDefault();
   const value = input.value.trim();
   if (!value) return input.focus();
-  const search = `?url=${encodeURIComponent(value)}`;
-  try { history.pushState(null, "", `/find${search}`); } catch {}
+  // A newly shared song always starts from its whole preview.
+  state.search = `?url=${encodeURIComponent(value)}`;
+  try { history.pushState(null, "", `/find${state.search}`); } catch {}
   input.blur();
-  load(apiQuery(search));
+  load(apiQuery(state.search));
 });
 
 function start() {
-  const query = apiQuery(location.search);
+  state.search = location.search;
+  const query = apiQuery(state.search);
   if (!query) {
     stopPreview();
+    closePanel();
     list.replaceChildren();
     $("seed").hidden = true;
+    $("part").hidden = true;
     $("bar").hidden = true;
     return;
   }
