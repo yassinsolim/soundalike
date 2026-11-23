@@ -360,3 +360,23 @@ def test_windows_read_from_the_file_for_each_seed_give_the_same_bodies(tmp_path)
     assert cons.signals(world.bases | {"head": given}, 4)["head"] is given
     del streamed
     gc.collect()
+
+
+def test_a_part_of_a_stored_seed_reads_only_its_windows(world):
+    cons, row = world.cons, int(world.graph[0])
+    whole, part = cons.signals(world.bases, row), cons.signals(world.bases, row, part=[1])
+    unit = _unit(world.win.astype(np.float64))
+    np.testing.assert_allclose(part["snd"].numpy(), np.einsum("d,nvd->nv", unit[row, 1], unit).max(axis=1), atol=3e-3)
+    table = _unit(world.blend.table.numpy().astype(np.float64))
+    np.testing.assert_allclose(part["head"].numpy(), np.einsum("d,nvd->nv", table[row, 1], table).max(axis=1),
+                               atol=3e-3)
+    assert (part["snd"] <= whole["snd"] + 1e-6).all() and not torch.equal(part["snd"], whole["snd"])
+    # The playlist view is the song's, whichever part of it is asked.
+    assert torch.equal(part["cf"], whole["cf"]) and torch.equal(part["mel"], whole["mel"])
+    # Every window is the whole seed; the bodies take the part and their own sound weight.
+    assert torch.equal(cons.signals(world.bases, row, part=[0, 1, 2])["snd"], whole["snd"])
+    plain = cons.bodies(world.bases, -1, row=row)["all"]
+    assert cons.bodies(world.bases, -1, row=row, part=[0, 1, 2])["all"] == plain
+    heavy = cons.bodies(world.bases, -1, row=row, sound_weight=1.0)["all"]
+    assert [t for t, _, _ in heavy] == [t for t, _, _ in plain]  # a constant model: the sound rank orders both
+    assert heavy[-1][1] < plain[-1][1]

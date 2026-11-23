@@ -3696,3 +3696,33 @@ titled in non-Latin scripts resolved to nothing.
   songs shown.
 - A request takes about 2.7 s at the median on the production card; the 999k index before v12 measured 1.0 s there
   (2026-11-09).
+
+## A part of a song as the seed (2026-11-23): local prototype, not served
+
+Code: `--parts` and `--excerpts` ([ANYSONG.md](ANYSONG.md#a-part-of-a-song-prototype-off-by-default)). Lab:
+`anysong-lab/partmatch/` (`REPORT.md`, scripts and raw results), index of 1,109,024 songs, v12 homelab profile on
+the RTX 5080. Quality here means the engine's own measures; nobody listened to these lists.
+
+- **Where the preview sits.** 17 Deezer previews aligned against the full recordings (Jamendo tracks that are also
+  on Deezer, raw cross-correlation): 16 begin 47.5 to 48.0 s into the song, one at 59.4 s. Not 0:30 to 1:00, as an
+  old answer on Stack Overflow says.
+- **One 10 s window against the whole preview** (300 seeds: 150 world charts, 150 held claims). Main's top 10 shares
+  5.2 songs with the whole-preview list and 3.2 with another window's; the sound list 4.6 and 1.8. The consensus
+  model's predicted rating of the body rows falls from 1.335 to 1.300, rows that two or more signals rank in their
+  top 200 from 62 % to 59 %. A sound weight of 0.3 instead of 0.1 for parts makes the windows differ more (2.3
+  shared) at a predicted rating of 1.17; dropping the playlist signal gives 1.25. So a part uses the served model
+  and weight, with playlists.
+- **A clip of the listener's audio** (50 catalog previews sent as 24 kHz mono WAV through `/excerpt`, own song not
+  named, no tiers; share of the clean clip's top 10 that a changed clip keeps). The sound model hears level: 6 dB
+  quieter keeps 0.44, 20 dB quieter 0.14; brought back to full scale 0.82 (a clean clip rescaled: 0.87), which is
+  why excerpts are peak-normalised. Re-encoded MP3 128k 0.84, Opus 96k 0.69, AAC 128k 0.56, AAC 64k 0.07. Through
+  a simulated phone microphone 0.3 m from a laptop speaker in a quiet room 0.04: the sound list does not survive a
+  microphone, and band-limiting both sides made it worse (own song best of a 97-song pool 100 % to 62 %). The
+  samples model still finds the recording: own song first for 100 % of file, tab and quiet-microphone clips of 5 to
+  30 s, 98 % at 2 m with noise 10 dB under the music; its score is 0.59 or more for file and tab clips against 0.48
+  at most for any other song (2,806 clips), hence `--identify-score 0.55`.
+- **Clip length.** Own song first in the sound model: 78 % at 5 s, 100 % at 10 s; in the melody model 42 % at 5 s,
+  92 % at 10 s, 100 % from 20 s (its windows are 20 s). Ask for 10 s at least, 20 s for the melody lists.
+- **Cost.** A part of a catalog song: 0.94 s against 1.27 s for the whole preview (medians, fresh seeds). An excerpt:
+  1.2 to 1.3 s without identification and 1.6 s with it (a second pass over the samples table, 0.43 s), against
+  2.3 s for a live Deezer seed; embedding is 0.08 to 0.11 s of that. Peak VRAM 6.2 GB allocated.

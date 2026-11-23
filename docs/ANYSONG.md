@@ -405,6 +405,40 @@ plain JSON files in [`webapp/well-known/`](../webapp/well-known), reached throug
 are served as `application/json` without a redirect, which both platforms require. A new signing key or app id
 means editing those files.
 
+## A part of a song (prototype, off by default)
+
+Two additions let a listener say which part of a song the matches should follow. Both are off unless the engine is
+started with their flag, so the served lists do not change. Measurements: `anysong-lab/partmatch/REPORT.md`
+(2026-11-23); local demo page: [`demo/part-match/`](../demo/part-match) (`python demo/part-match/serve.py`, not
+deployed).
+
+**`--parts`: a part of the preview.** `GET /api/anysong/similar?...&part=<start>-<end>` takes seconds of the song's
+30 s preview, at least 5 apart. The seed is then only the windows of that span (`audio.part_windows`): the 10 s
+sound windows (and their scene-head vectors) and the 6 s samples chunks it covers by 70 % or more, and the 20 s
+melody shingle around it, so a 10 s part still hears 5 s either side in the melody model. A catalog song uses its
+stored windows (no download, no embedding); a song outside the catalog is embedded as before and cut to the span.
+Playlist vectors, tempo, language and the artist's scene stay the song's own. Spans that pick the same windows
+share one cached result; a span that picks every window is the plain seed. `query.part` gives the seconds each
+channel heard (`{"sonic": [10, 20], "samples": [9.19, 21.44], "melody": [5, 25]}`) and, when the song's length is
+known (a live seed, or a catalog seed that came through `search`), `query.preview` says where the preview sits in
+the song (`{"start": 48.0, "end": 78.0}`): 16 of 17 previews measured against full recordings begin 47.5 to
+48.0 s into the song, one at 59.4 s, so clients should word it as the usual place.
+
+**`--excerpts`: a clip of the listener's own audio.** `POST /api/anysong/excerpt` takes one clip of 5 to 30 s as the
+request body (WAV, FLAC, Ogg or MP3: what libsndfile reads; at most `--excerpt-max-mb`, default 12) and the query
+parameters `k`, `dedupe`, `lang`, `scene` of `similar`. The clip is decoded in memory with a header check first,
+embedded like a song outside the catalog with as many windows as it fills (`audio.excerpt_clips`), ranked, and
+dropped: nothing is written to disk, cached, logged or added to the catalog or the learn queue. The answer has the
+shape of `similar` with `query.source` `excerpt` and `query.seconds`; `listeners` and the artist scene need a
+known song. Optional `title` + `artist` or `isrc` name the song: it is then left out of the lists and its artist
+gives the scene, the catalog tiers and the listener lists (a name that nothing knows is not an error). With
+`--identify-score S` a clip without a name is first looked up in the whole samples index, and a best match scoring
+at least `S` (0.55: the same recording) stands in for the name and is reported as `query.identified`. The clip is
+brought to full scale before it is embedded, because the sound model hears level. The route has its own budget,
+`--excerpt-per-min` (default 6 per client), answers `411` without a body, `413` over the size limit, `422` for
+audio it cannot decode, clips outside 5 to 30 s and silence, and a CORS preflight when `--cors-origin` is set.
+`--part-sound-weight` sets the consensus body's sound weight for part and excerpt seeds (default: the body's own).
+
 ## Growing the catalog
 
 [`anysong.crawl`](../src/soundalike/anysong/crawl.py) adds songs along Deezer's related-artist graph, starting from

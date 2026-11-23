@@ -2,11 +2,73 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 import numpy as np
 
 CLIP_SECONDS = 30.0
+# Where each channel's windows sit in a 30 s preview, as its embedder cuts them: (hop, length) in seconds and how
+# many, the first starting at 0 (``embedders``: MuQ-MuLan 3 x 10 s, CLEWS 20 s shingles every 5 s, SampleID 6.125 s
+# chunks at half overlap).
+WINDOW_LAYOUT: dict[str, tuple[float, float, int]] = {
+    "melody": (5.0, 20.0, 3), "samples": (3.0625, 6.125, 8), "sonic": (10.0, 10.0, 3)}
+PART_COVER = 0.7  # a window belongs to a part of the preview that covers at least this share of it
+
+
+def part_windows(start: float, end: float, layout: Mapping[str, tuple[float, float, int]] = WINDOW_LAYOUT
+                 ) -> dict[str, list[int]]:
+    """The windows of each channel that stand for the span ``start`` to ``end`` (seconds) of a 30 s preview: those
+    the span covers at least ``PART_COVER`` of; when it covers none that far, the one it covers most (ties: the one
+    centred nearest the span's centre). Sound windows are 10 s and samples chunks 6 s, so they follow a span closely;
+    melody shingles are 20 s, so a 10 s span is one shingle that also hears 5 s either side of it."""
+    out = {}
+    for channel, (hop, length, count) in layout.items():
+        cover = [max(0.0, min(end, i * hop + length) - max(start, i * hop)) / length for i in range(count)]
+        chosen = [i for i, c in enumerate(cover) if c >= PART_COVER]
+        if not chosen:
+            centre = (start + end) / 2
+            chosen = [min(range(count), key=lambda i: (-round(cover[i], 6), abs(i * hop + length / 2 - centre), i))]
+        out[channel] = chosen
+    return out
+
+
+def window_spans(part: Mapping[str, Sequence[int]], layout: Mapping[str, tuple[float, float, int]] = WINDOW_LAYOUT
+                 ) -> dict[str, list[float]]:
+    """The seconds of the preview each channel hears for ``part`` (``part_windows``): [first start, last end]."""
+    return {channel: [round(min(rows) * layout[channel][0], 2),
+                      round(max(rows) * layout[channel][0] + layout[channel][1], 2)]
+            for channel, rows in part.items()}
+
+
+def excerpt_clips(mono: np.ndarray, native_sr: int, rates: Mapping[str, int]) -> dict[str, np.ndarray]:
+    """One clip per channel (``rates``: channel -> its model's sample rate) for an excerpt of any length, cut so that
+    each model hears only as many windows as the excerpt fills, unlike a preview, which is repeated to 30 s: sound
+    10 s windows spread evenly over the excerpt (one for up to 10 s, two up to 20 s, three beyond), melody 20 s
+    shingles every 5 s (one for up to 20 s), samples 6.125 s chunks at half overlap. Audio shorter than one window is
+    repeated to fill it. A 30 s excerpt gives the windows of a preview."""
+    import soxr
+
+    if len(mono) == 0:
+        raise ValueError("empty audio")
+    out, resampled = {}, {}
+    for channel, sr in rates.items():
+        if sr not in resampled:
+            resampled[sr] = soxr.resample(mono, native_sr, sr, quality="HQ") if native_sr != sr else mono
+        x = resampled[sr]
+        hop, length, _ = WINDOW_LAYOUT[channel]
+        w = int(round(length * sr))
+        if len(x) < w:
+            x = np.tile(x, int(np.ceil(w / len(x))))[:w]
+        if channel == "sonic":
+            n = min(3, int(np.ceil(len(x) / w - 1e-6)))
+            starts = np.linspace(0, len(x) - w, n).round().astype(int) if n > 1 else [0]
+            x = np.concatenate([x[s:s + w] for s in starts])
+        else:
+            h = int(round(hop * sr))
+            x = x[:w + (len(x) - w) // h * h]
+        out[channel] = np.ascontiguousarray(x, dtype=np.float32)
+    return out
 
 
 def load_clip(path: str | Path, sr: int, seconds: float = CLIP_SECONDS) -> np.ndarray:
@@ -31,6 +93,36 @@ def decode_mono(path: str | Path) -> tuple[np.ndarray, int]:
     if not np.isfinite(mono).all():
         raise ValueError(f"Non-finite audio: {path}")
     return mono, native_sr
+
+
+def decode_bytes(data: bytes, max_seconds: float, min_seconds: float = 0.0) -> tuple[np.ndarray, int]:
+    """``decode_mono`` for an untrusted clip held in memory (what libsndfile reads: WAV, FLAC, Ogg Vorbis/Opus, MP3,
+    AIFF). The header is read first, so a file that claims more than ``max_seconds``, an odd sample rate or many
+    channels is refused before any audio is decoded; nothing touches the disk. Raises ValueError with a message
+    fit for the client."""
+    import io
+
+    import soundfile as sf
+
+    try:
+        with sf.SoundFile(io.BytesIO(data)) as f:
+            if not 8000 <= f.samplerate <= 192_000 or not 1 <= f.channels <= 8:
+                raise ValueError("unsupported sample rate or channel count")
+            # MP3 and Ogg headers may not know their length: read at most the limit plus one second and check after.
+            if f.frames > (max_seconds + 1.0) * f.samplerate:
+                raise ValueError(f"the clip is longer than {max_seconds:g} s")
+            sr = f.samplerate
+            block = f.read(int((max_seconds + 1.0) * sr) + 1, dtype="float32", always_2d=True)
+    except sf.LibsndfileError as exc:
+        raise ValueError("could not decode the audio (send WAV, FLAC, Ogg or MP3)") from exc
+    mono = block.mean(axis=1)
+    if len(mono) > (max_seconds + 0.5) * sr:
+        raise ValueError(f"the clip is longer than {max_seconds:g} s")
+    if len(mono) < min_seconds * sr:
+        raise ValueError(f"the clip is shorter than {min_seconds:g} s")
+    if len(mono) == 0 or not np.isfinite(mono).all():
+        raise ValueError("the clip holds no usable audio")
+    return np.ascontiguousarray(mono[:int(max_seconds * sr)]), sr
 
 
 def fit_clips(mono: np.ndarray, native_sr: int, rates: tuple[int, ...] | list[int],
