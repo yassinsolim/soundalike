@@ -230,7 +230,8 @@ Optional: `platform=spotify\|apple\|both` (default: the platform of the link, ot
 default 20), `lang=same\|all` (default `same`: Best matches in the seed's language), `list=main\|best\|listeners`
 (default `main`; `best` is the fused melody and samples list the site calls Melody match, `listeners` is Listeners
 also play; a list the answer lacks falls back to `main`, and `engine.list` names the one served; `/find` passes
-`?list=` on), `storefront` (two-letter Apple
+`?list=` on), `part=<start>-<end>` (seconds of the song's 30-second preview, at least 10 apart, at most 30: match
+that part instead of the whole preview; see [A part of a song](#a-part-of-a-song)), `storefront` (two-letter Apple
 Music country; default: the link's storefront, then the listener's country, then `us`).
 
 ```json
@@ -240,7 +241,8 @@ Music country; default: the link's storefront, then the listener's country, then
     "title": "Du hast", "artist": "Rammstein", "isrc": "DED579704010",
     "artwork": "https://image-cdn-ak.spotifycdn.com/image/…", "platform": "spotify",
     "source_url": "https://open.spotify.com/track/5awDvzxWfd53SSrsRZ8pXO",
-    "spotify_id": "5awDvzxWfd53SSrsRZ8pXO", "language": "de", "storefront": "us", "deezer_id": 630595142
+    "spotify_id": "5awDvzxWfd53SSrsRZ8pXO", "language": "de", "storefront": "us", "deezer_id": 630595142,
+    "part": null, "parts": { "min_s": 10, "max_s": 30, "preview_s": 30, "song_offset_s": 48.0 }
   },
   "results": [
     {
@@ -265,6 +267,11 @@ Music country; default: the link's storefront, then the listener's country, then
   page (`null` for `isrc` and
   `title`+`artist` seeds); `language` is the engine's label (`unknown` possible); `deezer_id` is the recording the
   engine ranked from (`engine.matched_title` / `matched_artist` name it, and may be another release of the song).
+  `parts` is `null` from an engine that cannot match a part of the preview; otherwise it gives the shortest and
+  longest part and the preview's length in seconds, and `song_offset_s`, where the preview starts in the song
+  (`null` when unknown). `part` is `{"start", "end"}` when the lists are for a part, and `null` otherwise: also
+  when `part=` was sent to an engine without parts, which answers for the whole preview. A client shows its part
+  control only when `parts` is not `null`.
 - `results`: in rank order. `match` is the sound match from 0 to 100 (`null` when the engine has none). `isrc`,
   `artwork` and `preview_url` come from Deezer and are `null` when Deezer did not answer in time. `preview_url` is a
   30-second MP3 whose address **expires about 15 minutes after the answer was built**: play it soon, and on a
@@ -428,7 +435,8 @@ and lists the seed and its soundalikes with cover, match and a preview button. T
 Spotify or Apple Music, by default the app the link came from, with a switch for the other. Rows navigate in the
 same tab, without `target="_blank"`, so the phone's app links hand over to the installed app from an in-app
 browser as well; coming back shows the saved list without a new request. For local work,
-`node webapp/tools/mobile-dev-server.js` serves the page and both endpoints.
+`node webapp/tools/mobile-dev-server.js` serves the home page, this page and their endpoints against the engine
+named by `SOUNDALIKE_ENGINE_URL`.
 
 So that a `/find` link opens the installed app instead of the page, the site serves
 `/.well-known/apple-app-site-association` (iPhone app `FJH4UWVC4K.app.yassin.soundalike`, paths `/find*`) and
@@ -497,6 +505,32 @@ brought to full scale before it is embedded, because the sound model hears level
 audio it cannot decode, clips outside 5 to 30 s and silence, and a CORS preflight when `--cors-origin` is set.
 `--part-sound-weight` sets the consensus body's sound weight for part and excerpt seeds (default: the body's own;
 not set in production).
+
+### Match a part in the clients
+
+The clients show a **Match a part** control (marked beta) only when the `similar` answer on screen has
+`query.parts`, so it costs no request of its own and nothing changes with an engine without `--parts`. They keep
+spans on a 5-second grid, 10, 15 or 20 seconds long. An answer to `part=` without `query.part` is for the whole
+preview (an older engine ignores the parameter), so the client drops the part; an engine that refuses the
+parameter (400 or 404) is asked once more without it.
+
+- **Website** ([`webapp/search.js`](../webapp/search.js)): "Match a part" follows the seed's preview button. It
+  opens a timeline of the preview (its waveform, read from Deezer's CDN with WebAudio, or a plain bar) with a span
+  to drag, resize by its edges or by the length buttons, and move with the arrow keys (Shift changes the length).
+  Times are song times when the place of the preview is known (`song_offset_s`, or the usual 0:48 for a song the
+  search listed as 90 seconds or longer), else preview times. "Play this part" plays just the span, and Apply
+  reloads the lists. A chip ("Matching 0:58–1:13 of the song · whole preview") leads back. The part is in the
+  share link (`#id=<id>&tab=<tab>&part=<start>-<end>`, also as `/?id=…&part=…`) and in the request, so each part
+  has its own cached answer. A newly picked song always starts from its whole preview.
+- **Spotify extension** (runtime 2.16.0): the same control in the page's header, drawn with the theme's colours.
+  The page plays no previews, so "Play this part" plays the song in Spotify from about where the part starts and
+  pauses when it is over. Saved lists are kept per part (`…:part:<start>-<end>` in the cache id), and nothing is
+  remembered from one search to the next.
+- **Phones**: `/api/mobile/similar` takes `part=` and reports `query.part` and `query.parts`
+  ([Mobile API](#mobile-api)). The `/find` page and the apps have no control yet.
+- **Which lists follow.** Best matches, Listeners also play and Melody match are read from the one answer, so all
+  three follow the part; Listeners also play still starts from the whole song's listeners. The extension's Sounds
+  like list (local companion or the older hosted library) always uses the whole song.
 
 ## Growing the catalog
 

@@ -108,6 +108,27 @@ prompt. Best matches and Listeners also play only run on the hosted matcher, so
 their tabs ask before sending the song's title and artist. Lists saved from an
 earlier search show without asking.
 
+## Match a part (beta)
+
+Soundalike hears a 30-second preview. Pick the part of it you care about:
+**Match a part**, next to the play button at the top of the page, opens a
+30-second timeline with a span of 10, 15 or 20 seconds. Drag it or its edges,
+use the length buttons, or focus it and press the arrow keys (Shift with an
+arrow key changes the length). **Apply** reloads Best matches, Listeners also
+play and Melody match for that part, and a chip such as "Matching 0:58–1:13
+of the song · whole preview" takes you back. Sounds like always uses the
+whole song.
+
+- Times are song times when the server knows where the preview sits in the
+  song (usually from 0:48); otherwise they count from the start of the
+  preview.
+- **Play this part** plays the song in Spotify from about where the part
+  starts and pauses when it is over. The page itself plays no previews, and in
+  a few songs the preview sits elsewhere, so treat it as a rough guide.
+- The button shows only when the matcher's answer says it can match parts.
+  Lists are saved per part, and a new search always starts from the whole
+  preview. Needs runtime 2.16.0.
+
 ## Show more, Recent, and coming back to a list
 
 - Each list shows 20 songs. **Show more** under it adds the next 20, up to the

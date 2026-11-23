@@ -59,6 +59,22 @@
     "Audio only is on, and this list comes from what this song's listeners also play. Turn Audio only off to see it.";
   const noListenersNote =
     "We don't know what this artist's listeners play yet, so there's no list here. Best matches still has this song's closest matches.";
+  // Match a part: a server that can rank a part of the preview says so in
+  // every answer (query.parts), so the control costs no request of its own and
+  // stays hidden on servers without it.
+  const partStepSeconds = 5;
+  const partLongestSeconds = 20;
+  const partDefault = [10, 20];
+  // Where previews usually start in the song, for songs the server gives no place for.
+  const usualPreviewOffset = 48;
+  const partIntro =
+    "Soundalike hears a 30-second preview. Pick the part of it you care about.";
+  const partTabsNote =
+    "All three tabs follow the part. Listeners also play still starts from the whole song's listeners; only how close each song sounds follows the part.";
+  const partPlaceNote =
+    "Song times assume the preview sits where previews usually do; in a few songs it is elsewhere.";
+  const partKeysNote =
+    "Drag the part or its edges. Keyboard: arrow keys move it, Shift with an arrow key changes its length.";
   const DEMO = [
     ["Plastic Love", "Mariya Takeuchi"],
     ["Redbone", "Childish Gambino"],
@@ -96,6 +112,7 @@
   const resolved = new Map(); // song key -> Deezer id, for chips and #s= links
   let acItems = [];
   let acSel = -1;
+  const durations = new Map(); // Deezer id -> seconds, from search suggestions
   let timer = null;
   let controller = null;
   let requestSequence = 0;
@@ -330,14 +347,26 @@
     input.blur();
     const id = Number(song.id);
     cards.set(id, { id, title: song.title, artist: song.artist, cover: safeImg(song.cover) });
+    if (Number(song.duration) > 0) durations.set(id, Number(song.duration));
     openId(id);
   }
 
   // ---------- links ----------
-  // #id=<Deezer id>&tab=<tab> is the share link. #s=<title — artist> is the
-  // older home-page link, still used by the example chips.
-  function writeHash(id, push) {
-    const hash = `#id=${id}&tab=${tab}`;
+  // #id=<Deezer id>&tab=<tab> is the share link, with &part=<start>-<end>
+  // (seconds of the preview) when a part is matched. #s=<title — artist> is
+  // the older home-page link, still used by the example chips.
+  const partText = part => `${part[0]}-${part[1]}`;
+
+  function parsePart(text) {
+    const found = /^(\d{1,2}(?:\.\d{1,3})?)-(\d{1,2}(?:\.\d{1,3})?)$/.exec(text || "");
+    if (!found) return null;
+    const start = Number(found[1]);
+    const end = Number(found[2]);
+    return end <= 30 && end - start >= 10 ? [start, end] : null;
+  }
+
+  function writeHash(id, push, part = null) {
+    const hash = `#id=${id}&tab=${tab}${part ? `&part=${partText(part)}` : ""}`;
     if (location.hash === hash) return false;
     if (push) location.hash = hash;
     else history.replaceState(null, "", hash);
@@ -383,25 +412,35 @@
     }
     const params = new URLSearchParams(hash.slice(1));
     const id = params.get("id") || "";
+    const part = parsePart(params.get("part"));
     return {
-      target: ID_RE.test(id) ? { id: Number(id) } : null,
+      target: ID_RE.test(id) ? { id: Number(id), ...(part ? { part } : {}) } : null,
       tab: tabKey(params.get("tab")),
     };
   }
 
-  const targetKey = target => (target.id ? `id:${target.id}` : `s:${songKey(target)}`);
+  // A part of a song is its own page: its lists differ from the whole preview's.
+  const targetKey = target =>
+    target.id
+      ? `id:${target.id}${target.part ? `:${partText(target.part)}` : ""}`
+      : `s:${songKey(target)}`;
 
-  // /anysong forwards its query string, so /?id=<id>&tab=<tab> opens that song.
+  // /anysong forwards its query string, so /?id=<id>&tab=<tab> opens that song
+  // (and &part=<start>-<end> that part of it).
   function adoptQueryLink() {
     const params = new URLSearchParams(location.search);
     const id = params.get("id");
     if (id === null) return;
     const wanted = tabKey(params.get("tab"));
+    const part = parsePart(params.get("part"));
     params.delete("id");
     params.delete("tab");
+    params.delete("part");
     const rest = params.toString();
     const keepHash = !ID_RE.test(id) || (location.hash && location.hash !== "#");
-    const hash = keepHash ? location.hash : `#id=${id}&tab=${wanted || tab}`;
+    const hash = keepHash
+      ? location.hash
+      : `#id=${id}&tab=${wanted || tab}${part ? `&part=${partText(part)}` : ""}`;
     history.replaceState(null, "", `${location.pathname}${rest ? `?${rest}` : ""}${hash}`);
   }
 
@@ -434,7 +473,8 @@
   }
 
   // ---------- results ----------
-  async function fetchBestMatches(target, isCurrent, lang, audioOnly = false) {
+  // part: [start, end] seconds of the preview to match instead of all of it.
+  async function fetchBestMatches(target, isCurrent, lang, audioOnly = false, part = null) {
     // The policy keeps HTTP-cached responses from before a format change out.
     const params = new URLSearchParams(
       target.id
@@ -445,6 +485,7 @@
     params.set("lang", lang);
     params.set("policy", bestMatchesPolicy);
     if (audioOnly) params.set("scene", "0");
+    if (part) params.set("part", partText(part));
     for (let attempt = 0; ; attempt += 1) {
       const requestController = new AbortController();
       const timeout = window.setTimeout(
@@ -468,6 +509,11 @@
       // 503 means every analysis slot is taken; a short wait usually frees one.
       if (response.status === 503 && attempt < bestMatchesRetries && isCurrent()) {
         await pause(1500 * (attempt + 1));
+        continue;
+      }
+      // A server without Match a part refuses the span: ask for the whole preview.
+      if (params.has("part") && (response.status === 400 || response.status === 404)) {
+        params.delete("part");
         continue;
       }
       if (!response.ok || !body.ok) {
@@ -554,13 +600,17 @@
         seed: null,
         lang: "same",
         audioOnly: savedAudioOnly(),
+        // Only a link carries a part; a newly picked song starts whole.
+        part: target.part || null,
         bestSequence: 0,
         best: { status: "pending" },
         body: null,
       };
       let body;
       try {
-        body = await fetchBestMatches(picked.target, isCurrent, picked.lang, picked.audioOnly);
+        body = await fetchBestMatches(
+          picked.target, isCurrent, picked.lang, picked.audioOnly, picked.part
+        );
       } catch (error) {
         if (isCurrent()) setState(esc(errorText(error)), "err");
         return;
@@ -568,6 +618,8 @@
       if (!isCurrent()) return;
       picked.best = { status: "ready", body };
       picked.body = body;
+      // A server without Match a part answers for the whole preview.
+      if (!(body.query || {}).part) picked.part = null;
       const query = body.query || {};
       if (Number.isInteger(query.id) && query.id > 0) id = query.id;
       const card = (id && cards.get(id)) || {};
@@ -582,13 +634,13 @@
         picked.target = { id };
         cards.set(id, seed);
         if (!target.id) resolved.set(songKey(target), id);
-        currentKey = `id:${id}`;
+        currentKey = targetKey({ id, part: picked.part });
       }
       if (document.activeElement !== input) {
         input.value = seed.title ? `${seed.title} — ${seed.artist}` : "";
       }
       showPick(picked);
-      if (id) writeHash(id, false);
+      if (id) writeHash(id, false, picked.part);
       if (!seed.cover && id) {
         fetchPreview(id).then(preview => {
           const cover = safeImg((preview && preview.cover) || "");
@@ -795,7 +847,7 @@
     renderTab(picked);
     const isCurrent = () =>
       shownPick === picked && picked.bestSequence === sequence;
-    fetchBestMatches(picked.target, isCurrent, picked.lang, picked.audioOnly)
+    fetchBestMatches(picked.target, isCurrent, picked.lang, picked.audioOnly, picked.part)
       .then(
         body => ({ status: "ready", body }),
         error => ({ status: "failed", error })
@@ -803,7 +855,10 @@
       .then(entry => {
         if (picked.bestSequence !== sequence) return;
         picked.best = entry;
-        if (entry.status === "ready") picked.body = entry.body;
+        if (entry.status === "ready") {
+          picked.body = entry.body;
+          if (picked.part && !(entry.body.query || {}).part) setPart(picked, null);
+        }
         renderTab(picked);
       });
   }
@@ -844,6 +899,7 @@
     blurb.textContent = noListeners ? "" : blurbText(picked);
     blurb.hidden = noListeners;
     renderLanguage(picked, noListeners);
+    renderPart(picked);
     if (entry.status === "pending") {
       list.innerHTML = '<li class="state"><span class="spin"></span> matching…</li>';
     } else if (entry.status === "failed") {
@@ -881,7 +937,9 @@
     }
     tab = key;
     if (updateHash) saveTab(key);
-    if (updateHash && shownPick && shownPick.seed.id) writeHash(shownPick.seed.id, false);
+    if (updateHash && shownPick && shownPick.seed.id) {
+      writeHash(shownPick.seed.id, false, shownPick.part);
+    }
     markTabs();
     if (shownPick) renderTab(shownPick);
   }
@@ -898,7 +956,10 @@
       (seed.id
         ? `<button class="pv" type="button" data-id="${seed.id}" aria-label="Preview ${esc(seed.title)}" title="Preview">▶</button>`
         : "") +
+      '<button class="copy" id="part-open" type="button" aria-expanded="false" aria-controls="part-panel" hidden>Match a part <span class="beta">beta</span></button>' +
       '<button class="copy" id="share" type="button">🔗 Share</button><button class="copy" id="copy" type="button">⧉ Copy list</button><button class="save" id="save" type="button">＋ Save to Spotify</button></div></section>' +
+      '<section class="part" id="part-panel" aria-label="Match a part of the preview" hidden></section>' +
+      '<div class="part-chip" id="part-chip" hidden></div>' +
       `<div class="tabs" role="tablist" aria-label="Kind of match">${resultTabs
         .map(
           entry =>
@@ -912,6 +973,7 @@
     document.querySelector("#share").onclick = share;
     document.querySelector("#language-toggle").onclick = () => toggleLanguage(picked);
     document.querySelector("#audio-only").onclick = () => toggleAudioOnly(picked);
+    document.querySelector("#part-open").onclick = () => togglePartPanel(picked);
     const seedPreview = out.querySelector(".seed .pv");
     if (seedPreview) seedPreview.onclick = () => togglePreview(seed.id, seedPreview);
     const tabs = [...out.querySelectorAll(".tab")];
@@ -958,6 +1020,12 @@
   const audio = new Audio();
   audio.preload = "none";
   let playingId = null;
+  // While a part of the seed's preview plays: the second it stops at.
+  let partEnd = null;
+  // The open picker: {picked, limits, start, end, peaks}; the drag in progress.
+  let partDraft = null;
+  let partDrag = null;
+  const peaksCache = new Map(); // Deezer id -> Promise of the preview's peaks
   const previewCache = new Map();
 
   async function fetchPreview(id) {
@@ -982,11 +1050,16 @@
       button.textContent = on ? "⏸" : "▶";
       button.closest("li.row")?.classList.toggle("playing", on);
     });
+    const partPlay = document.querySelector("#part-play");
+    if (partPlay) partPlay.textContent = partEnd !== null ? "⏸ Stop" : "▶ Play this part";
+    const head = document.querySelector("#part-head");
+    if (head && partEnd === null) head.hidden = true;
   }
 
   function stopPreview() {
     audio.pause();
     playingId = null;
+    partEnd = null;
     syncPlaying();
   }
 
@@ -1003,6 +1076,7 @@
     try {
       if (!preview || !preview.preview) throw new Error("no preview");
       audio.src = preview.preview;
+      partEnd = null;
       await audio.play();
       syncPlaying();
     } catch {
@@ -1017,7 +1091,367 @@
   }
 
   audio.addEventListener("ended", stopPreview);
-  audio.addEventListener("pause", syncPlaying);
+  audio.addEventListener("pause", () => {
+    if (audio.paused) partEnd = null;
+    syncPlaying();
+  });
+  audio.addEventListener("timeupdate", () => {
+    if (partEnd === null) return;
+    if (audio.currentTime >= partEnd) {
+      stopPreview();
+      return;
+    }
+    const head = document.querySelector("#part-head");
+    if (!head || !partDraft) return;
+    head.hidden = false;
+    head.style.left = `${(100 * audio.currentTime) / partDraft.limits.total}%`;
+  });
+
+  // ---------- match a part ----------
+  // The seed card's "Match a part" opens a 30-second timeline of the preview
+  // with a span to drag; Apply reloads the lists for that span.
+  const clock = seconds => {
+    const whole = Math.max(0, Math.round(seconds));
+    return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
+  };
+
+  // What the server can match: the preview's length and the shortest and
+  // longest part, or null on a server without Match a part.
+  function partLimits(picked) {
+    const parts = ((picked.body || {}).query || {}).parts;
+    if (!parts || typeof parts !== "object" || !picked.seed || !picked.seed.id) return null;
+    const total = Number(parts.preview_s) || 30;
+    const min = Math.max(partStepSeconds, Number(parts.min_s) || 10);
+    const max = Math.min(partLongestSeconds, Number(parts.max_s) || partLongestSeconds);
+    return min <= max && max <= total ? { total, min, max } : null;
+  }
+
+  // Where the preview starts in the song, in seconds, or null when unknown.
+  // The server says it when it knows the song's length; a song the search
+  // listed as 90 s or longer is taken to sit where previews usually do.
+  function songOffset(picked) {
+    const parts = ((picked.body || {}).query || {}).parts || {};
+    if (Number.isFinite(parts.song_offset_s) && parts.song_offset_s >= 0) {
+      return parts.song_offset_s;
+    }
+    return (durations.get(picked.seed.id) || 0) >= 90 ? usualPreviewOffset : null;
+  }
+
+  // "0:58–1:13 of the song", or of the preview when its place is unknown.
+  function spanLabel(picked, part) {
+    const offset = songOffset(picked);
+    const base = offset === null ? 0 : offset;
+    return `${clock(base + part[0])}–${clock(base + part[1])} of the ${
+      offset === null ? "preview" : "song"
+    }`;
+  }
+
+  // The seconds each model heard for the part, as the server reports them.
+  function heardText(picked) {
+    const heard = (((picked.body || {}).query || {}).part || {}).heard;
+    if (!heard || typeof heard !== "object") return "";
+    const offset = songOffset(picked) || 0;
+    const spans = ["sonic", "melody", "samples"]
+      .filter(name => Array.isArray(heard[name]) && heard[name].length === 2)
+      .map(name =>
+        `${name === "sonic" ? "sound" : name} ${clock(offset + heard[name][0])}–${clock(offset + heard[name][1])}`
+      );
+    return spans.length ? `Heard: ${spans.join(", ")}` : "";
+  }
+
+  // Keeps a span on the step grid, inside the preview and within the lengths.
+  function fitSpan(start, end, limits) {
+    const snap = value => Math.round(value / partStepSeconds) * partStepSeconds;
+    const length = Math.min(limits.max, Math.max(limits.min, snap(end - start)));
+    const from = Math.min(limits.total - length, Math.max(0, snap(start)));
+    return [from, from + length];
+  }
+
+  function setPart(picked, part) {
+    picked.part = part;
+    if (shownPick !== picked || !picked.seed.id) return;
+    currentKey = targetKey({ id: picked.seed.id, part });
+    writeHash(picked.seed.id, false, part);
+  }
+
+  function applyPart(picked, part) {
+    closePartPanel();
+    setPart(picked, part);
+    reloadBest(picked);
+  }
+
+  // The chip under the seed card while a part is matched, and the button that
+  // opens the picker: shown only when the server's answer offers parts.
+  function renderPart(picked) {
+    const open = document.querySelector("#part-open");
+    const chip = document.querySelector("#part-chip");
+    if (!open || !chip) return;
+    const limits = partLimits(picked);
+    open.hidden = !limits;
+    if (!limits) closePartPanel();
+    chip.hidden = !picked.part;
+    if (!picked.part) {
+      chip.innerHTML = "";
+      return;
+    }
+    const heard = heardText(picked);
+    chip.innerHTML =
+      `<span id="part-chip-text"${heard ? ` title="${esc(heard)}"` : ""}>Matching ${esc(spanLabel(picked, picked.part))}</span>` +
+      ' · <button type="button" id="part-clear" title="Match the whole preview again">whole preview</button>';
+    document.querySelector("#part-clear").onclick = () => applyPart(picked, null);
+  }
+
+  function closePartPanel() {
+    const panel = document.querySelector("#part-panel");
+    if (partEnd !== null) stopPreview();
+    partDraft = null;
+    if (!panel || panel.hidden) return;
+    panel.hidden = true;
+    panel.innerHTML = "";
+    document.querySelector("#part-open")?.setAttribute("aria-expanded", "false");
+  }
+
+  function togglePartPanel(picked) {
+    const panel = document.querySelector("#part-panel");
+    const limits = partLimits(picked);
+    if (!panel || !limits) return;
+    if (!panel.hidden) {
+      closePartPanel();
+      return;
+    }
+    const [start, end] = fitSpan(...(picked.part || partDefault), limits);
+    partDraft = { picked, limits, start, end, peaks: null };
+    const offset = songOffset(picked);
+    const base = offset === null ? 0 : offset;
+    const lengths = [];
+    for (let length = limits.min; length <= limits.max; length += partStepSeconds) {
+      lengths.push(length);
+    }
+    const ticks = [];
+    for (let at = 0; at <= limits.total; at += 10) ticks.push(at);
+    panel.innerHTML =
+      `<p class="part-intro"><span class="beta">New · beta</span> ${esc(partIntro)}</p>` +
+      '<div class="part-track" id="part-track"><canvas id="part-wave" aria-hidden="true"></canvas>' +
+      '<div class="part-span" id="part-span" role="slider" tabindex="0" aria-label="Part of the preview to match" aria-valuemin="0">' +
+      '<i class="part-edge" data-edge="start"></i><i class="part-edge" data-edge="end"></i></div>' +
+      '<i class="part-head" id="part-head" hidden></i></div>' +
+      `<div class="part-ticks" aria-hidden="true">${ticks
+        .map(at => `<span>${clock(base + at)}</span>`)
+        .join("")}</div>` +
+      '<p class="part-label" id="part-label"></p>' +
+      '<div class="part-controls"><span class="part-lengths" role="group" aria-label="Length of the part">' +
+      lengths
+        .map(length => `<button type="button" data-length="${length}" aria-pressed="false">${length} s</button>`)
+        .join("") +
+      '</span><button type="button" id="part-play">▶ Play this part</button>' +
+      '<button type="button" class="save" id="part-apply">Apply</button>' +
+      '<button type="button" id="part-cancel">Cancel</button></div>' +
+      `<p class="part-note">${esc(partTabsNote)}${offset === null ? "" : ` ${esc(partPlaceNote)}`} ${esc(partKeysNote)}</p>`;
+    panel.hidden = false;
+    document.querySelector("#part-open").setAttribute("aria-expanded", "true");
+    document.querySelector("#part-apply").onclick = () =>
+      applyPart(picked, [partDraft.start, partDraft.end]);
+    document.querySelector("#part-cancel").onclick = closePartPanel;
+    document.querySelector("#part-play").onclick = () => playPart(picked);
+    panel.querySelectorAll(".part-lengths button").forEach(button => {
+      button.onclick = () =>
+        moveDraft(partDraft.start, partDraft.start + Number(button.dataset.length));
+    });
+    const span = document.querySelector("#part-span");
+    span.onkeydown = onPartKey;
+    const track = document.querySelector("#part-track");
+    track.onpointerdown = onPartPointerDown;
+    track.onpointermove = onPartPointerMove;
+    track.onpointerup = track.onpointercancel = () => {
+      partDrag = null;
+    };
+    // Without this a flicked touch drag ends in a fling, and the browser
+    // takes the next tap (on Apply, say) as the tap that stops it.
+    track.addEventListener("touchmove", event => event.preventDefault(), { passive: false });
+    showDraft();
+    const draft = partDraft;
+    previewPeaks(picked.seed.id).then(peaks => {
+      if (partDraft !== draft || !peaks) return;
+      draft.peaks = peaks;
+      drawWave();
+    });
+  }
+
+  function moveDraft(start, end) {
+    if (!partDraft) return;
+    const [from, to] = fitSpan(start, end, partDraft.limits);
+    if (from === partDraft.start && to === partDraft.end) return;
+    if (partEnd !== null) stopPreview();
+    partDraft.start = from;
+    partDraft.end = to;
+    showDraft();
+  }
+
+  function showDraft() {
+    const span = document.querySelector("#part-span");
+    if (!partDraft || !span) return;
+    const { picked, limits, start, end } = partDraft;
+    const label = `${spanLabel(picked, [start, end])} · ${end - start} s`;
+    span.style.left = `${(100 * start) / limits.total}%`;
+    span.style.width = `${(100 * (end - start)) / limits.total}%`;
+    span.setAttribute("aria-valuemax", String(limits.total - limits.min));
+    span.setAttribute("aria-valuenow", String(start));
+    span.setAttribute("aria-valuetext", label);
+    document.querySelector("#part-label").textContent = label;
+    document.querySelectorAll("#part-panel .part-lengths button").forEach(button => {
+      button.setAttribute("aria-pressed", String(Number(button.dataset.length) === end - start));
+    });
+    const same = picked.part && picked.part[0] === start && picked.part[1] === end;
+    document.querySelector("#part-apply").disabled = Boolean(same);
+    drawWave();
+  }
+
+  // Arrow keys move the part a step; with Shift they change its length.
+  function onPartKey(event) {
+    if (!partDraft) return;
+    const { limits, start, end } = partDraft;
+    const step =
+      event.key === "ArrowRight" || event.key === "ArrowUp"
+        ? partStepSeconds
+        : event.key === "ArrowLeft" || event.key === "ArrowDown"
+          ? -partStepSeconds
+          : 0;
+    if (step) {
+      if (!event.shiftKey) moveDraft(start + step, end + step);
+      else {
+        // A longer part that would pass the end of the preview grows backwards.
+        const length = Math.min(limits.max, Math.max(limits.min, end - start + step));
+        const from = Math.min(start, limits.total - length);
+        moveDraft(from, from + length);
+      }
+    } else if (event.key === "Home") moveDraft(0, end - start);
+    else if (event.key === "End") moveDraft(limits.total - (end - start), limits.total);
+    else return;
+    event.preventDefault?.();
+  }
+
+  function pointerSeconds(event) {
+    const box = document.querySelector("#part-track").getBoundingClientRect();
+    return box.width > 0 ? ((event.clientX - box.left) / box.width) * partDraft.limits.total : 0;
+  }
+
+  // Dragging the span moves it and dragging an edge resizes it; a press
+  // outside the span brings the span's middle there.
+  function onPartPointerDown(event) {
+    if (!partDraft) return;
+    const at = pointerSeconds(event);
+    const { start, end } = partDraft;
+    const edge = event.target && event.target.dataset ? event.target.dataset.edge : "";
+    const inside = at >= start && at <= end;
+    partDrag = {
+      mode: edge === "start" || edge === "end" ? edge : "move",
+      grab: inside ? at - start : (end - start) / 2,
+    };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    event.preventDefault?.();
+    if (!inside && partDrag.mode === "move") onPartPointerMove(event);
+  }
+
+  function onPartPointerMove(event) {
+    if (!partDraft || !partDrag) return;
+    const at = pointerSeconds(event);
+    const { limits, start, end } = partDraft;
+    const within = length => Math.min(limits.max, Math.max(limits.min, length));
+    if (partDrag.mode === "move") {
+      const from = at - partDrag.grab;
+      moveDraft(from, from + (end - start));
+    } else if (partDrag.mode === "start") {
+      const from = Math.max(0, end - within(end - at));
+      moveDraft(from, end);
+    } else {
+      const to = Math.min(limits.total, start + within(at - start));
+      moveDraft(start, to);
+    }
+  }
+
+  async function playPart(picked) {
+    if (!partDraft) return;
+    if (partEnd !== null) {
+      stopPreview();
+      return;
+    }
+    const id = picked.seed.id;
+    const { start, end } = partDraft;
+    const button = document.querySelector("#part-play");
+    stopPreview();
+    playingId = id;
+    const preview = await fetchPreview(id);
+    if (playingId !== id) return;
+    try {
+      if (!preview || !preview.preview) throw new Error("no preview");
+      audio.src = preview.preview;
+      audio.currentTime = start;
+      partEnd = end;
+      await audio.play();
+      syncPlaying();
+    } catch {
+      if (playingId !== id) return;
+      stopPreview();
+      if (button) button.textContent = "✕ No preview";
+    }
+  }
+
+  // The preview's loudness in 240 columns, for the timeline: Deezer's CDN lets
+  // pages read the audio. Browsers without WebAudio, and failures, give null
+  // and the timeline stays a plain bar.
+  function previewPeaks(id) {
+    if (!peaksCache.has(id)) peaksCache.set(id, loadPeaks(id).catch(() => null));
+    return peaksCache.get(id);
+  }
+
+  async function loadPeaks(id) {
+    const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!Offline) return null;
+    const preview = await fetchPreview(id);
+    // The same host check as for covers: only Deezer's CDN is read.
+    const url = safeImg((preview && preview.preview) || "");
+    if (!url) return null;
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const buffer = await new Offline(1, 1, 44100).decodeAudioData(await response.arrayBuffer());
+    const data = buffer.getChannelData(0);
+    const columns = 240;
+    const size = Math.floor(data.length / columns);
+    if (size < 1) return null;
+    const peaks = new Float32Array(columns);
+    const stride = Math.max(1, Math.floor(size / 200));
+    let top = 0;
+    for (let column = 0; column < columns; column += 1) {
+      let peak = 0;
+      for (let index = column * size; index < (column + 1) * size; index += stride) {
+        const level = Math.abs(data[index]);
+        if (level > peak) peak = level;
+      }
+      peaks[column] = peak;
+      if (peak > top) top = peak;
+    }
+    return top > 0 ? peaks.map(peak => peak / top) : null;
+  }
+
+  function drawWave() {
+    const canvas = document.querySelector("#part-wave");
+    if (!partDraft || !partDraft.peaks || !canvas || !canvas.getContext) return;
+    const { peaks, limits, start, end } = partDraft;
+    const ratio = window.devicePixelRatio || 1;
+    const width = Math.max(1, Math.round(canvas.clientWidth * ratio));
+    const height = Math.max(1, Math.round(canvas.clientHeight * ratio));
+    if (canvas.width !== width) canvas.width = width;
+    if (canvas.height !== height) canvas.height = height;
+    const context = canvas.getContext("2d");
+    context.clearRect(0, 0, width, height);
+    const bar = width / peaks.length;
+    peaks.forEach((peak, column) => {
+      const at = ((column + 0.5) / peaks.length) * limits.total;
+      context.fillStyle = at >= start && at < end ? "#1db954" : "#3a4658";
+      const tall = Math.max(ratio, peak * (height - 2 * ratio));
+      context.fillRect(column * bar, (height - tall) / 2, Math.max(1, bar - ratio), tall);
+    });
+  }
 
   // ---------- examples ----------
   function surpriseMe() {

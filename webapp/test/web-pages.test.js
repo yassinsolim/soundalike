@@ -186,6 +186,10 @@ class FakeElement extends FakeEvents {
     }
   }
   scrollIntoView() {}
+  // Every element is 300 px wide, so 10 px are one second of a 30 s timeline.
+  getBoundingClientRect() {
+    return { left: 0, top: 0, width: 300, height: 60 };
+  }
 }
 
 class FakeDocument extends FakeEvents {
@@ -293,13 +297,19 @@ function loadPage(html, scripts, { path, hash = "", search = "", storage = {}, l
   const windowEvents = new FakeEvents();
   const requests = [];
   const errors = [];
+  const audios = [];
   const stored = new Map(Object.entries(storage));
   const kept = new Map(Object.entries(local));
   let currentHash = hash;
   let currentSearch = search;
   const context = {
     AbortController,
-    Audio: FakeAudio,
+    Audio: class extends FakeAudio {
+      constructor() {
+        super();
+        audios.push(this);
+      }
+    },
     URL,
     URLSearchParams,
     clearTimeout,
@@ -361,6 +371,7 @@ function loadPage(html, scripts, { path, hash = "", search = "", storage = {}, l
     document,
     errors,
     requests,
+    audios,
     get hash() {
       return currentHash;
     },
@@ -1261,6 +1272,231 @@ test("Audio only stays reachable when its reload fails", async () => {
   assert.equal(page.similar().at(-1).get("scene"), null);
   assert.equal(page.document.querySelector("#language-toggle").hidden, false);
   assert.deepEqual(page.texts("#matches .t"), ["n.h.i.e.", "AHHH HA"]);
+});
+
+// A server that can match a part of the preview says so in every answer
+// (query.parts) and names the part an answer is for (query.part); its lists
+// then differ from the whole preview's.
+const PARTS_INFO = { min_s: 10, max_s: 30, preview_s: 30, song_offset_s: 48 };
+const PART_INTRO = "Soundalike hears a 30-second preview. Pick the part of it you care about.";
+
+function partsBest({ parts = PARTS_INFO, refuse = false } = {}) {
+  return (params) => {
+    const part = params.get("part");
+    if (part && refuse) {
+      return json(404, { ok: false, error: "choosing a part of the preview is not enabled" });
+    }
+    const body = anysongBody({
+      lang: params.get("lang"),
+      scene: params.get("scene") === "0" ? "off" : "on",
+    });
+    if (parts) body.query.parts = parts;
+    if (part && parts) {
+      const [start, end] = part.split("-").map(Number);
+      body.query.part = {
+        start, end, heard: { sonic: [10, 30], samples: [15.31, 30.63], melody: [10, 30] },
+      };
+      body.results.main.reverse();
+    }
+    return json(200, body);
+  };
+}
+
+const partParams = (page) => page.similar().map((params) => params.get("part"));
+const key = (page, name, shiftKey = false) =>
+  page.document.querySelector("#part-span").dispatch("keydown", { key: name, shiftKey });
+
+test("Match a part stays hidden on a server that cannot match parts", async () => {
+  // A link to a part opens the whole preview there, and the link is put right.
+  const page = loadMain({ hash: `#id=${AMANGA_ID}&tab=best&part=10-25`, body: anysongBody });
+  await waitFor(() => shown(page));
+  assert.equal(page.document.querySelector("#part-open").hidden, true);
+  assert.equal(page.document.querySelector("#part-chip").hidden, true);
+  assert.equal(page.document.querySelector("#part-panel").hidden, true);
+  assert.deepEqual(partParams(page), ["10-25"]);
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=best`);
+  assert.deepEqual(page.errors, []);
+});
+
+test("Match a part opens a picker by the seed's preview button and Apply reloads the lists", async () => {
+  const page = loadMain({ hash: `#id=${AMANGA_ID}`, best: partsBest() });
+  await waitFor(() => shown(page));
+  const open = page.document.querySelector("#part-open");
+  assert.equal(open.hidden, false);
+  assert.equal(open.textContent, "Match a part beta");
+  assert.equal(open.getAttribute("aria-expanded"), "false");
+  // It follows the seed's preview button in the seed card's actions.
+  assert.deepEqual(
+    page.document.querySelectorAll(".seed .actions button").map((button) => button.id || button.className),
+    ["pv", "part-open", "share", "copy", "save"],
+  );
+  assert.equal(page.document.querySelector("#part-chip").hidden, true);
+
+  open.click();
+  const panel = page.document.querySelector("#part-panel");
+  assert.equal(panel.hidden, false);
+  assert.equal(open.getAttribute("aria-expanded"), "true");
+  assert.equal(page.text("#part-panel .part-intro"), `New · beta ${PART_INTRO}`);
+  const span = page.document.querySelector("#part-span");
+  assert.equal(span.getAttribute("role"), "slider");
+  assert.equal(span.getAttribute("tabindex"), "0");
+  assert.equal(span.getAttribute("aria-valuetext"), "0:58–1:08 of the song · 10 s");
+  assert.deepEqual(page.texts("#part-panel .part-ticks span"), ["0:48", "0:58", "1:08", "1:18"]);
+  assert.deepEqual(page.texts("#part-panel .part-lengths button"), ["10 s", "15 s", "20 s"]);
+  assert.match(page.text("#part-panel .part-note"), /^All three tabs follow the part\. /);
+  assert.match(page.text("#part-panel .part-note"), /in a few songs it is elsewhere/);
+
+  // Arrow keys move the span in 5-second steps; Shift changes its length.
+  key(page, "ArrowRight");
+  assert.equal(page.text("#part-label"), "1:03–1:13 of the song · 10 s");
+  assert.equal(span.style.left, "50%");
+  key(page, "ArrowRight", true);
+  assert.equal(page.text("#part-label"), "1:03–1:18 of the song · 15 s");
+  // At the end of the preview a longer part grows backwards, up to 20 s.
+  key(page, "ArrowRight", true);
+  key(page, "ArrowRight", true);
+  assert.equal(page.text("#part-label"), "0:58–1:18 of the song · 20 s");
+  key(page, "Home");
+  assert.equal(page.text("#part-label"), "0:48–1:08 of the song · 20 s");
+  // A length button keeps the start.
+  page.document.querySelectorAll("#part-panel .part-lengths button")[1].click();
+  assert.equal(page.text("#part-label"), "0:48–1:03 of the song · 15 s");
+  assert.deepEqual(
+    page.document.querySelectorAll("#part-panel .part-lengths button")
+      .map((button) => button.getAttribute("aria-pressed")),
+    ["false", "true", "false"],
+  );
+  // Dragging the span moves it (touch and mouse are both pointers).
+  const track = page.document.querySelector("#part-track");
+  track.dispatch("pointerdown", { clientX: 50, pointerId: 1, target: span });
+  track.dispatch("pointermove", { clientX: 152 });
+  track.dispatch("pointerup");
+  assert.equal(page.text("#part-label"), "0:58–1:13 of the song · 15 s");
+  // Dragging an edge resizes it, never under 10 s.
+  const edge = page.document.querySelectorAll("#part-span .part-edge")[1];
+  track.dispatch("pointerdown", { clientX: 250, pointerId: 1, target: edge });
+  track.dispatch("pointermove", { clientX: 120 });
+  track.dispatch("pointerup");
+  assert.equal(page.text("#part-label"), "0:58–1:08 of the song · 10 s");
+  // A press outside the span brings its middle there.
+  track.dispatch("pointerdown", { clientX: 290, pointerId: 1, target: track });
+  track.dispatch("pointerup");
+  assert.equal(page.text("#part-label"), "1:08–1:18 of the song · 10 s");
+  assert.deepEqual(partParams(page), [null]);
+
+  const before = shown(page).dataset.id;
+  page.document.querySelector("#part-apply").click();
+  await waitFor(() => page.similar().length === 2 && shown(page) && shown(page).dataset.id !== before);
+  assert.deepEqual(partParams(page), [null, "20-30"]);
+  // The part is in the share link, and the picker gives way to a chip.
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=best&part=20-30`);
+  assert.equal(panel.hidden, true);
+  const chip = page.document.querySelector("#part-chip");
+  assert.equal(chip.hidden, false);
+  assert.equal(chip.textContent, "Matching 1:08–1:18 of the song · whole preview");
+  assert.equal(
+    page.document.querySelector("#part-chip-text").getAttribute("title"),
+    "Heard: sound 0:58–1:18, melody 0:58–1:18, samples 1:03–1:19",
+  );
+
+  // The other tabs read the same answer; switching keeps the part in the link.
+  page.document.querySelector("#tab-listeners").click();
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=listeners&part=20-30`);
+  assert.equal(chip.hidden, false);
+  assert.equal(page.similar().length, 2);
+  // So do the language and Audio only switches.
+  page.document.querySelector("#language-toggle").click();
+  await waitFor(() => page.similar().length === 3);
+  assert.equal(page.similar()[2].get("part"), "20-30");
+  assert.equal(page.similar()[2].get("lang"), "all");
+
+  // "whole preview" goes back.
+  await waitFor(() => page.document.querySelector("#part-clear"));
+  page.document.querySelector("#part-clear").click();
+  await waitFor(() => page.similar().length === 4 && chip.hidden);
+  assert.equal(page.similar()[3].get("part"), null);
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=listeners`);
+  assert.equal(open.hidden, false);
+  assert.deepEqual(page.errors, []);
+});
+
+test("a link with a part opens that part, from the hash or an old /anysong query", async () => {
+  const page = loadMain({ hash: `#id=${AMANGA_ID}&tab=best&part=5-20`, best: partsBest() });
+  await waitFor(() => shown(page));
+  assert.deepEqual(partParams(page), ["5-20"]);
+  assert.equal(page.text("#part-chip"), "Matching 0:53–1:08 of the song · whole preview");
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=best&part=5-20`);
+  // The picker opens on the part being matched, with nothing to apply yet.
+  page.document.querySelector("#part-open").click();
+  assert.equal(page.text("#part-label"), "0:53–1:08 of the song · 15 s");
+  assert.equal(page.document.querySelector("#part-apply").disabled, true);
+  page.document.querySelector("#part-cancel").click();
+  assert.equal(page.document.querySelector("#part-panel").hidden, true);
+  // Picking another song starts from its whole preview.
+  page.document.querySelector("#matches .t").click();
+  await waitFor(() => page.similar().length === 2);
+  assert.equal(page.similar()[1].get("part"), null);
+
+  const forwarded = loadMain({ search: `?id=${AMANGA_ID}&tab=melody&part=10-20`, best: partsBest() });
+  await waitFor(() => shown(forwarded));
+  assert.equal(forwarded.search, "");
+  assert.equal(forwarded.hash, `#id=${AMANGA_ID}&tab=melody&part=10-20`);
+  assert.deepEqual(partParams(forwarded), ["10-20"]);
+
+  // Spans the picker cannot make are not sent.
+  for (const bad of ["12", "20-10", "5-12", "10-40", "a-b"]) {
+    const other = loadMain({ hash: `#id=${AMANGA_ID}&part=${bad}`, best: partsBest() });
+    await waitFor(() => shown(other));
+    assert.deepEqual(partParams(other), [null]);
+  }
+});
+
+test("a server that refuses the part answers for the whole preview and no chip stays", async () => {
+  const page = loadMain({ hash: `#id=${AMANGA_ID}`, best: partsBest({ refuse: true }) });
+  await waitFor(() => shown(page));
+  page.document.querySelector("#part-open").click();
+  page.document.querySelector("#part-apply").click();
+  await waitFor(() => page.similar().length === 3 && shown(page));
+  assert.deepEqual(partParams(page), [null, "10-20", null]);
+  assert.equal(page.document.querySelector("#part-chip").hidden, true);
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=best`);
+  assert.deepEqual(page.errors, []);
+});
+
+test("a part is given in preview time when the song's is unknown, and plays just that span", async () => {
+  const page = loadMain({
+    hash: `#id=${AMANGA_ID}`,
+    best: partsBest({ parts: { ...PARTS_INFO, song_offset_s: null } }),
+  });
+  await waitFor(() => shown(page));
+  page.document.querySelector("#part-open").click();
+  assert.equal(page.text("#part-label"), "0:10–0:20 of the preview · 10 s");
+  assert.deepEqual(page.texts("#part-panel .part-ticks span"), ["0:00", "0:10", "0:20", "0:30"]);
+  assert.doesNotMatch(page.text("#part-panel .part-note"), /in a few songs it is elsewhere/);
+
+  const [audio] = page.audios;
+  const play = page.document.querySelector("#part-play");
+  assert.equal(play.textContent, "▶ Play this part");
+  play.click();
+  await waitFor(() => !audio.paused);
+  assert.equal(audio.src, PREVIEW);
+  assert.equal(audio.currentTime, 10);
+  assert.equal(play.textContent, "⏸ Stop");
+  audio.currentTime = 14;
+  audio.dispatch("timeupdate");
+  assert.equal(audio.paused, false);
+  assert.equal(page.document.querySelector("#part-head").style.left, `${(100 * 14) / 30}%`);
+  // It stops at the end of the span, not of the preview.
+  audio.currentTime = 20.1;
+  audio.dispatch("timeupdate");
+  assert.equal(audio.paused, true);
+  assert.equal(play.textContent, "▶ Play this part");
+  // The seed's own preview button still plays the whole preview.
+  play.click();
+  await waitFor(() => !audio.paused);
+  page.document.querySelector(".seed .pv").click();
+  assert.equal(audio.paused, true);
+  assert.deepEqual(page.errors, []);
 });
 
 test("a song the matcher cannot use shows the reason instead of tabs", async () => {

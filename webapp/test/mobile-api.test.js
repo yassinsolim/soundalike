@@ -182,6 +182,9 @@ test("a Spotify link returns the documented response shape", async () => {
     language: "de",
     storefront: "us",
     deezer_id: ENGINE.query.id,
+    // No part was asked for, and this engine answer says nothing about parts.
+    part: null,
+    parts: null,
   });
   assert.match(body.query.artwork, /^https:\/\//);
   assert.equal(body.results.length, 3);
@@ -1198,6 +1201,67 @@ test("list= picks the melody list or what listeners also play from the same answ
   const refused = await ask("vibe");
   assert.equal(refused.status, 400);
   assert.equal(refused.body.error.code, "invalid_parameter");
+});
+
+test("part= is passed to the engine and the answer says which span was matched", async () => {
+  const parts = { min_s: 10, max_s: 30, preview_s: 30, song_offset_s: 48 };
+  const asked = [];
+  const net = network({
+    "engine.test": (url) => {
+      const part = url.searchParams.get("part");
+      asked.push(part);
+      const query = { ...ENGINE.query, parts };
+      if (part) {
+        const [start, end] = part.split("-").map(Number);
+        query.part = { start, end, heard: { sonic: [10, 20], samples: [9.19, 24.5], melody: [5, 30] } };
+      }
+      return reply({ ...ENGINE, query });
+    },
+  });
+  const { similarHandler } = service(net);
+  const ask = (part) => call(similarHandler, similarPath({ url: SPOTIFY_LINK, k: "2", ...(part ? { part } : {}) }));
+
+  const whole = await ask();
+  assert.equal(whole.body.query.part, null);
+  // The engine's limits and the preview's place in the song come through, so an app can offer the control.
+  assert.deepEqual(whole.body.query.parts, parts);
+  const picked = await ask("10-25");
+  assert.equal(picked.status, 200);
+  assert.deepEqual(picked.body.query.part, { start: 10, end: 25 });
+  assert.deepEqual(asked, [null, "10-25"]);
+  // The same span again is answered from memory.
+  await ask("10-25");
+  assert.equal(net.count("engine.test"), 2);
+
+  for (const bad of ["10", "25-10", "5-12", "10-31", "x-y"]) {
+    const refused = await ask(bad);
+    assert.equal(refused.status, 400);
+    assert.equal(refused.body.error.code, "invalid_parameter");
+  }
+  assert.equal(net.count("engine.test"), 2);
+});
+
+test("an engine without parts answers part= for the whole preview", async () => {
+  // Today's engine ignores the parameter; one started without parts refuses it.
+  for (const refuses of [false, true]) {
+    const asked = [];
+    const net = network({
+      "engine.test": (url) => {
+        asked.push(url.searchParams.get("part"));
+        return refuses && url.searchParams.has("part")
+          ? reply({ ok: false, error: "choosing a part of the preview is not enabled" }, 404)
+          : reply(ENGINE);
+      },
+    });
+    const { body, status } = await call(
+      service(net).similarHandler, similarPath({ url: SPOTIFY_LINK, k: "2", part: "10-20" }),
+    );
+    assert.equal(status, 200);
+    assert.equal(body.query.part, null);
+    assert.equal(body.query.parts, null);
+    assert.equal(body.results[0].deezer_id, FIRST_ID);
+    assert.deepEqual(asked, refuses ? ["10-20", null] : ["10-20"]);
+  }
 });
 
 test("a list the answer lacks falls back to the main one and says so", async () => {

@@ -318,7 +318,9 @@ The API also serves **Same vibe**, the Best candidates that share the seed's tem
 the separate melody, samples and sound lists. The web app and the Spotify extension show three lists
 ([evaluation of the first two](docs/ANYSONG_EVAL.md#one-main-list-and-listeners-also-play-pre-registered-2026-11-11-before-any-held-out-result)):
 Best matches, Listeners also play and, since extension 2.15.0, **Melody match**, the fused melody and samples list
-(`results.best`) that Best matches showed before v12.
+(`results.best`) that Best matches showed before v12. **Match a part** (beta: the web app, and extension 2.16.0)
+lets you pick 10 to 20 seconds of the 30-second preview Soundalike hears and get the three lists for that part; it
+appears once the server can match parts ([how the clients use it](docs/ANYSONG.md#match-a-part-in-the-clients)).
 **Listeners also play** ranks other artists' songs mostly by the listener model. **Best matches** (`results.main`)
 starts with likely covers and samples, only when a melody or samples match stands out. Since 2026-11-22 (v12) the rest
 of it is the consensus body: five catalog-wide signals score every song against the seed (whitened sound, a scene head
