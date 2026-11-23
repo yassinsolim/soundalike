@@ -175,6 +175,33 @@ test("a shared Spotify link shows the seed and rows that open in Spotify", async
   assert.equal(page.requests.length, 1);
 });
 
+test("Spotify rows are asked about again only when the server has Spotify credentials", async () => {
+  const respond = (source) => (url) => {
+    if (url.startsWith("/api/mobile/similar")) {
+      return answer(
+        "spotify",
+        [row(1, { spotify_exact: true, spotify_kind: "track", spotify_id: "1a2B3c4D5e6F7g8H9i0J1k", spotify_url: "https://open.spotify.com/track/1a2B3c4D5e6F7g8H9i0J1k" }), row(2)],
+        { spotify_lookup: true, spotify_source: source },
+      );
+    }
+    return { ok: true, exact: true, kind: "track", url: "https://open.spotify.com/track/9z8Y7x6W5v4U3t2S1r0Q9p", retry_after: null };
+  };
+  // Without credentials the answer already holds every track the server can find.
+  const metadata = await open("?spotify_id=5awDvzxWfd53SSrsRZ8pXO", respond("metadata"));
+  assert.equal(metadata.requests.length, 1);
+  // A track link is a plain same-tab link, so the phone hands it to Spotify, which plays it.
+  const [track, search] = metadata.rows();
+  assert.equal(track.anchor.href, "https://open.spotify.com/track/1a2B3c4D5e6F7g8H9i0J1k");
+  assert.equal(track.anchor.target, undefined);
+  assert.equal(search.anchor.href, "https://open.spotify.com/search/Artist%202%20Song%202");
+
+  const credentials = await open("?spotify_id=5awDvzxWfd53SSrsRZ8pXO", respond("credentials"));
+  assert.deepEqual(credentials.requests.slice(1), [
+    "/api/mobile/link?deezer_id=1002&platform=spotify&title=Song+2&artist=Artist+2&storefront=us",
+  ]);
+  assert.equal(credentials.rows()[1].anchor.href, "https://open.spotify.com/track/9z8Y7x6W5v4U3t2S1r0Q9p");
+});
+
 test("the toggle switches every row to Apple Music and looks up exact links", async () => {
   const page = await open("?spotify_id=5awDvzxWfd53SSrsRZ8pXO&k=3&lang=all", (url) => {
     if (url.startsWith("/api/mobile/similar")) return answer("spotify", [row(1), row(2), row(3)]);

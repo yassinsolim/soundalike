@@ -9,7 +9,9 @@ import {
   appleSearchUrl,
   cleanAppleUrl,
   isAppleId,
+  coreTitle,
   isSpotifyId,
+  normalize,
   normalizeIsrc,
   normalizeStorefront,
   parseSharedLink,
@@ -17,8 +19,10 @@ import {
   searchTitle,
   SPOTIFY_SHORT_HOSTS,
   spotifyIsrcUrl,
+  spotifyMetadataQueries,
   spotifySearchUrl,
   spotifyTrackUrl,
+  versionWords,
 } from "./mobile-links.js";
 
 export const DEFAULT_ENGINE_URL = "https://soundalike.yassin.app/api/anysong";
@@ -43,6 +47,13 @@ const LINK_MISS_TTL_MS = DAY;
 const MAX_TEXT = 300;
 const BROWSER_UA =
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36";
+// ListenBrainz Labs: Spotify track ids for artist and title, many songs per call, no key.
+const METADATA_LOOKUP_URL = "https://labs.api.listenbrainz.org/spotify-id-from-metadata/json";
+const METADATA_LOOKUP_UA =
+  "soundalike-mobile-api/1.0 (+https://soundalike.yassin.app; https://github.com/yassinsolim/soundalike)";
+// Candidates of one song that /api/mobile/similar and /api/mobile/link check on Spotify's embed page.
+const VERIFY_EAGER = 1;
+const VERIFY_ON_DEMAND = 5;
 const NEXT_DATA = /<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/;
 const CLIENT_IP = /^[0-9a-fA-F:.]{3,45}$/;
 
@@ -152,9 +163,9 @@ function pickSpotifyImage(images) {
 
 /**
  * Reads Spotify's public embed page (`open.spotify.com/embed/track/<id>`).
- * Returns {title, artists[], durationMs|null, artwork|null}, "missing" when
- * Spotify says the track does not exist, or null when the page is unreadable.
- * The page has no ISRC.
+ * Returns {title, artists[], durationMs|null, artwork|null, playable},
+ * "missing" when Spotify says the track does not exist, or null when the page
+ * is unreadable. The page has no ISRC.
  */
 export function parseSpotifyEmbed(html) {
   const match = NEXT_DATA.exec(typeof html === "string" ? html : "");
@@ -178,6 +189,7 @@ export function parseSpotifyEmbed(html) {
     artists,
     durationMs: Number.isFinite(entity.duration) ? entity.duration : null,
     artwork: pickSpotifyImage(entity.visualIdentity?.image),
+    playable: entity.isPlayable !== false,
   };
 }
 
@@ -293,6 +305,8 @@ export function createMobileService({
   budgetMs = 2000,
   seedTimeoutMs = 5000,
   engineTimeoutMs = 25000,
+  lookupTimeoutMs = 4000,
+  verifyWaitMs = 300,
   appleEagerRows = APPLE_EAGER_ROWS,
 } = {}) {
   const engineBase = String(env.SOUNDALIKE_ENGINE_URL || DEFAULT_ENGINE_URL).replace(/\/+$/, "");
@@ -310,12 +324,20 @@ export function createMobileService({
   const deezerFacts = new TtlCache(100000, now);
   const appleLinks = new TtlCache(50000, now);
   const spotifyLinks = new TtlCache(50000, now);
+  // Track ids ListenBrainz knows for a song (by Deezer id), and the one of them that was checked.
+  const spotifyCandidates = new TtlCache(50000, now);
+  const spotifyPicks = new TtlCache(50000, now);
+  const spotifyPicking = new Map();
   // Deezer allows 50 requests per 5 seconds per address, iTunes Search about
-  // 20 a minute. Both buckets stay a little under that.
+  // 20 a minute. Both buckets stay a little under that. Spotify publishes no
+  // limit for its embed pages; 40 per 10 seconds is two new answers.
   const deezerBucket = createBucket(45, 5000, now);
   const itunesBucket = createBucket(18, MINUTE, now);
+  const embedBucket = createBucket(40, 10000, now);
   let spotifyToken = null;
   let spotifyPausedUntil = 0;
+  let metadataPausedUntil = 0;
+  let embedPausedUntil = 0;
 
   function withTimeout(signal, timeoutMs) {
     const timeout = AbortSignal.timeout(timeoutMs);
@@ -364,6 +386,10 @@ export function createMobileService({
       artist: text(body.artist?.name),
       isrc: normalizeIsrc(body.isrc),
       durationMs: Number.isFinite(body.duration) && body.duration > 0 ? body.duration * 1000 : null,
+      album: text(body.album?.title),
+      contributors: [
+        ...new Set((Array.isArray(body.contributors) ? body.contributors : []).map((one) => text(one?.name)).filter(Boolean)),
+      ],
       artwork: dzcdnUrl(body.album?.cover_medium),
       preview: dzcdnUrl(body.preview),
     };
@@ -480,7 +506,7 @@ export function createMobileService({
     return result.ok ? result.body : null;
   }
 
-  /** The Spotify track id of a song, null (not found) or undefined (not asked). */
+  /** With client credentials: the Spotify track id of a song, null (not found) or undefined (not asked). */
   async function spotifyLink(deezerId, wanted, signal) {
     if (!hasSpotifyCredentials) return undefined;
     const key = String(deezerId);
@@ -510,6 +536,123 @@ export function createMobileService({
     } catch {
       return undefined;
     }
+  }
+
+  // ---- Spotify track ids without credentials -------------------------------
+
+  function pauseFor(response, fallbackSeconds) {
+    const wait = Number(response.headers?.get?.("retry-after"));
+    return now() + (Number.isFinite(wait) && wait > 0 ? Math.min(wait, 3600) : fallbackSeconds) * 1000;
+  }
+
+  /**
+   * Asks ListenBrainz for the Spotify track ids of several songs in one call
+   * and remembers the answer per song, hits and misses alike. `entries` are
+   * {key, wanted}. It runs on its own clock, not the request's, so an answer
+   * that comes too late for one request still serves the next.
+   */
+  async function lookupSpotifyCandidates(entries) {
+    const asked = entries.filter((entry) => spotifyCandidates.get(entry.key) === undefined);
+    if (!asked.length || now() < metadataPausedUntil) return;
+    const queries = [];
+    const owners = [];
+    for (const entry of asked) {
+      for (const query of spotifyMetadataQueries(entry.wanted)) {
+        queries.push(query);
+        owners.push(entry);
+      }
+    }
+    try {
+      const response = await fetchImpl(METADATA_LOOKUP_URL, {
+        method: "POST",
+        headers: { Accept: "application/json", "Content-Type": "application/json", "User-Agent": METADATA_LOOKUP_UA },
+        body: JSON.stringify(queries),
+        signal: AbortSignal.timeout(lookupTimeoutMs),
+      });
+      if (response.status === 429 || response.status >= 500) {
+        metadataPausedUntil = pauseFor(response, 60);
+        return;
+      }
+      const body = response.ok ? await response.json() : null;
+      if (!Array.isArray(body) || body.length !== queries.length) return;
+      const found = new Map(asked.map((entry) => [entry, []]));
+      body.forEach((item, index) => {
+        const ids = found.get(owners[index]);
+        for (const id of Array.isArray(item?.spotify_track_ids) ? item.spotify_track_ids : []) {
+          if (isSpotifyId(id) && !ids.includes(id)) ids.push(id);
+        }
+      });
+      for (const [entry, ids] of found) {
+        spotifyCandidates.set(entry.key, ids, ids.length ? LINK_HIT_TTL_MS : LINK_MISS_TTL_MS);
+      }
+    } catch {
+      // Unreachable or too slow: nothing is remembered, the next answer asks again.
+    }
+  }
+
+  /** One candidate's embed page: the parsed page, "missing", or undefined when it cannot be asked now. */
+  async function readEmbed(id) {
+    if (now() < embedPausedUntil || !embedBucket.take()) return undefined;
+    try {
+      const response = await fetchImpl(`https://open.spotify.com/embed/track/${id}`, {
+        headers: { "User-Agent": BROWSER_UA, "Accept-Language": "en" },
+        signal: AbortSignal.timeout(lookupTimeoutMs),
+      });
+      if (response.status === 404) return "missing";
+      if (response.status === 429 || response.status >= 500) {
+        embedPausedUntil = pauseFor(response, 60);
+        return undefined;
+      }
+      if (!response.ok) return undefined;
+      return parseSpotifyEmbed(await response.text()) ?? undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Checks the first `limit` candidates on Spotify's public embed page and
+   * picks the one that is this song: the same title and kind of version (live,
+   * remix, ...), playable, and closest in length when several are. The lookup matches on names, so the pick can be
+   * another release of the song (album or single, a remaster). Artist names
+   * are not compared: Spotify romanises them (Кино is "Kino" there).
+   * Returns the id, null (none of them is the song) or undefined (not known yet).
+   */
+  function pickSpotifyCandidate(key, wanted, ids, limit) {
+    const count = Math.min(limit, ids.length);
+    const known = spotifyPicks.get(key);
+    if (known !== undefined && known.checked >= count) return Promise.resolve(known.id);
+    // One check per song at a time, however many answers are waiting for it.
+    const flight = `${key}:${count}`;
+    let pending = spotifyPicking.get(flight);
+    if (!pending) {
+      pending = checkSpotifyCandidates(key, wanted, ids, count).finally(() => spotifyPicking.delete(flight));
+      spotifyPicking.set(flight, pending);
+    }
+    return pending;
+  }
+
+  async function checkSpotifyCandidates(key, wanted, ids, count) {
+    const pages = await Promise.all(ids.slice(0, count).map(readEmbed));
+    const wantedTitle = coreTitle(wanted.title);
+    const wantedVersion = versionWords(wanted.title);
+    let best = null;
+    let bestApart = Infinity;
+    pages.forEach((page, index) => {
+      if (!page || page === "missing" || !page.playable || coreTitle(page.title) !== wantedTitle) return;
+      if (versionWords(page.title) !== wantedVersion) return;
+      const apart =
+        Number.isFinite(wanted.durationMs) && Number.isFinite(page.durationMs)
+          ? Math.abs(wanted.durationMs - page.durationMs)
+          : 0;
+      if (apart < bestApart) {
+        best = ids[index];
+        bestApart = apart;
+      }
+    });
+    if (pages.includes(undefined)) return best ?? undefined;
+    spotifyPicks.set(key, { id: best, checked: count }, best ? LINK_HIT_TTL_MS : LINK_MISS_TTL_MS);
+    return best;
   }
 
   // ---- Seed ----------------------------------------------------------------
@@ -581,6 +724,7 @@ export function createMobileService({
       return {
         value: {
           platform: "spotify",
+          spotifyId: id,
           title: embed.title,
           artist: embed.artists[0],
           artistLine: embed.artists.join(", "),
@@ -734,37 +878,90 @@ export function createMobileService({
     // Everything below is best effort inside one time budget: whatever has
     // not arrived when it ends is served as a search link or null.
     const details = rows.map(() => ({}));
-    const seedDetails = {};
+    const seedDetails = { spotify: seed.spotifyId ?? null };
     const controller = new AbortController();
     const { signal } = controller;
-    const tasks = rows.map(async (row, index) => {
+    const wantedOf = (row, track) => ({
+      title: row.title,
+      artist: row.artist,
+      durationMs: track?.durationMs ?? null,
+      isrc: track?.isrc ?? null,
+      album: track?.album ?? null,
+      contributors: track?.contributors ?? [],
+    });
+    // Per row: Deezer's details, then (with credentials) Spotify's own search.
+    const ready = rows.map(async (row, index) => {
       const state = details[index];
       const track = await deezerTrack(row.id, signal);
       if (track && track !== "missing") state.track = track;
-      const wanted = {
-        title: row.title,
-        artist: row.artist,
-        durationMs: state.track?.durationMs ?? null,
-        isrc: state.track?.isrc ?? null,
-      };
-      await Promise.all([
-        (async () => {
-          if (!wantApple) return;
-          const key = `${storefront}:${row.id}`;
-          const known = appleLinks.get(key);
-          if (known !== undefined && !(known instanceof Promise)) state.apple = known;
-          else if (index < appleEagerRows) state.apple = await appleLink(row.id, wanted, storefront, signal);
-        })(),
-        (async () => {
-          if (wantSpotify) state.spotify = await spotifyLink(row.id, wanted, signal);
-        })(),
-      ]);
+      if (wantSpotify) state.spotify = (await spotifyLink(row.id, wantedOf(row, state.track), signal)) || null;
     });
-    if (Number.isSafeInteger(answer.query.id) && (!seed.isrc || !seed.artwork)) {
+    const tasks = rows.map(async (row, index) => {
+      if (!wantApple) return;
+      await ready[index];
+      const state = details[index];
+      const known = appleLinks.get(`${storefront}:${row.id}`);
+      if (known !== undefined && !(known instanceof Promise)) state.apple = known;
+      else if (index < appleEagerRows) {
+        state.apple = await appleLink(row.id, wantedOf(row, state.track), storefront, signal);
+      }
+    });
+    tasks.push(...ready);
+    const seedTrack =
+      Number.isSafeInteger(answer.query.id) && (!seed.isrc || !seed.artwork || (wantSpotify && !seedDetails.spotify))
+        ? (async () => {
+            const track = await deezerTrack(answer.query.id, signal, { force: true });
+            if (track && track !== "missing") seedDetails.track = track;
+          })()
+        : Promise.resolve();
+    tasks.push(seedTrack);
+    if (wantSpotify) {
+      // Everything credentials did not find goes to ListenBrainz in one call,
+      // then each first candidate is checked on Spotify's embed page.
       tasks.push(
         (async () => {
-          const track = await deezerTrack(answer.query.id, signal, { force: true });
-          if (track && track !== "missing") seedDetails.track = track;
+          await Promise.allSettled([...ready, seedTrack]);
+          const entries = rows
+            .map((row, index) => ({ key: String(row.id), wanted: wantedOf(row, details[index].track), state: details[index] }))
+            .filter((entry) => !entry.state.spotify);
+          if (!seedDetails.spotify) {
+            // The engine's release of the seed names everyone on it ("Luis Fonsi, Daddy Yankee").
+            const sameSong = seedDetails.track && coreTitle(seedDetails.track.title) === coreTitle(seed.title);
+            entries.push({
+              key: `seed:${normalize(seed.artist)}:${normalize(seed.title)}`,
+              wanted: {
+                title: seed.title,
+                artist: seed.artist,
+                durationMs: seed.durationMs,
+                album: null,
+                contributors: sameSong ? seedDetails.track.contributors : [],
+              },
+              state: seedDetails,
+            });
+          }
+          await lookupSpotifyCandidates(entries);
+          const checks = Promise.all(
+            entries.map(async (entry) => {
+              const ids = spotifyCandidates.get(entry.key);
+              if (!ids?.length) return;
+              // Until it is checked the first id stands: of 157 first ids measured, all were the song.
+              entry.state.spotify = ids[0];
+              entry.state.unchecked = true;
+              const pick = await pickSpotifyCandidate(entry.key, entry.wanted, ids, VERIFY_EAGER);
+              if (pick === undefined) return;
+              entry.state.spotify = pick;
+              entry.state.unchecked = false;
+            }),
+          );
+          // The checks finish on their own for the next answer; this one waits only briefly.
+          let wait;
+          await Promise.race([
+            checks,
+            new Promise((resolve) => {
+              wait = setTimeout(resolve, verifyWaitMs);
+            }),
+          ]);
+          clearTimeout(wait);
         })(),
       );
     }
@@ -797,6 +994,7 @@ export function createMobileService({
             : spotifySearchUrl(row.artist, row.title),
         spotify_exact: Boolean(spotify),
         spotify_kind: spotifyKind,
+        spotify_id: spotify || null,
         apple_music_url: apple || appleSearchUrl(storefront, row.artist, row.title),
         apple_exact: Boolean(apple),
       };
@@ -804,7 +1002,8 @@ export function createMobileService({
     return {
       cacheable: !request.storefrontGuessed,
       // An answer missing Deezer's details (rate limit, time budget) is worth asking for again soon.
-      maxAge: details.every((state) => state.track && !state.track.stale) ? RESPONSE_MAX_AGE_S : 20,
+      maxAge:
+        details.every((state) => state.track && !state.track.stale && !state.unchecked) ? RESPONSE_MAX_AGE_S : 20,
       body: {
         ok: true,
         query: {
@@ -814,6 +1013,7 @@ export function createMobileService({
           artwork: seed.artwork ?? seedDetails.track?.artwork ?? null,
           platform,
           source_url: seed.sourceUrl,
+          spotify_id: seedDetails.spotify ?? null,
           language: text(answer.query.language),
           storefront,
           deezer_id: Number.isSafeInteger(answer.query.id) ? answer.query.id : null,
@@ -832,7 +1032,8 @@ export function createMobileService({
           spotify_exact: results.filter((row) => row.spotify_exact).length,
           spotify_isrc: results.filter((row) => row.spotify_kind === "isrc_search").length,
           apple_exact: results.filter((row) => row.apple_exact).length,
-          spotify_lookup: hasSpotifyCredentials,
+          spotify_lookup: true,
+          spotify_source: hasSpotifyCredentials ? "credentials" : "metadata",
           apple_eager_rows: appleEagerRows,
         },
       },
@@ -857,11 +1058,18 @@ export function createMobileService({
     const { storefront } = store;
 
     const signal = AbortSignal.timeout(Math.max(budgetMs, 4000));
-    let wanted = title && artist ? { title, artist, durationMs: null, isrc: null } : null;
+    let wanted = title && artist ? { title, artist, durationMs: null, isrc: null, album: null, contributors: [] } : null;
     const track = await deezerTrack(deezerId, signal, { force: true });
     if (track === "missing") throw new MobileError(404, "track_not_found");
     if (track?.title && track.artist) {
-      wanted = { title: track.title, artist: track.artist, durationMs: track.durationMs, isrc: track.isrc };
+      wanted = {
+        title: track.title,
+        artist: track.artist,
+        durationMs: track.durationMs,
+        isrc: track.isrc,
+        album: track.album ?? null,
+        contributors: track.contributors ?? [],
+      };
     }
     if (!wanted) throw new MobileError(502, "lookup_unavailable");
 
@@ -869,6 +1077,7 @@ export function createMobileService({
     let exact = false;
     let kind = "search";
     let retryAfter = null;
+    let spotifyId = null;
     if (platform === "apple") {
       const found = await appleLink(deezerId, wanted, storefront, signal);
       if (found === undefined) retryAfter = Math.max(1, itunesBucket.retryAfter());
@@ -876,7 +1085,15 @@ export function createMobileService({
       if (exact) kind = "track";
       url = found || appleSearchUrl(storefront, wanted.artist, wanted.title);
     } else {
-      const found = await spotifyLink(deezerId, wanted, signal);
+      let found = await spotifyLink(deezerId, wanted, signal);
+      if (!found) {
+        // One row may take longer: every candidate ListenBrainz has is checked, not only the first.
+        const key = String(deezerId);
+        await lookupSpotifyCandidates([{ key, wanted }]);
+        const ids = spotifyCandidates.get(key);
+        if (ids?.length) found = await pickSpotifyCandidate(key, wanted, ids, VERIFY_ON_DEMAND);
+      }
+      spotifyId = found || null;
       exact = Boolean(found);
       if (exact) kind = "track";
       else if (wanted.isrc) kind = "isrc_search";
@@ -899,6 +1116,7 @@ export function createMobileService({
         url,
         exact,
         kind,
+        ...(platform === "spotify" ? { spotify_id: spotifyId } : {}),
         storefront: platform === "apple" ? storefront : null,
         retry_after: retryAfter,
       },

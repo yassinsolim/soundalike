@@ -11,7 +11,9 @@ import {
   pickBestMatch,
   primaryArtist,
   searchTitle,
+  spotifyMetadataQueries,
   spotifySearchUrl,
+  versionWords,
 } from "../server/mobile-links.js";
 
 const ID = "4cOdK2wGLETKBW3PvgPWqT";
@@ -140,4 +142,44 @@ test("builds search links and cleans Apple links", () => {
     "https://is1-ssl.mzstatic.com/image/thumb/Music/a/b.jpg/300x300bb.jpg",
   );
   assert.equal(appleArtwork("http://is1-ssl.mzstatic.com/a/100x100bb.jpg"), null);
+});
+
+test("builds the ways a song is put to the Spotify id lookup, best first, without repeats", () => {
+  const q = (artist_name, track_name, release_name = "") => ({ artist_name, release_name, track_name });
+  assert.deepEqual(
+    spotifyMetadataQueries({
+      title: "Hey DJ (Remix)",
+      artist: "CNCO",
+      album: "Hey DJ",
+      contributors: ["CNCO", "Meghan Trainor", "Sean Paul"],
+    }),
+    [
+      q("CNCO, Meghan Trainor, Sean Paul", "Hey DJ (Remix)", "Hey DJ"),
+      q("CNCO", "Hey DJ (Remix)", "Hey DJ"),
+      q("CNCO, Meghan Trainor, Sean Paul", "Hey DJ"),
+      q("CNCO", "Hey DJ"),
+    ],
+  );
+  // One artist and a plain title is one question.
+  assert.deepEqual(spotifyMetadataQueries({ title: "Lethal", artist: "Vera Blue", album: null, contributors: ["Vera Blue"] }), [
+    q("Vera Blue", "Lethal"),
+  ]);
+  // No Deezer details: the result's own names, then the plain title, then the first artist with it.
+  assert.deepEqual(spotifyMetadataQueries({ title: "Loca (feat. Cali y El Dandee)", artist: "Maite Perroni & Friends" }), [
+    q("Maite Perroni & Friends", "Loca (feat. Cali y El Dandee)"),
+    q("Maite Perroni & Friends", "Loca"),
+    q("Maite Perroni", "Loca"),
+  ]);
+  assert.deepEqual(spotifyMetadataQueries({ title: "", artist: "x" }), []);
+  assert.deepEqual(spotifyMetadataQueries({ title: "x", artist: " " }), []);
+});
+
+test("names the kind of version in a title", () => {
+  assert.equal(versionWords("American Spirit (Live)"), "live");
+  assert.equal(versionWords("American Spirit"), "");
+  assert.equal(versionWords("Chora Boy (Ao Vivo)"), versionWords("Chora Boy - Ao Vivo"));
+  assert.equal(versionWords("Neele Neele Ambar Par (The Unwind Mix)"), versionWords("Neele Neele Ambar Par - The Unwind Mix"));
+  assert.equal(versionWords("Song (Live Acoustic Remix)"), "acoustic live remix");
+  assert.equal(versionWords("Kleine geile Nonne (Remastered)"), "", "a remaster is the same recording");
+  assert.equal(versionWords("Alive"), "", "whole words only");
 });
