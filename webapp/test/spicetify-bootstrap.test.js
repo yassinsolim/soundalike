@@ -473,9 +473,19 @@ test("Marketplace permanently pins the bootstrap implementation commit", () => {
   assert.equal(marketplaceManifest.main, "integrations/spicetify/bootstrap.js");
   assert.equal(
     marketplaceManifest.branch,
-    "38ca29ca9ec760dc40e58a567ca6aaff632ae306",
+    "7a834dc4abe33d2ae0d0272181c0de7e1507929b",
   );
   assert.match(marketplaceManifest.branch, /^[a-f0-9]{40}$/);
+});
+
+test("the pinned bootstrap carries the key and feed that are committed", () => {
+  const pinned = showPinned(
+    marketplaceManifest.branch,
+    "integrations/spicetify/bootstrap.js",
+  ).toString("utf8");
+  assert.ok(pinned.includes(`"${productionPublicSpki}"`));
+  assert.ok(pinned.includes("/main/integrations/spicetify/releases/stable-2.json`"));
+  assert.ok(pinned.includes(`"${storageKey}"`));
 });
 
 test("state saved by the bootstrap of the lost key cannot block the new feed", async () => {
