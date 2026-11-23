@@ -63,7 +63,9 @@ The seed is then only the windows of that span (``audio.part_windows``: sound an
 chunks, melody the 20 s shingle around it), stored ones for a catalog song; playlists, tempo, language and artist
 scene stay the song's. ``/healthz`` then says ``parts: true``, every ``similar`` answer carries ``query["parts"]``
 (the limits of a span, and where the preview starts in the song when its length is known: ``preview_span``), and an
-answer for a span ``query["part"]``: the span asked for and the seconds each channel heard.
+answer for a span ``query["part"]``: the span asked for and the seconds each channel heard. An indexed song's length
+comes from ``--durations`` (``durations.DurationTable``) or a Deezer track object seen since the start, never from
+a request made for it.
 
 With ``--excerpts``, ``POST /api/anysong/excerpt`` (body: one audio clip of 5 to 30 s as WAV, FLAC, Ogg or MP3, at
 most ``--excerpt-max-mb``; query: ``k``, ``dedupe``, ``lang``, ``scene`` as for ``similar``, and optional ``title``,
@@ -583,8 +585,13 @@ class AnySong:
                  popularity: listener.Popularity | None = None, match_quantiles: Sequence[float] | None = None,
                  consensus=None, consensus_quantiles: Sequence[float] | None = None, parts: bool = False,
                  excerpts: bool = False, part_sound_weight: float | None = None,
-                 identify_score: float | None = None):
+                 identify_score: float | None = None, durations=None):
         self.engine, self.deezer, self.meta, self.keep_previews = engine, deezer, meta, keep_previews
+        # Song lengths, for where a preview sits in its song (``_parts_info``): the catalog's table
+        # (``durations.DurationTable``, --durations) and, kept without a time limit, the length in every Deezer
+        # track object a search or lookup brought in (``_know``).
+        self.durations = durations
+        self.lengths = LRU(cache_size * 32)
         # A part of the preview as the seed (``similar`` with ``part``) and clips of the user's own audio
         # (``excerpt``): both off unless asked for. ``part_sound_weight``: the consensus body's sound weight for
         # those queries (None: the service's). ``identify_score``: an excerpt whose best samples match scores at
@@ -745,6 +752,7 @@ class AnySong:
                 "language_search": self.language_rows is not None,
                 "language_detector": None if self.language_detector is None else detections,
                 "parts": self.parts, "excerpts": self.excerpts,
+                "durations": None if self.durations is None else {"songs": len(self.durations)},
                 "gpu_mib": _gpu_mib(self.engine.device)}
 
     def _tracks(self, q: str, limit: int, language: str | None = None,
@@ -765,7 +773,7 @@ class AnySong:
             found = [t for t in found if isinstance(t, dict) and type(t.get("id")) is int]
             if language is None:
                 for t in found:
-                    self.known.put(t["id"], t)
+                    self._know(t)
             hits = [_hit(t) for t in found]
             self.searches.put(key, hits)
         return hits
@@ -885,7 +893,7 @@ class AnySong:
             if not isinstance(info, dict) or info.get("id") != track_id:
                 return {}
             info.setdefault("contributors", [])
-            self.known.put(track_id, info)
+            self._know(info)
         return info
 
     def _contributors(self, track_id: int, charge: Callable[[], None] | None = None) -> list[tuple[int | None, str]]:
@@ -1020,7 +1028,7 @@ class AnySong:
             if isinstance(track, dict) and type(track.get("id")) is int and (
                     self.engine.indexed(track["id"]) or track.get("preview")):
                 tid = track["id"]
-                self.known.put(tid, track)
+                self._know(track)
                 self.isrcs.put(code, tid)
         if tid is not None:
             return tid
@@ -1114,12 +1122,29 @@ class AnySong:
         finally:
             self.pending.release()
 
+    def _know(self, track: dict) -> None:
+        """Remember a Deezer track object: briefly as a whole (``known``: its preview address expires), its length
+        for as long as there is room."""
+        self.known.put(track["id"], track)
+        duration = track.get("duration")
+        if isinstance(duration, (int, float)) and not isinstance(duration, bool) and duration > 0:
+            self.lengths.put(track["id"], duration)
+
+    def _duration(self, res: dict) -> float | None:
+        """The seed's length in seconds, as far as it is known without asking Deezer: a live seed's own track
+        object (kept with its result), a length seen in a search or lookup since the service started, else the
+        catalog's table."""
+        track_id = res["query"].get("id")
+        duration = res.get("duration") or self.lengths.get(track_id)
+        if not duration and self.durations is not None and track_id:
+            duration = self.durations.seconds(track_id)
+        return duration or None
+
     def _parts_info(self, res: dict) -> dict:
         """``query["parts"]``, what a client needs to offer a part of this seed's preview: the shortest and longest
         span and the preview's length in seconds, and ``song_offset_s``, where the preview starts in the song
-        (``preview_span``), None unless the song's length is known (a live seed's Deezer object, a catalog seed's
-        from a recent search) and long enough."""
-        duration = res.get("duration") or (self.known.get(res["query"].get("id")) or {}).get("duration")
+        (``preview_span``), None unless the song's length is known (``_duration``) and long enough."""
+        duration = self._duration(res)
         span = preview_span(duration)
         return {"min_s": PART_MIN_SECONDS, "max_s": PREVIEW_SECONDS, "preview_s": PREVIEW_SECONDS,
                 "song_offset_s": None if span is None else round(span[0], 1)}
@@ -2549,6 +2574,9 @@ def main(argv: list[str] | None = None) -> None:
                         "scene (anysong.tiers; needs --scene)")
     p.add_argument("--tempo", type=Path, default=None,
                    help="catalog tempo table from anysong.tempo; enables the Same vibe list")
+    p.add_argument("--durations", type=Path, default=None,
+                   help="catalog song lengths from anysong.durations: with --parts, an indexed song's answer then "
+                        "says where its preview sits in the song without a Deezer lookup")
     p.add_argument("--tempo-model", default=None,
                    help="Beat This! checkpoint for the tempo of unseen seeds (without it their tempo is unknown)")
     p.add_argument("--host", default="127.0.0.1")
@@ -2750,6 +2778,11 @@ def main(argv: list[str] | None = None) -> None:
 
         tiers = TierGate.load(args.core_ids, scene, engine.indexes)
     tempo = TempoTable.load(args.tempo) if args.tempo is not None else None
+    durations = None
+    if args.durations is not None:
+        from .durations import DurationTable
+
+        durations = DurationTable.load(args.durations)
     tracker = None
     if tempo is not None and args.tempo_model:
         from .tempo import Tracker
@@ -2805,7 +2838,7 @@ def main(argv: list[str] | None = None) -> None:
                       stems=store, dissector=dissector, catalog_previews=args.catalog_previews,
                       consensus=consensus, consensus_quantiles=consensus_quantiles,
                       parts=args.parts, excerpts=args.excerpts, part_sound_weight=args.part_sound_weight,
-                      identify_score=args.identify_score,
+                      identify_score=args.identify_score, durations=durations,
                       **_overall_scales(args.overall))
     server = Server((args.host, args.port), service, args.search_per_min, args.similar_per_min,
                     args.cors_origin, args.client_ip_header, dissect_per_min=args.dissect_per_min,

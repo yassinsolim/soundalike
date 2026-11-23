@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 torch = pytest.importorskip("torch")
-from soundalike.anysong import index_build, index_check, listener, serve
+from soundalike.anysong import durations, index_build, index_check, listener, serve
 from soundalike.anysong.scene import build as build_scene
 from soundalike.anysong.scenehead import SceneHead
 
@@ -40,6 +40,7 @@ def _index(root):
     scene.save(root / "scene.npz")
     np.save(root / "core_ids.npy", IDS[:10])
     np.savez(root / "tempo.npz", ids=IDS, bpm=np.full(N, 120, np.float32))
+    durations.save(root / "durations.npz", {int(t): 200 for t in IDS[:30]})
     one = np.array([0])
     arrays = (0.0, one, one, np.zeros(1), np.array([True]), one, one, np.zeros(1), 0)
     listener.Ranker(listener.FEATURES_POP, *arrays, "test ranker").save(root / "ranker.npz")
@@ -59,6 +60,7 @@ def test_a_complete_index_directory_passes_and_each_gap_is_named(tmp_path, capsy
     problems, summary = index_check.check(tmp_path)
     assert problems == [] and summary["songs"] == N and summary["named"] == N and summary["graph"] == 3
     assert summary["ranker"] == "test ranker" and summary["consensus"] == "test consensus"
+    assert summary["with_length"] == 30
     assert index_check.main([str(tmp_path)]) == 0 and json.loads(capsys.readouterr().out)["ok"] is True
 
     def broken(change):
@@ -69,6 +71,12 @@ def test_a_complete_index_directory_passes_and_each_gap_is_named(tmp_path, capsy
     (tmp_path / "sonic" / "norms.npy").rename(tmp_path / "norms.keep")
     assert "norms.npy: missing" in " | ".join(index_check.check(tmp_path)[0])
     (tmp_path / "norms.keep").rename(tmp_path / "sonic" / "norms.npy")
+    (tmp_path / "durations.npz").rename(tmp_path / "durations.keep")
+    assert "durations.npz: missing" in " | ".join(index_check.check(tmp_path)[0])
+    assert "durations.npz: none of its songs" in broken(
+        lambda: durations.save(tmp_path / "durations.npz", {1: 200, 2: 300}))
+    (tmp_path / "durations.npz").unlink()
+    (tmp_path / "durations.keep").rename(tmp_path / "durations.npz")
     assert "does not fit the sonic index" in broken(
         lambda: np.save(tmp_path / "heads" / "h4.emb.npy", np.zeros((N - 1, W, 6), np.float16)))
     np.save(tmp_path / "heads" / "h4.emb.npy", np.zeros((N, W, 6), np.float16))

@@ -2585,10 +2585,40 @@ def test_part_of_a_catalog_seed_searches_its_stored_windows_and_is_cached_apart(
     assert "part" not in svc.similar(1)["query"] and "part" not in svc.results.get(1)["query"]
     assert len(engine.parts) == 2 and not svc.cached(1, (0.0, 10.0))
     # The song's length, known from a search, places the preview in the song.
-    svc.known.put(5, {"id": 5, "duration": 200})
+    svc._know({"id": 5, "duration": 200})
     assert svc.similar(5, part=(0.0, 10.0))["query"]["parts"]["song_offset_s"] == 48.0
-    svc.known.put(1, {"id": 1, "duration": 80})  # too short a song for the measured place
+    svc._know({"id": 1, "duration": 80})  # too short a song for the measured place
     assert svc.similar(1)["query"]["parts"]["song_offset_s"] is None
+
+
+def test_song_offset_is_known_from_the_catalogs_lengths_without_asking_deezer(tmp_path):
+    from soundalike.anysong.durations import DurationTable
+
+    table = DurationTable(np.array([1, 3, 5]), np.array([200, 80, 240]))
+    svc = api.AnySong(PartEngine(), FakeDeezer(tmp_path), META, parts=True, durations=table)
+
+    def offset(tid, **kw):
+        return svc.similar(tid, **kw)["query"]["parts"]["song_offset_s"]
+
+    assert offset(1) == 48.0 and offset(1, part=(0.0, 10.0)) == 48.0 and offset(5) == 48.0
+    assert offset(3) is None  # 80 s: shorter than anything the preview's place was measured for
+    assert offset(2) is None  # the table does not have it
+    assert svc.deezer.lookups == 0 and svc.deezer.searches == 0
+    assert svc.health()["durations"] == {"songs": 3}
+    # A length Deezer gave in any search or lookup since the start is kept, also for answers already cached and
+    # after the track object itself is forgotten; it wins over the table's.
+    svc._know({"id": 2, "duration": 300})
+    svc._know({"id": 3, "duration": 200.0})
+    svc._know({"id": 4, "duration": None})
+    svc._know({"id": 6, "duration": True})
+    svc.known = api.LRU(4)
+    assert offset(2) == 48.0 and offset(3) == 48.0 and offset(4) is None and offset(6) is None
+    svc.search("one more time")
+    assert svc.lengths.get(99) == 30  # the search's hits are remembered
+    # Without the table nothing is known of a catalog song that no search returned; without --parts nothing is said.
+    plain = api.AnySong(PartEngine(), FakeDeezer(tmp_path), META, parts=True)
+    assert plain.similar(1)["query"]["parts"]["song_offset_s"] is None and plain.health()["durations"] is None
+    assert "parts" not in api.AnySong(PartEngine(), FakeDeezer(tmp_path), META, durations=table).similar(1)["query"]
 
 
 def test_part_answers_take_the_list_parameters_and_leave_the_other_lists_alone(tmp_path):
