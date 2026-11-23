@@ -16,6 +16,9 @@ import {
   normalizeStorefront,
   parseSharedLink,
   pickBestMatch,
+  pickSeedRecording,
+  sameLength,
+  scriptLanguages,
   searchTitle,
   SPOTIFY_SHORT_HOSTS,
   spotifyIsrcUrl,
@@ -44,6 +47,8 @@ const ENGINE_TTL_MS = 10 * MINUTE;
 const DEEZER_TTL_MS = 5 * MINUTE;
 const LINK_HIT_TTL_MS = 7 * DAY;
 const LINK_MISS_TTL_MS = DAY;
+// Which Deezer recording a link is does not change.
+const SEED_RECORDING_TTL_MS = 30 * DAY;
 const MAX_TEXT = 300;
 const BROWSER_UA =
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36";
@@ -328,6 +333,9 @@ export function createMobileService({
   const spotifyCandidates = new TtlCache(50000, now);
   const spotifyPicks = new TtlCache(50000, now);
   const spotifyPicking = new Map();
+  // How a shared song that its names did not find was found after all: by
+  // Deezer id, under another artist name, or not at all. Keyed by the link.
+  const seedRecordings = new TtlCache(20000, now);
   // Deezer allows 50 requests per 5 seconds per address, iTunes Search about
   // 20 a minute. Both buckets stay a little under that. Spotify publishes no
   // limit for its embed pages; 40 per 10 seconds is two new answers.
@@ -590,12 +598,12 @@ export function createMobileService({
     }
   }
 
-  /** One candidate's embed page: the parsed page, "missing", or undefined when it cannot be asked now. */
-  async function readEmbed(id) {
+  /** One track's embed page: the parsed page, "missing", or undefined when it cannot be asked now. */
+  async function readEmbed(id, language = "en") {
     if (now() < embedPausedUntil || !embedBucket.take()) return undefined;
     try {
       const response = await fetchImpl(`https://open.spotify.com/embed/track/${id}`, {
-        headers: { "User-Agent": BROWSER_UA, "Accept-Language": "en" },
+        headers: { "User-Agent": BROWSER_UA, "Accept-Language": language },
         signal: AbortSignal.timeout(lookupTimeoutMs),
       });
       if (response.status === 404) return "missing";
@@ -725,8 +733,10 @@ export function createMobileService({
         value: {
           platform: "spotify",
           spotifyId: id,
+          key: `spotify:${id}`,
           title: embed.title,
           artist: embed.artists[0],
+          artists: embed.artists,
           artistLine: embed.artists.join(", "),
           isrc,
           artwork: embed.artwork,
@@ -762,8 +772,11 @@ export function createMobileService({
       return {
         value: {
           platform: "apple",
+          key: `apple:${id}`,
           title,
           artist,
+          artists: [artist],
+          album: text(song.collectionName),
           artistLine: artist,
           isrc: null, // the iTunes API does not publish ISRCs
           artwork: appleArtwork(song.artworkUrl100),
@@ -811,9 +824,10 @@ export function createMobileService({
 
   // ---- Engine --------------------------------------------------------------
 
-  function askEngine(seed, k, lang, clientIp) {
-    const query = new URLSearchParams({ title: seed.title, artist: seed.artist });
-    if (seed.isrc) query.set("isrc", seed.isrc);
+  /** `song` is {id} (a Deezer track) or {title, artist, isrc?}. */
+  function askEngine(song, k, lang, clientIp) {
+    const query = new URLSearchParams(song.id ? { id: String(song.id) } : { title: song.title, artist: song.artist });
+    if (!song.id && song.isrc) query.set("isrc", song.isrc);
     query.set("k", String(k));
     query.set("lang", lang);
     const url = `${engineBase}/similar?${query}`;
@@ -838,6 +852,125 @@ export function createMobileService({
       if (status === 503 || status === 504) throw new MobileError(503, "engine_busy", { retryAfter });
       throw new MobileError(502, "engine_unavailable");
     });
+  }
+
+  // ---- A shared song the engine does not find by name ------------------------
+
+  async function deezerList(path, language) {
+    deezerBucket.take(true);
+    try {
+      const { ok, body } = await getJson(`https://api.deezer.com/${path}`, {
+        timeoutMs: lookupTimeoutMs,
+        headers: language ? { "Accept-Language": language } : {},
+      });
+      return ok && Array.isArray(body?.data) ? body.data : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /** The artist names the link's own service has in the script of the title ("Kino" is Кино). */
+  async function alternateArtists(seed, language) {
+    if (!language || !seed.spotifyId) return [];
+    const page = await readEmbed(seed.spotifyId, language);
+    if (!page || page === "missing") return [];
+    const known = new Set(seed.artists.map(normalize));
+    return page.artists.filter((name) => !known.has(normalize(name)));
+  }
+
+  /**
+   * Looks for the shared song among the Deezer tracks of its artists, in
+   * Deezer's own naming and in the language of the title's script, and
+   * returns the track id when `pickSeedRecording` has the evidence, else null.
+   */
+  async function findDeezerRecording(seed, names, language) {
+    const found = await Promise.all(
+      names.slice(0, 4).map((name) => deezerList(`search/artist?q=${encodeURIComponent(name)}&limit=5`)),
+    );
+    // Deezer's artist search knows other spellings (周杰倫 finds Jay Chou), so
+    // the names are not compared: the track evidence decides.
+    const artistIds = [...new Set(found.flatMap((list) => list.slice(0, 2).map((artist) => artist?.id)))]
+      .filter(Number.isSafeInteger)
+      .slice(0, 4);
+    if (!artistIds.length) return null;
+    const lists = [];
+    for (const id of artistIds) {
+      lists.push(deezerList(`artist/${id}/top?limit=100`));
+      if (language) lists.push(deezerList(`artist/${id}/top?limit=100`, language));
+    }
+    for (const name of names.slice(0, 2)) {
+      lists.push(deezerList(`search?q=${encodeURIComponent(`${seed.title} ${name}`)}&limit=25`, language));
+    }
+    const tracks = new Map();
+    for (const row of (await Promise.all(lists)).flat()) {
+      if (!Number.isSafeInteger(row?.id) || !artistIds.includes(row.artist?.id) || !text(row.title)) continue;
+      const track = tracks.get(row.id) ?? {
+        id: row.id,
+        titles: [],
+        durationS: row.duration,
+        album: text(row.album?.title),
+        rank: Number.isFinite(row.rank) ? row.rank : 0,
+        isrc: null,
+      };
+      if (!track.titles.includes(row.title)) track.titles.push(row.title);
+      tracks.set(row.id, track);
+    }
+    const fitting = [...tracks.values()].filter((track) => sameLength(seed.durationMs, track.durationS)).slice(0, 8);
+    // Which releases are one recording is told by their ISRCs.
+    await Promise.all(
+      fitting.map(async (track) => {
+        const details = await deezerTrack(track.id, AbortSignal.timeout(lookupTimeoutMs), { force: true });
+        if (details && details !== "missing") track.isrc = details.isrc;
+      }),
+    );
+    return pickSeedRecording(seed, fitting)?.id ?? null;
+  }
+
+  /**
+   * The engine's answer for a shared song. Its names are tried first, as
+   * always. Only when the engine does not know the song by them (Deezer has
+   * 晴天 as "Sunny Day", Кино's songs under Кино and not "Kino"), the Deezer
+   * recording is looked for with evidence and the engine asked by its id;
+   * failing that, the names are tried once more with the artist as written
+   * in the title's script. What worked is remembered for the link.
+   */
+  async function engineAnswer(seed, k, lang, clientIp) {
+    const known = seed.key ? seedRecordings.get(seed.key) : undefined;
+    if (known?.id || known?.artist) {
+      try {
+        return await askEngine(known.id ? { id: known.id } : { title: seed.title, artist: known.artist }, k, lang, clientIp);
+      } catch (error) {
+        if (!(error instanceof MobileError) || error.code !== "song_not_found") throw error;
+        seedRecordings.entries.delete(seed.key);
+      }
+    }
+    let notFound;
+    try {
+      return await askEngine(seed, k, lang, clientIp);
+    } catch (error) {
+      if (!(error instanceof MobileError) || error.code !== "song_not_found") throw error;
+      if (!seed.key || !Number.isFinite(seed.durationMs) || known?.miss) throw error;
+      notFound = error;
+    }
+    const language = scriptLanguages(`${seed.title} ${seed.artists.join(" ")}`);
+    const alternates = await alternateArtists(seed, language);
+    const attempts = [];
+    const recording = await findDeezerRecording(seed, [...seed.artists, ...alternates], language);
+    if (recording) attempts.push({ remember: { id: recording }, song: { id: recording } });
+    if (alternates.length) {
+      attempts.push({ remember: { artist: alternates[0] }, song: { title: seed.title, artist: alternates[0] } });
+    }
+    for (const attempt of attempts) {
+      try {
+        const answer = await askEngine(attempt.song, k, lang, clientIp);
+        seedRecordings.set(seed.key, attempt.remember, SEED_RECORDING_TTL_MS);
+        return answer;
+      } catch (error) {
+        if (!(error instanceof MobileError) || error.code !== "song_not_found") throw error;
+      }
+    }
+    seedRecordings.set(seed.key, { miss: true }, LINK_MISS_TTL_MS);
+    throw notFound;
   }
 
   // ---- /api/mobile/similar -------------------------------------------------
@@ -869,7 +1002,7 @@ export function createMobileService({
     const { storefront } = request;
 
     const clientIp = String(headers["cf-connecting-ip"] ?? "");
-    const answer = await askEngine(seed, request.k, request.lang, CLIENT_IP.test(clientIp) ? clientIp : null);
+    const answer = await engineAnswer(seed, request.k, request.lang, CLIENT_IP.test(clientIp) ? clientIp : null);
     const list = Array.isArray(answer.results.main) ? "main" : "best";
     const rows = (Array.isArray(answer.results[list]) ? answer.results[list] : [])
       .filter((row) => Number.isSafeInteger(row?.id) && text(row.title) && text(row.artist))

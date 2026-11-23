@@ -273,7 +273,7 @@ Errors are `{"ok": false, "error": {"code", "message"}}`; `message` is fit to sh
 | 400 | `missing_seed`, `invalid_parameter` | No song named, or a bad value |
 | 400 | `invalid_link`, `not_a_track`, `unsupported_link` | Not a Spotify or Apple Music link; an album link without a song; a playlist, artist, podcast or a short link that leads elsewhere |
 | 404 | `track_not_found` | Spotify, Apple Music or Deezer does not know the linked song |
-| 404 | `song_not_found` | The engine found no recording of it with a preview |
+| 404 | `song_not_found` | The engine found no recording of it with a preview, by name or by the fallback below |
 | 429 | `rate_limited` | The engine's per-listener limit; honour `Retry-After` |
 | 502 | `resolver_unavailable`, `engine_unavailable` | Spotify / iTunes / Deezer, or the engine, did not answer |
 | 503 | `engine_busy` | The engine is busy; retry after `Retry-After` seconds |
@@ -352,6 +352,30 @@ not a documented API; when either fails the links are what they were before, nev
 - In both cases `query.isrc` is then filled from Deezer's entry for the recording the engine matched, and every
   result's ISRC from Deezer's track API (50 requests per 5 seconds; the server stays under it and returns `null`
   rather than wait).
+- **A shared link the engine does not find by name.** Spotify and Apple Music name a song as its market does;
+  Deezer may hold another title or artist spelling (Jay Chou's 晴天 is "Sunny Day" there; Кино is "Kino" on Spotify).
+  Only after the engine's 404 for the names, and only for links (they have a length), the server looks for the
+  recording itself:
+  1. the artist's name in the title's script, from Spotify's embed page asked in that script's language (`ru` for
+     Cyrillic, `zh-TW` and `ja` for Han, `ar`, `ko`, ...);
+  2. on Deezer, the first two artists its artist search gives for each name (it knows other spellings: 周杰倫 finds
+     Jay Chou), their top 100 tracks in Deezer's default naming and in that language, and a title search;
+  3. a track is accepted only when its length is within 2 seconds of the link's **and** its title in one of those
+     namings is the link's title (same kind of version), or, for Apple Music links, it is the one recording of
+     that length on the album the link names. Of several releases of the song, the recording (ISRC) most of them
+     are wins, then the most played. The length alone is never enough, even for the only track that has it
+     (three of Jay Chou's 63 tracks are within 2 seconds of 晴天). The engine is then asked with `id=`;
+  4. failing that, the engine is asked once more by name with the artist from step 1; this is a match by name, as
+     on the normal path, and may be another release (Spotify's 5:46 Кукушка answered from Deezer's 6:41 one).
+
+  What worked is remembered for the link for 30 days (a miss for a day), so later requests go straight to it.
+  Measured on 2026-11-23: 晴天 (Spotify and Apple Music links) → Deezer 2602471112 "Sunny Day"; Земфира's ХОЧЕШЬ? →
+  1520555492; Кино's Группа крови and Кукушка by step 4. The lookups took 1.1 to 1.3 s (9 to 14 requests, 13 to
+  Deezer at most) on top of the engine's two calls; songs found by name (アイドル, Wegz's البخت, Despacito, bad guy)
+  made no extra request. A title that Deezer holds only in translation in every language asked stays a 404, and
+  so do typed `title`+`artist` seeds. No credential-free way from a Spotify track id to an ISRC was found:
+  ListenBrainz Labs maps names or MusicBrainz ids to Spotify ids, not back; MusicBrainz knows no URL for this
+  track and lists its recording without an ISRC.
 - The engine is reached at `SOUNDALIKE_ENGINE_URL` (default `https://soundalike.yassin.app/api/anysong`). Through
   the public address every phone request shares the web host's engine rate limit (cached answers are free). When
   the variable is a plain `http://` LAN address, the listener's `CF-Connecting-IP` is forwarded so the engine's
