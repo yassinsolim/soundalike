@@ -105,10 +105,13 @@ So a tap plays at once only with a track id. The phone has no credential-free wa
 server does it for the rows it can (`spotify_kind: "track"`, `spotify_id`). In the list those rows carry a play
 mark and the others an open mark:
 
-- **A row with a track id**: the tap starts the song in Spotify and the sheet comes back in front 0.3 s later, so
-  the list stays, the row reads "Playing in Spotify", and the next tap switches song. Android lets the sheet come
-  back only while it still counts as visible, which is why it waits that short moment and no longer; if Android
-  ever refuses, the sheet closes and Spotify stays in front.
+- **A row with a track id**: the tap starts the song in Spotify. Spotify comes to the front, and as soon as the
+  player reports the new song the sheet comes back in front of it: the list stays, the row reads "Playing in
+  Spotify", and the next tap switches song. On a real device (Spotify 9.2.0, 12 taps in a row) the song started
+  0.6 to 0.9 s after the tap seven times and 1.4 to 9.7 s the other five; the sheet was back every time. When no
+  song change is seen within 12 s (no notification access, the same song tapped again, or Spotify had to start
+  first) the sheet closes and Spotify stays in front, where the song is. Coming back on a timer instead covered
+  Spotify before it had read the link about one tap in ten, and the song did not start.
 - **A row without one**: the tap opens the ISRC search in Spotify, one more tap there.
 
 There is no login-free way to queue a song or play the whole list in Spotify.
@@ -244,11 +247,14 @@ With Spotify logged in on the same device (2026-11-22, release build unless note
 | Song change with the sheet open (debug build) | "Now playing: … Show soundalikes" appears; tapping it reloads |
 | Add-tile dialog (debug build) | Guide button › system dialog › Add tile |
 
-Tap = plays (2026-11-22, debug build against a local stand-in for the server that returned track ids, because the
-live route did not send any yet): a row with an id switched Spotify to that song on each of four taps, the sheet
-was the front activity again afterwards, and the row read "Playing in Spotify". Asked back in the same instant
-instead of 0.3 s later, the sheet stayed in front but Spotify did not switch until it was next opened. Not tried:
-Spotify not running at the moment of the tap, and the live route.
+Tap = plays, release build against production (2026-11-22, Spotify 9.2.0 logged in): the live route marked 12 to
+13 of 20 rows with a track id. Tile, then a row: the song plays and the list is back in front, 12 taps out of 12;
+a row without an id opens the ISRC search. From Spotify's own share sheet (portrait there): share icon, More, Find
+soundalikes, a row: the song started 0.8 s after the last tap. With Spotify swiped out of recents the song starts
+only after Spotify has loaded (over ten seconds once), and the sheet closes instead of coming back. When Spotify
+moves on by itself the green mark goes and the "Now playing" line appears. Listening to hearing a soundalike: two
+taps with the floating button, swipe and two taps with the tile, four taps by sharing; about one second after the
+last tap in the usual case.
 
 Re-run on the release build the same day: the add-tile dialog from the guide, the playing card following the
 player, the floating button (only over Spotify with usage access, hidden over Soundalike's own screens, one tap
