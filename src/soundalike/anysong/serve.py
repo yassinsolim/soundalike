@@ -21,7 +21,7 @@ import os
 import sys
 import time
 from collections import deque
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -29,7 +29,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from .audio import load_clips
+from .audio import excerpt_clips, load_clips
 from .embedders import REGISTRY, Embedder
 from .evaluate import l2, load_keys, score_block, window_scores
 
@@ -608,15 +608,27 @@ class Engine:
         clips = load_clips(path, sorted({REGISTRY[ch.model].sr for ch in self.channels}))
         return clips, {"decode": (time.perf_counter() - t) * 1000}
 
+    def excerpt_clips(self, mono: np.ndarray, native_sr: int) -> tuple[dict[str, np.ndarray], dict[str, float]]:
+        """One clip per channel for a decoded excerpt of 5 to 30 s (``audio.excerpt_clips``; CPU only), for
+        ``embed_channel_clips``."""
+        t = time.perf_counter()
+        clips = excerpt_clips(mono, native_sr, {ch.name: REGISTRY[ch.model].sr for ch in self.channels})
+        return clips, {"resample": (time.perf_counter() - t) * 1000}
+
     def embed_clips(self, clips: dict[int, np.ndarray]) -> tuple[dict[str, np.ndarray], dict[str, float]]:
-        """Raw window embeddings per channel for decoded clips, plus GPU timings in ms."""
+        """Raw window embeddings per channel for decoded clips (one per sample rate), plus GPU timings in ms."""
+        return self.embed_channel_clips({ch.name: clips[REGISTRY[ch.model].sr] for ch in self.channels})
+
+    def embed_channel_clips(self, clips: Mapping[str, np.ndarray]) -> tuple[dict[str, np.ndarray], dict[str, float]]:
+        """``embed_clips`` for one clip per channel, each at its model's rate and of any length the model windows
+        (``excerpt_clips``)."""
         timings: dict[str, float] = {}
         out: dict[str, np.ndarray] = {}
         for ch in self.channels:
             emb = self.embedder(ch.model)
             _sync(self.device)
             t = time.perf_counter()
-            win = emb.embed(clips[emb.sr][None])["win"][0]
+            win = emb.embed(np.asarray(clips[ch.name])[None])["win"][0]
             _sync(self.device)
             timings[f"embed_{ch.model}"] = (time.perf_counter() - t) * 1000
             if not np.isfinite(win.astype(np.float32)).all():
@@ -630,7 +642,8 @@ class Engine:
         return wins, t_decode | t_embed
 
     def _search(self, ch: Channel, q: torch.Tensor, k: int, exclude: list[int], allow, row: int | None,
-                windows: np.ndarray | None, results: dict, timings: dict[str, float], within=None) -> None:
+                windows: np.ndarray | None, results: dict, timings: dict[str, float], within=None,
+                part: Sequence[int] | None = None) -> None:
         """One channel's top ``k`` for a prepared query. With a ``blend``, the sonic channel also gives
         ``results["blend"]``: the top ``k`` rows by blended score (``blend.Blend.scores``; the same ``allow`` mask
         and ``exclude``) in that order, each with its exact sonic score; and ``results["blendz"]``: the blended score
@@ -670,11 +683,12 @@ class Engine:
         if blend is None:
             return
         t = time.perf_counter()
-        seed_head, head = blend.seed_head(row, windows), None
+        # ``part``: the stored seed's sonic windows the query is made of (``search_stored``).
+        seed_head, head = blend.seed_head(row, windows, part), None
         if self.keep_base and blend.streamed:
             # One pass over a head table in host memory gives the blend's term and ``results["base"]["head"]``, the
             # head scores as ``consensus.Consensus`` reads them (``Blend.head_views``).
-            head, results["base"]["head"] = blend.head_views(seed_head, blend.unit_seed(row, seed_head))
+            head, results["base"]["head"] = blend.head_views(seed_head, blend.unit_seed(row, seed_head, part))
         blended = blend.scores(base, seed_head, row, head)
         if mask is not None:
             blended = blended.masked_fill(~mask, -torch.inf)
@@ -729,28 +743,41 @@ class Engine:
         return all(int(track_id) in ix.pos for ix in self.indexes.values())
 
     def score_tracks(self, channel: str, track_ids: Iterable[int], windows: np.ndarray | None = None,
-                     query_track: int | None = None) -> dict[int, float]:
+                     query_track: int | None = None, part: Sequence[int] | None = None) -> dict[int, float]:
         """Exact scores of the indexed ``track_ids`` in one channel, against live ``windows`` (raw, as embedded) or
-        the stored windows of ``query_track``; ids outside the index are left out."""
+        the stored windows of ``query_track`` (``part``: only those of them); ids outside the index are left out."""
         idx = self.indexes[channel]
         q = idx.prep_query(windows) if windows is not None else idx.stored_query(int(query_track))
+        if part is not None and windows is None:
+            q = q[list(part)]
         rows = np.array(sorted({idx.pos[int(t)] for t in track_ids if int(t) in idx.pos}), dtype=np.int64)
         values = idx.score_rows(q, rows).tolist()
         return {int(idx.ids[r]): float(v) for r, v in zip(rows, values)}
 
+    def top_match(self, channel: str, windows: np.ndarray) -> tuple[int, float] | None:
+        """The best song of one channel's whole index (no row mask) for raw windows: (track id, score)."""
+        idx = self.indexes[channel]
+        rows = idx.top(idx.search(idx.prep_query(windows))[0], 1)
+        return rows[0] if rows else None
+
     def search_stored(self, track_id: int, k: int = 20, exclude: Iterable[int] = (),
                       allow: Mapping[str, torch.Tensor] | None = None,
-                      within: Mapping[str, torch.Tensor] | None = None
+                      within: Mapping[str, torch.Tensor] | None = None,
+                      part: Mapping[str, Sequence[int]] | None = None
                       ) -> tuple[dict[str, list[tuple[int, float]]], dict[str, float]]:
         """Rank an indexed track from its stored fp16 windows instead of re-embedding its preview (live
         embeddings match the stored ones up to fp16 rounding; see ``serve_check``). The track itself is
-        excluded; ``allow`` and ``within`` as in ``search_windows``."""
+        excluded; ``allow`` and ``within`` as in ``search_windows``. ``part`` (channel -> window numbers,
+        ``part_windows``): the query is those stored windows alone, one part of the preview."""
         results, timings = {}, {}
         exclude = [int(track_id), *exclude]
         for ch in self.channels:
             idx = self.indexes[ch.name]
-            self._search(ch, idx.stored_query(track_id), k, exclude, allow, idx.pos[int(track_id)], None, results,
-                         timings, within)
+            q = idx.stored_query(track_id)
+            if part is not None:
+                q = q[list(part[ch.name])]
+            self._search(ch, q, k, exclude, allow, idx.pos[int(track_id)], None, results, timings, within,
+                         part["sonic"] if part is not None else None)
         return results, timings
 
 

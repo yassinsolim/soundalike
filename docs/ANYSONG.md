@@ -30,6 +30,14 @@ instrumentals) remain visible. A live seed outside the catalog uses the same pri
 language, the filter fails open. The filter costs some cross-language matches; the measured trade-offs are in
 [ANYSONG_EVAL.md](ANYSONG_EVAL.md#language-gate-impact).
 
+The seed's own song never appears in a list (`dedupe=1`, the default): any release by the seed's artist whose title
+is the seed's without version tags, also when the names are spelled differently in accents, width forms or a
+leading "The". A seed outside the catalog is named by Deezer today and the catalog's releases as they were when
+indexed, so "Maria También" hides "Maria Tambien (Live at Sydney Opera House)". Another song by the seed's artist
+may still lead Best matches (`main`): its audio head is for likely covers, samples and shared melodies whoever made
+them (Khruangbin's dub version "Mary Always" for "Maria También"); the consensus body after the head and Listeners
+also play hold other artists only.
+
 Other artists' versions of the seed's own song (the same title) are limited in Best matches, Same vibe and Sounds
 like. One that scores 0.55 or more in the samples list reuses the seed's recording (a re-upload, a sped-up edit, the
 same song under another credit) and is dropped. At most three of the rest stay, the best placed first, so covers of
@@ -150,7 +158,31 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   and artist as given and, when that finds no release of the song, for the normalized song key, which finds
   symbol-named artists. The first of 10 hits with a preview, that version and those tags is ranked live. Failing
   that, an indexed release with that version, a hit with that version, the song's best indexed release (untagged
-  first, then lowest id) or else its first search hit stands in, and no release at all is a 404. With `isrc=` (the
+  first, then lowest id) or else its first search hit stands in. When neither the catalog nor those searches know
+  the song under the names as given, it is looked for under another credit or naming
+  ([`anysong/lookup.py`](../src/soundalike/anysong/lookup.py)), on evidence only:
+  - *the title* is the same key in any naming Deezer holds for the track: its default one, the one it gives with
+    `Accept-Language` set to the language of the request's script ("Zankyosanka" is 残響散歌 for `ja`), or a bracketed
+    part in another script ("Gangnam Style (강남스타일)"); Arabic letters written two ways are folded;
+  - *the artist* is the track's credited artist or one name of that credit, or one of its contributors (Deezer's
+    track details: "Ella Baila Sola" is credited to Eslabon Armado first and Peso Pluma second), or the Deezer
+    artist that the artist search finds for the name (周杰倫 is Jay Chou), or spelled almost like the credit ("Pink"
+    for "P!nk", "ACDC" for "AC/DC").
+
+  The steps, each only if the one before found nothing: the hits already returned, the same search in the request
+  script's language, the contributors of the three most popular hits with the title, Deezer's artist search, and,
+  for a title outside the Latin script, the top tracks of those artists in that language. Last, a title one typing
+  slip off (similarity 0.85 or more, at least six characters, the same numbers) counts when the artist evidence is
+  better than a close spelling. Among several, the same title wins, then the better artist evidence, then Deezer's
+  rank. The song found is then the catalog's release of it when there is one (under Deezer's own credit and
+  naming), chosen as above. Anything less is a 404 as before: a known title by an artist who is not on the track
+  is never answered with someone else's song. This costs up to about ten more Deezer requests (1 to 3 s) for a
+  name that would otherwise be a 404, none for a name that is found, and the answers are cached for an hour.
+  What Deezer alone cannot settle stays a 404: a title in a script for which Deezer holds no naming (BTS "봄날",
+  filed as "Spring Day" only) or an artist typed in another script than Deezer's without any shared naming
+  ("Kino" for Кино). On 2026-11-23, of 81 real requests in many scripts 45 resolved before and 72 after, none
+  changed, and 10 requests for songs that do not exist stayed 404 (`tests/test_anysong_lookup.py`, on recorded
+  Deezer answers). With `isrc=` (the
   Spotify extension reads the seed's ISRC from Spotify), an indexed release with the requested version answers
   first; then Deezer's ISRC lookup (cached), which also finds tracks that Deezer's search hides in the server's
   country; then the name lookup. `query.id`
@@ -404,6 +436,67 @@ So that a `/find` link opens the installed app instead of the page, the site ser
 plain JSON files in [`webapp/well-known/`](../webapp/well-known), reached through `rewrites` in `site.json` so they
 are served as `application/json` without a redirect, which both platforms require. A new signing key or app id
 means editing those files.
+
+## A part of a song
+
+A listener can say which part of a song the matches should follow. Measurements: `anysong-lab/partmatch/REPORT.md`
+(2026-11-23) and [ANYSONG_EVAL.md](ANYSONG_EVAL.md#a-part-of-a-song-as-the-seed-2026-11-23); local demo page:
+[`demo/part-match/`](../demo/part-match) (`python demo/part-match/serve.py`, not deployed). Served: a part of the
+preview (`--parts`, in the production unit). Not served: clips of the listener's own audio (`--excerpts`) and
+naming a clip's song (`--identify-score`), which are off unless the engine is started with their flags; the
+production unit must not carry them (`tests/test_anysong_api.py` checks the unit file), and `--identify-score`
+without `--excerpts` refuses to start.
+
+**`--parts`: a part of the preview.** `GET /api/anysong/similar?...&part=<start>-<end>` takes seconds of the song's
+30 s preview, decimals allowed, `0 <= start < end <= 30` and at least 10 apart (the sound model's window); every
+other parameter (`id` or `title` + `artist` or `isrc`, `k`, `lang`, `scene`, `dedupe`) works as without it.
+
+| Request | Answer |
+|---|---|
+| `part=10-20` | 200, the lists of `similar` for that span |
+| `part=` that is malformed, outside 0 to 30, or shorter than 10 s | 400, before the song is looked up |
+| `part=` on an engine without `--parts` | 404 `choosing a part of the preview is not enabled`, before any lookup |
+
+The seed is then only the windows of that span (`audio.part_windows`): the 10 s sound windows (and their scene-head
+vectors) and the 6 s samples chunks it covers by 70 % or more, and the 20 s melody shingle around it, so a 10 s part
+still hears 5 s either side in the melody model. A catalog song uses its stored windows (no download, no
+embedding); a song outside the catalog is downloaded and embedded as before and cut to the span. Playlist vectors,
+tempo, language (and so the language gate) and the artist's scene stay the song's own, the seed's own song and the
+other lists' rules are as for the whole preview, and every list is returned. Stems (`/dissect`) do not take a
+part.
+
+- **Detection.** `/healthz` has `parts: true` (and `excerpts: false`), and every `similar` answer of such an engine
+  carries `query.parts`: `{"min_s": 10.0, "max_s": 30.0, "preview_s": 30.0, "song_offset_s": 48.0}`.
+  `song_offset_s` is where the preview starts in the song, `null` when the engine does not know the song's length
+  (always known for a song outside the catalog; for a catalog song only when it came through `search` in the last
+  ten minutes) or the song is shorter than 90 s. 16 of 17 previews measured against full recordings begin 47.5 to
+  48.0 s into the song and one at 59.4 s, so clients should word it as the usual place; a client that knows the
+  song's length itself may assume 48 s for songs of 90 s or more.
+- **Echo.** An answer for a span carries `query.part`: `{"start": 10.0, "end": 20.0, "heard": {"sonic": [10.0,
+  20.0], "samples": [9.19, 21.44], "melody": [5.0, 25.0]}}`, the span asked for and the seconds of the preview each
+  model heard. Without `part=` there is no `query.part`.
+- **Cache and rate limit.** Results are cached per window choice, apart from the whole preview's: spans that pick
+  the same windows share one result (each answer echoes its own span), and a span that picks every window (such as
+  `0-30`) is the whole-preview result, never the other way round. A span whose windows were not ranked yet costs
+  one `/similar` request of the client's budget, like any new ranking; cached ones are free.
+- Parts add no model and no table: measured under an 8 GB cap with part requests, a live seed and a Stems
+  dissection, see [ANYSONG_EVAL.md](ANYSONG_EVAL.md#a-part-of-a-song-as-the-seed-2026-11-23).
+
+**`--excerpts`: a clip of the listener's own audio.** `POST /api/anysong/excerpt` takes one clip of 5 to 30 s as the
+request body (WAV, FLAC, Ogg or MP3: what libsndfile reads; at most `--excerpt-max-mb`, default 12) and the query
+parameters `k`, `dedupe`, `lang`, `scene` of `similar`. The clip is decoded in memory with a header check first,
+embedded like a song outside the catalog with as many windows as it fills (`audio.excerpt_clips`), ranked, and
+dropped: nothing is written to disk, cached, logged or added to the catalog or the learn queue. The answer has the
+shape of `similar` with `query.source` `excerpt` and `query.seconds`; `listeners` and the artist scene need a
+known song. Optional `title` + `artist` or `isrc` name the song: it is then left out of the lists and its artist
+gives the scene, the catalog tiers and the listener lists (a name that nothing knows is not an error). With
+`--identify-score S` a clip without a name is first looked up in the whole samples index, and a best match scoring
+at least `S` (0.55: the same recording) stands in for the name and is reported as `query.identified`. The clip is
+brought to full scale before it is embedded, because the sound model hears level. The route has its own budget,
+`--excerpt-per-min` (default 6 per client), answers `411` without a body, `413` over the size limit, `422` for
+audio it cannot decode, clips outside 5 to 30 s and silence, and a CORS preflight when `--cors-origin` is set.
+`--part-sound-weight` sets the consensus body's sound weight for part and excerpt seeds (default: the body's own;
+not set in production).
 
 ## Growing the catalog
 

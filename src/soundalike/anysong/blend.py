@@ -109,10 +109,12 @@ class Blend:
             return self.table.blocks()
         return ((s, self.table[s:s + chunk]) for s in range(0, len(self), chunk))
 
-    def seed_head(self, row: int | None, windows: np.ndarray | None = None) -> torch.Tensor:
-        """The seed's head vectors [W, dim]: its stored ones, or those of a live seed's raw sonic ``windows``."""
+    def seed_head(self, row: int | None, windows: np.ndarray | None = None, part=None) -> torch.Tensor:
+        """The seed's head vectors [W, dim]: its stored ones (``part``: only those windows of them), or those of a
+        live seed's raw sonic ``windows``."""
         if row is not None:
-            return self.table[row].float()
+            head = self.table[row].float()
+            return head if part is None else head[list(part)]
         return torch.from_numpy(self.head.embed(np.asarray(windows, dtype=np.float32))).to(self.table.device)
 
     @torch.inference_mode()
@@ -120,10 +122,13 @@ class Blend:
         """Best window-pair cosine between the seed's head vectors and every row's [N]."""
         return self.head_views(seed, None, chunk)[0]
 
-    def unit_seed(self, row: int | None, seed: torch.Tensor) -> torch.Tensor:
-        """The seed's head vectors for ``unit_scores``: a stored seed's at unit length again in fp16, a live seed's
-        (``seed``, from ``seed_head``) as they are."""
-        return unit_half(self.table[row].half()) if row is not None else seed
+    def unit_seed(self, row: int | None, seed: torch.Tensor, part=None) -> torch.Tensor:
+        """The seed's head vectors for ``unit_scores``: a stored seed's at unit length again in fp16 (``part``: only
+        those windows of them), a live seed's (``seed``, from ``seed_head``) as they are."""
+        if row is None:
+            return seed
+        unit = unit_half(self.table[row].half())
+        return unit if part is None else unit[list(part)]
 
     @torch.inference_mode()
     def head_views(self, seed: torch.Tensor, unit_seed: torch.Tensor | None, chunk: int = HEAD_CHUNK

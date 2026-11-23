@@ -209,21 +209,25 @@ class Consensus:
 
     @torch.inference_mode()
     def signals(self, bases: Mapping[str, torch.Tensor], row: int | None = None,
-                windows: np.ndarray | None = None) -> dict[str, torch.Tensor]:
+                windows: np.ndarray | None = None, part: Sequence[int] | None = None) -> dict[str, torch.Tensor]:
         """Each signal's score of every sonic row [N] for a stored seed (``row``) or a live one (its raw sonic
         ``windows``), -inf where the signal has none. ``bases``: channel -> the stage-1 scores less the hub penalty
         of the seed's melody and samples searches, in those indexes' row order, and (optional) ``"head"``: the
-        head signal, when the engine computed it with the blend's."""
+        head signal, when the engine computed it with the blend's. ``part``: the stored seed's sonic windows that
+        make the query (one part of its preview): the sound and head signals read those alone; the playlist signal
+        is the song's either way."""
         if row is None:
             sound = self.prep(windows)
         elif self.streamed:
             sound = unit_half(self.windows[row].half())
         else:
             sound = self.windows[row].to(self.device)
+        if part is not None and row is not None:
+            sound = sound[list(part)]
         head = bases.get("head")
         if head is None:  # else the engine's pass over a head table in host memory gave it (``Blend.head_views``)
             seed = self.blend.seed_head(None, windows) if row is None else None
-            head = self.blend.unit_scores(self.blend.unit_seed(row, seed))
+            head = self.blend.unit_scores(self.blend.unit_seed(row, seed, part))
         out = {"snd": self._sound(sound), "head": head}
         cf = torch.full((self.n,), -torch.inf, device=self.device)
         at = int(self.blend.graph_pos[row]) if row is not None else -1
@@ -275,7 +279,7 @@ class Consensus:
 
     @torch.inference_mode()
     def candidates(self, signals: Mapping[str, torch.Tensor], seed: Seed, rows: np.ndarray | None = None,
-                   scene_cache: dict | None = None) -> Candidates:
+                   scene_cache: dict | None = None, sound_weight: float | None = None) -> Candidates:
         """The seed's candidates with their features and body scores; ``rows`` (a study's own sonic rows) replaces
         the pool. ``scene_cache``: the scene columns per artist, shared by the calls for one seed."""
         n, allow = self.n, self.allowed(seed)
@@ -335,7 +339,8 @@ class Consensus:
         capped = (ranks[:, 0] >= 1) & (ranks[:, 0] <= self.sound_cap)
         score = np.full(len(r), -np.inf)
         lr = X[capped, FEATURES.index("lr_snd")]
-        score[capped] = self._predict(X[capped][:, self.columns]) - self.sound_weight * np.minimum(lr, 5.0)
+        weight = self.sound_weight if sound_weight is None else sound_weight
+        score[capped] = self._predict(X[capped][:, self.columns]) - weight * np.minimum(lr, 5.0)
         return Candidates(r, X, ranks, score)
 
     def _scene_columns(self, seed: Seed, rows: np.ndarray, cache: dict) -> np.ndarray:
@@ -362,10 +367,12 @@ class Consensus:
         return values[at]
 
     def body(self, signals: Mapping[str, torch.Tensor], seed: Seed, keep: int = KEEP,
-             scene_cache: dict | None = None) -> list[tuple[int, float, tuple[int, ...]]]:
+             scene_cache: dict | None = None, sound_weight: float | None = None
+             ) -> list[tuple[int, float, tuple[int, ...]]]:
         """The seed's body: (track id, body score, each signal's rank in ``SIGNALS`` order, 0 without a score) by
-        falling score (ties: lower track id), the best song of each artist, at most ``keep``."""
-        c = self.candidates(signals, seed, scene_cache=scene_cache)
+        falling score (ties: lower track id), the best song of each artist, at most ``keep``. ``sound_weight``
+        replaces the service's for this body."""
+        c = self.candidates(signals, seed, scene_cache=scene_cache, sound_weight=sound_weight)
         tids = self.ids[c.rows]
         out, seen = [], set()
         for j in np.lexsort((tids, -c.score)):
@@ -379,16 +386,19 @@ class Consensus:
 
     def bodies(self, bases: Mapping[str, torch.Tensor], code: int, row: int | None = None,
                windows: np.ndarray | None = None, artist: str | None = None, artist_id: int | None = None,
-               bpm: float | None = None) -> dict[str, list[tuple[int, float, tuple[int, ...]]]]:
+               bpm: float | None = None, part: Sequence[int] | None = None, sound_weight: float | None = None
+               ) -> dict[str, list[tuple[int, float, tuple[int, ...]]]]:
         """The bodies of one seed: "same" among its language's songs (``code``: its language in ``codes``, -1 for
         none) and "all" among every language's, which reads the seed as one of unknown language. A stored seed is
-        its sonic ``row``; a live one comes with its raw sonic ``windows``, credited ``artist``, scene-table
-        ``artist_id`` and tempo."""
-        signals = self.signals(bases, row, windows)
+        its sonic ``row`` (``part``: only those of its sonic windows, ``signals``); a live one comes with its raw
+        sonic ``windows``, credited ``artist``, scene-table ``artist_id`` and tempo. ``sound_weight``: the weight of
+        the sound rank in these bodies' score instead of the service's (queries for a part of a song)."""
+        signals = self.signals(bases, row, windows, part)
         cache: dict = {}
-        out = {"all": self.body(signals, self.seed(-1, row, artist, artist_id, bpm), scene_cache=cache)}
-        out["same"] = self.body(signals, self.seed(code, row, artist, artist_id, bpm), scene_cache=cache) \
-            if code >= 0 else out["all"]
+        out = {"all": self.body(signals, self.seed(-1, row, artist, artist_id, bpm), scene_cache=cache,
+                                sound_weight=sound_weight)}
+        out["same"] = self.body(signals, self.seed(code, row, artist, artist_id, bpm), scene_cache=cache,
+                                sound_weight=sound_weight) if code >= 0 else out["all"]
         return out
 
 
