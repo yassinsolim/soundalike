@@ -20,6 +20,7 @@ class FakeElement {
     this.textContent = "";
     this.hidden = false;
     this.value = "";
+    this.style = {};
     this.classList = {
       add: (name) => { this.className = [...new Set([...this.className.split(" ").filter(Boolean), name])].join(" "); },
       remove: (name) => { this.className = this.className.split(" ").filter((part) => part && part !== name).join(" "); },
@@ -36,9 +37,16 @@ class FakeElement {
   }
   focus() {}
   blur() {}
+  // Every element is 300 px wide at the left edge, so 10 px is one second of a 30-second preview.
+  getBoundingClientRect() { return { left: 0, width: 300 }; }
+  setPointerCapture() {}
 }
 
-const IDS = ["form", "link", "status", "list", "seed", "seed-art", "seed-title", "seed-artist", "bar", "count", "p-spotify", "p-apple"];
+const IDS = ["form", "link", "status", "list", "seed", "seed-art", "seed-title", "seed-artist", "bar", "count", "p-spotify", "p-apple",
+  "part", "part-open", "part-chip", "part-chip-text", "part-clear", "part-panel", "part-track", "part-span", "part-head",
+  "part-from", "part-to", "part-label", "part-10", "part-15", "part-20", "part-play", "part-apply"];
+// What the page's markup hides until its script shows it.
+const HIDDEN = ["seed", "bar", "part", "part-chip", "part-panel", "part-head"];
 
 const row = (n, extra = {}) => ({
   title: `Song ${n}`,
@@ -73,12 +81,23 @@ const answer = (platform, results, links = {}) => ({
   links: { spotify_exact: 0, apple_exact: 0, spotify_lookup: false, apple_eager_rows: 5, ...links },
 });
 
+const REFUSED = Symbol("refused");
+const refused = (body) => ({ ...body, [REFUSED]: true });
+
 /** Loads the page at `search` with `respond(url)` standing in for the server. */
 async function open(search, respond, { userAgent = "Mozilla/5.0 (Linux; Android 14)", session = {} } = {}) {
   const elements = Object.fromEntries(IDS.map((id) => [id, new FakeElement("div", id)]));
+  for (const id of HIDDEN) elements[id].hidden = true;
   const requests = [];
+  const addresses = [];
   const audio = new FakeElement("audio");
-  Object.assign(audio, { played: [], pause() {}, async play() { this.played.push(this.src); } });
+  Object.assign(audio, {
+    played: [],
+    currentTime: 0,
+    paused: true,
+    pause() { this.paused = true; },
+    async play() { this.paused = false; this.played.push(this.src); },
+  });
   const storage = (data) => ({
     getItem: (key) => data[key] ?? null,
     setItem: (key, value) => { data[key] = String(value); },
@@ -89,7 +108,10 @@ async function open(search, respond, { userAgent = "Mozilla/5.0 (Linux; Android 
     window: windowObject,
     document: { getElementById: (id) => elements[id], createElement: (tag) => new FakeElement(tag), title: "" },
     location: { search },
-    history: { pushState() {} },
+    history: {
+      pushState: (_, __, url) => addresses.push(["push", url]),
+      replaceState: (_, __, url) => addresses.push(["replace", url]),
+    },
     navigator: { userAgent },
     Audio: function Audio() { return audio; },
     URLSearchParams,
@@ -98,7 +120,8 @@ async function open(search, respond, { userAgent = "Mozilla/5.0 (Linux; Android 
     fetch: async (url) => {
       requests.push(url);
       const body = await respond(url);
-      return { json: async () => body };
+      // `refused(body)` stands for a 400 answer.
+      return { status: body?.[REFUSED] ? 400 : 200, json: async () => body };
     },
   };
   vm.runInNewContext(script, context);
@@ -110,7 +133,7 @@ async function open(search, respond, { userAgent = "Mozilla/5.0 (Linux; Android 
       button: item.children[0],
       anchor: item.children[1],
     }));
-  return { elements, requests, rows, settle, audio, context };
+  return { elements, requests, addresses, rows, settle, audio, context };
 }
 
 test("the page is self-contained and routed with a strict policy", () => {
@@ -332,4 +355,244 @@ test("association files let /find links open the iPhone and Android apps", () =>
   assert.equal(links[0].target.package_name, "app.yassin.soundalike");
   assert.equal(links[0].target.sha256_cert_fingerprints.length, 1);
   assert.match(links[0].target.sha256_cert_fingerprints[0], /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/);
+});
+
+// ---- Match a part ------------------------------------------------------------
+
+const PARTS = { min_s: 10, max_s: 30, preview_s: 30, song_offset_s: 48 };
+/** An answer from a server that can match a part; `part` when the lists are for one. */
+const partAnswer = (part = null, parts = PARTS) => {
+  const body = answer("spotify", [row(1), row(2)]);
+  Object.assign(body.query, { parts, part: part ? { start: part[0], end: part[1] } : null });
+  return body;
+};
+const similarParams = (url) => Object.fromEntries(new URLSearchParams(url.split("?")[1]));
+const press = (element) => element.dispatch("click");
+/** A finger (or mouse) on the track at `second` of the preview: the fake track is 10 px a second. */
+const pointer = (second) => ({ clientX: second * 10, pointerId: 1 });
+const span = (page) => [page.elements["part-span"].style.left, page.elements["part-span"].style.width];
+
+test("the page's markup carries the part control, hidden, and its policy is unchanged", () => {
+  for (const id of ["part", "part-chip", "part-panel", "part-head"]) {
+    assert.match(html, new RegExp(`<[a-z]+ [^>]*id="${id}"[^>]* hidden>`), id);
+  }
+  for (const id of IDS) assert.ok(html.includes(`id="${id}"`), id);
+  assert.match(html, /\.trk\{[^}]*touch-action:none/, "dragging the span must not scroll the page");
+  assert.doesNotMatch(html, /<canvas|AudioContext|decodeAudioData/, "a plain bar: no waveform, nothing to fetch");
+  const policy = config.headers.find((entry) => entry.source === "/find").headers.find((header) => header.key === "Content-Security-Policy").value;
+  assert.match(policy, /script-src 'unsafe-inline';/);
+  assert.match(policy, /connect-src 'self'$/);
+  assert.doesNotMatch(policy, /blob:|unsafe-eval|script-src[^;]*https:/);
+});
+
+test("Match a part shows only when the server offers parts", async () => {
+  const without = await open("?spotify_id=5awDvzxWfd53SSrsRZ8pXO", () => answer("spotify", [row(1)]));
+  assert.equal(without.elements.part.hidden, true);
+  press(without.elements["part-open"]);
+  assert.equal(without.elements["part-panel"].hidden, true, "nothing opens without parts");
+
+  const offered = await open("?spotify_id=5awDvzxWfd53SSrsRZ8pXO", () => partAnswer());
+  assert.equal(offered.elements.part.hidden, false);
+  assert.equal(offered.elements["part-chip"].hidden, true);
+  assert.equal(offered.elements["part-panel"].hidden, true);
+  assert.equal(offered.requests.length, 1, "the control costs no request of its own");
+
+  // Limits the page cannot serve (a longer shortest part than its longest) hide it too.
+  const odd = await open("?spotify_id=5awDvzxWfd53SSrsRZ8pXO", () => partAnswer(null, { ...PARTS, min_s: 25 }));
+  assert.equal(odd.elements.part.hidden, true);
+});
+
+test("the span is dragged on a 5-second grid, resized by the length buttons, and applied", async () => {
+  const link = "https://open.spotify.com/track/5awDvzxWfd53SSrsRZ8pXO";
+  const page = await open(`?url=${encodeURIComponent(link)}&lang=all`, (url) =>
+    partAnswer(similarParams(url).part ? similarParams(url).part.split("-").map(Number) : null),
+  );
+  const { elements } = page;
+  press(elements["part-open"]);
+  assert.equal(elements["part-panel"].hidden, false);
+  assert.equal(elements["part-open"].attributes["aria-expanded"], "true");
+  // Starts at 10 to 20 seconds of the preview, named in song time (the preview starts at 0:48).
+  assert.deepEqual(span(page), [`${100 / 3}%`, `${100 / 3}%`]);
+  assert.equal(elements["part-label"].textContent, "0:58–1:08 of the song · 10 seconds");
+  assert.equal(elements["part-from"].textContent, "0:48");
+  assert.equal(elements["part-to"].textContent, "1:18");
+  assert.deepEqual(["10", "15", "20"].map((n) => elements[`part-${n}`].attributes["aria-pressed"]), ["true", "false", "false"]);
+  assert.equal(elements["part-span"].attributes["aria-valuetext"], "0:58–1:08 of the song");
+
+  // A finger inside the span drags it from where it was put down; it snaps to 5 seconds.
+  const track = elements["part-track"];
+  let prevented = false;
+  track.dispatch("pointerdown", { ...pointer(13), preventDefault() { prevented = true; } });
+  assert.equal(prevented, true);
+  track.dispatch("pointermove", pointer(15));
+  assert.deepEqual(span(page), [`${100 / 3}%`, `${100 / 3}%`], "2 seconds is not yet a step");
+  track.dispatch("pointermove", pointer(19));
+  assert.deepEqual(span(page), ["50%", `${100 / 3}%`]);
+  track.dispatch("pointermove", pointer(40));
+  assert.deepEqual(span(page), [`${200 / 3}%`, `${100 / 3}%`], "it stops at the end of the preview");
+  track.dispatch("pointermove", pointer(-20));
+  assert.deepEqual(span(page), ["0%", `${100 / 3}%`], "and at its start");
+  track.dispatch("pointerup", pointer(-20));
+  track.dispatch("pointermove", pointer(25));
+  assert.deepEqual(span(page), ["0%", `${100 / 3}%`], "a lifted finger moves nothing");
+
+  // A tap outside the span brings its middle there.
+  track.dispatch("pointerdown", pointer(21));
+  track.dispatch("pointercancel", pointer(21));
+  assert.deepEqual(span(page), ["50%", `${100 / 3}%`]);
+
+  // The length buttons keep the start and stay inside the preview.
+  press(elements["part-20"]);
+  assert.deepEqual(span(page), [`${100 / 3}%`, `${200 / 3}%`], "20 seconds from 0:15 would run past the end");
+  assert.equal(elements["part-label"].textContent, "0:58–1:18 of the song · 20 seconds");
+  assert.equal(elements["part-20"].attributes["aria-pressed"], "true");
+  press(elements["part-15"]);
+  // Arrow keys move it one step.
+  let keyPrevented = false;
+  elements["part-span"].dispatch("keydown", { key: "ArrowLeft", preventDefault() { keyPrevented = true; } });
+  assert.equal(keyPrevented, true);
+  assert.equal(elements["part-label"].textContent, "0:53–1:08 of the song · 15 seconds");
+  elements["part-span"].dispatch("keydown", { key: "Enter" });
+  assert.equal(elements["part-label"].textContent, "0:53–1:08 of the song · 15 seconds");
+  assert.equal(page.requests.length, 1, "nothing is asked until Apply");
+
+  press(elements["part-apply"]);
+  await page.settle();
+  assert.deepEqual(similarParams(page.requests[1]), { url: link, lang: "all", part: "5-20" });
+  // The part is in the page's address, so a shared link keeps it.
+  assert.deepEqual(page.addresses, [["push", `/find?url=${encodeURIComponent(link)}&lang=all&part=5-20`]]);
+  assert.equal(elements["part-panel"].hidden, true);
+  assert.equal(elements["part-chip"].hidden, false);
+  assert.equal(elements["part-chip-text"].textContent, "Matching 0:53–1:08 of the song");
+
+  // Reopened, the picker starts from the part on screen.
+  press(elements["part-open"]);
+  assert.equal(elements["part-label"].textContent, "0:53–1:08 of the song · 15 seconds");
+  press(elements["part-open"]);
+  assert.equal(elements["part-panel"].hidden, true, "the button also closes it");
+
+  // "whole preview" leads back.
+  press(elements["part-clear"]);
+  await page.settle();
+  assert.deepEqual(similarParams(page.requests[2]), { url: link, lang: "all" });
+  assert.deepEqual(page.addresses.at(-1), ["push", `/find?url=${encodeURIComponent(link)}&lang=all`]);
+  assert.equal(elements["part-chip"].hidden, true);
+});
+
+test("a link with a part opens on that part; a bad part is ignored", async () => {
+  const page = await open("?spotify_id=5awDvzxWfd53SSrsRZ8pXO&part=15-30", () => partAnswer([15, 30], { ...PARTS, song_offset_s: null }));
+  assert.deepEqual(similarParams(page.requests[0]), { spotify_id: "5awDvzxWfd53SSrsRZ8pXO", part: "15-30" });
+  // Without the preview's place in the song, times are the preview's own.
+  assert.equal(page.elements["part-chip-text"].textContent, "Matching 0:15–0:30 of the preview");
+  assert.deepEqual(page.addresses, []);
+  press(page.elements["part-open"]);
+  assert.equal(page.elements["part-label"].textContent, "0:15–0:30 of the preview · 15 seconds");
+  assert.equal(page.elements["part-to"].textContent, "0:30");
+
+  for (const bad of ["5-12", "20-10", "0-31", "abc", "10-20-30", "-5-20", ""]) {
+    const ignored = await open(`?spotify_id=5awDvzxWfd53SSrsRZ8pXO&part=${bad}`, () => partAnswer());
+    assert.deepEqual(similarParams(ignored.requests[0]), { spotify_id: "5awDvzxWfd53SSrsRZ8pXO" }, bad);
+    assert.deepEqual(ignored.addresses, [["replace", "/find?spotify_id=5awDvzxWfd53SSrsRZ8pXO"]], bad);
+    assert.equal(ignored.elements["part-chip"].hidden, true);
+  }
+
+  // A newly pasted link starts from its whole preview.
+  page.elements.link.value = "https://open.spotify.com/track/2Fxmhks0bxGSBdJ92vM42m";
+  page.elements.form.dispatch("submit");
+  await page.settle();
+  assert.equal(similarParams(page.requests.at(-1)).part, undefined);
+});
+
+test("a server without parts answers for the whole preview and the part is dropped", async () => {
+  // An older engine ignores the parameter: no query.part in the answer.
+  const session = {};
+  const ignored = await open("?spotify_id=5awDvzxWfd53SSrsRZ8pXO&part=10-20&lang=all", () => answer("spotify", [row(1)]), { session });
+  assert.equal(ignored.elements.part.hidden, true);
+  assert.equal(ignored.elements["part-chip"].hidden, true);
+  assert.deepEqual(ignored.addresses, [["replace", "/find?spotify_id=5awDvzxWfd53SSrsRZ8pXO&lang=all"]]);
+  assert.equal(ignored.rows().length, 1);
+  assert.equal(Object.keys(session).length, 0, "not kept under the part's address");
+
+  // A server that refuses the part is asked once more without it.
+  const page = await open("?spotify_id=5awDvzxWfd53SSrsRZ8pXO&part=10-20", (url) =>
+    similarParams(url).part
+      ? refused({ ok: false, error: { code: "invalid_parameter", message: "part is not supported." } })
+      : partAnswer(),
+  );
+  assert.deepEqual(page.requests.map((url) => similarParams(url).part), ["10-20", undefined]);
+  assert.equal(page.rows().length, 2);
+  assert.equal(page.elements.status.hidden, true);
+  assert.equal(page.elements["part-chip"].hidden, true);
+  assert.deepEqual(page.addresses, [["replace", "/find?spotify_id=5awDvzxWfd53SSrsRZ8pXO"]]);
+
+  // Refused for another reason: the error is shown, after one retry only.
+  const broken = await open("?spotify_id=5awDvzxWfd53SSrsRZ8pXO&part=10-20", () =>
+    refused({ ok: false, error: { code: "invalid_parameter", message: "Nope." } }),
+  );
+  assert.equal(broken.requests.length, 2);
+  assert.equal(broken.elements.status.textContent, "Nope.");
+});
+
+test("Play this part plays the seed's preview from the part's start and stops at its end", async () => {
+  const page = await open("?spotify_id=5awDvzxWfd53SSrsRZ8pXO", (url) => {
+    if (url.startsWith("/api/mobile/similar")) return partAnswer();
+    assert.equal(url, "/api/preview?id=1");
+    return { ok: true, preview: "https://cdnt-preview.dzcdn.net/seed.mp3", cover: "" };
+  });
+  const { elements, audio } = page;
+  press(elements["part-open"]);
+  assert.equal(elements["part-play"].hidden, false);
+  press(elements["part-15"]);
+  press(elements["part-play"]);
+  assert.equal(elements["part-play"].textContent, "❚❚ Stop");
+  await page.settle();
+  assert.deepEqual(audio.played, ["https://cdnt-preview.dzcdn.net/seed.mp3"]);
+  assert.equal(audio.currentTime, 10);
+
+  audio.currentTime = 17.5;
+  audio.dispatch("timeupdate");
+  assert.equal(elements["part-head"].hidden, false);
+  assert.equal(elements["part-head"].style.left, `${(100 * 17.5) / 30}%`);
+  audio.currentTime = 25.1;
+  audio.dispatch("timeupdate");
+  assert.equal(audio.paused, true, "stopped at the end of the part");
+  assert.equal(elements["part-play"].textContent, "▶ Play this part");
+  assert.equal(elements["part-head"].hidden, true);
+
+  // Again: the address is reused; moving the span stops it; a row's preview takes over.
+  press(elements["part-play"]);
+  await page.settle();
+  assert.equal(page.requests.filter((url) => url.startsWith("/api/preview")).length, 1);
+  assert.equal(audio.paused, false);
+  elements["part-track"].dispatch("pointerdown", pointer(27));
+  assert.equal(audio.paused, true);
+  press(elements["part-play"]);
+  await page.settle();
+  page.rows()[0].button.dispatch("click");
+  await page.settle();
+  assert.equal(elements["part-play"].textContent, "▶ Play this part");
+  assert.equal(audio.played.at(-1), "https://cdnt-preview.dzcdn.net/1.mp3");
+  audio.currentTime = 29;
+  audio.dispatch("timeupdate");
+  assert.equal(audio.paused, false, "a row's preview is not cut at the part's end");
+
+  // No preview to be had: the button is switched off, the rest still works.
+  const silent = await open("?spotify_id=5awDvzxWfd53SSrsRZ8pXO", (url) =>
+    url.startsWith("/api/mobile/similar") ? partAnswer() : { ok: false, error: "no preview" },
+  );
+  press(silent.elements["part-open"]);
+  press(silent.elements["part-play"]);
+  await silent.settle();
+  assert.equal(silent.elements["part-play"].disabled, true);
+  assert.equal(silent.elements["part-play"].textContent, "▶ Play this part");
+  assert.deepEqual(silent.audio.played, []);
+
+  // A seed without a Deezer id has nothing to play.
+  const unknown = await open("?spotify_id=5awDvzxWfd53SSrsRZ8pXO", () => {
+    const body = partAnswer();
+    body.query.deezer_id = null;
+    return body;
+  });
+  press(unknown.elements["part-open"]);
+  assert.equal(unknown.elements["part-play"].hidden, true);
 });

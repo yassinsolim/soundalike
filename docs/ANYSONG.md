@@ -441,9 +441,10 @@ accepts every `/api/mobile/similar` parameter (and `text=` for share-sheet text)
 and lists the seed and its soundalikes with cover, match and a preview button. Tapping a row opens the song in
 Spotify or Apple Music, by default the app the link came from, with a switch for the other. Rows navigate in the
 same tab, without `target="_blank"`, so the phone's app links hand over to the installed app from an in-app
-browser as well; coming back shows the saved list without a new request. For local work,
-`node webapp/tools/mobile-dev-server.js` serves the home page, this page and their endpoints against the engine
-named by `SOUNDALIKE_ENGINE_URL`.
+browser as well; coming back shows the saved list without a new request. Under the seed it has
+[Match a part](#match-a-part-in-the-clients), and `part=<start>-<end>` in the page's address opens a part. For
+local work, `node webapp/tools/mobile-dev-server.js` serves the home page, this page and their endpoints against
+the engine named by `SOUNDALIKE_ENGINE_URL`.
 
 So that a `/find` link opens the installed app instead of the page, the site serves
 `/.well-known/apple-app-site-association` (iPhone app `FJH4UWVC4K.app.yassin.soundalike`, paths `/find*`) and
@@ -534,7 +535,16 @@ parameter (400 or 404) is asked once more without it.
   pauses when it is over. Saved lists are kept per part (`…:part:<start>-<end>` in the cache id), and nothing is
   remembered from one search to the next.
 - **Phones**: `/api/mobile/similar` takes `part=` and reports `query.part` and `query.parts`
-  ([Mobile API](#mobile-api)). The `/find` page and the apps have no control yet.
+  ([Mobile API](#mobile-api)). The `/find` page ([`webapp/find/index.html`](../webapp/find/index.html)) has the
+  control in its own inline script, because its Content-Security-Policy admits no script file: "Match a part"
+  under the seed opens a plain bar of the preview (no waveform, so nothing is fetched) with a span to drag by
+  finger, move with the arrow keys, or place by tapping the bar, and 10 s, 15 s and 20 s buttons for its length.
+  "Play this part" plays the span from the seed's preview (`/api/preview`), Apply reloads the list, and a chip
+  ("Matching 0:58–1:13 of the song · whole preview") leads back. Times are song times only when the answer has
+  `song_offset_s`; the page does not know the song's length, so it never assumes 0:48. The part is in the page's
+  address (`/find?url=…&part=<start>-<end>`), so a shared link and the Back button keep it; a part that is not one
+  (shorter than 10 s, past 30 s) is ignored and taken out of the address, and a newly pasted link starts from
+  its whole preview. The apps have no control yet.
 - **Which lists follow.** Best matches, Listeners also play and Melody match are read from the one answer, so all
   three follow the part; Listeners also play still starts from the whole song's listeners. The extension's Sounds
   like list (local companion or the older hosted library) always uses the whole song.
