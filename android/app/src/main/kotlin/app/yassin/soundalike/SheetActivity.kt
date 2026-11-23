@@ -5,6 +5,7 @@ import android.content.res.Configuration
 import android.graphics.Color.TRANSPARENT
 import android.os.Bundle
 import android.os.PowerManager
+import android.os.SystemClock
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -71,31 +72,61 @@ class SheetActivity : ComponentActivity() {
     }
 
     /**
-     * A song was just started in Spotify, which brings Spotify to the front. Spotify only acts on
-     * the link once its screen is up, so the sheet waits a moment and then asks to be in front
-     * again, while Android still counts it as visible and allows that. The song plays, the list
-     * stays, and the next tap can switch song. (Asked for in the same instant, the sheet never
-     * leaves the front and Spotify holds the link until it is next opened: tried on a device.)
+     * A song was just started in Spotify, which brings Spotify to the front. Spotify acts on the
+     * link only while its screen is up: usually within a second, a few seconds when it has to
+     * start first. So the sheet waits until the player reports another song than before the tap
+     * and only then asks to be in front again, and keeps asking for a moment longer because
+     * Spotify opens its own screen once more. Android allows that from an app that was just in
+     * front. The song plays, the list stays, and the next tap can switch song.
+     *
+     * When no song change is seen (no notification access, the same song tapped again, or Spotify
+     * too slow), the sheet closes and Spotify stays in front, where the song is. Coming back on a
+     * timer instead looked smoother but covered Spotify before it had read the link about one
+     * time in ten, and always when Spotify was not running: measured on a device.
      */
-    private fun stayInFront() {
-        staying = true
+    private fun stayInFront(songBefore: String?) {
+        if (!NowPlaying.hasAccess(this)) return
+        val started = SystemClock.elapsedRealtime()
+        var settleUntil = 0L
+        stayUntil = started + WAIT_FOR_SONG_MS
         val view = window.decorView
-        view.postDelayed({
-            startActivity(
-                Intent(this, SheetActivity::class.java).setAction(ACTION_STAY)
-                    .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NO_ANIMATION)
-            )
-        }, RETURN_AFTER_MS)
-        // If Android refused, the sheet is hidden behind Spotify: close it rather than leave it there.
-        view.postDelayed({ if (staying) finish() }, GIVE_UP_AFTER_MS)
+        view.post(object : Runnable {
+            override fun run() {
+                val now = SystemClock.elapsedRealtime()
+                val song = NowPlaying.current
+                if (settleUntil == 0L && song != null && song.playing && song.key != songBefore) {
+                    settleUntil = now + SETTLE_MS
+                    stayUntil = settleUntil
+                }
+                if (settleUntil != 0L && !inFront) {
+                    startActivity(
+                        Intent(this@SheetActivity, SheetActivity::class.java).setAction(ACTION_STAY)
+                            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                    )
+                }
+                when {
+                    now < stayUntil -> view.postDelayed(this, CHECK_EVERY_MS)
+                    !inFront -> finish()
+                }
+            }
+        })
     }
 
-    /** True from starting a song until the sheet is in front again; it must not close itself in between. */
-    private var staying = false
+    /** Until this moment (elapsed realtime) the sheet must not close itself when another app takes the front. */
+    private var stayUntil = 0L
+    private val staying get() = SystemClock.elapsedRealtime() < stayUntil
+
+    /** The sheet is the activity in front. */
+    private var inFront = false
 
     override fun onResume() {
         super.onResume()
-        staying = false
+        inFront = true
+    }
+
+    override fun onPause() {
+        super.onPause()
+        inFront = false
     }
 
     private fun load(intent: Intent) {
@@ -169,7 +200,10 @@ class SheetActivity : ComponentActivity() {
                     target = model.target,
                     onTarget = { model.target = it },
                     player = model.player,
-                    onOpen = { match -> model.open(match, onPlaying = ::stayInFront) },
+                    onOpen = { match ->
+                        val songBefore = NowPlaying.current?.takeIf { it.playing }?.key
+                        model.open(match, onPlaying = { stayInFront(songBefore) })
+                    },
                     playsAtOnce = model::playsAtOnce,
                     isPlaying = model::isPlayingInSpotify,
                     onRetry = model::retry,
@@ -198,8 +232,9 @@ class SheetActivity : ComponentActivity() {
     }
 
     companion object {
-        private const val RETURN_AFTER_MS = 300L
-        private const val GIVE_UP_AFTER_MS = 2000L
+        private const val WAIT_FOR_SONG_MS = 12_000L
+        private const val SETTLE_MS = 1500L
+        private const val CHECK_EVERY_MS = 150L
         private const val ACTION_STAY = "app.yassin.soundalike.action.STAY"
         const val ACTION_NOW_PLAYING = "app.yassin.soundalike.action.NOW_PLAYING"
         const val EXTRA_FROM = "from"

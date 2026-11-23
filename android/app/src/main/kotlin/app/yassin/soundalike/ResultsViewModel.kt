@@ -163,8 +163,13 @@ class ResultsViewModel(application: Application) : AndroidViewModel(application)
     /** True for the row whose song Spotify is playing: what the player reports, else the row tapped last. */
     fun isPlayingInSpotify(match: Match): Boolean {
         val id = match.spotifyId ?: return false
-        val reported = NowPlaying.current?.takeIf { it.playing }?.spotifyUri
-        return if (reported != null) reported == "spotify:track:$id" else startedId == id
+        // Without notification access the player can't be seen: the row tapped last is the best guess.
+        if (!NowPlaying.hasAccess(app)) return startedId == id
+        val song = NowPlaying.current?.takeIf { it.playing }
+        val reported = song?.spotifyUri ?: return false
+        // Spotify may play another release of the tapped song, under another id: the title settles it.
+        return reported == "spotify:track:$id" ||
+            (startedId == id && TextMatch.coreTitle(song.title) == TextMatch.coreTitle(match.title))
     }
 
     /** True when tapping the row starts the song itself in Spotify instead of opening a search for it. */
