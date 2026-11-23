@@ -118,6 +118,66 @@ def test_the_wider_lookup_only_runs_when_the_names_find_nothing_and_is_cached():
     assert svc.known.get(2193681047)["contributors"]
 
 
+def test_the_wider_lookup_pays_for_each_deezer_request_and_a_miss_is_remembered():
+    svc = api.AnySong(NoEngine(), ReplayDeezer(), {})
+    charges = []
+
+    def charge():
+        charges.append(len(svc.deezer.requests))
+
+    assert svc.resolve("The Weeknd", "Blinding Lights", charge) == 908604612
+    assert charges == [0] and svc.deezer.requests == ["search"]  # found under its names: one charge, as before
+    del charges[:], svc.deezer.requests[:]
+    assert svc.resolve("Peso Pluma", "Ella Baila Sola", charge) == 2193681047
+    # Every Deezer request of the wider lookup was paid for before it was made.
+    assert charges == list(range(len(svc.deezer.requests))) and len(charges) >= 3
+    del charges[:], svc.deezer.requests[:]
+    assert svc.resolve("Peso Pluma", "Ella Baila Sola", charge) == 2193681047
+    assert charges == [0] and svc.deezer.requests == []  # cached: the one charge of any name lookup
+
+    # A budget of three: the lookup stops there with a 429, and what it read stays cached for the next try.
+    svc = api.AnySong(NoEngine(), ReplayDeezer(), {})
+    budget = [3]
+
+    def limited():
+        if not budget[0]:
+            raise api.ApiError(429, "too many requests")
+        budget[0] -= 1
+
+    with pytest.raises(api.ApiError) as err:
+        svc.resolve("Kino", "Группа крови", limited)
+    assert err.value.status == 429 and len(svc.deezer.requests) == 3
+    budget[0] = 20
+    with pytest.raises(api.ApiError) as err:
+        svc.resolve("Kino", "Группа крови", limited)
+    made = len(svc.deezer.requests)
+    assert err.value.status == 404 and made > 3 and budget[0] == 20 - 1 - (made - 3)
+    # Not found: asked again, in any letter case, it is a 404 that costs nothing.
+    for artist in ("Kino", "KINO"):
+        with pytest.raises(api.ApiError) as err:
+            svc.resolve(artist, "Группа крови", lambda: pytest.fail("charged for a remembered miss"))
+        assert err.value.status == 404 and len(svc.deezer.requests) == made
+    # A refusal for the budget is not remembered as a miss, and a miss is forgotten after RESOLVE_MISS_TTL.
+    now = [0.0]
+    svc.misses = api.LRU(8, ttl=api.RESOLVE_MISS_TTL, clock=lambda: now[0])
+    budget[0] = 0
+    for _ in range(2):
+        with pytest.raises(api.ApiError) as err:
+            svc.resolve("Kino", "Группа крови", limited)
+        assert err.value.status == 429
+    budget[0] = 5
+    with pytest.raises(api.ApiError) as err:
+        svc.resolve("Kino", "Группа крови", limited)
+    assert err.value.status == 404 and budget[0] == 4  # Deezer's answers are still cached: the one charge
+    now[0] = api.RESOLVE_MISS_TTL - 1
+    with pytest.raises(api.ApiError):
+        svc.resolve("Kino", "Группа крови", lambda: pytest.fail("charged for a remembered miss"))
+    now[0] = api.RESOLVE_MISS_TTL + 1
+    with pytest.raises(api.ApiError):
+        svc.resolve("Kino", "Группа крови", limited)
+    assert budget[0] == 3
+
+
 def test_a_failing_deezer_request_in_the_wider_lookup_is_a_502():
     class Down(ReplayDeezer):
         def track(self, tid):

@@ -1701,16 +1701,44 @@ def test_http_rate_limit_groups_ipv6_by_64_and_falls_back_to_peer(server):
 
 def test_http_name_lookups_spend_the_search_budget_only_on_catalog_misses(tmp_path):
     srv = api.Server(("127.0.0.1", 0), api.AnySong(FakeEngine(), FakeDeezer(tmp_path, tracks=NEW_SONG), META),
-                     search_per_min=4, similar_per_min=600)
+                     search_per_min=8, similar_per_min=600)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     try:
+        dz = srv.service.deezer
         miss = "/api/anysong/similar?title=Another%20Song&artist=Nobody"
-        assert [get(srv, miss)[0] for _ in range(2)] == [404, 429]  # search_per_min=4 -> burst of 1
+        # search_per_min=8 -> burst of 2: the search, and the artist search of the wider lookup that follows it.
+        assert get(srv, miss)[0] == 404 and (dz.searches, dz.artist_searches) == (1, 1)
+        # The same unknown name again costs nothing: no Deezer request and nothing of the budget, however often.
+        assert [get(srv, miss.replace("Nobody", "NOBODY"))[0] for _ in range(5)] == [404] * 5
+        # Another unknown name finds the budget spent and is refused before any Deezer request.
+        assert get(srv, "/api/anysong/similar?title=Yet%20Another&artist=Nobody")[0] == 429
+        assert (dz.searches, dz.artist_searches) == (1, 1)
         assert get(srv, "/api/anysong/similar?title=Third%20Song&artist=Third")[0] == 200
-        assert srv.service.deezer.searches == 1
+        assert (dz.searches, dz.artist_searches) == (1, 1)
     finally:
         srv.shutdown()
         srv.server_close()
+
+
+def test_post_without_excerpts_is_refused_without_reading_the_body(server):
+    import socket
+
+    def refused(length, sent=b""):
+        with socket.create_connection(("127.0.0.1", server.server_address[1]), timeout=5) as sock:
+            sock.sendall(b"POST /api/anysong/excerpt HTTP/1.1\r\nHost: x\r\nContent-Type: audio/wav\r\n"
+                         + f"Content-Length: {length}\r\n\r\n".encode() + sent)
+            answer = b""
+            while chunk := sock.recv(65536):  # ends when the server closes the connection
+                answer += chunk
+        return answer.decode()
+
+    # A body of 40 MB is announced and never sent: a server that read past it would wait; this one answers at once.
+    answer = refused(40 * 2**20)
+    assert answer.startswith("HTTP/1.0 404") or answer.startswith("HTTP/1.1 404")
+    assert "Connection: close" in answer and answer.endswith('{"ok":false,"error":"not found"}')
+    # A body of a clip's size is read past, so that an ordinary client reads the answer rather than a reset.
+    assert post(server, "/api/anysong/excerpt", b"x" * 1_500_000)[0] == 404
+    assert post(server, "/api/anysong/elsewhere", b"x" * 100)[0] == 404
 
 
 def test_http_isrc_lookups_answer_songs_deezer_search_cannot_see(tmp_path):

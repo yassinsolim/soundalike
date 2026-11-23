@@ -3695,7 +3695,13 @@ titled in non-Latin scripts resolved to nothing.
 - The owner's 21 earlier verdicts on catalog songs, top 30 of v12: 1 of 6 liked songs shown, 2 of 15 rejected
   songs shown.
 - A request takes about 2.7 s at the median on the production card; the 999k index before v12 measured 1.0 s there
-  (2026-11-09).
+  (2026-11-09). That 2.7 s was measured minutes after the tables had been read into the host's file cache three
+  times; a day later the same build took 3.18 s per new song (median of 40, `timings_ms.total`, 2.9 to 3.6 s), and
+  engine update 1's deploy measured 3.06 s on the 14 gate songs. The update did not slow whole-song requests: the
+  v12 source (904f9c0) against the update's (432ce01) on one PC in the production profile, two engine starts
+  each, 54 songs per start, gave 1.61 and 1.73 s against 1.59 and 1.64 s per new song (medians of 40 after the
+  gate songs), every stage within the spread between two starts of one build, and 83 and 85 ms against 86 and
+  88 ms for a cached answer (which is where the own-song filter and `query.parts` run).
 
 ## A part of a song as the seed (2026-11-23)
 
