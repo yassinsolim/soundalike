@@ -132,20 +132,21 @@ def test_homepage_language_switch_is_accessible_and_covers_both_tabs():
     assert "hidden_sounds" not in script
 
 
-def test_homepage_offers_both_any_song_tabs_from_one_response():
+def test_homepage_offers_three_any_song_tabs_from_one_response():
     script = (ROOT / "webapp" / "search.js").read_text(encoding="utf-8")
     keys = re.findall(r'key: "(\w+)",\s*label: "([^"]+)"', script)
-    assert keys == [("best", "Best matches"), ("listeners", "Listeners also play")]
+    assert keys == [("best", "Best matches"), ("listeners", "Listeners also play"), ("melody", "Melody match")]
     assert (
         "\"Songs by other artists that this song's listeners also play, one per artist. "
         "The likelier its listeners are to play a song, and the closer it sounds, "
         'the higher it ranks."'
     ) in script
-    # Best matches read the main list and fall back to Best matches from older servers.
+    # Best matches read the main list and fall back to Best matches from older servers; Melody match reads "best".
     assert 'Array.isArray(results.main) && results.main.length ? "main" : "best"' in script
-    # Old links name Same vibe, Same melody, Samples & loops or Sounds like
-    # ("sonic" on older any-song links); they open Best matches.
-    assert 'key === "listeners" ? "listeners" : "best"' in script
+    assert 'if (key === "melody") return "best";' in script
+    # Old links name Same vibe, Samples & loops or Sounds like ("sonic" on older any-song links); they open
+    # Best matches. Old Same melody links open Melody match.
+    assert 'resultTabs.some(entry => entry.key === key) ? key : "best"' in script
 
 
 def test_marketplace_description_pins_the_immutable_update_bootstrap():

@@ -81,15 +81,15 @@ def test_home_page_footer_links_evaluation_in_new_tab_safely():
     assert 'rel="noopener"' in link.group(2)
 
 
-def test_anysong_language_switch_covers_both_tabs():
+def test_anysong_language_switch_covers_every_tab():
     assert 'params.set("lang", lang);' in SCRIPT
     assert '<div class="language-filter" id="language" role="status">' in SCRIPT
     assert '<button id="language-toggle" type="button" aria-pressed="false" hidden>' in SCRIPT
     assert '"Show all languages"' in SCRIPT and '"Show same language"' in SCRIPT
     # display:flex would otherwise beat the hidden attribute.
     assert ".language-filter[hidden]{display:none}" in HOME
-    # The server's hidden count is for the fused list, not main or Listeners also play, so neither tab shows a count:
-    # both only say what they leave out.
+    # The server's hidden count is for the fused list, not main or Listeners also play, so no tab shows a count:
+    # they only say what they leave out.
     assert '"all languages" : "other languages left out"' in SCRIPT
     assert "Number(query.hidden)" not in SCRIPT and "other-language matches in the top 20" not in SCRIPT
     assert "hidden_sounds" not in SCRIPT
@@ -119,15 +119,30 @@ def test_anysong_best_caption_puts_covers_first_then_the_model():
     ) in SCRIPT
 
 
-def test_anysong_has_the_spotify_extensions_two_tabs():
+def test_anysong_has_the_spotify_extensions_three_tabs():
     keys = re.findall(r'key: "(\w+)",\s*label: "([^"]+)"', SCRIPT)
-    assert keys == [("best", "Best matches"), ("listeners", "Listeners also play")]
-    # Best matches read the main list, or Best matches from a server without it.
+    assert keys == [("best", "Best matches"), ("listeners", "Listeners also play"), ("melody", "Melody match")]
+    # Best matches read the main list, or Best matches from a server without it; Melody match is the "best" list.
+    assert 'if (key === "melody") return "best";' in SCRIPT
     assert 'Array.isArray(results.main) && results.main.length ? "main" : "best"' in SCRIPT
-    # Links to the old tabs, and unknown tabs, open Best matches.
+    # Melody match says how the list is built, and with Audio only that it is audio alone.
     assert (
-        'const tabKey = key => (key === null ? null : key === "listeners" ? "listeners" : "best");'
+        '"Likely covers, samples and shared melodies first, from the melody and sample matches fused into one '
+        "ranking, then similar-sounding songs by artists this song's listeners also play, marked Listeners also "
+        'play. Turn on Audio only to leave those out."'
     ) in SCRIPT
+    assert (
+        '"Likely covers, samples and shared melodies: the melody and sample matches fused into one ranking, '
+        'by audio alone."'
+    ) in SCRIPT
+    # Links to the dropped tabs, and unknown tabs, open Best matches; a tab the page has opens itself.
+    assert (
+        "const tabKey = key =>\n"
+        '    key === null ? null : resultTabs.some(entry => entry.key === key) ? key : "best";'
+    ) in SCRIPT.replace("\r\n", "\n")
+    # The tab chosen last is kept for the next visit.
+    assert 'const tabStoreKey = "soundalike:tab:v1";' in SCRIPT
+    assert "if (updateHash) saveTab(key);" in SCRIPT
     # A new policy keeps cached answers from before the consensus body out.
     assert 'const bestMatchesPolicy = "main-consensus-v4";' in SCRIPT
     assert "best-vibe-sounds" not in SCRIPT
