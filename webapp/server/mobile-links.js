@@ -149,6 +149,109 @@ export function versionWords(value) {
   return [...new Set(normalize(value).match(VERSION_WORDS) ?? [])].sort().join(" ");
 }
 
+// The language a title or name in another script is most likely written in.
+// Sent as Accept-Language, Spotify's embed page then gives the artist's name
+// in that script and Deezer the title it holds for it. Deezer answers 晴天 for
+// "ja" and "Sunny Day" for every Chinese locale, so Han asks for both.
+const SCRIPT_LANGUAGES = [
+  [/[\u3040-\u30ff]/u, ["ja"]],
+  [/\p{Script=Han}/u, ["zh-TW", "ja"]],
+  [/\p{Script=Hangul}/u, ["ko"]],
+  [/\p{Script=Cyrillic}/u, ["ru"]],
+  [/\p{Script=Arabic}/u, ["ar"]],
+  [/\p{Script=Hebrew}/u, ["he"]],
+  [/\p{Script=Greek}/u, ["el"]],
+  [/\p{Script=Thai}/u, ["th"]],
+  [/\p{Script=Devanagari}/u, ["hi"]],
+];
+
+/** Languages for the scripts in `text`, as an Accept-Language value ("zh-TW,ja;q=0.9"); null for Latin text. */
+export function scriptLanguages(text) {
+  const languages = [];
+  for (const [script, list] of SCRIPT_LANGUAGES) {
+    if (!script.test(String(text ?? ""))) continue;
+    for (const language of list) if (!languages.includes(language)) languages.push(language);
+  }
+  if (!languages.length) return null;
+  return languages.map((language, index) => (index ? `${language};q=${(1 - index / 10).toFixed(1)}` : language)).join(",");
+}
+
+// Letters that are written two ways in the same word. Decomposed, the Arabic
+// alef forms are an alef and a mark, so dropping the marks (with the vowel
+// marks and the tatweel) folds them; yeh and teh marbuta have a second
+// letter. Cyrillic yo folds with the other accents in `normalize`.
+const LETTER_FOLDS = [
+  [/[\u064b-\u065f\u0670\u0640]/g, ""],
+  [/\u0671/g, "\u0627"],
+  [/\u0649/g, "\u064a"],
+  [/\u0629/g, "\u0647"],
+];
+
+/** A title for comparison across spellings: its core, with interchangeable letters folded. */
+export function looseTitle(value) {
+  let folded = String(value ?? "").normalize("NFD");
+  for (const [pattern, replacement] of LETTER_FOLDS) folded = folded.replace(pattern, replacement);
+  return coreTitle(folded);
+}
+
+export const SEED_DURATION_TOLERANCE_S = 2;
+
+/** Whether a Deezer length (whole seconds) is the seed's length, give or take two seconds. */
+export function sameLength(seedDurationMs, deezerSeconds) {
+  return (
+    Number.isFinite(seedDurationMs) &&
+    Number.isFinite(deezerSeconds) &&
+    Math.abs(Math.round(seedDurationMs / 1000) - deezerSeconds) <= SEED_DURATION_TOLERANCE_S
+  );
+}
+
+/**
+ * Picks the Deezer recording that is the shared song, when the names alone
+ * did not find it (Deezer lists 晴天 as "Sunny Day"). It never guesses: a
+ * candidate needs the seed's length and one more piece of evidence.
+ *
+ * `seed` is {title, durationMs, album?}. `candidates` are Deezer tracks of
+ * the seed's artists: {id, titles[] (in every language asked), durationS,
+ * album, isrc, rank}.
+ *
+ * Evidence, stronger first; the first kind that any candidate has decides:
+ *  1. the same title in one of the languages, and the same kind of version;
+ *  2. the same album name (Apple Music links name the album).
+ * With title evidence several releases of the song may remain: the ISRC most
+ * of them carry wins, then the most played. With album evidence more than
+ * one recording remaining means it is not known which, and the answer is
+ * null. The length alone is never enough, however few tracks have it: an
+ * artist's other songs are too often within two seconds (three of Jay Chou's
+ * 63 are, for 晴天), and the shared song may be missing from Deezer.
+ */
+export function pickSeedRecording(seed, candidates) {
+  const fitting = (Array.isArray(candidates) ? candidates : []).filter((candidate) =>
+    sameLength(seed.durationMs, candidate?.durationS),
+  );
+  if (!fitting.length) return null;
+  const wantedTitle = looseTitle(seed.title);
+  const wantedVersion = versionWords(seed.title);
+  const byTitle = fitting.filter((candidate) =>
+    (candidate.titles || []).some(
+      (title) => wantedTitle && looseTitle(title) === wantedTitle && versionWords(title) === wantedVersion,
+    ),
+  );
+  const recordingOf = (candidate) => candidate.isrc || `id:${candidate.id}`;
+  if (byTitle.length) {
+    const counts = new Map();
+    for (const candidate of byTitle) counts.set(recordingOf(candidate), (counts.get(recordingOf(candidate)) || 0) + 1);
+    return [...byTitle].sort(
+      (a, b) => counts.get(recordingOf(b)) - counts.get(recordingOf(a)) || (b.rank || 0) - (a.rank || 0) || a.id - b.id,
+    )[0];
+  }
+  const wantedAlbum = normalize(seed.album);
+  const byAlbum = wantedAlbum ? fitting.filter((candidate) => normalize(candidate.album) === wantedAlbum) : [];
+  if (byAlbum.length && new Set(byAlbum.map(recordingOf)).size === 1) {
+    return [...byAlbum].sort((a, b) => (b.rank || 0) - (a.rank || 0) || a.id - b.id)[0];
+  }
+  return null;
+}
+
 export function primaryArtist(value) {
   const text = String(value ?? "");
   return normalize(text.split(ARTIST_SPLIT)[0]) || normalize(text);

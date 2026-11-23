@@ -1020,3 +1020,151 @@ test("with credentials Spotify's own search comes first and ListenBrainz gets on
   assert.deepEqual(sent, [["Eisbrecher", "Unheilig"]]);
   assert.equal(body.links.spotify_source, "credentials");
 });
+
+// ---- A shared song the engine does not find by name -------------------------
+
+// Recorded on 2026-11-23: Jay Chou's 晴天 on Spotify (the embed page in English
+// and in Chinese) and on Deezer, which lists it as "Sunny Day": the artist
+// search, his top tracks in Deezer's default naming and for "zh-TW,ja" (cut
+// to the three of the song's length and two others), a search, three tracks.
+const JAY_ID = "5pIcwtJYNJx93l420oR2Vm";
+const JAY_LINK = `https://open.spotify.com/track/${JAY_ID}?si=abc`;
+const JAY_EMBED = { en: fixture(`spotify-embed-${JAY_ID}.en.html`), native: fixture(`spotify-embed-${JAY_ID}.zh-TW.html`) };
+const JAY_DEEZER = JSON.parse(fixture("deezer-seed-fallback.json"));
+const SUNNY_DAY_ID = 2602471112;
+
+/** Spotify and Deezer as recorded for 晴天; `engine(params)` answers the engine's requests. */
+function jayChou(engine, { topLocal = JAY_DEEZER.topLocal } = {}) {
+  return {
+    "open.spotify.com": (_, options) => reply(options.headers["Accept-Language"] === "en" ? JAY_EMBED.en : JAY_EMBED.native),
+    "engine.test": (url) => engine(Object.fromEntries(url.searchParams)),
+    "api.deezer.com": (url, options) => {
+      const language = options.headers?.["Accept-Language"];
+      if (url.pathname === "/search/artist") {
+        return reply({ data: url.searchParams.get("q") === "Jay Chou" ? JAY_DEEZER.artists : JAY_DEEZER.artistsNative });
+      }
+      if (url.pathname === "/artist/69175/top") return reply({ data: language ? topLocal : JAY_DEEZER.top });
+      if (url.pathname.startsWith("/artist/")) return reply({ data: [] });
+      if (url.pathname === "/search") return reply({ data: JAY_DEEZER.search });
+      const id = url.pathname.split("/").pop();
+      return reply(JAY_DEEZER.tracks[id] ?? deezerTrack(id));
+    },
+  };
+}
+
+const notFound = () => reply({ ok: false, error: "song not found" }, 404);
+const engineCalls = (net) =>
+  net.calls.filter((url) => url.hostname === "engine.test").map((url) => url.searchParams.get("id") ?? `${url.searchParams.get("title")} / ${url.searchParams.get("artist")}`);
+const deezerPaths = (net) => net.calls.filter((url) => url.hostname === "api.deezer.com").map((url) => url.pathname);
+
+test("a song Deezer lists under another title is found among its artist's tracks and asked for by id", async () => {
+  let clock = 1_000_000;
+  const net = network(jayChou((params) => (params.id === String(SUNNY_DAY_ID) ? reply(ENGINE) : notFound())));
+  const { similarHandler } = service(net, { now: () => clock });
+  const { status, body } = await call(similarHandler, similarPath({ url: JAY_LINK, k: "3" }));
+  assert.equal(status, 200);
+  assert.equal(body.query.title, "晴天", "the song is shown as it was shared");
+  assert.equal(body.query.artist, "Jay Chou");
+  assert.equal(body.query.spotify_id, JAY_ID);
+  assert.equal(body.results.length, 3);
+  assert.deepEqual(engineCalls(net), ["晴天 / Jay Chou", String(SUNNY_DAY_ID)]);
+  // His tracks were listed in Deezer's naming and in the title's languages.
+  const tops = net.calls.filter((url) => url.pathname === "/artist/69175/top");
+  assert.equal(tops.length, 2);
+  assert.ok(net.calls.some((url) => url.pathname === "/search/artist" && url.searchParams.get("q") === "周杰倫"));
+
+  // The link's recording is remembered: later the engine is asked by id at once.
+  clock += 60 * 60 * 1000;
+  const before = net.calls.length;
+  const later = await call(similarHandler, similarPath({ url: JAY_LINK, k: "3" }));
+  assert.equal(later.status, 200);
+  assert.deepEqual(engineCalls(net).slice(2), [String(SUNNY_DAY_ID)]);
+  const since = net.calls.slice(before);
+  assert.equal(since.some((url) => url.pathname.startsWith("/artist/") || url.pathname.startsWith("/search")), false);
+});
+
+test("without evidence the song stays not found, and that is remembered", async () => {
+  // Deezer has no title for it in the title's language: three of his tracks
+  // have the length, and nothing says which one it is.
+  const net = network(jayChou(notFound, { topLocal: JAY_DEEZER.top }));
+  const { similarHandler } = service(net);
+  const first = await call(similarHandler, similarPath({ url: JAY_LINK, k: "3" }));
+  assert.equal(first.status, 404);
+  assert.equal(first.body.error.code, "song_not_found");
+  // Asked by name, then once more with the artist as written in Chinese; never by a guessed id.
+  assert.deepEqual(engineCalls(net), ["晴天 / Jay Chou", "晴天 / 周杰倫"]);
+
+  const before = net.calls.length;
+  const again = await call(similarHandler, similarPath({ url: JAY_LINK, k: "3" }));
+  assert.equal(again.status, 404);
+  assert.deepEqual(net.calls.slice(before).map((url) => url.hostname), ["engine.test"], "no second search of Deezer");
+});
+
+test("an artist Spotify romanises is tried under the name in the title's script", async () => {
+  const page = (artist) => EMBED_HTML.replaceAll("Du hast", "Группа крови").replaceAll("Rammstein", artist);
+  const net = network({
+    "open.spotify.com": (_, options) => reply(page(options.headers["Accept-Language"] === "ru" ? "Кино" : "Kino")),
+    "engine.test": (url) => (url.searchParams.get("artist") === "Кино" ? reply(ENGINE) : notFound()),
+    // Deezer's releases of the song have other lengths, so no track has the evidence.
+    "api.deezer.com": (url) => (url.pathname.startsWith("/track/") ? reply(deezerTrack(url.pathname.split("/").pop())) : reply({ data: [] })),
+  });
+  const { similarHandler } = service(net);
+  const { status, body } = await call(similarHandler, similarPath({ url: SPOTIFY_LINK, k: "3" }));
+  assert.equal(status, 200);
+  assert.equal(body.query.artist, "Kino");
+  assert.deepEqual(engineCalls(net), ["Группа крови / Kino", "Группа крови / Кино"]);
+  assert.deepEqual(
+    net.calls.filter((url) => url.pathname === "/search/artist").map((url) => url.searchParams.get("q")),
+    ["Kino", "Кино"],
+  );
+});
+
+test("an Apple Music song is found by its album and length", async () => {
+  // iTunes: "99 Luftballons" on the album "99 Luftballons", 233 s. Deezer here has it as "99 Red Balloons".
+  const top = (tracks) => tracks.map(([id, title, duration, album]) => ({ id, title, duration, rank: 1, artist: { id: 77, name: "Nena" }, album: { title: album } }));
+  const routes = (tracks) => ({
+    "engine.test": (url) => (url.searchParams.get("id") === "501" ? reply(ENGINE) : notFound()),
+    "api.deezer.com": (url) => {
+      if (url.pathname === "/search/artist") return reply({ data: [{ id: 77, name: "Nena" }] });
+      if (url.pathname === "/artist/77/top") return reply({ data: top(tracks) });
+      if (url.pathname === "/search") return reply({ data: [] });
+      return reply(deezerTrack(url.pathname.split("/").pop()));
+    },
+  });
+  const found = network(routes([[501, "99 Red Balloons", 234, "99 Luftballons"], [502, "Leuchtturm", 233, "Nena"]]));
+  const answer = await call(service(found).similarHandler, similarPath({ url: APPLE_LINK, k: "3" }));
+  assert.equal(answer.status, 200);
+  assert.equal(answer.body.query.title, "99 Luftballons");
+  assert.deepEqual(engineCalls(found), ["99 Luftballons / Nena", "501"]);
+
+  // Another album, or the wrong length: no evidence.
+  for (const tracks of [
+    [[501, "99 Red Balloons", 234, "Nena feat. Nena"]],
+    [[501, "99 Red Balloons", 240, "99 Luftballons"]],
+  ]) {
+    const none = network(routes(tracks));
+    assert.equal((await call(service(none).similarHandler, similarPath({ url: APPLE_LINK, k: "3" }))).status, 404);
+    assert.deepEqual(engineCalls(none), ["99 Luftballons / Nena"]);
+  }
+});
+
+test("a song the engine finds by name costs nothing more, and typed names are never looked up", async () => {
+  const net = network();
+  await call(service(net).similarHandler, similarPath({ url: SPOTIFY_LINK, k: "3" }));
+  assert.equal(engineCalls(net).length, 1);
+  assert.equal(deezerPaths(net).some((path) => path.startsWith("/search") || path.startsWith("/artist/")), false);
+  assert.equal(net.calls.filter((url) => url.pathname === `/embed/track/${SPOTIFY_ID}`).length, 1);
+
+  // title+artist and isrc seeds have no length to check a recording against.
+  const typed = network({ "engine.test": notFound });
+  const answer = await call(service(typed).similarHandler, similarPath({ title: "晴天", artist: "Jay Chou" }));
+  assert.equal(answer.status, 404);
+  assert.deepEqual(typed.calls.map((url) => url.hostname), ["engine.test"]);
+});
+
+test("the engine being down during the fallback is an error, not a wrong answer", async () => {
+  const net = network(jayChou((params) => (params.id ? reply("bad gateway", 502) : notFound())));
+  const answer = await call(service(net).similarHandler, similarPath({ url: JAY_LINK, k: "3" }));
+  assert.equal(answer.status, 502);
+  assert.equal(answer.body.error.code, "engine_unavailable");
+});

@@ -1,0 +1,329 @@
+{
+ "artists": [
+  {
+   "id": 69175,
+   "name": "Jay Chou",
+   "nb_fan": 58884
+  },
+  {
+   "id": 412577251,
+   "name": "Jay Chou",
+   "nb_fan": 0
+  },
+  {
+   "id": 6005548,
+   "name": "周杰伦",
+   "nb_fan": 743
+  },
+  {
+   "id": 361249442,
+   "name": "Fang Jay Chou",
+   "nb_fan": 0
+  },
+  {
+   "id": 9638732,
+   "name": "Patrick Brasca & Jay Chou",
+   "nb_fan": 29
+  }
+ ],
+ "artistsNative": [
+  {
+   "id": 69175,
+   "name": "Jay Chou",
+   "nb_fan": 58884
+  },
+  {
+   "id": 6005548,
+   "name": "周杰伦",
+   "nb_fan": 743
+  },
+  {
+   "id": 412577251,
+   "name": "Jay Chou",
+   "nb_fan": 0
+  },
+  {
+   "id": 425765111,
+   "name": "言承旭,吳建豪,周渝民,五月天阿信,周杰倫",
+   "nb_fan": 0
+  },
+  {
+   "id": 9638732,
+   "name": "Patrick Brasca & Jay Chou",
+   "nb_fan": 29
+  }
+ ],
+ "top": [
+  {
+   "id": 2602470962,
+   "title": "Tornado",
+   "duration": 251,
+   "rank": 155575,
+   "artist": {
+    "id": 69175,
+    "name": "Jay Chou"
+   },
+   "album": {
+    "id": 529057762,
+    "title": "Jay"
+   }
+  },
+  {
+   "id": 2602471092,
+   "title": "In The Name of Father",
+   "duration": 342,
+   "rank": 179733,
+   "artist": {
+    "id": 69175,
+    "name": "Jay Chou"
+   },
+   "album": {
+    "id": 529057792,
+    "title": "Yeh, Hwei-Mei"
+   }
+  },
+  {
+   "id": 2602471112,
+   "title": "Sunny Day",
+   "duration": 270,
+   "rank": 239193,
+   "artist": {
+    "id": 69175,
+    "name": "Jay Chou"
+   },
+   "album": {
+    "id": 529057792,
+    "title": "Yeh, Hwei-Mei"
+   }
+  },
+  {
+   "id": 2602475732,
+   "title": "Waiting For You",
+   "duration": 270,
+   "rank": 45280,
+   "artist": {
+    "id": 69175,
+    "name": "Jay Chou"
+   },
+   "album": {
+    "id": 529058742,
+    "title": "Greatest Works Of Art"
+   }
+  },
+  {
+   "id": 2602481502,
+   "title": "Simple Love",
+   "duration": 271,
+   "rank": 243486,
+   "artist": {
+    "id": 69175,
+    "name": "Jay Chou"
+   },
+   "album": {
+    "id": 529060532,
+    "title": "Fantasy"
+   }
+  }
+ ],
+ "topLocal": [
+  {
+   "id": 2602470962,
+   "title": "竜巻",
+   "duration": 251,
+   "rank": 155575,
+   "artist": {
+    "id": 69175,
+    "name": "Jay Chou"
+   },
+   "album": {
+    "id": 529057762,
+    "title": "Jay"
+   }
+  },
+  {
+   "id": 2602471092,
+   "title": "父の名で",
+   "duration": 342,
+   "rank": 179733,
+   "artist": {
+    "id": 69175,
+    "name": "Jay Chou"
+   },
+   "album": {
+    "id": 529057792,
+    "title": "Yeh, Hwei-Mei"
+   }
+  },
+  {
+   "id": 2602471112,
+   "title": "晴天",
+   "duration": 270,
+   "rank": 239193,
+   "artist": {
+    "id": 69175,
+    "name": "Jay Chou"
+   },
+   "album": {
+    "id": 529057792,
+    "title": "Yeh, Hwei-Mei"
+   }
+  },
+  {
+   "id": 2602475732,
+   "title": "Waiting For You",
+   "duration": 270,
+   "rank": 45280,
+   "artist": {
+    "id": 69175,
+    "name": "Jay Chou"
+   },
+   "album": {
+    "id": 529058742,
+    "title": "Greatest Works Of Art"
+   }
+  },
+  {
+   "id": 2602481502,
+   "title": "シンプルな愛",
+   "duration": 271,
+   "rank": 243486,
+   "artist": {
+    "id": 69175,
+    "name": "Jay Chou"
+   },
+   "album": {
+    "id": 529060532,
+    "title": "Fantasy"
+   }
+  }
+ ],
+ "search": [
+  {
+   "id": 2602484932,
+   "title": "Sunny Day (Live)",
+   "duration": 250,
+   "rank": 71362,
+   "artist": {
+    "id": 69175,
+    "name": "Jay Chou"
+   },
+   "album": {
+    "id": 529061092,
+    "title": "Jay Chou The Invincible Concert Tour"
+   }
+  },
+  {
+   "id": 2613853122,
+   "title": "Sunny Day (Live)",
+   "duration": 298,
+   "rank": 2488,
+   "artist": {
+    "id": 69175,
+    "name": "Jay Chou"
+   },
+   "album": {
+    "id": 532824502,
+    "title": "Jay Incomparable Concert Live 2004 (Live)"
+   }
+  },
+  {
+   "id": 3150796731,
+   "title": "晴天 (钢琴版)",
+   "duration": 267,
+   "rank": 17749,
+   "artist": {
+    "id": 292542351,
+    "name": "CIP Music"
+   },
+   "album": {
+    "id": 686215901,
+    "title": "周杰伦钢琴曲集"
+   }
+  },
+  {
+   "id": 3308253601,
+   "title": "sunny day (晴天)",
+   "duration": 324,
+   "rank": 22292,
+   "artist": {
+    "id": 128621582,
+    "name": "Minnz Piano"
+   },
+   "album": {
+    "id": 737057841,
+    "title": "jay chou piano covers"
+   }
+  }
+ ],
+ "tracks": {
+  "2602471112": {
+   "id": 2602471112,
+   "title": "Sunny Day",
+   "isrc": "TWK970300503",
+   "duration": 270,
+   "rank": 239193,
+   "preview": "https://cdnt-preview.dzcdn.net/api/1/1/0/4/e/0/04e728aa627afd0f108b3e0a6d390542.mp3?hdnea=exp=1795395106~acl=/api/1/1/0/4/e/0/04e728aa627afd0f108b3e0a6d390542.mp3*~data=user_id=0,application_id=42~hmac=c651e9bf4a093a592a42cf8e899700cba1bc977ed27bd7699c02ad7a592051ca",
+   "artist": {
+    "id": 69175,
+    "name": "Jay Chou"
+   },
+   "album": {
+    "id": 529057792,
+    "title": "Yeh, Hwei-Mei",
+    "cover_medium": "https://cdn-images.dzcdn.net/images/cover/0bbe818baebb2f37ed2197c08d3c9627/250x250-000000-80-0-0.jpg"
+   },
+   "contributors": [
+    {
+     "name": "Jay Chou"
+    }
+   ]
+  },
+  "2602475732": {
+   "id": 2602475732,
+   "title": "Waiting For You",
+   "isrc": "TWK971801101",
+   "duration": 270,
+   "rank": 45280,
+   "preview": "https://cdnt-preview.dzcdn.net/api/1/1/a/d/5/0/ad5443f69eb67ec685c98db4de4ccf7a.mp3?hdnea=exp=1795395106~acl=/api/1/1/a/d/5/0/ad5443f69eb67ec685c98db4de4ccf7a.mp3*~data=user_id=0,application_id=42~hmac=d7b8c03deb9af218c8b32792446c7e10507f332161f910d7267667559611c356",
+   "artist": {
+    "id": 69175,
+    "name": "Jay Chou"
+   },
+   "album": {
+    "id": 529058742,
+    "title": "Greatest Works Of Art",
+    "cover_medium": "https://cdn-images.dzcdn.net/images/cover/5e6d25d5e18af766e01df6392e03d839/250x250-000000-80-0-0.jpg"
+   },
+   "contributors": [
+    {
+     "name": "Jay Chou"
+    },
+    {
+     "name": "楊瑞代"
+    }
+   ]
+  },
+  "2602481502": {
+   "id": 2602481502,
+   "title": "Simple Love",
+   "isrc": "TWK970100203",
+   "duration": 271,
+   "rank": 243486,
+   "preview": "https://cdnt-preview.dzcdn.net/api/1/1/a/7/1/0/a718b2918024e45e767c2cb97210db12.mp3?hdnea=exp=1795395106~acl=/api/1/1/a/7/1/0/a718b2918024e45e767c2cb97210db12.mp3*~data=user_id=0,application_id=42~hmac=4de5a3d4bfc94bee676285fcb0e223cd168282329d6bf570e5a7611c586c4ec6",
+   "artist": {
+    "id": 69175,
+    "name": "Jay Chou"
+   },
+   "album": {
+    "id": 529060532,
+    "title": "Fantasy",
+    "cover_medium": "https://cdn-images.dzcdn.net/images/cover/52d6ddaa83895df737960adbe8966f13/250x250-000000-80-0-0.jpg"
+   },
+   "contributors": [
+    {
+     "name": "Jay Chou"
+    }
+   ]
+  }
+ }
+}

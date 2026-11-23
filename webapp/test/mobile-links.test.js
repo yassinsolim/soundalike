@@ -6,10 +6,14 @@ import {
   appleSearchUrl,
   cleanAppleUrl,
   coreTitle,
+  looseTitle,
   normalizeIsrc,
   parseSharedLink,
   pickBestMatch,
+  pickSeedRecording,
   primaryArtist,
+  sameLength,
+  scriptLanguages,
   searchTitle,
   spotifyMetadataQueries,
   spotifySearchUrl,
@@ -182,4 +186,77 @@ test("names the kind of version in a title", () => {
   assert.equal(versionWords("Song (Live Acoustic Remix)"), "acoustic live remix");
   assert.equal(versionWords("Kleine geile Nonne (Remastered)"), "", "a remaster is the same recording");
   assert.equal(versionWords("Alive"), "", "whole words only");
+});
+
+test("names the languages of a title's script", () => {
+  assert.equal(scriptLanguages("晴天 Jay Chou"), "zh-TW,ja;q=0.9");
+  assert.equal(scriptLanguages("アイドル"), "ja");
+  assert.equal(scriptLanguages("夜に駆ける"), "ja,zh-TW;q=0.9");
+  assert.equal(scriptLanguages("Группа крови Kino"), "ru");
+  assert.equal(scriptLanguages("البخت"), "ar");
+  assert.equal(scriptLanguages("강남스타일"), "ko");
+  assert.equal(scriptLanguages("Despacito — Luis Fonsi"), null);
+  assert.equal(scriptLanguages("Zitti e buoni Måneskin"), null);
+  assert.equal(scriptLanguages(null), null);
+});
+
+test("compares titles across spellings of the same letters", () => {
+  assert.equal(looseTitle("تملي معاك"), looseTitle("تملى معاك"));
+  assert.equal(looseTitle("أواخر الشتا"), looseTitle("اواخر الشتا"));
+  assert.equal(looseTitle("Ёлка"), looseTitle("елка"));
+  assert.equal(looseTitle("晴天 (Remastered)"), "晴天");
+  assert.notEqual(looseTitle("晴天"), looseTitle("Sunny Day"));
+});
+
+test("a Deezer length is the seed's within two seconds", () => {
+  assert.equal(sameLength(269746, 270), true);
+  assert.equal(sameLength(269746, 272), true);
+  assert.equal(sameLength(269746, 268), true);
+  assert.equal(sameLength(269746, 273), false);
+  assert.equal(sameLength(269746, 267), false);
+  assert.equal(sameLength(null, 270), false);
+  assert.equal(sameLength(269746, undefined), false);
+});
+
+test("picks the shared song's Deezer recording only on evidence", () => {
+  const seed = { title: "晴天", durationMs: 269746 };
+  const track = (id, titles, durationS, extra = {}) => ({ id, titles, durationS, album: "Yeh, Hwei-Mei", isrc: null, rank: 0, ...extra });
+  const sunny = track(1, ["Sunny Day", "晴天"], 270, { isrc: "TWK970300503" });
+  const waiting = track(2, ["Waiting For You"], 270, { album: "Greatest Works Of Art", isrc: "TWK971801101" });
+  const simple = track(3, ["Simple Love", "シンプルな愛"], 271, { album: "Fantasy", isrc: "TWK970100203" });
+  assert.equal(pickSeedRecording(seed, [waiting, simple, sunny]).id, 1);
+
+  // The length alone never decides, not even for the only track that has it.
+  assert.equal(pickSeedRecording(seed, [waiting]), null);
+  assert.equal(pickSeedRecording(seed, [waiting, simple]), null);
+  assert.equal(pickSeedRecording(seed, [track(1, ["Sunny Day"], 270)]), null);
+  // The title alone does not either.
+  assert.equal(pickSeedRecording(seed, [track(1, ["晴天"], 300)]), null);
+  assert.equal(pickSeedRecording({ title: "晴天", durationMs: null }, [sunny]), null);
+  // A live recording of the same length is another recording.
+  assert.equal(pickSeedRecording(seed, [track(1, ["晴天 (Live)"], 270)]), null);
+  assert.equal(pickSeedRecording({ title: "晴天 (Live)", durationMs: 269746 }, [track(1, ["晴天 - Live"], 270)]).id, 1);
+
+  // Several releases of the song: the recording most of them are wins, then the most played.
+  const single = track(4, ["晴天"], 270, { isrc: "TWK970300503", rank: 900 });
+  const rerecorded = track(5, ["晴天"], 269, { isrc: "TWK972400001", rank: 5000 });
+  assert.equal(pickSeedRecording(seed, [rerecorded, sunny, single]).id, 4);
+  assert.equal(pickSeedRecording(seed, [rerecorded, sunny]).id, 5);
+
+  // Apple Music names the album: with the length, one recording on it is enough.
+  const apple = { title: "晴天", durationMs: 269747, album: "Yeh, Hwei-Mei" };
+  assert.equal(pickSeedRecording(apple, [track(1, ["Sunny Day"], 270), waiting]).id, 1);
+  // Two recordings of that length on the album: not known which.
+  assert.equal(pickSeedRecording(apple, [track(1, ["Sunny Day"], 270), track(6, ["Class Is Over"], 271)]), null);
+  // The same recording listed twice on it is one recording.
+  assert.equal(
+    pickSeedRecording(apple, [
+      track(1, ["Sunny Day"], 270, { isrc: "TWK970300503", rank: 1 }),
+      track(7, ["Sunny Day"], 270, { isrc: "TWK970300503", rank: 2 }),
+    ]).id,
+    7,
+  );
+  assert.equal(pickSeedRecording({ ...apple, album: "葉惠美" }, [track(1, ["Sunny Day"], 270)]), null);
+  assert.equal(pickSeedRecording(seed, []), null);
+  assert.equal(pickSeedRecording(seed, null), null);
 });
