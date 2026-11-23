@@ -203,40 +203,6 @@ Errors are `{ok:false, error}` with 400 (bad parameters), 404 (unknown track or 
 (undecodable preview), 429 (rate limit), 502 (Deezer), 503 (busy) or 504 (timed out waiting for an identical
 request).
 
-## Match a part
-
-The engine hears a 30-second preview of each song. With `--parts` (see the engine's description of `part=`), a
-listener can match a part of that preview instead of all of it, and the clients show a **Match a part** control
-(marked beta). How the clients use it:
-
-- **Detection, without a request of its own.** Every `similar` answer of an engine that matches parts carries
-  `query.parts` (`{"min_s": 10, "max_s": 30, "preview_s": 30, "song_offset_s": 48.0}`; `song_offset_s` is where the
-  preview starts in the song, `null` when the engine does not know). The control is drawn only when the answer on
-  screen has it, so with an engine without parts nothing changes. `/healthz` says the same as `parts: true`.
-- **Request.** `&part=<start>-<end>` in seconds of the preview. The clients keep spans on a 5-second grid, 10, 15
-  or 20 seconds long. The answer then has `query.part` (`{"start", "end", "heard": {"sonic", "samples",
-  "melody"}}`: the span, and the seconds each model heard for it). An answer to `part=` without `query.part` is for
-  the whole preview: clients then drop the part. An engine that refuses the parameter (400 or 404) is asked once
-  more without it.
-- **Website** ([`webapp/search.js`](../webapp/search.js)): "Match a part" follows the seed's preview button. It
-  opens a timeline of the preview (its waveform, read from Deezer's CDN with WebAudio, or a plain bar) with a span
-  to drag, resize by its edges or by the length buttons, and move with the arrow keys (Shift changes the length).
-  Times are song times when the place of the preview is known (the server's, or the usual 0:48 for a song the
-  search listed as 90 seconds or longer), else preview times. "Play this part" plays just the span, and Apply
-  reloads the lists. A chip ("Matching 0:58–1:13 of the song · whole preview") leads back. The part is in the
-  share link (`#id=<id>&tab=<tab>&part=<start>-<end>`, also as `/?id=…&part=…`) and in the request, so each part
-  has its own cached answer. A newly picked song always starts from its whole preview.
-- **Spotify extension** (runtime 2.16.0): the same control in the page's header, drawn with the theme's colours.
-  The page plays no previews, so "Play this part" plays the song in Spotify from about where the part starts and
-  pauses when it is over. Saved lists are kept per part (`…:part:<start>-<end>` in the cache id), and nothing is
-  remembered from one search to the next.
-- **Phones**: `/api/mobile/similar` takes `part=` and reports `query.part` and `query.parts`
-  ([Mobile API](#mobile-api)). The `/find` page and the apps have no control yet.
-- **Which lists follow.** Best matches, Listeners also play and Melody match are read from the one answer, so all
-  three follow the part. The song's playlists, tempo, language and artist scene stay the whole song's, so Listeners
-  also play still starts from the song's listeners. The extension's Sounds like list (local companion or the older
-  hosted library) always uses the whole song.
-
 ## Mobile API
 
 For phone clients (the iOS share extension and Shortcut, the Android share target, the phone page `/find`): give it
@@ -265,7 +231,7 @@ default 20), `lang=same\|all` (default `same`: Best matches in the seed's langua
 (default `main`; `best` is the fused melody and samples list the site calls Melody match, `listeners` is Listeners
 also play; a list the answer lacks falls back to `main`, and `engine.list` names the one served; `/find` passes
 `?list=` on), `part=<start>-<end>` (seconds of the song's 30-second preview, at least 10 apart, at most 30: match
-that part instead of the whole preview; see [Match a part](#match-a-part)), `storefront` (two-letter Apple
+that part instead of the whole preview; see [A part of a song](#a-part-of-a-song)), `storefront` (two-letter Apple
 Music country; default: the link's storefront, then the listener's country, then `us`).
 
 ```json
@@ -539,6 +505,32 @@ brought to full scale before it is embedded, because the sound model hears level
 audio it cannot decode, clips outside 5 to 30 s and silence, and a CORS preflight when `--cors-origin` is set.
 `--part-sound-weight` sets the consensus body's sound weight for part and excerpt seeds (default: the body's own;
 not set in production).
+
+### Match a part in the clients
+
+The clients show a **Match a part** control (marked beta) only when the `similar` answer on screen has
+`query.parts`, so it costs no request of its own and nothing changes with an engine without `--parts`. They keep
+spans on a 5-second grid, 10, 15 or 20 seconds long. An answer to `part=` without `query.part` is for the whole
+preview (an older engine ignores the parameter), so the client drops the part; an engine that refuses the
+parameter (400 or 404) is asked once more without it.
+
+- **Website** ([`webapp/search.js`](../webapp/search.js)): "Match a part" follows the seed's preview button. It
+  opens a timeline of the preview (its waveform, read from Deezer's CDN with WebAudio, or a plain bar) with a span
+  to drag, resize by its edges or by the length buttons, and move with the arrow keys (Shift changes the length).
+  Times are song times when the place of the preview is known (`song_offset_s`, or the usual 0:48 for a song the
+  search listed as 90 seconds or longer), else preview times. "Play this part" plays just the span, and Apply
+  reloads the lists. A chip ("Matching 0:58–1:13 of the song · whole preview") leads back. The part is in the
+  share link (`#id=<id>&tab=<tab>&part=<start>-<end>`, also as `/?id=…&part=…`) and in the request, so each part
+  has its own cached answer. A newly picked song always starts from its whole preview.
+- **Spotify extension** (runtime 2.16.0): the same control in the page's header, drawn with the theme's colours.
+  The page plays no previews, so "Play this part" plays the song in Spotify from about where the part starts and
+  pauses when it is over. Saved lists are kept per part (`…:part:<start>-<end>` in the cache id), and nothing is
+  remembered from one search to the next.
+- **Phones**: `/api/mobile/similar` takes `part=` and reports `query.part` and `query.parts`
+  ([Mobile API](#mobile-api)). The `/find` page and the apps have no control yet.
+- **Which lists follow.** Best matches, Listeners also play and Melody match are read from the one answer, so all
+  three follow the part; Listeners also play still starts from the whole song's listeners. The extension's Sounds
+  like list (local companion or the older hosted library) always uses the whole song.
 
 ## Growing the catalog
 
