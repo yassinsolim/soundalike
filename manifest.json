@@ -1,10 +1,10 @@
 {
   "name": "Soundalike",
-  "description": "Find songs that sound alike in Spotify: best matches by melody and samples, plus same-language sound matches with native playback.",
+  "description": "Find songs that sound alike in Spotify: Best matches, Listeners also play and Melody match, with native playback.",
   "preview": "https://raw.githubusercontent.com/yassinsolim/soundalike/main/docs/spicetify-results.png",
   "main": "integrations/spicetify/bootstrap.js",
   "readme": "https://raw.githubusercontent.com/yassinsolim/soundalike/main/integrations/spicetify/README.md",
-  "branch": "38ca29ca9ec760dc40e58a567ca6aaff632ae306",
+  "branch": "7a834dc4abe33d2ae0d0272181c0de7e1507929b",
   "authors": [
     {
       "name": "Yassin Soliman",

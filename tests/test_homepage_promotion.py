@@ -152,11 +152,11 @@ def test_homepage_offers_three_any_song_tabs_from_one_response():
 def test_marketplace_description_pins_the_immutable_update_bootstrap():
     manifest = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["description"] == (
-        "Find songs that sound alike in Spotify: best matches by melody and "
-        "samples, plus same-language sound matches with native playback."
+        "Find songs that sound alike in Spotify: Best matches, Listeners also "
+        "play and Melody match, with native playback."
     )
     assert manifest["main"] == "integrations/spicetify/bootstrap.js"
-    assert manifest["branch"] == "38ca29ca9ec760dc40e58a567ca6aaff632ae306"
+    assert manifest["branch"] == "7a834dc4abe33d2ae0d0272181c0de7e1507929b"
 
 
 def test_marketplace_card_tracks_current_docs_on_main():
