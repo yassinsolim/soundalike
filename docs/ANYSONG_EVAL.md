@@ -3700,7 +3700,8 @@ titled in non-Latin scripts resolved to nothing.
   engine update 1's deploy measured 3.06 s on the 14 gate songs. The update did not slow whole-song requests: the
   v12 source (904f9c0) against the update's (432ce01) on one PC in the production profile, two engine starts
   each, 54 songs per start, gave 1.61 and 1.73 s against 1.59 and 1.64 s per new song (medians of 40 after the
-  gate songs), every stage within the spread between two starts of one build, and 83 and 85 ms against 86 and
+  gate songs), no stage more than 8 ms outside the spread between two starts of one build (the sonic search,
+  140 and 156 ms against 163 and 164 ms, in code the update did not touch), and 83 and 85 ms against 86 and
   88 ms for a cached answer (which is where the own-song filter and `query.parts` run).
 
 ## A part of a song as the seed (2026-11-23)
