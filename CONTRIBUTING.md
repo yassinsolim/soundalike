@@ -95,7 +95,7 @@ Do not change these in a pull request; the maintainer handles them when
 publishing a signed release:
 
 - `RUNTIME_SEMANTIC_VERSION` in `soundalike.js`;
-- `integrations/spicetify/releases/stable.json`;
+- the signed feeds in `integrations/spicetify/releases/`;
 - `integrations/spicetify/bootstrap.js` and the commit pinned in `manifest.json`.
 
 Merged extension changes reach users with the next signed release. The process

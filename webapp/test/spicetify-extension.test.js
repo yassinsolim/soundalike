@@ -4903,11 +4903,11 @@ test("the bar shows the overall match, the sound match moves to its tooltip, and
   assert.match(app.currentPage.innerHTML, /English \(best guess\) · other languages left out/);
 });
 
-// The signed runtime Marketplace's bootstrap injects (releases/stable.json).
+// The signed runtime Marketplace's bootstrap injects (releases/stable-2.json).
 // Its commit can live only in a pull request ref, so fetch it if needed.
 function signedRuntimeSource() {
   const stable = JSON.parse(fs.readFileSync(
-    new URL("../../integrations/spicetify/releases/stable.json", import.meta.url),
+    new URL("../../integrations/spicetify/releases/stable-2.json", import.meta.url),
     "utf8",
   ));
   const commit = stable.payload.runtime.url.match(/\/([a-f0-9]{40})\//)[1];
