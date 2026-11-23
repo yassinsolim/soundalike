@@ -58,7 +58,7 @@ a live seed's language is read from its preview by the model and rule that label
 (``languages.LanguageDetector``); ``query["language_source"]`` says where a seed's language comes from: its own
 "label", "detected", its "artist"'s majority or the table's "guess".
 
-With ``--parts``, ``similar`` takes ``part=<start>-<end>``: seconds of the song's 30 s preview (at least 5 apart).
+With ``--parts``, ``similar`` takes ``part=<start>-<end>``: seconds of the song's 30 s preview (at least 10 apart).
 The seed is then only the windows of that span (``audio.part_windows``: sound and scene head 10 s windows, samples 6 s
 chunks, melody the 20 s shingle around it), stored ones for a catalog song; playlists, tempo, language and artist
 scene stay the song's. ``/healthz`` then says ``parts: true``, every ``similar`` answer carries ``query["parts"]``
@@ -95,6 +95,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
+from functools import lru_cache
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -192,6 +193,7 @@ FUSE_WEIGHTS = {"melody": 1.0, "samples": 1.0}
 RESOLVE_LIMIT = 10  # Deezer search depth for a title and artist that are not in the catalog
 RESOLVE_CREDITS = 3  # tracks whose Deezer details are read for a song not found under the names as given
 RESOLVE_ARTISTS = 2  # names of a requested credit looked up as Deezer artists, and artists whose top tracks are read
+RESOLVE_MISS_TTL = 900.0  # seconds a title and artist that nothing knew stays a 404 without being looked up again
 _PARENS = re.compile(r"[\(\[][^\)\]]*[\)\]]")
 _DASH_SUFFIX = re.compile(r"\s+-\s+.*$")
 _FEAT = re.compile(r"\s(?:feat\.?|ft\.?|featuring)\s.*$")
@@ -212,6 +214,9 @@ PART_MIN_SECONDS = 10.0  # the sound model's window; a shorter span would be hea
 EXCERPT_MIN_SECONDS = 5.0
 EXCERPT_MAX_SECONDS = 30.0
 EXCERPT_MAX_BYTES = 12 * 2**20  # 30 s of 48 kHz stereo 24-bit WAV is 8.6 MB
+# A refused POST body up to this size (a 30 s clip as the page would send it is 1.4 MB) is read past, so that the
+# client reads the answer instead of a connection reset; a larger one is left unread and the connection closed.
+POST_SKIM_BYTES = 2 * 2**20
 _PART = re.compile(r"(\d{1,2}(?:\.\d{1,6})?)-(\d{1,2}(?:\.\d{1,6})?)")
 
 
@@ -269,6 +274,13 @@ def _lookup_key(artist: str, title: str) -> tuple[str, str]:
     so accents on Latin letters, symbols and a leading "The" are ignored. Lists keep ``song_key``."""
     a, t = song_key(_fold(artist), _fold(title))
     return _LEADING_THE.sub("", a) or a, t
+
+
+@lru_cache(maxsize=1 << 16)
+def _own_key(artist: str, title: str) -> tuple[str, str]:
+    """``_lookup_key`` for the own-song check of the lists (``AnySong._view``), remembered: a song sits in several
+    of a seed's lists and in many seeds' lists, and folding its names is most of that check's cost (4 µs a row)."""
+    return _lookup_key(artist, title)
 
 
 def _content_tags(title: str) -> frozenset[str]:
@@ -673,6 +685,9 @@ class AnySong:
         self.pending = threading.BoundedSemaphore(max_pending)
         self.results = LRU(cache_size)
         self.searches = LRU(cache_size, ttl=search_ttl)
+        # Names that neither the catalog nor Deezer knew (``resolve``'s 404s), remembered for ``RESOLVE_MISS_TTL``
+        # so that asking again costs no Deezer request and nothing of the caller's search budget.
+        self.misses = LRU(cache_size, ttl=RESOLVE_MISS_TTL)
         # Track objects from recent searches carry signed preview URLs, so a click on a search result
         # skips the Deezer track lookup. Kept briefly because the URLs expire.
         self.known = LRU(cache_size * 4, ttl=known_ttl)
@@ -732,12 +747,16 @@ class AnySong:
                 "parts": self.parts, "excerpts": self.excerpts,
                 "gpu_mib": _gpu_mib(self.engine.device)}
 
-    def _tracks(self, q: str, limit: int, language: str | None = None) -> list[dict]:
+    def _tracks(self, q: str, limit: int, language: str | None = None,
+                charge: Callable[[], None] | None = None) -> list[dict]:
         """Deezer's search hits for ``q`` as cards (``_hit``), cached. ``language``: an Accept-Language value, for
-        the names Deezer holds in that language; only default-language track objects are remembered for ``_live``."""
+        the names Deezer holds in that language; only default-language track objects are remembered for ``_live``.
+        ``charge`` runs before a request to Deezer is made (not for a cached answer)."""
         key = (q.casefold(), limit) if language is None else (q.casefold(), limit, language)
         hits = self.searches.get(key)
         if hits is None:
+            if charge is not None:
+                charge()
             try:
                 found = self.deezer.search(q, limit) if language is None else \
                     self.deezer.search(q, limit, language=language)
@@ -767,8 +786,8 @@ class AnySong:
                 return tid
         return None
 
-    def _search_song(self, artist: str, title: str, key: tuple[str, str], wider: bool = True
-                     ) -> tuple[tuple[str, str], list[dict]]:
+    def _search_song(self, artist: str, title: str, key: tuple[str, str], wider: bool = True,
+                     charge: Callable[[], None] | None = None) -> tuple[tuple[str, str], list[dict]]:
         """The song a title and artist name on Deezer: its ``_lookup_key`` and its search cards with a preview.
         First the hits with the requested ``key`` for "artist title" as given, then, if that finds none, for the
         normalized key text, which Deezer's search handles better ("crosses bitches brew" finds "††† (Crosses)" where
@@ -786,9 +805,10 @@ class AnySong:
                 return key, same
             for hit in hits:
                 seen.setdefault(hit["id"], hit)
-        return self._search_wider(artist, title, list(seen.values())) if wider else (key, [])
+        return self._search_wider(artist, title, list(seen.values()), charge) if wider else (key, [])
 
-    def _search_wider(self, artist: str, title: str, hits: Sequence[dict]) -> tuple[tuple[str, str], list[dict]]:
+    def _search_wider(self, artist: str, title: str, hits: Sequence[dict],
+                      charge: Callable[[], None] | None = None) -> tuple[tuple[str, str], list[dict]]:
         """The requested song among Deezer tracks that do not carry the requested names as given (``lookup``: the
         evidence that counts). ``hits``: what the searches for the names returned. Tried in turn, stopping at the
         first that finds the song with the same title: those hits with the requested artist anywhere in the credit;
@@ -820,23 +840,23 @@ class AnySong:
             found = song()
             language = lookup.script_languages(f"{artist} {title}")
             if not found and language:
-                for hit in self._tracks(f"{artist} {title}"[:200], RESOLVE_LIMIT, language):
+                for hit in self._tracks(f"{artist} {title}"[:200], RESOLVE_LIMIT, language, charge):
                     add(hit, default=False)
                 found = song()
             if not found:
                 titled = [c for c in candidates.values() if lookup.title_evidence(title, c, _lookup_key)]
                 for candidate in sorted(titled, key=lambda c: -c.rank)[:RESOLVE_CREDITS]:
-                    candidate.contributors = self._contributors(candidate.id)
+                    candidate.contributors = self._contributors(candidate.id, charge)
                 found = song()
             if not found:
-                artist_ids = self._artist_ids(artist)
+                artist_ids = self._artist_ids(artist, charge)
                 found = song(artist_ids)
             language = lookup.script_languages(title)
             if not found and language:
                 named = [c.artist_id for c in candidates.values()
                          if c.artist_id and lookup.artist_evidence(artist, c, (), _lookup_key) == "name"]
                 for artist_id in list(dict.fromkeys([*named, *artist_ids]))[:RESOLVE_ARTISTS]:
-                    for hit in self._top_tracks(artist_id, language):
+                    for hit in self._top_tracks(artist_id, language, charge):
                         add(hit, default=False)
                 found = song(artist_ids)
             if not found:
@@ -844,7 +864,7 @@ class AnySong:
             cards = []
             for candidate in found[:RESOLVE_CREDITS]:
                 # A track only seen in another naming: its default one, which the catalog and the lists use.
-                card = candidate.card or self._default_card(candidate.id)
+                card = candidate.card or self._default_card(candidate.id, charge)
                 if card is not None and card["has_preview"]:
                     cards.append(card)
         except RuntimeError as exc:
@@ -854,10 +874,13 @@ class AnySong:
         key = _lookup_key(cards[0]["artist"], cards[0]["title"])
         return key, [card for card in cards if _lookup_key(card["artist"], card["title"]) == key]
 
-    def _details(self, track_id: int) -> dict:
-        """A track's Deezer object with its contributors (the search's objects have none), remembered for ``_live``."""
+    def _details(self, track_id: int, charge: Callable[[], None] | None = None) -> dict:
+        """A track's Deezer object with its contributors (the search's objects have none), remembered for ``_live``.
+        ``charge``: as for ``_tracks``."""
         info = self.known.get(track_id)
         if info is None or "contributors" not in info:
+            if charge is not None:
+                charge()
             info = self.deezer.track(track_id)
             if not isinstance(info, dict) or info.get("id") != track_id:
                 return {}
@@ -865,23 +888,26 @@ class AnySong:
             self.known.put(track_id, info)
         return info
 
-    def _contributors(self, track_id: int) -> list[tuple[int | None, str]]:
-        credits = self._details(track_id).get("contributors") or ()
+    def _contributors(self, track_id: int, charge: Callable[[], None] | None = None) -> list[tuple[int | None, str]]:
+        credits = self._details(track_id, charge).get("contributors") or ()
         return [(c.get("id"), c.get("name") or "") for c in credits if isinstance(c, dict)]
 
-    def _default_card(self, track_id: int) -> dict | None:
-        info = self._details(track_id)
+    def _default_card(self, track_id: int, charge: Callable[[], None] | None = None) -> dict | None:
+        info = self._details(track_id, charge)
         return _hit(info) if info else None
 
-    def _artist_ids(self, artist: str) -> list[int]:
+    def _artist_ids(self, artist: str, charge: Callable[[], None] | None = None) -> list[int]:
         """The Deezer artists the requested ``artist`` may be (each name of a credit of several, two at most): the
         artist search's hits with that very name, most fans first, and, for a name outside the Latin script, its
-        first two hits, since Deezer files such artists under a Latin name (周杰倫 is Jay Chou). Cached."""
+        first two hits, since Deezer files such artists under a Latin name (周杰倫 is Jay Chou). Cached; ``charge``:
+        as for ``_tracks``, once for each name."""
         key = ("artists", artist.casefold())
         ids = self.searches.get(key)
         if ids is None:
             ids = []
             for name in [part.strip() for part in _ARTIST_SPLIT.split(artist) if part.strip()][:RESOLVE_ARTISTS]:
+                if charge is not None:
+                    charge()
                 hits = self.deezer.search_artists(name, 5)
                 wanted = lookup.credit_names(name, _lookup_key)
                 same = [hit for hit in hits if wanted & lookup.credit_names(hit.get("name") or "", _lookup_key)]
@@ -893,11 +919,14 @@ class AnySong:
             self.searches.put(key, ids)
         return ids
 
-    def _top_tracks(self, artist_id: int, language: str) -> list[dict]:
-        """An artist's top tracks as cards named in ``language`` (``_hit``), cached; none when Deezer has none."""
+    def _top_tracks(self, artist_id: int, language: str, charge: Callable[[], None] | None = None) -> list[dict]:
+        """An artist's top tracks as cards named in ``language`` (``_hit``), cached; none when Deezer has none.
+        ``charge``: as for ``_tracks``."""
         key = ("top", artist_id, language)
         hits = self.searches.get(key)
         if hits is None:
+            if charge is not None:
+                charge()
             try:
                 found = self.deezer.artist_top_tracks(artist_id, 100, language=language)
             except ValueError:
@@ -918,6 +947,10 @@ class AnySong:
         nor the search knows the song under these names, it is looked for under another credit or naming
         (``_search_wider``: the requested artist as a second credit, the title in another script or one typing slip
         off), and its releases are then chosen among in the same way; without that evidence the answer is 404.
+        That wider lookup can take about ten Deezer requests, all through the one Deezer limiter that every other
+        lookup and the crawl wait on, so ``on_search`` runs again before each of them: a client pays for them from
+        its search budget and gets a 429 when it is spent (what was read so far stays cached). A name that was not
+        found is remembered for ``RESOLVE_MISS_TTL``: asked again, it is a 404 at no cost.
         """
         artist, title = _text_param(artist, "artist"), _text_param(title, "title")
         key, version, tags = _lookup_key(artist, title), version_words(title), _content_tags(title)
@@ -926,10 +959,13 @@ class AnySong:
             return found
         known = self.by_key.get(key, ())
         same_version = [tid for tid in known if version_words(self.meta[tid][1]) == version]
+        miss = (artist.casefold(), title.casefold())
+        if not known and self.misses.get(miss):
+            raise ApiError(404, "song not found")
         try:
             if on_search is not None:
                 on_search()
-            song, cards = self._search_song(artist, title, key, wider=not known)
+            song, cards = self._search_song(artist, title, key, wider=not known, charge=on_search)
         except ApiError:
             if known:
                 return (same_version or known)[0]
@@ -952,6 +988,7 @@ class AnySong:
             return known[0]
         if cards:
             return cards[0]["id"]
+        self.misses.put(miss, True)
         raise ApiError(404, "song not found")
 
     def resolve_isrc(self, isrc: str, artist: str | None = None, title: str | None = None,
@@ -1612,7 +1649,7 @@ class AnySong:
                     if key == qkey or key in order:
                         continue
                     if qown is not None and not (qplain and artist.isascii() and title.isascii()) \
-                            and _lookup_key(artist, title) == qown:
+                            and _own_key(artist, title) == qown:
                         continue
                 order[key] = {"id": tid, "score": round(float(score), 4), "artist": artist, "title": title}
             return order
@@ -2304,7 +2341,8 @@ class Handler(BaseHTTPRequestHandler):
         forwarded = client_key(self.headers.get(header, "")) if header else None
         return forwarded or client_key(self.client_address[0]) or self.client_address[0]
 
-    def _send(self, code: int, obj: dict, max_age: int = 0) -> None:
+    def _send(self, code: int, obj: dict, max_age: int = 0, close: bool = False) -> None:
+        """``close``: the connection ends with this answer (a request body that was not read is still on it)."""
         body = json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode()
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -2314,6 +2352,8 @@ class Handler(BaseHTTPRequestHandler):
         if self.server.cors_origin:
             self.send_header("Access-Control-Allow-Origin", self.server.cors_origin)
             self.send_header("Vary", "Origin")
+        if close:
+            self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(body)
 
@@ -2349,14 +2389,18 @@ class Handler(BaseHTTPRequestHandler):
         svc = self.server.service
         length = self.headers.get("Content-Length", "")
         unread = int(length) if length.isdigit() else 0
+        if url.path != "/api/anysong/excerpt" or not svc.excerpts:
+            # Nothing else takes a body, and without --excerpts nothing does: the body is not read
+            # (``POST_SKIM_BYTES``).
+            if unread <= POST_SKIM_BYTES:
+                self._discard(unread)
+            return self._send(404, {"ok": False, "error": "not found"}, close=unread > POST_SKIM_BYTES)
         try:
             params = parse_qs(url.query, max_num_fields=8)
         except ValueError:
             self._discard(unread)
             return self._send(400, {"ok": False, "error": "bad query string"})
         try:
-            if url.path != "/api/anysong/excerpt" or not svc.excerpts:
-                raise ApiError(404, "not found")
             if not unread:
                 raise ApiError(411, "send the clip as the request body, with its Content-Length")
             if unread > self.server.excerpt_max_bytes:

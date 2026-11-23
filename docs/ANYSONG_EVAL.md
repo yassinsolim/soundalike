@@ -3695,7 +3695,18 @@ titled in non-Latin scripts resolved to nothing.
 - The owner's 21 earlier verdicts on catalog songs, top 30 of v12: 1 of 6 liked songs shown, 2 of 15 rejected
   songs shown.
 - A request takes about 2.7 s at the median on the production card; the 999k index before v12 measured 1.0 s there
-  (2026-11-09).
+  (2026-11-09). That 2.7 s was measured minutes after the tables had been read into the host's file cache three
+  times; a day later the same build took 3.18 s per new song (median of 40, `timings_ms.total`, 2.9 to 3.6 s), and
+  engine update 1's deploy measured 3.06 s on the 14 gate songs. So the update did not slow production, and old
+  against new source says the same: the v12 source (904f9c0) and the update's (432ce01) on one PC in the
+  production profile, six engine starts each in alternation, 54 new songs per start (medians of the last 40):
+  0.99 to 1.09 s for v12 and 1.04 to 1.21 s for the update, overlapping. The stages on the card are the same
+  (sonic search 91 to 102 ms against 92 to 98 ms, blend 88 to 98 against 89 to 94, consensus 199 to 216 against
+  199 to 214); what moves from start to start, in both directions, is the stages that read the tables from the
+  file cache (samples search 263 to 310 ms against 288 to 360), in code a whole-song request runs unchanged. The
+  one repeatable cost of the update is in building an answer: 36 to 37 ms against 38 to 42 ms for a cached
+  answer, the own-song check folding the names of every listed row (8 ms for 2,000 rows when the seed's names are
+  not plain ASCII). Those keys are now remembered (`api._own_key`): 35 to 37 ms again.
 
 ## A part of a song as the seed (2026-11-23)
 

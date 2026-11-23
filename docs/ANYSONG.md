@@ -178,6 +178,11 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   naming), chosen as above. Anything less is a 404 as before: a known title by an artist who is not on the track
   is never answered with someone else's song. This costs up to about ten more Deezer requests (1 to 3 s) for a
   name that would otherwise be a 404, none for a name that is found, and the answers are cached for an hour.
+  Those requests share the one Deezer limiter with every other lookup and the crawl, so each of them is paid from
+  the client's `/search` budget like the first search: a client out of budget gets a 429 part-way (what was read
+  stays cached, so asking again goes on from there), and no client can put more than its 60 requests a minute on
+  Deezer this way. A name that was not found is remembered for 15 minutes (`RESOLVE_MISS_TTL`): asked again it is
+  a 404 without any Deezer request and at no cost to the budget.
   What Deezer alone cannot settle stays a 404: a title in a script for which Deezer holds no naming (BTS "봄날",
   filed as "Spring Day" only) or an artist typed in another script than Deezer's without any shared naming
   ("Kino" for Кино). On 2026-11-23, of 81 real requests in many scripts 45 resolved before and 72 after, none
@@ -193,8 +198,10 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   A catalog song is queried with its stored windows (no audio work); an unseen song is downloaded, decoded and run
   through all three encoders, and the result is cached in memory.
 - Rate limits are token buckets per client: `/similar` 20/min (burst 5), `/search` 60/min (burst 15). Cached
-  `/similar` results are free, and a name lookup the catalog cannot answer spends one `/search` request (when that
-  budget is spent, a song with another catalog release uses it instead of failing). Clients are
+  `/similar` results are free, and a name lookup the catalog cannot answer spends one `/search` request, plus one
+  for each further Deezer request when the name is not found as given (when that budget is spent, a song with
+  another catalog release uses it instead of failing). A `POST` gets a 404 unless `--excerpts` is on; its body is
+  not read (up to 2 MiB is skimmed so the client sees the answer; after more the connection closes). Clients are
   keyed by `--client-ip-header` (`CF-Connecting-IP`) with IPv6 grouped per /64; only enable that flag while the
   port is reachable solely through the proxy chain. Excess concurrent live work returns 503 (`--max-pending`),
   which the page retries with backoff.
