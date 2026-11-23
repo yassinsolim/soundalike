@@ -194,10 +194,10 @@ and scroll to the newly listed extensions.
 That is enough for normal use: Marketplace installs the immutable
 `bootstrap.js`, which automatically verifies and loads signed Soundalike
 runtime updates from the public hosted library. **If you installed Soundalike
-before this bootstrap release, uninstall and reinstall it once in
-Marketplace, then restart Spotify.** The old immutable runtime cannot update
-itself; after that final reinstall, runtime updates are automatic. Steps 3 and
-4 are optional local-companion setup.
+before 23 November 2026, uninstall and reinstall it once in Marketplace, then
+restart Spotify.** Those installs stay on version 2.13.0, because the key that
+signed their updates was lost; after the reinstall, runtime updates are
+automatic again. Steps 3 and 4 are optional local-companion setup.
 
 Manual install:
 

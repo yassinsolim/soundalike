@@ -5,7 +5,8 @@ inside Spotify. Soundalike compares audio embeddings instead of using genres,
 popularity, or your listening history. Results open on **Best matches**: songs
 that share a melody, sample, or loop with yours, then the songs a model ranks
 closest to it from five signals. **Listeners also play** lists similar songs by
-other artists that your song's listeners also play.
+other artists that your song's listeners also play, and **Melody match** lists
+the melody and sample matches on their own.
 
 ![Soundalike best matches inside Spotify](../../docs/spicetify-results.png)
 
@@ -15,7 +16,7 @@ other artists that your song's listeners also play.
 2. Right-click any track in Spotify, including the song playing in the player
    bar.
 3. Select **Find soundalikes**. Results open on **Best matches**; select
-   **Listeners also play** to switch lists.
+   **Listeners also play** or **Melody match** to switch lists.
 4. Double-click a result or use its left-side play button. The list then plays
    on in the order shown, like a playlist that is never saved. Right-click a
    result for Spotify's normal track actions.
@@ -26,18 +27,20 @@ automatically uses Soundalike's hosted services.
 
 ### Marketplace updates
 
-Marketplace now installs a small, commit-pinned bootstrap. On Spotify start it
+Marketplace installs a small, commit-pinned bootstrap. On Spotify start it
 checks a signed stable release feed, verifies the signature, immutable Git
 commit URL, SHA-256 hash, and browser SRI before loading the runtime. It keeps
 the last verified runtime locally and falls back to that runtime (then its
-baked-in runtime) if an update cannot be trusted or fetched. Future signed
-runtime releases do **not** require a Marketplace manifest change.
+baked-in runtime) if an update cannot be trusted or fetched. Signed runtime
+releases do **not** require a Marketplace manifest change.
 
-**Existing Marketplace users must reinstall once**: uninstall Soundalike in
-Marketplace, install it again, and restart Spotify. Older immutable runtime
-copies cannot update themselves. After that final reinstall, runtime updates
-are automatic. Manual installs remain manual; use the current file and run
-`spicetify apply` when updating.
+**If you installed Soundalike before 23 November 2026, reinstall it once**:
+uninstall Soundalike in Marketplace, install it again, and restart Spotify.
+The key that signed updates for those installs was lost in November 2026, so
+they keep working but stay on version 2.13.0 (three tabs named Best matches,
+Same vibe and Sounds like). The reinstall brings the bootstrap of the new key;
+after it, updates are automatic again. Manual installs remain manual; use the
+current file and run `spicetify apply` when updating.
 
 ## Best matches, Listeners also play and Melody match
 

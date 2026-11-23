@@ -62,20 +62,21 @@ This is the easiest way to use Soundalike regularly.
    **Find soundalikes**.
 
 Results open on their own Spotify page, starting with **Best matches**, with
-**Listeners also play** one tab away. You can play a result, and the
-songs after it follow in the order shown without creating a playlist. You can
-also open a result's album, use Spotify's normal track menu, or search for
-another set of matches.
+**Listeners also play** and **Melody match** one tab away. You can play a
+result, and the songs after it follow in the order shown without creating a
+playlist. You can also open a result's album, use Spotify's normal track menu,
+or search for another set of matches.
 
 Marketplace installs receive signed runtime updates when Spotify starts. The
 loader verifies the release signature, immutable commit URL, SHA-256 hash, and
 browser integrity value before it runs an update. If verification or download
 fails, it uses the last verified version.
 
-If you installed Soundalike before the signed updater was introduced, or if
-**Find soundalikes** is missing, remove the extension from Marketplace, install
-it once more, and restart Spotify. Later runtime updates should not require
-another reinstall.
+**If you installed Soundalike before 23 November 2026, reinstall it once:**
+remove the extension in Marketplace, install it again, and restart Spotify.
+Older installs keep working but stay on version 2.13.0, because the key that
+signed their updates was lost and a new one is in use. Do the same if **Find
+soundalikes** is missing. Later updates do not need another reinstall.
 
 Spotify 1.3.5 and newer need Spicetify 2.46.1 or newer. Older Spicetify
 releases empty every right-click menu once an extension adds an item, so on
