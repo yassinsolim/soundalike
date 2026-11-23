@@ -535,16 +535,24 @@ parameter (400 or 404) is asked once more without it.
   pauses when it is over. Saved lists are kept per part (`…:part:<start>-<end>` in the cache id), and nothing is
   remembered from one search to the next.
 - **Phones**: `/api/mobile/similar` takes `part=` and reports `query.part` and `query.parts`
-  ([Mobile API](#mobile-api)). The `/find` page ([`webapp/find/index.html`](../webapp/find/index.html)) has the
-  control in its own inline script, because its Content-Security-Policy admits no script file: "Match a part"
-  under the seed opens a plain bar of the preview (no waveform, so nothing is fetched) with a span to drag by
-  finger, move with the arrow keys, or place by tapping the bar, and 10 s, 15 s and 20 s buttons for its length.
-  "Play this part" plays the span from the seed's preview (`/api/preview`), Apply reloads the list, and a chip
-  ("Matching 0:58–1:13 of the song · whole preview") leads back. Times are song times only when the answer has
-  `song_offset_s`; the page does not know the song's length, so it never assumes 0:48. The part is in the page's
-  address (`/find?url=…&part=<start>-<end>`), so a shared link and the Back button keep it; a part that is not one
-  (shorter than 10 s, past 30 s) is ignored and taken out of the address, and a newly pasted link starts from
-  its whole preview. The apps have no control yet.
+  ([Mobile API](#mobile-api)).
+  - **`/find` page** ([`webapp/find/index.html`](../webapp/find/index.html)): it has the control in its own inline
+    script, because its Content-Security-Policy admits no script file: "Match a part" under the seed opens a plain
+    bar of the preview (no waveform, so nothing is fetched) with a span to drag by finger, move with the arrow
+    keys, or place by tapping the bar, and 10 s, 15 s and 20 s buttons for its length. "Play this part" plays the
+    span from the seed's preview (`/api/preview`), Apply reloads the list, and a chip ("Matching 0:58–1:13 of the
+    song · whole preview") leads back. Times are song times only when the answer has `song_offset_s`; the page
+    does not know the song's length, so it never assumes 0:48. The part is in the page's address
+    (`/find?url=…&part=<start>-<end>`), so a shared link and the Back button keep it; a part that is not one
+    (shorter than 10 s, past 30 s) is ignored and taken out of the address, and a newly pasted link starts from
+    its whole preview.
+  - **Android app** (2.1.0, [`android/`](../android/README.md#match-a-part)): "Match a part" sits under the song in
+    the results sheet and in the app. It opens a bar of the preview with the part on it: drag the part, drag an
+    edge, tap elsewhere, or use the −5 s / +5 s and 10 / 15 / 20 s buttons. "Play this part" plays the span from the
+    preview and Apply reloads the list; a chip ("Matching 0:58–1:08 of the song", then "Whole preview") leads back.
+    Song times are used when the server gives the preview's place or the song is known to be 90 s or longer. The
+    part stays while the player moves on to other songs and ends when another song's list is loaded.
+  - The iPhone app has no control yet.
 - **Which lists follow.** Best matches, Listeners also play and Melody match are read from the one answer, so all
   three follow the part; Listeners also play still starts from the whole song's listeners. The extension's Sounds
   like list (local companion or the older hosted library) always uses the whole song.

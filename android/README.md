@@ -66,6 +66,32 @@ while music plays.
 While the list is open and the player moves to another song, a line at the top offers "Show soundalikes" for the
 new song.
 
+### Match a part
+
+The matches normally follow the song's whole 30-second preview. When the answer on screen says the server can
+match a part of it (`query.parts`), a **Match a part** button (beta) sits under the song, in the sheet and in the
+app; with a server that can't, nothing shows and nothing is asked.
+
+- Tap it: a bar of the preview opens with the part on it, 10 to 20 seconds long on a 5-second grid like the
+  website's. Drag the part to move it, drag near an edge to resize it, tap elsewhere on the bar to bring it there,
+  or use −5 s / +5 s and the 10 s / 15 s / 20 s buttons, which are easier than dragging on a small screen.
+- **Play this part** plays just that span of the song's own preview (fetched from Deezer by the id the server
+  matched) with the same audio focus as the row previews, so the music app pauses and resumes; a line moves across
+  the bar while it plays.
+- **Apply** reloads the list for the part (`part=<start>-<end>`); the button becomes a chip, "Matching 0:58–1:08 of
+  the song", with **Whole preview** next to it. Tapping the chip reopens the picker at that part.
+- Times are song times when the server gives the preview's place in the song, or when the song is known to be 90
+  seconds or longer (from the player or the search result; previews usually start 0:48 in, and the picker says it
+  is an assumption). Otherwise they are preview times, "0:10–0:20 of the preview".
+- The part belongs to the song on screen. It stays while the music app moves on (the "Now playing … Show
+  soundalikes" line still offers the new song), through a rotation, and through a failed request (Try again asks
+  for the same part). A new song, from that line, a share, the tile or a search, starts from its whole preview.
+- A server that refuses `part=` (400 or 404) is asked once more without it, and an answer without `query.part` is
+  shown as the whole preview. From the phone to the first list for a part: two taps (Match a part, Apply) for the
+  default 0:10–0:20.
+
+There is no waveform: drawing one means downloading and decoding the preview before the picker can open.
+
 What is playing comes from two sources:
 - `MediaSessionManager.getActiveSessions`, which Android allows for apps with notification access.
   `NowPlayingListener` is an empty `NotificationListenerService`; no notification is read. It gives title, artist
@@ -160,7 +186,7 @@ lists it.
 ```powershell
 . D:\android\env.ps1          # JAVA_HOME, ANDROID_HOME, GRADLE_USER_HOME, PATH for this shell
 cd android
-.\gradlew.bat :core:test                 # 23 unit tests, plain JVM
+.\gradlew.bat :core:test                 # unit tests, plain JVM
 .\gradlew.bat :app:assembleDebug         # app/build/outputs/apk/debug/app-debug.apk
 .\gradlew.bat :app:assembleRelease       # app/build/outputs/apk/release/app-release.apk (R8, 1.7 MB)
 .\gradlew.bat :app:lintDebug
@@ -259,6 +285,20 @@ last tap in the usual case.
 Re-run on the release build the same day: the add-tile dialog from the guide, the playing card following the
 player, the floating button (only over Spotify with usage access, hidden over Soundalike's own screens, one tap
 opens the sheet, hold hides it), and the song-change line.
+
+Match a part, release build 2.1.0 against production (2026-11-23):
+
+| Checked | Emulator (Android 16) | Flip 2 (Android 13, Spotify playing) |
+|---|---|---|
+| Button shown, picker opens and scrolls into view | yes | yes, landscape and portrait |
+| Drag the part, drag each edge, tap the bar, ±5 s, length buttons, limits at both ends | yes, every result read back | drags and buttons, read from screenshots |
+| Play this part | starts at the part, stops by itself after its length | audible 1.0 s after the tap, ran 15.3 s for a 15 s part; Spotify paused during it and resumed |
+| Apply, chip, reopen at the part, Whole preview | yes | yes; 0.8 s for parts the server had ranked, 3.4 to 5.1 s for new ones |
+| Rotation with the picker open | part and picker kept, no new request | not rotated by hand; the device was in both orientations during the pass |
+| Player moves to another song | not run | part kept; tapping a row still plays it and returns; "Show soundalikes" loads the new song whole |
+| Offline on Apply, then Try again | error with the song shown; the same part is asked again | not run |
+| In the app (search pick), YouTube link | yes | not run |
+| Song times ("0:58–1:08 of the song") | not run | yes, for a song Spotify reports as longer than 90 s |
 
 Needs a real phone (not tested):
 - A Spotify Free account: whether `spotify:track:` still starts playback there.

@@ -13,6 +13,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.yassin.soundalike.core.Match
 import app.yassin.soundalike.core.MusicSource
+import app.yassin.soundalike.core.Part
 import app.yassin.soundalike.core.Seed
 import app.yassin.soundalike.core.SharedLink
 import app.yassin.soundalike.core.SoundalikeError
@@ -55,7 +56,8 @@ sealed interface Request {
 }
 
 sealed interface ResultsState {
-    data class Loading(val seed: Seed?) : ResultsState
+    /** `part` is set while matches for a part of the song's preview are fetched. */
+    data class Loading(val seed: Seed?, val part: Part? = null) : ResultsState
     data class Loaded(val results: SoundalikeResults) : ResultsState
     /** `seed` is the song that was asked about, when it got that far, so the user can see what was understood. */
     data class Failed(val message: String, val reason: Reason = Reason.OTHER, val seed: Seed? = null) : ResultsState
@@ -91,67 +93,101 @@ class ResultsViewModel(application: Application) : AndroidViewModel(application)
 
     val player = PreviewPlayer(app, viewModelScope)
 
+    /** Asks the server about the song on screen again; kept so a part can be matched for exactly that song. */
+    private var ask: (suspend (Part?) -> SoundalikeResults)? = null
+
     fun load(request: Request) {
         this.request = request
         followed = null
+        ask = null
         job?.cancel()
         player.stop()
-        job = viewModelScope.launch {
-            val started = SystemClock.elapsedRealtime()
-            try {
-                val results = when (request) {
-                    is Request.Shared -> {
-                        val link = SharedLink.find(request.text)
-                        target = targetFor(link?.source ?: request.from)
-                        state = ResultsState.Loading(null)
-                        if (link == null) {
-                            state = ResultsState.Failed(SoundalikeError.UnsupportedLink().message!!, ResultsState.Reason.NOT_A_SONG_LINK)
-                            return@launch
-                        }
-                        Shortcuts.publish(app)
-                        app.client().similar(link)
-                    }
-                    is Request.Song -> {
-                        target = targetFor(request.seed.source)
-                        state = ResultsState.Loading(request.seed)
-                        app.client().similar(request.seed)
-                    }
-                    Request.Playing -> {
-                        if (!NowPlaying.hasAccess(app)) {
-                            state = ResultsState.Failed(
-                                "To see what's playing, allow notification access for Soundalike. It reads the song title from your music app and nothing else.",
-                                ResultsState.Reason.NO_ACCESS,
-                            )
-                            return@launch
-                        }
-                        val song = NowPlaying.read(app)
-                        NowPlaying.report(app).lines().forEach { Log.i("Soundalike", it) }
-                        if (song == null) {
-                            state = ResultsState.Failed("Nothing is playing. Start a song in your music app, then try again.", ResultsState.Reason.NOTHING_PLAYING)
-                            return@launch
-                        }
-                        val seed = song.toSeed()
-                        Log.i("Soundalike", "playing: ${song.title} / ${song.artist} from ${song.packageName}")
-                        target = targetFor(seed.source)
-                        state = ResultsState.Loading(seed)
-                        app.client().similar(seed)
-                    }
+        when (request) {
+            is Request.Shared -> {
+                val link = SharedLink.find(request.text)
+                target = targetFor(link?.source ?: request.from)
+                if (link == null) {
+                    state = ResultsState.Failed(SoundalikeError.UnsupportedLink().message!!, ResultsState.Reason.NOT_A_SONG_LINK)
+                    return
                 }
-                app.history.add(results.seed)
-                followed = NowPlaying.read(app)?.takeIf {
-                    request == Request.Playing || TextMatch.normalize(it.title) == TextMatch.normalize(results.seed.title)
-                }?.key
-                state = ResultsState.Loaded(results)
-                app.lastAnswer = "${results.matches.size} results from the ${results.route} route in ${SystemClock.elapsedRealtime() - started} ms"
-                Log.i("Soundalike", app.lastAnswer!!)
-            } catch (error: SoundalikeError) {
-                state = ResultsState.Failed(error.message!!, seed = (state as? ResultsState.Loading)?.seed)
+                Shortcuts.publish(app)
+                run(seed = null, part = null) { part -> app.client().similar(link, part = part) }
+            }
+            is Request.Song -> {
+                target = targetFor(request.seed.source)
+                run(request.seed, part = null) { part -> app.client().similar(request.seed, part = part) }
+            }
+            Request.Playing -> {
+                if (!NowPlaying.hasAccess(app)) {
+                    state = ResultsState.Failed(
+                        "To see what's playing, allow notification access for Soundalike. It reads the song title from your music app and nothing else.",
+                        ResultsState.Reason.NO_ACCESS,
+                    )
+                    return
+                }
+                val song = NowPlaying.read(app)
+                NowPlaying.report(app).lines().forEach { Log.i("Soundalike", it) }
+                if (song == null) {
+                    state = ResultsState.Failed("Nothing is playing. Start a song in your music app, then try again.", ResultsState.Reason.NOTHING_PLAYING)
+                    return
+                }
+                val seed = song.toSeed()
+                Log.i("Soundalike", "playing: ${song.title} / ${song.artist} from ${song.packageName}")
+                target = targetFor(seed.source)
+                run(seed, part = null) { part -> app.client().similar(seed, part = part) }
             }
         }
     }
 
+    /**
+     * Matches a part of the preview of the song on screen, or its whole preview again (null).
+     * It is the same song whatever the player has moved on to since; a newly loaded song
+     * always starts from its whole preview.
+     */
+    fun matchPart(part: Part?) {
+        val again = ask ?: return
+        val seed = when (val shown = state) {
+            is ResultsState.Loaded -> shown.results.seed
+            is ResultsState.Loading -> shown.seed
+            is ResultsState.Failed -> shown.seed
+        }
+        job?.cancel()
+        player.stop()
+        run(seed, part, again)
+    }
+
+    /** The part asked for last, for [retry]. */
+    private var asked: Part? = null
+
+    private fun run(seed: Seed?, part: Part?, ask: suspend (Part?) -> SoundalikeResults) {
+        val sameSong = this.ask === ask
+        this.ask = ask
+        asked = part
+        state = ResultsState.Loading(seed, part)
+        job = viewModelScope.launch {
+            val started = SystemClock.elapsedRealtime()
+            try {
+                val results = ask(part)
+                app.history.add(results.seed)
+                if (!sameSong) {
+                    followed = NowPlaying.read(app)?.takeIf {
+                        request == Request.Playing || TextMatch.normalize(it.title) == TextMatch.normalize(results.seed.title)
+                    }?.key
+                }
+                state = ResultsState.Loaded(results)
+                val what = results.part?.let { "part ${it.wire}" } ?: if (part != null) "whole preview (part ${part.wire} not taken)" else "whole preview"
+                app.lastAnswer = "${results.matches.size} results from the ${results.route} route in ${SystemClock.elapsedRealtime() - started} ms, $what"
+                Log.i("Soundalike", app.lastAnswer!!)
+            } catch (error: SoundalikeError) {
+                state = ResultsState.Failed(error.message!!, seed = seed)
+            }
+        }
+    }
+
+    /** Asks again for what failed: the same song and, when a part was asked for, the same part. */
     fun retry() {
-        request?.let(::load)
+        val again = ask
+        if (again != null) run((state as? ResultsState.Failed)?.seed, asked, again) else request?.let(::load)
     }
 
     private fun targetFor(source: MusicSource?): MusicSource =
