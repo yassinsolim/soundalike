@@ -123,8 +123,11 @@ whole song.
   song (usually from 0:48); otherwise they count from the start of the
   preview.
 - **Play this part** plays the song in Spotify from about where the part
-  starts and pauses when it is over. The page itself plays no previews, and in
-  a few songs the preview sits elsewhere, so treat it as a rough guide.
+  starts until the part is over. If the song was already the current one, it
+  then goes back to where it was, playing or paused as before; a song started
+  for the part is paused. Once you pause, move in the song or play something
+  else, nothing is put back. The page itself plays no previews, and in a few
+  songs the preview sits elsewhere, so treat it as a rough guide.
 - The button shows only when the matcher's answer says it can match parts.
   Lists are saved per part, and a new search always starts from the whole
   preview. Needs runtime 2.16.0.

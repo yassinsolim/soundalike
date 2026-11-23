@@ -4163,7 +4163,7 @@ test("Play this part plays the song in Spotify from about that point and pauses 
   app.partControls.open.onclick();
   assert.match(
     app.currentPage.innerHTML,
-    /<button class="sa-part-play" type="button" title="Plays the song in Spotify from about where this part starts, then pauses">Play this part<\/button>/,
+    /<button class="sa-part-play" type="button" title="Plays the song in Spotify from about where this part starts, then pauses or returns to where you were in it">Play this part<\/button>/,
   );
   const started = app.partControls.play.onclick();
   await waitFor(() => app.contextPlays.length === 1);
@@ -4172,7 +4172,102 @@ test("Play this part plays the song in Spotify from about that point and pauses 
   // 0:48 into the song plus 10 seconds into the preview.
   assert.deepEqual(seeks, [58000]);
   assert.equal(playing, true);
-  await waitFor(() => !playing);
+  await waitFor(() => !playing, 5000);
+  // A song started for the part is only paused.
+  assert.deepEqual(seeks, [58000]);
+});
+
+// A Spotify player with the seed as its current song. The position moves a
+// quarter of a second each time it is read while playing, as the part's
+// watcher reads it every quarter of a second.
+function partPlayer(app, { position, playing, starts = true }) {
+  const player = { position, playing, seeks: [] };
+  Object.assign(app.player, {
+    data: { item: { uri: "spotify:track:test" } },
+    isPlaying: () => player.playing,
+    getProgress() {
+      if (player.playing) player.position += 250;
+      return player.position;
+    },
+    play() {
+      if (starts) player.playing = true;
+    },
+    pause() {
+      player.playing = false;
+    },
+    seek(ms) {
+      player.seeks.push(ms);
+      player.position = ms;
+    },
+  });
+  return player;
+}
+
+test("Play this part returns a song that was already playing to where it was, still playing", async () => {
+  const app = await openPartsPage({ playerApi: true, timerScale: 0.001 });
+  const player = partPlayer(app, { position: 150000, playing: true });
+  app.partControls.open.onclick();
+  await app.partControls.play.onclick();
+  assert.equal(app.contextPlays.length, 0);
+  assert.deepEqual(player.seeks, [58000]);
+  await waitFor(() => player.seeks.length === 2, 5000);
+  // The part is over: back to 2:30 (read a quarter second later), playing on.
+  assert.deepEqual(player.seeks, [58000, 150250]);
+  assert.equal(player.playing, true);
+  assert.equal(app.notifications.length, 1);
+});
+
+test("Play this part returns a paused song to where it was, paused, also when the picker closes early", async () => {
+  const app = await openPartsPage({ playerApi: true, timerScale: 0.001 });
+  const player = partPlayer(app, { position: 100000, playing: false });
+  app.partControls.open.onclick();
+  await app.partControls.play.onclick();
+  assert.equal(player.playing, true);
+  await waitFor(() => player.seeks.length === 2, 5000);
+  assert.deepEqual(player.seeks, [58000, 100000]);
+  assert.equal(player.playing, false);
+
+  // Played again and cancelled before the part is over.
+  await app.partControls.play.onclick();
+  assert.equal(player.playing, true);
+  app.partControls.cancel.onclick();
+  assert.deepEqual(player.seeks, [58000, 100000, 58000, 100000]);
+  assert.equal(player.playing, false);
+});
+
+test("Play this part leaves the player alone once the listener moves in the song or pauses", async () => {
+  const app = await openPartsPage({ playerApi: true, timerScale: 0.001 });
+  const player = partPlayer(app, { position: 100000, playing: false });
+  app.partControls.open.onclick();
+  await app.partControls.play.onclick();
+  await waitFor(() => player.position > 58000);
+  // The listener jumps to the last chorus.
+  player.position = 170000;
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  assert.deepEqual(player.seeks, [58000]);
+  assert.equal(player.playing, true);
+  assert.ok(player.position > 170000);
+
+  // Played again and paused by the listener: it stays where they paused it.
+  await app.partControls.play.onclick();
+  await waitFor(() => player.position > 58000 && player.position < 68000);
+  player.playing = false;
+  const pausedAt = player.position;
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  assert.equal(player.playing, false);
+  assert.equal(player.position, pausedAt);
+  assert.equal(app.notifications.length, 1);
+});
+
+test("Play this part says so and puts the song back when Spotify does not start playing", async () => {
+  const app = await openPartsPage({ playerApi: true, timerScale: 0.001 });
+  const player = partPlayer(app, { position: 100000, playing: false, starts: false });
+  app.partControls.open.onclick();
+  await app.partControls.play.onclick();
+  await waitFor(() => app.notifications.length === 2, 5000);
+  assert.deepEqual(app.notifications[1], ["Spotify didn't start playing this part.", true]);
+  assert.deepEqual(player.seeks, [58000, 100000]);
+  assert.equal(player.playing, false);
 });
 
 function loadVersionedExtension(spicetifyVersion, spotifyVersion) {

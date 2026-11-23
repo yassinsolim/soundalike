@@ -115,6 +115,9 @@
   // Where previews usually start in the song, for songs the server gives no place for.
   const USUAL_PREVIEW_OFFSET_SECONDS = 48;
   const PART_PLAY_WAIT_MS = 3000;
+  const PART_PLAY_POLL_MS = 250;
+  // Further than this from the part, the listener moved in the song themselves.
+  const PART_PLAY_SLACK_MS = 1500;
   const PART_INTRO =
     "Soundalike hears a 30-second preview. Pick the part of it you care about.";
   const PART_LISTS_NOTE =
@@ -125,7 +128,7 @@
   const PART_KEYS_NOTE =
     "Drag the part or its edges. Keyboard: arrow keys move it, Shift with an arrow key changes its length.";
   const PART_PLAY_TITLE =
-    "Plays the song in Spotify from about where this part starts, then pauses";
+    "Plays the song in Spotify from about where this part starts, then pauses or returns to where you were in it";
   // Audio only: the hosted lists come without the scene and listener layer
   // (scene=0), and the companion's Sounds like without related-artist ordering.
   const AUDIO_ONLY_KEY = "soundalike:audio-only:v1";
@@ -264,8 +267,9 @@
   let lateMatches = null;
   let routeMountTimer;
   let cacheSaveTimer;
-  // While Play this part runs: the timer that pauses Spotify at the part's end.
-  let partPlayTimer;
+  // While Play this part runs: the part's place in the song, and where the
+  // song was when it was already the current one, to put back afterwards.
+  let partPlay = null;
   // A fresh answer said the server can match a part of the preview.
   let serverMatchesParts = false;
   let searchSequence = 0;
@@ -1640,7 +1644,7 @@
     const state = resultsState;
     const limits = state && partLimits(state);
     if (!limits) return;
-    clearTimeout(partPlayTimer);
+    stopPartPlay(true);
     if (state.partDraft) {
       state.partDraft = null;
     } else {
@@ -1655,7 +1659,7 @@
   function applyPart(part) {
     const state = resultsState;
     if (!state || state.best.status === "offer") return;
-    clearTimeout(partPlayTimer);
+    // A part that is playing plays on to its end while its lists load.
     state.part = part;
     state.partDraft = null;
     state.viewChosen = true;
@@ -1766,22 +1770,34 @@
   }
 
   // The panel plays no previews, so the part is played in Spotify: the song
-  // from about where the part starts, paused when the part is over. The
-  // preview's place in the song is the server's, or the usual one for a song
-  // of a minute and a half or more.
+  // from about where the part starts, until the part is over. The preview's
+  // place in the song is the server's, or the usual one for a song of a minute
+  // and a half or more. A song that was already the current one goes back to
+  // where it was, playing or paused as it was; a song started for the part is
+  // paused. Nothing is put back once the listener pauses, moves in the song
+  // or plays something else: the player is theirs again.
   async function playPart() {
     const state = resultsState;
     const draft = state?.partDraft;
     if (!draft) return;
-    clearTimeout(partPlayTimer);
     const { start, end } = draft;
+    // Playing the part again keeps what was there before the first time.
+    const before = partPlay && partPlay.state === state
+      ? partPlay.before
+      : seedIsCurrent(state) && typeof Spicetify.Player?.getProgress === "function"
+        ? {
+          position: Math.max(0, Number(Spicetify.Player.getProgress()) || 0),
+          playing: Boolean(Spicetify.Player.isPlaying?.()),
+        }
+        : null;
+    stopPartPlay(false);
     if (!seedIsCurrent(state)) {
       await playSeedSong(state);
       for (let waited = 0; !seedIsCurrent(state) && waited < PART_PLAY_WAIT_MS; waited += 100) {
         await delay(100);
       }
     }
-    if (state !== resultsState || !seedIsCurrent(state)) return;
+    if (state !== resultsState || !state.partDraft || !seedIsCurrent(state)) return;
     const known = partLimits(state)?.offset ?? null;
     const duration = Number(Spicetify.Player?.getDuration?.()) || 0;
     const offset = known !== null
@@ -1791,11 +1807,64 @@
       Spicetify.showNotification("Soundalike doesn't know where the preview sits in this song.", true);
       return;
     }
-    Spicetify.Player.seek(Math.round((offset + start) * 1000));
+    const run = {
+      state,
+      before,
+      from: Math.round((offset + start) * 1000),
+      to: Math.round((offset + end) * 1000),
+      started: false,
+      polls: 0,
+      timer: null,
+    };
+    partPlay = run;
+    Spicetify.Player.seek(run.from);
     if (!Spicetify.Player.isPlaying?.()) Spicetify.Player.play?.();
-    partPlayTimer = setTimeout(() => {
-      if (seedIsCurrent(state) && Spicetify.Player.isPlaying?.()) Spicetify.Player.pause?.();
-    }, (end - start) * 1000);
+    run.timer = setTimeout(watchPartPlay, PART_PLAY_POLL_MS, run);
+  }
+
+  function watchPartPlay(run) {
+    if (partPlay !== run) return;
+    // Another song plays now.
+    if (!seedIsCurrent(run.state)) return stopPartPlay(false);
+    run.polls += 1;
+    const playing = Boolean(Spicetify.Player.isPlaying?.());
+    const progress = Number(Spicetify.Player.getProgress?.());
+    // A player that tells no position is followed by the clock.
+    const at = Number.isFinite(progress) ? progress : run.from + run.polls * PART_PLAY_POLL_MS;
+    const inPart = at >= run.from - PART_PLAY_SLACK_MS && at <= run.to + PART_PLAY_SLACK_MS;
+    if (!run.started) {
+      // Spotify takes a moment to move to the part and play.
+      if (playing && inPart) {
+        run.started = true;
+        run.polls = 0;
+      } else if (run.polls * PART_PLAY_POLL_MS >= PART_PLAY_WAIT_MS) {
+        stopPartPlay(true);
+        Spicetify.showNotification("Spotify didn't start playing this part.", true);
+        return;
+      }
+    } else if (!playing || !inPart) {
+      // Paused or moved in the song by the listener.
+      return stopPartPlay(false);
+    } else if (at >= run.to) {
+      return stopPartPlay(true);
+    }
+    run.timer = setTimeout(watchPartPlay, PART_PLAY_POLL_MS, run);
+  }
+
+  // Ends Play this part. restore: put the song back as it was before the part
+  // (see playPart); otherwise the player is left as it is.
+  function stopPartPlay(restore) {
+    const run = partPlay;
+    if (!run) return;
+    clearTimeout(run.timer);
+    partPlay = null;
+    if (!restore || !seedIsCurrent(run.state)) return;
+    const playing = Boolean(Spicetify.Player.isPlaying?.());
+    if (run.before) {
+      Spicetify.Player.seek(run.before.position);
+      if (run.before.playing && !playing) Spicetify.Player.play?.();
+    }
+    if (playing && !run.before?.playing) Spicetify.Player.pause?.();
   }
 
   function bindPartPicker(page, state) {
