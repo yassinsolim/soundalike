@@ -3,20 +3,22 @@
 (function soundalikeMarketplaceBootstrap() {
   "use strict";
 
-  const GLOBAL_PROMISE = "__soundalikeBootstrapPromiseV2";
+  const GLOBAL_PROMISE = "__soundalikeBootstrapPromiseV3";
   if (window[GLOBAL_PROMISE]) return;
 
   const REPOSITORY = "yassinsolim/soundalike";
   const RAW_ORIGIN = "https://raw.githubusercontent.com";
   const CDN_ORIGIN = "https://cdn.jsdelivr.net";
   const RUNTIME_PATH = "integrations/spicetify/soundalike.js";
+  // Release key 2026-11 signs stable-2.json. stable.json stays as the feed of
+  // bootstraps pinned before it, whose signing key was lost.
   const MANIFEST_URL =
-    `${RAW_ORIGIN}/${REPOSITORY}/main/integrations/spicetify/releases/stable.json`;
+    `${RAW_ORIGIN}/${REPOSITORY}/main/integrations/spicetify/releases/stable-2.json`;
   const MANIFEST_TIMEOUT_MS = 5000;
   const RUNTIME_TIMEOUT_MS = 10000;
-  const STORAGE_KEY = "soundalike:marketplace-runtime-lkg:v1";
+  const STORAGE_KEY = "soundalike:marketplace-runtime-lkg:v2";
   const PUBLIC_KEY_SPKI_BASE64 =
-    "MCowBQYDK2VwAyEAFkN5Ka3jDavJYiPeH2itZv7+2Brg4UkhhRjVP15pJWk=";
+    "MCowBQYDK2VwAyEAmGUIDBczlsHjAmW45yuqGzEBrKEF0ZbH5jspIalCgh8=";
   // This is intentionally an already-published commit, never this bootstrap's
   // commit. It remains available if an update or crypto verification fails.
   const BUNDLED_RUNTIME = {

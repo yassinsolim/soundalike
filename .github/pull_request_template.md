@@ -22,4 +22,4 @@
 - [ ] `python -m pytest` and `npm --prefix webapp test` pass locally (and the mobile checks, if `mobile/` changed).
 - [ ] Docs are updated if setup, usage or behaviour changed.
 - [ ] No secrets, tokens or personal data are included.
-- [ ] Spicetify changes leave the runtime version, `releases/stable.json`, `bootstrap.js` and `manifest.json` unchanged.
+- [ ] Spicetify changes leave the runtime version, the feeds in `releases/`, `bootstrap.js` and `manifest.json` unchanged.

@@ -25,9 +25,19 @@ const marketplaceManifest = JSON.parse(fs.readFileSync(
   "utf8",
 ));
 const stableManifest = JSON.parse(fs.readFileSync(
+  new URL("../../integrations/spicetify/releases/stable-2.json", import.meta.url),
+  "utf8",
+));
+// The feed of bootstraps pinned before 2026-11. Its signing key was lost, so
+// it can never change again: those installs keep the runtime it names.
+const legacyManifest = JSON.parse(fs.readFileSync(
   new URL("../../integrations/spicetify/releases/stable.json", import.meta.url),
   "utf8",
 ));
+const legacyPublicSpki =
+  "MCowBQYDK2VwAyEAFkN5Ka3jDavJYiPeH2itZv7+2Brg4UkhhRjVP15pJWk=";
+const legacyStorageKey = "soundalike:marketplace-runtime-lkg:v1";
+const storageKey = "soundalike:marketplace-runtime-lkg:v2";
 const productionPublicSpki = bootstrapSource.match(
   /PUBLIC_KEY_SPKI_BASE64\s*=\s*\n?\s*"([^"]+)"/,
 )?.[1];
@@ -35,12 +45,12 @@ const signingKey = generateKeyPairSync("ed25519");
 const publicSpki = signingKey.publicKey
   .export({ type: "spki", format: "der" })
   .toString("base64");
-const testSource = bootstrapSource.replace(
-  "MCowBQYDK2VwAyEAFkN5Ka3jDavJYiPeH2itZv7+2Brg4UkhhRjVP15pJWk=",
-  publicSpki,
-);
+assert.ok(productionPublicSpki);
+assert.notEqual(productionPublicSpki, legacyPublicSpki);
+const testSource = bootstrapSource.replace(productionPublicSpki, publicSpki);
+assert.notEqual(testSource, bootstrapSource);
 const manifestUrl =
-  "https://raw.githubusercontent.com/yassinsolim/soundalike/main/integrations/spicetify/releases/stable.json";
+  "https://raw.githubusercontent.com/yassinsolim/soundalike/main/integrations/spicetify/releases/stable-2.json";
 const runtimeBase =
   "https://raw.githubusercontent.com/yassinsolim/soundalike/";
 const runtimeCdnBase =
@@ -182,7 +192,10 @@ function loadBootstrap({
       warn(...values) { logs.push(["warn", ...values]); },
     },
     crypto,
-    ...(legacyPromise ? { __soundalikeBootstrapPromise: legacyPromise } : {}),
+    ...(legacyPromise ? {
+      __soundalikeBootstrapPromise: legacyPromise,
+      __soundalikeBootstrapPromiseV2: legacyPromise,
+    } : {}),
     document: {
       head: documentRoot,
       createElement(tag) {
@@ -216,7 +229,7 @@ function loadBootstrap({
     scripts,
     storage,
     async done() {
-      await context.__soundalikeBootstrapPromiseV2;
+      await context.__soundalikeBootstrapPromiseV3;
       await new Promise((resolve) => setTimeout(resolve, 0));
     },
   };
@@ -235,7 +248,7 @@ test("loads a valid signed immutable update, verifies its hash, and persists it"
   assert.equal(app.scripts[0].integrity, update.sri);
   assert.equal(app.scripts[0].crossOrigin, "anonymous");
   assert.deepEqual(
-    JSON.parse(app.storage.get("soundalike:marketplace-runtime-lkg:v1")),
+    JSON.parse(app.storage.get(storageKey)),
     { sequence: 2, runtime: runtimeFields(update) },
   );
 });
@@ -289,7 +302,7 @@ test("rejects a signed semantic downgrade even with a newer sequence", async () 
     sequence: 4,
     version: "2.0.0",
   });
-  const storage = new Map([["soundalike:marketplace-runtime-lkg:v1", JSON.stringify({
+  const storage = new Map([[storageKey, JSON.stringify({
     sequence: lkg.sequence,
     runtime: runtimeFields(lkg),
   })]]);
@@ -384,7 +397,7 @@ test("uses a persisted LKG when the feed is unavailable", async () => {
     sequence: 5,
     version: "5.0.0",
   });
-  const storage = new Map([["soundalike:marketplace-runtime-lkg:v1", JSON.stringify({
+  const storage = new Map([[storageKey, JSON.stringify({
     sequence: lkg.sequence,
     runtime: runtimeFields(lkg),
   })]]);
@@ -417,7 +430,7 @@ test("shares one global loader promise when bootstrap is evaluated repeatedly", 
   assert.equal(app.scripts.length, 1);
 });
 
-test("loads even when the broken legacy bootstrap promise already exists", async () => {
+test("loads even when an older bootstrap's promise already exists", async () => {
   const update = candidate();
   const app = loadBootstrap({
     manifest: signedManifest(update),
@@ -465,38 +478,87 @@ test("Marketplace permanently pins the bootstrap implementation commit", () => {
   assert.match(marketplaceManifest.branch, /^[a-f0-9]{40}$/);
 });
 
-test("committed stable feed verifies against the production key and runtime", () => {
-  assert.ok(productionPublicSpki);
-  const publicKey = createPublicKey({
-    key: Buffer.from(productionPublicSpki, "base64"),
-    format: "der",
-    type: "spki",
+test("state saved by the bootstrap of the lost key cannot block the new feed", async () => {
+  // That bootstrap saved its last runtime under the old storage name. A high
+  // sequence and version there must not read as a downgrade here.
+  const old = candidate({
+    body: Buffer.from("old runtime"),
+    commit: "e".repeat(40),
+    sequence: 99,
+    version: "9.0.0",
   });
-  assert.equal(
-    verify(
-      null,
-      Buffer.from(canonicalJson(stableManifest.payload)),
-      publicKey,
-      Buffer.from(stableManifest.signature, "base64"),
-    ),
-    true,
+  const saved = JSON.stringify({ sequence: old.sequence, runtime: runtimeFields(old) });
+  const update = candidate();
+  const app = loadBootstrap({
+    manifest: signedManifest(update),
+    bodies: new Map([[update.url, Buffer.from("verified runtime")]]),
+    storage: new Map([[legacyStorageKey, saved]]),
+  });
+
+  await app.done();
+
+  assert.deepEqual(app.requests, [manifestUrl, update.url]);
+  assert.equal(app.logs.length, 0);
+  assert.equal(app.scripts[0].src, executableRuntimeUrl(update.url));
+  assert.equal(app.storage.get(legacyStorageKey), saved);
+  assert.deepEqual(
+    JSON.parse(app.storage.get(storageKey)),
+    { sequence: 2, runtime: runtimeFields(update) },
   );
+});
+
+test("the bootstrap reads only the feed of its own key", () => {
+  assert.equal(bootstrapSource.match(/releases\/[\w.-]+\.json/g).join(), "releases/stable-2.json");
+  assert.ok(bootstrapSource.includes(`"${storageKey}"`));
+  assert.ok(!bootstrapSource.includes(legacyStorageKey));
+  assert.ok(!bootstrapSource.includes(legacyPublicSpki));
+});
+
+function feedVerifies(feed, spki) {
+  return verify(
+    null,
+    Buffer.from(canonicalJson(feed.payload)),
+    createPublicKey({ key: Buffer.from(spki, "base64"), format: "der", type: "spki" }),
+    Buffer.from(feed.signature, "base64"),
+  );
+}
+
+function assertFeedNamesItsRuntime(feed) {
+  assert.equal(feed.payload.schema, 1);
+  assert.equal(feed.payload.channel, "stable");
   const runtime = Buffer.from(showPinned(
-    new URL(stableManifest.payload.runtime.url).pathname.split("/")[3],
+    new URL(feed.payload.runtime.url).pathname.split("/")[3],
     "integrations/spicetify/soundalike.js",
   ));
   const digest = createHash("sha256").update(runtime).digest();
-  assert.equal(stableManifest.payload.runtime.sha256, digest.toString("hex"));
-  assert.equal(
-    stableManifest.payload.runtime.sri,
-    `sha256-${digest.toString("base64")}`,
-  );
+  assert.equal(feed.payload.runtime.sha256, digest.toString("hex"));
+  assert.equal(feed.payload.runtime.sri, `sha256-${digest.toString("base64")}`);
   assert.match(
     runtime.toString("utf8"),
     new RegExp(
       `const RUNTIME_SEMANTIC_VERSION = ` +
-        `"${stableManifest.payload.runtime.version.replaceAll(".", "\\.")}";`,
+        `"${feed.payload.runtime.version.replaceAll(".", "\\.")}";`,
     ),
+  );
+}
+
+test("committed stable feed verifies against the production key and runtime", () => {
+  assert.equal(feedVerifies(stableManifest, productionPublicSpki), true);
+  assert.equal(feedVerifies(stableManifest, legacyPublicSpki), false);
+  assertFeedNamesItsRuntime(stableManifest);
+  // One line of sequences across both feeds, so no number is ever reused.
+  assert.ok(stableManifest.payload.sequence > legacyManifest.payload.sequence);
+});
+
+test("the feed of the lost key stays exactly as it was last signed", () => {
+  assert.equal(feedVerifies(legacyManifest, legacyPublicSpki), true);
+  assert.equal(feedVerifies(legacyManifest, productionPublicSpki), false);
+  assertFeedNamesItsRuntime(legacyManifest);
+  assert.equal(legacyManifest.payload.sequence, 20);
+  assert.equal(legacyManifest.payload.runtime.version, "2.13.0");
+  assert.equal(
+    legacyManifest.signature,
+    "AyG6ITTB8FRhieIsW95nfbnhB2iwGglkAc+tJZgPrMatHAAO3sFTHDJlfQAh0ZWUafh3HSSmys4HFJlpfn+KBQ==",
   );
 });
 

@@ -1,0 +1,14 @@
+{
+  "payload": {
+    "schema": 1,
+    "channel": "stable",
+    "sequence": 21,
+    "runtime": {
+      "version": "2.15.0",
+      "url": "https://raw.githubusercontent.com/yassinsolim/soundalike/7ffc55aa53f7a521734bebd1b78bc677720b7fad/integrations/spicetify/soundalike.js",
+      "sha256": "c94d03c5f63b71d1218d077d823d2ddce971e2f3e2ef6f58ed111df54587a310",
+      "sri": "sha256-yU0DxfY7cdEhjQd9gj0t3Olx4vPi729Y7REd9UWHoxA="
+    }
+  },
+  "signature": "G8MzC/vEimvSOH8bx1OTsa48YwM1fIoDigjmRK9klUKH6YTIF9YgAqNDAWRsB2vvvwC5AZK/YMSDeLr7K5RQAQ=="
+}
