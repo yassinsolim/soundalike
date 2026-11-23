@@ -35,6 +35,12 @@ storage name, so a sequence saved by an older bootstrap cannot make the new
 feed look like a downgrade. Sequences still continue across feeds (20, then
 21) so that no number is ever used twice.
 
+Both bootstraps accept a feed only when its sequence is higher than the one
+they saved. On every start with an unchanged feed they therefore log
+`Marketplace update rejected; using last known good runtime` with `Refusing a
+signed runtime downgrade` to the console and load the saved runtime, which is
+the one the feed names. That warning is expected and is not an error.
+
 Runtime bytes are fetched and hashed from their signed immutable GitHub Raw
 URL. They are executed from the corresponding immutable jsDelivr URL because
 GitHub Raw serves JavaScript as `text/plain` with `nosniff`, which Chromium
