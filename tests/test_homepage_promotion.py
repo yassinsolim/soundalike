@@ -117,7 +117,8 @@ def test_homepage_language_switch_is_accessible_and_covers_both_tabs():
     script = (ROOT / "webapp" / "search.js").read_text(encoding="utf-8")
     assert ".language-filter[hidden]{display:none}" in HTML
     assert 'params.set("lang", lang);' in script
-    assert "fetchBestMatches(picked.target, isCurrent, picked.lang, picked.audioOnly)" in script
+    # The reload keeps the language, Audio only and the part of the preview being matched.
+    assert "fetchBestMatches(picked.target, isCurrent, picked.lang, picked.audioOnly, picked.part)" in script
     assert '<div class="language-filter" id="language" role="status">' in script
     assert (
         '<button id="language-toggle" type="button" aria-pressed="false" hidden>'

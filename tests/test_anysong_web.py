@@ -155,3 +155,32 @@ def test_anysong_has_the_spotify_extensions_three_tabs():
         "\"We don't know what this artist's listeners play yet, so there's no list here. "
         "Best matches still has this song's closest matches.\""
     ) in SCRIPT
+
+
+def test_match_a_part_is_offered_only_by_servers_that_match_parts():
+    # The control reads query.parts from the normal answer: no request of its own, hidden without it.
+    assert "const parts = ((picked.body || {}).query || {}).parts;" in SCRIPT
+    assert "open.hidden = !limits;" in SCRIPT
+    assert "healthz" not in SCRIPT
+    assert 'if (part) params.set("part", partText(part));' in SCRIPT
+    # A server without it answers for the whole preview (or refuses the span and is asked again without it).
+    assert "if (!(body.query || {}).part) picked.part = null;" in SCRIPT
+    assert 'if (params.has("part") && (response.status === 400 || response.status === 404)) {' in SCRIPT
+    # The part is in the share link, and a newly picked song starts from its whole preview.
+    assert "const hash = `#id=${id}&tab=${tab}${part ? `&part=${partText(part)}` : \"\"}`;" in SCRIPT
+    assert "if (!writeHash(id, true)) load({ id });" in SCRIPT
+    # The copy is short, marked beta and claims nothing about quality.
+    assert '"Soundalike hears a 30-second preview. Pick the part of it you care about."' in SCRIPT
+    assert '<span class="beta">New · beta</span>' in SCRIPT
+    assert 'Match a part <span class="beta">beta</span>' in SCRIPT
+    assert '"All three tabs follow the part. Listeners also play still starts from the whole song\'s listeners; ' \
+        'only how close each song sounds follows the part."' in SCRIPT
+    # Spans sit on a 5-second grid and run 10 to 20 seconds; the timeline works with touch and the keyboard.
+    assert "const partStepSeconds = 5;" in SCRIPT and "const partLongestSeconds = 20;" in SCRIPT
+    assert 'role="slider" tabindex="0" aria-label="Part of the preview to match"' in SCRIPT
+    assert "track.onpointerdown = onPartPointerDown;" in SCRIPT
+    assert "touch-action:none" in HOME
+    # display rules would otherwise beat the hidden attribute.
+    assert ".part-chip[hidden]{display:none}" in HOME and ".part-head[hidden]{display:none}" in HOME
+    # The waveform is read from Deezer's CDN only, like the covers.
+    assert 'const url = safeImg((preview && preview.preview) || "");' in SCRIPT

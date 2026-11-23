@@ -270,6 +270,19 @@ function parseSimilarParams(params, headers) {
   // sample matches ("best"), or what the song's listeners also play.
   const list = choice(params, "list", ["main", "best", "listeners"], "main");
   const platform = choice(params, "platform", ["spotify", "apple", "both"], null);
+  // A part of the 30-second preview to match instead of all of it:
+  // "<start>-<end>" in seconds, passed on to the engine as given.
+  const partText = firstParam(params, "part");
+  let part = null;
+  if (partText !== null) {
+    const found = /^(\d{1,2}(?:\.\d{1,3})?)-(\d{1,2}(?:\.\d{1,3})?)$/.exec(partText);
+    if (!found || Number(found[2]) > 30 || Number(found[2]) - Number(found[1]) < 10) {
+      throw new MobileError(400, "invalid_parameter", {
+        message: "part must be <start>-<end> in seconds of the 30-second preview, at least 10 apart.",
+      });
+    }
+    part = `${Number(found[1])}-${Number(found[2])}`;
+  }
   const store = storefrontParam(params, headers);
 
   // The most specific name wins. What else the client knows (the app's own
@@ -303,7 +316,7 @@ function parseSimilarParams(params, headers) {
     store.storefront = seed.storefront;
     store.guessed = false;
   }
-  return { seed, hints, k, lang, list, platform, storefront: store.storefront, storefrontGuessed: store.guessed };
+  return { seed, hints, k, lang, list, part, platform, storefront: store.storefront, storefrontGuessed: store.guessed };
 }
 
 export function createMobileService({
@@ -827,12 +840,18 @@ export function createMobileService({
 
   // ---- Engine --------------------------------------------------------------
 
-  /** `song` is {id} (a Deezer track) or {title, artist, isrc?}. */
-  function askEngine(song, k, lang, clientIp) {
+  /**
+   * `song` is {id} (a Deezer track) or {title, artist, isrc?}; `part` is
+   * "<start>-<end>" seconds of the preview, or null for all of it. An engine
+   * without parts refuses the span (or ignores it), so the whole preview is
+   * asked for instead: the answer's `query.part` says whether a part was used.
+   */
+  function askEngine(song, k, lang, clientIp, part = null) {
     const query = new URLSearchParams(song.id ? { id: String(song.id) } : { title: song.title, artist: song.artist });
     if (!song.id && song.isrc) query.set("isrc", song.isrc);
     query.set("k", String(k));
     query.set("lang", lang);
+    if (part) query.set("part", part);
     const url = `${engineBase}/similar?${query}`;
     return cached(engineAnswers, url, async () => {
       let result;
@@ -847,6 +866,9 @@ export function createMobileService({
       const { status, body } = result;
       if (status === 200 && body?.ok && body.query && body.results) {
         return { value: body, ttlMs: ENGINE_TTL_MS };
+      }
+      if (part && (status === 400 || status === 404)) {
+        return { value: await askEngine(song, k, lang, clientIp), ttlMs: ENGINE_TTL_MS };
       }
       if (status === 404 || status === 422) throw new MobileError(404, "song_not_found");
       const wait = Number(result.headers?.get?.("retry-after"));
@@ -937,11 +959,13 @@ export function createMobileService({
    * failing that, the names are tried once more with the artist as written
    * in the title's script. What worked is remembered for the link.
    */
-  async function engineAnswer(seed, k, lang, clientIp) {
+  async function engineAnswer(seed, k, lang, clientIp, part = null) {
     const known = seed.key ? seedRecordings.get(seed.key) : undefined;
     if (known?.id || known?.artist) {
       try {
-        return await askEngine(known.id ? { id: known.id } : { title: seed.title, artist: known.artist }, k, lang, clientIp);
+        return await askEngine(
+          known.id ? { id: known.id } : { title: seed.title, artist: known.artist }, k, lang, clientIp, part,
+        );
       } catch (error) {
         if (!(error instanceof MobileError) || error.code !== "song_not_found") throw error;
         seedRecordings.entries.delete(seed.key);
@@ -949,7 +973,7 @@ export function createMobileService({
     }
     let notFound;
     try {
-      return await askEngine(seed, k, lang, clientIp);
+      return await askEngine(seed, k, lang, clientIp, part);
     } catch (error) {
       if (!(error instanceof MobileError) || error.code !== "song_not_found") throw error;
       if (!seed.key || !Number.isFinite(seed.durationMs) || known?.miss) throw error;
@@ -965,7 +989,7 @@ export function createMobileService({
     }
     for (const attempt of attempts) {
       try {
-        const answer = await askEngine(attempt.song, k, lang, clientIp);
+        const answer = await askEngine(attempt.song, k, lang, clientIp, part);
         seedRecordings.set(seed.key, attempt.remember, SEED_RECORDING_TTL_MS);
         return answer;
       } catch (error) {
@@ -1005,7 +1029,15 @@ export function createMobileService({
     const { storefront } = request;
 
     const clientIp = String(headers["cf-connecting-ip"] ?? "");
-    const answer = await engineAnswer(seed, request.k, request.lang, CLIENT_IP.test(clientIp) ? clientIp : null);
+    const answer = await engineAnswer(
+      seed, request.k, request.lang, CLIENT_IP.test(clientIp) ? clientIp : null, request.part,
+    );
+    // What the engine says about parts of the preview: `parts` when it can
+    // match one (its limits, and where the preview sits in the song), `part`
+    // when this answer is for one.
+    const span = (value) => (Number.isFinite(value) && value >= 0 ? value : null);
+    const engineParts = answer.query.parts && typeof answer.query.parts === "object" ? answer.query.parts : null;
+    const enginePart = answer.query.part && typeof answer.query.part === "object" ? answer.query.part : null;
     // A list the answer doesn't have (no listener data, an older engine)
     // falls back to the main one; `engine.list` says which was served.
     const list = request.list !== "main" && Array.isArray(answer.results[request.list])
@@ -1157,6 +1189,15 @@ export function createMobileService({
           language: text(answer.query.language),
           storefront,
           deezer_id: Number.isSafeInteger(answer.query.id) ? answer.query.id : null,
+          part: enginePart ? { start: span(enginePart.start), end: span(enginePart.end) } : null,
+          parts: engineParts
+            ? {
+                min_s: span(engineParts.min_s),
+                max_s: span(engineParts.max_s),
+                preview_s: span(engineParts.preview_s),
+                song_offset_s: span(engineParts.song_offset_s),
+              }
+            : null,
         },
         results,
         engine: {

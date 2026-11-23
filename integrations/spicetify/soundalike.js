@@ -19,7 +19,7 @@
 // README for Marketplace or manual setup.
 
 (function soundalike() {
-  const RUNTIME_SEMANTIC_VERSION = "2.15.0";
+  const RUNTIME_SEMANTIC_VERSION = "2.16.0";
   const LOCAL_SERVER = "http://127.0.0.1:8787";
   const PRIMARY_HOSTED_SERVER = "https://soundalike-api.yassin.app";
   const FALLBACK_HOSTED_SERVER = "https://soundalike.yassin.app";
@@ -104,7 +104,28 @@
   const PLAYER_BAR_SELECTOR = ".Root__now-playing-bar, .main-nowPlayingBar-container";
   const PAGE_BOTTOM_PADDING = 56;
   const BEST_MATCHES_ENDPOINT = `${FALLBACK_HOSTED_SERVER}/api/anysong/similar`;
-  const BEST_MATCHES_POLICY = "anysong-main-consensus-v16";
+  const BEST_MATCHES_POLICY = "anysong-main-consensus-v17";
+  // Match a part: a server that can rank a part of the 30-second preview says
+  // so in every answer (query.parts), so the control needs no request of its
+  // own and stays hidden with servers that can't. Spans sit on a 5-second
+  // grid and are 10 to 20 seconds long.
+  const PART_STEP_SECONDS = 5;
+  const PART_LONGEST_SECONDS = 20;
+  const PART_DEFAULT = [10, 20];
+  // Where previews usually start in the song, for songs the server gives no place for.
+  const USUAL_PREVIEW_OFFSET_SECONDS = 48;
+  const PART_PLAY_WAIT_MS = 3000;
+  const PART_INTRO =
+    "Soundalike hears a 30-second preview. Pick the part of it you care about.";
+  const PART_LISTS_NOTE =
+    "Best matches, Listeners also play and Melody match follow the part; Sounds like always uses the whole song. " +
+    "Listeners also play still starts from the whole song's listeners; only how close each song sounds follows the part.";
+  const PART_PLACE_NOTE =
+    "Song times assume the preview sits where previews usually do; in a few songs it is elsewhere.";
+  const PART_KEYS_NOTE =
+    "Drag the part or its edges. Keyboard: arrow keys move it, Shift with an arrow key changes its length.";
+  const PART_PLAY_TITLE =
+    "Plays the song in Spotify from about where this part starts, then pauses";
   // Audio only: the hosted lists come without the scene and listener layer
   // (scene=0), and the companion's Sounds like without related-artist ordering.
   const AUDIO_ONLY_KEY = "soundalike:audio-only:v1";
@@ -243,6 +264,10 @@
   let lateMatches = null;
   let routeMountTimer;
   let cacheSaveTimer;
+  // While Play this part runs: the timer that pauses Spotify at the part's end.
+  let partPlayTimer;
+  // A fresh answer said the server can match a part of the preview.
+  let serverMatchesParts = false;
   let searchSequence = 0;
   const pendingRecommendations = new Map();
   const pendingIsrcLookups = new Map();
@@ -983,6 +1008,11 @@
         bpm: Number.isFinite(query.bpm) && query.bpm > 0 ? query.bpm : null,
         // "unknown_artist": no listener data, so Listeners also play is empty.
         ...(["on", "off", "unknown_artist"].includes(query.scene) ? { scene: query.scene } : {}),
+        // The server can match a part of the preview: its limits, and where
+        // the preview starts in the song when it knows.
+        ...(compactParts(query.parts) ? { parts: compactParts(query.parts) } : {}),
+        // This answer is for a part: [start, end] seconds of the preview.
+        ...(compactPart(query.part) ? { part: compactPart(query.part) } : {}),
       }),
       results,
       main,
@@ -998,12 +1028,36 @@
     return data?.main?.length ? data.main : data?.results || [];
   }
 
+  function compactParts(parts) {
+    if (!parts || typeof parts !== "object") return null;
+    const total = Number(parts.preview_s) || 30;
+    const min = Math.max(PART_STEP_SECONDS, Number(parts.min_s) || 10);
+    const max = Math.min(PART_LONGEST_SECONDS, Number(parts.max_s) || PART_LONGEST_SECONDS);
+    if (!(min <= max && max <= total)) return null;
+    const offset = Number.isFinite(parts.song_offset_s) && parts.song_offset_s >= 0
+      ? parts.song_offset_s
+      : null;
+    return { total, min, max, offset };
+  }
+
+  function compactPart(part) {
+    const start = Number(part?.start);
+    const end = Number(part?.end);
+    return part && Number.isFinite(start) && Number.isFinite(end) && start >= 0 && end > start
+      ? [start, end]
+      : null;
+  }
+
+  const partText = (part) => `${part[0]}-${part[1]}`;
+
+  // part: [start, end] seconds of the preview to match instead of all of it.
   async function requestBestMatchesUncached(
     title,
     artist,
     langMode = "same",
     isrc = null,
-    audioOnly = false
+    audioOnly = false,
+    part = null
   ) {
     // The policy keeps HTTP-cached responses from before a format change out.
     const params = new URLSearchParams({
@@ -1015,6 +1069,7 @@
     });
     if (audioOnly) params.set("scene", "0");
     if (isrc) params.set("isrc", isrc);
+    if (part) params.set("part", partText(part));
     for (let attempt = 0; ; attempt++) {
       let response;
       try {
@@ -1037,6 +1092,11 @@
         await delay(BEST_MATCHES_RETRY_DELAY_MS * (attempt + 1));
         continue;
       }
+      // A server without Match a part refuses the span: ask for the whole preview.
+      if (params.has("part") && (response.status === 400 || response.status === 404)) {
+        params.delete("part");
+        continue;
+      }
       if (!response.ok || !body?.ok) {
         throw bestMatchesError(response.ok ? 0 : response.status);
       }
@@ -1044,37 +1104,49 @@
       if (!bestRows(data).length) {
         throw bestMatchesError(0, "No best matches came back for this song.");
       }
+      if (data.query.parts) serverMatchesParts = true;
       return data;
     }
   }
 
-  // Audio-only and listener-aware lists are saved apart, so they never mix.
-  function bestMatchesCacheId(seedUri, langMode = "same", audioOnly = false) {
-    return `best:${BEST_MATCHES_POLICY}:${audioOnly ? "audio" : "listeners"}:${langMode}:${seedUri}`;
+  // Audio-only and listener-aware lists are saved apart, so they never mix,
+  // and so is the list of each part of the preview.
+  function bestMatchesCacheId(seedUri, langMode = "same", audioOnly = false, part = null) {
+    return `best:${BEST_MATCHES_POLICY}:${audioOnly ? "audio" : "listeners"}:${langMode}:${seedUri}` +
+      (part ? `:part:${partText(part)}` : "");
   }
 
-  // Lists saved before Stems have no Deezer ids, so they are fetched once more.
-  function savedBestMatches(seedUri, langMode = "same", audioOnly = false) {
+  // Lists saved before Stems have no Deezer ids, so they are fetched once more;
+  // so are lists saved before the server could match a part, once it can.
+  function savedBestMatches(seedUri, langMode = "same", audioOnly = false, part = null) {
     const cached = readCacheEntry(
       "recommendations",
-      bestMatchesCacheId(seedUri, langMode, audioOnly)
+      bestMatchesCacheId(seedUri, langMode, audioOnly, part)
     );
-    return bestRows(cached).length && deezerId(cached.query?.id)
+    return bestRows(cached).length && deezerId(cached.query?.id) &&
+      (cached.query.parts || !serverMatchesParts)
       ? { data: cached, cached: true }
       : null;
   }
 
-  async function requestBestMatches(title, artist, seedUri, langMode = "same", audioOnly = false) {
-    const saved = savedBestMatches(seedUri, langMode, audioOnly);
+  async function requestBestMatches(
+    title, artist, seedUri, langMode = "same", audioOnly = false, part = null
+  ) {
+    const saved = savedBestMatches(seedUri, langMode, audioOnly, part);
     if (saved) return saved;
-    const cacheId = bestMatchesCacheId(seedUri, langMode, audioOnly);
+    const cacheId = bestMatchesCacheId(seedUri, langMode, audioOnly, part);
     if (pendingRecommendations.has(cacheId)) {
       return pendingRecommendations.get(cacheId);
     }
     const request = lookupSeedIsrc(seedUri)
-      .then((isrc) => requestBestMatchesUncached(title, artist, langMode, isrc, audioOnly))
+      .then((isrc) => requestBestMatchesUncached(title, artist, langMode, isrc, audioOnly, part))
       .then((data) => {
-        writeCacheEntry("recommendations", cacheId, data);
+        // A server without Match a part answered for the whole preview.
+        writeCacheEntry(
+          "recommendations",
+          data.query.part ? cacheId : bestMatchesCacheId(seedUri, langMode, audioOnly),
+          data
+        );
         return { data, cached: false };
       })
       .finally(() => pendingRecommendations.delete(cacheId));
@@ -1426,9 +1498,11 @@
   }
 
   // Asks for this search's Best matches in the page's language and audio
-  // modes. A list that arrives after the mode changed again is dropped.
+  // modes, for the part of the preview it matches. A list that arrives after
+  // the mode or the part changed again is dropped.
   function requestModeBestMatches(state) {
     const { seedTrack, seedUri, audioOnly } = state;
+    const part = state.part || null;
     state.best = pendingResultList();
     state.limits = {};
     const request = settledRequest(requestBestMatches(
@@ -1436,13 +1510,16 @@
       seedArtistName(seedTrack),
       seedUri,
       state.showAllLanguages ? "all" : "same",
-      audioOnly
+      audioOnly,
+      part
     ));
-    request.promise.then(() => settleBestMatches(state, audioOnly, request));
+    request.promise.then(() => settleBestMatches(state, audioOnly, request, part));
   }
 
-  function settleBestMatches(state, audioOnly, request) {
-    if (state.audioOnly !== audioOnly) return;
+  function settleBestMatches(state, audioOnly, request, part = null) {
+    if (state.audioOnly !== audioOnly || !sameSpan(state.part, part)) return;
+    // A server without Match a part answered for the whole preview.
+    if (part && request.ok && !request.value.data.query.part) state.part = null;
     settleResultsView(state, "best", request);
   }
 
@@ -1478,6 +1555,269 @@
     }
     refreshResultsPage(true);
     activePage?.view?.querySelector?.(".sa-audio-only")?.focus?.();
+  }
+
+  // ---- Match a part -------------------------------------------------------
+  // The header's "Match a part" opens a 30-second timeline of the preview with
+  // a span to move; Apply asks for the hosted lists of that span. The choice
+  // belongs to the open search and is not saved.
+  const sameSpan = (left, right) =>
+    (left ? partText(left) : "") === (right ? partText(right) : "");
+
+  function clockText(seconds) {
+    const whole = Math.max(0, Math.round(seconds));
+    return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
+  }
+
+  // What the search's server can match, kept while a list reloads; null with a
+  // server that can't match parts.
+  function partLimits(state) {
+    if (state.best.status === "ready") state.partsInfo = state.best.data.query?.parts || null;
+    return state.partsInfo || null;
+  }
+
+  // "0:58–1:13 of the song", or of the preview when its place is unknown.
+  function spanLabel(state, part) {
+    const offset = partLimits(state)?.offset ?? null;
+    const base = offset === null ? 0 : offset;
+    return `${clockText(base + part[0])}–${clockText(base + part[1])} of the ${
+      offset === null ? "preview" : "song"
+    }`;
+  }
+
+  // Keeps a span on the step grid, inside the preview and within the lengths.
+  function fitSpan(start, end, limits) {
+    const snap = (value) => Math.round(value / PART_STEP_SECONDS) * PART_STEP_SECONDS;
+    const length = Math.min(limits.max, Math.max(limits.min, snap(end - start)));
+    const from = Math.min(limits.total - length, Math.max(0, snap(start)));
+    return [from, from + length];
+  }
+
+  function partOpenMarkup(state, view) {
+    if (view === "sounds" || state.best.status === "offer" || !partLimits(state)) return "";
+    return `<button class="sa-part-open" type="button" aria-expanded="${Boolean(state.partDraft)}" ` +
+      `aria-controls="sa-part">Match a part <span class="sa-beta">beta</span></button>`;
+  }
+
+  function partChipMarkup(state, view) {
+    if (!state.part) return "";
+    return `<div class="sa-part-chip" role="status"><span>Matching ${esc(spanLabel(state, state.part))}` +
+      `${view === "sounds" ? " (not on Sounds like)" : ""}</span> · ` +
+      `<button class="sa-part-clear" type="button" title="Match the whole preview again">whole preview</button></div>`;
+  }
+
+  function partPanelMarkup(state, view) {
+    const limits = partLimits(state);
+    const draft = state.partDraft;
+    if (!draft || !limits || view === "sounds") return "";
+    const base = limits.offset === null ? 0 : limits.offset;
+    const lengths = [];
+    for (let length = limits.min; length <= limits.max; length += PART_STEP_SECONDS) lengths.push(length);
+    const ticks = [];
+    for (let at = 0; at <= limits.total; at += 10) ticks.push(at);
+    const label = `${spanLabel(state, [draft.start, draft.end])} · ${draft.end - draft.start} s`;
+    const unchanged = sameSpan(state.part, [draft.start, draft.end]);
+    return `<section class="sa-part" id="sa-part" aria-label="Match a part of the preview">
+        <p class="sa-part-intro"><span class="sa-beta">New · beta</span> ${esc(PART_INTRO)}</p>
+        <div class="sa-part-track">
+          <div class="sa-part-span" role="slider" tabindex="0" aria-label="Part of the preview to match" aria-valuemin="0" aria-valuemax="${limits.total - limits.min}" aria-valuenow="${draft.start}" aria-valuetext="${esc(label)}" style="left:${(100 * draft.start) / limits.total}%;width:${(100 * (draft.end - draft.start)) / limits.total}%"><i class="sa-part-edge" data-edge="start"></i><i class="sa-part-edge" data-edge="end"></i></div>
+        </div>
+        <div class="sa-part-ticks" aria-hidden="true">${ticks.map((at) => `<span>${clockText(base + at)}</span>`).join("")}</div>
+        <p class="sa-part-label">${esc(label)}</p>
+        <div class="sa-part-controls">
+          <span class="sa-part-lengths" role="group" aria-label="Length of the part">${lengths.map((length) =>
+            `<button class="sa-part-length" type="button" data-length="${length}" aria-pressed="${length === draft.end - draft.start}">${length} s</button>`
+          ).join("")}</span>
+          <button class="sa-part-play" type="button" title="${esc(PART_PLAY_TITLE)}">Play this part</button>
+          <button class="sa-part-apply" type="button"${unchanged ? " disabled" : ""}>Apply</button>
+          <button class="sa-part-cancel" type="button">Cancel</button>
+        </div>
+        <p class="sa-part-note">${esc(PART_LISTS_NOTE)} ${esc(PART_PLACE_NOTE)} ${esc(PART_KEYS_NOTE)}</p>
+      </section>`;
+  }
+
+  function togglePartPicker() {
+    const state = resultsState;
+    const limits = state && partLimits(state);
+    if (!limits) return;
+    clearTimeout(partPlayTimer);
+    if (state.partDraft) {
+      state.partDraft = null;
+    } else {
+      const [start, end] = fitSpan(...(state.part || PART_DEFAULT), limits);
+      state.partDraft = { start, end };
+    }
+    refreshResultsPage();
+    activePage?.view?.querySelector?.(state.partDraft ? ".sa-part-span" : ".sa-part-open")?.focus?.();
+  }
+
+  // part: [start, end] to match that span, null to match the whole preview again.
+  function applyPart(part) {
+    const state = resultsState;
+    if (!state || state.best.status === "offer") return;
+    clearTimeout(partPlayTimer);
+    state.part = part;
+    state.partDraft = null;
+    state.viewChosen = true;
+    requestModeBestMatches(state);
+    refreshResultsPage(true);
+    activePage?.view?.querySelector?.(part ? ".sa-part-clear" : ".sa-part-open")?.focus?.();
+  }
+
+  // Moves the open picker's span and redraws it in place: rebuilding the page
+  // would end a drag and drop keyboard focus.
+  function movePartDraft(start, end) {
+    const state = resultsState;
+    const limits = state && partLimits(state);
+    const draft = state?.partDraft;
+    if (!draft || !limits) return;
+    const [from, to] = fitSpan(start, end, limits);
+    if (from === draft.start && to === draft.end) return;
+    draft.start = from;
+    draft.end = to;
+    const page = activePage?.view;
+    const label = `${spanLabel(state, [from, to])} · ${to - from} s`;
+    const span = page?.querySelector?.(".sa-part-span");
+    if (span) {
+      if (span.style) {
+        span.style.left = `${(100 * from) / limits.total}%`;
+        span.style.width = `${(100 * (to - from)) / limits.total}%`;
+      }
+      span.setAttribute?.("aria-valuenow", String(from));
+      span.setAttribute?.("aria-valuetext", label);
+    }
+    const text = page?.querySelector?.(".sa-part-label");
+    if (text) text.textContent = label;
+    Array.from(page?.querySelectorAll?.(".sa-part-length") || []).forEach((button) => {
+      button.setAttribute?.("aria-pressed", String(Number(button.dataset?.length) === to - from));
+    });
+    const apply = page?.querySelector?.(".sa-part-apply");
+    if (apply) apply.disabled = sameSpan(state.part, [from, to]);
+  }
+
+  // Arrow keys move the part a step; with Shift they change its length.
+  function onPartKey(event) {
+    const state = resultsState;
+    const limits = state && partLimits(state);
+    const draft = state?.partDraft;
+    if (!draft || !limits) return;
+    const { start, end } = draft;
+    const step = event.key === "ArrowRight" || event.key === "ArrowUp"
+      ? PART_STEP_SECONDS
+      : event.key === "ArrowLeft" || event.key === "ArrowDown"
+        ? -PART_STEP_SECONDS
+        : 0;
+    if (step) {
+      if (!event.shiftKey) movePartDraft(start + step, end + step);
+      else {
+        // A longer part that would pass the end of the preview grows backwards.
+        const length = Math.min(limits.max, Math.max(limits.min, end - start + step));
+        const from = Math.min(start, limits.total - length);
+        movePartDraft(from, from + length);
+      }
+    } else if (event.key === "Home") movePartDraft(0, end - start);
+    else if (event.key === "End") movePartDraft(limits.total - (end - start), limits.total);
+    else return;
+    event.preventDefault?.();
+  }
+
+  // Dragging the span moves it and dragging an edge resizes it; a press
+  // outside the span brings the span's middle there.
+  function bindPartDrag(track) {
+    let drag = null;
+    const seconds = (event) => {
+      const box = track.getBoundingClientRect?.();
+      const total = partLimits(resultsState)?.total || 30;
+      return box?.width > 0 ? ((event.clientX - box.left) / box.width) * total : 0;
+    };
+    const move = (event) => {
+      const state = resultsState;
+      const limits = state && partLimits(state);
+      const draft = state?.partDraft;
+      if (!drag || !draft || !limits) return;
+      const at = seconds(event);
+      const { start, end } = draft;
+      const within = (length) => Math.min(limits.max, Math.max(limits.min, length));
+      if (drag.mode === "move") movePartDraft(at - drag.grab, at - drag.grab + (end - start));
+      else if (drag.mode === "start") movePartDraft(Math.max(0, end - within(end - at)), end);
+      else movePartDraft(start, Math.min(limits.total, start + within(at - start)));
+    };
+    track.onpointerdown = (event) => {
+      const draft = resultsState?.partDraft;
+      if (!draft) return;
+      const at = seconds(event);
+      const edge = event.target?.dataset?.edge;
+      const inside = at >= draft.start && at <= draft.end;
+      drag = {
+        mode: edge === "start" || edge === "end" ? edge : "move",
+        grab: inside ? at - draft.start : (draft.end - draft.start) / 2,
+      };
+      track.setPointerCapture?.(event.pointerId);
+      event.preventDefault?.();
+      if (!inside && drag.mode === "move") move(event);
+    };
+    track.onpointermove = move;
+    track.onpointerup = track.onpointercancel = () => {
+      drag = null;
+    };
+    // Without this a flicked touch drag ends in a fling, and the browser
+    // takes the next tap (on Apply, say) as the tap that stops it.
+    track.addEventListener?.("touchmove", (event) => event.preventDefault(), { passive: false });
+  }
+
+  // The panel plays no previews, so the part is played in Spotify: the song
+  // from about where the part starts, paused when the part is over. The
+  // preview's place in the song is the server's, or the usual one for a song
+  // of a minute and a half or more.
+  async function playPart() {
+    const state = resultsState;
+    const draft = state?.partDraft;
+    if (!draft) return;
+    clearTimeout(partPlayTimer);
+    const { start, end } = draft;
+    if (!seedIsCurrent(state)) {
+      await playSeedSong(state);
+      for (let waited = 0; !seedIsCurrent(state) && waited < PART_PLAY_WAIT_MS; waited += 100) {
+        await delay(100);
+      }
+    }
+    if (state !== resultsState || !seedIsCurrent(state)) return;
+    const known = partLimits(state)?.offset ?? null;
+    const duration = Number(Spicetify.Player?.getDuration?.()) || 0;
+    const offset = known !== null
+      ? known
+      : duration >= 90000 ? USUAL_PREVIEW_OFFSET_SECONDS : null;
+    if (offset === null || typeof Spicetify.Player?.seek !== "function") {
+      Spicetify.showNotification("Soundalike doesn't know where the preview sits in this song.", true);
+      return;
+    }
+    Spicetify.Player.seek(Math.round((offset + start) * 1000));
+    if (!Spicetify.Player.isPlaying?.()) Spicetify.Player.play?.();
+    partPlayTimer = setTimeout(() => {
+      if (seedIsCurrent(state) && Spicetify.Player.isPlaying?.()) Spicetify.Player.pause?.();
+    }, (end - start) * 1000);
+  }
+
+  function bindPartPicker(page, state) {
+    const open = page.querySelector(".sa-part-open");
+    if (open) open.onclick = togglePartPicker;
+    const clear = page.querySelector(".sa-part-clear");
+    if (clear) clear.onclick = () => applyPart(null);
+    const span = page.querySelector(".sa-part-span");
+    if (!state.partDraft || !span) return;
+    span.onkeydown = onPartKey;
+    const track = page.querySelector(".sa-part-track");
+    if (track) bindPartDrag(track);
+    Array.from(page.querySelectorAll(".sa-part-length") || []).forEach((button) => {
+      button.onclick = () =>
+        movePartDraft(state.partDraft.start, state.partDraft.start + Number(button.dataset.length));
+    });
+    const play = page.querySelector(".sa-part-play");
+    if (play) play.onclick = playPart;
+    const apply = page.querySelector(".sa-part-apply");
+    if (apply) apply.onclick = () => applyPart([state.partDraft.start, state.partDraft.end]);
+    const cancel = page.querySelector(".sa-part-cancel");
+    if (cancel) cancel.onclick = togglePartPicker;
   }
 
   // Applies a list that finished after the page opened. A search that isn't
@@ -3282,8 +3622,11 @@
         ${state.seedUri
           ? `<button class="sa-seed-play" type="button" title="${esc(seedPlayLabel(state))}" aria-label="${esc(seedPlayLabel(state))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="sa-icon-play" d="${PLAY_PATH}"></path><path class="sa-icon-pause" d="${PAUSE_PATH}"></path></svg></button>`
           : ""}
+        ${partOpenMarkup(state, view)}
         ${recentToggleMarkup(state)}
       </div>
+      ${partPanelMarkup(state, view)}
+      ${partChipMarkup(state, view)}
       ${recentSearchesMarkup(state.seedUri, Boolean(state.recentOpen))}
       ${resultTabsMarkup(state)}
       <div class="sa-panel sa-view-${view}" id="sa-panel" role="tabpanel" aria-labelledby="sa-tab-${view}">
@@ -3492,6 +3835,29 @@
         .sa-recent-title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .sa-recent-item[aria-current="true"] .sa-recent-title{color:var(--spice-button,#1ed760)}
         .sa-recent-artist{color:var(--spice-subtext,#b3b3b3);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .sa-beta{display:inline-block;border:1px solid rgba(var(--spice-rgb-text,255,255,255),.35);border-radius:999px;padding:0 7px;color:var(--spice-subtext,#b3b3b3);font-size:11px;font-weight:600;vertical-align:1px}
+        .sa-part-open,.sa-part-controls button,.sa-part-clear{min-height:32px;border:1px solid rgba(var(--spice-rgb-text,255,255,255),.2);border-radius:999px;padding:5px 14px;background:transparent;color:var(--spice-text,#fff);font:inherit;font-weight:600;cursor:pointer}
+        .sa-part-open{flex:none;align-self:center}
+        .sa-part-open:hover,.sa-part-open[aria-expanded="true"],.sa-part-controls button:hover:enabled,.sa-part-clear:hover,.sa-part-length[aria-pressed="true"]{border-color:var(--spice-button,#1ed760)}
+        .sa-part-open:focus-visible,.sa-part-controls button:focus-visible,.sa-part-clear:focus-visible,.sa-part-span:focus-visible{outline:2px solid var(--spice-button,#1ed760);outline-offset:2px}
+        .sa-part{max-width:680px;margin:0 0 18px;padding:14px;border:1px solid rgba(var(--spice-rgb-text,255,255,255),.12);border-radius:8px;background:rgba(var(--spice-rgb-text,255,255,255),.04)}
+        .sa-part-intro{margin:0 0 10px}
+        .sa-part-track{position:relative;height:48px;border-radius:6px;background:linear-gradient(rgba(var(--spice-rgb-text,255,255,255),.25),rgba(var(--spice-rgb-text,255,255,255),.25)) center/100% 4px no-repeat,rgba(var(--spice-rgb-text,255,255,255),.06);touch-action:none;cursor:pointer;user-select:none}
+        .sa-part-span{position:absolute;top:0;bottom:0;box-sizing:border-box;border:2px solid var(--spice-button,#1ed760);border-radius:6px;background:rgba(var(--spice-rgb-button,30,215,96),.22);cursor:grab}
+        .sa-part-edge{position:absolute;top:0;bottom:0;width:20px;cursor:ew-resize}
+        .sa-part-edge[data-edge="start"]{left:-10px}
+        .sa-part-edge[data-edge="end"]{right:-10px}
+        .sa-part-edge::after{content:"";position:absolute;top:50%;left:50%;width:4px;height:20px;margin:-10px 0 0 -2px;border-radius:2px;background:var(--spice-button,#1ed760)}
+        .sa-part-ticks{display:flex;justify-content:space-between;margin:4px 0 0;color:var(--spice-subtext,#b3b3b3);font-size:11px}
+        .sa-part-label{margin:8px 0;font-weight:700}
+        .sa-part-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+        .sa-part-lengths{display:inline-flex;gap:6px}
+        .sa-part-length[aria-pressed="true"]{background:rgba(var(--spice-rgb-button,30,215,96),.22)}
+        .sa-part-apply:enabled{border-color:var(--spice-button,#1ed760);background:var(--spice-button,#1ed760);color:#000}
+        .sa-part-controls button:disabled{color:var(--spice-subtext,#b3b3b3);cursor:default}
+        .sa-part-note{margin:10px 0 0;color:var(--spice-subtext,#b3b3b3);font-size:12px}
+        .sa-part-chip{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 16px;padding:4px 5px 4px 14px;border:1px solid var(--spice-button,#1ed760);border-radius:999px;font-weight:600}
+        .sa-part-clear{min-height:28px;padding:3px 12px}
         @container (max-width:760px){
           .sa-list-head,.sa-row-content{grid-template-columns:32px 44px minmax(0,1fr) 56px}
           .sa-view-best .sa-list-head,.sa-view-best .sa-row-content,.sa-view-listeners .sa-list-head,.sa-view-melody .sa-list-head,.sa-view-listeners .sa-row-content,.sa-view-melody .sa-row-content{grid-template-columns:32px 44px minmax(0,1fr)}
@@ -3747,6 +4113,7 @@
     if (languageToggle) languageToggle.onclick = toggleBestLanguageMode;
     const audioOnlyToggle = page.querySelector(".sa-audio-only");
     if (audioOnlyToggle) audioOnlyToggle.onclick = toggleAudioOnly;
+    bindPartPicker(page, state);
     const more = page.querySelector(".sa-more");
     if (more) more.onclick = showMoreResults;
     hydrateShownList(state, page);

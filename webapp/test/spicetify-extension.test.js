@@ -126,6 +126,10 @@ function loadExtension(fetchImpl, options = {}) {
     },
   };
   const recentPanel = { hidden: true };
+  // Match a part's controls, by the last part of their class name, and the
+  // length buttons of the page drawn last.
+  const partControls = {};
+  let partLengths = [];
   const recentClear = { onclick: null };
   // The Recent rows of the page drawn last.
   let recentItems = [];
@@ -345,6 +349,34 @@ function loadExtension(fetchImpl, options = {}) {
             ? audioOnlyButton
             : null;
         }
+        // Match a part's controls keep handlers, styles and attributes like nodes.
+        const partControl = selector.match(/^\.sa-part-(open|clear|track|span|label|play|apply|cancel)$/);
+        if (partControl) {
+          const name = partControl[1];
+          if (!this.innerHTML.includes(`class="sa-part-${name}"`)) return null;
+          const node = (partControls[name] ||= {
+            onclick: null,
+            onkeydown: null,
+            style: {},
+            attributes: {},
+            textContent: "",
+            disabled: false,
+            setAttribute(key, value) {
+              this.attributes[key] = String(value);
+            },
+            focus() {
+              context.document.activeElement = this;
+            },
+            getBoundingClientRect() {
+              return { left: 0, top: 0, width: 300, height: 48 };
+            },
+            setPointerCapture() {},
+          });
+          if (name === "apply") {
+            node.disabled = this.innerHTML.includes('class="sa-part-apply" type="button" disabled');
+          }
+          return node;
+        }
         return queryPage(selector);
       },
       querySelectorAll(selector) {
@@ -358,6 +390,21 @@ function loadExtension(fetchImpl, options = {}) {
           )].map(([, uri]) => ({ onclick: null, dataset: { uri } }));
           return recentItems;
         }
+        if (selector === ".sa-part-length") {
+          // One set per drawn page: redrawing in place asks for them again.
+          if (this.partLengths) return this.partLengths;
+          partLengths = this.partLengths = [...this.innerHTML.matchAll(
+            /<button class="sa-part-length" type="button" data-length="(\d+)"/g,
+          )].map(([, length]) => ({
+            onclick: null,
+            dataset: { length },
+            attributes: {},
+            setAttribute(key, value) {
+              this.attributes[key] = String(value);
+            },
+          }));
+          return partLengths;
+        }
         if (selector === ".sa-dx-play") {
           const buttons = [...this.innerHTML.matchAll(
             /<button class="sa-dx-play" type="button" data-uri="([^"]*)" data-title="([^"]*)"/g,
@@ -369,7 +416,8 @@ function loadExtension(fetchImpl, options = {}) {
       },
       contains(node) {
         return this.className === "sa-results-host" &&
-          (tabs.includes(node) || node === offerButton || node === audioOnlyButton);
+          (tabs.includes(node) || node === offerButton || node === audioOnlyButton ||
+            Object.values(partControls).includes(node));
       },
     };
   }
@@ -871,6 +919,10 @@ function loadExtension(fetchImpl, options = {}) {
     recentToggle,
     recentPanel,
     recentClear,
+    partControls,
+    get partLengths() {
+      return partLengths;
+    },
     get recentItems() {
       return recentItems;
     },
@@ -2409,7 +2461,7 @@ const soundsFixture = [
   { title: "Take My Breath", artist: "The Weeknd", bpm: 121.7 },
 ];
 
-const bestCacheKey = "best:anysong-main-consensus-v16:listeners:same:spotify:track:test";
+const bestCacheKey = "best:anysong-main-consensus-v17:listeners:same:spotify:track:test";
 
 function bestMatchesBody(best = bestFixture, overrides = {}) {
   return {
@@ -2670,7 +2722,7 @@ test("opens on Best matches with Listeners also play one tab away", async () => 
   // A new response format gets a new URL, so HTTP-cached older responses are skipped.
   assert.equal(
     bestUrl.searchParams.get("policy"),
-    "anysong-main-consensus-v16",
+    "anysong-main-consensus-v17",
   );
   // Best matches came back, so the older Sounds like service isn't asked.
   assert.deepEqual(
@@ -3914,6 +3966,213 @@ test("restores a saved Listeners also play list without asking the matcher again
   assert.doesNotMatch(html, /Matched in/);
   assert.equal(second.rows[0].dataset.uri, "spotify:track:sounds0");
   assert.equal(second.rows[1].dataset.uri, "spotify:track:best1");
+});
+
+// A server that can match a part of the preview says so in every answer
+// (query.parts) and names the part an answer is for (query.part).
+const PARTS_INFO = { min_s: 10, max_s: 30, preview_s: 30, song_offset_s: 48 };
+
+function partsFetch({ parts = PARTS_INFO, refuse = false } = {}) {
+  return async (url) => {
+    const params = new URL(url).searchParams;
+    const part = params.get("part");
+    if (part && refuse) return response(404, { ok: false, error: "choosing a part of the preview is not enabled" });
+    const body = mainMatchesBody(params.get("lang"));
+    if (parts) body.query.parts = parts;
+    if (part && parts) {
+      const [start, end] = part.split("-").map(Number);
+      body.query.part = { start, end, heard: { sonic: [10, 30], samples: [15.31, 30.63], melody: [10, 30] } };
+      body.results.main = [...body.results.main].reverse();
+    }
+    return response(200, body);
+  };
+}
+
+async function openPartsPage(options = {}) {
+  const app = loadBestMatchesExtension({ bestFetch: partsFetch(options.fetch), ...options });
+  await app.run();
+  await waitFor(() => hasLog(app, "Best matches metadata settled"));
+  return app;
+}
+
+const partParams = (app) => app.bestRequests.map((url) => new URL(url).searchParams.get("part"));
+
+test("Match a part stays hidden with a server that cannot match parts", async () => {
+  const app = await openPartsPage({ fetch: { parts: null } });
+  assert.doesNotMatch(app.currentPage.innerHTML, /class="sa-part-open"|class="sa-part-chip"|class="sa-part"/);
+  assert.equal(app.currentPage.querySelector(".sa-part-open"), null);
+  assert.deepEqual(partParams(app), [null]);
+});
+
+test("Match a part opens a picker in the header, and Apply reloads the hosted lists for the span", async () => {
+  const storage = new Map();
+  const app = await openPartsPage({ storage });
+  let html = app.currentPage.innerHTML;
+  assert.match(
+    html,
+    /<button class="sa-part-open" type="button" aria-expanded="false" aria-controls="sa-part">Match a part <span class="sa-beta">beta<\/span><\/button>/,
+  );
+  // The button sits in the header, after the seed's play button.
+  assert.ok(html.indexOf('class="sa-seed-play"') < html.indexOf('class="sa-part-open"'));
+  assert.ok(html.indexOf('class="sa-part-open"') < html.indexOf('class="sa-tabs"'));
+  assert.doesNotMatch(html, /class="sa-part"|class="sa-part-chip"/);
+
+  app.partControls.open.onclick();
+  html = app.currentPage.innerHTML;
+  assert.match(html, /aria-expanded="true" aria-controls="sa-part"/);
+  assert.match(
+    html,
+    /<span class="sa-beta">New · beta<\/span> Soundalike hears a 30-second preview\. Pick the part of it you care about\.<\/p>/,
+  );
+  assert.match(
+    html,
+    /<div class="sa-part-span" role="slider" tabindex="0" aria-label="Part of the preview to match" aria-valuemin="0" aria-valuemax="20" aria-valuenow="10" aria-valuetext="0:58–1:08 of the song · 10 s"/,
+  );
+  assert.match(html, /<span>0:48<\/span><span>0:58<\/span><span>1:08<\/span><span>1:18<\/span>/);
+  assert.match(html, /<p class="sa-part-label">0:58–1:08 of the song · 10 s<\/p>/);
+  assert.match(html, /Sounds like always uses the whole song/);
+  assert.match(html, /in a few songs it is elsewhere/);
+  assert.deepEqual(app.partLengths.map((button) => button.dataset.length), ["10", "15", "20"]);
+  // The keyboard lands on the span.
+  assert.equal(app.activeElement, app.partControls.span);
+
+  // Arrow keys move the span in 5-second steps; Shift changes its length.
+  const key = (name, shiftKey = false) => app.partControls.span.onkeydown({ key: name, shiftKey });
+  key("ArrowRight");
+  assert.equal(app.partControls.label.textContent, "1:03–1:13 of the song · 10 s");
+  assert.equal(app.partControls.span.attributes["aria-valuenow"], "15");
+  assert.equal(app.partControls.span.style.left, "50%");
+  key("ArrowRight", true);
+  assert.equal(app.partControls.label.textContent, "1:03–1:18 of the song · 15 s");
+  // At the end of the preview a longer part grows backwards, up to 20 s.
+  key("ArrowRight", true);
+  key("ArrowRight", true);
+  assert.equal(app.partControls.label.textContent, "0:58–1:18 of the song · 20 s");
+  key("Home");
+  assert.equal(app.partControls.label.textContent, "0:48–1:08 of the song · 20 s");
+  // A length button keeps the start.
+  app.partLengths[1].onclick();
+  assert.equal(app.partControls.label.textContent, "0:48–1:03 of the song · 15 s");
+  // Dragging the span moves it: 300 px are the 30 seconds.
+  app.partControls.track.onpointerdown({ clientX: 50, pointerId: 1, target: {} });
+  app.partControls.track.onpointermove({ clientX: 152 });
+  app.partControls.track.onpointerup({});
+  assert.equal(app.partControls.label.textContent, "0:58–1:13 of the song · 15 s");
+  // Dragging the end edge resizes it, never under 10 s.
+  app.partControls.track.onpointerdown({ clientX: 250, pointerId: 1, target: { dataset: { edge: "end" } } });
+  app.partControls.track.onpointermove({ clientX: 120 });
+  app.partControls.track.onpointerup({});
+  assert.equal(app.partControls.label.textContent, "0:58–1:08 of the song · 10 s");
+  key("End");
+  assert.equal(app.partControls.label.textContent, "1:08–1:18 of the song · 10 s");
+  assert.deepEqual(partParams(app), [null]);
+
+  app.partControls.apply.onclick();
+  await waitFor(() => app.bestRequests.length === 2 &&
+    app.rows[0].dataset.uri === "spotify:track:best1");
+  assert.deepEqual(partParams(app), [null, "20-30"]);
+  html = app.currentPage.innerHTML;
+  assert.match(
+    html,
+    /<div class="sa-part-chip" role="status"><span>Matching 1:08–1:18 of the song<\/span> · <button class="sa-part-clear" type="button" title="Match the whole preview again">whole preview<\/button><\/div>/,
+  );
+  assert.doesNotMatch(html, /class="sa-part"/);
+  // Listeners also play and Melody match read the same answer, so they follow.
+  app.tab("listeners").onclick();
+  assert.match(app.currentPage.innerHTML, /class="sa-part-chip"/);
+  assert.equal(app.bestRequests.length, 2);
+  // Each part's list is saved apart from the whole preview's.
+  await waitFor(() => Boolean(
+    JSON.parse(storage.get("soundalike:spicetify-cache:v9") || "{}")
+      .recommendations?.[`${bestCacheKey}:part:20-30`]), 1000);
+  const saved = JSON.parse(storage.get("soundalike:spicetify-cache:v9")).recommendations;
+  assert.deepEqual(saved[`${bestCacheKey}:part:20-30`].value.query.part, [20, 30]);
+  assert.equal(saved[bestCacheKey].value.query.part, undefined);
+
+  // "whole preview" goes back to the saved list without asking again.
+  app.partControls.clear.onclick();
+  await waitFor(() => !app.currentPage.innerHTML.includes('class="sa-part-chip"') &&
+    app.currentPage.innerHTML.includes('class="sa-part-open"'));
+  assert.equal(app.bestRequests.length, 2);
+  assert.equal(app.activeElement, app.partControls.open);
+});
+
+test("a part's place is given in preview time when the server doesn't know the song's", async () => {
+  const app = await openPartsPage({ fetch: { parts: { ...PARTS_INFO, song_offset_s: null } } });
+  app.partControls.open.onclick();
+  const html = app.currentPage.innerHTML;
+  assert.match(html, /<p class="sa-part-label">0:10–0:20 of the preview · 10 s<\/p>/);
+  assert.match(html, /<span>0:00<\/span><span>0:10<\/span><span>0:20<\/span><span>0:30<\/span>/);
+  // Cancel closes the picker and asks nothing.
+  app.partControls.cancel.onclick();
+  assert.doesNotMatch(app.currentPage.innerHTML, /class="sa-part"/);
+  assert.deepEqual(partParams(app), [null]);
+});
+
+test("a server that refuses the part answers for the whole preview and no chip stays", async () => {
+  const storage = new Map();
+  const app = await openPartsPage({ storage, fetch: { refuse: true } });
+  app.partControls.open.onclick();
+  app.partControls.apply.onclick();
+  await waitFor(() => app.bestRequests.length === 3 &&
+    app.currentPage.innerHTML.includes('class="sa-part-open"') &&
+    !app.currentPage.innerHTML.includes('class="sa-part-chip"'));
+  assert.deepEqual(partParams(app), [null, "10-20", null]);
+  const saved = JSON.parse(storage.get("soundalike:spicetify-cache:v9") || "{}").recommendations || {};
+  assert.equal(saved[`${bestCacheKey}:part:10-20`], undefined);
+});
+
+test("a list saved before the server could match parts is asked for again once it can", async () => {
+  const storage = new Map();
+  const older = loadBestMatchesExtension({ storage, bestFetch: partsFetch({ parts: null }) });
+  await older.run();
+  await waitFor(() => Boolean(
+    JSON.parse(storage.get("soundalike:spicetify-cache:v9") || "{}").recommendations?.[bestCacheKey]), 1000);
+
+  const app = loadBestMatchesExtension({ storage, bestFetch: partsFetch() });
+  // The saved list shows first: nothing said yet that the server matches parts.
+  await app.run();
+  assert.equal(app.bestRequests.length, 0);
+  assert.doesNotMatch(app.currentPage.innerHTML, /class="sa-part-open"/);
+  // Another song's fresh answer says so, and the saved list is fetched once more.
+  await app.run("spotify:track:other");
+  await waitFor(() => app.bestRequests.length === 1);
+  await app.run();
+  await waitFor(() => app.bestRequests.length === 2 &&
+    app.currentPage.innerHTML.includes('class="sa-part-open"'));
+});
+
+test("Play this part plays the song in Spotify from about that point and pauses after it", async () => {
+  const app = await openPartsPage({ playerApi: true, timerScale: 0.001 });
+  const seeks = [];
+  let playing = false;
+  Object.assign(app.player, {
+    isPlaying: () => playing,
+    play() {
+      playing = true;
+    },
+    pause() {
+      playing = false;
+    },
+    seek(ms) {
+      seeks.push(ms);
+    },
+  });
+  // Another song is playing: the seed starts first.
+  app.player.data = { item: { uri: "spotify:track:elsewhere" } };
+  app.partControls.open.onclick();
+  assert.match(
+    app.currentPage.innerHTML,
+    /<button class="sa-part-play" type="button" title="Plays the song in Spotify from about where this part starts, then pauses">Play this part<\/button>/,
+  );
+  const started = app.partControls.play.onclick();
+  await waitFor(() => app.contextPlays.length === 1);
+  app.player.data = { item: { uri: "spotify:track:test" } };
+  await started;
+  // 0:48 into the song plus 10 seconds into the preview.
+  assert.deepEqual(seeks, [58000]);
+  assert.equal(playing, true);
+  await waitFor(() => !playing);
 });
 
 function loadVersionedExtension(spicetifyVersion, spotifyVersion) {
