@@ -95,6 +95,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
+from functools import lru_cache
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -273,6 +274,13 @@ def _lookup_key(artist: str, title: str) -> tuple[str, str]:
     so accents on Latin letters, symbols and a leading "The" are ignored. Lists keep ``song_key``."""
     a, t = song_key(_fold(artist), _fold(title))
     return _LEADING_THE.sub("", a) or a, t
+
+
+@lru_cache(maxsize=1 << 16)
+def _own_key(artist: str, title: str) -> tuple[str, str]:
+    """``_lookup_key`` for the own-song check of the lists (``AnySong._view``), remembered: a song sits in several
+    of a seed's lists and in many seeds' lists, and folding its names is most of that check's cost (4 µs a row)."""
+    return _lookup_key(artist, title)
 
 
 def _content_tags(title: str) -> frozenset[str]:
@@ -1641,7 +1649,7 @@ class AnySong:
                     if key == qkey or key in order:
                         continue
                     if qown is not None and not (qplain and artist.isascii() and title.isascii()) \
-                            and _lookup_key(artist, title) == qown:
+                            and _own_key(artist, title) == qown:
                         continue
                 order[key] = {"id": tid, "score": round(float(score), 4), "artist": artist, "title": title}
             return order
