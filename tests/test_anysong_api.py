@@ -2844,6 +2844,44 @@ def test_excerpt_with_its_song_keeps_the_songs_identity(excerpt_server):
     assert post(excerpt_server, "/api/anysong/excerpt?id=x", _wav(12))[0] == 400
 
 
+def test_excerpt_lookup_errors_reach_the_caller_and_only_not_found_ranks_the_clip_alone(tmp_path):
+    dz = QueryDeezer(tmp_path, tracks=NEW_SONG)
+    svc = api.AnySong(PartEngine(), dz, META, copy_score=None, excerpts=True, parts=True)
+    srv = api.Server(("127.0.0.1", 0), svc, search_per_min=4, similar_per_min=600, excerpt_per_min=600)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        base = "/api/anysong/excerpt?"
+        code, _, body = post(srv, base + "artist=New%20Artist&title=Brand%20New%20Song", _wav(12))
+        assert code == 200 and body["query"]["id"] == 99  # search_per_min=4 -> burst of 1: this lookup spends it
+        ranked = len(svc.engine.calls)
+        # The search budget is spent: the caller is told so, by title and artist and by ISRC alike. Ranking the clip
+        # alone instead would drop the song's identity without a word.
+        for names in ("artist=Nobody&title=Another%20Song", "isrc=GBAYE0000001&artist=Nobody&title=Another%20Song",
+                      "isrc=GBAYE0000002"):
+            code, headers, body = post(srv, base + names, _wav(12))
+            assert code == 429 and body["error"] == "too many requests" and headers["Retry-After"]
+        assert len(svc.engine.calls) == ranked and dz.searches == 1
+        # A song the catalog names needs no budget.
+        code, _, body = post(srv, base + "artist=Third&title=Third%20Song", _wav(12))
+        assert code == 200 and body["query"]["id"] == 7
+        ranked = len(svc.engine.calls)
+        # Deezer down: 502, not a clip ranked alone.
+        srv.limiters["/api/anysong/search"] = api.TokenBucket(600, 100)
+        dz.fail = True
+        code, _, body = post(srv, base + "artist=Nobody&title=Uncached%20Song", _wav(12))
+        assert code == 502 and len(svc.engine.calls) == ranked
+        # A name that nothing knows is the one case that ranks the clip alone, under the names given.
+        dz.fail = False
+        code, _, body = post(srv, base + "artist=Nobody&title=Nothing%20At%20All", _wav(12))
+        assert code == 200 and "id" not in body["query"] and body["query"]["title"] == "Nothing At All"
+        code, _, body = post(srv, base + "isrc=GBAYE0000003", _wav(12))
+        assert code == 200 and "id" not in body["query"]
+        assert svc.health()["excerpt"]["refused"] == {429: 3, 502: 1}
+    finally:
+        srv.shutdown()
+        srv.server_close()
+
+
 def test_excerpt_hints_name_the_song_to_leave_out(excerpt_server):
     svc = excerpt_server.service
     code, _, body = post(excerpt_server, "/api/anysong/excerpt?artist=Other%20Artist&title=Different%20Song", _wav(12))

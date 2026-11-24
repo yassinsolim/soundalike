@@ -2533,13 +2533,16 @@ class Handler(BaseHTTPRequestHandler):
                 if seed is not None:  # the song the clip is from, by id: it has to exist
                     hint = svc.excerpt_seed(seed, search_budget)
                 else:
-                    try:  # naming the song is optional help: one that cannot be found is no error
+                    # Named by ISRC or by title and artist: a song that nothing knows (404) is no error, the clip
+                    # is then ranked alone. Anything else (a spent search budget, Deezer down) is the caller's to
+                    # see: ranking alone instead would silently drop the song's identity.
+                    try:
                         if "isrc" in params:
                             hint = svc.resolve_isrc(params["isrc"][0], artist, title, search_budget)
                         elif artist and title:
                             hint = svc.resolve(artist, title, search_budget)
                     except ApiError as exc:
-                        if exc.status == 400:
+                        if exc.status != 404:
                             raise
                 out = svc.excerpt(data, k, dedupe, lang_mode, scene, hint, artist, title)
             return self._send(200, out)

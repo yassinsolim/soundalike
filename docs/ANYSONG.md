@@ -458,10 +458,10 @@ means editing those files.
 A listener can say which part of a song the matches should follow. Measurements: `anysong-lab/partmatch/REPORT.md`
 (2026-11-23) and [ANYSONG_EVAL.md](ANYSONG_EVAL.md#a-part-of-a-song-as-the-seed-2026-11-23); local demo page:
 [`demo/part-match/`](../demo/part-match) (`python demo/part-match/serve.py`, not deployed). Served: a part of the
-preview (`--parts`, in the production unit). Not served: clips of the listener's own audio (`--excerpts`) and
-naming a clip's song (`--identify-score`), which are off unless the engine is started with their flags; the
-production unit must not carry them (`tests/test_anysong_api.py` checks the unit file), and `--identify-score`
-without `--excerpts` refuses to start.
+preview (`--parts`) and, from engine update 2, a clip of the listener's own audio, which reaches any part of a
+song (`--excerpts`; needs `--parts`). Not served: naming a clip's song from the samples index
+(`--identify-score`, which refuses to start without `--excerpts`); clients send the song's id instead.
+`tests/test_anysong_api.py` checks the unit file for exactly this.
 
 **`--parts`: a part of the preview.** `GET /api/anysong/similar?...&part=<start>-<end>` takes seconds of the song's
 30 s preview, decimals allowed, `0 <= start < end <= 30` and at least 10 apart (the sound model's window); every
@@ -500,21 +500,50 @@ part.
 - Parts add no model and no table: measured under an 8 GB cap with part requests, a live seed and a Stems
   dissection, see [ANYSONG_EVAL.md](ANYSONG_EVAL.md#a-part-of-a-song-as-the-seed-2026-11-23).
 
-**`--excerpts`: a clip of the listener's own audio.** `POST /api/anysong/excerpt` takes one clip of 5 to 30 s as the
-request body (WAV, FLAC, Ogg or MP3: what libsndfile reads; at most `--excerpt-max-mb`, default 12) and the query
-parameters `k`, `dedupe`, `lang`, `scene` of `similar`. The clip is decoded in memory with a header check first,
-embedded like a song outside the catalog with as many windows as it fills (`audio.excerpt_clips`), ranked, and
-dropped: nothing is written to disk, cached, logged or added to the catalog or the learn queue. The answer has the
-shape of `similar` with `query.source` `excerpt` and `query.seconds`; `listeners` and the artist scene need a
-known song. Optional `title` + `artist` or `isrc` name the song: it is then left out of the lists and its artist
-gives the scene, the catalog tiers and the listener lists (a name that nothing knows is not an error). With
-`--identify-score S` a clip without a name is first looked up in the whole samples index, and a best match scoring
-at least `S` (0.55: the same recording) stands in for the name and is reported as `query.identified`. The clip is
-brought to full scale before it is embedded, because the sound model hears level. The route has its own budget,
-`--excerpt-per-min` (default 6 per client), answers `411` without a body, `413` over the size limit, `422` for
-audio it cannot decode, clips outside 5 to 30 s and silence, and a CORS preflight when `--cors-origin` is set.
-`--part-sound-weight` sets the consensus body's sound weight for part and excerpt seeds (default: the body's own;
-not set in production).
+**`--excerpts`: a clip of the listener's own audio.** `POST /api/anysong/excerpt` takes one clip of 10 to 30 s as
+the request body, with a `Content-Length`, and the query parameters `k`, `dedupe`, `lang`, `scene` of `similar`.
+The answer has the shape of `similar` with `query.source` `excerpt`, `query.seconds` and `Cache-Control: no-store`.
+
+- **The song the clip is from.** `id=<deezer id>` names it (404 `unknown track` if neither the catalog nor Deezer
+  has it); `isrc=` or `title=` + `artist=` name it as for `similar` (a name that nothing knows is not an error: the
+  clip is then ranked alone; a spent search budget or a Deezer failure is returned as 429 or 502, never hidden by
+  ranking alone). The song keeps the seed's identity: it and its other releases are left out of the
+  lists, its language gates them, its artist gives the scene, the catalog tiers and Listeners also play, and an
+  indexed song's playlist vector goes into the consensus body (`api.EXCERPT_SEED_PLAYLISTS`, chosen by the model's
+  own rating: [ANYSONG_EVAL.md](ANYSONG_EVAL.md#a-clip-of-any-part-of-the-song-2026-11-24)). Every audio signal
+  (sound, scene head, melody, samples, tempo) is the clip's.
+- **A clip alone** has no artist: with the catalog tiers it is ranked against the core catalog only, its language
+  is detected from the clip, and there is no `listeners` list. Its own song comes first when that song is a core
+  song.
+- **Detection.** `query.parts.excerpt` on every `similar` and `excerpt` answer:
+  `{"min_s": 10.0, "max_s": 30.0, "max_bytes": 6291456}`; `/healthz` has `excerpts: true` and `excerpt` (limits,
+  formats, refusals by status).
+- **What is checked, in this order, before the body is read:** the route is on (404, body unread), a
+  `Content-Length` and no chunked encoding (411), at most `--excerpt-max-mb` (413; 6 MB in production), the
+  parameters (400), the client's own excerpt budget (429 with `Retry-After`; `--excerpt-per-min`, 6 a minute and a
+  burst of 2 in production), and that no other clip is being read or ranked (503 with `Retry-After: 2`: one clip at
+  a time, never queued). The body is then read against a 20 s deadline (408, connection closed).
+- **What decodes.** The container is told by its first bytes, not by `Content-Type`. Production takes WAV only
+  (`--excerpt-formats`, default `wav`): `audio.decode_wav` reads PCM of 8 to 32 bits and IEEE float with numpy, in
+  this process, with no decoder library and no other program, never trusting a chunk size beyond the bytes that
+  arrived. `flac`, `ogg` and `mp3` can be allowed and then go to libsndfile (a C library) with the header checked
+  first and at most 31 s decoded. Anything else is 415; a clip that cannot be decoded, is outside 10 to 30 s, has
+  more than 2 channels or a rate outside 8 to 96 kHz, or is silent is 422. Nothing runs ffmpeg.
+- **What is kept: nothing.** No file, no cache entry, no learn-queue line, no catalog row. The access log has the
+  path and the status of an excerpt request, not its query string, so not the song's names either.
+- **Bounds.** One clip in memory at a time (6 MB and its decoded 30 s). The engine is waited for at most 20 s per
+  step (503); the models are the ones a live seed already uses, so nothing is loaded
+  ([VRAM under an 8 GB cap](ANYSONG_EVAL.md#a-clip-of-any-part-of-the-song-2026-11-24)).
+- The clip is brought to full scale before it is embedded, because the sound model hears level. A CORS preflight
+  (`OPTIONS`) answers 204 for `--cors-origin` with `POST` and `Content-Type` allowed.
+- **The public path.** `https://soundalike.yassin.app/api/anysong/*` reaches the engine through Cloudflare and
+  the web container's Caddy; that rule is not in this repository (`webapp/site.json` has no `/api/anysong`
+  rewrite). Measured on 2026-11-24: a `POST` with a body of 1 KB to 13 MB and an `OPTIONS` reach the engine.
+
+With `--identify-score S` a clip without a name is first looked up in the whole samples index, and a best match
+scoring at least `S` (0.55: the same recording) stands in for the name and is reported as `query.identified`; not
+set in production. `--part-sound-weight` sets the consensus body's sound weight for part and excerpt seeds
+(default: the body's own; not set in production).
 
 ### Match a part in the clients
 
