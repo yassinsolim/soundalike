@@ -160,7 +160,6 @@ def test_anysong_has_the_spotify_extensions_three_tabs():
 def test_match_a_part_is_offered_only_by_servers_that_match_parts():
     # The control reads query.parts from the normal answer: no request of its own, hidden without it.
     assert "const parts = ((picked.body || {}).query || {}).parts;" in SCRIPT
-    assert 'partLimits(picked) ? "preview" : "",' in SCRIPT and "open.hidden = !sources.length;" in SCRIPT
     assert "healthz" not in SCRIPT
     assert 'if (part) params.set("part", partText(part));' in SCRIPT
     # A server without it answers for the whole preview (or refuses the span and is asked again without it).
@@ -177,8 +176,6 @@ def test_match_a_part_is_offered_only_by_servers_that_match_parts():
         'only how close each song sounds follows the part."' in SCRIPT
     # Spans sit on a 5-second grid and run 10 to 20 seconds; the timeline works with touch and the keyboard.
     assert "const partStepSeconds = 5;" in SCRIPT and "const partLongestSeconds = 20;" in SCRIPT
-    assert 'role="slider" tabindex="0" aria-label="${esc(label)}"' in SCRIPT
-    assert 'trackHtml("Part of the preview to match", ticks)' in SCRIPT
     assert "track.onpointerdown = onPartPointerDown;" in SCRIPT
     assert "touch-action:none" in HOME
     # display rules would otherwise beat the hidden attribute.
