@@ -46,6 +46,12 @@ createServer(async (request, response) => {
   if (page) {
     response.setHeader("Content-Type", page[1]);
     response.setHeader("Cache-Control", "no-cache");
+    // The response headers production sends for this path (site.json): its Permissions-Policy and
+    // Content-Security-Policy decide what a page may do, capture included.
+    for (const rule of site.headers || []) {
+      if (!new RegExp(`^${rule.source}$`).test(url.pathname)) continue;
+      for (const header of rule.headers) response.setHeader(header.key, header.value);
+    }
     return response.end(readFileSync(new URL(page[0], import.meta.url)));
   }
   try {

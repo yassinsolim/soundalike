@@ -86,17 +86,22 @@
   const clipFileLimitBytes = 400 * 1024 * 1024;
   const clipSourceLabels = {
     preview: "The 30-second preview",
+    tab: "Any part, from YouTube or another tab",
     file: "A file of the song",
-    tab: "A tab that is playing it",
   };
   const clipFileIntro =
     "Have this song as a file? Choose it and pick any part of the whole song.";
   const clipPrivacyNote =
     "The file is opened in your browser and is not uploaded. Only the seconds you pick are sent to be matched, and nothing is stored.";
   const clipTabIntro =
-    "Play the song in another tab of this browser, at the part you care about, then capture it here.";
+    "Soundalike holds only a 30-second preview of each song. For any other part, play it in another tab and let Soundalike listen to that tab.";
+  const clipTabSteps = [
+    "Open the song on YouTube, or any site that plays it, in another tab and go to the part you want.",
+    "Press Capture here. In your browser's dialog choose that tab and leave “Also share tab audio” on.",
+    "Listen to what was captured, drag the part to match, and press Apply.",
+  ];
   const clipTabNote =
-    "Your browser asks what to share: choose the tab that is playing and leave “Also share tab audio” switched on. Only the sound is used, for the seconds you chose, and the picture is dropped at once. Nothing is stored. Some sites do not let their sound be captured.";
+    "Only the sound is used, for the seconds you chose; the picture is dropped at once and nothing is stored. Soundalike hears only what you capture, not the rest of the video. This is your browser's own tab sharing: it does not make copying allowed, so capture only audio you may use under the site's terms.";
   const clipSeedNote =
     "The clip replaces the preview as what Soundalike hears. The song, its artist and its language stay the ones you picked.";
   const clipAloneNote =
@@ -1384,8 +1389,8 @@
     const clips = canDecodeAudio() ? clipLimits(picked) : null;
     return [
       partLimits(picked) ? "preview" : "",
-      clips ? "file" : "",
       clips && canCaptureTab() ? "tab" : "",
+      clips ? "file" : "",
     ].filter(Boolean);
   }
 
@@ -1809,20 +1814,76 @@
     togglePartPanel(picked);
   }
 
+  // "1:23", "1:02:03", "83", "83s" or "1m23s" as seconds; null for anything else.
+  function clockSeconds(text) {
+    const value = String(text || "").trim();
+    const clocked = /^(?:(\d{1,2}):)?(\d{1,3}):(\d{2})$/.exec(value);
+    if (clocked) return (Number(clocked[1]) || 0) * 3600 + Number(clocked[2]) * 60 + Number(clocked[3]);
+    const counted = /^(?:(\d{1,3})m)?(\d{1,5})s?$/.exec(value);
+    return counted ? (Number(counted[1]) || 0) * 60 + Number(counted[2]) : null;
+  }
+
+  // A YouTube address as the address that opens the video at `time` (or at
+  // the address's own t=); null for anything that is not a YouTube video.
+  function youtubeAt(text, time) {
+    let url;
+    try {
+      url = new URL(String(text || "").trim());
+    } catch {
+      return null;
+    }
+    const host = url.hostname.replace(/^(www|m|music)\./, "");
+    const id =
+      host === "youtu.be"
+        ? url.pathname.slice(1)
+        : host !== "youtube.com"
+          ? ""
+          : url.pathname === "/watch"
+            ? url.searchParams.get("v") || ""
+            : (/^\/(?:shorts|live|embed)\/([\w-]+)/.exec(url.pathname) || [])[1] || "";
+    if (!/^[\w-]{6,20}$/.test(id)) return null;
+    const seconds = clockSeconds(time) ?? clockSeconds(url.searchParams.get("t")) ?? 0;
+    return `https://www.youtube.com/watch?v=${id}${seconds ? `&t=${seconds}s` : ""}`;
+  }
+
+  // The tab source: the listener plays any part of the song in another tab
+  // (YouTube is the usual place) and shares that tab's sound for some seconds.
+  // Soundalike fetches nothing from the site; it hears what the browser shares.
   function tabSource(picked, body) {
     const clips = clipLimits(picked);
     const lengths = clipCaptureSeconds.filter(
       seconds => seconds >= clips.min && seconds <= clips.longest
     );
     let seconds = lengths.includes(20) ? 20 : lengths[lengths.length - 1];
+    const seed = picked.seed.id ? `${picked.seed.artist} ${picked.seed.title}`.trim() : "";
     body.innerHTML =
       `<p class="part-intro"><span class="beta">Experimental</span> ${esc(clipTabIntro)}</p>` +
+      `<ol class="clip-steps"><li>${esc(clipTabSteps[0])}` +
+      '<span class="clip-link"><input id="clip-link" type="url" placeholder="YouTube link (optional)" aria-label="YouTube link" autocomplete="off">' +
+      '<input id="clip-at" type="text" inputmode="numeric" placeholder="1:23" aria-label="Time to start at" autocomplete="off">' +
+      '<button type="button" id="clip-go">Open it there ↗</button>' +
+      (seed
+        ? `<a id="clip-find" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=${encodeURIComponent(seed)}">Find it on YouTube ↗</a>`
+        : "") +
+      `</span></li><li>${esc(clipTabSteps[1])}</li><li>${esc(clipTabSteps[2])}</li></ol>` +
       `<div class="part-controls">${lengthsHtml(lengths, "Seconds to capture")}` +
       '<button type="button" class="save" id="clip-capture">● Capture</button>' +
       '<button type="button" id="clip-stop" hidden>■ Stop now</button>' +
       '<button type="button" id="part-cancel">Cancel</button></div>' +
       '<p class="clip-status" id="clip-status" role="status"></p>' +
       `<p class="part-note">${esc(clipTabNote)} ${esc(clipWhoNote(picked))}</p>`;
+    document.querySelector("#clip-go").onclick = () => {
+      const address = youtubeAt(
+        document.querySelector("#clip-link").value,
+        document.querySelector("#clip-at").value
+      );
+      if (!address) {
+        clipSay(body, "That is not a link to a YouTube video. You can also just open the song in another tab yourself.");
+        return;
+      }
+      clipSay(body, "Opened in a new tab. Come back here and press Capture while it plays.");
+      window.open(address, "_blank", "noopener");
+    };
     const buttons = body.querySelectorAll(".part-lengths button");
     const press = () =>
       buttons.forEach(button => {

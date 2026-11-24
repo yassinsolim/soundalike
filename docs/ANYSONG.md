@@ -531,23 +531,35 @@ parameter (400 or 404) is asked once more without it.
   share link (`#id=<id>&tab=<tab>&part=<start>-<end>`, also as `/?id=…&part=…`) and in the request, so each part
   has its own cached answer. A newly picked song always starts from its whole preview.
   - **Any part of the song (website only).** The preview is all Soundalike holds, so any other part has to come
-    from audio the listener has or is playing. When the answer on screen also has `query.parts.excerpt`
-    (`{min_s, max_s, max_bytes}`: an engine with `--excerpts`), the panel gets a row of sources next to "The
-    30-second preview": **A file of the song** (chosen or dropped; decoded in the page with WebAudio, never
-    uploaded) and, in Chromium browsers on a computer, **A tab that is playing it** (experimental:
-    `getDisplayMedia` with the tab's audio, voice processing off, the picture dropped at once, samples taken by the
-    worklet [`webapp/clip-tap.js`](../webapp/clip-tap.js) for 10, 20 or 30 seconds). Either gives a timeline of
-    the whole file or capture with the same span (10, 15 or 20 seconds, moved by the second) and "Play this part".
-    Apply renders only the span to one channel at 24 kHz, brings it to full scale (the sound model hears level),
-    and sends it as a 16-bit WAV (0.5 to 1 MB) with `POST /api/anysong/excerpt?id=<seed>`: the clip replaces the
-    preview as the audio, while the song, its artist, language and links stay the seed's. The chip reads
-    "Matching your clip (0:12–0:27 of your file) · whole preview"; the language and Audio only switches send the
-    same clip again. A clip is never in a link (the address stays the song's) and nothing of it is kept, by the
-    page beyond the open result or by the server. Without a seed, "Match a clip of your own audio" under the search
-    bar (shown once an answer has advertised clips; the advert is remembered in `localStorage`) matches the clip
-    by sound alone: no Listeners also play, no share link, and a clip the server names as a catalog song takes
-    that song as its seed. Firefox and Safari share no tab audio, so they get the file source only; a browser
-    without WebAudio gets neither.
+    from audio the listener is playing or has. When the answer on screen also has `query.parts.excerpt`
+    (`{min_s, max_s, max_bytes}`: an engine with `--excerpts`), the panel gets a row of sources after "The
+    30-second preview":
+    - **Any part, from YouTube or another tab** (experimental; Chromium browsers on a computer). The listener
+      opens the song in another tab at the part they want (a YouTube link and a time can be pasted and are opened
+      as `youtube.com/watch?v=…&t=…s`; with a seed there is also a YouTube search link), presses Capture and
+      picks that tab in the browser's own dialog with "Also share tab audio" on. The page takes the tab's sound
+      with `getDisplayMedia` (voice processing off, the picture's track stopped at once, plain samples through the
+      worklet [`webapp/clip-tap.js`](../webapp/clip-tap.js)) for 10, 20 or 30 seconds, and stops every track when
+      it is done, cancelled, or the share has no sound. Soundalike asks YouTube for nothing: no server-side fetch,
+      no player embed. It hears only what was captured, so there is no slider over the whole video, and the panel
+      says that sharing a tab does not make copying allowed. Checked on 2026-11-23 in Chrome 156 with a CC BY
+      video on YouTube and the page served with production's response headers (`Permissions-Policy` blocks the
+      microphone, not tab sharing): three 20-second captures shared 8, 9 and 6 of their Best matches top 10 with
+      the same seconds of the artist's own file.
+    - **A file of the song** (chosen or dropped; decoded in the page with WebAudio, never uploaded).
+
+    Either gives a timeline of the whole capture or file with the same span (10, 15 or 20 seconds, moved by the
+    second) and "Play this part". Apply renders only the span to one channel at 24 kHz, brings it to full scale
+    (the sound model hears level), and sends it as a 16-bit WAV (0.5 to 1 MB) with
+    `POST /api/anysong/excerpt?id=<seed>`: the clip replaces the preview as the audio, while the song, its artist,
+    language and links stay the seed's. The chip reads "Matching your clip (0:00–0:20 of your capture) · whole
+    preview"; the language and Audio only switches send the same clip again. A clip is never in a link (the
+    address stays the song's) and nothing of it is kept, by the page beyond the open result or by the server.
+    Without a seed, "Match any part of a song, from YouTube or a file" under the search bar (shown once an answer
+    has advertised clips; the advert is remembered in `localStorage`) matches the clip by sound alone: no
+    Listeners also play, no share link, and a clip the server names as a catalog song takes that song as its
+    seed. Firefox and Safari share no tab audio, so they get the file source only; a browser without WebAudio
+    gets neither.
 - **Spotify extension** (runtime 2.16.0): the same control in the page's header, drawn with the theme's colours.
   The page plays no previews, so "Play this part" plays the song in Spotify from about where the part starts and
   pauses when it is over. Saved lists are kept per part (`…:part:<start>-<end>` in the cache id), and nothing is

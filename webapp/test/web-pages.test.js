@@ -1914,7 +1914,7 @@ test("a clip the server refuses says why, and a server that stopped taking clips
 
 // Chromium on a computer: the Share dialog's tab with its sound.
 function fakeTabShare({ sound = true } = {}) {
-  const share = { asked: [], stopped: 0, taps: [] };
+  const share = { asked: [], stopped: 0, taps: [], opened: [] };
   const track = () => ({ stop: () => { share.stopped += 1; } });
   const stream = {
     connected: share.taps,
@@ -1935,6 +1935,9 @@ function fakeTabShare({ sound = true } = {}) {
         },
       },
     },
+    open: (...args) => {
+      share.opened.push(args);
+    },
     AudioWorkletNode: class {
       constructor(_context, name) {
         this.name = name;
@@ -1951,13 +1954,44 @@ test("a tab's sound is offered in Chromium on a computer, captured without voice
   await waitFor(() => shown(page));
   page.document.querySelector("#part-open").click();
   assert.deepEqual(sourceButtons(page).map((button) => button.textContent),
-    ["The 30-second preview", "A file of the song", "A tab that is playing it experimental"]);
-  sourceButtons(page)[2].click();
-  assert.match(page.text("#part-panel .part-intro"), /^Experimental Play the song in another tab/);
-  assert.match(page.text("#part-panel .part-note"), /leave “Also share tab audio” switched on/);
-  assert.match(page.text("#part-panel .part-note"), /the picture is dropped at once\. Nothing is stored\./);
+    ["The 30-second preview", "Any part, from YouTube or another tab experimental", "A file of the song"]);
+  sourceButtons(page)[1].click();
+  assert.match(page.text("#part-panel .part-intro"), /^Experimental Soundalike holds only a 30-second preview of each song\./);
+  assert.deepEqual(page.texts("#part-panel .clip-steps li").map((step) => step.slice(0, 28)),
+    ["Open the song on YouTube, or", "Press Capture here. In your ", "Listen to what was captured,"]);
+  assert.match(page.text("#part-panel .clip-steps"), /choose that tab and leave “Also share tab audio” on/);
+  assert.match(page.text("#part-panel .part-note"), /the picture is dropped at once and nothing is stored\./);
+  // It says what it is not: no way around a site's terms, and no slider over the whole video.
+  assert.match(page.text("#part-panel .part-note"), /hears only what you capture, not the rest of the video/);
+  assert.match(page.text("#part-panel .part-note"), /does not make copying allowed, so capture only audio you may use under the site's terms/);
+  // A YouTube link and a time open the video there, in a new tab; nothing is fetched from YouTube.
+  assert.equal(page.document.querySelector("#clip-find").getAttribute("href"),
+    "https://www.youtube.com/results?search_query=Josiah%20De%20Disciple%20Amanga");
+  const link = page.document.querySelector("#clip-link");
+  const at = page.document.querySelector("#clip-at");
+  const go = page.document.querySelector("#clip-go");
+  const opens = [
+    ["https://youtu.be/wgFHz7SN_h8", "1:10", "https://www.youtube.com/watch?v=wgFHz7SN_h8&t=70s"],
+    ["https://music.youtube.com/watch?v=wgFHz7SN_h8&t=95", "", "https://www.youtube.com/watch?v=wgFHz7SN_h8&t=95s"],
+    ["https://www.youtube.com/watch?v=wgFHz7SN_h8&list=x", "1m5s", "https://www.youtube.com/watch?v=wgFHz7SN_h8&t=65s"],
+    ["https://m.youtube.com/shorts/wgFHz7SN_h8", "", "https://www.youtube.com/watch?v=wgFHz7SN_h8"],
+  ];
+  for (const [address, time, opened] of opens) {
+    link.value = address;
+    at.value = time;
+    go.click();
+    assert.deepEqual(share.opened.at(-1), [opened, "_blank", "noopener"]);
+  }
+  for (const address of ["https://example.com/watch?v=wgFHz7SN_h8", "sneaky snitch", "https://www.youtube.com/@channel"]) {
+    link.value = address;
+    go.click();
+  }
+  assert.equal(share.opened.length, opens.length);
+  assert.match(page.text("#clip-status"), /^That is not a link to a YouTube video\./);
+  assert.deepEqual(page.requests.filter((url) => /youtu/.test(url)), []);
   assert.deepEqual(page.texts("#part-panel .part-lengths button"), ["10 s", "20 s", "30 s"]);
   page.document.querySelectorAll("#part-panel .part-lengths button")[2].click();
+  assert.equal(posts.length, 0);
 
   page.document.querySelector("#clip-capture").click();
   await waitFor(() => share.taps.length === 1);
@@ -1991,7 +2025,7 @@ test("a share without sound, or with silence, says what to do instead of matchin
   const first = loadClips({ globals: mute.globals });
   await waitFor(() => shown(first.page));
   first.page.document.querySelector("#part-open").click();
-  sourceButtons(first.page)[2].click();
+  sourceButtons(first.page)[1].click();
   first.page.document.querySelector("#clip-capture").click();
   await waitFor(() => first.page.text("#clip-status"));
   assert.equal(first.page.text("#clip-status"),
@@ -2002,7 +2036,7 @@ test("a share without sound, or with silence, says what to do instead of matchin
   const second = loadClips({ globals: quiet.globals });
   await waitFor(() => shown(second.page));
   second.page.document.querySelector("#part-open").click();
-  sourceButtons(second.page)[2].click();
+  sourceButtons(second.page)[1].click();
   second.page.document.querySelector("#clip-capture").click();
   await waitFor(() => quiet.taps.length === 1);
   for (let block = 0; block < 4; block += 1) {
@@ -2018,7 +2052,7 @@ test("a share without sound, or with silence, says what to do instead of matchin
   const last = loadClips({ globals: third.globals });
   await waitFor(() => shown(last.page));
   last.page.document.querySelector("#part-open").click();
-  sourceButtons(last.page)[2].click();
+  sourceButtons(last.page)[1].click();
   last.page.document.querySelector("#clip-capture").click();
   await waitFor(() => third.taps.length === 1);
   last.page.document.querySelector("#part-cancel").click();
@@ -2035,7 +2069,7 @@ test("a clip without a song is matched by sound alone and says what is missing",
   });
   const entry = page.document.querySelector("#clip-open");
   assert.equal(entry.hidden, false);
-  assert.equal(entry.textContent, "🎧 Match a clip of your own audio beta");
+  assert.equal(entry.textContent, "🎧 Match any part of a song, from YouTube or a file beta");
   entry.click();
   // No song, so no preview to pick from: the file is the first source.
   assert.equal(page.text("#part-panel .part-intro"),
@@ -2086,5 +2120,21 @@ test("a clip the server recognises as a catalog song takes that song as its seed
   page.document.querySelector("#language-toggle").click();
   await waitFor(() => posts.length === 2);
   assert.equal(posts[1].params.get("id"), String(AMANGA_ID));
+  assert.deepEqual(page.errors, []);
+});
+
+test("without a song, a browser that can share a tab opens on the tab source", async () => {
+  const share = fakeTabShare();
+  const { page } = loadClips({
+    hash: "",
+    globals: share.globals,
+    local: { [CLIP_ADVERT_KEY]: JSON.stringify(EXCERPT_ADVERT) },
+  });
+  page.document.querySelector("#clip-open").click();
+  assert.deepEqual(sourceButtons(page).map((button) => `${button.textContent}:${button.getAttribute("aria-pressed")}`),
+    ["Any part, from YouTube or another tab experimental:true", "A file of the song:false"]);
+  // No song, so nothing to search YouTube for.
+  assert.equal(page.document.querySelector("#clip-find"), null);
+  assert.match(page.text("#part-panel .part-note"), /Without a song picked, the clip is matched by sound alone/);
   assert.deepEqual(page.errors, []);
 });
