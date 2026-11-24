@@ -2417,7 +2417,7 @@ def test_consensus_body_follows_mains_audio_head(tmp_path, listener_data):
     assert [x["id"] for x in svc._view(res, k=10, dedupe=True, cached=False)["results"]["main"]] == [5, 11, 7, 12]
 
 
-def test_consensus_body_is_computed_once_per_seed_from_the_searches_base_scores(tmp_path):
+def test_consensus_body_is_computed_once_per_seed_from_the_searches_base_scores(tmp_path, monkeypatch):
     class Rows(FakeRows):
         vocab = {"en": 0, "ru": 1}
 
@@ -2430,6 +2430,12 @@ def test_consensus_body_is_computed_once_per_seed_from_the_searches_base_scores(
 
         def embed_clips(self, clips):
             return {"sonic": "live windows"}, {}
+
+        def excerpt_clips(self, mono, sr):
+            return {"sonic": mono}, {}
+
+        def embed_channel_clips(self, clips):
+            return {"sonic": "clip windows"}, {}
 
     class FakeConsensus:
         calls = []
@@ -2447,7 +2453,7 @@ def test_consensus_body_is_computed_once_per_seed_from_the_searches_base_scores(
     engine = BaseEngine(RU_SCORES)
     svc = api.AnySong(engine, FakeDeezer(tmp_path), RU_META, languages=languages,
                       language_rows=Rows(languages, RU_META, RU_SCORES), consensus=FakeConsensus(),
-                      consensus_quantiles=CONSENSUS_Q)
+                      consensus_quantiles=CONSENSUS_Q, excerpts=True)
     plain = api.AnySong(LangEngine(RU_SCORES), FakeDeezer(tmp_path), RU_META, languages=languages,
                         language_rows=Rows(languages, RU_META, RU_SCORES))
     assert engine.keep_base and svc.health()["consensus"]["model"] == "fake" and plain.health()["consensus"] is None
@@ -2464,6 +2470,16 @@ def test_consensus_body_is_computed_once_per_seed_from_the_searches_base_scores(
     svc.similar(99, k=5)
     bases, code, kw = FakeConsensus.calls[-1]
     assert code == -1 and kw == {"windows": "live windows", "artist": "Daft Punk", "artist_id": None, "bpm": None}
+    # A clip that comes with its indexed song: the song's row (its playlist vector, artist and tempo) with the
+    # clip's windows as the audio, under the song's language. A clip alone is a live seed.
+    svc.excerpt(_wav(12), hint=1)
+    assert FakeConsensus.calls[-1] == ({"melody": "m", "samples": "s"}, 1, {"row": 0, "audio": "clip windows"})
+    svc.excerpt(_wav(12))
+    bases, code, kw = FakeConsensus.calls[-1]
+    assert code == -1 and kw == {"windows": "clip windows", "artist": "", "artist_id": None, "bpm": None}
+    monkeypatch.setattr(api, "EXCERPT_SEED_PLAYLISTS", False)  # the audio-only body, as measured against
+    svc.excerpt(_wav(12), hint=1)
+    assert set(FakeConsensus.calls[-1][2]) == {"windows", "artist", "artist_id", "bpm"}
 
 
 @pytest.mark.parametrize("flags,message", [
@@ -2585,10 +2601,40 @@ def test_part_of_a_catalog_seed_searches_its_stored_windows_and_is_cached_apart(
     assert "part" not in svc.similar(1)["query"] and "part" not in svc.results.get(1)["query"]
     assert len(engine.parts) == 2 and not svc.cached(1, (0.0, 10.0))
     # The song's length, known from a search, places the preview in the song.
-    svc.known.put(5, {"id": 5, "duration": 200})
+    svc._know({"id": 5, "duration": 200})
     assert svc.similar(5, part=(0.0, 10.0))["query"]["parts"]["song_offset_s"] == 48.0
-    svc.known.put(1, {"id": 1, "duration": 80})  # too short a song for the measured place
+    svc._know({"id": 1, "duration": 80})  # too short a song for the measured place
     assert svc.similar(1)["query"]["parts"]["song_offset_s"] is None
+
+
+def test_song_offset_is_known_from_the_catalogs_lengths_without_asking_deezer(tmp_path):
+    from soundalike.anysong.durations import DurationTable
+
+    table = DurationTable(np.array([1, 3, 5]), np.array([200, 80, 240]))
+    svc = api.AnySong(PartEngine(), FakeDeezer(tmp_path), META, parts=True, durations=table)
+
+    def offset(tid, **kw):
+        return svc.similar(tid, **kw)["query"]["parts"]["song_offset_s"]
+
+    assert offset(1) == 48.0 and offset(1, part=(0.0, 10.0)) == 48.0 and offset(5) == 48.0
+    assert offset(3) is None  # 80 s: shorter than anything the preview's place was measured for
+    assert offset(2) is None  # the table does not have it
+    assert svc.deezer.lookups == 0 and svc.deezer.searches == 0
+    assert svc.health()["durations"] == {"songs": 3}
+    # A length Deezer gave in any search or lookup since the start is kept, also for answers already cached and
+    # after the track object itself is forgotten; it wins over the table's.
+    svc._know({"id": 2, "duration": 300})
+    svc._know({"id": 3, "duration": 200.0})
+    svc._know({"id": 4, "duration": None})
+    svc._know({"id": 6, "duration": True})
+    svc.known = api.LRU(4)
+    assert offset(2) == 48.0 and offset(3) == 48.0 and offset(4) is None and offset(6) is None
+    svc.search("one more time")
+    assert svc.lengths.get(99) == 30  # the search's hits are remembered
+    # Without the table nothing is known of a catalog song that no search returned; without --parts nothing is said.
+    plain = api.AnySong(PartEngine(), FakeDeezer(tmp_path), META, parts=True)
+    assert plain.similar(1)["query"]["parts"]["song_offset_s"] is None and plain.health()["durations"] is None
+    assert "parts" not in api.AnySong(PartEngine(), FakeDeezer(tmp_path), META, durations=table).similar(1)["query"]
 
 
 def test_part_answers_take_the_list_parameters_and_leave_the_other_lists_alone(tmp_path):
@@ -2633,16 +2679,67 @@ def _wav(seconds, sr=8000, channels=1, value=0.1):
 
 
 def test_decode_bytes_reads_clips_in_memory_and_refuses_the_rest():
-    from soundalike.anysong.audio import decode_bytes
+    from soundalike.anysong.audio import UnsupportedAudio, decode_bytes, decode_wav, sniff
 
     mono, sr = decode_bytes(_wav(6, 8000, channels=2), 30, 5)
     assert sr == 8000 and mono.shape == (48000,) and mono.dtype == np.float32
-    for data, message in ((b"not audio at all", "could not decode"), (_wav(40), "longer than 30 s"),
-                          (_wav(2), "shorter than 5 s"), (_wav(6, sr=4000), "sample rate"), (b"", "could not decode")):
+    for data, message in ((_wav(40), "longer than 30 s"), (_wav(2), "shorter than 5 s"),
+                          (_wav(6, sr=4000), "sample rate"), (_wav(6, channels=3), "channel count"),
+                          (_wav(6)[:40], "fmt and a data chunk"), (b"RIFF\0\0\0\0WAVEfmt ", "fmt and a data chunk")):
         with pytest.raises(ValueError, match=message):
             decode_bytes(data, 30, 5)
-    # A header that understates its length cannot smuggle in more audio than the limit.
+    # What is not audio, or not a container that is asked for, is told apart from a clip that cannot be used.
+    for data in (b"not audio at all", b"", b"RIFF1234AVI LIST", b"\x7fELF" + b"\0" * 64, b"<html>", b"FORM\0\0\0\0AIFF"):
+        with pytest.raises(UnsupportedAudio):
+            decode_bytes(data, 30, 5)
+    # A header that understates its length cannot smuggle in more audio than the limit, and one that overstates it
+    # gets what is there.
     assert len(decode_bytes(_wav(30.4), 30)[0]) == 30 * 8000
+    lying = bytearray(_wav(6))
+    at = bytes(lying).index(b"data") + 4
+    lying[at:at + 4] = (2**32 - 1).to_bytes(4, "little")
+    assert len(decode_wav(bytes(lying), 30, 5)[0]) == 6 * 8000
+    assert sniff(b"fLaC...") == "flac" and sniff(b"OggS....") == "ogg" and sniff(b"ID3\x04") == "mp3"
+    assert sniff(b"\xff\xfb\x90\x00") == "mp3" and sniff(b"\xff\xf1\x50\x80") is None  # MPEG layer III, not AAC
+
+
+@pytest.mark.parametrize("subtype,tolerance", [("PCM_U8", 2e-2), ("PCM_16", 1e-4), ("PCM_24", 1e-6), ("PCM_32", 1e-6),
+                                               ("FLOAT", 1e-7), ("DOUBLE", 1e-7)])
+def test_decode_wav_reads_what_libsndfile_wrote(subtype, tolerance):
+    import io
+
+    import soundfile as sf
+
+    from soundalike.anysong.audio import decode_wav
+
+    x = (np.random.default_rng(1).uniform(-0.9, 0.9, (8000 * 6, 2))).astype(np.float32)
+    buf = io.BytesIO()
+    sf.write(buf, x, 8000, format="WAV", subtype=subtype)
+    mono, sr = decode_wav(buf.getvalue(), 30, 5)
+    reference = sf.read(io.BytesIO(buf.getvalue()), dtype="float32", always_2d=True)[0].mean(axis=1)
+    assert sr == 8000 and mono.dtype == np.float32 and np.abs(mono - reference).max() <= tolerance
+    # WAVE_FORMAT_EXTENSIBLE, which browsers and editors write for 24-bit and multichannel audio.
+    buf = io.BytesIO()
+    sf.write(buf, x, 8000, format="WAVEX", subtype=subtype)
+    assert np.abs(decode_wav(buf.getvalue(), 30, 5)[0] - reference).max() <= tolerance
+
+
+def test_decode_bytes_takes_only_the_formats_asked_for():
+    import io
+
+    import soundfile as sf
+
+    from soundalike.anysong.audio import UnsupportedAudio, decode_bytes
+
+    x = (np.random.default_rng(1).uniform(-0.5, 0.5, 8000 * 6)).astype(np.float32)
+    buf = io.BytesIO()
+    sf.write(buf, x, 8000, format="FLAC", subtype="PCM_16")
+    with pytest.raises(UnsupportedAudio, match="send WAV"):
+        decode_bytes(buf.getvalue(), 30, 5, formats=("wav",))
+    mono, sr = decode_bytes(buf.getvalue(), 30, 5, formats=("wav", "flac"))
+    assert sr == 8000 and np.abs(mono - x).max() < 1e-3
+    with pytest.raises(ValueError, match="could not decode"):
+        decode_bytes(b"fLaC" + b"\0" * 400, 30, 5)
 
 
 def test_excerpt_clips_hold_only_the_windows_an_excerpt_fills():
@@ -2669,7 +2766,7 @@ def test_excerpt_clips_hold_only_the_windows_an_excerpt_fills():
 def excerpt_server(tmp_path):
     queue = api.LearnQueue(tmp_path / "queue.jsonl")
     svc = api.AnySong(PartEngine(), FakeDeezer(tmp_path), META, copy_score=None, excerpts=True, learn=queue,
-                      identify_score=0.95)
+                      identify_score=0.95, parts=True)
     srv = api.Server(("127.0.0.1", 0), svc, search_per_min=600, similar_per_min=600, excerpt_per_min=12,
                      cors_origin="https://yassin.app", client_header="CF-Connecting-IP", excerpt_max_bytes=600_000)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
@@ -2692,78 +2789,236 @@ def post(srv, path, data, headers=None, method="POST"):
 
 def test_excerpt_ranks_a_clip_and_keeps_nothing(excerpt_server, tmp_path):
     svc = excerpt_server.service
-    code, headers, body = post(excerpt_server, "/api/anysong/excerpt?k=3", _wav(6))
+    code, headers, body = post(excerpt_server, "/api/anysong/excerpt?k=3", _wav(12))
     assert code == 200 and headers["Cache-Control"] == "no-store"
     # The clip is recognised as a recording of song 2 (samples score 0.99 >= 0.95), which then stands for the seed:
     # it and its other releases (1 and 4) are left out.
+    advert = {"min_s": 10.0, "max_s": 30.0, "preview_s": 30.0, "song_offset_s": None,
+              "excerpt": {"min_s": 10.0, "max_s": 30.0, "max_bytes": 600_000}}
     assert body["query"] == {"id": 2, "artist": "Daft Punk", "title": "One More Time (Radio Edit)",
-                             "source": "excerpt", "seconds": 6.0, "language": "unknown",
-                             "language_mode": "same", "hidden": 0, "scene": "off",
+                             "source": "excerpt", "seconds": 12.0, "language": "unknown",
+                             "language_mode": "same", "hidden": 0, "scene": "off", "parts": advert,
                              "identified": {"id": 2, "artist": "Daft Punk", "title": "One More Time (Radio Edit)",
                                             "score": 0.99}}
     assert [x["id"] for x in body["results"]["melody"]] == [3, 5, 7] and body["cached"] is False
-    assert svc.engine.calls == [("clips", 48000, 8000), ("embed_excerpt", ["melody", "samples", "sonic"]),
+    assert svc.engine.calls == [("clips", 96000, 8000), ("embed_excerpt", ["melody", "samples", "sonic"]),
                                 ("top", "samples"), ("windows", (2,), api.FETCH)]
+    # Clients learn of the upload from any answer, and from /healthz.
+    assert get(excerpt_server, "/api/anysong/similar?id=1")[2]["query"]["parts"]["excerpt"] == advert["excerpt"]
+    health = get(excerpt_server, "/healthz")[2]
+    assert health["excerpts"] is True and health["excerpt"]["formats"] == ["wav"]
     # A clip the samples model does not place that surely is ranked as it is, against the whole catalog.
     svc.identify_score = 0.995
-    code, _, body = post(excerpt_server, "/api/anysong/excerpt?k=3", _wav(6))
+    code, _, body = post(excerpt_server, "/api/anysong/excerpt?k=3", _wav(12))
     assert "identified" not in body["query"] and "id" not in body["query"]
     assert [x["id"] for x in body["results"]["melody"]] == [2, 3, 5]
     assert svc.engine.calls[-1] == ("windows", (), api.FETCH)
     svc.identify_score = 0.95
     assert svc.engine.peak == pytest.approx(1.0)  # the quiet clip (peak under 0.5) reaches the models at full scale
-    # No file, no cached result, no learn-queue line: a second upload is computed again.
-    assert len(svc.results) == 0 and not (tmp_path / "queue.jsonl").exists()
+    # No file, no cached result (the one there is the GET's above), no learn-queue line: a second upload is
+    # computed again.
+    assert len(svc.results) == 1 and svc.results.get(1) is not None and not (tmp_path / "queue.jsonl").exists()
     assert [p.name for p in tmp_path.iterdir()] == []
-    assert post(excerpt_server, "/api/anysong/excerpt", _wav(6))[2]["cached"] is False
+    assert post(excerpt_server, "/api/anysong/excerpt", _wav(12))[2]["cached"] is False
     assert svc.health()["served"]["excerpt"] == 3
+
+
+def test_excerpt_with_its_song_keeps_the_songs_identity(excerpt_server):
+    svc = excerpt_server.service
+    svc.languages = FakeLanguages({1: "en", 2: "en", 3: "fr", 4: "en", 5: "en", 6: "en", 7: "unknown"})
+    code, _, body = post(excerpt_server, "/api/anysong/excerpt?id=1&k=5", _wav(12))
+    assert code == 200 and body["query"]["id"] == 1 and body["query"]["title"] == "One More Time"
+    assert body["query"]["source"] == "excerpt" and body["query"]["language"] == "en"
+    # The seed is not looked for in the samples index, it and its other releases are left out, and its language
+    # gates the lists: the audio is the clip's, the identity the song's.
+    assert ("top", "samples") not in svc.engine.calls and svc.engine.calls[-1] == ("windows", (1,), api.FETCH)
+    assert _ids(body, "melody") == [3, 5, 7] and 3 not in _ids(body, "best")
+    assert svc.deezer.lookups == 0 and svc.deezer.searches == 0
+    # A song outside the catalog is asked of Deezer once (the search budget pays); one nobody knows is a 404.
+    code, _, body = post(excerpt_server, "/api/anysong/excerpt?id=99", _wav(12))
+    assert code == 200 and body["query"]["id"] == 99 and body["query"]["artist"] == "Daft Punk"
+    assert svc.deezer.lookups == 1 and svc.engine.calls[-1] == ("windows", (99,), api.FETCH)
+    code, _, body = post(excerpt_server, "/api/anysong/excerpt?id=12345", _wav(12))
+    assert code == 404 and body["error"] == "unknown track"
+    assert post(excerpt_server, "/api/anysong/excerpt?id=0", _wav(12))[0] == 400
+    assert post(excerpt_server, "/api/anysong/excerpt?id=x", _wav(12))[0] == 400
+
+
+def test_excerpt_lookup_errors_reach_the_caller_and_only_not_found_ranks_the_clip_alone(tmp_path):
+    dz = QueryDeezer(tmp_path, tracks=NEW_SONG)
+    svc = api.AnySong(PartEngine(), dz, META, copy_score=None, excerpts=True, parts=True)
+    srv = api.Server(("127.0.0.1", 0), svc, search_per_min=4, similar_per_min=600, excerpt_per_min=600)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        base = "/api/anysong/excerpt?"
+        code, _, body = post(srv, base + "artist=New%20Artist&title=Brand%20New%20Song", _wav(12))
+        assert code == 200 and body["query"]["id"] == 99  # search_per_min=4 -> burst of 1: this lookup spends it
+        ranked = len(svc.engine.calls)
+        # The search budget is spent: the caller is told so, by title and artist and by ISRC alike. Ranking the clip
+        # alone instead would drop the song's identity without a word.
+        for names in ("artist=Nobody&title=Another%20Song", "isrc=GBAYE0000001&artist=Nobody&title=Another%20Song",
+                      "isrc=GBAYE0000002"):
+            code, headers, body = post(srv, base + names, _wav(12))
+            assert code == 429 and body["error"] == "too many requests" and headers["Retry-After"]
+        assert len(svc.engine.calls) == ranked and dz.searches == 1
+        # A song the catalog names needs no budget.
+        code, _, body = post(srv, base + "artist=Third&title=Third%20Song", _wav(12))
+        assert code == 200 and body["query"]["id"] == 7
+        ranked = len(svc.engine.calls)
+        # Deezer down: 502, not a clip ranked alone.
+        srv.limiters["/api/anysong/search"] = api.TokenBucket(600, 100)
+        dz.fail = True
+        code, _, body = post(srv, base + "artist=Nobody&title=Uncached%20Song", _wav(12))
+        assert code == 502 and len(svc.engine.calls) == ranked
+        # A name that nothing knows is the one case that ranks the clip alone, under the names given.
+        dz.fail = False
+        code, _, body = post(srv, base + "artist=Nobody&title=Nothing%20At%20All", _wav(12))
+        assert code == 200 and "id" not in body["query"] and body["query"]["title"] == "Nothing At All"
+        code, _, body = post(srv, base + "isrc=GBAYE0000003", _wav(12))
+        assert code == 200 and "id" not in body["query"]
+        assert svc.health()["excerpt"]["refused"] == {429: 3, 502: 1}
+    finally:
+        srv.shutdown()
+        srv.server_close()
 
 
 def test_excerpt_hints_name_the_song_to_leave_out(excerpt_server):
     svc = excerpt_server.service
-    code, _, body = post(excerpt_server, "/api/anysong/excerpt?artist=Other%20Artist&title=Different%20Song", _wav(6))
+    code, _, body = post(excerpt_server, "/api/anysong/excerpt?artist=Other%20Artist&title=Different%20Song", _wav(12))
     assert code == 200 and body["query"]["id"] == 5 and body["query"]["title"] == "Different Song"
     assert svc.engine.calls[-1] == ("windows", (5,), api.FETCH) and "identified" not in body["query"]
     assert ("top", "samples") not in svc.engine.calls  # a named song is not looked for
     assert not {5, 6} & {x["id"] for x in body["results"]["melody"]}
     # A name nothing knows is no error: the clip is ranked as it is, under the names given.
     svc.deezer.tracks.clear()
-    svc.deezer.search = lambda q, limit: []
+    svc.deezer.search = lambda q, limit, language=None: []
     svc.identify_score = None
-    code, _, body = post(excerpt_server, "/api/anysong/excerpt?artist=Nobody&title=Nothing", _wav(6))
+    code, _, body = post(excerpt_server, "/api/anysong/excerpt?artist=Nobody&title=Nothing", _wav(12))
     assert code == 200 and "id" not in body["query"] and body["query"]["artist"] == "Nobody"
-    assert post(excerpt_server, "/api/anysong/excerpt?isrc=nope", _wav(6))[0] == 400
+    assert post(excerpt_server, "/api/anysong/excerpt?isrc=nope", _wav(12))[0] == 400
 
 
 @pytest.mark.parametrize("path,data,status", [
     ("/api/anysong/excerpt", b"", 411),
     ("/api/anysong/excerpt", b"x" * 600_001, 413),
-    ("/api/anysong/excerpt", b"garbage" * 100, 422),
+    ("/api/anysong/excerpt", b"garbage" * 100, 415),
+    ("/api/anysong/excerpt", b"\x7fELF" + b"\0" * 5000, 415),
+    ("/api/anysong/excerpt", "flac", 415),
+    ("/api/anysong/excerpt", "truncated", 422),
     ("/api/anysong/excerpt", "long", 422),
     ("/api/anysong/excerpt", "short", 422),
     ("/api/anysong/excerpt", "silent", 422),
     ("/api/anysong/excerpt?lang=xx", "ok", 400),
     ("/api/anysong/excerpt?k=0", "ok", 400),
+    ("/api/anysong/excerpt?a=1&b=2&c=3&d=4&e=5&f=6&g=7&h=8&i=9&j=10", "ok", 400),
     ("/api/anysong/similar?id=1", "ok", 404),
 ])
 def test_excerpt_errors(excerpt_server, path, data, status):
-    clips = {"long": lambda: _wav(31, sr=8000), "short": lambda: _wav(3), "silent": lambda: _wav(6, value=0.0),
-             "ok": lambda: _wav(6)}
+    import io
+
+    import soundfile as sf
+
+    def flac():
+        buf = io.BytesIO()
+        sf.write(buf, np.zeros(8000 * 12, np.float32) + 0.1, 8000, format="FLAC", subtype="PCM_16")
+        return buf.getvalue()
+
+    clips = {"long": lambda: _wav(31, sr=8000), "short": lambda: _wav(9), "silent": lambda: _wav(12, value=0.0),
+             "ok": lambda: _wav(12), "flac": flac, "truncated": lambda: _wav(12)[:30]}
+    svc = excerpt_server.service
+    before = list(svc.engine.calls)
     code, headers, body = post(excerpt_server, path, clips[data]() if isinstance(data, str) else data)
     assert code == status and body["ok"] is False and body["error"] and headers["Cache-Control"] == "no-store"
-    assert excerpt_server.service.pending.acquire(blocking=False)  # no slot is left taken
-    excerpt_server.service.pending.release()
+    assert svc.engine.calls == before  # nothing reached the models
+    assert svc.pending.acquire(blocking=False)  # no slot is left taken
+    svc.pending.release()
+    with svc.excerpt_turn():  # nor the excerpt turn
+        pass
+    if path.startswith("/api/anysong/excerpt"):
+        assert svc.health()["excerpt"]["refused"] == {status: 1}
 
 
 def test_excerpt_has_its_own_rate_limit_and_cors_preflight(excerpt_server):
     ip = {"CF-Connecting-IP": "203.0.113.9"}
-    codes = [post(excerpt_server, "/api/anysong/excerpt", _wav(6), ip)[0] for _ in range(4)]
-    assert codes == [200, 200, 200, 429]  # excerpt_per_min=12 -> burst of 3
+    codes = [post(excerpt_server, "/api/anysong/excerpt", _wav(12), ip) for _ in range(4)]
+    assert [code for code, _, _ in codes] == [200, 200, 200, 429]  # excerpt_per_min=12 -> burst of 3
+    assert codes[-1][1]["Retry-After"] == "5"  # one more in 60 / 12 seconds
     assert get(excerpt_server, "/api/anysong/similar?id=1", ip)[0] == 200  # the other budgets are untouched
     code, headers, _ = post(excerpt_server, "/api/anysong/excerpt", None, method="OPTIONS")
     assert code == 204 and headers["Access-Control-Allow-Origin"] == "https://yassin.app"
     assert "POST" in headers["Access-Control-Allow-Methods"]
     assert post(excerpt_server, "/api/anysong/similar", None, method="OPTIONS")[0] == 404
+
+
+def test_excerpt_takes_one_clip_at_a_time_and_does_not_wait_long_for_the_engine(excerpt_server, monkeypatch):
+    svc = excerpt_server.service
+
+    def send(client):  # each from another address: the per-client budget is not what is tested here
+        return post(excerpt_server, "/api/anysong/excerpt", _wav(12), {"CF-Connecting-IP": f"203.0.113.{client}"})
+
+    with svc.excerpt_turn():  # another clip is being read or ranked
+        code, headers, body = send(1)
+    assert code == 503 and headers["Retry-After"] == "2" and "another clip" in body["error"]
+    assert svc.engine.calls == []  # refused before the upload was decoded
+    assert send(2)[0] == 200
+    # The engine is busy with other requests for longer than an excerpt waits: 503, and the turn is given back.
+    monkeypatch.setattr(api, "EXCERPT_WAIT_SECONDS", 0.2)
+    svc.gpu.acquire()
+    try:
+        code, headers, body = send(3)
+    finally:
+        svc.gpu.release()
+    assert code == 503 and headers["Retry-After"] == "2" and "busy" in body["error"]
+    assert send(4)[0] == 200
+    assert svc.health()["excerpt"]["refused"] == {503: 2}
+
+
+def test_excerpt_upload_that_stalls_or_has_no_length_is_dropped(excerpt_server, monkeypatch):
+    import socket
+
+    monkeypatch.setattr(api, "EXCERPT_READ_SECONDS", 0.5)
+
+    def raw(headers, sent=b""):
+        with socket.create_connection(("127.0.0.1", excerpt_server.server_address[1]), timeout=10) as sock:
+            sock.sendall(b"POST /api/anysong/excerpt HTTP/1.1\r\nHost: x\r\n" + headers + b"\r\n" + sent)
+            answer = b""
+            while chunk := sock.recv(65536):
+                answer += chunk
+        return answer.decode()
+
+    import time
+
+    started = time.monotonic()
+    answer = raw(b"Content-Length: 200000\r\n", _wav(12)[:1000])  # 1 KB of 200 KB, then silence
+    assert " 408 " in answer.splitlines()[0] and "Connection: close" in answer
+    assert time.monotonic() - started < 5
+    answer = raw(b"Transfer-Encoding: chunked\r\n", b"5\r\nhello\r\n0\r\n\r\n")
+    assert " 411 " in answer.splitlines()[0]
+    svc = excerpt_server.service
+    assert svc.engine.calls == [] and svc.health()["excerpt"]["refused"] == {408: 1, 411: 1}
+    assert post(excerpt_server, "/api/anysong/excerpt", _wav(12))[0] == 200  # the turn was given back
+
+
+def test_excerpt_requests_leave_no_names_in_the_log(excerpt_server, capsys):
+    path = "/api/anysong/excerpt?artist=Secret%20Artist&title=Secret%20Title&id=5"
+    assert post(excerpt_server, path, _wav(12))[0] == 200
+    assert post(excerpt_server, path, b"junk")[0] == 415
+    assert post(excerpt_server, path, None, method="OPTIONS")[0] == 204
+    log = capsys.readouterr().out
+    assert log.count('"POST /api/anysong/excerpt HTTP/1.1"') == 2 and '"OPTIONS /api/anysong/excerpt HTTP/1.1"' in log
+    assert "Secret" not in log and "id=5" not in log and "?" not in log
+
+
+def test_excerpts_need_parts_and_known_formats(tmp_path, capsys):
+    with pytest.raises(ValueError, match="excerpt formats"):
+        api.AnySong(PartEngine(), FakeDeezer(tmp_path), META, excerpts=True, excerpt_formats=("wav", "aiff"))
+    with pytest.raises(ValueError, match="excerpt formats"):
+        api.AnySong(PartEngine(), FakeDeezer(tmp_path), META, excerpts=True, excerpt_formats=())
+    # Without --parts there is no query.parts for the advert to sit in: the engine refuses to start that way.
+    pytest.importorskip("torch")
+    with pytest.raises(SystemExit):
+        api.main(["--index", "nowhere", "--excerpts"])
+    assert "--excerpts needs --parts" in capsys.readouterr().err
 
 
 def test_excerpt_route_is_off_unless_enabled(server):
@@ -2827,14 +3082,19 @@ def test_parts_alone_do_not_open_the_excerpt_route(part_server):
     assert "excerpt" not in part_server.service.health()["served"]
 
 
-def test_production_unit_serves_parts_but_neither_excerpts_nor_identification():
+def test_production_unit_serves_parts_and_wav_excerpts_but_no_identification():
     from pathlib import Path
 
     unit = (Path(__file__).parents[1] / "deploy" / "homelab" / "soundalike-anysong.service").read_text(encoding="utf-8")
     start = unit[unit.index("ExecStart="):unit.index("\nRestart=")]
-    flags = [word for word in start.replace("\\\n", " ").split() if word.startswith("--")]
+    words = start.replace("\\\n", " ").split()
+    flags = [word for word in words if word.startswith("--")]
     assert "--parts" in flags and len(flags) == len(set(flags))
-    assert not [flag for flag in flags if flag.startswith(("--excerpt", "--identify", "--part-sound"))]
+    # Clips of the listener's audio: on, six a minute for a client, 6 MB at most, WAV alone (the default: no
+    # decoder library on bytes anyone can send), and never named from the samples index.
+    assert "--excerpts" in flags and words[words.index("--excerpt-per-min") + 1] == "6"
+    assert words[words.index("--excerpt-max-mb") + 1] == "6"
+    assert not [flag for flag in flags if flag.startswith(("--excerpt-formats", "--identify", "--part-sound"))]
 
 
 def test_identify_score_cannot_be_set_without_excerpts(capsys):
