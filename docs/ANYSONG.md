@@ -484,10 +484,12 @@ part.
 - **Detection.** `/healthz` has `parts: true` (and `excerpts: false`), and every `similar` answer of such an engine
   carries `query.parts`: `{"min_s": 10.0, "max_s": 30.0, "preview_s": 30.0, "song_offset_s": 48.0}`.
   `song_offset_s` is where the preview starts in the song, `null` when the engine does not know the song's length
-  (always known for a song outside the catalog; for a catalog song only when it came through `search` in the last
-  ten minutes) or the song is shorter than 90 s. 16 of 17 previews measured against full recordings begin 47.5 to
-  48.0 s into the song and one at 59.4 s, so clients should word it as the usual place; a client that knows the
-  song's length itself may assume 48 s for songs of 90 s or more.
+  or the song is shorter than 90 s. The length is always known for a song outside the catalog (its Deezer track
+  object). For a catalog song, which is ranked without asking Deezer, it comes from the catalog's length table
+  (`--durations`, [Song lengths](#song-lengths)) or from any Deezer track object a search or lookup has brought
+  in since the service started; no request is made for it. 16 of 17 previews measured against full recordings
+  begin 47.5 to 48.0 s into the song and one at 59.4 s, so clients should word it as the usual place; a client
+  that knows the song's length itself may assume 48 s for songs of 90 s or more.
 - **Echo.** An answer for a span carries `query.part`: `{"start": 10.0, "end": 20.0, "heard": {"sonic": [10.0,
   20.0], "samples": [9.19, 21.44], "melody": [5.0, 25.0]}}`, the span asked for and the seconds of the preview each
   model heard. Without `part=` there is no `query.part`.
@@ -778,6 +780,23 @@ python -m soundalike.anysong.tempo --ids index_full/samples/ids.npy --previews p
 The full catalog took 0.7 GPU-hours on the RTX 5080; 266,945 of 269,278 tracks have a tempo. The API runs the same
 model on the previews of seeds outside the catalog (`--tempo-model`).
 
+## Song lengths
+
+`durations.npz` (`ids` sorted, `seconds` as uint16; 10 bytes a song) holds the length Deezer gave for the catalog's
+songs when they were collected. The API reads it with `--durations` only to say where a preview sits in its song
+(`query.parts.song_offset_s`); nothing is ranked with it. [`anysong.durations`](../src/soundalike/anysong/durations.py)
+builds it from the track files the catalog was collected with, without any request:
+
+```sh
+python -m soundalike.anysong.durations --ids index/sonic/ids.npy --out index/durations.npz \
+  --tracks crawl/export/deezer_tracks.jsonl previews/tracks.jsonl
+```
+
+`--tracks` are JSON-lines files with a Deezer track per line (`track_id` or `id`, and `duration` in seconds): what
+`crawl export` and `previews --save-meta` write; earlier files win. A song the files do not have stays without a
+length, and its answers say `song_offset_s: null` until a search returns it. `/healthz` reports
+`durations.songs`, and `index_check` the number of indexed songs with a length (`with_length`).
+
 ## Listener ranker
 
 `ranker.npz` holds the listener model as plain arrays: 100 trees of depth at most 6, about 120 KB. Serving
@@ -834,7 +853,7 @@ to keep those cached: 16 GB with `MemoryMax=14G`. If they fall out of the cache 
 One directory holds everything of an index, with fixed names (the unit's flags point into `index/current`):
 `melody/`, `samples/`, `sonic/` (index_build / index_whiten output), `heads/h2.*` and `heads/h4.*`,
 `playlists/cooc.npz` and `cf128.npy`, `catalog_meta.npz`, `languages.npz`, `scene.npz`, `core_ids.npy`,
-`tempo.npz`, `ranker.npz`, `popularity.npz`, `match_quantiles.json`, `overall.json`, `consensus.npz` and
+`tempo.npz`, `durations.npz`, `ranker.npz`, `popularity.npz`, `match_quantiles.json`, `overall.json`, `consensus.npz` and
 `consensus_quantiles.json`. Before the symlink swap,
 
 ```sh
@@ -852,7 +871,7 @@ Swapping the index:
 ```sh
 scp -r index_new root@ct409:/opt/soundalike/index-store/NAME          # parallel scp per file is fastest
 cd /opt/soundalike/index-store/NAME && sha256sum -c ../NAME.sha256 && chmod -R go-w .
-cp catalog_meta.npz languages.npz scene.npz tempo.npz core_ids.npy ranker.npz /opt/soundalike/index-store/NAME/   # its tables
+cp catalog_meta.npz languages.npz scene.npz tempo.npz durations.npz core_ids.npy ranker.npz /opt/soundalike/index-store/NAME/   # its tables
 systemctl stop soundalike-anysong
 ln -sfn /opt/soundalike/index-store/NAME /opt/soundalike/index/current
 systemctl start soundalike-anysong && journalctl -u soundalike-anysong -f   # wait for "ready in ..."

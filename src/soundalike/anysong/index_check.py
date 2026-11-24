@@ -11,6 +11,7 @@ The directory is everything the service reads that belongs to one index (docs/AN
     heads/<h4>.npz, .emb.npy     scene head of the blend and the consensus body (--blend-head)
     playlists/cooc.npz, cf128.npy                       playlist vectors (--blend-cf)
     catalog_meta.npz languages.npz scene.npz core_ids.npy tempo.npz      the catalog tables
+    durations.npz                                       song lengths (--durations), for as many songs as are known
     ranker.npz popularity.npz                           listener ranker and the popularity it reads
     match_quantiles.json overall.json                   sound-match and overall-match scales of this index
     consensus.npz consensus_quantiles.json              consensus model and the quantiles of its body score
@@ -32,8 +33,9 @@ import numpy as np
 from . import listener
 
 CHANNEL_NAMES = ("melody", "samples", "sonic")
-TABLES = ("catalog_meta.npz", "languages.npz", "scene.npz", "core_ids.npy", "tempo.npz", "ranker.npz",
-          "popularity.npz", "match_quantiles.json", "overall.json", "consensus.npz", "consensus_quantiles.json")
+TABLES = ("catalog_meta.npz", "languages.npz", "scene.npz", "core_ids.npy", "tempo.npz", "durations.npz",
+          "ranker.npz", "popularity.npz", "match_quantiles.json", "overall.json", "consensus.npz",
+          "consensus_quantiles.json")
 
 
 def _array(path: Path, problems: list[str]) -> np.ndarray | None:
@@ -111,6 +113,7 @@ def check(root: Path | str, head: str = "h2", blend_head: str = "h4") -> tuple[l
     """(problems, summary) for the index directory ``root``; no problems = the v12 service can start on it."""
     from . import api, consensus
     from .languages import LanguageTable
+    from .durations import DurationTable
     from .scene import SceneTable
 
     root = Path(root)
@@ -168,6 +171,10 @@ def check(root: Path | str, head: str = "h2", blend_head: str = "h4") -> tuple[l
     if core is not None and sonic is not None and not np.isin(core, sonic).any():
         problems.append("core_ids.npy: none of its songs is in the index")
     with_tempo = table("tempo.npz", tempo)
+    lengths = table("durations.npz", DurationTable.load)
+    with_length = None if lengths is None or sonic is None else int(np.isin(sonic, lengths.ids).sum())
+    if with_length == 0 and n:
+        problems.append("durations.npz: none of its songs is in the index")
     ranker = table("ranker.npz", listener.Ranker.load)
     table("popularity.npz", listener.Popularity.load)
     table("match_quantiles.json", quantiles)
@@ -178,7 +185,7 @@ def check(root: Path | str, head: str = "h2", blend_head: str = "h4") -> tuple[l
         unknown = [f for f in model.features if f not in consensus.FEATURES]
         if unknown:
             problems.append(f"consensus.npz: reads features this code does not compute: {unknown}")
-    return problems, {"songs": n, "named": named, "with_tempo": with_tempo,
+    return problems, {"songs": n, "named": named, "with_tempo": with_tempo, "with_length": with_length,
                       "graph": None if rows is None else len(rows),
                       "ranker": None if ranker is None else ranker.meta or "on",
                       "consensus": None if model is None else model.meta or "on"}

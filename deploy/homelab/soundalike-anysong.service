@@ -24,7 +24,8 @@ Environment=ANYSONG_HOST=192.168.1.47
 Environment=ANYSONG_PORT=8790
 # /opt/soundalike/index/current points at one index directory that holds everything the service reads of an index
 # (python -m soundalike.anysong.index_check <dir> lists and checks it): the melody, samples and sonic indexes, the scene
-# heads (heads/), the playlist vectors (playlists/), the catalog tables (catalog_meta, languages, scene, tempo),
+# heads (heads/), the playlist vectors (playlists/), the catalog tables (catalog_meta, languages, scene, tempo,
+# durations: song lengths, so that an answer can say where the preview sits in the song),
 # core_ids.npy, the songs of the catalog before anysong.crawl grew it (anysong.tiers), ranker.npz, the listener ranker
 # trained on these tables (anysong.listener) with its popularity.npz, the match and overall scales, and the consensus
 # model with its quantiles (anysong.consensus). Swapping the symlink swaps them together. Indexes live on the
@@ -45,6 +46,7 @@ ExecStart=/opt/soundalike/venv/bin/python -m soundalike.anysong.api \
     --language-model /opt/soundalike/ckpt/whisper-large-v3-turbo \
     --scene /opt/soundalike/index/current/scene.npz --core-ids /opt/soundalike/index/current/core_ids.npy \
     --tempo /opt/soundalike/index/current/tempo.npz --tempo-model /opt/soundalike/ckpt/beat_this/final0.ckpt \
+    --durations /opt/soundalike/index/current/durations.npz \
     --ranker /opt/soundalike/index/current/ranker.npz --head /opt/soundalike/index/current/heads/h2 \
     --popularity /opt/soundalike/index/current/popularity.npz \
     --match-quantiles /opt/soundalike/index/current/match_quantiles.json \
