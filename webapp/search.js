@@ -75,6 +75,39 @@
     "Song times assume the preview sits where previews usually do; in a few songs it is elsewhere.";
   const partKeysNote =
     "Drag the part or its edges. Keyboard: arrow keys move it, Shift with an arrow key changes its length.";
+  // Any part of the song: a server that also ranks a clip of the listener's own
+  // audio says so in query.parts.excerpt ({min_s, max_s, max_bytes}). The clip
+  // is cut in the browser from a file the listener chooses or from a tab's
+  // sound, and only that clip is sent (POST /api/anysong/excerpt).
+  const clipKey = "clip";
+  const clipAdvertKey = "soundalike:excerpt:v1";
+  const clipDefaultSeconds = 15;
+  const clipCaptureSeconds = [10, 20, 30];
+  const clipFileLimitBytes = 400 * 1024 * 1024;
+  const clipSourceLabels = {
+    preview: "The 30-second preview",
+    tab: "Any part, from YouTube or another tab",
+    file: "A file of the song",
+  };
+  const clipFileIntro =
+    "Have this song as a file? Choose it and pick any part of the whole song.";
+  const clipPrivacyNote =
+    "The file is opened in your browser and is not uploaded. Only the seconds you pick are sent to be matched, and nothing is stored.";
+  const clipTabIntro =
+    "Soundalike holds only a 30-second preview of each song. For any other part, play it in another tab and let Soundalike listen to that tab.";
+  const clipTabSteps = [
+    "Open the song on YouTube, or any site that plays it, in another tab and go to the part you want.",
+    "Press Capture here. In your browser's dialog choose that tab and leave “Also share tab audio” on.",
+    "Listen to what was captured, drag the part to match, and press Apply.",
+  ];
+  const clipTabNote =
+    "Only the sound is used, for the seconds you chose; the picture is dropped at once and nothing is stored. Soundalike hears only what you capture, not the rest of the video. This is your browser's own tab sharing: it does not make copying allowed, so capture only audio you may use under the site's terms.";
+  const clipSeedNote =
+    "The clip replaces the preview as what Soundalike hears. The song, its artist and its language stay the ones you picked.";
+  const clipAloneNote =
+    "Without a song picked, the clip is matched by sound alone: Listeners also play needs to know the song.";
+  const clipNoListenersNote =
+    "This list comes from what a song's listeners also play, and we don't know which song your clip is from. Search the song first, then match your clip from its Match a part panel.";
   const DEMO = [
     ["Plastic Love", "Mariya Takeuchi"],
     ["Redbone", "Childish Gambino"],
@@ -121,11 +154,19 @@
   let currentKey = null;
   let shownPick = null;
   let lastSurprise = -1;
+  // The pick whose Match a part panel is open, the clip sound that is playing
+  // and the tab capture in progress.
+  let panelPick = null;
+  let clipNode = null;
+  let clipCapture = null;
+  let clipContext = null;
 
   class RequestError extends Error {
-    constructor(status, message) {
+    // clip: the request sent a clip of the listener's own audio.
+    constructor(status, message, clip = false) {
       super(message);
       this.status = status;
+      this.clip = clip;
     }
   }
 
@@ -446,6 +487,7 @@
 
   function clearResults() {
     loadSequence += 1;
+    dropPanel();
     currentKey = null;
     shownPick = null;
     stopPreview();
@@ -467,7 +509,7 @@
     }
     if (target) {
       if (targetKey(target) !== currentKey) load(target);
-    } else if (currentKey !== null) {
+    } else if (currentKey !== null && currentKey !== clipKey) {
       clearResults();
     }
   }
@@ -523,6 +565,114 @@
     }
   }
 
+  // ---------- a clip of the listener's own audio ----------
+  // What the server takes as a clip, from an answer's query.parts.excerpt.
+  function clipAdvert(body) {
+    const advert = (((body || {}).query || {}).parts || {}).excerpt;
+    if (!advert || typeof advert !== "object") return null;
+    const min = Number(advert.min_s);
+    const max = Number(advert.max_s);
+    const maxBytes = Number(advert.max_bytes);
+    return min > 0 && max >= min && maxBytes > 0 ? { min, max, maxBytes } : null;
+  }
+
+  // The last answer's word on clips is kept, so the entry under the search bar
+  // is there on the next visit without a request of its own.
+  function savedClipAdvert() {
+    try {
+      const kept = JSON.parse(window.localStorage.getItem(clipAdvertKey) || "null");
+      return clipAdvert({ query: { parts: { excerpt: kept } } });
+    } catch {
+      return null;
+    }
+  }
+
+  function noteClipAdvert(body, refused = false) {
+    const advert = refused ? null : clipAdvert(body);
+    try {
+      if (advert) {
+        window.localStorage.setItem(
+          clipAdvertKey,
+          JSON.stringify({ min_s: advert.min, max_s: advert.max, max_bytes: advert.maxBytes })
+        );
+      } else window.localStorage.removeItem(clipAdvertKey);
+    } catch {}
+    showClipEntry();
+  }
+
+  function showClipEntry() {
+    const entry = document.querySelector("#clip-open");
+    if (entry) entry.hidden = !savedClipAdvert() || !canDecodeAudio();
+  }
+
+  // The lists for picked.clip. With a seed song the clip replaces its audio
+  // and the song stays the seed (id=); without one the clip stands alone.
+  async function fetchClipMatches(picked, isCurrent) {
+    const params = new URLSearchParams({ k: "20", lang: picked.lang });
+    if (picked.seed.id) params.set("id", String(picked.seed.id));
+    if (picked.audioOnly) params.set("scene", "0");
+    for (let attempt = 0; ; attempt += 1) {
+      const requestController = new AbortController();
+      const timeout = window.setTimeout(
+        () => requestController.abort(),
+        bestMatchesTimeoutMs
+      );
+      let response;
+      let body = {};
+      try {
+        response = await fetch(`/api/anysong/excerpt?${params}`, {
+          method: "POST",
+          headers: { "Content-Type": "audio/wav" },
+          body: picked.clip.blob,
+          signal: requestController.signal,
+        });
+        try {
+          body = await response.json();
+        } catch {}
+      } catch (error) {
+        throw new RequestError(error.name === "AbortError" ? 504 : 0, "", true);
+      } finally {
+        window.clearTimeout(timeout);
+      }
+      // One clip is ranked at a time; a short wait usually frees the slot.
+      if (response.status === 503 && attempt < bestMatchesRetries && isCurrent()) {
+        await pause(2000 * (attempt + 1));
+        continue;
+      }
+      if (!response.ok || !body.ok) {
+        // A server that stopped taking clips: the entry goes away.
+        if (response.status === 404 && !/track/.test(body.error || "")) noteClipAdvert(null, true);
+        throw new RequestError(response.status, body.error || "", true);
+      }
+      return body;
+    }
+  }
+
+  function fetchMatches(picked, isCurrent) {
+    return picked.clip
+      ? fetchClipMatches(picked, isCurrent)
+      : fetchBestMatches(picked.target, isCurrent, picked.lang, picked.audioOnly, picked.part);
+  }
+
+  function clipErrorText(error) {
+    const status = error.status;
+    const message = error.message || "";
+    const said = message ? `${message.charAt(0).toUpperCase()}${message.slice(1)}.` : "";
+    if (status === 404) {
+      return /track/.test(message)
+        ? "We couldn't find that song on Deezer."
+        : "Matching your own audio is not switched on right now.";
+    }
+    if (status === 413) return "That clip is too large to send. Pick a shorter part.";
+    if (status === 415 || status === 422 || status === 400) {
+      return said || "We couldn't read that clip.";
+    }
+    if (status === 429) {
+      return "You're sending clips a bit fast. Wait a minute and try again.";
+    }
+    return "";
+  }
+
   // A link that names only a title opens the first search hit with a preview.
   async function searchFirst(text) {
     try {
@@ -544,6 +694,8 @@
 
   function errorText(error) {
     const status = error && error.status;
+    const clipText = error && error.clip ? clipErrorText(error) : "";
+    if (clipText) return clipText;
     const message = (error && error.message) || "";
     if (status === 400) return "Pick a song from the suggestions, or type its title and artist.";
     if (status === 404) {
@@ -568,6 +720,7 @@
 
   async function load(target) {
     const sequence = ++loadSequence;
+    dropPanel();
     const isCurrent = () => sequence === loadSequence;
     currentKey = targetKey(target);
     shownPick = null;
@@ -602,6 +755,9 @@
         audioOnly: savedAudioOnly(),
         // Only a link carries a part; a newly picked song starts whole.
         part: target.part || null,
+        // A clip of the listener's own audio matched instead of the preview:
+        // {blob, source, label}. Never in a link: the audio is only here.
+        clip: null,
         bestSequence: 0,
         best: { status: "pending" },
         body: null,
@@ -618,6 +774,7 @@
       if (!isCurrent()) return;
       picked.best = { status: "ready", body };
       picked.body = body;
+      noteClipAdvert(body);
       // A server without Match a part answers for the whole preview.
       if (!(body.query || {}).part) picked.part = null;
       const query = body.query || {};
@@ -746,7 +903,14 @@
     const total = (body.timings_ms || {}).total;
     const live = query.source === "live";
     return [
-      [live ? (body.cached ? "heard live earlier" : "heard live just now") : "in our library", live],
+      [
+        query.source === "excerpt"
+          ? "your clip, heard just now"
+          : live
+            ? (body.cached ? "heard live earlier" : "heard live just now")
+            : "in our library",
+        live || query.source === "excerpt",
+      ],
       [!body.cached && total ? `matched in ${(total / 1000).toFixed(1)} s` : "", false],
     ].filter(([text]) => text);
   }
@@ -847,7 +1011,7 @@
     renderTab(picked);
     const isCurrent = () =>
       shownPick === picked && picked.bestSequence === sequence;
-    fetchBestMatches(picked.target, isCurrent, picked.lang, picked.audioOnly, picked.part)
+    fetchMatches(picked, isCurrent)
       .then(
         body => ({ status: "ready", body }),
         error => ({ status: "failed", error })
@@ -858,6 +1022,8 @@
         if (entry.status === "ready") {
           picked.body = entry.body;
           if (picked.part && !(entry.body.query || {}).part) setPart(picked, null);
+          noteClipAdvert(entry.body);
+          if (picked.clip && adoptClipSeed(picked, entry.body)) return;
         }
         renderTab(picked);
       });
@@ -905,7 +1071,12 @@
     } else if (entry.status === "failed") {
       list.innerHTML = `<li class="state err">${esc(errorText(entry.error))}</li>`;
     } else if (noListeners) {
-      const note = picked.audioOnly ? audioOnlyListenersNote : noListenersNote;
+      const note =
+        picked.clip && !picked.seed.id
+          ? clipNoListenersNote
+          : picked.audioOnly
+            ? audioOnlyListenersNote
+            : noListenersNote;
       list.innerHTML = `<li class="state">${esc(note)}</li>`;
     } else if (!rows.length) {
       list.innerHTML = '<li class="state">No matches in this list.</li>';
@@ -957,8 +1128,8 @@
         ? `<button class="pv" type="button" data-id="${seed.id}" aria-label="Preview ${esc(seed.title)}" title="Preview">▶</button>`
         : "") +
       '<button class="copy" id="part-open" type="button" aria-expanded="false" aria-controls="part-panel" hidden>Match a part <span class="beta">beta</span></button>' +
-      '<button class="copy" id="share" type="button">🔗 Share</button><button class="copy" id="copy" type="button">⧉ Copy list</button><button class="save" id="save" type="button">＋ Save to Spotify</button></div></section>' +
-      '<section class="part" id="part-panel" aria-label="Match a part of the preview" hidden></section>' +
+      `<button class="copy" id="share" type="button"${seed.id ? "" : " hidden"}>🔗 Share</button><button class="copy" id="copy" type="button">⧉ Copy list</button><button class="save" id="save" type="button">＋ Save to Spotify</button></div></section>` +
+      '<section class="part" id="part-panel" aria-label="Match a part of the song" hidden></section>' +
       '<div class="part-chip" id="part-chip" hidden></div>' +
       `<div class="tabs" role="tablist" aria-label="Kind of match">${resultTabs
         .map(
@@ -1058,6 +1229,7 @@
 
   function stopPreview() {
     audio.pause();
+    stopClipSound();
     playingId = null;
     partEnd = null;
     syncPlaying();
@@ -1092,7 +1264,7 @@
 
   audio.addEventListener("ended", stopPreview);
   audio.addEventListener("pause", () => {
-    if (audio.paused) partEnd = null;
+    if (audio.paused && clipNode === null) partEnd = null;
     syncPlaying();
   });
   audio.addEventListener("timeupdate", () => {
@@ -1161,7 +1333,8 @@
 
   // Keeps a span on the step grid, inside the preview and within the lengths.
   function fitSpan(start, end, limits) {
-    const snap = value => Math.round(value / partStepSeconds) * partStepSeconds;
+    const step = limits.step || partStepSeconds;
+    const snap = value => Math.round(value / step) * step;
     const length = Math.min(limits.max, Math.max(limits.min, snap(end - start)));
     const from = Math.min(limits.total - length, Math.max(0, snap(start)));
     return [from, from + length];
@@ -1176,84 +1349,174 @@
 
   function applyPart(picked, part) {
     closePartPanel();
+    picked.clip = null;
     setPart(picked, part);
     reloadBest(picked);
   }
 
-  // The chip under the seed card while a part is matched, and the button that
-  // opens the picker: shown only when the server's answer offers parts.
+  // What the server takes as a clip for this pick: its last answer says, or,
+  // for a clip without a song, the answer kept from before. A part of a clip
+  // is as long as a part of the preview.
+  function clipLimits(picked) {
+    const advert = picked.body ? clipAdvert(picked.body) : savedClipAdvert();
+    if (!advert) return null;
+    const min = Math.max(2 * partStepSeconds, Math.ceil(advert.min));
+    const max = Math.min(partLongestSeconds, Math.floor(advert.max));
+    return min <= max
+      ? { min, max, longest: Math.floor(advert.max), maxBytes: advert.maxBytes }
+      : null;
+  }
+
+  const canDecodeAudio = () =>
+    Boolean(window.AudioContext || window.webkitAudioContext) &&
+    Boolean(window.OfflineAudioContext || window.webkitOfflineAudioContext);
+
+  // A tab's sound can be captured in Chromium browsers on a computer. The
+  // others share no audio, so the source is not offered there.
+  function canCaptureTab() {
+    const browser = window.navigator || {};
+    return Boolean(
+      browser.userAgentData &&
+        !browser.userAgentData.mobile &&
+        browser.mediaDevices &&
+        browser.mediaDevices.getDisplayMedia &&
+        window.AudioWorkletNode
+    );
+  }
+
+  // Where a part can come from: the preview, a file of the song, a tab.
+  function partSources(picked) {
+    const clips = canDecodeAudio() ? clipLimits(picked) : null;
+    return [
+      partLimits(picked) ? "preview" : "",
+      clips && canCaptureTab() ? "tab" : "",
+      clips ? "file" : "",
+    ].filter(Boolean);
+  }
+
+  const clipLabel = (source, start, end) =>
+    `${clock(start)}–${clock(end)} of your ${source === "file" ? "file" : "capture"}`;
+
+  // The chip under the seed card while a part or a clip is matched, and the
+  // button that opens the picker: shown only when the server's answer offers
+  // parts or clips.
   function renderPart(picked) {
     const open = document.querySelector("#part-open");
     const chip = document.querySelector("#part-chip");
     if (!open || !chip) return;
-    const limits = partLimits(picked);
-    open.hidden = !limits;
-    if (!limits) closePartPanel();
-    chip.hidden = !picked.part;
-    if (!picked.part) {
+    const sources = partSources(picked);
+    open.hidden = !sources.length;
+    if (!sources.length) closePartPanel();
+    const label = picked.clip
+      ? `your clip (${picked.clip.label})`
+      : picked.part
+        ? spanLabel(picked, picked.part)
+        : "";
+    chip.hidden = !label;
+    if (!label) {
       chip.innerHTML = "";
       return;
     }
-    const heard = heardText(picked);
+    const heard = picked.clip ? "" : heardText(picked);
+    // Without a song there is no preview to go back to.
+    const whole = Boolean(picked.seed.id);
     chip.innerHTML =
-      `<span id="part-chip-text"${heard ? ` title="${esc(heard)}"` : ""}>Matching ${esc(spanLabel(picked, picked.part))}</span>` +
-      ' · <button type="button" id="part-clear" title="Match the whole preview again">whole preview</button>';
-    document.querySelector("#part-clear").onclick = () => applyPart(picked, null);
+      `<span id="part-chip-text"${heard ? ` title="${esc(heard)}"` : ""}>Matching ${esc(label)}</span>` +
+      ` · <button type="button" id="part-clear" title="${
+        whole ? "Match the whole preview again" : "Clear your clip"
+      }">${whole ? "whole preview" : "clear"}</button>`;
+    document.querySelector("#part-clear").onclick = () =>
+      whole ? applyPart(picked, null) : clearResults();
+  }
+
+  // Forgets the open picker without touching the page, which is being replaced.
+  function dropPanel() {
+    stopCapture();
+    partDraft = null;
+    panelPick = null;
   }
 
   function closePartPanel() {
     const panel = document.querySelector("#part-panel");
     if (partEnd !== null) stopPreview();
-    partDraft = null;
+    const picked = panelPick;
+    dropPanel();
     if (!panel || panel.hidden) return;
     panel.hidden = true;
     panel.innerHTML = "";
     document.querySelector("#part-open")?.setAttribute("aria-expanded", "false");
+    // A clip without a song that was never matched leaves nothing to show.
+    if (picked && !picked.seed.id && shownPick !== picked) clearResults();
   }
 
   function togglePartPanel(picked) {
     const panel = document.querySelector("#part-panel");
-    const limits = partLimits(picked);
-    if (!panel || !limits) return;
+    const sources = partSources(picked);
+    if (!panel || !sources.length) return;
     if (!panel.hidden) {
       closePartPanel();
       return;
     }
-    const [start, end] = fitSpan(...(picked.part || partDefault), limits);
-    partDraft = { picked, limits, start, end, peaks: null };
-    const offset = songOffset(picked);
-    const base = offset === null ? 0 : offset;
-    const lengths = [];
-    for (let length = limits.min; length <= limits.max; length += partStepSeconds) {
-      lengths.push(length);
-    }
-    const ticks = [];
-    for (let at = 0; at <= limits.total; at += 10) ticks.push(at);
-    panel.innerHTML =
-      `<p class="part-intro"><span class="beta">New · beta</span> ${esc(partIntro)}</p>` +
-      '<div class="part-track" id="part-track"><canvas id="part-wave" aria-hidden="true"></canvas>' +
-      '<div class="part-span" id="part-span" role="slider" tabindex="0" aria-label="Part of the preview to match" aria-valuemin="0">' +
-      '<i class="part-edge" data-edge="start"></i><i class="part-edge" data-edge="end"></i></div>' +
-      '<i class="part-head" id="part-head" hidden></i></div>' +
-      `<div class="part-ticks" aria-hidden="true">${ticks
-        .map(at => `<span>${clock(base + at)}</span>`)
-        .join("")}</div>` +
-      '<p class="part-label" id="part-label"></p>' +
-      '<div class="part-controls"><span class="part-lengths" role="group" aria-label="Length of the part">' +
-      lengths
-        .map(length => `<button type="button" data-length="${length}" aria-pressed="false">${length} s</button>`)
-        .join("") +
-      '</span><button type="button" id="part-play">▶ Play this part</button>' +
-      '<button type="button" class="save" id="part-apply">Apply</button>' +
-      '<button type="button" id="part-cancel">Cancel</button></div>' +
-      `<p class="part-note">${esc(partTabsNote)}${offset === null ? "" : ` ${esc(partPlaceNote)}`} ${esc(partKeysNote)}</p>`;
     panel.hidden = false;
-    document.querySelector("#part-open").setAttribute("aria-expanded", "true");
+    panelPick = picked;
+    document.querySelector("#part-open")?.setAttribute("aria-expanded", "true");
+    const wanted = picked.clip ? picked.clip.source : "preview";
+    showSource(picked, sources.includes(wanted) ? wanted : sources[0]);
+  }
+
+  // The panel for one source, under the row that switches between them (no
+  // row when the preview is all there is).
+  function showSource(picked, source) {
+    const panel = document.querySelector("#part-panel");
+    if (!panel) return;
+    if (partEnd !== null) stopPreview();
+    stopCapture();
+    partDraft = null;
+    const sources = partSources(picked);
+    panel.innerHTML =
+      (sources.length > 1
+        ? `<div class="part-sources" role="group" aria-label="Where to pick the part from">${sources
+            .map(
+              name =>
+                `<button type="button" data-source="${name}" aria-pressed="${name === source}">${esc(clipSourceLabels[name])}${
+                  name === "tab" ? ' <span class="beta">experimental</span>' : ""
+                }</button>`
+            )
+            .join("")}</div>`
+        : "") + '<div id="part-body"></div>';
+    panel.querySelectorAll(".part-sources button").forEach(button => {
+      button.onclick = () => showSource(picked, button.dataset.source);
+    });
+    const body = document.querySelector("#part-body");
+    if (source === "preview") previewSource(picked, body);
+    else if (source === "file") fileSource(picked, body);
+    else tabSource(picked, body);
+  }
+
+  const trackHtml = (label, ticks) =>
+    '<div class="part-track" id="part-track"><canvas id="part-wave" aria-hidden="true"></canvas>' +
+    `<div class="part-span" id="part-span" role="slider" tabindex="0" aria-label="${esc(label)}" aria-valuemin="0">` +
+    '<i class="part-edge" data-edge="start"></i><i class="part-edge" data-edge="end"></i></div>' +
+    '<i class="part-head" id="part-head" hidden></i></div>' +
+    `<div class="part-ticks" aria-hidden="true">${ticks
+      .map(text => `<span>${text}</span>`)
+      .join("")}</div>` +
+    '<p class="part-label" id="part-label"></p>';
+
+  const lengthsHtml = (lengths, label) =>
+    `<span class="part-lengths" role="group" aria-label="${esc(label)}">${lengths
+      .map(length => `<button type="button" data-length="${length}" aria-pressed="false">${length} s</button>`)
+      .join("")}</span>`;
+
+  // The span's drag, keys, length buttons, Play, Apply and Cancel.
+  function wirePicker(picked, body) {
     document.querySelector("#part-apply").onclick = () =>
-      applyPart(picked, [partDraft.start, partDraft.end]);
+      partDraft.buffer
+        ? applyClip(picked)
+        : applyPart(picked, [partDraft.start, partDraft.end]);
     document.querySelector("#part-cancel").onclick = closePartPanel;
     document.querySelector("#part-play").onclick = () => playPart(picked);
-    panel.querySelectorAll(".part-lengths button").forEach(button => {
+    body.querySelectorAll(".part-lengths button").forEach(button => {
       button.onclick = () =>
         moveDraft(partDraft.start, partDraft.start + Number(button.dataset.length));
     });
@@ -1269,12 +1532,518 @@
     // takes the next tap (on Apply, say) as the tap that stops it.
     track.addEventListener("touchmove", event => event.preventDefault(), { passive: false });
     showDraft();
+  }
+
+  function previewSource(picked, body) {
+    const limits = partLimits(picked);
+    const [start, end] = fitSpan(...(picked.part || partDefault), limits);
+    partDraft = { picked, limits, start, end, peaks: null, source: "preview" };
+    const offset = songOffset(picked);
+    const base = offset === null ? 0 : offset;
+    const lengths = [];
+    for (let length = limits.min; length <= limits.max; length += partStepSeconds) {
+      lengths.push(length);
+    }
+    const ticks = [];
+    for (let at = 0; at <= limits.total; at += 10) ticks.push(clock(base + at));
+    body.innerHTML =
+      `<p class="part-intro"><span class="beta">New · beta</span> ${esc(partIntro)}</p>` +
+      trackHtml("Part of the preview to match", ticks) +
+      `<div class="part-controls">${lengthsHtml(lengths, "Length of the part")}` +
+      '<button type="button" id="part-play">▶ Play this part</button>' +
+      '<button type="button" class="save" id="part-apply">Apply</button>' +
+      '<button type="button" id="part-cancel">Cancel</button></div>' +
+      `<p class="part-note">${esc(partTabsNote)}${offset === null ? "" : ` ${esc(partPlaceNote)}`} ${esc(partKeysNote)}</p>`;
+    wirePicker(picked, body);
     const draft = partDraft;
     previewPeaks(picked.seed.id).then(peaks => {
       if (partDraft !== draft || !peaks) return;
       draft.peaks = peaks;
       drawWave();
     });
+  }
+
+  // ---------- any part of the song: the listener's own audio ----------
+  function audioContext() {
+    if (!clipContext) clipContext = new (window.AudioContext || window.webkitAudioContext)();
+    return clipContext;
+  }
+
+  // Says something in the open source's status line, unless the panel moved on.
+  function clipSay(body, text) {
+    const status = document.querySelector("#clip-status");
+    if (status && document.querySelector("#part-body") === body) status.textContent = text;
+  }
+
+  const clipWhoNote = picked => (picked.seed.id ? clipSeedNote : clipAloneNote);
+
+  function fileSource(picked, body) {
+    body.innerHTML =
+      `<p class="part-intro"><span class="beta">New · beta</span> ${esc(clipFileIntro)}</p>` +
+      '<div class="clip-drop" id="clip-drop"><button type="button" id="clip-choose">Choose an audio file</button>' +
+      "<span>or drop it here</span>" +
+      '<input type="file" id="clip-file" accept="audio/*,.mp3,.m4a,.aac,.flac,.wav,.ogg,.opus" hidden></div>' +
+      '<p class="clip-status" id="clip-status" role="status"></p>' +
+      '<div class="part-controls"><button type="button" id="part-cancel">Cancel</button></div>' +
+      `<p class="part-note">${esc(clipPrivacyNote)} ${esc(clipWhoNote(picked))}</p>`;
+    const chooser = document.querySelector("#clip-file");
+    document.querySelector("#clip-choose").onclick = () => chooser.click();
+    chooser.onchange = () => {
+      const file = chooser.files && chooser.files[0];
+      if (file) openClipFile(picked, body, file);
+    };
+    const drop = document.querySelector("#clip-drop");
+    drop.ondragover = event => {
+      event.preventDefault?.();
+      drop.classList.add("over");
+    };
+    drop.ondragleave = () => drop.classList.remove("over");
+    drop.ondrop = event => {
+      event.preventDefault?.();
+      drop.classList.remove("over");
+      const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+      if (file) openClipFile(picked, body, file);
+    };
+    document.querySelector("#part-cancel").onclick = closePartPanel;
+  }
+
+  // The file is decoded here, in the page: it never leaves the browser.
+  async function openClipFile(picked, body, file) {
+    if (file.size > clipFileLimitBytes) {
+      clipSay(body, "That file is too large to open here.");
+      return;
+    }
+    clipSay(body, "Opening the file…");
+    let buffer;
+    try {
+      buffer = await audioContext().decodeAudioData(await file.arrayBuffer());
+    } catch {
+      clipSay(body, "Your browser could not read that file as audio. Try an MP3, M4A, FLAC or WAV.");
+      return;
+    }
+    if (document.querySelector("#part-body") === body) bufferPicker(picked, body, buffer, "file");
+  }
+
+  // The whole file, or the whole capture, as a timeline with a span to drag.
+  function bufferPicker(picked, body, buffer, source) {
+    const clips = clipLimits(picked);
+    if (!clips) return;
+    const total = Math.floor(buffer.duration);
+    if (total < clips.min) {
+      clipSay(body, `That ${source === "file" ? "file" : "capture"} is shorter than ${clips.min} seconds.`);
+      return;
+    }
+    const limits = { total, min: clips.min, max: Math.min(clips.max, total), step: 1 };
+    const length = Math.min(limits.max, Math.max(limits.min, clipDefaultSeconds));
+    // A file opens a third of the way in, where songs are usually under way.
+    const from = source === "file" ? (total - length) / 3 : 0;
+    const [start, end] = fitSpan(from, from + length, limits);
+    partDraft = {
+      picked, limits, start, end, peaks: peaksOf(buffer.getChannelData(0)), source, buffer,
+    };
+    const lengths = [];
+    for (let seconds = limits.min; seconds <= limits.max; seconds += partStepSeconds) {
+      lengths.push(seconds);
+    }
+    const ticks = [0, 1, 2, 3, 4].map(quarter => clock((quarter * total) / 4));
+    body.innerHTML =
+      `<p class="part-intro"><span class="beta">${source === "file" ? "New · beta" : "Experimental"}</span> ${
+        source === "file"
+          ? "This is your whole file. Drag the part to match."
+          : "This is what was captured. Drag the part to match."
+      }</p>` +
+      trackHtml("Part of your audio to match", ticks) +
+      `<div class="part-controls">${lengthsHtml(lengths, "Length of the part")}` +
+      '<button type="button" id="part-play">▶ Play this part</button>' +
+      '<button type="button" class="save" id="part-apply">Apply</button>' +
+      `<button type="button" id="clip-again">${source === "file" ? "Another file" : "Capture again"}</button>` +
+      '<button type="button" id="part-cancel">Cancel</button></div>' +
+      '<p class="clip-status" id="clip-status" role="status"></p>' +
+      `<p class="part-note">Only the part you pick is sent, and nothing is stored. ${esc(clipWhoNote(picked))} ${esc(partKeysNote)}</p>`;
+    wirePicker(picked, body);
+    document.querySelector("#clip-again").onclick = () => showSource(picked, source);
+  }
+
+  // The span as a small file: one channel, 24 kHz, 16 bits, brought to full
+  // scale, because the sound model hears level and catalog songs sit there.
+  async function clipWav(buffer, start, end) {
+    const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    let rate = 24000;
+    let context;
+    try {
+      context = new Offline(1, Math.round((end - start) * rate), rate);
+    } catch {
+      // Older browsers only render at the usual rates.
+      rate = 44100;
+      context = new Offline(1, Math.round((end - start) * rate), rate);
+    }
+    const node = context.createBufferSource();
+    node.buffer = buffer;
+    node.connect(context.destination);
+    node.start(0, start, end - start);
+    const data = (await context.startRendering()).getChannelData(0);
+    let peak = 0;
+    for (let index = 0; index < data.length; index += 1) {
+      const level = Math.abs(data[index]);
+      if (level > peak) peak = level;
+    }
+    if (peak < 0.001) throw new Error("quiet");
+    const view = new DataView(new ArrayBuffer(44 + data.length * 2));
+    const text = (at, value) => {
+      for (let index = 0; index < value.length; index += 1) {
+        view.setUint8(at + index, value.charCodeAt(index));
+      }
+    };
+    text(0, "RIFF");
+    view.setUint32(4, 36 + data.length * 2, true);
+    text(8, "WAVEfmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, rate, true);
+    view.setUint32(28, rate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    text(36, "data");
+    view.setUint32(40, data.length * 2, true);
+    const gain = 32767 / peak;
+    for (let index = 0; index < data.length; index += 1) {
+      view.setInt16(44 + index * 2, Math.round(data[index] * gain), true);
+    }
+    return new Blob([view], { type: "audio/wav" });
+  }
+
+  // Apply for a clip: cut it, then match it in place of the preview.
+  async function applyClip(picked) {
+    const draft = partDraft;
+    const body = document.querySelector("#part-body");
+    const apply = document.querySelector("#part-apply");
+    if (!draft || !draft.buffer || !apply) return;
+    if (partEnd !== null) stopPreview();
+    apply.disabled = true;
+    clipSay(body, "Preparing your clip…");
+    const failed = text => {
+      if (partDraft !== draft) return;
+      clipSay(body, text);
+      apply.disabled = false;
+    };
+    let blob;
+    try {
+      blob = await clipWav(draft.buffer, draft.start, draft.end);
+    } catch (error) {
+      failed(
+        error && error.message === "quiet"
+          ? "That part is silent. Pick another part."
+          : "Your browser could not prepare that clip."
+      );
+      return;
+    }
+    if (partDraft !== draft) return;
+    const clips = clipLimits(picked);
+    if (clips && blob.size > clips.maxBytes) {
+      failed("That clip is too large to send. Pick a shorter part.");
+      return;
+    }
+    picked.clip = {
+      blob,
+      source: draft.source,
+      label: clipLabel(draft.source, draft.start, draft.end),
+    };
+    picked.part = null;
+    if (shownPick === picked) closePartPanel();
+    else {
+      // A clip without a song: its results take the picker's place.
+      dropPanel();
+      showPick(picked);
+    }
+    if (picked.seed.id) {
+      currentKey = targetKey({ id: picked.seed.id });
+      writeHash(picked.seed.id, false, null);
+    }
+    reloadBest(picked);
+  }
+
+  // A clip sent without a song that the server recognised as a catalog song:
+  // that song becomes the seed, still matched by the clip.
+  function adoptClipSeed(picked, body) {
+    const query = body.query || {};
+    if (shownPick !== picked || picked.seed.id) return false;
+    if (!Number.isInteger(query.id) || query.id <= 0) return false;
+    picked.seed = {
+      id: query.id,
+      title: query.title || "",
+      artist: query.artist || "",
+      cover: safeImg(query.cover || ""),
+    };
+    picked.target = { id: query.id };
+    cards.set(query.id, picked.seed);
+    currentKey = targetKey({ id: query.id });
+    writeHash(query.id, false, null);
+    showPick(picked);
+    return true;
+  }
+
+  // "Match a clip of your own audio" under the search bar: no song is picked,
+  // so the clip is matched by sound alone.
+  function openClipHome() {
+    if (!savedClipAdvert() || !canDecodeAudio()) return;
+    stopPreview();
+    loadSequence += 1;
+    dropPanel();
+    currentKey = clipKey;
+    shownPick = null;
+    lastResults = [];
+    lastSeed = null;
+    if (location.hash) {
+      history.replaceState(null, "", `${location.pathname}${location.search}`);
+    }
+    if (document.activeElement !== input) input.value = "";
+    const picked = {
+      target: null,
+      seed: { id: null, title: "Your clip", artist: "No song picked: matched by sound alone", cover: "" },
+      lang: "same",
+      audioOnly: savedAudioOnly(),
+      part: null,
+      clip: null,
+      bestSequence: 0,
+      best: { status: "pending" },
+      body: null,
+    };
+    out.innerHTML =
+      '<section class="part" id="part-panel" aria-label="Match a clip of your own audio" hidden></section>';
+    togglePartPanel(picked);
+  }
+
+  // "1:23", "1:02:03", "83", "83s" or "1m23s" as seconds; null for anything else.
+  function clockSeconds(text) {
+    const value = String(text || "").trim();
+    const clocked = /^(?:(\d{1,2}):)?(\d{1,3}):(\d{2})$/.exec(value);
+    if (clocked) return (Number(clocked[1]) || 0) * 3600 + Number(clocked[2]) * 60 + Number(clocked[3]);
+    const counted = /^(?:(\d{1,3})m)?(\d{1,5})s?$/.exec(value);
+    return counted ? (Number(counted[1]) || 0) * 60 + Number(counted[2]) : null;
+  }
+
+  // A YouTube address as the address that opens the video at `time` (or at
+  // the address's own t=); null for anything that is not a YouTube video.
+  function youtubeAt(text, time) {
+    let url;
+    try {
+      url = new URL(String(text || "").trim());
+    } catch {
+      return null;
+    }
+    const host = url.hostname.replace(/^(www|m|music)\./, "");
+    const id =
+      host === "youtu.be"
+        ? url.pathname.slice(1)
+        : host !== "youtube.com"
+          ? ""
+          : url.pathname === "/watch"
+            ? url.searchParams.get("v") || ""
+            : (/^\/(?:shorts|live|embed)\/([\w-]+)/.exec(url.pathname) || [])[1] || "";
+    if (!/^[\w-]{6,20}$/.test(id)) return null;
+    const seconds = clockSeconds(time) ?? clockSeconds(url.searchParams.get("t")) ?? 0;
+    return `https://www.youtube.com/watch?v=${id}${seconds ? `&t=${seconds}s` : ""}`;
+  }
+
+  // The tab source: the listener plays any part of the song in another tab
+  // (YouTube is the usual place) and shares that tab's sound for some seconds.
+  // Soundalike fetches nothing from the site; it hears what the browser shares.
+  function tabSource(picked, body) {
+    const clips = clipLimits(picked);
+    const lengths = clipCaptureSeconds.filter(
+      seconds => seconds >= clips.min && seconds <= clips.longest
+    );
+    let seconds = lengths.includes(20) ? 20 : lengths[lengths.length - 1];
+    const seed = picked.seed.id ? `${picked.seed.artist} ${picked.seed.title}`.trim() : "";
+    body.innerHTML =
+      `<p class="part-intro"><span class="beta">Experimental</span> ${esc(clipTabIntro)}</p>` +
+      `<ol class="clip-steps"><li>${esc(clipTabSteps[0])}` +
+      '<span class="clip-link"><input id="clip-link" type="url" placeholder="YouTube link (optional)" aria-label="YouTube link" autocomplete="off">' +
+      '<input id="clip-at" type="text" inputmode="numeric" placeholder="1:23" aria-label="Time to start at" autocomplete="off">' +
+      '<button type="button" id="clip-go">Open it there ↗</button>' +
+      (seed
+        ? `<a id="clip-find" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=${encodeURIComponent(seed)}">Find it on YouTube ↗</a>`
+        : "") +
+      `</span></li><li>${esc(clipTabSteps[1])}</li><li>${esc(clipTabSteps[2])}</li></ol>` +
+      `<div class="part-controls">${lengthsHtml(lengths, "Seconds to capture")}` +
+      '<button type="button" class="save" id="clip-capture">● Capture</button>' +
+      '<button type="button" id="clip-stop" hidden>■ Stop now</button>' +
+      '<button type="button" id="part-cancel">Cancel</button></div>' +
+      '<p class="clip-status" id="clip-status" role="status"></p>' +
+      `<p class="part-note">${esc(clipTabNote)} ${esc(clipWhoNote(picked))}</p>`;
+    document.querySelector("#clip-go").onclick = () => {
+      const address = youtubeAt(
+        document.querySelector("#clip-link").value,
+        document.querySelector("#clip-at").value
+      );
+      if (!address) {
+        clipSay(body, "That is not a link to a YouTube video. You can also just open the song in another tab yourself.");
+        return;
+      }
+      clipSay(body, "Opened in a new tab. Come back here and press Capture while it plays.");
+      window.open(address, "_blank", "noopener");
+    };
+    const buttons = body.querySelectorAll(".part-lengths button");
+    const press = () =>
+      buttons.forEach(button => {
+        button.setAttribute("aria-pressed", String(Number(button.dataset.length) === seconds));
+      });
+    buttons.forEach(button => {
+      button.onclick = () => {
+        seconds = Number(button.dataset.length);
+        press();
+      };
+    });
+    press();
+    document.querySelector("#clip-capture").onclick = () => captureTab(picked, body, seconds);
+    document.querySelector("#clip-stop").onclick = () => clipCapture && clipCapture.finish();
+    document.querySelector("#part-cancel").onclick = closePartPanel;
+  }
+
+  function stopCapture() {
+    if (clipCapture) clipCapture.cancel();
+  }
+
+  // Records the sound of a tab the listener shares, for `seconds`, as plain
+  // samples (no second lossy encoding), then opens it in the picker.
+  async function captureTab(picked, body, seconds) {
+    if (clipCapture) return;
+    stopPreview();
+    const capture = document.querySelector("#clip-capture");
+    const stop = document.querySelector("#clip-stop");
+    const idle = on => {
+      if (document.querySelector("#part-body") !== body) return;
+      capture.hidden = !on;
+      stop.hidden = on;
+    };
+    let stream;
+    try {
+      // Voice processing is made for speech and damages music.
+      stream = await window.navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        systemAudio: "include",
+        selfBrowserSurface: "exclude",
+      });
+    } catch {
+      clipSay(body, "Nothing was shared.");
+      return;
+    }
+    const end = () => stream.getTracks().forEach(track => track.stop());
+    stream.getVideoTracks().forEach(track => track.stop());
+    const sound = stream.getAudioTracks()[0];
+    if (!sound || document.querySelector("#part-body") !== body) {
+      end();
+      clipSay(body, "That share has no sound. Choose a tab, not a window or a screen, and leave “Also share tab audio” on.");
+      return;
+    }
+    const context = audioContext();
+    let tap;
+    try {
+      await context.resume();
+      if (!context.clipTap) {
+        await context.audioWorklet.addModule("/clip-tap.js");
+        context.clipTap = true;
+      }
+      tap = new window.AudioWorkletNode(context, "clip-tap");
+    } catch {
+      end();
+      clipSay(body, "Your browser could not start the capture.");
+      return;
+    }
+    const source = context.createMediaStreamSource(stream);
+    const chunks = [];
+    const need = Math.round(seconds * context.sampleRate);
+    let got = 0;
+    let cancelled = false;
+    const done = new Promise(resolve => {
+      clipCapture = {
+        finish: resolve,
+        cancel: () => {
+          cancelled = true;
+          resolve();
+        },
+      };
+      tap.port.onmessage = event => {
+        chunks.push(event.data);
+        got += event.data.length;
+        clipSay(body, `Capturing… ${Math.min(seconds, Math.floor(got / context.sampleRate))} of ${seconds} s`);
+        if (got >= need) resolve();
+      };
+      // The listener stopped sharing from the browser's own bar.
+      sound.onended = resolve;
+    });
+    source.connect(tap);
+    idle(false);
+    clipSay(body, `Capturing… 0 of ${seconds} s`);
+    await done;
+    clipCapture = null;
+    tap.port.onmessage = null;
+    source.disconnect();
+    end();
+    if (cancelled) return;
+    idle(true);
+    const clips = clipLimits(picked);
+    const frames = Math.min(got, need);
+    if (!clips || frames < clips.min * context.sampleRate) {
+      clipSay(body, `Less than ${clips ? clips.min : 10} seconds were captured.`);
+      return;
+    }
+    const buffer = context.createBuffer(1, frames, context.sampleRate);
+    const data = buffer.getChannelData(0);
+    let at = 0;
+    let energy = 0;
+    for (const chunk of chunks) {
+      const take = Math.min(chunk.length, frames - at);
+      if (take <= 0) break;
+      data.set(chunk.subarray(0, take), at);
+      at += take;
+    }
+    for (let index = 0; index < frames; index += 1) energy += data[index] * data[index];
+    // Quieter than -60 dB on average: nothing was playing, or no sound was shared.
+    if (Math.sqrt(energy / frames) < 0.001) {
+      clipSay(body, "Almost nothing was heard. Is the tab playing, and was “Also share tab audio” on?");
+      return;
+    }
+    if (document.querySelector("#part-body") === body) bufferPicker(picked, body, buffer, "tab");
+  }
+
+  // The sound of a clip's span, with the play head on the timeline.
+  function playClipSound(buffer, start, end) {
+    stopPreview();
+    const context = audioContext();
+    if (context.resume) context.resume();
+    const node = context.createBufferSource();
+    node.buffer = buffer;
+    node.connect(context.destination);
+    const began = context.currentTime;
+    clipNode = node;
+    partEnd = end;
+    node.onended = () => {
+      if (clipNode === node) stopPreview();
+    };
+    node.start(0, start, end - start);
+    syncPlaying();
+    const frame = window.requestAnimationFrame || (step => window.setTimeout(step, 60));
+    const tick = () => {
+      const head = document.querySelector("#part-head");
+      if (clipNode !== node || !partDraft || !head) return;
+      head.hidden = false;
+      head.style.left = `${(100 * (start + context.currentTime - began)) / partDraft.limits.total}%`;
+      frame(tick);
+    };
+    tick();
+  }
+
+  function stopClipSound() {
+    const node = clipNode;
+    clipNode = null;
+    if (!node) return;
+    node.onended = null;
+    try {
+      node.stop();
+    } catch {}
   }
 
   function moveDraft(start, end) {
@@ -1291,7 +2060,9 @@
     const span = document.querySelector("#part-span");
     if (!partDraft || !span) return;
     const { picked, limits, start, end } = partDraft;
-    const label = `${spanLabel(picked, [start, end])} · ${end - start} s`;
+    const label = `${
+      partDraft.buffer ? clipLabel(partDraft.source, start, end) : spanLabel(picked, [start, end])
+    } · ${end - start} s`;
     span.style.left = `${(100 * start) / limits.total}%`;
     span.style.width = `${(100 * (end - start)) / limits.total}%`;
     span.setAttribute("aria-valuemax", String(limits.total - limits.min));
@@ -1301,7 +2072,8 @@
     document.querySelectorAll("#part-panel .part-lengths button").forEach(button => {
       button.setAttribute("aria-pressed", String(Number(button.dataset.length) === end - start));
     });
-    const same = picked.part && picked.part[0] === start && picked.part[1] === end;
+    const same =
+      !partDraft.buffer && picked.part && picked.part[0] === start && picked.part[1] === end;
     document.querySelector("#part-apply").disabled = Boolean(same);
     drawWave();
   }
@@ -1312,9 +2084,9 @@
     const { limits, start, end } = partDraft;
     const step =
       event.key === "ArrowRight" || event.key === "ArrowUp"
-        ? partStepSeconds
+        ? limits.step || partStepSeconds
         : event.key === "ArrowLeft" || event.key === "ArrowDown"
-          ? -partStepSeconds
+          ? -(limits.step || partStepSeconds)
           : 0;
     if (step) {
       if (!event.shiftKey) moveDraft(start + step, end + step);
@@ -1375,6 +2147,10 @@
       stopPreview();
       return;
     }
+    if (partDraft.buffer) {
+      playClipSound(partDraft.buffer, partDraft.start, partDraft.end);
+      return;
+    }
     const id = picked.seed.id;
     const { start, end } = partDraft;
     const button = document.querySelector("#part-play");
@@ -1414,7 +2190,11 @@
     const response = await fetch(url);
     if (!response.ok) return null;
     const buffer = await new Offline(1, 1, 44100).decodeAudioData(await response.arrayBuffer());
-    const data = buffer.getChannelData(0);
+    return peaksOf(buffer.getChannelData(0));
+  }
+
+  // Samples as 240 columns of loudness, the loudest at 1; null for silence.
+  function peaksOf(data) {
     const columns = 240;
     const size = Math.floor(data.length / columns);
     if (size < 1) return null;
@@ -1487,6 +2267,9 @@
   input.addEventListener("blur", () => window.setTimeout(hideAc, 150));
   ac.addEventListener("mousedown", event => event.preventDefault());
   window.addEventListener("hashchange", route);
+  const clipEntry = document.querySelector("#clip-open");
+  if (clipEntry) clipEntry.onclick = openClipHome;
+  showClipEntry();
   loadChips();
   adoptQueryLink();
   route();
