@@ -3749,3 +3749,31 @@ lists change and stay well-formed, not that they are better matches for the part
 - **Cost.** A part of a catalog song: 0.94 s against 1.27 s for the whole preview (medians, fresh seeds). An excerpt:
   1.2 to 1.3 s without identification and 1.6 s with it (a second pass over the samples table, 0.43 s), against
   2.3 s for a live Deezer seed; embedding is 0.08 to 0.11 s of that. Peak VRAM 6.2 GB allocated.
+
+## A clip of any part of the song (2026-11-24)
+
+Engine update 2 turns the excerpt endpoint on (`--excerpts`, [ANYSONG.md](ANYSONG.md#a-part-of-a-song)); the
+website's source for a clip is tab audio the listener shares, recorded for 10 to 20 s. Measured on one PC in the
+production profile under an 8 GB VRAM cap, through the real endpoint (`anysong-lab/update2/excerpt_study.py`); 39
+clips, each the middle 15 s of a catalog song's Deezer preview as a client sends it (mono, 24 kHz, 16-bit WAV).
+Nobody has listened to these lists; "rating" is the consensus model's own score of main's first ten body rows.
+
+- **With the song's id** (39 clips): all eight lists every time; the song itself never listed, no song by its
+  artist in main's body; the seed's language in 38 of 39. Main's top 10 shares 6.1 songs with the whole-preview
+  list (a 15 s part is another seed, as for `part=`).
+- **The song's playlist vector in the consensus body, or the clip's audio alone?** With the playlist vector the
+  rating is 1.168, without 1.131 (paired: higher for 26 of 39 clips, +0.037 on average, +0.058 over the 31 seeds
+  that have a playlist vector); 4.4 of the ten rows then carry a playlist rank, and the list shares 6.1 instead of
+  3.1 songs with the whole-preview list. So a clip that comes with its indexed song reads that song's playlist
+  vector (`api.EXCERPT_SEED_PLAYLISTS`), as a part of the preview does.
+- **A clip alone** (no id): the song's own recording is first in the samples and sound lists for 23 of 23
+  core-catalog songs and 0 of 16 songs the crawl added: a clip has no artist, so the catalog tiers leave it the
+  core catalog. Clients send the id; a clip alone is for audio that is in nobody's catalog.
+- **Cost.** 0.87 s at the median with the id and 0.83 s alone on this PC (a whole preview: about 1.0 s); the
+  production card is about three times slower.
+- **VRAM.** Twelve clips, twelve Stems dissections, a live song and part requests in flight together: 6.05 GB
+  allocated at rest, peak 7.21 GB (update 1: 7.24 GB). The clips use the models a live seed already uses.
+- **Not measured:** real tab captures (the report's simulation of a 128 kbit/s source at -12 dB kept 0.55 to 0.66
+  of the sound list once brought to full scale, which the engine does for every clip), clips from outside the
+  preview's 30 s (there the song's own preview is not in the audio, which is the point of the feature), and the
+  production card's timings.

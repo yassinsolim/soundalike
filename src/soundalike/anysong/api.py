@@ -63,7 +63,9 @@ The seed is then only the windows of that span (``audio.part_windows``: sound an
 chunks, melody the 20 s shingle around it), stored ones for a catalog song; playlists, tempo, language and artist
 scene stay the song's. ``/healthz`` then says ``parts: true``, every ``similar`` answer carries ``query["parts"]``
 (the limits of a span, and where the preview starts in the song when its length is known: ``preview_span``), and an
-answer for a span ``query["part"]``: the span asked for and the seconds each channel heard.
+answer for a span ``query["part"]``: the span asked for and the seconds each channel heard. An indexed song's length
+comes from ``--durations`` (``durations.DurationTable``) or a Deezer track object seen since the start, never from
+a request made for it.
 
 With ``--excerpts``, ``POST /api/anysong/excerpt`` (body: one audio clip of 5 to 30 s as WAV, FLAC, Ogg or MP3, at
 most ``--excerpt-max-mb``; query: ``k``, ``dedupe``, ``lang``, ``scene`` as for ``similar``, and optional ``title``,
@@ -81,6 +83,7 @@ from __future__ import annotations
 import argparse
 import ipaddress
 import json
+import math
 import re
 import shutil
 import sys
@@ -105,7 +108,7 @@ import numpy as np
 
 from . import listener, lookup, samevibe
 from . import stems as stemlib
-from .audio import decode_bytes, part_windows, window_spans
+from .audio import EXCERPT_FORMATS, UnsupportedAudio, decode_bytes, part_windows, window_spans
 from .deezer import version_words
 from .scene import SceneParams, SceneTable, affinity, arrange_artists, audio_head, scene_fuse, standout
 from .scenehead import SceneHead
@@ -211,9 +214,16 @@ _ISRC = re.compile(r"^[A-Z]{2}[A-Z0-9]{3}\d{7}$")
 PREVIEW_SECONDS = 30.0
 PREVIEW_OFFSET = 48.0  # where the preview usually starts in the song (``preview_span``)
 PART_MIN_SECONDS = 10.0  # the sound model's window; a shorter span would be heard as the 10 s around it
-EXCERPT_MIN_SECONDS = 5.0
+EXCERPT_MIN_SECONDS = 10.0  # the sound model's window; the melody model's is 20 s (a shorter clip is repeated)
 EXCERPT_MAX_SECONDS = 30.0
 EXCERPT_MAX_BYTES = 12 * 2**20  # 30 s of 48 kHz stereo 24-bit WAV is 8.6 MB
+EXCERPT_READ_SECONDS = 20.0  # an upload that stalls longer than this between two reads is dropped (408)
+EXCERPT_WAIT_SECONDS = 20.0  # an excerpt that waits longer than this for the engine is refused (503)
+EXCERPT_RETRY_SECONDS = 2  # Retry-After of a 503 for an excerpt
+# An excerpt that comes with its song (a seed id): the consensus body reads the song's playlist vector next to the
+# clip's audio (True) or the audio alone, as for a clip without a song (False). Chosen by the model's own rating of
+# the two bodies (docs/ANYSONG_EVAL.md, "A clip of any part of the song").
+EXCERPT_SEED_PLAYLISTS = True
 # A refused POST body up to this size (a 30 s clip as the page would send it is 1.4 MB) is read past, so that the
 # client reads the answer instead of a connection reset; a larger one is left unread and the connection closed.
 POST_SKIM_BYTES = 2 * 2**20
@@ -583,8 +593,23 @@ class AnySong:
                  popularity: listener.Popularity | None = None, match_quantiles: Sequence[float] | None = None,
                  consensus=None, consensus_quantiles: Sequence[float] | None = None, parts: bool = False,
                  excerpts: bool = False, part_sound_weight: float | None = None,
-                 identify_score: float | None = None):
+                 identify_score: float | None = None, durations=None,
+                 excerpt_max_bytes: int = EXCERPT_MAX_BYTES, excerpt_formats: Sequence[str] = ("wav",)):
         self.engine, self.deezer, self.meta, self.keep_previews = engine, deezer, meta, keep_previews
+        # Clips of the user's own audio (``excerpt``): the largest upload, the containers that are decoded
+        # (``audio.decode_bytes``; WAV alone is read without a decoder library), one clip at a time
+        # (``excerpt_turn``), and how many were refused, by HTTP status.
+        unknown = [name for name in excerpt_formats if name not in EXCERPT_FORMATS]
+        if unknown or not excerpt_formats:
+            raise ValueError(f"excerpt formats must be among {EXCERPT_FORMATS}, not {list(excerpt_formats)}")
+        self.excerpt_max_bytes, self.excerpt_formats = int(excerpt_max_bytes), tuple(excerpt_formats)
+        self._excerpt_slot = threading.BoundedSemaphore(1)
+        self.excerpt_refused: dict[int, int] = {}
+        # Song lengths, for where a preview sits in its song (``_parts_info``): the catalog's table
+        # (``durations.DurationTable``, --durations) and, kept without a time limit, the length in every Deezer
+        # track object a search or lookup brought in (``_know``).
+        self.durations = durations
+        self.lengths = LRU(cache_size * 32)
         # A part of the preview as the seed (``similar`` with ``part``) and clips of the user's own audio
         # (``excerpt``): both off unless asked for. ``part_sound_weight``: the consensus body's sound weight for
         # those queries (None: the service's). ``identify_score``: an excerpt whose best samples match scores at
@@ -745,6 +770,10 @@ class AnySong:
                 "language_search": self.language_rows is not None,
                 "language_detector": None if self.language_detector is None else detections,
                 "parts": self.parts, "excerpts": self.excerpts,
+                "excerpt": None if not self.excerpts else {
+                    "min_s": EXCERPT_MIN_SECONDS, "max_s": EXCERPT_MAX_SECONDS, "max_bytes": self.excerpt_max_bytes,
+                    "formats": list(self.excerpt_formats), "refused": dict(self.excerpt_refused)},
+                "durations": None if self.durations is None else {"songs": len(self.durations)},
                 "gpu_mib": _gpu_mib(self.engine.device)}
 
     def _tracks(self, q: str, limit: int, language: str | None = None,
@@ -765,7 +794,7 @@ class AnySong:
             found = [t for t in found if isinstance(t, dict) and type(t.get("id")) is int]
             if language is None:
                 for t in found:
-                    self.known.put(t["id"], t)
+                    self._know(t)
             hits = [_hit(t) for t in found]
             self.searches.put(key, hits)
         return hits
@@ -885,7 +914,7 @@ class AnySong:
             if not isinstance(info, dict) or info.get("id") != track_id:
                 return {}
             info.setdefault("contributors", [])
-            self.known.put(track_id, info)
+            self._know(info)
         return info
 
     def _contributors(self, track_id: int, charge: Callable[[], None] | None = None) -> list[tuple[int | None, str]]:
@@ -1020,7 +1049,7 @@ class AnySong:
             if isinstance(track, dict) and type(track.get("id")) is int and (
                     self.engine.indexed(track["id"]) or track.get("preview")):
                 tid = track["id"]
-                self.known.put(tid, track)
+                self._know(track)
                 self.isrcs.put(code, tid)
         if tid is not None:
             return tid
@@ -1114,15 +1143,36 @@ class AnySong:
         finally:
             self.pending.release()
 
+    def _know(self, track: dict) -> None:
+        """Remember a Deezer track object: briefly as a whole (``known``: its preview address expires), its length
+        for as long as there is room."""
+        self.known.put(track["id"], track)
+        duration = track.get("duration")
+        if isinstance(duration, (int, float)) and not isinstance(duration, bool) and duration > 0:
+            self.lengths.put(track["id"], duration)
+
+    def _duration(self, res: dict) -> float | None:
+        """The seed's length in seconds, as far as it is known without asking Deezer: a live seed's own track
+        object (kept with its result), a length seen in a search or lookup since the service started, else the
+        catalog's table."""
+        track_id = res["query"].get("id")
+        duration = res.get("duration") or self.lengths.get(track_id)
+        if not duration and self.durations is not None and track_id:
+            duration = self.durations.seconds(track_id)
+        return duration or None
+
     def _parts_info(self, res: dict) -> dict:
         """``query["parts"]``, what a client needs to offer a part of this seed's preview: the shortest and longest
         span and the preview's length in seconds, and ``song_offset_s``, where the preview starts in the song
-        (``preview_span``), None unless the song's length is known (a live seed's Deezer object, a catalog seed's
-        from a recent search) and long enough."""
-        duration = res.get("duration") or (self.known.get(res["query"].get("id")) or {}).get("duration")
+        (``preview_span``), None unless the song's length is known (``_duration``) and long enough."""
+        duration = self._duration(res)
         span = preview_span(duration)
-        return {"min_s": PART_MIN_SECONDS, "max_s": PREVIEW_SECONDS, "preview_s": PREVIEW_SECONDS,
+        info = {"min_s": PART_MIN_SECONDS, "max_s": PREVIEW_SECONDS, "preview_s": PREVIEW_SECONDS,
                 "song_offset_s": None if span is None else round(span[0], 1)}
+        if self.excerpts:  # a clip of the listener's own audio is taken too (POST /api/anysong/excerpt)
+            info["excerpt"] = {"min_s": EXCERPT_MIN_SECONDS, "max_s": EXCERPT_MAX_SECONDS,
+                               "max_bytes": self.excerpt_max_bytes}
+        return info
 
     def _assemble(self, query: dict, raw: dict, timings: dict[str, float], t: dict[str, float], vibe, windows,
                   detected, consensus, t0: float, sonic_part: Sequence[int] | None = None) -> dict:
@@ -1168,10 +1218,16 @@ class AnySong:
         kw: dict = {}
         if partial and self.part_sound_weight is not None:
             kw["sound_weight"] = self.part_sound_weight
+        seed_row = None
+        if query["source"] == "excerpt" and query.get("id") and EXCERPT_SEED_PLAYLISTS:
+            # A clip that came with its song: the song's row gives the playlist vector, its artist and its tempo.
+            seed_row = self.engine.indexes["sonic"].pos.get(int(query["id"]))
         if query["source"] == "catalog":
             if part is not None:
                 kw["part"] = part
             out = self.consensus.bodies(bases, code, row=self.engine.indexes["sonic"].pos[int(query["id"])], **kw)
+        elif seed_row is not None:
+            out = self.consensus.bodies(bases, code, row=seed_row, audio=windows, **kw)
         else:
             out = self.consensus.bodies(bases, code, windows=windows, artist=query.get("artist"),
                                         artist_id=query.get("artist_id"), bpm=bpm, **kw)
@@ -1330,11 +1386,17 @@ class AnySong:
                 self._related_jobs[artist_id] = self._background.submit(self._fetch_related, artist_id)
 
     @contextmanager
-    def _gpu(self, timings: dict[str, float]) -> Iterator[None]:
+    def _gpu(self, timings: dict[str, float], wait: float | None = None) -> Iterator[None]:
+        """The engine for one request at a time. ``wait``: seconds to queue for it at most, then 503 (None: as long
+        as it takes)."""
         t = time.perf_counter()
-        with self.gpu:
-            timings["queue"] = (time.perf_counter() - t) * 1000
+        if not self.gpu.acquire(timeout=-1 if wait is None else wait):
+            raise ApiError(503, "busy, retry shortly")
+        try:
+            timings["queue"] = timings.get("queue", 0.0) + (time.perf_counter() - t) * 1000
             yield
+        finally:
+            self.gpu.release()
 
     def _live(self, track_id: int, part: Mapping[str, Sequence[int]] | None = None):
         timings: dict[str, float] = {}
@@ -1393,12 +1455,13 @@ class AnySong:
 
     def _search_live(self, query: dict, embed: Callable[[], tuple[dict, dict]], exclude: list[int], clip22, speech,
                      timings: dict[str, float], part: Mapping[str, Sequence[int]] | None = None,
-                     partial: bool = False):
-        """Under the GPU lock, for a seed that comes as audio: its language from ``speech`` (a detector excerpt, or
-        None), its windows (``embed``; ``part``: only those windows of each channel), the searches, Same vibe's
-        inputs with the tempo of ``clip22`` and the consensus bodies (``partial``: ``_consensus``)."""
+                     partial: bool = False, wait: float | None = None):
+        """Under the GPU lock (``wait``: ``_gpu``), for a seed that comes as audio: its language from ``speech`` (a
+        detector excerpt, or None), its windows (``embed``; ``part``: only those windows of each channel), the
+        searches, Same vibe's inputs with the tempo of ``clip22`` and the consensus bodies (``partial``:
+        ``_consensus``)."""
         vibe = detected = None
-        with self._gpu(timings):
+        with self._gpu(timings, wait):
             if speech is not None:
                 # Before the search: the in-language lists need the seed's language.
                 t = time.perf_counter()
@@ -1426,16 +1489,46 @@ class AnySong:
                                         partial=partial or part is not None)
         return raw, timings | t_embed, t_search, vibe, wins.get("sonic"), detected, consensus
 
+    @contextmanager
+    def excerpt_turn(self) -> Iterator[None]:
+        """One excerpt at a time, from the moment its upload is read: a second one is refused (503) rather than
+        queued, so that clips never pile up in memory or in front of the engine."""
+        if not self._excerpt_slot.acquire(blocking=False):
+            raise ApiError(503, "busy with another clip, retry shortly")
+        try:
+            yield
+        finally:
+            self._excerpt_slot.release()
+
+    def excerpt_seed(self, track_id: int, on_search: Callable[[], None] | None = None) -> int:
+        """The song an excerpt is said to be from, by its Deezer id: an indexed song, one a search or lookup has
+        brought in, or (``on_search``: the caller's search budget) one Deezer knows; else 404."""
+        if self.engine.indexed(track_id) or self.known.get(track_id) is not None:
+            return track_id
+        if on_search is not None:
+            on_search()
+        try:
+            info = self.deezer.track(track_id)
+        except RuntimeError as exc:
+            raise ApiError(502, "track lookup failed") from exc
+        if not isinstance(info, dict) or info.get("id") != track_id:
+            raise ApiError(404, "unknown track")
+        self._know(info)
+        return track_id
+
     def excerpt(self, data: bytes, k: int = 20, dedupe: bool = True, lang_mode: str = "same", scene: bool = True,
                 hint: int | None = None, artist: str | None = None, title: str | None = None) -> dict:
         """The lists of ``similar`` for a clip of the user's own audio (``EXCERPT_MIN_SECONDS`` to
-        ``EXCERPT_MAX_SECONDS``): decoded in memory and embedded like a song outside the catalog, with as many
-        windows as the clip fills. Nothing of it is kept: no file, no cache entry, no learn-queue line, no catalog
-        row. ``hint``: the Deezer id of the song it is from, when the caller could name it; without one, the song
-        the clip is recognised as (``_identify``) stands in and is reported as ``query["identified"]``. That song
-        is left out of the lists, and its artist gives the scene, the catalog tiers and the listener lists.
-        ``artist`` and ``title``: the names as given when no song is known (the artist's language and other
-        releases of the song are then still recognised)."""
+        ``EXCERPT_MAX_SECONDS``): decoded in memory (``audio.decode_bytes``, ``excerpt_formats``) and embedded like a
+        song outside the catalog, with as many windows as the clip fills. Nothing of it is kept: no file, no cache
+        entry, no learn-queue line, no catalog row, no log line. ``hint``: the Deezer id of the song it is from,
+        when the caller could name it (``excerpt_seed``); without one, the song the clip is recognised as
+        (``_identify``) stands in and is reported as ``query["identified"]``. That song keeps the seed's identity:
+        it and its other releases are left out of the lists, its language gates them, its artist gives the scene,
+        the catalog tiers and the listener lists, and, when it is indexed, its playlist vector goes into the
+        consensus body (``EXCERPT_SEED_PLAYLISTS``); every audio signal is the clip's. ``artist`` and ``title``:
+        the names as given when no song is known (the artist's language and other releases of the song are then
+        still recognised). The engine is waited for at most ``EXCERPT_WAIT_SECONDS`` at a time."""
         if not self.excerpts:
             raise ApiError(404, "not found")
         if not self.pending.acquire(blocking=False):
@@ -1444,7 +1537,9 @@ class AnySong:
             t0 = time.perf_counter()
             timings: dict[str, float] = {}
             try:
-                mono, sr = decode_bytes(data, EXCERPT_MAX_SECONDS, EXCERPT_MIN_SECONDS)
+                mono, sr = decode_bytes(data, EXCERPT_MAX_SECONDS, EXCERPT_MIN_SECONDS, self.excerpt_formats)
+            except UnsupportedAudio as exc:
+                raise ApiError(415, str(exc)) from None
             except ValueError as exc:
                 raise ApiError(422, str(exc)) from None
             peak = float(np.abs(mono).max())
@@ -1458,7 +1553,7 @@ class AnySong:
             clips, t_clips = self.engine.excerpt_clips(mono, sr)
             timings |= t_clips
             identified = None
-            with self._gpu(timings):
+            with self._gpu(timings, EXCERPT_WAIT_SECONDS):
                 wins, t_embed = self.engine.embed_channel_clips(clips)
                 if not hint:
                     identified = self._identify(wins, t_embed)
@@ -1480,7 +1575,8 @@ class AnySong:
                     n = int(SAMPLE_RATE * EXCERPT_SECONDS)
                     speech = np.pad(x[:n], (0, max(0, n - len(x)))).astype(np.float32)
             raw, timings, t_search, vibe, sonic, detected, consensus = self._search_live(
-                query, lambda: (wins, {}), [hint] if hint else [], clip22, speech, timings, partial=True)
+                query, lambda: (wins, {}), [hint] if hint else [], clip22, speech, timings, partial=True,
+                wait=EXCERPT_WAIT_SECONDS)
             res = self._assemble(query, raw, timings, t_search, vibe, sonic, detected, consensus, t0)
         finally:
             self.pending.release()
@@ -1735,7 +1831,7 @@ class AnySong:
                 if source_blend is not None:
                     blend_view = {key: item for key, item in source_blend.items() if keep(item)}
         query = q | {"language": language, "language_mode": lang_mode, "hidden": hidden, "scene": scene_state}
-        if self.parts and q.get("source") != "excerpt":
+        if self.parts:
             query["parts"] = self._parts_info(res)
         if part is not None:
             # A span that takes every window is the whole preview: each channel heard all of it.
@@ -2341,8 +2437,10 @@ class Handler(BaseHTTPRequestHandler):
         forwarded = client_key(self.headers.get(header, "")) if header else None
         return forwarded or client_key(self.client_address[0]) or self.client_address[0]
 
-    def _send(self, code: int, obj: dict, max_age: int = 0, close: bool = False) -> None:
-        """``close``: the connection ends with this answer (a request body that was not read is still on it)."""
+    def _send(self, code: int, obj: dict, max_age: int = 0, close: bool = False,
+              retry_after: int | None = None) -> None:
+        """``close``: the connection ends with this answer (a request body that was not read is still on it);
+        ``retry_after``: seconds, as the Retry-After header."""
         body = json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode()
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -2352,6 +2450,8 @@ class Handler(BaseHTTPRequestHandler):
         if self.server.cors_origin:
             self.send_header("Access-Control-Allow-Origin", self.server.cors_origin)
             self.send_header("Vary", "Origin")
+        if retry_after is not None:
+            self.send_header("Retry-After", str(int(retry_after)))
         if close:
             self.send_header("Connection", "close")
         self.end_headers()
@@ -2370,8 +2470,13 @@ class Handler(BaseHTTPRequestHandler):
             raise ApiError(400, "lang must be 'same' or 'all'")
         return k, dedupe, lang_mode, _int_param(params, "scene", 1, 0, 1) == 1
 
+    def _hide_query(self, path: str) -> None:
+        """Keep the query string of an excerpt request out of the access log: it may name the song."""
+        self.requestline = f"{self.command} {path} {self.request_version}"
+
     def do_OPTIONS(self):
         """CORS preflight for the excerpt upload (a POST with an audio body)."""
+        self._hide_query(urlsplit(self.path).path)
         allowed = self.server.cors_origin and self.server.service.excerpts \
             and urlsplit(self.path).path == "/api/anysong/excerpt"
         self.send_response(204 if allowed else 404)
@@ -2385,8 +2490,15 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
+        """``POST /api/anysong/excerpt``. Checked before a byte of the body is read: that the route is on, the
+        declared length (411 without one or with chunked encoding, 413 over ``excerpt_max_bytes``), the parameters
+        (400), the client's excerpt budget (429) and that no other clip is in work (503). Then the body is read
+        against a deadline (408), the song it is said to be from is looked up, and ``AnySong.excerpt`` decodes it
+        (415 for what is not accepted audio, 422 for a clip that cannot be used) and ranks. The access log gets the
+        path and the status, never the query string; nothing of the clip is written anywhere."""
         url = urlsplit(self.path)
         svc = self.server.service
+        self._hide_query(url.path)
         length = self.headers.get("Content-Length", "")
         unread = int(length) if length.isdigit() else 0
         if url.path != "/api/anysong/excerpt" or not svc.excerpts:
@@ -2396,47 +2508,84 @@ class Handler(BaseHTTPRequestHandler):
                 self._discard(unread)
             return self._send(404, {"ok": False, "error": "not found"}, close=unread > POST_SKIM_BYTES)
         try:
-            params = parse_qs(url.query, max_num_fields=8)
-        except ValueError:
-            self._discard(unread)
-            return self._send(400, {"ok": False, "error": "bad query string"})
-        try:
-            if not unread:
+            try:
+                params = parse_qs(url.query, max_num_fields=9)
+            except ValueError:
+                raise ApiError(400, "bad query string") from None
+            if not unread or self.headers.get("Transfer-Encoding"):
                 raise ApiError(411, "send the clip as the request body, with its Content-Length")
-            if unread > self.server.excerpt_max_bytes:
-                raise ApiError(413, f"the clip is too large: at most {self.server.excerpt_max_bytes // 2**20} MB "
+            if unread > svc.excerpt_max_bytes:
+                raise ApiError(413, f"the clip is too large: at most {svc.excerpt_max_bytes / 2**20:g} MB "
                                     f"and {EXCERPT_MAX_SECONDS:g} s")
             k, dedupe, lang_mode, scene = self._list_params(params)
-            self._limit(url.path)
-            data, unread = self.rfile.read(unread), 0
-            if len(data) != int(length):
-                raise ApiError(400, "incomplete upload")
+            seed = _int_param(params, "id", None, 1, 2**53) if "id" in params else None
             artist, title = ((params.get(name) or [None])[0] for name in ("artist", "title"))
             artist = _text_param(artist, "artist") if artist is not None else None
             title = _text_param(title, "title") if title is not None else None
-            hint = None
-            try:  # naming the song is optional help: one that cannot be found is no error
-                if "isrc" in params:
-                    hint = svc.resolve_isrc(params["isrc"][0], artist, title,
-                                            lambda: self._limit("/api/anysong/search"))
-                elif artist and title:
-                    hint = svc.resolve(artist, title, lambda: self._limit("/api/anysong/search"))
-            except ApiError as exc:
-                if exc.status == 400:
-                    raise
-            return self._send(200, svc.excerpt(data, k, dedupe, lang_mode, scene, hint, artist, title))
+            self._limit(url.path)
+            with svc.excerpt_turn():
+                data, unread = self._read_body(unread), 0
+
+                def search_budget() -> None:
+                    self._limit("/api/anysong/search")
+
+                hint = None
+                if seed is not None:  # the song the clip is from, by id: it has to exist
+                    hint = svc.excerpt_seed(seed, search_budget)
+                else:
+                    # Named by ISRC or by title and artist: a song that nothing knows (404) is no error, the clip
+                    # is then ranked alone. Anything else (a spent search budget, Deezer down) is the caller's to
+                    # see: ranking alone instead would silently drop the song's identity.
+                    try:
+                        if "isrc" in params:
+                            hint = svc.resolve_isrc(params["isrc"][0], artist, title, search_budget)
+                        elif artist and title:
+                            hint = svc.resolve(artist, title, search_budget)
+                    except ApiError as exc:
+                        if exc.status != 404:
+                            raise
+                out = svc.excerpt(data, k, dedupe, lang_mode, scene, hint, artist, title)
+            return self._send(200, out)
         except ApiError as exc:
-            self._discard(unread)
-            self._send(exc.status, {"ok": False, "error": exc.message})
+            with svc._lock:
+                svc.excerpt_refused[exc.status] = svc.excerpt_refused.get(exc.status, 0) + 1
+            close = unread > POST_SKIM_BYTES or exc.status == 408
+            if unread and not close:
+                self._discard(unread)
+            retry = {429: self.server.excerpt_retry, 503: EXCERPT_RETRY_SECONDS}.get(exc.status)
+            self._send(exc.status, {"ok": False, "error": exc.message}, close=close, retry_after=retry)
         except Exception:
             traceback.print_exc()
-            self._send(500, {"ok": False, "error": "internal error"})
+            self._send(500, {"ok": False, "error": "internal error"}, close=bool(unread))
+
+    def _read_body(self, length: int) -> bytes:
+        """The request body, read against a deadline of ``EXCERPT_READ_SECONDS`` for all of it: an upload that
+        stalls holds the one excerpt turn, so it is dropped (408) rather than waited for."""
+        deadline = time.monotonic() + EXCERPT_READ_SECONDS
+        chunks: list[bytes] = []
+        left = length
+        try:
+            while left:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError
+                self.connection.settimeout(remaining)
+                chunk = self.rfile.read1(min(left, 65536))
+                if not chunk:
+                    raise ApiError(400, "incomplete upload")
+                chunks.append(chunk)
+                left -= len(chunk)
+        except OSError:  # a socket timeout is one
+            raise ApiError(408, f"the upload took longer than {EXCERPT_READ_SECONDS:g} s") from None
+        finally:
+            self.connection.settimeout(self.timeout)
+        return b"".join(chunks)
 
     def _discard(self, unread: int) -> None:
         """Read past a request body that is refused, so the client can read the answer; a body many times the
         limit is not read: the connection closes instead."""
         try:
-            if unread > 4 * self.server.excerpt_max_bytes:
+            if unread > 4 * self.server.service.excerpt_max_bytes:
                 raise OSError("too large to read past")
             while unread > 0:
                 chunk = self.rfile.read(min(unread, 65536))
@@ -2498,14 +2647,16 @@ class Server(ThreadingHTTPServer):
 
     def __init__(self, addr, service: AnySong, search_per_min: float = 60, similar_per_min: float = 20,
                  cors_origin: str | None = None, client_header: str | None = None, dissect_per_min: float = 12,
-                 excerpt_per_min: float = 6, excerpt_max_bytes: int = EXCERPT_MAX_BYTES):
+                 excerpt_per_min: float = 6, excerpt_max_bytes: int | None = None):
         super().__init__(addr, Handler)
         self.service, self.cors_origin, self.client_header = service, cors_origin, client_header
-        self.excerpt_max_bytes = excerpt_max_bytes
+        if excerpt_max_bytes is not None:
+            service.excerpt_max_bytes = int(excerpt_max_bytes)
+        self.excerpt_retry = max(1, math.ceil(60 / excerpt_per_min))  # Retry-After of a 429 for an excerpt
         self.limiters = {"/api/anysong/search": TokenBucket(search_per_min, max(1, int(search_per_min // 4))),
                          "/api/anysong/similar": TokenBucket(similar_per_min, max(1, int(similar_per_min // 4))),
                          "/api/anysong/dissect": TokenBucket(dissect_per_min, max(1, int(dissect_per_min // 4))),
-                         "/api/anysong/excerpt": TokenBucket(excerpt_per_min, max(1, int(excerpt_per_min // 4)))}
+                         "/api/anysong/excerpt": TokenBucket(excerpt_per_min, max(2, int(excerpt_per_min // 4)))}
 
 
 def _warmup(engine) -> float:
@@ -2549,6 +2700,9 @@ def main(argv: list[str] | None = None) -> None:
                         "scene (anysong.tiers; needs --scene)")
     p.add_argument("--tempo", type=Path, default=None,
                    help="catalog tempo table from anysong.tempo; enables the Same vibe list")
+    p.add_argument("--durations", type=Path, default=None,
+                   help="catalog song lengths from anysong.durations: with --parts, an indexed song's answer then "
+                        "says where its preview sits in the song without a Deezer lookup")
     p.add_argument("--tempo-model", default=None,
                    help="Beat This! checkpoint for the tempo of unseen seeds (without it their tempo is unknown)")
     p.add_argument("--host", default="127.0.0.1")
@@ -2637,11 +2791,15 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--parts", action="store_true",
                    help="similar takes part=<start>-<end>: only that span of the 30 s preview is the seed")
     p.add_argument("--excerpts", action="store_true",
-                   help="POST /api/anysong/excerpt: rank the catalog against a 5 to 30 s clip of the caller's own "
-                        "audio, decoded in memory and never kept")
-    p.add_argument("--excerpt-per-min", type=float, default=6, help="excerpt uploads per client and minute")
+                   help="POST /api/anysong/excerpt: rank the catalog against a 10 to 30 s clip of the caller's own "
+                        "audio, decoded in memory and never kept (needs --parts, which advertises it to clients)")
+    p.add_argument("--excerpt-per-min", type=float, default=6,
+                   help="excerpt uploads per client and minute (burst: a quarter of it, at least 2)")
     p.add_argument("--excerpt-max-mb", type=float, default=EXCERPT_MAX_BYTES / 2**20,
                    help="largest excerpt upload in MB")
+    p.add_argument("--excerpt-formats", nargs="+", choices=EXCERPT_FORMATS, default=["wav"],
+                   help="containers an excerpt may come in. wav is read by this program alone; flac, ogg and mp3 "
+                        "are decoded by libsndfile, a C library, from bytes anyone can send")
     p.add_argument("--part-sound-weight", type=float, default=None,
                    help="the consensus body's sound weight for part and excerpt seeds (default: the body's own)")
     p.add_argument("--identify-score", type=float, default=None,
@@ -2650,6 +2808,8 @@ def main(argv: list[str] | None = None) -> None:
     args = p.parse_args(argv)
     if args.identify_score is not None and not args.excerpts:
         p.error("--identify-score names the song of an excerpt and needs --excerpts")
+    if args.excerpts and not args.parts:
+        p.error("--excerpts needs --parts: query.parts is where clients learn of it")
     if args.stems_model is not None and not args.tempo_model:
         p.error("--stems-model needs --tempo-model")
     if args.core_ids is not None and args.scene is None:
@@ -2750,6 +2910,11 @@ def main(argv: list[str] | None = None) -> None:
 
         tiers = TierGate.load(args.core_ids, scene, engine.indexes)
     tempo = TempoTable.load(args.tempo) if args.tempo is not None else None
+    durations = None
+    if args.durations is not None:
+        from .durations import DurationTable
+
+        durations = DurationTable.load(args.durations)
     tracker = None
     if tempo is not None and args.tempo_model:
         from .tempo import Tracker
@@ -2805,11 +2970,12 @@ def main(argv: list[str] | None = None) -> None:
                       stems=store, dissector=dissector, catalog_previews=args.catalog_previews,
                       consensus=consensus, consensus_quantiles=consensus_quantiles,
                       parts=args.parts, excerpts=args.excerpts, part_sound_weight=args.part_sound_weight,
-                      identify_score=args.identify_score,
+                      identify_score=args.identify_score, durations=durations,
+                      excerpt_max_bytes=int(args.excerpt_max_mb * 2**20), excerpt_formats=args.excerpt_formats,
                       **_overall_scales(args.overall))
     server = Server((args.host, args.port), service, args.search_per_min, args.similar_per_min,
                     args.cors_origin, args.client_ip_header, dissect_per_min=args.dissect_per_min,
-                    excerpt_per_min=args.excerpt_per_min, excerpt_max_bytes=int(args.excerpt_max_mb * 2**20))
+                    excerpt_per_min=args.excerpt_per_min)
     sizes = {name: len(ix) for name, ix in engine.indexes.items()}
     hubs = {name: getattr(ix, "hub_alpha", 0.0) for name, ix in engine.indexes.items()}
     print(f"ready in {time.perf_counter() - t:.1f}s (warmup {warm:.1f}s) {sizes} hub_alpha={hubs} "
