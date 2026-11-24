@@ -380,3 +380,20 @@ def test_a_part_of_a_stored_seed_reads_only_its_windows(world):
     heavy = cons.bodies(world.bases, -1, row=row, sound_weight=1.0)["all"]
     assert [t for t, _, _ in heavy] == [t for t, _, _ in plain]  # a constant model: the sound rank orders both
     assert heavy[-1][1] < plain[-1][1]
+
+
+def test_a_clip_of_a_stored_song_brings_its_audio_and_keeps_the_songs_playlist_view(world):
+    cons, row = world.cons, int(world.graph[0])
+    other = (row + 7) % N
+    clip = world.win[other].astype(np.float32)  # raw windows of other audio, as an excerpt is embedded
+    own, live, mixed = cons.signals(world.bases, row), cons.signals(world.bases, windows=clip), \
+        cons.signals(world.bases, row, audio=clip)
+    # Sound and head are the clip's, the playlist signal the song's; melody and samples come with the searches.
+    assert torch.equal(mixed["snd"], live["snd"]) and torch.equal(mixed["head"], live["head"])
+    assert torch.equal(mixed["cf"], own["cf"]) and not torch.equal(mixed["snd"], own["snd"])
+    assert np.isneginf(live["cf"].numpy()).all() and np.isfinite(mixed["cf"].numpy()).any()
+    assert torch.equal(mixed["mel"], own["mel"])
+    # The body is the stored seed's (its row, artist and tempo are left out and read as the song's) on those signals.
+    body = cons.bodies(world.bases, -1, row=row, audio=clip)["all"]
+    assert body == cons.body(mixed, cons.seed(-1, row))
+    assert IDS[row] not in [t for t, _, _ in body]

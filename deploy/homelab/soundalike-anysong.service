@@ -38,8 +38,11 @@ Environment=ANYSONG_PORT=8790
 # Only trust it while this port is reachable solely through the Cloudflare tunnel / proxy chain.
 # Responses are public, credential-free GETs, so any origin may read them (the Spotify desktop client needs this).
 # --parts: similar takes part=<start>-<end>, a span of the 30 s preview as the seed (docs/ANYSONG.md, "A part of a
-# song"); it uses the windows the index already holds and loads nothing more. The upload endpoint (--excerpts) and
-# naming a clip's song (--identify-score) stay off here: do not add them without a decision to publish them.
+# song"); it uses the windows the index already holds and loads nothing more.
+# --excerpts: POST /api/anysong/excerpt takes a clip of the listener's own audio, 10 to 30 s, so that any part of a
+# song can be matched (owner's decision, 2026-11-24). One clip at a time, 6 a minute per client, 6 MB at most, WAV
+# only: --excerpt-formats is left at its default so that no decoder library reads bytes anyone can send. Nothing of
+# a clip is written or logged. Naming a clip's song (--identify-score) stays off: clients send the song's id.
 ExecStart=/opt/soundalike/venv/bin/python -m soundalike.anysong.api \
     --index /opt/soundalike/index/current --meta /opt/soundalike/index/current/catalog_meta.npz \
     --languages /opt/soundalike/index/current/languages.npz \
@@ -61,6 +64,7 @@ ExecStart=/opt/soundalike/venv/bin/python -m soundalike.anysong.api \
     --stems /opt/soundalike/stems/ablation60k-v2 --stems-model /opt/soundalike/ckpt/demucs \
     --stems-cache /var/lib/anysong/stems --catalog-previews /data/previews \
     --half-stage1 samples --parts \
+    --excerpts --excerpt-per-min 6 --excerpt-max-mb 6 \
     --learn-queue /var/lib/anysong/learn-queue.jsonl \
     --host ${ANYSONG_HOST} --port ${ANYSONG_PORT} --client-ip-header CF-Connecting-IP --cors-origin "*"
 Restart=always

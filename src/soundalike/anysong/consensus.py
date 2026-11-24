@@ -209,25 +209,28 @@ class Consensus:
 
     @torch.inference_mode()
     def signals(self, bases: Mapping[str, torch.Tensor], row: int | None = None,
-                windows: np.ndarray | None = None, part: Sequence[int] | None = None) -> dict[str, torch.Tensor]:
+                windows: np.ndarray | None = None, part: Sequence[int] | None = None,
+                audio: np.ndarray | None = None) -> dict[str, torch.Tensor]:
         """Each signal's score of every sonic row [N] for a stored seed (``row``) or a live one (its raw sonic
         ``windows``), -inf where the signal has none. ``bases``: channel -> the stage-1 scores less the hub penalty
         of the seed's melody and samples searches, in those indexes' row order, and (optional) ``"head"``: the
         head signal, when the engine computed it with the blend's. ``part``: the stored seed's sonic windows that
         make the query (one part of its preview): the sound and head signals read those alone; the playlist signal
-        is the song's either way."""
-        if row is None:
-            sound = self.prep(windows)
+        is the song's either way. ``audio``: raw sonic windows that stand for the stored seed's own (a clip of the
+        song from outside its preview): sound and head read them, the playlist signal stays the song's."""
+        live = windows if row is None else audio
+        if live is not None:
+            sound = self.prep(live)
         elif self.streamed:
             sound = unit_half(self.windows[row].half())
         else:
             sound = self.windows[row].to(self.device)
-        if part is not None and row is not None:
+        if part is not None and live is None:
             sound = sound[list(part)]
         head = bases.get("head")
         if head is None:  # else the engine's pass over a head table in host memory gave it (``Blend.head_views``)
-            seed = self.blend.seed_head(None, windows) if row is None else None
-            head = self.blend.unit_scores(self.blend.unit_seed(row, seed, part))
+            seed = self.blend.seed_head(None, live) if live is not None else None
+            head = self.blend.unit_scores(self.blend.unit_seed(None if live is not None else row, seed, part))
         out = {"snd": self._sound(sound), "head": head}
         cf = torch.full((self.n,), -torch.inf, device=self.device)
         at = int(self.blend.graph_pos[row]) if row is not None else -1
@@ -386,14 +389,15 @@ class Consensus:
 
     def bodies(self, bases: Mapping[str, torch.Tensor], code: int, row: int | None = None,
                windows: np.ndarray | None = None, artist: str | None = None, artist_id: int | None = None,
-               bpm: float | None = None, part: Sequence[int] | None = None, sound_weight: float | None = None
-               ) -> dict[str, list[tuple[int, float, tuple[int, ...]]]]:
+               bpm: float | None = None, part: Sequence[int] | None = None, sound_weight: float | None = None,
+               audio: np.ndarray | None = None) -> dict[str, list[tuple[int, float, tuple[int, ...]]]]:
         """The bodies of one seed: "same" among its language's songs (``code``: its language in ``codes``, -1 for
         none) and "all" among every language's, which reads the seed as one of unknown language. A stored seed is
-        its sonic ``row`` (``part``: only those of its sonic windows, ``signals``); a live one comes with its raw
-        sonic ``windows``, credited ``artist``, scene-table ``artist_id`` and tempo. ``sound_weight``: the weight of
-        the sound rank in these bodies' score instead of the service's (queries for a part of a song)."""
-        signals = self.signals(bases, row, windows, part)
+        its sonic ``row`` (``part``: only those of its sonic windows; ``audio``: other windows in their place,
+        ``signals``); a live one comes with its raw sonic ``windows``, credited ``artist``, scene-table
+        ``artist_id`` and tempo. ``sound_weight``: the weight of the sound rank in these bodies' score instead of
+        the service's (queries for a part of a song)."""
+        signals = self.signals(bases, row, windows, part, audio)
         cache: dict = {}
         out = {"all": self.body(signals, self.seed(-1, row, artist, artist_id, bpm), scene_cache=cache,
                                 sound_weight=sound_weight)}
