@@ -290,7 +290,10 @@ function json(status, body) {
   return { ok: status >= 200 && status < 300, status, json: async () => body };
 }
 
-function loadPage(html, scripts, { path, hash = "", search = "", storage = {}, local = {}, routes }) {
+// globals: more of the browser for one page (WebAudio, navigator, Blob).
+function loadPage(html, scripts, {
+  path, hash = "", search = "", storage = {}, local = {}, routes, globals = {},
+}) {
   const body = html.match(/<body>([\s\S]*)<\/body>/)[1]
     .replace(/<script[\s\S]*?<\/script>/g, "");
   const document = new FakeDocument(body);
@@ -357,10 +360,11 @@ function loadPage(html, scripts, { path, hash = "", search = "", storage = {}, l
         setTimeout(() => windowEvents.dispatch("hashchange"), 0);
       },
     },
-    fetch: async (url) => {
+    fetch: async (url, init) => {
       requests.push(String(url));
-      return routes(new URL(String(url), ORIGIN));
+      return routes(new URL(String(url), ORIGIN), init);
     },
+    ...globals,
   };
   context.window = context;
   vm.createContext(context);
@@ -528,14 +532,18 @@ const TRACKS = [
 ];
 const LEGACY_APIS = ["/api/search", "/api/recommend", "/api/stats", "/api/spicetify_recommend"];
 
-function loadMain({ hash = "", search = "", storage, local, body = mainBestBody, best, tracks = TRACKS } = {}) {
+// excerpt: answers POST /api/anysong/excerpt, (query parameters, request) -> response.
+function loadMain({
+  hash = "", search = "", storage, local, body = mainBestBody, best, tracks = TRACKS, globals, excerpt,
+} = {}) {
   return loadPage(mainHtml, [inlineScript(mainHtml), searchJs], {
     path: "/",
     hash,
     search,
     storage,
     local,
-    routes: (url) => {
+    globals,
+    routes: (url, init) => {
       if (url.hostname === "accounts.spotify.com") {
         return json(200, { access_token: "spotify-token" });
       }
@@ -547,6 +555,7 @@ function loadMain({ hash = "", search = "", storage, local, body = mainBestBody,
             scene: url.searchParams.get("scene") === "0" ? "off" : "on",
           }));
       }
+      if (url.pathname === "/api/anysong/excerpt" && excerpt) return excerpt(url.searchParams, init);
       if (url.pathname === "/api/anysong/search") return json(200, { tracks });
       if (url.pathname === "/api/preview") {
         return json(200, { ok: true, preview: PREVIEW, cover: COVER });
@@ -1619,4 +1628,463 @@ test("returning from the Spotify login reopens the song that was open", async ()
   await waitFor(() => shown(listeners));
   assert.equal(selected(listeners, "listeners"), "true");
   assert.equal(listeners.hash, `#id=${AMANGA_ID}&tab=listeners`);
+});
+
+// ---------------------------------------------------------------- any part of the song
+// A server that also ranks a clip of the listener's own audio says so in
+// query.parts.excerpt. The page then offers a file of the song, and in
+// Chromium on a computer a tab's sound, next to the preview; only the picked
+// seconds are sent (POST /api/anysong/excerpt), as a 24 kHz mono WAV.
+const EXCERPT_ADVERT = { min_s: 10, max_s: 30, max_bytes: 6291456 };
+const CLIP_PARTS = { ...PARTS_INFO, excerpt: EXCERPT_ADVERT };
+const CLIP_ADVERT_KEY = "soundalike:excerpt:v1";
+const CLIP_RATE = 8000;
+
+// WebAudio as far as the page uses it: every file decodes to `seconds` of a
+// steady level of 0.25, and every render is kept in `rendered`.
+function fakeWebAudio({ seconds = 200, level = 0.25, undecodable = false } = {}) {
+  const rendered = [];
+  const played = [];
+  const buffer = (length, rate, fill) => {
+    const data = new Float32Array(length).fill(fill);
+    return { length, sampleRate: rate, duration: length / rate, getChannelData: () => data };
+  };
+  class AudioContext {
+    constructor() {
+      this.sampleRate = CLIP_RATE;
+      this.currentTime = 0;
+      this.destination = {};
+      this.modules = [];
+      this.audioWorklet = { addModule: async (url) => this.modules.push(url) };
+      AudioContext.last = this;
+    }
+    async resume() {}
+    async decodeAudioData() {
+      if (undecodable) throw new Error("not audio");
+      return buffer(seconds * CLIP_RATE, CLIP_RATE, level);
+    }
+    createBuffer(_channels, length, rate) {
+      return buffer(length, rate, 0);
+    }
+    createBufferSource() {
+      return {
+        connect() {},
+        start: (_when, offset, length) => played.push([offset, length]),
+        stop() {},
+      };
+    }
+    createMediaStreamSource(stream) {
+      return { connect: (node) => stream.connected.push(node), disconnect() {} };
+    }
+  }
+  class OfflineAudioContext {
+    constructor(_channels, length, rate) {
+      this.length = length;
+      this.rate = rate;
+      this.destination = {};
+    }
+    createBufferSource() {
+      return {
+        connect() {},
+        start: (_when, offset, length) => {
+          this.span = [offset, length];
+        },
+      };
+    }
+    async startRendering() {
+      rendered.push({ rate: this.rate, span: this.span });
+      return buffer(this.length, this.rate, level);
+    }
+  }
+  return { globals: { AudioContext, OfflineAudioContext, Blob }, rendered, played, AudioContext };
+}
+
+function clipBody(params, { known = true, lang } = {}) {
+  const body = anysongBody({
+    lang: lang || params.get("lang"),
+    scene: params.get("scene") === "0" || !known ? "off" : "on",
+  });
+  body.query = { ...body.query, source: "excerpt", seconds: 20, parts: { excerpt: EXCERPT_ADVERT } };
+  body.cached = false;
+  if (!known) {
+    delete body.query.id;
+    body.query.title = "";
+    body.query.artist = "";
+    body.query.scene = "unknown_artist";
+  }
+  body.results.main.reverse();
+  return body;
+}
+
+// The page with a server that takes clips; `posts` are the clips it was sent.
+function loadClips({ audio = fakeWebAudio(), answer = (params) => json(200, clipBody(params)), ...options } = {}) {
+  const posts = [];
+  const page = loadMain({
+    hash: `#id=${AMANGA_ID}`,
+    best: partsBest({ parts: CLIP_PARTS }),
+    ...options,
+    globals: { ...audio.globals, ...(options.globals || {}) },
+    excerpt: (params, init) => {
+      posts.push({ params, init });
+      return answer(params, init);
+    },
+  });
+  return { page, posts, audio };
+}
+
+const AUDIO_FILE = { name: "song.flac", size: 30_000_000, arrayBuffer: async () => new ArrayBuffer(64) };
+const sourceButtons = (page) => page.document.querySelectorAll("#part-panel .part-sources button");
+
+async function chooseFile(page, file = AUDIO_FILE) {
+  const chooser = page.document.querySelector("#clip-file");
+  chooser.files = [file];
+  chooser.dispatch("change");
+  await waitFor(() => page.document.querySelector("#part-span") || page.text("#clip-status") !== "Opening the file…");
+}
+
+async function wavOf(post) {
+  const view = new DataView(await post.init.body.arrayBuffer());
+  const text = (at, length) => String.fromCharCode(...new Uint8Array(view.buffer, at, length));
+  let peak = 0;
+  for (let at = 44; at < view.byteLength; at += 2) peak = Math.max(peak, Math.abs(view.getInt16(at, true)));
+  return {
+    tag: `${text(0, 4)} ${text(8, 8)} ${text(36, 4)}`,
+    channels: view.getUint16(22, true),
+    rate: view.getUint32(24, true),
+    bits: view.getUint16(34, true),
+    seconds: (view.byteLength - 44) / 2 / view.getUint32(24, true),
+    peak,
+  };
+}
+
+test("a server that takes no clips offers the preview alone, and no clip entry under the search bar", async () => {
+  const { page } = loadClips({ best: partsBest(), local: { [CLIP_ADVERT_KEY]: JSON.stringify(EXCERPT_ADVERT) } });
+  await waitFor(() => shown(page));
+  page.document.querySelector("#part-open").click();
+  assert.deepEqual(sourceButtons(page), []);
+  assert.equal(page.text("#part-panel .part-intro"), `New · beta ${PART_INTRO}`);
+  // What an earlier visit kept is dropped once the server says otherwise.
+  assert.equal(page.kept.has(CLIP_ADVERT_KEY), false);
+  assert.equal(page.document.querySelector("#clip-open").hidden, true);
+  assert.deepEqual(page.errors, []);
+});
+
+test("a browser without WebAudio is not offered its own audio", async () => {
+  const { page } = loadClips({ audio: { globals: {} } });
+  await waitFor(() => shown(page));
+  page.document.querySelector("#part-open").click();
+  assert.deepEqual(sourceButtons(page), []);
+  assert.equal(page.document.querySelector("#clip-open").hidden, true);
+});
+
+test("any part of the song: a file is cut in the browser and only the picked span is sent for the seed", async () => {
+  const { page, posts, audio } = loadClips();
+  await waitFor(() => shown(page));
+  assert.equal(page.kept.get(CLIP_ADVERT_KEY), JSON.stringify(EXCERPT_ADVERT));
+  page.document.querySelector("#part-open").click();
+  // The preview stays the first source; a tab's sound needs Chromium on a computer.
+  assert.deepEqual(sourceButtons(page).map((button) => button.textContent),
+    ["The 30-second preview", "A file of the song"]);
+  assert.deepEqual(sourceButtons(page).map((button) => button.getAttribute("aria-pressed")), ["true", "false"]);
+  assert.equal(page.text("#part-panel .part-intro"), `New · beta ${PART_INTRO}`);
+
+  sourceButtons(page)[1].click();
+  assert.equal(sourceButtons(page)[1].getAttribute("aria-pressed"), "true");
+  assert.match(page.text("#part-panel .part-note"), /is not uploaded\. Only the seconds you pick are sent to be matched, and nothing is stored\./);
+  assert.match(page.text("#part-panel .part-note"), /The song, its artist and its language stay the ones you picked\./);
+  assert.equal(page.document.querySelector("#clip-file").getAttribute("type"), "file");
+
+  await chooseFile(page);
+  // The whole 3:20 file is the timeline; the span opens a third of the way in.
+  assert.deepEqual(page.texts("#part-panel .part-ticks span"), ["0:00", "0:50", "1:40", "2:30", "3:20"]);
+  assert.equal(page.text("#part-label"), "1:02–1:17 of your file · 15 s");
+  assert.deepEqual(page.texts("#part-panel .part-lengths button"), ["10 s", "15 s", "20 s"]);
+  // It moves by the second, anywhere in the song.
+  key(page, "ArrowRight");
+  assert.equal(page.text("#part-label"), "1:03–1:18 of your file · 15 s");
+  key(page, "End");
+  assert.equal(page.text("#part-label"), "3:05–3:20 of your file · 15 s");
+  const track = page.document.querySelector("#part-track");
+  track.dispatch("pointerdown", { clientX: 18, pointerId: 1, target: track });
+  track.dispatch("pointerup");
+  assert.equal(page.text("#part-label"), "0:05–0:20 of your file · 15 s");
+  page.document.querySelectorAll("#part-panel .part-lengths button")[2].click();
+  assert.equal(page.text("#part-label"), "0:05–0:25 of your file · 20 s");
+  // Play this part plays the file's span, and stops.
+  page.document.querySelector("#part-play").click();
+  assert.deepEqual(audio.played, [[5, 20]]);
+  assert.equal(page.text("#part-play"), "⏸ Stop");
+  page.document.querySelector("#part-play").click();
+  assert.equal(page.text("#part-play"), "▶ Play this part");
+  assert.equal(posts.length, 0);
+
+  const before = shown(page).dataset.id;
+  page.document.querySelector("#part-apply").click();
+  await waitFor(() => posts.length === 1 && shown(page) && shown(page).dataset.id !== before);
+  // Only the span is rendered and sent: 20 s, mono, 24 kHz, 16 bits, at full scale.
+  assert.deepEqual(audio.rendered, [{ rate: 24000, span: [5, 20] }]);
+  assert.equal(posts[0].init.method, "POST");
+  assert.equal(posts[0].init.headers["Content-Type"], "audio/wav");
+  assert.deepEqual(await wavOf(posts[0]),
+    { tag: "RIFF WAVEfmt  data", channels: 1, rate: 24000, bits: 16, seconds: 20, peak: 32767 });
+  // The song stays the seed: its id goes with the clip.
+  assert.deepEqual(Object.fromEntries(posts[0].params), { k: "20", lang: "same", id: String(AMANGA_ID) });
+
+  const chip = page.document.querySelector("#part-chip");
+  assert.equal(chip.textContent, "Matching your clip (0:05–0:25 of your file) · whole preview");
+  assert.equal(page.document.querySelector("#part-panel").hidden, true);
+  // A clip cannot be in a link: the link is the song's.
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=best`);
+  assert.equal(page.text(".seed h2"), "Amanga");
+  assert.deepEqual(page.texts("#seedtags .tag"), ["your clip, heard just now", "matched in 0.6 s"]);
+
+  // The language and Audio only switches send the same clip again.
+  page.document.querySelector("#language-toggle").click();
+  await waitFor(() => posts.length === 2);
+  assert.equal(posts[1].params.get("lang"), "all");
+  assert.equal(posts[1].init.body, posts[0].init.body);
+  await waitFor(() => shown(page));
+  page.document.querySelector("#audio-only").click();
+  await waitFor(() => posts.length === 3);
+  assert.equal(posts[2].params.get("scene"), "0");
+
+  // Reopening the picker comes back to the file source; "whole preview" drops the clip.
+  await waitFor(() => shown(page));
+  page.document.querySelector("#part-open").click();
+  assert.equal(sourceButtons(page)[1].getAttribute("aria-pressed"), "true");
+  page.document.querySelector("#part-cancel").click();
+  const asked = page.similar().length;
+  page.document.querySelector("#part-clear").click();
+  await waitFor(() => page.similar().length === asked + 1 && chip.hidden);
+  assert.equal(posts.length, 3);
+  assert.deepEqual(page.errors, []);
+});
+
+test("a file that is not audio, too short, silent or too large says so and sends nothing", async () => {
+  const bad = loadClips({ audio: fakeWebAudio({ undecodable: true }) });
+  await waitFor(() => shown(bad.page));
+  bad.page.document.querySelector("#part-open").click();
+  sourceButtons(bad.page)[1].click();
+  await chooseFile(bad.page);
+  assert.equal(bad.page.text("#clip-status"),
+    "Your browser could not read that file as audio. Try an MP3, M4A, FLAC or WAV.");
+  await chooseFile(bad.page, { ...AUDIO_FILE, size: 500 * 1024 * 1024 });
+  assert.equal(bad.page.text("#clip-status"), "That file is too large to open here.");
+
+  const short = loadClips({ audio: fakeWebAudio({ seconds: 8 }) });
+  await waitFor(() => shown(short.page));
+  short.page.document.querySelector("#part-open").click();
+  sourceButtons(short.page)[1].click();
+  await chooseFile(short.page);
+  assert.equal(short.page.text("#clip-status"), "That file is shorter than 10 seconds.");
+
+  const silent = loadClips({ audio: fakeWebAudio({ level: 0 }) });
+  await waitFor(() => shown(silent.page));
+  silent.page.document.querySelector("#part-open").click();
+  sourceButtons(silent.page)[1].click();
+  await chooseFile(silent.page);
+  silent.page.document.querySelector("#part-apply").click();
+  await waitFor(() => silent.page.text("#clip-status") === "That part is silent. Pick another part.");
+  assert.equal(silent.page.document.querySelector("#part-apply").disabled, false);
+  assert.equal(bad.posts.length + short.posts.length + silent.posts.length, 0);
+});
+
+test("a clip the server refuses says why, and a server that stopped taking clips loses the entry", async () => {
+  const cases = [
+    [422, "the clip is shorter than 10 s", "The clip is shorter than 10 s."],
+    [413, "the clip is too large", "That clip is too large to send. Pick a shorter part."],
+    [429, "too many requests", "You're sending clips a bit fast. Wait a minute and try again."],
+    [404, "not found", "Matching your own audio is not switched on right now."],
+  ];
+  for (const [status, error, text] of cases) {
+    const { page, posts } = loadClips({ answer: () => json(status, { ok: false, error }) });
+    await waitFor(() => shown(page));
+    page.document.querySelector("#part-open").click();
+    sourceButtons(page)[1].click();
+    await chooseFile(page);
+    page.document.querySelector("#part-apply").click();
+    await waitFor(() => page.document.querySelector("#matches .state.err"));
+    assert.equal(page.text("#matches .state.err"), text);
+    assert.equal(posts.length, 1);
+    assert.equal(page.kept.has(CLIP_ADVERT_KEY), status !== 404);
+    // The way back to the song is still there.
+    assert.equal(page.text("#part-clear"), "whole preview");
+  }
+});
+
+// Chromium on a computer: the Share dialog's tab with its sound.
+function fakeTabShare({ sound = true } = {}) {
+  const share = { asked: [], stopped: 0, taps: [] };
+  const track = () => ({ stop: () => { share.stopped += 1; } });
+  const stream = {
+    connected: share.taps,
+    video: [track()],
+    audio: sound ? [track()] : [],
+    getTracks() { return [...this.video, ...this.audio]; },
+    getVideoTracks() { return this.video; },
+    getAudioTracks() { return this.audio; },
+  };
+  share.stream = stream;
+  share.globals = {
+    navigator: {
+      userAgentData: { mobile: false },
+      mediaDevices: {
+        getDisplayMedia: async (options) => {
+          share.asked.push(options);
+          return stream;
+        },
+      },
+    },
+    AudioWorkletNode: class {
+      constructor(_context, name) {
+        this.name = name;
+        this.port = {};
+      }
+    },
+  };
+  return share;
+}
+
+test("a tab's sound is offered in Chromium on a computer, captured without voice processing, and matched like a file", async () => {
+  const share = fakeTabShare();
+  const { page, posts, audio } = loadClips({ globals: share.globals });
+  await waitFor(() => shown(page));
+  page.document.querySelector("#part-open").click();
+  assert.deepEqual(sourceButtons(page).map((button) => button.textContent),
+    ["The 30-second preview", "A file of the song", "A tab that is playing it experimental"]);
+  sourceButtons(page)[2].click();
+  assert.match(page.text("#part-panel .part-intro"), /^Experimental Play the song in another tab/);
+  assert.match(page.text("#part-panel .part-note"), /leave “Also share tab audio” switched on/);
+  assert.match(page.text("#part-panel .part-note"), /the picture is dropped at once\. Nothing is stored\./);
+  assert.deepEqual(page.texts("#part-panel .part-lengths button"), ["10 s", "20 s", "30 s"]);
+  page.document.querySelectorAll("#part-panel .part-lengths button")[2].click();
+
+  page.document.querySelector("#clip-capture").click();
+  await waitFor(() => share.taps.length === 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(share.asked[0].audio)),
+    { echoCancellation: false, noiseSuppression: false, autoGainControl: false });
+  assert.deepEqual(audio.AudioContext.last.modules, ["/clip-tap.js"]);
+  assert.equal(share.taps[0].name, "clip-tap");
+  // The picture is dropped as soon as the share starts.
+  assert.equal(share.stopped, 1);
+  assert.equal(page.document.querySelector("#clip-capture").hidden, true);
+  assert.equal(page.document.querySelector("#clip-stop").hidden, false);
+  // Six blocks of five seconds arrive from the worklet.
+  for (let block = 0; block < 6; block += 1) {
+    share.taps[0].port.onmessage({ data: new Float32Array(5 * CLIP_RATE).fill(0.1) });
+  }
+  await waitFor(() => page.document.querySelector("#part-span"));
+  assert.equal(share.stopped, 3);
+  assert.deepEqual(page.texts("#part-panel .part-ticks span"), ["0:00", "0:08", "0:15", "0:23", "0:30"]);
+  assert.equal(page.text("#part-label"), "0:00–0:15 of your capture · 15 s");
+  key(page, "End");
+  page.document.querySelector("#part-apply").click();
+  await waitFor(() => posts.length === 1);
+  assert.deepEqual(audio.rendered, [{ rate: 24000, span: [15, 15] }]);
+  assert.equal(posts[0].params.get("id"), String(AMANGA_ID));
+  await waitFor(() => page.text("#part-chip") === "Matching your clip (0:15–0:30 of your capture) · whole preview");
+  assert.deepEqual(page.errors, []);
+});
+
+test("a share without sound, or with silence, says what to do instead of matching", async () => {
+  const mute = fakeTabShare({ sound: false });
+  const first = loadClips({ globals: mute.globals });
+  await waitFor(() => shown(first.page));
+  first.page.document.querySelector("#part-open").click();
+  sourceButtons(first.page)[2].click();
+  first.page.document.querySelector("#clip-capture").click();
+  await waitFor(() => first.page.text("#clip-status"));
+  assert.equal(first.page.text("#clip-status"),
+    "That share has no sound. Choose a tab, not a window or a screen, and leave “Also share tab audio” on.");
+  assert.equal(mute.stopped, 2);
+
+  const quiet = fakeTabShare();
+  const second = loadClips({ globals: quiet.globals });
+  await waitFor(() => shown(second.page));
+  second.page.document.querySelector("#part-open").click();
+  sourceButtons(second.page)[2].click();
+  second.page.document.querySelector("#clip-capture").click();
+  await waitFor(() => quiet.taps.length === 1);
+  for (let block = 0; block < 4; block += 1) {
+    quiet.taps[0].port.onmessage({ data: new Float32Array(5 * CLIP_RATE) });
+  }
+  await waitFor(() => /^Almost nothing/.test(second.page.text("#clip-status")));
+  assert.equal(second.page.text("#clip-status"),
+    "Almost nothing was heard. Is the tab playing, and was “Also share tab audio” on?");
+  assert.equal(second.page.document.querySelector("#clip-capture").hidden, false);
+
+  // Cancel during a capture ends the share and sends nothing.
+  const third = fakeTabShare();
+  const last = loadClips({ globals: third.globals });
+  await waitFor(() => shown(last.page));
+  last.page.document.querySelector("#part-open").click();
+  sourceButtons(last.page)[2].click();
+  last.page.document.querySelector("#clip-capture").click();
+  await waitFor(() => third.taps.length === 1);
+  last.page.document.querySelector("#part-cancel").click();
+  await waitFor(() => third.stopped === 3);
+  assert.equal(last.page.document.querySelector("#part-panel").hidden, true);
+  assert.equal(first.posts.length + second.posts.length + last.posts.length, 0);
+});
+
+test("a clip without a song is matched by sound alone and says what is missing", async () => {
+  const { page, posts } = loadClips({
+    hash: "",
+    local: { [CLIP_ADVERT_KEY]: JSON.stringify(EXCERPT_ADVERT) },
+    answer: (params) => json(200, clipBody(params, { known: false })),
+  });
+  const entry = page.document.querySelector("#clip-open");
+  assert.equal(entry.hidden, false);
+  assert.equal(entry.textContent, "🎧 Match a clip of your own audio beta");
+  entry.click();
+  // No song, so no preview to pick from: the file is the first source.
+  assert.equal(page.text("#part-panel .part-intro"),
+    "New · beta Have this song as a file? Choose it and pick any part of the whole song.");
+  assert.match(page.text("#part-panel .part-note"),
+    /Without a song picked, the clip is matched by sound alone: Listeners also play needs to know the song\./);
+  // Cancel before anything is matched leaves the page empty.
+  page.document.querySelector("#part-cancel").click();
+  assert.equal(page.document.querySelector("#out").innerHTML, "");
+
+  entry.click();
+  await chooseFile(page);
+  page.document.querySelector("#part-apply").click();
+  await waitFor(() => shown(page));
+  assert.deepEqual(Object.fromEntries(posts[0].params), { k: "20", lang: "same" });
+  assert.equal(page.text(".seed h2"), "Your clip");
+  assert.equal(page.text(".seed .art"), "No song picked: matched by sound alone");
+  assert.equal(page.document.querySelector("#share").hidden, true);
+  assert.equal(page.document.querySelector(".seed .pv"), null);
+  assert.equal(page.hash, "");
+  assert.equal(page.text("#part-chip"), "Matching your clip (1:02–1:17 of your file) · clear");
+  page.document.querySelector("#tab-listeners").click();
+  assert.equal(page.text("#matches .state"),
+    "This list comes from what a song's listeners also play, and we don't know which song your clip is from. " +
+    "Search the song first, then match your clip from its Match a part panel.");
+  assert.equal(page.hash, "");
+  // Another part of the same audio can be picked from the card.
+  assert.equal(page.document.querySelector("#part-open").hidden, false);
+  page.document.querySelector("#part-clear").click();
+  assert.equal(page.document.querySelector("#out").innerHTML, "");
+  assert.deepEqual(page.errors, []);
+});
+
+test("a clip the server recognises as a catalog song takes that song as its seed", async () => {
+  const { page, posts } = loadClips({
+    hash: "",
+    local: { [CLIP_ADVERT_KEY]: JSON.stringify(EXCERPT_ADVERT) },
+  });
+  page.document.querySelector("#clip-open").click();
+  await chooseFile(page);
+  page.document.querySelector("#part-apply").click();
+  await waitFor(() => shown(page) && page.text(".seed h2") === "Amanga");
+  assert.equal(posts[0].params.get("id"), null);
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=best`);
+  assert.equal(page.document.querySelector("#share").hidden, false);
+  assert.equal(page.text("#part-chip"), "Matching your clip (1:02–1:17 of your file) · whole preview");
+  // From here on the clip goes with the song.
+  page.document.querySelector("#language-toggle").click();
+  await waitFor(() => posts.length === 2);
+  assert.equal(posts[1].params.get("id"), String(AMANGA_ID));
+  assert.deepEqual(page.errors, []);
 });

@@ -132,6 +132,7 @@ remains available for compatibility but is not the normal interactive path.
 webapp/
   index.html          # the whole static UI: search, results, Spotify login, save
   search.js           # abortable autocomplete, prefix reuse, and idle prewarming
+  clip-tap.js         # audio worklet of Match a part's tab capture (loaded by search.js)
   build_search_catalog.py
   api/
     _search.py        # stdlib-only title/artist catalog and bounded query cache

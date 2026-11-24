@@ -22,6 +22,7 @@ const rewrites = new Map(
 const pages = new Map([
   ["/", ["../index.html", "text/html; charset=utf-8"]],
   ["/search.js", ["../search.js", "text/javascript; charset=utf-8"]],
+  ["/clip-tap.js", ["../clip-tap.js", "text/javascript; charset=utf-8"]],
   ["/find", ["../find/index.html", "text/html; charset=utf-8"]],
   ["/find/", ["../find/index.html", "text/html; charset=utf-8"]],
 ]);
@@ -49,7 +50,19 @@ createServer(async (request, response) => {
   }
   try {
     if (url.pathname.startsWith("/api/anysong/")) {
-      const answer = await fetch(`${engine}${url.pathname.slice("/api/anysong".length)}${url.search}`);
+      // A clip of the listener's audio (POST /api/anysong/excerpt) goes on with its body.
+      const chunks = [];
+      if (request.method === "POST") for await (const chunk of request) chunks.push(chunk);
+      const answer = await fetch(
+        `${engine}${url.pathname.slice("/api/anysong".length)}${url.search}`,
+        request.method === "POST"
+          ? {
+              method: "POST",
+              headers: { "Content-Type": request.headers["content-type"] || "application/octet-stream" },
+              body: Buffer.concat(chunks),
+            }
+          : {},
+      );
       return sendJson(response, answer.status, await answer.text());
     }
     if (url.pathname === "/api/preview") {
