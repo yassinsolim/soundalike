@@ -363,26 +363,29 @@ struct ResultsScreen: View {
                 case .seed(let seed): model.load(seed: seed)
                 }
             }
+            .task(id: PrefetchKey(ids: matches.map(\.id), target: model.target, spotify: spotify.isConnected, music: canUseAppleMusic)) {
+                // Look the list up in the music app now, so tapping a result starts it at once.
+                switch model.target {
+                case .spotify where spotify.isConnected: _ = await SpotifyAccount().trackIDs(for: matches)
+                case .appleMusic where canUseAppleMusic: _ = await AppleMusicService.shared.songs(for: matches)
+                default: break
+                }
+            }
+    }
+
+    private struct PrefetchKey: Equatable {
+        var ids: [String]
+        var target: MusicSource
+        var spotify: Bool
+        var music: Bool
+    }
+
+    private var matches: [Match] {
+        if case .loaded(let results) = model.state { results.matches } else { [] }
     }
 
     private var actions: ResultActions {
         let music = AppleMusicService.shared
-        let matches: [Match] = if case .loaded(let results) = model.state { results.matches } else { [] }
-        // Playing a result lets the player bar's Next and Previous walk this list.
-        let following: (@escaping (Match) async throws -> Void) -> (Match) async throws -> Void = { play in
-            @Sendable func playFromList(_ match: Match) async throws {
-                try await play(match)
-                guard let index = matches.firstIndex(of: match) else { return }
-                await PlayerController.shared.follow(matches, at: index, play: playFromList)
-                // Look up the neighbours' Spotify ids now, so Next and Previous start at once.
-                if SpotifyAccount().isConnected {
-                    for neighbour in [index + 1, index - 1] where matches.indices.contains(neighbour) {
-                        Task { _ = try? await SpotifyAccount().trackID(for: matches[neighbour]) }
-                    }
-                }
-            }
-            return playFromList
-        }
         let open: (Match, MusicSource) async -> Void = { match, target in
             let url: URL
             if target == .appleMusic {
@@ -399,16 +402,19 @@ struct ResultsScreen: View {
         case .spotify where spotify.isConnected:
             return ResultActions(
                 open: open,
-                play: following { match in
-                    try await logged("spotify-play") {
+                // The whole list goes to Spotify, so skipping anywhere walks it.
+                play: { match in
+                    try await shownInBar(match, .spotify) { try await logged("spotify-play") {
                         guard let id = try await SpotifyAccount().trackID(for: match) else { throw SoundalikeError.notInCatalog }
+                        var seen = Set<String>()
+                        let list = await SpotifyAccount().trackIDs(for: matches).compactMap { $0 }.filter { seen.insert($0).inserted }
                         do {
-                            try await SpotifyAccount().play(trackID: id)
+                            try await SpotifyAccount().play(trackIDs: list.contains(id) ? list : [id], startingAt: id)
                         } catch SpotifyError.noActiveDevice {
                             // Spotify isn't running anywhere: open the song there instead.
                             await Opener.open(URL(string: "https://open.spotify.com/track/\(id)")!)
                         }
-                    }
+                    } }
                 },
                 playMessage: "Playing in Spotify",
                 queue: { match in
@@ -422,7 +428,7 @@ struct ResultsScreen: View {
         case .appleMusic where canUseAppleMusic:
             return ResultActions(
                 open: open,
-                play: following { match in try await logged("apple-play") { try await music.playNow(match) } },
+                play: { match in try await shownInBar(match, .appleMusic) { try await logged("apple-play") { try await music.play(match, in: matches) } } },
                 playMessage: "Playing in Apple Music",
                 queue: { match in try await logged("play-next") { try await music.playNext(match) } },
                 queueLabel: "Play Next",
@@ -432,6 +438,19 @@ struct ResultsScreen: View {
         default:
             return ResultActions(open: open)
         }
+    }
+}
+
+/// Puts a tapped result in the player bar straight away, then has the bar read the music app
+/// back as soon as the song has started.
+private func shownInBar(_ match: Match, _ source: PlayerController.Source, _ play: () async throws -> Void) async throws {
+    await PlayerController.shared.starting(match, in: source)
+    do {
+        try await play()
+        await PlayerController.shared.started(in: source, ok: true)
+    } catch {
+        await PlayerController.shared.started(in: source, ok: false)
+        throw error
     }
 }
 

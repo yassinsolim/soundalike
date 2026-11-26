@@ -97,10 +97,14 @@ final class AppleMusicService {
         }
     }
 
-    /// Plays a result now in the Music app.
-    func playNow(_ match: Match) async throws {
+    /// Plays a result in the Music app with the rest of its list around it. The Music app's own
+    /// skip buttons (lock screen, headphones, CarPlay) then walk the list, and choosing anything
+    /// else in Music replaces it.
+    func play(_ match: Match, in list: [Match]) async throws {
         try await requireSubscription()
-        SystemMusicPlayer.shared.queue = [try await song(for: match)]
+        let start = try await song(for: match)
+        let songs = await songs(for: list)
+        SystemMusicPlayer.shared.queue = SystemMusicPlayer.Queue(for: songs.contains(start) ? songs : [start], startingAt: start)
         try await SystemMusicPlayer.shared.play()
     }
 
@@ -120,11 +124,17 @@ final class AppleMusicService {
         _ = try await MusicLibrary.shared.createPlaylist(name: name, description: "Songs that sound alike, found by Soundalike.", items: songs)
     }
 
-    private func songs(for matches: [Match]) async -> [Song] {
-        var songs: [Song] = []
-        for match in matches {
-            if let song = try? await song(for: match) { songs.append(song) }
+    /// Every result that is in Apple Music, in list order, looked up side by side.
+    func songs(for matches: [Match]) async -> [Song] {
+        let found = await withTaskGroup(of: (Int, Song?).self) { group in
+            for (index, match) in matches.enumerated() {
+                group.addTask { (index, try? await self.song(for: match)) }
+            }
+            var found = [Song?](repeating: nil, count: matches.count)
+            for await (index, song) in group { found[index] = song }
+            return found
         }
-        return songs
+        var seen = Set<MusicItemID>()
+        return found.compactMap { $0 }.filter { seen.insert($0.id).inserted }
     }
 }

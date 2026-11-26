@@ -119,9 +119,27 @@ public struct SpotifyAccount: Sendable {
         return try await trackID(isrc: isrc)
     }
 
-    /// Plays a track in Spotify on the device the user is listening on (Premium only).
-    public func play(trackID: String) async throws {
-        let body = try JSONSerialization.data(withJSONObject: ["uris": ["spotify:track:\(trackID)"]])
+    /// Spotify's ids for a whole list, looked up side by side; nil where a song isn't on Spotify.
+    public func trackIDs(for matches: [Match]) async -> [String?] {
+        await withTaskGroup(of: (Int, String?).self) { group in
+            for (index, match) in matches.enumerated() {
+                group.addTask { (index, try? await trackID(for: match)) }
+            }
+            var ids = [String?](repeating: nil, count: matches.count)
+            for await (index, id) in group { ids[index] = id }
+            return ids
+        }
+    }
+
+    /// Plays a list of tracks in Spotify, starting at one of them (Premium only). The list
+    /// becomes what Spotify is playing, so its own skip buttons (lock screen, headphones,
+    /// CarPlay) walk it, and choosing anything else in Spotify replaces it. Unlike the queue,
+    /// nothing is left behind.
+    public func play(trackIDs: [String], startingAt start: String) async throws {
+        let body = try JSONSerialization.data(withJSONObject: [
+            "uris": trackIDs.map { "spotify:track:\($0)" },
+            "offset": ["uri": "spotify:track:\(start)"],
+        ])
         let (_, status) = try await api("PUT", "me/player/play", body: body)
         guard (200..<300).contains(status) else { throw status == 404 ? SpotifyError.noActiveDevice : SpotifyError.requestFailed(status) }
     }

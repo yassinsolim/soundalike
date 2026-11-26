@@ -55,17 +55,9 @@ final class PlayerController: ObservableObject {
     private var spotifyDevice: String?
     /// When each app's song or play state last changed, to pick between two paused apps.
     private var changedAt: [Source: Date] = [:]
-    /// The soundalike list the playing song was started from, so Next and Previous walk it.
-    private var list: FollowedList?
-
-    private struct FollowedList {
-        var matches: [Match]
-        var index: Int
-        var play: (Match) async throws -> Void
-        /// When Soundalike last started a song from the list; the app's report lags behind.
-        var startedAt = Date()
-    }
     private var lastSeen: [Source: String] = [:]
+    /// A song Soundalike just asked a music app to play, shown until that app reports it.
+    private var pending: (source: Source, title: String, artist: String, until: Date)?
 
     private init() {
         SpotifyRemote.shared.onState = { [weak self] state in self?.update(spotify: state) }
@@ -143,14 +135,7 @@ final class PlayerController: ObservableObject {
         }
     }
 
-    /// Remembers the list a result was played from. Next and Previous then move through
-    /// it for as long as that result is the song playing.
-    func follow(_ matches: [Match], at index: Int, play: @escaping (Match) async throws -> Void) {
-        list = FollowedList(matches: matches, index: index, play: play)
-    }
-
     func skipToNext() {
-        if step(1) { return }
         switch source {
         case .spotify: SpotifyRemote.shared.isConnected ? SpotifyRemote.shared.skipToNext() : sendWebAPI(.next)
         case .appleMusic: Task { try? await SystemMusicPlayer.shared.skipToNextEntry() }
@@ -158,14 +143,14 @@ final class PlayerController: ObservableObject {
         }
     }
 
-    /// Like Control Center: restarts the song after its first few seconds, otherwise goes back one
-    /// (in the soundalike list when the song came from it).
+    /// Like Control Center: restarts the song after its first few seconds, otherwise goes back one.
+    /// A soundalike list started from Soundalike is what the music app is playing, so both
+    /// directions walk it there too.
     func skipToPrevious() {
         if position(at: Date()) > 3 {
             seek(to: 0)
             return
         }
-        if step(-1) { return }
         switch source {
         case .spotify: SpotifyRemote.shared.isConnected ? SpotifyRemote.shared.skipToPrevious() : sendWebAPI(.previous)
         case .appleMusic: Task { try? await SystemMusicPlayer.shared.skipToPreviousEntry() }
@@ -184,63 +169,43 @@ final class PlayerController: ObservableObject {
         }
     }
 
-    /// Plays the next (or previous) song in the followed list. False when the playing song
-    /// isn't from the list or the list ends, so the music app's own skip runs instead.
-    private func step(_ offset: Int) -> Bool {
-        guard var list, isFromList(list) else {
-            list = nil
-            return false
-        }
-        var index = list.index + offset
-        guard list.matches.indices.contains(index) else { return false }
-        list.index = index
-        list.startedAt = Date()
-        self.list = list
-        let matches = list.matches
-        let play = list.play
-        show(matches[index])
-        Task {
-            // Songs missing from the music app's catalog are skipped over.
-            while matches.indices.contains(index) {
-                do {
-                    try await play(matches[index])
-                    EventLog.record("player-list", ["index": index, "ok": true])
-                    break
-                } catch {
-                    EventLog.record("player-list", ["index": index, "ok": false, "error": "\(error)"])
-                    index += offset
-                    self.list?.index = index
-                }
-            }
-            if source == .spotify, !SpotifyRemote.shared.isConnected {
-                for delay in [250, 900] {
+    /// Shows a tapped result in the bar at once; the music app takes a moment to report it.
+    func starting(_ match: Match, in source: Source) {
+        pending = (source, match.title, match.artist, Date().addingTimeInterval(4))
+        let cover = (source == .spotify ? spotify : appleMusic)?.track.cover
+        store(Snapshot(
+            track: Track(
+                id: "pending:\(match.id)", title: match.title, artist: match.artist,
+                cover: match.artworkURL.map { .url($0) } ?? cover, duration: 0, seed: nil
+            ),
+            isPlaying: true, position: 0, at: Date()
+        ), for: source)
+    }
+
+    /// After the play request: reads the app back right away instead of at the next poll,
+    /// and drops the placeholder when the request failed.
+    func started(in source: Source, ok: Bool) {
+        if !ok { pending = nil }
+        switch source {
+        case .appleMusic: scheduleAppleRefresh()
+        case .spotify:
+            guard !SpotifyRemote.shared.isConnected else { return }
+            Task {
+                for delay in [150, 350, 700, 1200] {
                     try? await Task.sleep(for: .milliseconds(delay))
                     await refreshSpotifyWebAPI()
+                    if pending == nil { break }
                 }
             }
         }
+    }
+
+    /// False for a report of the song that was playing before the tapped one.
+    private func accepts(title: String, artist: String, from source: Source) -> Bool {
+        guard let pending, pending.source == source else { return true }
+        guard Date() > pending.until || (Self.similar(title, pending.title) && Self.similar(artist, pending.artist)) else { return false }
+        self.pending = nil
         return true
-    }
-
-    /// Shows a list song in the bar straight away, before the music app reports it.
-    private func show(_ match: Match) {
-        guard let source, var snapshot = now else { return }
-        snapshot.track = Track(
-            id: "pending:\(match.id)", title: match.title, artist: match.artist,
-            cover: match.artworkURL.map { .url($0) }, duration: 0, seed: nil
-        )
-        snapshot.isPlaying = true
-        snapshot.position = 0
-        snapshot.at = Date()
-        store(snapshot, for: source)
-    }
-
-    private func isFromList(_ list: FollowedList) -> Bool {
-        if Date().timeIntervalSince(list.startedAt) < 8 { return true }
-        guard let track = now?.track else { return false }
-        let match = list.matches[list.index]
-        // Lists are full of same-title covers, so the artist has to agree too.
-        return Self.similar(track.title, match.title) && Self.similar(track.artist, match.artist)
     }
 
     /// Equal after normalising, or one starts with the other ("Song" / "Song - Remastered",
@@ -255,9 +220,12 @@ final class PlayerController: ObservableObject {
     private func update(spotify state: SPTAppRemotePlayerState) {
         let track = state.track
         // Between songs App Remote reports a placeholder ("--", no length); skip it.
-        guard track.duration > 0, !track.uri.isEmpty else { return }
+        guard track.duration > 0, !track.uri.isEmpty,
+              accepts(title: track.name, artist: track.artist.name, from: .spotify) else { return }
         let id = track.uri
-        let cover = spotify?.track.id == id ? spotify?.track.cover : nil
+        // Keep the tapped result's cover until Spotify's own image arrives.
+        let previous = spotify?.track
+        let cover = previous?.id == id || previous?.id.hasPrefix("pending:") == true ? previous?.cover : nil
         spotify = Snapshot(
             track: Track(
                 id: id, title: track.name, artist: track.artist.name, cover: cover,
@@ -271,7 +239,7 @@ final class PlayerController: ObservableObject {
             canSeek: state.playbackRestrictions.canSeek
         )
         choose()
-        if cover == nil, spotifyImageID != id {
+        if spotifyImageID != id {
             spotifyImageID = id
             Task {
                 guard let image = await SpotifyRemote.shared.image(for: track), spotify?.track.id == id else { return }
@@ -285,6 +253,7 @@ final class PlayerController: ObservableObject {
         guard let state = try? await SpotifyAccount().playbackState() else { return }
         spotifyNeedsWake = false
         spotifyDevice = state.deviceID
+        guard accepts(title: state.seed.title, artist: state.seed.artist, from: .spotify) else { return }
         let id = state.seed.spotifyID ?? state.seed.title
         spotify = Snapshot(
             track: Track(
@@ -341,6 +310,7 @@ final class PlayerController: ObservableObject {
             duration = song.duration ?? 0
             seed = Seed(title: song.title, artist: song.artistName, isrc: song.isrc, source: .appleMusic, appleMusicID: song.id.rawValue)
         }
+        guard accepts(title: title, artist: artist, from: .appleMusic) else { return }
         appleMusic = Snapshot(
             track: Track(
                 id: entry.id, title: title, artist: artist, cover: entry.artwork.map { .musicKit($0) },
