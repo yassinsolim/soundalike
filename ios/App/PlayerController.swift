@@ -56,8 +56,18 @@ final class PlayerController: ObservableObject {
     /// When each app's song or play state last changed, to pick between two paused apps.
     private var changedAt: [Source: Date] = [:]
     private var lastSeen: [Source: String] = [:]
-    /// A song Soundalike just asked a music app to play, shown until that app reports it.
-    private var pending: (source: Source, title: String, artist: String, until: Date)?
+    /// A song Soundalike just asked a music app to play, shown until that app reports it, with
+    /// what the bar showed before so a failed request can put it back.
+    private var pending: Pending?
+
+    private struct Pending {
+        var id = UUID()
+        var source: Source
+        var title: String
+        var artist: String
+        var until: Date
+        var previous: Snapshot?
+    }
 
     private init() {
         SpotifyRemote.shared.onState = { [weak self] state in self?.update(spotify: state) }
@@ -170,22 +180,35 @@ final class PlayerController: ObservableObject {
     }
 
     /// Shows a tapped result in the bar at once; the music app takes a moment to report it.
-    func starting(_ match: Match, in source: Source) {
-        pending = (source, match.title, match.artist, Date().addingTimeInterval(4))
-        let cover = (source == .spotify ? spotify : appleMusic)?.track.cover
+    /// Returns the request's id for `started`.
+    func starting(_ match: Match, in source: Source) -> UUID {
+        let previous = snapshot(for: source)
+        let request = Pending(source: source, title: match.title, artist: match.artist, until: Date().addingTimeInterval(4), previous: previous)
+        pending = request
         store(Snapshot(
             track: Track(
                 id: "pending:\(match.id)", title: match.title, artist: match.artist,
-                cover: match.artworkURL.map { .url($0) } ?? cover, duration: 0, seed: nil
+                cover: match.artworkURL.map { .url($0) } ?? previous?.track.cover, duration: 0, seed: nil
             ),
             isPlaying: true, position: 0, at: Date()
         ), for: source)
+        return request.id
     }
 
-    /// After the play request: reads the app back right away instead of at the next poll,
-    /// and drops the placeholder when the request failed.
-    func started(in source: Source, ok: Bool) {
-        if !ok { pending = nil }
+    /// After the play request: reads the app back right away instead of at the next poll.
+    /// When it failed, the bar goes back to what it showed before that tap (unless a newer
+    /// tap has replaced it since).
+    func started(_ request: UUID, ok: Bool) {
+        guard let pending, pending.id == request else { return }
+        let source = pending.source
+        if !ok {
+            self.pending = nil
+            switch source {
+            case .spotify: spotify = pending.previous
+            case .appleMusic: appleMusic = pending.previous
+            }
+            choose()
+        }
         switch source {
         case .appleMusic: scheduleAppleRefresh()
         case .spotify:
@@ -194,7 +217,7 @@ final class PlayerController: ObservableObject {
                 for delay in [150, 350, 700, 1200] {
                     try? await Task.sleep(for: .milliseconds(delay))
                     await refreshSpotifyWebAPI()
-                    if pending == nil { break }
+                    if self.pending?.id != request { break }
                 }
             }
         }

@@ -463,12 +463,12 @@ struct ResultsScreen: View {
 /// Puts a tapped result in the player bar straight away, then has the bar read the music app
 /// back as soon as the song has started.
 private func shownInBar(_ match: Match, _ source: PlayerController.Source, _ play: () async throws -> Void) async throws {
-    await PlayerController.shared.starting(match, in: source)
+    let request = await PlayerController.shared.starting(match, in: source)
     do {
         try await play()
-        await PlayerController.shared.started(in: source, ok: true)
+        await PlayerController.shared.started(request, ok: true)
     } catch {
-        await PlayerController.shared.started(in: source, ok: false)
+        await PlayerController.shared.started(request, ok: false)
         throw error
     }
 }
