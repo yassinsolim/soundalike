@@ -364,13 +364,13 @@ struct ResultsScreen: View {
                     canUseAppleMusic = (try? await MusicSubscription.current.canPlayCatalogContent) ?? false
                 }
                 checkedAppleMusic = true
-                // Apple Music listeners without Spotify get results in Apple Music, whatever the song came from.
-                if canUseAppleMusic, !spotify.isConnected { model.preferred = .appleMusic }
+                applyPreferredApp()
             }
+            // Connect Spotify can finish after these results opened (on Apple Music, say).
+            .onChange(of: spotify.isConnected) { applyPreferredApp() }
             .task {
                 guard case .loading(nil) = model.state else { return }
-                // Once Spotify is connected, results open there even for a song found in Music.
-                if spotify.isConnected { model.preferred = .spotify }
+                applyPreferredApp()
                 switch request.kind {
                 case .shared(let text): model.load(shared: text)
                 case .seed(let seed): model.load(seed: seed)
@@ -384,6 +384,12 @@ struct ResultsScreen: View {
                 default: break
                 }
             }
+    }
+
+    /// Results open in the app the user plays in, whatever app the song came from: Spotify once
+    /// it's connected, else Apple Music for a subscriber. With neither, the song's own app.
+    private func applyPreferredApp() {
+        model.preferred = spotify.isConnected ? .spotify : canUseAppleMusic ? .appleMusic : nil
     }
 
     private struct PrefetchKey: Equatable {

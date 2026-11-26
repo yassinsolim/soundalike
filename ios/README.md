@@ -71,7 +71,7 @@ Auto-detect runs at launch and after the app comes back from the background. Pul
 
 ## Which app results open in
 
-Once Spotify is connected, results open in Spotify whatever app the song came from; an Apple Music subscriber without Spotify gets Apple Music. The Spotify / Apple Music switch shows only to people who can play in both apps or in neither (`ResultsModel.preferred`, `ResultsView(showsTargetPicker:)`). Before, a song found in the Music app switched the results to Apple Music and saved that as the preferred app.
+Once Spotify is connected, results open in Spotify whatever app the song came from; an Apple Music subscriber without Spotify gets Apple Music. The Spotify / Apple Music switch shows only to people who can play in both apps or in neither (`ResultsModel.preferred`, `ResultsView(showsTargetPicker:)`). It's applied again whenever Spotify connects or disconnects, so results already on screen move to Spotify when Connect Spotify finishes late. Before, a song found in the Music app switched the results to Apple Music and saved that as the preferred app.
 
 ## Build
 
