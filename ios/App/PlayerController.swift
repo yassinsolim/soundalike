@@ -203,16 +203,16 @@ final class PlayerController: ObservableObject {
     /// False for a report of the song that was playing before the tapped one.
     private func accepts(title: String, artist: String, from source: Source) -> Bool {
         guard let pending, pending.source == source else { return true }
-        guard Date() > pending.until || (Self.similar(title, pending.title) && Self.similar(artist, pending.artist)) else { return false }
+        guard Date() > pending.until || (TextMatch.similar(title, pending.title) && TextMatch.similar(artist, pending.artist)) else { return false }
         self.pending = nil
         return true
     }
 
-    /// Equal after normalising, or one starts with the other ("Song" / "Song - Remastered",
-    /// "Artist" / "Artist, Guest").
-    private static func similar(_ a: String, _ b: String) -> Bool {
-        let a = TextMatch.normalize(a), b = TextMatch.normalize(b)
-        return !a.isEmpty && !b.isEmpty && (a == b || a.hasPrefix(b) || b.hasPrefix(a))
+    /// The song in the bar, for marking it in a results list.
+    var live: LiveSong? {
+        guard let track = now?.track else { return nil }
+        let pendingID = track.id.hasPrefix("pending:") ? String(track.id.dropFirst("pending:".count)) : nil
+        return LiveSong(matchID: pendingID, title: track.title, artist: track.artist, isPlaying: now?.isPlaying ?? false)
     }
 
     // MARK: - Spotify

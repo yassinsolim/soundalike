@@ -22,6 +22,11 @@ public final class ResultsModel: ObservableObject {
     }
     /// A one-line message from the host, for example why a link could not open.
     @Published public var notice: String?
+    /// The app the user plays music in, set by the host (Spotify once it's connected). Results
+    /// then open there, whichever app the song came from.
+    public var preferred: MusicSource? {
+        didSet { if let preferred { target = preferred } }
+    }
 
     private let client: SoundalikeClient
     private var task: Task<Void, Never>?
@@ -36,13 +41,13 @@ public final class ResultsModel: ObservableObject {
             state = .failed(SoundalikeError.unsupportedLink.localizedDescription)
             return
         }
-        target = link.source
+        if preferred == nil { target = link.source }
         let client = self.client
         start(seed: nil) { try await client.similar(to: link) }
     }
 
     public func load(seed: Seed) {
-        if seed.source != .search { target = seed.source }
+        if preferred == nil, seed.source != .search { target = seed.source }
         let client = self.client
         start(seed: seed) { try await client.similar(to: seed) }
     }

@@ -140,14 +140,33 @@ public struct SpotifyAccount: Sendable {
             "uris": trackIDs.map { "spotify:track:\($0)" },
             "offset": ["uri": "spotify:track:\(start)"],
         ])
-        let (_, status) = try await api("PUT", "me/player/play", body: body)
+        try await onDevice("PUT", "me/player/play", body: body)
+    }
+
+    /// Sends a player request. Spotify answers 404 "no active device" when its app is open on
+    /// the phone but hasn't played yet (right after Connect Spotify, say); the request then
+    /// goes to the phone's Spotify by device id instead of sending the user to Spotify.
+    private func onDevice(_ method: String, _ path: String, body: Data? = nil) async throws {
+        var (_, status) = try await api(method, path, body: body)
+        if status == 404, let device = try await phoneDevice() {
+            (_, status) = try await api(method, path + (path.contains("?") ? "&" : "?") + "device_id=" + device, body: body)
+        }
         guard (200..<300).contains(status) else { throw status == 404 ? SpotifyError.noActiveDevice : SpotifyError.requestFailed(status) }
+    }
+
+    /// The phone's Spotify among the user's devices, percent-encoded; nil when it isn't running.
+    /// Other devices are left alone, so music never starts on a computer across the room.
+    private func phoneDevice() async throws -> String? {
+        let (data, status) = try await api("GET", "me/player/devices")
+        guard status == 200, let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let devices = object["devices"] as? [[String: Any]] else { return nil }
+        let phone = devices.first { ($0["type"] as? String)?.lowercased() == "smartphone" && $0["is_restricted"] as? Bool != true }
+        return (phone?["id"] as? String)?.addingPercentEncoding(withAllowedCharacters: .alphanumerics)
     }
 
     /// Adds a track to the user's Spotify queue (Premium only).
     public func queue(trackID: String) async throws {
-        let (_, status) = try await api("POST", "me/player/queue?uri=spotify%3Atrack%3A\(trackID)")
-        guard (200..<300).contains(status) else { throw status == 404 ? SpotifyError.noActiveDevice : SpotifyError.requestFailed(status) }
+        try await onDevice("POST", "me/player/queue?uri=spotify%3Atrack%3A\(trackID)")
     }
 
     /// What the Spotify player is doing, for a remote control.

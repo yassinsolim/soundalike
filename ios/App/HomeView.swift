@@ -344,20 +344,33 @@ struct ResultsScreen: View {
     let request: ResultsRequest
     @StateObject private var model = ResultsModel()
     @ObservedObject private var spotify = SpotifyConnector.shared
+    @ObservedObject private var playing = PlayerController.shared
     /// Queue and playlist actions need an Apple Music subscription; without one they stay hidden.
     @State private var canUseAppleMusic = false
+    @State private var checkedAppleMusic = false
 
     var body: some View {
-        ResultsView(state: model.state, target: $model.target, actions: actions, retry: { model.retry() })
+        ResultsView(
+            state: model.state, target: $model.target, actions: actions, live: playing.live,
+            // One app to play in (Spotify connected, or an Apple Music subscription): no switch.
+            // It's offered only to people who can play in both, or in neither.
+            showsTargetPicker: checkedAppleMusic && spotify.isConnected == canUseAppleMusic,
+            retry: { model.retry() }
+        )
             .navigationTitle("Soundalikes")
             .navigationBarTitleDisplayMode(.inline)
             .task {
                 if MusicAuthorization.currentStatus == .authorized {
                     canUseAppleMusic = (try? await MusicSubscription.current.canPlayCatalogContent) ?? false
                 }
+                checkedAppleMusic = true
+                // Apple Music listeners without Spotify get results in Apple Music, whatever the song came from.
+                if canUseAppleMusic, !spotify.isConnected { model.preferred = .appleMusic }
             }
             .task {
                 guard case .loading(nil) = model.state else { return }
+                // Once Spotify is connected, results open there even for a song found in Music.
+                if spotify.isConnected { model.preferred = .spotify }
                 switch request.kind {
                 case .shared(let text): model.load(shared: text)
                 case .seed(let seed): model.load(seed: seed)

@@ -49,18 +49,48 @@ public struct ResultActions {
     }
 }
 
+/// The song the music app is playing, so the results list can mark it like Spotify does.
+public struct LiveSong: Equatable, Sendable {
+    /// Set while the song was just started from a result and the app hasn't reported it yet.
+    public var matchID: String?
+    public var title: String
+    public var artist: String
+    public var isPlaying: Bool
+
+    public init(matchID: String?, title: String, artist: String, isPlaying: Bool) {
+        self.matchID = matchID
+        self.title = title
+        self.artist = artist
+        self.isPlaying = isPlaying
+    }
+
+    /// The result this is, if any: the one just started, else the first with the same title and artist.
+    func row(in matches: [Match]) -> String? {
+        if let matchID, matches.contains(where: { $0.id == matchID }) { return matchID }
+        return matches.first { TextMatch.similar($0.title, title) && TextMatch.similar($0.artist, artist) }?.id
+    }
+}
+
 public struct ResultsView: View {
     let state: ResultsState
     let actions: ResultActions
     let retry: (() -> Void)?
+    let live: LiveSong?
+    /// The Spotify / Apple Music switch; hidden when the user has only one app to play in.
+    let showsTargetPicker: Bool
     @Binding var target: MusicSource
     @StateObject private var player = PreviewPlayer()
     @State private var toast: String?
 
-    public init(state: ResultsState, target: Binding<MusicSource>, actions: ResultActions, retry: (() -> Void)? = nil) {
+    public init(
+        state: ResultsState, target: Binding<MusicSource>, actions: ResultActions, live: LiveSong? = nil,
+        showsTargetPicker: Bool = true, retry: (() -> Void)? = nil
+    ) {
         self.state = state
         self._target = target
         self.actions = actions
+        self.live = live
+        self.showsTargetPicker = showsTargetPicker
         self.retry = retry
     }
 
@@ -85,12 +115,16 @@ public struct ResultsView: View {
                 .listRowSeparator(.hidden)
             case .loaded(let results):
                 SeedHeader(seed: results.seed).listRowSeparator(.hidden)
-                targetPicker
-                    .listRowSeparator(.hidden)
+                if showsTargetPicker {
+                    targetPicker
+                        .listRowSeparator(.hidden)
+                }
                 appleMusicBar(results.matches)
+                let liveRow = live?.row(in: results.matches)
                 ForEach(results.matches) { match in
                     ResultRow(
-                        match: match, player: player, symbol: actions.openSymbol, label: actions.openLabel(target),
+                        match: match, player: player, live: liveRow == match.id ? live : nil,
+                        symbol: actions.openSymbol, label: actions.openLabel(target),
                         playFull: actions.play.map { play in { run(actions.playMessage) { try await play(match) } } }
                     ) {
                         Task { await actions.open(match, target) }
@@ -210,6 +244,8 @@ struct SeedHeader: View {
 struct ResultRow: View {
     let match: Match
     @ObservedObject var player: PreviewPlayer
+    /// Set when this result is the song the music app is playing.
+    let live: LiveSong?
     let symbol: String
     let label: String
     /// Plays the whole song in the music app; when nil, tapping plays the preview here.
@@ -227,15 +263,20 @@ struct ResultRow: View {
 
     private var isPlaying: Bool { player.playingID == match.id }
     private var isLoading: Bool { player.loadingID == match.id }
+    /// Green like Spotify's playing row: the music app's song, or this row's preview.
+    private var isLive: Bool { live != nil || isPlaying }
 
     var body: some View {
         HStack(spacing: 12) {
             Button(action: tap) {
                 ZStack {
                     Artwork(url: match.artworkURL, size: 52)
-                    Circle().fill(.black.opacity(isPlaying || isLoading ? 0.45 : 0.25)).frame(width: 30, height: 30)
+                    Circle().fill(.black.opacity(isPlaying || isLoading || live != nil ? 0.45 : 0.25)).frame(width: 30, height: 30)
                     if isLoading {
                         ProgressView().tint(.white)
+                    } else if let live, !isPlaying {
+                        Image(systemName: "waveform").font(.system(size: 14, weight: .bold)).foregroundStyle(Color.green)
+                            .symbolEffect(.variableColor.iterative.dimInactiveLayers, options: .repeating, isActive: live.isPlaying)
                     } else {
                         Image(systemName: isPlaying ? "pause.fill" : "play.fill").font(.system(size: 13, weight: .bold)).foregroundStyle(.white)
                     }
@@ -255,6 +296,7 @@ struct ResultRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(match.title).font(.body.weight(.semibold)).lineLimit(1)
+                    .foregroundStyle(isLive ? Color.green : .primary)
                 Text(match.artist).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
