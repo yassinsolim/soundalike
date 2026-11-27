@@ -192,7 +192,7 @@ count together in `api/_search.py`. Custom catalogs may instead set both
 
 ## Deploy it
 
-Production runs on a Proxmox LXC container with a small private gateway, reached
+Production runs on a self-hosted Linux container with a small private gateway, reached
 only through Cloudflare Tunnel. The host checks `main` every five minutes, builds
 an immutable release of each new commit, and switches to it after installation
 succeeds. Any Linux host can run the same app if it provides:

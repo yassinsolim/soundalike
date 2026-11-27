@@ -20,7 +20,9 @@ Environment=OMP_NUM_THREADS=4
 Environment=SAMPLEID_CKPT=/opt/soundalike/ckpt/sampleid/sampleid-best.ckpt
 Environment=CLEWS_CKPT=/opt/soundalike/ckpt/clews
 Environment=SOUNDALIKE_EXT=/opt/soundalike/ext
-Environment=ANYSONG_HOST=192.168.1.47
+# ANYSONG_HOST, the LAN address the API listens on, is set on the host: /etc/soundalike/anysong.env holds the one line
+# ANYSONG_HOST=<address>. Without the file the unit does not start.
+EnvironmentFile=/etc/soundalike/anysong.env
 Environment=ANYSONG_PORT=8790
 # /opt/soundalike/index/current points at one index directory that holds everything the service reads of an index
 # (python -m soundalike.anysong.index_check <dir> lists and checks it): the melody, samples and sonic indexes, the scene

@@ -85,8 +85,8 @@ genre-incoherent results than the Sounds like tab (39 % vs 50 %) and more Listen
 ## Architecture
 
 ```
-browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api/anysong/*  ─▶ CT 409 :8790  anysong.api (RTX 2070 SUPER)
-                                                        └─ everything else ─▶ web gateway (webapp/)
+browser ── Cloudflare ── tunnel ── web host Caddy :8080 ─┬─ /api/anysong/*  ─▶ GPU host :8790  anysong.api (RTX 2070 SUPER)
+                                                          └─ everything else ─▶ web gateway (webapp/)
 ```
 
 - The home page, [`webapp/index.html`](../webapp/index.html) with [`webapp/search.js`](../webapp/search.js), is the
@@ -873,7 +873,7 @@ of 16–31 ms on the RTX 5080. `/healthz` reports the model's description under 
 
 ## Deployment (homelab)
 
-GPU host CT 409 (`/opt/soundalike`): `src/`, `venv/`, checkpoints under `ckpt/`, upstream code under `ext/`,
+The GPU host, a container on a homelab server (`/opt/soundalike`): `src/`, `venv/`, checkpoints under `ckpt/`, upstream code under `ext/`,
 offline Hugging Face cache in `hf/`, and indexes with `index/current` → the live index. Each index directory also
 holds the catalog tables it was built with: `catalog_meta.npz` for titles, `languages.npz` for language labels
 (`--languages`), `scene.npz` for the scene layer (`--scene`), `core_ids.npy` for the catalog tiers (`--core-ids`;
@@ -928,21 +928,22 @@ Whisper language model (`--language-model`) lives in `ckpt/whisper-large-v3-turb
 Swapping the index:
 
 ```sh
-scp -r index_new root@ct409:/opt/soundalike/index-store/NAME          # parallel scp per file is fastest
+scp -r index_new <gpu-host>:/opt/soundalike/index-store/NAME          # parallel scp per file is fastest
 cd /opt/soundalike/index-store/NAME && sha256sum -c ../NAME.sha256 && chmod -R go-w .
 cp catalog_meta.npz languages.npz scene.npz tempo.npz durations.npz core_ids.npy ranker.npz /opt/soundalike/index-store/NAME/   # its tables
 systemctl stop soundalike-anysong
 ln -sfn /opt/soundalike/index-store/NAME /opt/soundalike/index/current
 systemctl start soundalike-anysong && journalctl -u soundalike-anysong -f   # wait for "ready in ..."
-curl -s 192.168.1.47:8790/healthz
+curl -s "$ANYSONG_HOST:8790/healthz"                                  # the GPU host's LAN address
 ```
 
 Keep the previous index directory until the new one has been checked; rolling back is the same symlink swap.
 
-Public routing lives on CT 408: `"proxy_paths": {"/api/anysong/*": "192.168.1.47:8790"}` in the soundalike entry of
-`/etc/web/sites.json`, applied with `web-caddy-gen`. The API then listens on the LAN address
-(`ANYSONG_HOST=192.168.1.47`), and the Proxmox firewall for CT 409 only admits port 8790 from CT 408, which keeps
-`CF-Connecting-IP` trustworthy. The page itself ships with the normal `main` deploy.
+Public routing lives on the web host: `"proxy_paths": {"/api/anysong/*": "<gpu-host-lan-address>:8790"}` in the
+soundalike entry of `/etc/web/sites.json`, applied with `web-caddy-gen`. The API then listens on the GPU host's LAN
+address (`ANYSONG_HOST`, set in `/etc/soundalike/anysong.env` on that host), and the firewall for the GPU host only
+admits port 8790 from the web host, which keeps `CF-Connecting-IP` trustworthy. The page itself ships with the
+normal `main` deploy.
 
 Catalog growth runs on the same host as
 [`deploy/homelab/soundalike-crawl.service`](../deploy/homelab/soundalike-crawl.service), from its own copy of the

@@ -2844,7 +2844,7 @@ change it. As pre-registered, the guess stays off in this form and the result go
 
 ### Deployed: the overall match, guess off (2026-11-13)
 
-3b67714 went live on CT 409 at 04:20, using `deploy_overall.sh`. The script checks that only `api.py` and
+3b67714 went live on the GPU host at 04:20, using `deploy_overall.sh`. The script checks that only `api.py` and
 `languages.py` differ, with `LANGUAGE_GUESS` False. Backup and deploy log:
 `/opt/soundalike/deploy-backups/20261113-040138-overall/`.
 
@@ -2939,7 +2939,7 @@ smaller lists: 7 % of the reached seeds get fewer than ten songs on main, inside
 
 ### Deployed: the seed language guess on Best matches (2026-11-13)
 
-df81483 (`LANGUAGE_GUESS = "main"`) went live on CT 409 at 07:46, using `deploy_mainguess.sh`. The script checks that
+df81483 (`LANGUAGE_GUESS = "main"`) went live on the GPU host at 07:46, using `deploy_mainguess.sh`. The script checks that
 only `api.py` differs, with `LANGUAGE_GUESS` "main". Backup and deploy log:
 `/opt/soundalike/deploy-backups/20261113-072846-mainguess/`.
 
