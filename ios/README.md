@@ -36,7 +36,7 @@ Not possible on iOS 26.6, all tried on the device:
 - **A result card over the current app.** Controls never show snippets or dialogs: the intent returned a snippet every time and nothing appeared.
 - **A Live Activity.** Apple caps it at 160 points tall and collapses it after a few seconds, which was too small to use.
 
-Queueing and playing the full song in Spotify use the Web API, so for now they only work for allow-listed accounts. App Remote could do both for everyone once results carry Spotify track ids.
+Queueing and playing the full song in Spotify use the Web API, so they only work for allow-listed accounts. Spotify answers everyone else with 403 "User not registered in the Developer Dashboard" (or "not approved"); the app remembers that (`SpotifyAccount.webAPIRefused`, checked right after Connect Spotify), and their results play 30-second previews and open the song in Spotify instead. Reading and controlling Spotify still work for them through App Remote. App Remote could do both for everyone once results carry Spotify track ids.
 
 Links and in-app routes go through one URL scheme handled in `App/SoundalikeApp.swift`:
 

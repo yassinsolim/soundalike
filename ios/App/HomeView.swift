@@ -365,6 +365,9 @@ struct ResultsScreen: View {
     /// Queue and playlist actions need an Apple Music subscription; without one they stay hidden.
     @State private var canUseAppleMusic = false
     @State private var checkedAppleMusic = false
+    /// Spotify lets this account play results (it's on the app's allow list). Everyone else
+    /// gets previews here and Open in Spotify.
+    @State private var spotifyPlays = SpotifyAccount().playsResults
 
     var body: some View {
         ResultsView(
@@ -386,7 +389,10 @@ struct ResultsScreen: View {
                 applyPreferredApp()
             }
             // Connect Spotify can finish after these results opened (on Apple Music, say).
-            .onChange(of: spotify.isConnected) { applyPreferredApp() }
+            .onChange(of: spotify.isConnected) {
+                applyPreferredApp()
+                spotifyPlays = SpotifyAccount().playsResults
+            }
             .task {
                 guard case .loading(nil) = model.state else { return }
                 applyPreferredApp()
@@ -395,10 +401,12 @@ struct ResultsScreen: View {
                 case .seed(let seed): model.load(seed: seed)
                 }
             }
-            .task(id: PrefetchKey(ids: matches.map(\.id), target: model.target, spotify: spotify.isConnected, music: canUseAppleMusic)) {
+            .task(id: PrefetchKey(ids: matches.map(\.id), target: model.target, spotify: spotifyPlays, music: canUseAppleMusic)) {
                 // Look the list up in the music app now, so tapping a result starts it at once.
                 switch model.target {
-                case .spotify where spotify.isConnected: _ = await SpotifyAccount().trackIDs(for: matches)
+                case .spotify where spotifyPlays:
+                    _ = await SpotifyAccount().trackIDs(for: matches)
+                    spotifyPlays = SpotifyAccount().playsResults
                 case .appleMusic where canUseAppleMusic: _ = await AppleMusicService.shared.songs(for: matches)
                 default: break
                 }
@@ -450,13 +458,19 @@ struct ResultsScreen: View {
             await Opener.open(url)
         }
         switch model.target {
-        case .spotify where spotify.isConnected:
+        case .spotify where spotifyPlays:
             return ResultActions(
                 open: open,
                 // The whole list goes to Spotify, so skipping anywhere walks it.
                 play: { match in
                     try await shownInBar(match, .spotify) { try await logged("spotify-play") {
-                        guard let id = try await SpotifyAccount().trackID(for: match) else { throw SoundalikeError.notInCatalog }
+                        guard let id = try await SpotifyAccount().trackID(for: match) else {
+                            // Spotify only just refused this account: open the song there instead.
+                            guard SpotifyAccount.webAPIRefused else { throw SoundalikeError.notInCatalog }
+                            spotifyPlays = false
+                            await open(match, .spotify)
+                            return
+                        }
                         var seen = Set<String>()
                         let list = await SpotifyAccount().trackIDs(for: matches).compactMap { $0 }.filter { seen.insert($0).inserted }
                         do {

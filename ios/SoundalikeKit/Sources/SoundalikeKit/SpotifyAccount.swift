@@ -61,6 +61,9 @@ public struct SpotifyAccount: Sendable {
             "grant_type": "authorization_code", "code": code, "redirect_uri": Self.redirectURI,
             "client_id": Self.clientID, "code_verifier": authorization.verifier,
         ])
+        // A new account: find out now whether Spotify lets it use the Web API.
+        Self.webAPIRefused = false
+        _ = try? await api("GET", "me")
     }
 
     public var isConnected: Bool { loadToken() != nil }
@@ -251,11 +254,36 @@ public struct SpotifyAccount: Sendable {
         }
         do {
             let (data, response) = try await http.session.data(for: request)
-            return (data, (response as? HTTPURLResponse)?.statusCode ?? 0)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            if status == 403, Self.isAllowListRefusal(data) {
+                Self.webAPIRefused = true
+            } else if (200..<300).contains(status) {
+                Self.webAPIRefused = false
+            }
+            return (data, status)
         } catch {
             throw SoundalikeError.offline
         }
     }
+
+    /// Spotify answers every Web API request with 403 for accounts outside the development-mode
+    /// allow list ("User not registered in the Developer Dashboard", "User not approved for app").
+    /// Reading and controlling Spotify still work for them through App Remote; playing and
+    /// queueing results don't, so the app opens the song in Spotify instead.
+    public static var webAPIRefused: Bool {
+        get { sharedDefaults.bool(forKey: "spotifyWebAPIRefused") }
+        set { sharedDefaults.set(newValue, forKey: "spotifyWebAPIRefused") }
+    }
+
+    /// Connected, and Spotify lets this account use the Web API.
+    public var playsResults: Bool { isConnected && !Self.webAPIRefused }
+
+    static func isAllowListRefusal(_ body: Data) -> Bool {
+        let text = String(decoding: body, as: UTF8.self).lowercased()
+        return text.contains("not registered") || text.contains("not approved")
+    }
+
+    private static var sharedDefaults: UserDefaults { UserDefaults(suiteName: "group.app.yassin.soundalike") ?? .standard }
 
     func requestToken(_ form: [String: String]) async throws {
         var request = URLRequest(url: URL(string: "https://accounts.spotify.com/api/token")!, timeoutInterval: 15)
