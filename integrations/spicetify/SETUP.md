@@ -9,8 +9,9 @@ Add a **“Find soundalikes”** item to the right-click menu of any track in th
 Spotify desktop app, including the song playing in the player bar. Select it to
 open a page of matches for the selected
 track: **Best matches**, songs that share a melody, sample, or loop with it,
-and one tab away **Sounds like**, songs with the same overall sound. Results
-come from audio embeddings rather than tags.
+then the songs that sound most alike, and one tab away **Listeners also play**,
+similar songs by other artists that its listeners also play. Results come from
+audio embeddings rather than tags.
 Double-click a verified result or use its left-side play button to play it
 immediately; the rest of the list follows in the order shown, without creating
 a playlist. Right-click it to find soundalikes again or use Spotify's native
@@ -23,7 +24,7 @@ There are two ways to use Soundalike. Pick based on your Spotify install:
 | | Hosted web app | Spicetify (in-app right-click) |
 |---|---|---|
 | Setup | none | patch Spotify, then select **Install** in Marketplace |
-| Included library | 272,853 tracks; any Deezer song on [`/anysong`](https://soundalike.yassin.app/anysong) | Best matches, Same vibe, and Sounds like for any song with a Deezer preview; with the optional local companion, Sounds like for any song on your computer |
+| Included library | 272,853 tracks; any Deezer song on [`/anysong`](https://soundalike.yassin.app/anysong) | Best matches and Listeners also play for any song with a Deezer preview; with the optional local companion, Sounds like for any song on your computer |
 | Supported Spotify app | any app or browser | patchable desktop app; not Windows Store or Linux Snap |
 | Trigger | type or paste a song | right-click a track |
 
@@ -32,8 +33,9 @@ There are two ways to use Soundalike. Pick based on your Spotify install:
 **Skip this section for the normal Marketplace installation.** The extension
 automatically uses the hosted services when no local engine is running.
 Install the companion only if you want Sounds like queries to remain on your
-machine. Best matches only run on the hosted matcher, so while the companion
-is running the extension asks before each Best matches search.
+machine. Best matches and Listeners also play only run on the hosted matcher,
+so while the companion is running the extension asks before each Best matches
+search.
 
 Install [Python 3.9 or newer](https://www.python.org/downloads/) and Git, then
 create an isolated environment from the repository root.
@@ -192,10 +194,10 @@ and scroll to the newly listed extensions.
 That is enough for normal use: Marketplace installs the immutable
 `bootstrap.js`, which automatically verifies and loads signed Soundalike
 runtime updates from the public hosted library. **If you installed Soundalike
-before this bootstrap release, uninstall and reinstall it once in
-Marketplace, then restart Spotify.** The old immutable runtime cannot update
-itself; after that final reinstall, runtime updates are automatic. Steps 3 and
-4 are optional local-companion setup.
+before 23 November 2026, uninstall and reinstall it once in Marketplace, then
+restart Spotify.** Those installs stay on version 2.13.0, because the key that
+signed their updates was lost; after the reinstall, runtime updates are
+automatic again. Steps 3 and 4 are optional local-companion setup.
 
 Manual install:
 
@@ -256,7 +258,7 @@ curl --fail http://127.0.0.1:8787/health
 
 With or without the local engine, right-click any song in Spotify →
 **Find soundalikes**. A normal Spotify page opens on **Best matches**, with
-**Sounds like** one tab away; with a healthy local engine it opens on
+**Listeners also play** one tab away; with a healthy local engine it opens on
 **Sounds like** instead. Spotify album covers, verified artist names, album
 names, and, in Sounds like, measured BPM fill in progressively. Double-click a
 row or use its left-side play button to play that exact Spotify track without
@@ -407,12 +409,12 @@ On every supported platform, the extension reads the clicked track's title,
 artist, and artwork through Spotify's already-authenticated internal GraphQL
 client. It probes `http://127.0.0.1:8787` first. If the optional companion is
 healthy, the Sounds like search stays on your machine, and the Best matches
-tab asks before sending the title and artist to the hosted matcher. A Best
-matches list saved from an earlier search shows without asking. Otherwise,
-only that title, artist and, when Spotify lists one, the recording's ISRC
-(read from Spotify's own track metadata) are sent to
-`https://soundalike.yassin.app/api/anysong/similar` for Best matches, Same
-vibe, and Sounds like, which may look the song up on Deezer and analyze its
+and Listeners also play tabs ask before sending the title and artist to the
+hosted matcher. Lists saved from an earlier search show without asking.
+Otherwise, only that title, artist and, when Spotify lists one, the
+recording's ISRC (read from Spotify's own track metadata) are sent to
+`https://soundalike.yassin.app/api/anysong/similar` for Best matches and
+Listeners also play, which may look the song up on Deezer and analyze its
 public 30-second preview. Only when that matcher can't answer are they sent to
 the older Sounds like service at `https://soundalike-api.yassin.app` (or
 `https://soundalike.yassin.app` if that is unavailable). Spotify credentials, tokens, library data, and artwork are
@@ -431,8 +433,24 @@ who asked is kept.
   and reopen Spotify, then retry. If it repeats, run `spicetify update` and
   `spicetify backup apply` before reopening Spotify.
 - **Spotify shows an error after leaving Soundalike:** update Soundalike in
-  Marketplace and fully restart Spotify. Current releases render in an
-  extension-owned overlay and never remove Spotify's React-owned page nodes.
+  Marketplace and fully restart Spotify. Current releases add their own
+  element to Spotify's main view and never remove Spotify's React-owned page
+  nodes.
+- **The results page is empty with a theme (Lucid and others):** runtimes up
+  to 2.14.0 sized the page from an element that some themes collapse on
+  current Spotify clients. 2.15.0 sits inside Spotify's main view panel and
+  takes its colours from the theme; it was checked with no theme, the
+  Marketplace default, Lucid, DefaultDynamic, Comfy, Bloom, Catppuccin, Sleek,
+  text and Dribbblish. Update Soundalike and restart Spotify.
+- **The page has its header but no rows:** two causes are fixed in 2.15.0. A
+  Spotify song search that was slow or never answered held the rows back; rows
+  now show after five seconds at the latest, with a Spotify search instead of
+  playback until their song arrives. And a row whose native right-click menu
+  failed to draw was dropped whole; it now shows without that menu.
+- **Getting back to a list:** the **Soundalike results** button in Spotify's
+  top bar reopens the page as you left it, Spotify's Back and Forward step
+  through earlier searches, and **Recent** on the page lists the last 20.
+  **Show more** under a list adds the next 20 songs, up to 50.
 - **Right-click menus open empty, or Spotify says “Find soundalikes is off”:**
   Spicetify releases before 2.46.1 can't draw extension menu items on Spotify
   1.3.5 or newer, and one registered item leaves the whole menu empty.
@@ -487,10 +505,11 @@ right-click track ─▶ Spotify title + artist
    hosted any-song matcher         local engine healthy?
    (asks first while the local     └─ yes ─▶ Sounds like: local embedding
     engine is healthy)
-   Best matches (default): melody + samples, fused
-   Same vibe: tempo + sound
-   Sounds like: MuQ-MuLan sound (the older 272,853-track
-   service answers only if the matcher can't)
+   Best matches (default): likely covers and samples,
+   then MuQ-MuLan sound
+   Listeners also play: what the song's listeners play
+   (the older 272,853-track Sounds like service answers
+   only if the matcher can't)
           └──────────────┬──────────────┘
                          ▼
              verified Spotify track URI
@@ -498,8 +517,8 @@ right-click track ─▶ Spotify title + artist
    play / double-click ─▶ play the list from here │ right-click ─▶ native track menu
 ```
 
-Best matches, Same vibe, and Sounds like come from the any-song matcher, which
-looks the song up by title and artist. A song in its 999,293-song index
+Best matches and Listeners also play come from the any-song matcher, which
+looks the song up by title and artist. A song in its index of about 1.1 million songs
 answers from stored embeddings; any other song with a Deezer preview is
 downloaded and analyzed live on a GPU, which takes a few seconds, and is
 queued (by its Deezer IDs only) for the catalog crawl, so it and its artist's
@@ -507,8 +526,9 @@ neighbours join the index at the next rebuild. The
 extension retries twice when the matcher is busy and gives up after 30
 seconds.
 
-If the matcher can't answer, Sounds like falls back to the older hosted
-recommendation service, which in turn falls back to the hosted web app. It
+If the matcher can't answer, a Sounds like list from the older hosted
+recommendation service takes its place; that service in turn falls back to the
+hosted web app. It
 quietly asks the web app to warm after Spotify becomes idle. A
 fallback request can still take up to about 30 seconds while the
 checksum-pinned 299 MB index initializes. Both successful lists, Spotify

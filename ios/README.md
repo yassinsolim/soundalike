@@ -48,8 +48,9 @@ Links and in-app routes go through one URL scheme handled in `App/SoundalikeApp.
 | `soundalike://listen` | Recognise the song playing nearby |
 | `soundalike://search?q=<text>` | Open search with this text |
 
-`https://soundalike.yassin.app/find?url=…` opens the app once the site serves an
-`apple-app-site-association` file for `FJH4UWVC4K.app.yassin.soundalike` with the `/find*` path.
+`https://soundalike.yassin.app/find?url=…` opens the app once the site serves
+`/.well-known/apple-app-site-association` for `FJH4UWVC4K.app.yassin.soundalike` with the `/find*` path
+(`webapp/well-known/apple-app-site-association.json`, routed in `webapp/site.json`).
 
 ## History
 

@@ -186,6 +186,10 @@ class FakeElement extends FakeEvents {
     }
   }
   scrollIntoView() {}
+  // Every element is 300 px wide, so 10 px are one second of a 30 s timeline.
+  getBoundingClientRect() {
+    return { left: 0, top: 0, width: 300, height: 60 };
+  }
 }
 
 class FakeDocument extends FakeEvents {
@@ -286,20 +290,29 @@ function json(status, body) {
   return { ok: status >= 200 && status < 300, status, json: async () => body };
 }
 
-function loadPage(html, scripts, { path, hash = "", search = "", storage = {}, local = {}, routes }) {
+// globals: more of the browser for one page (WebAudio, navigator, Blob).
+function loadPage(html, scripts, {
+  path, hash = "", search = "", storage = {}, local = {}, routes, globals = {},
+}) {
   const body = html.match(/<body>([\s\S]*)<\/body>/)[1]
     .replace(/<script[\s\S]*?<\/script>/g, "");
   const document = new FakeDocument(body);
   const windowEvents = new FakeEvents();
   const requests = [];
   const errors = [];
+  const audios = [];
   const stored = new Map(Object.entries(storage));
   const kept = new Map(Object.entries(local));
   let currentHash = hash;
   let currentSearch = search;
   const context = {
     AbortController,
-    Audio: FakeAudio,
+    Audio: class extends FakeAudio {
+      constructor() {
+        super();
+        audios.push(this);
+      }
+    },
     URL,
     URLSearchParams,
     clearTimeout,
@@ -347,10 +360,11 @@ function loadPage(html, scripts, { path, hash = "", search = "", storage = {}, l
         setTimeout(() => windowEvents.dispatch("hashchange"), 0);
       },
     },
-    fetch: async (url) => {
+    fetch: async (url, init) => {
       requests.push(String(url));
-      return routes(new URL(String(url), ORIGIN));
+      return routes(new URL(String(url), ORIGIN), init);
     },
+    ...globals,
   };
   context.window = context;
   vm.createContext(context);
@@ -361,6 +375,7 @@ function loadPage(html, scripts, { path, hash = "", search = "", storage = {}, l
     document,
     errors,
     requests,
+    audios,
     get hash() {
       return currentHash;
     },
@@ -389,7 +404,18 @@ async function waitFor(predicate, timeoutMs = 1000) {
 
 const AMANGA_ID = 2206566227;
 
-function anysongBody({ lang = "same", language = "en", hidden = 2, vibe = true, bpm = 121.6 } = {}) {
+// /api/anysong/similar answers. The page shows main (Best matches) and
+// listeners (Listeners also play) and ignores the other lists. Audio only
+// (scene "off") and artists without listener data ("unknown_artist") come
+// without listeners; older servers send neither, only Best matches with
+// listener picks in it. After the audio head the main list's rows come from
+// the five-signal model (basis "consensus"), or in sound order ("sound")
+// with Audio only; `body` overrides that for other servers.
+function anysongBody({
+  lang = "same", language = "en", hidden = 2, scene = "on", older = false,
+  body = scene === "on" ? "consensus" : "sound",
+} = {}) {
+  const listeners = scene === "on";
   return {
     ok: true,
     query: {
@@ -400,26 +426,36 @@ function anysongBody({ lang = "same", language = "en", hidden = 2, vibe = true, 
       language,
       language_mode: lang,
       hidden,
-      scene: "on",
-      ...(vibe ? { bpm } : {}),
+      scene,
+      bpm: 121.6,
     },
     results: {
+      ...(older ? {} : {
+        main: [
+          { id: 11, title: "Bar A Thym", artist: "Kerri Chandler", score: 0.16667, basis: "audio", match: 41, ranks: { melody: 1 } },
+          lang === "all"
+            ? { id: 12, title: "Ngiyakhuluma", artist: "Mduduzi", score: 0.14286, basis: body, match: 88, ranks: { sonic: 2 } }
+            : { id: 13, title: "Sunshine", artist: "Robert Glasper", score: 0.14286, basis: body, match: 90, ranks: { sonic: 1 } },
+        ],
+      }),
+      ...(older || !listeners ? {} : {
+        listeners: [
+          { id: 71, title: "Deep Vibe", artist: "Black Coffee", score: 0.16667, basis: "listeners", match: 70, ranks: { sonic: 12 } },
+          lang === "all"
+            ? { id: 72, title: "Wena", artist: "Mduduzi", score: 0.14286, basis: "listeners", match: 40, ranks: {} }
+            : { id: 73, title: "Kitchen Floor", artist: "Moodymann", score: 0.14286, basis: "listeners", match: 52, ranks: { samples: 3 } },
+        ],
+      }),
       best: [
-        { id: 11, title: "Bar A Thym", artist: "Kerri Chandler", score: 0.2, ranks: { melody: 1 } },
-        lang === "all"
-          ? { id: 12, title: "Ngiyakhuluma", artist: "Mduduzi", score: 0.1, ranks: { samples: 1 } }
+        { id: 11, title: "Bar A Thym", artist: "Kerri Chandler", score: 0.2, basis: "audio", ranks: { melody: 1 } },
+        listeners
+          ? { id: 14, title: "Listener Pick", artist: "Culoe De Song", score: 0.1, basis: "listeners", ranks: { samples: 1 } }
           : { id: 13, title: "Sunshine", artist: "Robert Glasper", score: 0.1, ranks: { samples: 1 } },
       ],
-      ...(vibe ? {
-        vibe: [
-          { id: 71, title: "Deep Vibe", artist: "Black Coffee", score: 0.16667 },
-          lang === "all"
-            ? { id: 72, title: "Wena", artist: "Mduduzi", score: 0.14286 }
-            : { id: 73, title: "Kitchen Floor", artist: "Moodymann", score: 0.14286 },
-        ],
-      } : {}),
+      vibe: [{ id: 81, title: "Vibe Match", artist: "Black Motion", score: 0.16667 }],
       melody: [{ id: 21, title: "Melody Match", artist: "Someone", score: 0.9 }],
       samples: [{ id: 31, title: "Sample Match", artist: "Someone Else", score: 0.8 }],
+      sounds: [{ id: 91, title: "Sounds Match", artist: "Kidwild", score: 0.82 }],
       sonic: [{ id: 41, title: "Gumbaya Chords", artist: "Mdu a.k.a TRP", score: 0.7 }],
     },
     timings_ms: { total: 554.3 },
@@ -427,7 +463,7 @@ function anysongBody({ lang = "same", language = "en", hidden = 2, vibe = true, 
   };
 }
 
-function mainBestBody({ lang = "same", language = "en", hidden = 1, vibe = true } = {}) {
+function mainBestBody({ lang = "same", language = "en", hidden = 1, scene = "on" } = {}) {
   return {
     ok: true,
     query: {
@@ -438,24 +474,28 @@ function mainBestBody({ lang = "same", language = "en", hidden = 1, vibe = true 
       language,
       language_mode: lang,
       hidden,
-      scene: "on",
-      ...(vibe ? { bpm: 140.2 } : {}),
+      scene,
+      bpm: 140.2,
     },
     results: {
-      best: [
-        { id: 51, title: "n.h.i.e.", artist: "21 Savage", score: 0.2, ranks: { melody: 1 } },
+      main: [
+        { id: 51, title: "n.h.i.e.", artist: "21 Savage", score: 0.16667, basis: "audio", match: 35, ranks: { melody: 1 } },
         lang === "all"
-          ? { id: 52, title: "Airforce Negras", artist: "Spiff TV", score: 0.1, ranks: { samples: 2 } }
-          : { id: 53, title: "AHHH HA", artist: "Lil Durk", score: 0.1, ranks: { samples: 1 } },
+          ? { id: 52, title: "Airforce Negras", artist: "Spiff TV", score: 0.14286, basis: scene === "on" ? "consensus" : "sound", match: 77, ranks: { sonic: 3 } }
+          : { id: 53, title: "AHHH HA", artist: "Lil Durk", score: 0.14286, basis: scene === "on" ? "consensus" : "sound", match: 81, ranks: { sonic: 2 } },
       ],
-      ...(vibe ? {
-        vibe: [
-          { id: 81, title: "Kept Going", artist: "Unknown T", score: 0.16667 },
+      ...(scene === "on" ? {
+        listeners: [
+          { id: 81, title: "Kept Going", artist: "Unknown T", score: 0.16667, basis: "listeners", match: 66, ranks: { sonic: 9 } },
           lang === "all"
-            ? { id: 82, title: "Booba Vibe", artist: "Booba", score: 0.14286 }
-            : { id: 83, title: "Ain't It Different", artist: "Headie One", score: 0.14286 },
+            ? { id: 82, title: "Autre Son", artist: "Ninho", score: 0.14286, basis: "listeners", match: 31, ranks: {} }
+            : { id: 83, title: "Ain't It Different", artist: "Headie One", score: 0.14286, basis: "listeners", match: 58, ranks: {} },
         ],
       } : {}),
+      best: [
+        { id: 51, title: "n.h.i.e.", artist: "21 Savage", score: 0.2, basis: "audio", ranks: { melody: 1 } },
+        { id: 53, title: "AHHH HA", artist: "Lil Durk", score: 0.1, ranks: { samples: 1 } },
+      ],
       melody: [],
       samples: [],
       sonic: [],
@@ -463,17 +503,6 @@ function mainBestBody({ lang = "same", language = "en", hidden = 1, vibe = true 
     timings_ms: { total: 120 },
     cached: true,
   };
-}
-
-function mainSoundsBody({ lang = "same" } = {}) {
-  const body = mainBestBody({ lang });
-  body.results.sounds = [
-    { id: 91, title: "Sounds Match", artist: "Kidwild", score: 0.82, bpm: 141 },
-    lang === "all"
-      ? { id: 92, title: "Autre Son", artist: "Ninho", score: 0.8, bpm: null }
-      : { id: 93, title: "Close Sound", artist: "AntsLive", score: 0.8, bpm: 70.1 },
-  ];
-  return body;
 }
 
 const EIGHT_PM_ID = 3588588931;
@@ -503,22 +532,30 @@ const TRACKS = [
 ];
 const LEGACY_APIS = ["/api/search", "/api/recommend", "/api/stats", "/api/spicetify_recommend"];
 
-function loadMain({ hash = "", search = "", storage, local, body = mainBestBody, best, tracks = TRACKS } = {}) {
+// excerpt: answers POST /api/anysong/excerpt, (query parameters, request) -> response.
+function loadMain({
+  hash = "", search = "", storage, local, body = mainBestBody, best, tracks = TRACKS, globals, excerpt,
+} = {}) {
   return loadPage(mainHtml, [inlineScript(mainHtml), searchJs], {
     path: "/",
     hash,
     search,
     storage,
     local,
-    routes: (url) => {
+    globals,
+    routes: (url, init) => {
       if (url.hostname === "accounts.spotify.com") {
         return json(200, { access_token: "spotify-token" });
       }
       if (url.pathname === "/api/anysong/similar") {
         return best
           ? best(url.searchParams)
-          : json(200, body({ lang: url.searchParams.get("lang") }));
+          : json(200, body({
+            lang: url.searchParams.get("lang"),
+            scene: url.searchParams.get("scene") === "0" ? "off" : "on",
+          }));
       }
+      if (url.pathname === "/api/anysong/excerpt" && excerpt) return excerpt(url.searchParams, init);
       if (url.pathname === "/api/anysong/search") return json(200, { tracks });
       if (url.pathname === "/api/preview") {
         return json(200, { ok: true, preview: PREVIEW, cover: COVER });
@@ -537,20 +574,37 @@ const legacyCalls = (page) =>
   page.requests.filter((url) => LEGACY_APIS.some((api) => url.startsWith(api)));
 
 const BEST_CAPTION =
+  "Likely covers, samples and shared melodies first, then other artists' songs a model ranks closest, " +
+  "from five signals: sound, scene, playlists, melody and samples. Turn on Audio only to rank by sound alone.";
+const NUDGED_BEST_CAPTION =
+  "Likely covers, samples and shared melodies first, then the songs that sound most alike, " +
+  "nudged toward artists this song's listeners also play. Turn on Audio only to rank by sound alone.";
+const AUDIO_BEST_CAPTION =
+  "Likely covers, samples and shared melodies first, then the songs that sound most alike.";
+const MIXED_BEST_CAPTION =
   "Likely covers, samples and shared melodies first, then similar-sounding songs " +
   "by artists this song's listeners also play, marked Listeners also play. " +
   "Turn on Audio only to leave those out.";
-const AUDIO_BEST_CAPTION =
-  "Likely covers, samples and shared melodies first, then the songs that sound most alike.";
-const SOUNDS_CAPTION =
-  "Songs with the same overall sound (instruments, production and mood), favouring " +
-  "artists this song's listeners also play. Turn on Audio only to leave that out.";
-const AUDIO_SOUNDS_CAPTION =
-  "Songs with the same overall sound (instruments, production and mood).";
+const LISTENERS_CAPTION =
+  "Songs by other artists that this song's listeners also play, one per artist. " +
+  "The likelier its listeners are to play a song, and the closer it sounds, the higher it ranks.";
+const AUDIO_ONLY_LISTENERS_NOTE =
+  "Audio only is on, and this list comes from what this song's listeners also play. " +
+  "Turn Audio only off to see it.";
+const NO_LISTENERS_NOTE =
+  "We don't know what this artist's listeners play yet, so there's no list here. " +
+  "Best matches still has this song's closest matches.";
 const AUDIO_ONLY_KEY = "soundalike:audio-only:v1";
-const VIBE_CAPTION =
-  "Songs from these matches that share this song's tempo and overall sound, one per artist.";
-const TAB_LABELS = ["Best matches", "Same vibe", "Same melody", "Samples & loops", "Sounds like"];
+const TAB_KEY = "soundalike:tab:v1";
+const TAB_LABELS = ["Best matches", "Listeners also play", "Melody match"];
+const DROPPED_TABS = ["vibe", "samples", "sounds", "sonic"];
+const MELODY_CAPTION =
+  "Likely covers, samples and shared melodies first, from the melody and sample matches " +
+  "fused into one ranking, then similar-sounding songs by artists this song's listeners " +
+  "also play, marked Listeners also play. Turn on Audio only to leave those out.";
+const AUDIO_MELODY_CAPTION =
+  "Likely covers, samples and shared melodies: the melody and sample matches fused into " +
+  "one ranking, by audio alone.";
 
 test("home page has one any-song search bar and no library promo or size line", async () => {
   const page = loadMain();
@@ -604,7 +658,7 @@ test("the one search bar suggests any song on Deezer and opens the pick", async 
   assert.equal(params.get("id"), String(EIGHT_PM_ID));
   assert.equal(params.get("k"), "20");
   assert.equal(params.get("lang"), "same");
-  assert.equal(params.get("policy"), "best-vibe-sounds-v4");
+  assert.equal(params.get("policy"), "main-consensus-v4");
   assert.equal(params.get("scene"), null);
   assert.equal(page.text(".seed h2"), "8PM");
   assert.equal(page.document.querySelector(".seed .cover img").getAttribute("src"), COVER);
@@ -656,26 +710,45 @@ test("the /anysong stub forwards old links to the home page", () => {
   assert.match(anysongHtml, /<a href="\/">soundalike home page<\/a>/);
 });
 
-test("old /anysong?id= links land on the same song's results", async () => {
+test("old /anysong?id= links land on the same song's Best matches", async () => {
   const page = loadAnysong({ hash: "", search: `?id=${AMANGA_ID}&tab=sonic&ref=share` });
   await waitFor(() => shown(page));
 
   assert.equal(page.search, "?ref=share");
-  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=sounds`);
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=best`);
   assert.equal(page.similar()[0].get("id"), String(AMANGA_ID));
-  assert.equal(selected(page, "sounds"), "true");
-  assert.deepEqual(page.texts("#matches .t"), ["Gumbaya Chords"]);
-  assert.equal(page.document.querySelector("#language").hidden, true);
+  assert.equal(selected(page, "best"), "true");
+  assert.deepEqual(page.texts("#matches .t"), ["Bar A Thym", "Sunshine"]);
+  assert.equal(page.document.querySelector("#language").hidden, false);
   assert.deepEqual(page.errors, []);
+
+  const listeners = loadAnysong({ hash: "", search: `?id=${AMANGA_ID}&tab=listeners` });
+  await waitFor(() => shown(listeners));
+  assert.equal(listeners.search, "");
+  assert.equal(listeners.hash, `#id=${AMANGA_ID}&tab=listeners`);
+  assert.equal(selected(listeners, "listeners"), "true");
+  assert.deepEqual(listeners.texts("#matches .t"), ["Deep Vibe", "Kitchen Floor"]);
 });
 
-test("old any-song #id= links to Sounds like still open the sound channel", async () => {
-  const page = loadAnysong({ hash: `#id=${AMANGA_ID}&tab=sonic` });
-  await waitFor(() => shown(page));
+test("old #id= links to the five tabs, and unknown tabs, open Best matches", async () => {
+  for (const old of [...DROPPED_TABS, "best", "lyrics", ""]) {
+    const page = loadAnysong({ hash: `#id=${AMANGA_ID}&tab=${old}` });
+    await waitFor(() => shown(page));
+    assert.equal(selected(page, "best"), "true", old);
+    assert.equal(selected(page, "listeners"), "false", old);
+    assert.deepEqual(page.texts("#matches .t"), ["Bar A Thym", "Sunshine"], old);
+    assert.equal(page.hash, `#id=${AMANGA_ID}&tab=best`, old);
+  }
 
-  assert.equal(selected(page, "sounds"), "true");
-  assert.deepEqual(page.texts("#matches .t"), ["Gumbaya Chords"]);
-  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=sounds`);
+  const page = loadAnysong({ hash: `#id=${AMANGA_ID}&tab=listeners` });
+  await waitFor(() => shown(page));
+  assert.equal(selected(page, "listeners"), "true");
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=listeners`);
+  page.context.location.hash = `#id=${AMANGA_ID}&tab=samples`;
+  await waitFor(() => selected(page, "best") === "true");
+  assert.deepEqual(page.texts("#matches .t"), ["Bar A Thym", "Sunshine"]);
+  assert.equal(page.similar().length, 1);
+  assert.deepEqual(page.errors, []);
 });
 
 test("the home page's own #s= links still open the song", async () => {
@@ -713,65 +786,158 @@ test("example chips and Surprise me open songs through the any-song search", asy
   assert.deepEqual(page.errors, []);
 });
 
-test("all five any-song tabs read one response", async () => {
+test("three any-song tabs read one response, as in the Spotify extension", async () => {
   const page = loadAnysong();
   await waitFor(() => shown(page));
 
   assert.deepEqual(page.texts("#out .tab"), TAB_LABELS);
+  for (const old of DROPPED_TABS) {
+    assert.equal(page.document.querySelector(`#tab-${old}`), null, old);
+  }
   assert.equal(page.hash, `#id=${AMANGA_ID}&tab=best`);
   const expected = {
-    best: [["Bar A Thym", "Sunshine"], BEST_CAPTION, false],
-    vibe: [["Deep Vibe", "Kitchen Floor"], VIBE_CAPTION, false],
-    melody: [["Melody Match"], "Covers, interpolations and songs that reuse the tune.", true],
-    samples: [
-      ["Sample Match"],
-      "Songs that may share a sample, a loop or a chopped-up section.",
-      true,
-    ],
-    sounds: [["Gumbaya Chords"], "A similar overall sound: production, instruments and mood.", true],
+    best: [["Bar A Thym", "Sunshine"], BEST_CAPTION],
+    listeners: [["Deep Vibe", "Kitchen Floor"], LISTENERS_CAPTION],
   };
-  for (const [key, [titles, caption, unfiltered]] of Object.entries(expected)) {
+  for (const [key, [titles, caption]] of Object.entries(expected)) {
     page.document.querySelector(`#tab-${key}`).click();
     assert.equal(selected(page, key), "true");
     assert.equal(page.document.querySelector("#matches").getAttribute("aria-labelledby"), `tab-${key}`);
     assert.deepEqual(page.texts("#matches .t"), titles, key);
     assert.equal(page.text("#matchblurb"), caption, key);
-    assert.equal(page.document.querySelector("#language").hidden, unfiltered, key);
+    assert.equal(page.document.querySelector("#language").hidden, false, key);
     assert.equal(page.hash, `#id=${AMANGA_ID}&tab=${key}`);
   }
+  // Like the extension, Listeners also play rows carry no ranks or labels.
   assert.deepEqual(page.texts("#matches .why"), []);
   assert.deepEqual(
     page.document.querySelectorAll("#matches a.play").map((link) => link.getAttribute("href")),
-    ["https://open.spotify.com/search/Gumbaya%20Chords%20Mdu%20a.k.a%20TRP"],
+    [
+      "https://open.spotify.com/search/Deep%20Vibe%20Black%20Coffee",
+      "https://open.spotify.com/search/Kitchen%20Floor%20Moodymann",
+    ],
   );
+  // Melody match is the server's "best" list: the fused melody and sample
+  // matches with their ranks, then the listener picks, marked.
+  page.document.querySelector("#tab-melody").click();
+  assert.equal(selected(page, "melody"), "true");
+  assert.equal(page.document.querySelector("#matches").getAttribute("aria-labelledby"), "tab-melody");
+  assert.deepEqual(page.texts("#matches .t"), ["Bar A Thym", "Listener Pick"]);
+  assert.equal(page.text("#matchblurb"), MELODY_CAPTION);
+  assert.deepEqual(page.texts("#matches .why"), [
+    " · melody #1",
+    " · Listeners also play · samples #1",
+  ]);
+  assert.equal(page.document.querySelector("#language").hidden, false);
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=melody`);
   assert.equal(page.similar().length, 1);
   assert.deepEqual(page.errors, []);
 });
 
-test("Best matches ask for one language and say what was hidden", async () => {
+test("the tab chosen last is where the next visit opens", async () => {
+  const first = loadAnysong();
+  await waitFor(() => shown(first));
+  assert.equal(first.kept.has(TAB_KEY), false);
+  first.document.querySelector("#tab-melody").click();
+  assert.equal(first.kept.get(TAB_KEY), "melody");
+
+  const next = loadAnysong({ local: { [TAB_KEY]: "melody" } });
+  await waitFor(() => shown(next));
+  assert.equal(selected(next, "melody"), "true");
+  assert.equal(next.hash, `#id=${AMANGA_ID}&tab=melody`);
+  assert.deepEqual(next.texts("#matches .t"), ["Bar A Thym", "Listener Pick"]);
+
+  // A share link's tab wins for that visit and isn't kept.
+  const linked = loadAnysong({ hash: `#id=${AMANGA_ID}&tab=listeners`, local: { [TAB_KEY]: "melody" } });
+  await waitFor(() => shown(linked));
+  assert.equal(selected(linked, "listeners"), "true");
+  assert.equal(linked.kept.get(TAB_KEY), "melody");
+
+  const unknown = loadAnysong({ local: { [TAB_KEY]: "vibe" } });
+  await waitFor(() => shown(unknown));
+  assert.equal(selected(unknown, "best"), "true");
+});
+
+test("Melody match says it ranks by audio alone with Audio only or no listener data", async () => {
+  const audio = loadAnysong({
+    hash: `#id=${AMANGA_ID}&tab=melody`,
+    local: { [AUDIO_ONLY_KEY]: "true" },
+    body: (options) => anysongBody({ ...options, scene: "off" }),
+  });
+  await waitFor(() => shown(audio));
+  assert.equal(audio.similar()[0].get("scene"), "0");
+  assert.equal(audio.text("#matchblurb"), AUDIO_MELODY_CAPTION);
+  assert.deepEqual(audio.texts("#matches .t"), ["Bar A Thym", "Sunshine"]);
+  assert.deepEqual(audio.texts("#matches .why"), [" · melody #1", " · samples #1"]);
+
+  const unknown = loadAnysong({
+    hash: `#id=${AMANGA_ID}&tab=melody`,
+    body: (options) => anysongBody({ ...options, scene: "unknown_artist" }),
+  });
+  await waitFor(() => shown(unknown));
+  assert.equal(unknown.text("#matchblurb"), AUDIO_MELODY_CAPTION);
+});
+
+test("Best matches read the main list, ask for one language and say other languages are left out", async () => {
   const page = loadAnysong();
   await waitFor(() => shown(page));
 
   assert.equal(
     page.requests[0],
-    `/api/anysong/similar?id=${AMANGA_ID}&k=20&lang=same&policy=best-vibe-sounds-v4`,
+    `/api/anysong/similar?id=${AMANGA_ID}&k=20&lang=same&policy=main-consensus-v4`,
   );
   assert.equal(page.text("#matchblurb"), BEST_CAPTION);
   const box = page.document.querySelector("#language");
   assert.equal(box.hidden, false);
   assert.equal(box.getAttribute("role"), "status");
-  assert.equal(
-    page.text("#language-status"),
-    "English · 2 other-language matches hidden from the top 20",
-  );
+  // The server's hidden count (2 here) is for its fused order of every channel,
+  // not for the main list, so it is not shown.
+  assert.equal(page.text("#language-status"), "English · other languages left out");
   const toggle = page.document.querySelector("#language-toggle");
   assert.equal(toggle.hidden, false);
   assert.equal(toggle.textContent, "Show all languages");
   assert.equal(toggle.getAttribute("aria-pressed"), "false");
   assert.deepEqual(page.texts("#matches .t"), ["Bar A Thym", "Sunshine"]);
-  assert.deepEqual(page.texts("#matches .why"), [" · melody #1", " · samples #1"]);
+  // Only the audio head's rows show the ranks that put them there.
+  assert.deepEqual(page.texts("#matches .why"), [" · melody #1"]);
+  assert.deepEqual(page.texts("#matches .basis"), []);
   assert.deepEqual(page.texts("#seedtags .tag"), ["in our library"]);
   assert.deepEqual(page.errors, []);
+});
+
+test("the Best matches caption follows what placed the main list's rows", async () => {
+  // A server whose main list follows sound and the listener ranker.
+  const nudged = loadAnysong({ body: (options) => anysongBody({ ...options, body: "sound" }) });
+  await waitFor(() => shown(nudged));
+  assert.equal(nudged.text("#matchblurb"), NUDGED_BEST_CAPTION);
+
+  // The model needs no listener data, so an unknown artist keeps its caption.
+  const unknown = loadAnysong({
+    body: (options) => anysongBody({ ...options, scene: "unknown_artist", body: "consensus" }),
+  });
+  await waitFor(() => shown(unknown));
+  assert.equal(unknown.text("#matchblurb"), BEST_CAPTION);
+  assert.deepEqual(unknown.texts("#matches .basis"), []);
+  assert.deepEqual(unknown.texts("#matches .why"), [" · melody #1"]);
+});
+
+test("a consensus row's bar shows its match without calling it a sound match", async () => {
+  const page = loadAnysong({
+    body: (options) => {
+      const body = anysongBody(options);
+      body.results.main = body.results.main.map((item, index) => ({ ...item, overall: [93, 90][index] }));
+      return body;
+    },
+  });
+  await waitFor(() => shown(page));
+
+  const bars = page.document.querySelectorAll("#matches .bar");
+  assert.match(bars[0].getAttribute("aria-label"), /Sound match 41%/);
+  assert.equal(
+    bars[1].getAttribute("aria-label"),
+    "Match 90%: how strongly Soundalike ranks it for this song",
+  );
+  assert.equal(bars[1].getAttribute("title"), bars[1].getAttribute("aria-label"));
 });
 
 test("the language switch reloads Best matches and keeps focus on it", async () => {
@@ -784,7 +950,7 @@ test("the language switch reloads Best matches and keeps focus on it", async () 
   assert.equal(toggle.textContent, "Show same language");
   assert.match(page.text("#matches"), /matching…/);
   await waitFor(() =>
-    page.text("#language-status") === "English · 2 other-language matches in the top 20");
+    page.text("#language-status") === "English · all languages");
   assert.equal(page.similar()[1].get("lang"), "all");
   assert.equal(toggle.getAttribute("aria-pressed"), "true");
   assert.equal(page.document.activeElement, toggle);
@@ -792,11 +958,41 @@ test("the language switch reloads Best matches and keeps focus on it", async () 
 
   toggle.click();
   await waitFor(() => page.similar().length === 3 &&
-    page.text("#language-status")?.endsWith("hidden from the top 20"));
+    page.text("#language-status") === "English · other languages left out");
   assert.equal(page.similar()[2].get("lang"), "same");
   assert.equal(toggle.textContent, "Show all languages");
   assert.equal(page.document.activeElement, toggle);
   assert.equal(page.document.querySelector(".seed h2").textContent, "Amanga");
+});
+
+test("bars show the overall match with the sound match in the tooltip, and a guessed language says so", async () => {
+  const page = loadAnysong({
+    body: ({ lang }) => {
+      const body = anysongBody({ lang });
+      body.query.language_guessed = true;
+      body.results.main = body.results.main.map((item, index) => ({ ...item, overall: [93, 101][index] }));
+      return body;
+    },
+  });
+  await waitFor(() => shown(page));
+
+  assert.equal(page.text("#language-status"), "English (best guess) · other languages left out");
+  const bars = page.document.querySelectorAll("#matches .bar");
+  assert.equal(
+    bars[0].getAttribute("aria-label"),
+    "Match 93%: how strongly Soundalike ranks it for this song. " +
+      "Sound match 41%: sounds more alike than 41% of typical matches",
+  );
+  assert.equal(bars[0].getAttribute("title"), bars[0].getAttribute("aria-label"));
+  assert.equal(bars[0].getAttribute("role"), "img");
+  // An overall match out of range keeps the bar relative to the list's scores.
+  assert.equal(bars[1].getAttribute("aria-label"), null);
+  assert.equal(bars[1].getAttribute("aria-hidden"), "true");
+  assert.deepEqual(
+    page.document.querySelectorAll("#matches .bar i").map((bar) => bar.getAttribute("style")),
+    ["width:93%", "width:25%"],
+  );
+  assert.deepEqual(page.errors, []);
 });
 
 test("an uncertain language shows all languages without a switch", async () => {
@@ -807,29 +1003,52 @@ test("an uncertain language shows all languages without a switch", async () => {
 
   assert.equal(page.text("#language-status"), "Language uncertain; showing all languages.");
   assert.equal(page.document.querySelector("#language-toggle").hidden, true);
-  page.document.querySelector("#tab-vibe").click();
+  page.document.querySelector("#tab-listeners").click();
+  assert.deepEqual(page.texts("#matches .t"), ["Deep Vibe", "Kitchen Floor"]);
   assert.equal(page.text("#language-status"), "Language uncertain; showing all languages.");
   assert.equal(page.document.querySelector("#language-toggle").hidden, true);
 });
 
-test("Same vibe sits next to Best matches and opens from a share link", async () => {
-  const page = loadAnysong({ hash: `#id=${AMANGA_ID}&tab=vibe` });
+test("a main-only language guess labels Best matches and leaves Listeners also play uncertain", async () => {
+  const page = loadAnysong({
+    body: ({ lang }) => {
+      const body = anysongBody({ lang, language: "unknown", hidden: 0 });
+      body.query.main_language_guess = "en";
+      return body;
+    },
+  });
+  await waitFor(() => shown(page));
+
+  assert.equal(page.text("#language-status"), "English (best guess) · other languages left out");
+  assert.equal(page.document.querySelector("#language-toggle").hidden, false);
+  page.document.querySelector("#tab-listeners").click();
+  assert.equal(page.text("#language-status"), "Language uncertain; showing all languages.");
+  assert.equal(page.document.querySelector("#language-toggle").hidden, true);
+  page.document.querySelector("#tab-best").click();
+  page.document.querySelector("#language-toggle").click();
+  await waitFor(() => page.text("#language-status") === "English (best guess) · all languages");
+  assert.equal(page.similar()[1].get("lang"), "all");
+  assert.deepEqual(page.errors, []);
+});
+
+test("Listeners also play opens from a share link and arrow keys switch tabs", async () => {
+  const page = loadAnysong({ hash: `#id=${AMANGA_ID}&tab=listeners` });
   await waitFor(() => shown(page));
 
   assert.deepEqual(page.texts("#out .tab"), TAB_LABELS);
-  assert.equal(selected(page, "vibe"), "true");
+  assert.equal(selected(page, "listeners"), "true");
   assert.equal(selected(page, "best"), "false");
-  assert.equal(page.text("#matchblurb"), VIBE_CAPTION);
+  assert.equal(page.text("#matchblurb"), LISTENERS_CAPTION);
   assert.deepEqual(page.texts("#matches .t"), ["Deep Vibe", "Kitchen Floor"]);
   assert.deepEqual(page.texts("#matches .why"), []);
-  assert.deepEqual(page.texts("#seedtags .tag"), ["in our library", "122 BPM"]);
+  assert.deepEqual(page.texts("#seedtags .tag"), ["in our library"]);
   assert.equal(page.document.querySelector("#language").hidden, false);
   assert.equal(page.text("#language-status"), "English · other languages left out");
   const toggle = page.document.querySelector("#language-toggle");
   assert.equal(toggle.hidden, false);
   assert.equal(toggle.textContent, "Show all languages");
   assert.equal(toggle.getAttribute("aria-pressed"), "false");
-  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=vibe`);
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=listeners`);
   assert.equal(page.similar().length, 1);
   assert.deepEqual(page.errors, []);
 
@@ -837,17 +1056,19 @@ test("Same vibe sits next to Best matches and opens from a share link", async ()
   assert.equal(page.hash, `#id=${AMANGA_ID}&tab=best`);
   assert.equal(page.text("#matchblurb"), BEST_CAPTION);
   page.document.querySelector("#tab-best").onkeydown({ key: "ArrowRight" });
-  assert.equal(selected(page, "vibe"), "true");
-  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=vibe`);
-  page.document.querySelector("#tab-vibe").onkeydown({ key: "ArrowRight", preventDefault() {} });
+  assert.equal(selected(page, "listeners"), "true");
+  assert.equal(page.document.activeElement, page.document.querySelector("#tab-listeners"));
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=listeners`);
+  page.document.querySelector("#tab-listeners").onkeydown({ key: "ArrowRight", preventDefault() {} });
   assert.equal(selected(page, "melody"), "true");
-  assert.equal(page.document.querySelector("#language").hidden, true);
-  page.document.querySelector("#tab-melody").onkeydown({ key: "ArrowLeft", preventDefault() {} });
-  assert.equal(selected(page, "vibe"), "true");
+  page.document.querySelector("#tab-melody").onkeydown({ key: "ArrowRight", preventDefault() {} });
+  assert.equal(selected(page, "best"), "true");
+  page.document.querySelector("#tab-best").onkeydown({ key: "ArrowLeft", preventDefault() {} });
+  assert.equal(selected(page, "melody"), "true");
 });
 
-test("the language switch on Same vibe is shared with Best matches", async () => {
-  const page = loadAnysong({ hash: `#id=${AMANGA_ID}&tab=vibe` });
+test("the language switch on Listeners also play is shared with Best matches", async () => {
+  const page = loadAnysong({ hash: `#id=${AMANGA_ID}&tab=listeners` });
   await waitFor(() => shown(page));
   const toggle = page.document.querySelector("#language-toggle");
   toggle.focus();
@@ -858,89 +1079,25 @@ test("the language switch on Same vibe is shared with Best matches", async () =>
   assert.equal(toggle.textContent, "Show same language");
   assert.equal(toggle.getAttribute("aria-pressed"), "true");
   assert.equal(page.document.activeElement, toggle);
-  assert.equal(selected(page, "vibe"), "true");
+  assert.equal(selected(page, "listeners"), "true");
   assert.deepEqual(page.texts("#matches .t"), ["Deep Vibe", "Wena"]);
 
   page.document.querySelector("#tab-best").click();
-  assert.equal(
-    page.text("#language-status"),
-    "English · 2 other-language matches in the top 20",
-  );
+  assert.equal(page.text("#language-status"), "English · all languages");
   assert.equal(toggle.getAttribute("aria-pressed"), "true");
   assert.deepEqual(page.texts("#matches .t"), ["Bar A Thym", "Ngiyakhuluma"]);
   assert.equal(page.similar().length, 2);
 });
 
-test("Same vibe and the tempo are hidden when the server has neither", async () => {
-  const page = loadAnysong({
-    hash: `#id=${AMANGA_ID}&tab=vibe`,
-    body: ({ lang }) => anysongBody({ lang, vibe: false }),
-  });
+test("Best matches fall back to the older Best list from a server without main", async () => {
+  const page = loadAnysong({ body: (options) => anysongBody({ ...options, older: true }) });
   await waitFor(() => shown(page));
 
-  assert.equal(page.document.querySelector("#tab-vibe").hidden, true);
+  assert.deepEqual(page.texts("#out .tab"), TAB_LABELS);
   assert.equal(selected(page, "best"), "true");
-  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=best`);
-  assert.equal(page.text("#matchblurb"), BEST_CAPTION);
-  assert.deepEqual(page.texts("#seedtags .tag"), ["in our library"]);
-  assert.equal(
-    page.text("#language-status"),
-    "English · 2 other-language matches hidden from the top 20",
-  );
-  page.document.querySelector("#tab-best").onkeydown({ key: "ArrowRight" });
-  assert.equal(selected(page, "melody"), "true");
-  page.document.querySelector("#tab-melody").onkeydown({ key: "ArrowLeft" });
-  assert.equal(selected(page, "best"), "true");
-  assert.deepEqual(page.errors, []);
-});
-
-test("Same vibe shows all languages without a switch for an uncertain seed", async () => {
-  const page = loadAnysong({
-    hash: `#id=${AMANGA_ID}&tab=vibe`,
-    body: ({ lang }) => anysongBody({ lang, language: "unknown", hidden: 0, bpm: null }),
-  });
-  await waitFor(() => shown(page));
-
-  assert.equal(selected(page, "vibe"), "true");
-  assert.equal(page.text("#language-status"), "Language uncertain; showing all languages.");
-  assert.equal(page.document.querySelector("#language-toggle").hidden, true);
-  assert.deepEqual(page.texts("#seedtags .tag"), ["in our library"]);
-});
-
-test("Sounds like reads the fused list and shares the language switch", async () => {
-  const page = loadMain({
-    hash: `#id=${EIGHT_PM_ID}`,
-    best: (params) => json(200, mainSoundsBody({ lang: params.get("lang") })),
-  });
-  await waitFor(() => shown(page));
-
-  page.document.querySelector("#tab-sounds").click();
-  assert.deepEqual(page.texts("#matches .t"), ["Sounds Match", "Close Sound"]);
-  assert.equal(page.text("#matchblurb"), SOUNDS_CAPTION);
-  assert.deepEqual(page.texts("#seedtags .tag"), ["in our library", "140 BPM"]);
-  assert.equal(page.document.querySelector("#language").hidden, false);
-  assert.equal(page.text("#language-status"), "English · other languages left out");
-
-  page.document.querySelector("#language-toggle").click();
-  await waitFor(() => page.text("#language-status") === "English · all languages");
-  assert.equal(page.similar()[1].get("lang"), "all");
-  assert.equal(selected(page, "sounds"), "true");
-  assert.deepEqual(page.texts("#matches .t"), ["Sounds Match", "Autre Son"]);
-  assert.deepEqual(legacyCalls(page), []);
-  assert.deepEqual(page.errors, []);
-});
-
-test("Best matches label the songs placed by what listeners also play", async () => {
-  const page = loadAnysong({
-    body: ({ lang }) => {
-      const body = anysongBody({ lang });
-      body.results.best[0].basis = "audio";
-      body.results.best[1].basis = "listeners";
-      return body;
-    },
-  });
-  await waitFor(() => shown(page));
-
+  assert.deepEqual(page.texts("#matches .t"), ["Bar A Thym", "Listener Pick"]);
+  assert.equal(page.text("#matchblurb"), MIXED_BEST_CAPTION);
+  // That list mixes in listener picks, so they are marked.
   assert.deepEqual(page.texts("#matches .why"), [
     " · melody #1",
     " · Listeners also play · samples #1",
@@ -951,21 +1108,100 @@ test("Best matches label the songs placed by what listeners also play", async ()
     labels[0].getAttribute("title"),
     "Placed by what this song's listeners also play, not by audio alone",
   );
-  page.document.querySelector("#tab-melody").click();
+  assert.equal(page.text("#language-status"), "English · other languages left out");
+  // Such a server sends no listeners list either.
+  page.document.querySelector("#tab-listeners").click();
+  assert.equal(page.text("#matches .state"), NO_LISTENERS_NOTE);
+
+  page.document.querySelector("#tab-best").click();
+  page.document.querySelector("#audio-only").click();
+  await waitFor(() => page.similar().length === 2 && shown(page));
+  assert.equal(page.text("#matchblurb"), AUDIO_BEST_CAPTION);
   assert.deepEqual(page.texts("#matches .basis"), []);
   assert.deepEqual(page.errors, []);
+
+  const emptyMain = loadAnysong({
+    body: (options) => {
+      const body = anysongBody(options);
+      body.results.main = [];
+      return body;
+    },
+  });
+  await waitFor(() => shown(emptyMain));
+  assert.deepEqual(emptyMain.texts("#matches .t"), ["Bar A Thym", "Listener Pick"]);
+  assert.equal(emptyMain.text("#matchblurb"), MIXED_BEST_CAPTION);
+
+  const neither = loadAnysong({
+    body: (options) => {
+      const body = anysongBody({ ...options, older: true });
+      delete body.results.best;
+      return body;
+    },
+  });
+  await waitFor(() => neither.document.querySelector("#matches .state"));
+  assert.equal(selected(neither, "best"), "true");
+  assert.equal(neither.text("#matches .state"), "No matches in this list.");
+  assert.deepEqual(neither.errors, []);
 });
 
-test("Audio only reloads the lists without listeners and is remembered", async () => {
-  const page = loadMain({
-    hash: `#id=${EIGHT_PM_ID}`,
-    best: (params) => json(200, mainSoundsBody({ lang: params.get("lang") })),
+test("an artist without listener data says so on Listeners also play", async () => {
+  const page = loadAnysong({
+    hash: `#id=${AMANGA_ID}&tab=listeners`,
+    body: (options) => anysongBody({ ...options, scene: "unknown_artist" }),
   });
+  await waitFor(() => page.document.querySelector("#matches .state"));
+
+  assert.deepEqual(page.texts("#out .tab"), TAB_LABELS);
+  assert.equal(selected(page, "listeners"), "true");
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=listeners`);
+  assert.equal(page.text("#matches .state"), NO_LISTENERS_NOTE);
+  // An empty list has no ranking to describe, so only its note shows.
+  assert.equal(page.text("#matchblurb"), "");
+  assert.equal(page.document.querySelector("#matchblurb").hidden, true);
+  // Only Audio only is left to change on an empty list.
+  assert.equal(page.document.querySelector("#language").hidden, false);
+  assert.equal(page.text("#language-status"), "");
+  assert.equal(page.document.querySelector("#language-toggle").hidden, true);
+  assert.equal(page.document.querySelector("#audio-only").getAttribute("aria-pressed"), "false");
+  assert.equal(page.document.querySelector("#copy").disabled, true);
+  assert.equal(vm.runInContext("lastResults.length", page.context), 0);
+
+  // Best matches are in sound order, so they get the audio-only caption.
+  page.document.querySelector("#tab-best").click();
+  assert.deepEqual(page.texts("#matches .t"), ["Bar A Thym", "Sunshine"]);
+  assert.equal(page.text("#matchblurb"), AUDIO_BEST_CAPTION);
+  assert.equal(page.document.querySelector("#matchblurb").hidden, false);
+  assert.equal(page.document.querySelector("#language-toggle").hidden, false);
+  assert.equal(page.text("#language-status"), "English · other languages left out");
+  assert.equal(page.similar().length, 1);
+  assert.deepEqual(page.errors, []);
+
+  const emptyList = loadAnysong({
+    hash: `#id=${AMANGA_ID}&tab=listeners`,
+    body: (options) => {
+      const body = anysongBody(options);
+      body.results.listeners = [];
+      return body;
+    },
+  });
+  await waitFor(() => emptyList.document.querySelector("#matches .state"));
+  assert.equal(emptyList.text("#matches .state"), NO_LISTENERS_NOTE);
+  assert.equal(emptyList.document.querySelector("#matchblurb").hidden, true);
+  assert.deepEqual(emptyList.errors, []);
+});
+
+test("Audio only reloads without the listeners and is remembered", async () => {
+  const page = loadMain({ hash: `#id=${EIGHT_PM_ID}` });
   await waitFor(() => shown(page));
   const audio = page.document.querySelector("#audio-only");
   assert.equal(audio.textContent, "Audio only");
+  assert.equal(
+    audio.getAttribute("title"),
+    "Rank by audio alone, leaving out what this song's listeners also play",
+  );
   assert.equal(audio.getAttribute("aria-pressed"), "false");
   assert.equal(page.similar()[0].get("scene"), null);
+  assert.equal(page.text("#matchblurb"), BEST_CAPTION);
 
   audio.focus();
   audio.click();
@@ -977,22 +1213,40 @@ test("Audio only reloads the lists without listeners and is remembered", async (
   assert.equal(page.kept.get(AUDIO_ONLY_KEY), "true");
   assert.equal(page.document.activeElement, audio);
   assert.equal(page.text("#matchblurb"), AUDIO_BEST_CAPTION);
-  page.document.querySelector("#tab-sounds").click();
-  assert.equal(page.text("#matchblurb"), AUDIO_SOUNDS_CAPTION);
-  assert.equal(page.document.querySelector("#language").hidden, false);
+  assert.deepEqual(page.texts("#matches .t"), ["n.h.i.e.", "AHHH HA"]);
 
+  // Listeners also play comes from the listeners, so it says how to get it back.
+  page.document.querySelector("#tab-listeners").click();
+  assert.equal(page.text("#matches .state"), AUDIO_ONLY_LISTENERS_NOTE);
+  assert.equal(page.text("#matchblurb"), "");
+  assert.equal(page.document.querySelector("#matchblurb").hidden, true);
+  assert.equal(page.document.querySelector("#language").hidden, false);
+  assert.equal(page.text("#language-status"), "");
+  assert.equal(page.document.querySelector("#language-toggle").hidden, true);
+  assert.equal(audio.getAttribute("aria-pressed"), "true");
+  assert.equal(page.document.querySelector("#copy").disabled, true);
+
+  page.document.querySelector("#tab-best").click();
   page.document.querySelector("#language-toggle").click();
-  await waitFor(() => page.text("#language-status") === "English · all languages");
+  await waitFor(() =>
+    page.text("#language-status") === "English · all languages");
   assert.equal(page.similar()[2].get("lang"), "all");
   assert.equal(page.similar()[2].get("scene"), "0");
 
+  page.document.querySelector("#tab-listeners").click();
   audio.click();
   await waitFor(() => page.similar().length === 4 && shown(page));
   assert.equal(page.similar()[3].get("scene"), null);
   assert.equal(page.similar()[3].get("lang"), "all");
   assert.equal(audio.getAttribute("aria-pressed"), "false");
   assert.equal(page.kept.has(AUDIO_ONLY_KEY), false);
-  assert.equal(page.text("#matchblurb"), SOUNDS_CAPTION);
+  assert.equal(selected(page, "listeners"), "true");
+  assert.deepEqual(page.texts("#matches .t"), ["Kept Going", "Autre Son"]);
+  assert.equal(page.text("#language-status"), "English · all languages");
+  assert.equal(page.document.querySelector("#language-toggle").hidden, false);
+  assert.equal(page.text("#matchblurb"), LISTENERS_CAPTION);
+  assert.equal(page.document.querySelector("#matchblurb").hidden, false);
+  assert.equal(page.document.querySelector("#copy").disabled, false);
   assert.deepEqual(page.errors, []);
 });
 
@@ -1029,23 +1283,229 @@ test("Audio only stays reachable when its reload fails", async () => {
   assert.deepEqual(page.texts("#matches .t"), ["n.h.i.e.", "AHHH HA"]);
 });
 
-test("a reload without a Same vibe list returns to Best matches", async () => {
+// A server that can match a part of the preview says so in every answer
+// (query.parts) and names the part an answer is for (query.part); its lists
+// then differ from the whole preview's.
+const PARTS_INFO = { min_s: 10, max_s: 30, preview_s: 30, song_offset_s: 48 };
+const PART_INTRO = "Soundalike hears a 30-second preview. Pick the part of it you care about.";
+
+function partsBest({ parts = PARTS_INFO, refuse = false } = {}) {
+  return (params) => {
+    const part = params.get("part");
+    if (part && refuse) {
+      return json(404, { ok: false, error: "choosing a part of the preview is not enabled" });
+    }
+    const body = anysongBody({
+      lang: params.get("lang"),
+      scene: params.get("scene") === "0" ? "off" : "on",
+    });
+    if (parts) body.query.parts = parts;
+    if (part && parts) {
+      const [start, end] = part.split("-").map(Number);
+      body.query.part = {
+        start, end, heard: { sonic: [10, 30], samples: [15.31, 30.63], melody: [10, 30] },
+      };
+      body.results.main.reverse();
+    }
+    return json(200, body);
+  };
+}
+
+const partParams = (page) => page.similar().map((params) => params.get("part"));
+const key = (page, name, shiftKey = false) =>
+  page.document.querySelector("#part-span").dispatch("keydown", { key: name, shiftKey });
+
+test("Match a part stays hidden on a server that cannot match parts", async () => {
+  // A link to a part opens the whole preview there, and the link is put right.
+  const page = loadMain({ hash: `#id=${AMANGA_ID}&tab=best&part=10-25`, body: anysongBody });
+  await waitFor(() => shown(page));
+  assert.equal(page.document.querySelector("#part-open").hidden, true);
+  assert.equal(page.document.querySelector("#part-chip").hidden, true);
+  assert.equal(page.document.querySelector("#part-panel").hidden, true);
+  assert.deepEqual(partParams(page), ["10-25"]);
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=best`);
+  assert.deepEqual(page.errors, []);
+});
+
+test("Match a part opens a picker by the seed's preview button and Apply reloads the lists", async () => {
+  const page = loadMain({ hash: `#id=${AMANGA_ID}`, best: partsBest() });
+  await waitFor(() => shown(page));
+  const open = page.document.querySelector("#part-open");
+  assert.equal(open.hidden, false);
+  assert.equal(open.textContent, "Match a part beta");
+  assert.equal(open.getAttribute("aria-expanded"), "false");
+  // It follows the seed's preview button in the seed card's actions.
+  assert.deepEqual(
+    page.document.querySelectorAll(".seed .actions button").map((button) => button.id || button.className),
+    ["pv", "part-open", "share", "copy", "save"],
+  );
+  assert.equal(page.document.querySelector("#part-chip").hidden, true);
+
+  open.click();
+  const panel = page.document.querySelector("#part-panel");
+  assert.equal(panel.hidden, false);
+  assert.equal(open.getAttribute("aria-expanded"), "true");
+  assert.equal(page.text("#part-panel .part-intro"), `New · beta ${PART_INTRO}`);
+  const span = page.document.querySelector("#part-span");
+  assert.equal(span.getAttribute("role"), "slider");
+  assert.equal(span.getAttribute("tabindex"), "0");
+  assert.equal(span.getAttribute("aria-valuetext"), "0:58–1:08 of the song · 10 s");
+  assert.deepEqual(page.texts("#part-panel .part-ticks span"), ["0:48", "0:58", "1:08", "1:18"]);
+  assert.deepEqual(page.texts("#part-panel .part-lengths button"), ["10 s", "15 s", "20 s"]);
+  assert.match(page.text("#part-panel .part-note"), /^All three tabs follow the part\. /);
+  assert.match(page.text("#part-panel .part-note"), /in a few songs it is elsewhere/);
+
+  // Arrow keys move the span in 5-second steps; Shift changes its length.
+  key(page, "ArrowRight");
+  assert.equal(page.text("#part-label"), "1:03–1:13 of the song · 10 s");
+  assert.equal(span.style.left, "50%");
+  key(page, "ArrowRight", true);
+  assert.equal(page.text("#part-label"), "1:03–1:18 of the song · 15 s");
+  // At the end of the preview a longer part grows backwards, up to 20 s.
+  key(page, "ArrowRight", true);
+  key(page, "ArrowRight", true);
+  assert.equal(page.text("#part-label"), "0:58–1:18 of the song · 20 s");
+  key(page, "Home");
+  assert.equal(page.text("#part-label"), "0:48–1:08 of the song · 20 s");
+  // A length button keeps the start.
+  page.document.querySelectorAll("#part-panel .part-lengths button")[1].click();
+  assert.equal(page.text("#part-label"), "0:48–1:03 of the song · 15 s");
+  assert.deepEqual(
+    page.document.querySelectorAll("#part-panel .part-lengths button")
+      .map((button) => button.getAttribute("aria-pressed")),
+    ["false", "true", "false"],
+  );
+  // Dragging the span moves it (touch and mouse are both pointers).
+  const track = page.document.querySelector("#part-track");
+  track.dispatch("pointerdown", { clientX: 50, pointerId: 1, target: span });
+  track.dispatch("pointermove", { clientX: 152 });
+  track.dispatch("pointerup");
+  assert.equal(page.text("#part-label"), "0:58–1:13 of the song · 15 s");
+  // Dragging an edge resizes it, never under 10 s.
+  const edge = page.document.querySelectorAll("#part-span .part-edge")[1];
+  track.dispatch("pointerdown", { clientX: 250, pointerId: 1, target: edge });
+  track.dispatch("pointermove", { clientX: 120 });
+  track.dispatch("pointerup");
+  assert.equal(page.text("#part-label"), "0:58–1:08 of the song · 10 s");
+  // A press outside the span brings its middle there.
+  track.dispatch("pointerdown", { clientX: 290, pointerId: 1, target: track });
+  track.dispatch("pointerup");
+  assert.equal(page.text("#part-label"), "1:08–1:18 of the song · 10 s");
+  assert.deepEqual(partParams(page), [null]);
+
+  const before = shown(page).dataset.id;
+  page.document.querySelector("#part-apply").click();
+  await waitFor(() => page.similar().length === 2 && shown(page) && shown(page).dataset.id !== before);
+  assert.deepEqual(partParams(page), [null, "20-30"]);
+  // The part is in the share link, and the picker gives way to a chip.
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=best&part=20-30`);
+  assert.equal(panel.hidden, true);
+  const chip = page.document.querySelector("#part-chip");
+  assert.equal(chip.hidden, false);
+  assert.equal(chip.textContent, "Matching 1:08–1:18 of the song · whole preview");
+  assert.equal(
+    page.document.querySelector("#part-chip-text").getAttribute("title"),
+    "Heard: sound 0:58–1:18, melody 0:58–1:18, samples 1:03–1:19",
+  );
+
+  // The other tabs read the same answer; switching keeps the part in the link.
+  page.document.querySelector("#tab-listeners").click();
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=listeners&part=20-30`);
+  assert.equal(chip.hidden, false);
+  assert.equal(page.similar().length, 2);
+  // So do the language and Audio only switches.
+  page.document.querySelector("#language-toggle").click();
+  await waitFor(() => page.similar().length === 3);
+  assert.equal(page.similar()[2].get("part"), "20-30");
+  assert.equal(page.similar()[2].get("lang"), "all");
+
+  // "whole preview" goes back.
+  await waitFor(() => page.document.querySelector("#part-clear"));
+  page.document.querySelector("#part-clear").click();
+  await waitFor(() => page.similar().length === 4 && chip.hidden);
+  assert.equal(page.similar()[3].get("part"), null);
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=listeners`);
+  assert.equal(open.hidden, false);
+  assert.deepEqual(page.errors, []);
+});
+
+test("a link with a part opens that part, from the hash or an old /anysong query", async () => {
+  const page = loadMain({ hash: `#id=${AMANGA_ID}&tab=best&part=5-20`, best: partsBest() });
+  await waitFor(() => shown(page));
+  assert.deepEqual(partParams(page), ["5-20"]);
+  assert.equal(page.text("#part-chip"), "Matching 0:53–1:08 of the song · whole preview");
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=best&part=5-20`);
+  // The picker opens on the part being matched, with nothing to apply yet.
+  page.document.querySelector("#part-open").click();
+  assert.equal(page.text("#part-label"), "0:53–1:08 of the song · 15 s");
+  assert.equal(page.document.querySelector("#part-apply").disabled, true);
+  page.document.querySelector("#part-cancel").click();
+  assert.equal(page.document.querySelector("#part-panel").hidden, true);
+  // Picking another song starts from its whole preview.
+  page.document.querySelector("#matches .t").click();
+  await waitFor(() => page.similar().length === 2);
+  assert.equal(page.similar()[1].get("part"), null);
+
+  const forwarded = loadMain({ search: `?id=${AMANGA_ID}&tab=melody&part=10-20`, best: partsBest() });
+  await waitFor(() => shown(forwarded));
+  assert.equal(forwarded.search, "");
+  assert.equal(forwarded.hash, `#id=${AMANGA_ID}&tab=melody&part=10-20`);
+  assert.deepEqual(partParams(forwarded), ["10-20"]);
+
+  // Spans the picker cannot make are not sent.
+  for (const bad of ["12", "20-10", "5-12", "10-40", "a-b"]) {
+    const other = loadMain({ hash: `#id=${AMANGA_ID}&part=${bad}`, best: partsBest() });
+    await waitFor(() => shown(other));
+    assert.deepEqual(partParams(other), [null]);
+  }
+});
+
+test("a server that refuses the part answers for the whole preview and no chip stays", async () => {
+  const page = loadMain({ hash: `#id=${AMANGA_ID}`, best: partsBest({ refuse: true }) });
+  await waitFor(() => shown(page));
+  page.document.querySelector("#part-open").click();
+  page.document.querySelector("#part-apply").click();
+  await waitFor(() => page.similar().length === 3 && shown(page));
+  assert.deepEqual(partParams(page), [null, "10-20", null]);
+  assert.equal(page.document.querySelector("#part-chip").hidden, true);
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=best`);
+  assert.deepEqual(page.errors, []);
+});
+
+test("a part is given in preview time when the song's is unknown, and plays just that span", async () => {
   const page = loadMain({
-    hash: `#id=${EIGHT_PM_ID}`,
-    best: (params) => {
-      const lang = params.get("lang");
-      return json(200, mainBestBody({ lang, vibe: lang !== "all" }));
-    },
+    hash: `#id=${AMANGA_ID}`,
+    best: partsBest({ parts: { ...PARTS_INFO, song_offset_s: null } }),
   });
   await waitFor(() => shown(page));
-  page.document.querySelector("#tab-vibe").click();
-  page.document.querySelector("#language-toggle").click();
+  page.document.querySelector("#part-open").click();
+  assert.equal(page.text("#part-label"), "0:10–0:20 of the preview · 10 s");
+  assert.deepEqual(page.texts("#part-panel .part-ticks span"), ["0:00", "0:10", "0:20", "0:30"]);
+  assert.doesNotMatch(page.text("#part-panel .part-note"), /in a few songs it is elsewhere/);
 
-  await waitFor(() => page.text("#language-status") === "English · 1 other-language match in the top 20");
-  assert.equal(page.document.querySelector("#tab-vibe").hidden, true);
-  assert.equal(selected(page, "best"), "true");
-  assert.deepEqual(page.texts("#matches .t"), ["n.h.i.e.", "Airforce Negras"]);
-  assert.equal(page.hash, `#id=${EIGHT_PM_ID}&tab=best`);
+  const [audio] = page.audios;
+  const play = page.document.querySelector("#part-play");
+  assert.equal(play.textContent, "▶ Play this part");
+  play.click();
+  await waitFor(() => !audio.paused);
+  assert.equal(audio.src, PREVIEW);
+  assert.equal(audio.currentTime, 10);
+  assert.equal(play.textContent, "⏸ Stop");
+  audio.currentTime = 14;
+  audio.dispatch("timeupdate");
+  assert.equal(audio.paused, false);
+  assert.equal(page.document.querySelector("#part-head").style.left, `${(100 * 14) / 30}%`);
+  // It stops at the end of the span, not of the preview.
+  audio.currentTime = 20.1;
+  audio.dispatch("timeupdate");
+  assert.equal(audio.paused, true);
+  assert.equal(play.textContent, "▶ Play this part");
+  // The seed's own preview button still plays the whole preview.
+  play.click();
+  await waitFor(() => !audio.paused);
+  page.document.querySelector(".seed .pv").click();
+  assert.equal(audio.paused, true);
+  assert.deepEqual(page.errors, []);
 });
 
 test("a song the matcher cannot use shows the reason instead of tabs", async () => {
@@ -1091,25 +1551,29 @@ test("Copy list, Share, Open in Spotify and Save use the list on screen", async 
   page.document.querySelector("#copy").click();
   await waitFor(() => copied !== null);
   assert.equal(copied, "Bar A Thym — Kerri Chandler\nSunshine — Robert Glasper");
-  page.document.querySelector("#tab-melody").click();
+  page.document.querySelector("#tab-listeners").click();
   page.document.querySelector("#copy").click();
-  await waitFor(() => copied === "Melody Match — Someone");
+  await waitFor(() => copied === "Deep Vibe — Black Coffee\nKitchen Floor — Moodymann");
 
   page.document.querySelector("#share").click();
   await waitFor(() => page.text("#share") === "✓ Link copied");
-  assert.equal(copied, `${ORIGIN}/#id=${AMANGA_ID}&tab=melody`);
+  assert.equal(copied, `${ORIGIN}/#id=${AMANGA_ID}&tab=listeners`);
   assert.deepEqual(
     page.document.querySelectorAll("#matches a.play").map((link) => link.getAttribute("href")),
-    ["https://open.spotify.com/search/Melody%20Match%20Someone"],
+    [
+      "https://open.spotify.com/search/Deep%20Vibe%20Black%20Coffee",
+      "https://open.spotify.com/search/Kitchen%20Floor%20Moodymann",
+    ],
   );
   const save = page.document.querySelector("#save");
   assert.equal(save.disabled, false);
   assert.equal(save.onclick, page.context.savePlaylist);
   assert.equal(vm.runInContext("lastSeed.title", page.context), "Amanga");
-  assert.equal(vm.runInContext("lastResults.length", page.context), 1);
+  assert.equal(vm.runInContext("lastResults.length", page.context), 2);
+  assert.equal(vm.runInContext("lastResults[0].title", page.context), "Deep Vibe");
 
-  page.document.querySelector("#tab-samples").click();
-  assert.equal(vm.runInContext("lastResults[0].title", page.context), "Sample Match");
+  page.document.querySelector("#tab-best").click();
+  assert.equal(vm.runInContext("lastResults[0].title", page.context), "Bar A Thym");
   assert.deepEqual(page.errors, []);
 });
 
@@ -1130,6 +1594,7 @@ test("a match's title opens songs like it, and clearing the link clears the page
 });
 
 test("returning from the Spotify login reopens the song that was open", async () => {
+  // A login started on an old five-tab link comes back to Best matches.
   const page = loadMain({
     search: "?code=auth-code&state=expected",
     storage: {
@@ -1142,10 +1607,534 @@ test("returning from the Spotify login reopens the song that was open", async ()
   assert.equal(page.search, "");
   assert.equal(page.hash, `#id=${AMANGA_ID}&tab=vibe`);
   await waitFor(() => shown(page));
-  assert.equal(selected(page, "vibe"), "true");
+  assert.equal(selected(page, "best"), "true");
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=best`);
+  assert.deepEqual(page.texts("#matches .t"), ["Bar A Thym", "Sunshine"]);
   await waitFor(() => page.text("#sp") === "✓ Spotify connected");
   assert.equal(page.stored.get("sa_token"), "spotify-token");
   assert.equal(page.stored.has("sa_return"), false);
   assert.ok(page.requests.includes("https://accounts.spotify.com/api/token"));
+  assert.deepEqual(page.errors, []);
+
+  const listeners = loadMain({
+    search: "?code=auth-code&state=expected",
+    storage: {
+      sa_state: "expected",
+      sa_verifier: "verifier",
+      sa_return: `#id=${AMANGA_ID}&tab=listeners`,
+    },
+    body: anysongBody,
+  });
+  await waitFor(() => shown(listeners));
+  assert.equal(selected(listeners, "listeners"), "true");
+  assert.equal(listeners.hash, `#id=${AMANGA_ID}&tab=listeners`);
+});
+
+// ---------------------------------------------------------------- any part of the song
+// A server that also ranks a clip of the listener's own audio says so in
+// query.parts.excerpt. The page then offers a file of the song, and in
+// Chromium on a computer a tab's sound, next to the preview; only the picked
+// seconds are sent (POST /api/anysong/excerpt), as a 24 kHz mono WAV.
+const EXCERPT_ADVERT = { min_s: 10, max_s: 30, max_bytes: 6291456 };
+const CLIP_PARTS = { ...PARTS_INFO, excerpt: EXCERPT_ADVERT };
+const CLIP_ADVERT_KEY = "soundalike:excerpt:v1";
+const CLIP_RATE = 8000;
+
+// WebAudio as far as the page uses it: every file decodes to `seconds` of a
+// steady level of 0.25, and every render is kept in `rendered`.
+function fakeWebAudio({ seconds = 200, level = 0.25, undecodable = false } = {}) {
+  const rendered = [];
+  const played = [];
+  const buffer = (length, rate, fill) => {
+    const data = new Float32Array(length).fill(fill);
+    return { length, sampleRate: rate, duration: length / rate, getChannelData: () => data };
+  };
+  class AudioContext {
+    constructor() {
+      this.sampleRate = CLIP_RATE;
+      this.currentTime = 0;
+      this.destination = {};
+      this.modules = [];
+      this.audioWorklet = { addModule: async (url) => this.modules.push(url) };
+      AudioContext.last = this;
+    }
+    async resume() {}
+    async decodeAudioData() {
+      if (undecodable) throw new Error("not audio");
+      return buffer(seconds * CLIP_RATE, CLIP_RATE, level);
+    }
+    createBuffer(_channels, length, rate) {
+      return buffer(length, rate, 0);
+    }
+    createBufferSource() {
+      return {
+        connect() {},
+        start: (_when, offset, length) => played.push([offset, length]),
+        stop() {},
+      };
+    }
+    createMediaStreamSource(stream) {
+      return { connect: (node) => stream.connected.push(node), disconnect() {} };
+    }
+  }
+  class OfflineAudioContext {
+    constructor(_channels, length, rate) {
+      this.length = length;
+      this.rate = rate;
+      this.destination = {};
+    }
+    createBufferSource() {
+      return {
+        connect() {},
+        start: (_when, offset, length) => {
+          this.span = [offset, length];
+        },
+      };
+    }
+    async startRendering() {
+      rendered.push({ rate: this.rate, span: this.span });
+      return buffer(this.length, this.rate, level);
+    }
+  }
+  return { globals: { AudioContext, OfflineAudioContext, Blob }, rendered, played, AudioContext };
+}
+
+function clipBody(params, { known = true, lang } = {}) {
+  const body = anysongBody({
+    lang: lang || params.get("lang"),
+    scene: params.get("scene") === "0" || !known ? "off" : "on",
+  });
+  body.query = { ...body.query, source: "excerpt", seconds: 20, parts: { excerpt: EXCERPT_ADVERT } };
+  body.cached = false;
+  if (!known) {
+    delete body.query.id;
+    body.query.title = "";
+    body.query.artist = "";
+    body.query.scene = "unknown_artist";
+  }
+  body.results.main.reverse();
+  return body;
+}
+
+// The page with a server that takes clips; `posts` are the clips it was sent.
+function loadClips({ audio = fakeWebAudio(), answer = (params) => json(200, clipBody(params)), ...options } = {}) {
+  const posts = [];
+  const page = loadMain({
+    hash: `#id=${AMANGA_ID}`,
+    best: partsBest({ parts: CLIP_PARTS }),
+    ...options,
+    globals: { ...audio.globals, ...(options.globals || {}) },
+    excerpt: (params, init) => {
+      posts.push({ params, init });
+      return answer(params, init);
+    },
+  });
+  return { page, posts, audio };
+}
+
+const AUDIO_FILE = { name: "song.flac", size: 30_000_000, arrayBuffer: async () => new ArrayBuffer(64) };
+const sourceButtons = (page) => page.document.querySelectorAll("#part-panel .part-sources button");
+
+async function chooseFile(page, file = AUDIO_FILE) {
+  const chooser = page.document.querySelector("#clip-file");
+  chooser.files = [file];
+  chooser.dispatch("change");
+  await waitFor(() => page.document.querySelector("#part-span") || page.text("#clip-status") !== "Opening the file…");
+}
+
+async function wavOf(post) {
+  const view = new DataView(await post.init.body.arrayBuffer());
+  const text = (at, length) => String.fromCharCode(...new Uint8Array(view.buffer, at, length));
+  let peak = 0;
+  for (let at = 44; at < view.byteLength; at += 2) peak = Math.max(peak, Math.abs(view.getInt16(at, true)));
+  return {
+    tag: `${text(0, 4)} ${text(8, 8)} ${text(36, 4)}`,
+    channels: view.getUint16(22, true),
+    rate: view.getUint32(24, true),
+    bits: view.getUint16(34, true),
+    seconds: (view.byteLength - 44) / 2 / view.getUint32(24, true),
+    peak,
+  };
+}
+
+test("a server that takes no clips offers the preview alone, and no clip entry under the search bar", async () => {
+  const { page } = loadClips({ best: partsBest(), local: { [CLIP_ADVERT_KEY]: JSON.stringify(EXCERPT_ADVERT) } });
+  await waitFor(() => shown(page));
+  page.document.querySelector("#part-open").click();
+  assert.deepEqual(sourceButtons(page), []);
+  assert.equal(page.text("#part-panel .part-intro"), `New · beta ${PART_INTRO}`);
+  // What an earlier visit kept is dropped once the server says otherwise.
+  assert.equal(page.kept.has(CLIP_ADVERT_KEY), false);
+  assert.equal(page.document.querySelector("#clip-open").hidden, true);
+  assert.deepEqual(page.errors, []);
+});
+
+test("a browser without WebAudio is not offered its own audio", async () => {
+  const { page } = loadClips({ audio: { globals: {} } });
+  await waitFor(() => shown(page));
+  page.document.querySelector("#part-open").click();
+  assert.deepEqual(sourceButtons(page), []);
+  assert.equal(page.document.querySelector("#clip-open").hidden, true);
+});
+
+test("any part of the song: a file is cut in the browser and only the picked span is sent for the seed", async () => {
+  const { page, posts, audio } = loadClips();
+  await waitFor(() => shown(page));
+  assert.equal(page.kept.get(CLIP_ADVERT_KEY), JSON.stringify(EXCERPT_ADVERT));
+  page.document.querySelector("#part-open").click();
+  // The preview stays the first source; a tab's sound needs Chromium on a computer.
+  assert.deepEqual(sourceButtons(page).map((button) => button.textContent),
+    ["The 30-second preview", "A file of the song"]);
+  assert.deepEqual(sourceButtons(page).map((button) => button.getAttribute("aria-pressed")), ["true", "false"]);
+  assert.equal(page.text("#part-panel .part-intro"), `New · beta ${PART_INTRO}`);
+
+  sourceButtons(page)[1].click();
+  assert.equal(sourceButtons(page)[1].getAttribute("aria-pressed"), "true");
+  assert.match(page.text("#part-panel .part-note"), /is not uploaded\. Only the seconds you pick are sent to be matched, and nothing is stored\./);
+  assert.match(page.text("#part-panel .part-note"), /The song, its artist and its language stay the ones you picked\./);
+  assert.equal(page.document.querySelector("#clip-file").getAttribute("type"), "file");
+
+  await chooseFile(page);
+  // The whole 3:20 file is the timeline; the span opens a third of the way in.
+  assert.deepEqual(page.texts("#part-panel .part-ticks span"), ["0:00", "0:50", "1:40", "2:30", "3:20"]);
+  assert.equal(page.text("#part-label"), "1:02–1:17 of your file · 15 s");
+  assert.deepEqual(page.texts("#part-panel .part-lengths button"), ["10 s", "15 s", "20 s"]);
+  // It moves by the second, anywhere in the song.
+  key(page, "ArrowRight");
+  assert.equal(page.text("#part-label"), "1:03–1:18 of your file · 15 s");
+  key(page, "End");
+  assert.equal(page.text("#part-label"), "3:05–3:20 of your file · 15 s");
+  const track = page.document.querySelector("#part-track");
+  track.dispatch("pointerdown", { clientX: 18, pointerId: 1, target: track });
+  track.dispatch("pointerup");
+  assert.equal(page.text("#part-label"), "0:05–0:20 of your file · 15 s");
+  page.document.querySelectorAll("#part-panel .part-lengths button")[2].click();
+  assert.equal(page.text("#part-label"), "0:05–0:25 of your file · 20 s");
+  // Play this part plays the file's span, and stops.
+  page.document.querySelector("#part-play").click();
+  assert.deepEqual(audio.played, [[5, 20]]);
+  assert.equal(page.text("#part-play"), "⏸ Stop");
+  page.document.querySelector("#part-play").click();
+  assert.equal(page.text("#part-play"), "▶ Play this part");
+  assert.equal(posts.length, 0);
+
+  const before = shown(page).dataset.id;
+  page.document.querySelector("#part-apply").click();
+  await waitFor(() => posts.length === 1 && shown(page) && shown(page).dataset.id !== before);
+  // Only the span is rendered and sent: 20 s, mono, 24 kHz, 16 bits, at full scale.
+  assert.deepEqual(audio.rendered, [{ rate: 24000, span: [5, 20] }]);
+  assert.equal(posts[0].init.method, "POST");
+  assert.equal(posts[0].init.headers["Content-Type"], "audio/wav");
+  assert.deepEqual(await wavOf(posts[0]),
+    { tag: "RIFF WAVEfmt  data", channels: 1, rate: 24000, bits: 16, seconds: 20, peak: 32767 });
+  // The song stays the seed: its id goes with the clip.
+  assert.deepEqual(Object.fromEntries(posts[0].params), { k: "20", lang: "same", id: String(AMANGA_ID) });
+
+  const chip = page.document.querySelector("#part-chip");
+  assert.equal(chip.textContent, "Matching your clip (0:05–0:25 of your file) · whole preview");
+  assert.equal(page.document.querySelector("#part-panel").hidden, true);
+  // A clip cannot be in a link: the link is the song's.
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=best`);
+  assert.equal(page.text(".seed h2"), "Amanga");
+  assert.deepEqual(page.texts("#seedtags .tag"), ["your clip, heard just now", "matched in 0.6 s"]);
+
+  // The language and Audio only switches send the same clip again.
+  page.document.querySelector("#language-toggle").click();
+  await waitFor(() => posts.length === 2);
+  assert.equal(posts[1].params.get("lang"), "all");
+  assert.equal(posts[1].init.body, posts[0].init.body);
+  await waitFor(() => shown(page));
+  page.document.querySelector("#audio-only").click();
+  await waitFor(() => posts.length === 3);
+  assert.equal(posts[2].params.get("scene"), "0");
+
+  // Reopening the picker comes back to the file source; "whole preview" drops the clip.
+  await waitFor(() => shown(page));
+  page.document.querySelector("#part-open").click();
+  assert.equal(sourceButtons(page)[1].getAttribute("aria-pressed"), "true");
+  page.document.querySelector("#part-cancel").click();
+  const asked = page.similar().length;
+  page.document.querySelector("#part-clear").click();
+  await waitFor(() => page.similar().length === asked + 1 && chip.hidden);
+  assert.equal(posts.length, 3);
+  assert.deepEqual(page.errors, []);
+});
+
+test("a file that is not audio, too short, silent or too large says so and sends nothing", async () => {
+  const bad = loadClips({ audio: fakeWebAudio({ undecodable: true }) });
+  await waitFor(() => shown(bad.page));
+  bad.page.document.querySelector("#part-open").click();
+  sourceButtons(bad.page)[1].click();
+  await chooseFile(bad.page);
+  assert.equal(bad.page.text("#clip-status"),
+    "Your browser could not read that file as audio. Try an MP3, M4A, FLAC or WAV.");
+  await chooseFile(bad.page, { ...AUDIO_FILE, size: 500 * 1024 * 1024 });
+  assert.equal(bad.page.text("#clip-status"), "That file is too large to open here.");
+
+  const short = loadClips({ audio: fakeWebAudio({ seconds: 8 }) });
+  await waitFor(() => shown(short.page));
+  short.page.document.querySelector("#part-open").click();
+  sourceButtons(short.page)[1].click();
+  await chooseFile(short.page);
+  assert.equal(short.page.text("#clip-status"), "That file is shorter than 10 seconds.");
+
+  const silent = loadClips({ audio: fakeWebAudio({ level: 0 }) });
+  await waitFor(() => shown(silent.page));
+  silent.page.document.querySelector("#part-open").click();
+  sourceButtons(silent.page)[1].click();
+  await chooseFile(silent.page);
+  silent.page.document.querySelector("#part-apply").click();
+  await waitFor(() => silent.page.text("#clip-status") === "That part is silent. Pick another part.");
+  assert.equal(silent.page.document.querySelector("#part-apply").disabled, false);
+  assert.equal(bad.posts.length + short.posts.length + silent.posts.length, 0);
+});
+
+test("a clip the server refuses says why, and a server that stopped taking clips loses the entry", async () => {
+  const cases = [
+    [422, "the clip is shorter than 10 s", "The clip is shorter than 10 s."],
+    [413, "the clip is too large", "That clip is too large to send. Pick a shorter part."],
+    [429, "too many requests", "You're sending clips a bit fast. Wait a minute and try again."],
+    [404, "not found", "Matching your own audio is not switched on right now."],
+  ];
+  for (const [status, error, text] of cases) {
+    const { page, posts } = loadClips({ answer: () => json(status, { ok: false, error }) });
+    await waitFor(() => shown(page));
+    page.document.querySelector("#part-open").click();
+    sourceButtons(page)[1].click();
+    await chooseFile(page);
+    page.document.querySelector("#part-apply").click();
+    await waitFor(() => page.document.querySelector("#matches .state.err"));
+    assert.equal(page.text("#matches .state.err"), text);
+    assert.equal(posts.length, 1);
+    assert.equal(page.kept.has(CLIP_ADVERT_KEY), status !== 404);
+    // The way back to the song is still there.
+    assert.equal(page.text("#part-clear"), "whole preview");
+  }
+});
+
+// Chromium on a computer: the Share dialog's tab with its sound.
+function fakeTabShare({ sound = true } = {}) {
+  const share = { asked: [], stopped: 0, taps: [], opened: [] };
+  const track = () => ({ stop: () => { share.stopped += 1; } });
+  const stream = {
+    connected: share.taps,
+    video: [track()],
+    audio: sound ? [track()] : [],
+    getTracks() { return [...this.video, ...this.audio]; },
+    getVideoTracks() { return this.video; },
+    getAudioTracks() { return this.audio; },
+  };
+  share.stream = stream;
+  share.globals = {
+    navigator: {
+      userAgentData: { mobile: false },
+      mediaDevices: {
+        getDisplayMedia: async (options) => {
+          share.asked.push(options);
+          return stream;
+        },
+      },
+    },
+    open: (...args) => {
+      share.opened.push(args);
+    },
+    AudioWorkletNode: class {
+      constructor(_context, name) {
+        this.name = name;
+        this.port = {};
+      }
+    },
+  };
+  return share;
+}
+
+test("a tab's sound is offered in Chromium on a computer, captured without voice processing, and matched like a file", async () => {
+  const share = fakeTabShare();
+  const { page, posts, audio } = loadClips({ globals: share.globals });
+  await waitFor(() => shown(page));
+  page.document.querySelector("#part-open").click();
+  assert.deepEqual(sourceButtons(page).map((button) => button.textContent),
+    ["The 30-second preview", "Any part, from YouTube or another tab experimental", "A file of the song"]);
+  sourceButtons(page)[1].click();
+  assert.match(page.text("#part-panel .part-intro"), /^Experimental Soundalike holds only a 30-second preview of each song\./);
+  assert.deepEqual(page.texts("#part-panel .clip-steps li").map((step) => step.slice(0, 28)),
+    ["Open the song on YouTube, or", "Press Capture here. In your ", "Listen to what was captured,"]);
+  assert.match(page.text("#part-panel .clip-steps"), /choose that tab and leave “Also share tab audio” on/);
+  assert.match(page.text("#part-panel .part-note"), /the picture is dropped at once and nothing is stored\./);
+  // It says what it is not: no way around a site's terms, and no slider over the whole video.
+  assert.match(page.text("#part-panel .part-note"), /hears only what you capture, not the rest of the video/);
+  assert.match(page.text("#part-panel .part-note"), /does not make copying allowed, so capture only audio you may use under the site's terms/);
+  // A YouTube link and a time open the video there, in a new tab; nothing is fetched from YouTube.
+  assert.equal(page.document.querySelector("#clip-find").getAttribute("href"),
+    "https://www.youtube.com/results?search_query=Josiah%20De%20Disciple%20Amanga");
+  const link = page.document.querySelector("#clip-link");
+  const at = page.document.querySelector("#clip-at");
+  const go = page.document.querySelector("#clip-go");
+  const opens = [
+    ["https://youtu.be/wgFHz7SN_h8", "1:10", "https://www.youtube.com/watch?v=wgFHz7SN_h8&t=70s"],
+    ["https://music.youtube.com/watch?v=wgFHz7SN_h8&t=95", "", "https://www.youtube.com/watch?v=wgFHz7SN_h8&t=95s"],
+    ["https://www.youtube.com/watch?v=wgFHz7SN_h8&list=x", "1m5s", "https://www.youtube.com/watch?v=wgFHz7SN_h8&t=65s"],
+    ["https://m.youtube.com/shorts/wgFHz7SN_h8", "", "https://www.youtube.com/watch?v=wgFHz7SN_h8"],
+  ];
+  for (const [address, time, opened] of opens) {
+    link.value = address;
+    at.value = time;
+    go.click();
+    assert.deepEqual(share.opened.at(-1), [opened, "_blank", "noopener"]);
+  }
+  for (const address of ["https://example.com/watch?v=wgFHz7SN_h8", "sneaky snitch", "https://www.youtube.com/@channel"]) {
+    link.value = address;
+    go.click();
+  }
+  assert.equal(share.opened.length, opens.length);
+  assert.match(page.text("#clip-status"), /^That is not a link to a YouTube video\./);
+  assert.deepEqual(page.requests.filter((url) => /youtu/.test(url)), []);
+  assert.deepEqual(page.texts("#part-panel .part-lengths button"), ["10 s", "20 s", "30 s"]);
+  page.document.querySelectorAll("#part-panel .part-lengths button")[2].click();
+  assert.equal(posts.length, 0);
+
+  page.document.querySelector("#clip-capture").click();
+  await waitFor(() => share.taps.length === 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(share.asked[0].audio)),
+    { echoCancellation: false, noiseSuppression: false, autoGainControl: false });
+  assert.deepEqual(audio.AudioContext.last.modules, ["/clip-tap.js"]);
+  assert.equal(share.taps[0].name, "clip-tap");
+  // The picture is dropped as soon as the share starts.
+  assert.equal(share.stopped, 1);
+  assert.equal(page.document.querySelector("#clip-capture").hidden, true);
+  assert.equal(page.document.querySelector("#clip-stop").hidden, false);
+  // Six blocks of five seconds arrive from the worklet.
+  for (let block = 0; block < 6; block += 1) {
+    share.taps[0].port.onmessage({ data: new Float32Array(5 * CLIP_RATE).fill(0.1) });
+  }
+  await waitFor(() => page.document.querySelector("#part-span"));
+  assert.equal(share.stopped, 3);
+  assert.deepEqual(page.texts("#part-panel .part-ticks span"), ["0:00", "0:08", "0:15", "0:23", "0:30"]);
+  assert.equal(page.text("#part-label"), "0:00–0:15 of your capture · 15 s");
+  key(page, "End");
+  page.document.querySelector("#part-apply").click();
+  await waitFor(() => posts.length === 1);
+  assert.deepEqual(audio.rendered, [{ rate: 24000, span: [15, 15] }]);
+  assert.equal(posts[0].params.get("id"), String(AMANGA_ID));
+  await waitFor(() => page.text("#part-chip") === "Matching your clip (0:15–0:30 of your capture) · whole preview");
+  assert.deepEqual(page.errors, []);
+});
+
+test("a share without sound, or with silence, says what to do instead of matching", async () => {
+  const mute = fakeTabShare({ sound: false });
+  const first = loadClips({ globals: mute.globals });
+  await waitFor(() => shown(first.page));
+  first.page.document.querySelector("#part-open").click();
+  sourceButtons(first.page)[1].click();
+  first.page.document.querySelector("#clip-capture").click();
+  await waitFor(() => first.page.text("#clip-status"));
+  assert.equal(first.page.text("#clip-status"),
+    "That share has no sound. Choose a tab, not a window or a screen, and leave “Also share tab audio” on.");
+  assert.equal(mute.stopped, 2);
+
+  const quiet = fakeTabShare();
+  const second = loadClips({ globals: quiet.globals });
+  await waitFor(() => shown(second.page));
+  second.page.document.querySelector("#part-open").click();
+  sourceButtons(second.page)[1].click();
+  second.page.document.querySelector("#clip-capture").click();
+  await waitFor(() => quiet.taps.length === 1);
+  for (let block = 0; block < 4; block += 1) {
+    quiet.taps[0].port.onmessage({ data: new Float32Array(5 * CLIP_RATE) });
+  }
+  await waitFor(() => /^Almost nothing/.test(second.page.text("#clip-status")));
+  assert.equal(second.page.text("#clip-status"),
+    "Almost nothing was heard. Is the tab playing, and was “Also share tab audio” on?");
+  assert.equal(second.page.document.querySelector("#clip-capture").hidden, false);
+
+  // Cancel during a capture ends the share and sends nothing.
+  const third = fakeTabShare();
+  const last = loadClips({ globals: third.globals });
+  await waitFor(() => shown(last.page));
+  last.page.document.querySelector("#part-open").click();
+  sourceButtons(last.page)[1].click();
+  last.page.document.querySelector("#clip-capture").click();
+  await waitFor(() => third.taps.length === 1);
+  last.page.document.querySelector("#part-cancel").click();
+  await waitFor(() => third.stopped === 3);
+  assert.equal(last.page.document.querySelector("#part-panel").hidden, true);
+  assert.equal(first.posts.length + second.posts.length + last.posts.length, 0);
+});
+
+test("a clip without a song is matched by sound alone and says what is missing", async () => {
+  const { page, posts } = loadClips({
+    hash: "",
+    local: { [CLIP_ADVERT_KEY]: JSON.stringify(EXCERPT_ADVERT) },
+    answer: (params) => json(200, clipBody(params, { known: false })),
+  });
+  const entry = page.document.querySelector("#clip-open");
+  assert.equal(entry.hidden, false);
+  assert.equal(entry.textContent, "🎧 Match any part of a song, from YouTube or a file beta");
+  entry.click();
+  // No song, so no preview to pick from: the file is the first source.
+  assert.equal(page.text("#part-panel .part-intro"),
+    "New · beta Have this song as a file? Choose it and pick any part of the whole song.");
+  assert.match(page.text("#part-panel .part-note"),
+    /Without a song picked, the clip is matched by sound alone: Listeners also play needs to know the song\./);
+  // Cancel before anything is matched leaves the page empty.
+  page.document.querySelector("#part-cancel").click();
+  assert.equal(page.document.querySelector("#out").innerHTML, "");
+
+  entry.click();
+  await chooseFile(page);
+  page.document.querySelector("#part-apply").click();
+  await waitFor(() => shown(page));
+  assert.deepEqual(Object.fromEntries(posts[0].params), { k: "20", lang: "same" });
+  assert.equal(page.text(".seed h2"), "Your clip");
+  assert.equal(page.text(".seed .art"), "No song picked: matched by sound alone");
+  assert.equal(page.document.querySelector("#share").hidden, true);
+  assert.equal(page.document.querySelector(".seed .pv"), null);
+  assert.equal(page.hash, "");
+  assert.equal(page.text("#part-chip"), "Matching your clip (1:02–1:17 of your file) · clear");
+  page.document.querySelector("#tab-listeners").click();
+  assert.equal(page.text("#matches .state"),
+    "This list comes from what a song's listeners also play, and we don't know which song your clip is from. " +
+    "Search the song first, then match your clip from its Match a part panel.");
+  assert.equal(page.hash, "");
+  // Another part of the same audio can be picked from the card.
+  assert.equal(page.document.querySelector("#part-open").hidden, false);
+  page.document.querySelector("#part-clear").click();
+  assert.equal(page.document.querySelector("#out").innerHTML, "");
+  assert.deepEqual(page.errors, []);
+});
+
+test("a clip the server recognises as a catalog song takes that song as its seed", async () => {
+  const { page, posts } = loadClips({
+    hash: "",
+    local: { [CLIP_ADVERT_KEY]: JSON.stringify(EXCERPT_ADVERT) },
+  });
+  page.document.querySelector("#clip-open").click();
+  await chooseFile(page);
+  page.document.querySelector("#part-apply").click();
+  await waitFor(() => shown(page) && page.text(".seed h2") === "Amanga");
+  assert.equal(posts[0].params.get("id"), null);
+  assert.equal(page.hash, `#id=${AMANGA_ID}&tab=best`);
+  assert.equal(page.document.querySelector("#share").hidden, false);
+  assert.equal(page.text("#part-chip"), "Matching your clip (1:02–1:17 of your file) · whole preview");
+  // From here on the clip goes with the song.
+  page.document.querySelector("#language-toggle").click();
+  await waitFor(() => posts.length === 2);
+  assert.equal(posts[1].params.get("id"), String(AMANGA_ID));
+  assert.deepEqual(page.errors, []);
+});
+
+test("without a song, a browser that can share a tab opens on the tab source", async () => {
+  const share = fakeTabShare();
+  const { page } = loadClips({
+    hash: "",
+    globals: share.globals,
+    local: { [CLIP_ADVERT_KEY]: JSON.stringify(EXCERPT_ADVERT) },
+  });
+  page.document.querySelector("#clip-open").click();
+  assert.deepEqual(sourceButtons(page).map((button) => `${button.textContent}:${button.getAttribute("aria-pressed")}`),
+    ["Any part, from YouTube or another tab experimental:true", "A file of the song:false"]);
+  // No song, so nothing to search YouTube for.
+  assert.equal(page.document.querySelector("#clip-find"), null);
+  assert.match(page.text("#part-panel .part-note"), /Without a song picked, the clip is matched by sound alone/);
   assert.deepEqual(page.errors, []);
 });

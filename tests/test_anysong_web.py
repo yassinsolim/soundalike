@@ -81,22 +81,33 @@ def test_home_page_footer_links_evaluation_in_new_tab_safely():
     assert 'rel="noopener"' in link.group(2)
 
 
-def test_anysong_language_switch_covers_best_same_vibe_and_sounds_like():
+def test_anysong_language_switch_covers_every_tab():
     assert 'params.set("lang", lang);' in SCRIPT
-    assert 'id="language" role="status" hidden' in SCRIPT
+    assert '<div class="language-filter" id="language" role="status">' in SCRIPT
     assert '<button id="language-toggle" type="button" aria-pressed="false" hidden>' in SCRIPT
     assert '"Show all languages"' in SCRIPT and '"Show same language"' in SCRIPT
-    assert "Number(query.hidden)" in SCRIPT
     # display:flex would otherwise beat the hidden attribute.
     assert ".language-filter[hidden]{display:none}" in HOME
-    # Same vibe has no hidden count of its own, so it only says what it leaves out.
+    # The server's hidden count is for the fused list, not main or Listeners also play, so no tab shows a count:
+    # they only say what they leave out.
     assert '"all languages" : "other languages left out"' in SCRIPT
-    # The raw sound channel stays unfiltered.
-    assert 'const sonicBlurb = "A similar overall sound: production, instruments and mood.";' in SCRIPT
+    assert "Number(query.hidden)" not in SCRIPT and "other-language matches in the top 20" not in SCRIPT
     assert "hidden_sounds" not in SCRIPT
 
 
-def test_anysong_best_caption_puts_covers_first_then_the_listeners():
+def test_anysong_best_caption_puts_covers_first_then_the_model():
+    assert (
+        "\"Likely covers, samples and shared melodies first, then other artists' songs a model ranks closest, "
+        "from five signals: sound, scene, playlists, melody and samples. "
+        'Turn on Audio only to rank by sound alone."'
+    ) in SCRIPT
+    # Servers whose main list follows sound and the listener ranker.
+    assert (
+        '"Likely covers, samples and shared melodies first, then the songs that sound most alike, '
+        "nudged toward artists this song's listeners also play. "
+        'Turn on Audio only to rank by sound alone."'
+    ) in SCRIPT
+    # Servers without the main list send Best matches with listener picks in it.
     assert (
         '"Likely covers, samples and shared melodies first, then similar-sounding songs '
         "by artists this song's listeners also play, marked Listeners also play. "
@@ -108,22 +119,66 @@ def test_anysong_best_caption_puts_covers_first_then_the_listeners():
     ) in SCRIPT
 
 
-def test_anysong_same_vibe_tab_follows_best_and_needs_a_vibe_list():
+def test_anysong_has_the_spotify_extensions_three_tabs():
     keys = re.findall(r'key: "(\w+)",\s*label: "([^"]+)"', SCRIPT)
-    assert keys == [
-        ("best", "Best matches"),
-        ("vibe", "Same vibe"),
-        ("melody", "Same melody"),
-        ("samples", "Samples & loops"),
-        ("sounds", "Sounds like"),
-    ]
+    assert keys == [("best", "Best matches"), ("listeners", "Listeners also play"), ("melody", "Melody match")]
+    # Best matches read the main list, or Best matches from a server without it; Melody match is the "best" list.
+    assert 'if (key === "melody") return "best";' in SCRIPT
+    assert 'Array.isArray(results.main) && results.main.length ? "main" : "best"' in SCRIPT
+    # Melody match says how the list is built, and with Audio only that it is audio alone.
     assert (
-        "\"Songs from these matches that share this song's tempo and overall sound, "
-        'one per artist."'
+        '"Likely covers, samples and shared melodies first, from the melody and sample matches fused into one '
+        "ranking, then similar-sounding songs by artists this song's listeners also play, marked Listeners also "
+        'play. Turn on Audio only to leave those out."'
     ) in SCRIPT
-    # Older servers send no vibe list: the tab is hidden and its links open Best.
-    assert "picked.hasVibe = Array.isArray(vibe) && vibe.length > 0;" in SCRIPT
-    assert 'if (tab === "vibe" && !picked.hasVibe) {' in SCRIPT
-    # The seed's tempo is a rounded tag, only when the server knows it.
-    assert 'typeof query.bpm === "number" ? Math.round(query.bpm) : 0' in SCRIPT
-    assert '[tab !== "best" && bpm > 0 ? `${bpm} BPM` : "", false]' in SCRIPT
+    assert (
+        '"Likely covers, samples and shared melodies: the melody and sample matches fused into one ranking, '
+        'by audio alone."'
+    ) in SCRIPT
+    # Links to the dropped tabs, and unknown tabs, open Best matches; a tab the page has opens itself.
+    assert (
+        "const tabKey = key =>\n"
+        '    key === null ? null : resultTabs.some(entry => entry.key === key) ? key : "best";'
+    ) in SCRIPT.replace("\r\n", "\n")
+    # The tab chosen last is kept for the next visit.
+    assert 'const tabStoreKey = "soundalike:tab:v1";' in SCRIPT
+    assert "if (updateHash) saveTab(key);" in SCRIPT
+    # A new policy keeps cached answers from before the consensus body out.
+    assert 'const bestMatchesPolicy = "main-consensus-v4";' in SCRIPT
+    assert "best-vibe-sounds" not in SCRIPT
+    # Audio only and artists without listener data say why Listeners also play is empty.
+    assert (
+        "\"Audio only is on, and this list comes from what this song's listeners also play. "
+        'Turn Audio only off to see it."'
+    ) in SCRIPT
+    assert (
+        "\"We don't know what this artist's listeners play yet, so there's no list here. "
+        "Best matches still has this song's closest matches.\""
+    ) in SCRIPT
+
+
+def test_match_a_part_is_offered_only_by_servers_that_match_parts():
+    # The control reads query.parts from the normal answer: no request of its own, hidden without it.
+    assert "const parts = ((picked.body || {}).query || {}).parts;" in SCRIPT
+    assert "healthz" not in SCRIPT
+    assert 'if (part) params.set("part", partText(part));' in SCRIPT
+    # A server without it answers for the whole preview (or refuses the span and is asked again without it).
+    assert "if (!(body.query || {}).part) picked.part = null;" in SCRIPT
+    assert 'if (params.has("part") && (response.status === 400 || response.status === 404)) {' in SCRIPT
+    # The part is in the share link, and a newly picked song starts from its whole preview.
+    assert "const hash = `#id=${id}&tab=${tab}${part ? `&part=${partText(part)}` : \"\"}`;" in SCRIPT
+    assert "if (!writeHash(id, true)) load({ id });" in SCRIPT
+    # The copy is short, marked beta and claims nothing about quality.
+    assert '"Soundalike hears a 30-second preview. Pick the part of it you care about."' in SCRIPT
+    assert '<span class="beta">New · beta</span>' in SCRIPT
+    assert 'Match a part <span class="beta">beta</span>' in SCRIPT
+    assert '"All three tabs follow the part. Listeners also play still starts from the whole song\'s listeners; ' \
+        'only how close each song sounds follows the part."' in SCRIPT
+    # Spans sit on a 5-second grid and run 10 to 20 seconds; the timeline works with touch and the keyboard.
+    assert "const partStepSeconds = 5;" in SCRIPT and "const partLongestSeconds = 20;" in SCRIPT
+    assert "track.onpointerdown = onPartPointerDown;" in SCRIPT
+    assert "touch-action:none" in HOME
+    # display rules would otherwise beat the hidden attribute.
+    assert ".part-chip[hidden]{display:none}" in HOME and ".part-head[hidden]{display:none}" in HOME
+    # The waveform is read from Deezer's CDN only, like the covers.
+    assert 'const url = safeImg((preview && preview.preview) || "");' in SCRIPT

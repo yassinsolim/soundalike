@@ -7,7 +7,8 @@ labels; ListenBrainz is never a feature. The features describe:
 - the seed artist's Deezer neighbourhood: graph overlap, whether either artist lists the other as related, shared
   region and genre, the scene affinity;
 - tempo and whether the song's language is known.
-Popularity is deliberately not a feature: with it, lists concentrate on famous artists.
+Popularity was deliberately not a feature of the first rankers: with it, lists concentrate on famous artists. A
+ranker trained with ``pop`` (``FEATURES_POP``, the candidate's Deezer popularity from a ``Popularity`` table) reads it.
 
 Candidates are the channel lists plus, for each artist in the seed artist's neighbourhood, that artist's songs closest
 in sound (``SCENE_SONGS``, chosen among at most ``SCENE_MAX_TRACKS`` of its catalog songs). The model is stored as
@@ -26,9 +27,48 @@ from .scene import ArtistProfile, SceneParams, SceneTable, affinity, components
 
 FEATURES = ("son", "r_melody", "s_melody", "r_samples", "s_samples", "r_sonic", "in_pool", "from_scene", "graph",
             "region", "genre", "aff", "fwd", "rev", "nb", "tempo_gap", "lang_known")
+# A ranker may also read the scene-head cosine between seed and candidate (anysong.scenehead), as the last column.
+FEATURES_HEAD = FEATURES + ("head",)
+# ... and after it the candidate's popularity, log1p(Deezer rank), 0 for a song the table does not hold.
+FEATURES_POP = FEATURES_HEAD + ("pop",)
+FEATURE_SETS = (FEATURES, FEATURES_HEAD, FEATURES_POP)
 SCENE_SONGS = 3  # songs per neighbour artist added as candidates: its closest in sound
 SCENE_MAX_TRACKS = 150  # catalog songs per neighbour artist scored for that choice (lowest Deezer ids first)
 CHANNELS = ("melody", "samples", "sonic")
+
+
+class Popularity:
+    """Deezer popularity per track: ``pop`` = log1p(rank), higher is more popular; 0 for tracks outside the table.
+
+    File: ``.npz`` with ``ids`` (int64 Deezer track ids, ascending) and ``rank`` (float32)."""
+
+    def __init__(self, ids: np.ndarray, rank: np.ndarray):
+        ids, rank = np.asarray(ids, dtype=np.int64), np.asarray(rank, dtype=np.float32)
+        if ids.ndim != 1 or ids.shape != rank.shape or (np.diff(ids) <= 0).any():
+            raise ValueError("popularity needs one rank per track id, ids ascending and distinct")
+        if not np.isfinite(rank).all() or (rank < 0).any():
+            raise ValueError("popularity ranks must be finite and not negative")
+        self.ids, self.values = ids, np.log1p(rank.astype(np.float64))
+
+    @classmethod
+    def load(cls, path: Path | str) -> Popularity:
+        with np.load(path, allow_pickle=False) as z:
+            return cls(z["ids"], z["rank"])
+
+    def __len__(self) -> int:
+        """Songs with a popularity above 0."""
+        return int((self.values > 0).sum())
+
+    def of(self, track_ids) -> np.ndarray:
+        """``pop`` of each track id [n] as float64."""
+        query = np.asarray(track_ids, dtype=np.int64)
+        if not len(self.ids) or not len(query):
+            return np.zeros(len(query))
+        at = np.clip(np.searchsorted(self.ids, query), 0, len(self.ids) - 1)
+        return np.where(self.ids[at] == query, self.values[at], 0.0)
+
+    def pop(self, track_id: int) -> float:
+        return float(self.of([int(track_id)])[0])
 
 
 class ArtistTracks:
@@ -80,9 +120,24 @@ def tempo_gap(seed_bpm: float | None, bpm: float | None) -> float:
 def features(raw: Mapping[str, Iterable[tuple[int, float]]], son: Mapping[int, float], scene: Iterable[int],
              query_id: int, profile: ArtistProfile, related: Iterable[int], table: SceneTable, params: SceneParams,
              seed_bpm: float | None, bpm_of: Callable[[int], float | None],
-             language_known: Callable[[int], bool]) -> tuple[list[int], np.ndarray]:
-    """Feature rows (``FEATURES`` order) for every candidate with a sound score: the channel lists' songs and the
-    scene candidates, except the seed itself. Missing values are NaN."""
+             language_known: Callable[[int], bool],
+             head: Mapping[int, float] | None = None, extra: Iterable[int] = (),
+             columns: Iterable[str] | None = None, pop: Callable[[int], float] | None = None
+             ) -> tuple[list[int], np.ndarray]:
+    """Feature rows for every candidate with a sound score: the channel lists' songs, the scene candidates and the
+    ``extra`` songs (in neither), except the seed itself. Missing values are NaN.
+
+    ``columns``: the ranker's feature list (one of ``FEATURE_SETS``), which decides the columns; without it,
+    ``FEATURES_HEAD`` when ``head`` is given, else ``FEATURES``. A ``head`` column needs ``head`` (the scene-head
+    cosines), a ``pop`` column ``pop`` (``Popularity.pop``)."""
+    columns = (FEATURES if head is None else FEATURES_HEAD) if columns is None else tuple(columns)
+    if columns not in FEATURE_SETS:
+        raise ValueError(f"feature columns {columns} are not one of this code's feature lists")
+    with_head, with_pop = "head" in columns, "pop" in columns
+    if with_head and head is None:
+        raise ValueError("the 'head' feature needs the scene-head cosines")
+    if with_pop and pop is None:
+        raise ValueError("the 'pop' feature needs a popularity table")
     pool: dict[int, dict[str, float]] = {}
     for channel in CHANNELS:
         for rank, (tid, s) in enumerate(raw.get(channel, ()), 1):
@@ -94,7 +149,7 @@ def features(raw: Mapping[str, Iterable[tuple[int, float]]], son: Mapping[int, f
     qa = profile.artist_id
     per_artist: dict[int, tuple[float, ...]] = {}
     tids, rows = [], []
-    for tid in sorted((set(pool) | scene) - {int(query_id)}):
+    for tid in sorted((set(pool) | scene | {int(t) for t in extra}) - {int(query_id)}):
         if tid not in son:
             continue
         a = table.artist(tid) or 0
@@ -106,12 +161,17 @@ def features(raw: Mapping[str, Iterable[tuple[int, float]]], son: Mapping[int, f
                              rev, float(a in profile.neighbours))
         g, rg, gn, aff, fwd, rev, nb = per_artist[a]
         entry = pool.get(tid, {})
-        rows.append((son[tid], entry.get("r_melody", math.nan), entry.get("s_melody", math.nan),
-                     entry.get("r_samples", math.nan), entry.get("s_samples", math.nan),
-                     entry.get("r_sonic", math.nan), float(tid in pool), float(tid in scene), g, rg, gn, aff, fwd,
-                     rev, nb, tempo_gap(seed_bpm, bpm_of(tid)), float(language_known(tid))))
+        row = (son[tid], entry.get("r_melody", math.nan), entry.get("s_melody", math.nan),
+               entry.get("r_samples", math.nan), entry.get("s_samples", math.nan),
+               entry.get("r_sonic", math.nan), float(tid in pool), float(tid in scene), g, rg, gn, aff, fwd,
+               rev, nb, tempo_gap(seed_bpm, bpm_of(tid)), float(language_known(tid)))
+        if with_head:
+            row += (head.get(tid, math.nan),)
+        if with_pop:
+            row += (float(pop(tid)),)
+        rows.append(row)
         tids.append(tid)
-    return tids, np.asarray(rows, dtype=np.float64).reshape(len(rows), len(FEATURES))
+    return tids, np.asarray(rows, dtype=np.float64).reshape(len(rows), len(columns))
 
 
 def blend(primary: np.ndarray, secondary: np.ndarray, weight: float) -> np.ndarray:
@@ -131,8 +191,9 @@ def logit(p: np.ndarray) -> np.ndarray:
     return np.log(p / (1 - p))
 
 
-class Ranker:
-    """A binary gradient-boosted tree ensemble as arrays: P(listeners connect the artists) for feature rows.
+class Trees:
+    """A gradient-boosted tree ensemble as arrays, evaluated with numpy: ``raw`` is the baseline plus one leaf value
+    per tree for feature rows in the order of ``features``.
 
     Splits send a row left when its value is at most the threshold, and missing values (NaN) the way the tree
     learned (scikit-learn's HistGradientBoosting rules). Leaves point to themselves, so every row can descend
@@ -142,21 +203,24 @@ class Ranker:
                  threshold: np.ndarray, missing_left: np.ndarray, left: np.ndarray, right: np.ndarray,
                  value: np.ndarray, depth: int, meta: str = ""):
         self.features = tuple(features)
-        if self.features != FEATURES:
-            raise ValueError(f"ranker features {self.features} differ from this code's {FEATURES}")
+        self._check_features()
         n = len(feature)
         if not all(len(a) == n for a in (threshold, missing_left, left, right, value)):
             raise ValueError("inconsistent ranker arrays")
         if len(roots) == 0 or roots.max() >= n or left.max() >= n or right.max() >= n or \
-                feature.max() >= len(FEATURES) or depth < 0:
+                feature.max() >= len(self.features) or depth < 0:
             raise ValueError("ranker arrays point outside the model")
         self.baseline, self.roots, self.feature = float(baseline), roots.astype(np.int64), feature.astype(np.int64)
         self.threshold, self.missing_left = threshold.astype(np.float64), missing_left.astype(bool)
         self.left, self.right, self.value = left.astype(np.int64), right.astype(np.int64), value.astype(np.float64)
         self.depth, self.meta = int(depth), meta
 
+    def _check_features(self) -> None:
+        if len(set(self.features)) != len(self.features) or not self.features:
+            raise ValueError("a tree ensemble needs distinct feature names")
+
     @classmethod
-    def load(cls, path: Path | str) -> Ranker:
+    def load(cls, path: Path | str):
         with np.load(path, allow_pickle=False) as z:
             return cls([str(f) for f in z["features"]], float(z["baseline"]), z["roots"], z["feature"],
                        z["threshold"], z["missing_left"], z["left"], z["right"], z["value"], int(z["depth"]),
@@ -167,26 +231,55 @@ class Ranker:
                  feature=self.feature, threshold=self.threshold, missing_left=self.missing_left, left=self.left,
                  right=self.right, value=self.value, depth=np.int64(self.depth), meta=np.array(self.meta))
 
-    def predict(self, X: np.ndarray) -> np.ndarray:
+    def leaves(self, X: np.ndarray) -> np.ndarray:
+        """The leaf value each row reaches in each tree [rows, trees]."""
         X = np.asarray(X, dtype=np.float64)
         if X.ndim != 2 or X.shape[1] != len(self.features):
             raise ValueError(f"expected rows of {len(self.features)} features")
         if not len(X):
-            return np.zeros(0)
+            return np.zeros((0, len(self.roots)))
         node = np.broadcast_to(self.roots, (len(X), len(self.roots))).copy()
         rows = np.arange(len(X))[:, None]
         for _ in range(self.depth):
             x = X[rows, self.feature[node]]
             go_left = np.where(np.isnan(x), self.missing_left[node], x <= self.threshold[node])
             node = np.where(go_left, self.left[node], self.right[node])
-        raw = self.baseline + self.value[node].sum(axis=1)
-        return 1.0 / (1.0 + np.exp(-raw))
+        return self.value[node]
+
+    def raw(self, X: np.ndarray) -> np.ndarray:
+        return self.baseline + self.leaves(X).sum(axis=1)
 
 
-def export(model, meta: str = "") -> Ranker:
-    """A fitted binary scikit-learn ``HistGradientBoostingClassifier`` (numeric features only) as a ``Ranker``."""
+class Ranker(Trees):
+    """A binary classifier (``Trees``) over one of ``FEATURE_SETS``: P(listeners connect the artists) for feature
+    rows."""
+
+    def _check_features(self) -> None:
+        if self.features not in FEATURE_SETS:
+            raise ValueError(f"ranker features {self.features} differ from this code's {FEATURES} "
+                             f"(+ 'head', + 'pop')")
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        return 1.0 / (1.0 + np.exp(-self.raw(X)))
+
+
+class Regressor(Trees):
+    """A regressor (``Trees``) over any list of named features: ``predict`` is the ensemble's raw value, summed tree
+    by tree from the baseline as scikit-learn sums it, so it is that model's prediction to the last bit."""
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        leaves = self.leaves(X)
+        out = np.full(len(leaves), self.baseline)
+        for values in leaves.T:
+            out += values
+        return out
+
+
+def _arrays(model) -> tuple:
+    """The trees of a fitted scikit-learn HistGradientBoosting model with one tree per iteration (numeric features
+    only), as the array arguments of ``Trees`` after the feature names."""
     if getattr(model, "n_trees_per_iteration_", 1) != 1:
-        raise ValueError("only binary classifiers can be exported")
+        raise ValueError("only models with one tree per iteration can be exported")
     feature, threshold, missing_left, left, right, value, roots = [], [], [], [], [], [], []
     depth = 0
     for (tree,) in model._predictors:
@@ -204,6 +297,23 @@ def export(model, meta: str = "") -> Ranker:
         right += np.where(leaf, idx, nodes["right"] + base).tolist()
         value += np.where(leaf, nodes["value"], 0.0).tolist()
         depth = max(depth, int(nodes["depth"].max()))
-    return Ranker(FEATURES, float(np.ravel(model._baseline_prediction)[0]), np.array(roots), np.array(feature),
-                  np.array(threshold), np.array(missing_left), np.array(left), np.array(right), np.array(value),
-                  depth, meta)
+    return (float(np.ravel(model._baseline_prediction)[0]), np.array(roots), np.array(feature), np.array(threshold),
+            np.array(missing_left), np.array(left), np.array(right), np.array(value), depth)
+
+
+def export(model, meta: str = "", features: tuple[str, ...] = FEATURES) -> Ranker:
+    """A fitted binary scikit-learn ``HistGradientBoostingClassifier`` (numeric features only) as a ``Ranker``."""
+    if not hasattr(model, "classes_"):
+        raise ValueError("only binary classifiers can be exported (a regressor: export_regressor)")
+    return Ranker(features, *_arrays(model), meta)
+
+
+def export_regressor(model, features: Iterable[str], meta: str = "") -> Regressor:
+    """A fitted scikit-learn ``HistGradientBoostingRegressor`` with an identity link (numeric features only) as a
+    ``Regressor`` reading ``features``, the names of the model's input columns in order."""
+    features = tuple(features)
+    if hasattr(model, "classes_") or getattr(model, "loss", "squared_error") not in ("squared_error", "absolute_error"):
+        raise ValueError("only regressors with an identity link can be exported")
+    if len(features) != model.n_features_in_:
+        raise ValueError(f"{len(features)} feature names for a model of {model.n_features_in_} columns")
+    return Regressor(features, *_arrays(model), meta)

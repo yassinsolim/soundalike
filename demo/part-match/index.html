@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>soundalike: match a part of a song (local prototype)</title>
+<style>
+:root{color-scheme:dark}
+body{margin:0;padding:24px 20px 60px;background:#0a0d12;color:#eef1f5;font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:1080px;margin:0 auto}
+h1{font-size:22px;margin:0 0 4px} h2{font-size:16px;margin:18px 0 8px}
+p{margin:6px 0} .dim{color:#9aa4b2} .small{font-size:13px} .warn{color:#f0b429}
+a{color:#1db954}
+button,input,select{font:inherit;color:inherit;background:#161b24;border:1px solid #2a3240;border-radius:8px;padding:7px 12px}
+button{cursor:pointer} button:hover{border-color:#1db954} button.primary{background:#1db954;border-color:#1db954;color:#06110a;font-weight:600}
+button:disabled{opacity:.5;cursor:default}
+input[type=text]{width:100%;box-sizing:border-box}
+nav{display:flex;gap:8px;margin:16px 0}
+nav button.on{background:#1db954;border-color:#1db954;color:#06110a;font-weight:600}
+section{display:none} section.on{display:block}
+.card{background:#10151d;border:1px solid #222a36;border-radius:12px;padding:14px 16px;margin:12px 0}
+.hits{list-style:none;margin:8px 0 0;padding:0}
+.hits li{display:flex;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;cursor:pointer}
+.hits li:hover{background:#161b24}
+.hits img{width:36px;height:36px;border-radius:4px}
+canvas{width:100%;height:120px;display:block;border-radius:8px;background:#0d1219;touch-action:none;cursor:grab}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:760px){.cols{grid-template-columns:1fr}}
+ol.list{margin:6px 0 0;padding:0;list-style:none;counter-reset:n}
+ol.list li{counter-increment:n;display:grid;grid-template-columns:22px 28px 1fr 44px;gap:8px;align-items:center;padding:5px 4px;border-bottom:1px solid #1a212c}
+ol.list li::before{content:counter(n);color:#6b7686;font-size:12px;text-align:right}
+ol.list li.same{background:#12201a}
+ol.list .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ol.list .m{font-size:12px;color:#9aa4b2;text-align:right}
+ol.list button{padding:2px 7px;font-size:12px}
+.drop{border:2px dashed #2a3240;border-radius:12px;padding:26px;text-align:center}
+.drop.over{border-color:#1db954}
+.meter{height:8px;background:#161b24;border-radius:4px;overflow:hidden;flex:1;min-width:120px}
+.meter i{display:block;height:100%;width:0;background:#1db954}
+.note{border-left:3px solid #1db954;padding:4px 10px;margin:10px 0;background:#0f1a14}
+</style>
+</head>
+<body>
+<main>
+<h1>Match a part of a song</h1>
+<p class="dim small">Local prototype. Engine: <code id="api"></code> <span id="engine"></span></p>
+<nav>
+  <button data-tab="preview" class="on">A part of the preview</button>
+  <button data-tab="file">Use my audio</button>
+  <button data-tab="listen">Listen</button>
+</nav>
+
+<section id="preview" class="on">
+  <div class="card">
+    <input type="text" id="q" placeholder="Search a song (title and artist)" autocomplete="off">
+    <ul class="hits" id="hits"></ul>
+  </div>
+  <div class="card" id="song" hidden>
+    <div class="row"><strong id="songName"></strong><span class="dim small" id="songInfo"></span></div>
+    <p class="dim small" id="heard"></p>
+    <canvas id="pwave" width="1600" height="240"></canvas>
+    <div class="row">
+      <button id="pplay">Play this part</button><button id="pplayAll">Play all 30 s</button>
+      <span class="dim small">Drag the green span, or its edges. It snaps to the engine's 10-second windows.</span>
+    </div>
+    <div class="row">
+      <label class="small">List <select id="plist"><option value="main">Best matches</option><option value="sounds">Sounds like</option><option value="sonic">Raw sound channel</option><option value="melody">Raw melody channel</option></select></label>
+      <button class="primary" id="pgo">Find songs like this part</button><span id="pstatus" class="dim small"></span>
+    </div>
+    <div class="cols">
+      <div><h2 id="wholeTitle">Whole preview</h2><ol class="list" id="wholeList"></ol></div>
+      <div><h2 id="partTitle">Your part</h2><p class="dim small" id="partHeard"></p><ol class="list" id="partList"></ol></div>
+    </div>
+  </div>
+</section>
+
+<section id="file">
+  <div class="card">
+    <div class="drop" id="drop">Drop an audio file you own here, or <button id="pick">choose a file</button>
+      <input type="file" id="fileInput" accept="audio/*,.mp3,.wav,.flac,.ogg,.m4a" hidden>
+      <p class="dim small">The file is opened in this browser tab only. Just the 5 to 30 seconds you select are sent to the engine, which keeps nothing: no file, no log of the audio, no entry in the catalog.</p>
+    </div>
+    <div id="fileBox" hidden>
+      <div class="row"><strong id="fileName"></strong><span class="dim small" id="fileInfo"></span></div>
+      <canvas id="fwave" width="1600" height="240"></canvas>
+      <div class="row">
+        <button id="fplay">Play selection</button>
+        <label class="small">Length <select id="flen"><option>10</option><option>15</option><option selected>20</option><option>30</option></select> s</label>
+        <span class="dim small" id="fspan"></span>
+      </div>
+      <div class="row">
+        <input type="text" id="fartist" placeholder="Artist (optional)" style="max-width:220px">
+        <input type="text" id="ftitle" placeholder="Title (optional)" style="max-width:260px">
+        <button class="primary" id="fgo">Find songs like this part</button><span id="fstatus" class="dim small"></span>
+      </div>
+      <p class="dim small">Naming the song is optional: it lets the engine leave that song out of the list and use what it knows about the artist.</p>
+    </div>
+  </div>
+  <div class="card" id="fres" hidden></div>
+</section>
+
+<section id="listen">
+  <div class="card">
+    <div class="row">
+      <label class="small">Source <select id="lsrc"><option value="mic">Microphone</option><option value="tab">A browser tab's sound (Chrome, Edge)</option></select></label>
+      <label class="small">Seconds <select id="lsec"><option>10</option><option>15</option><option selected>20</option><option>30</option></select></label>
+      <button class="primary" id="lgo">Listen</button><button id="lstop" disabled>Stop</button>
+      <div class="meter"><i id="lmeter"></i></div><span id="lstatus" class="dim small"></span>
+    </div>
+    <p class="dim small">Microphone: play the part you care about on any speaker, close to this device, in a quiet room. Tab sound: pick the tab that is playing and tick "Also share tab audio"; the picture is discarded at once. The recording stays in memory, is sent once, and is not kept by the engine.</p>
+    <canvas id="lwave" width="1600" height="160" style="height:80px" hidden></canvas>
+    <div class="row" id="lafter" hidden><button id="lplay">Play what was heard</button></div>
+  </div>
+  <div class="card" id="lres" hidden></div>
+</section>
+</main>
+
+<script>
+"use strict";
+const API = new URLSearchParams(location.search).get("api") || "http://127.0.0.1:8796";
+const UPLOAD_RATE = 24000;                 // mono 16-bit WAV at the sound model's rate: 30 s is 1.4 MB
+const PREVIEW = 30, WINDOW = 10;
+const $ = id => document.getElementById(id);
+const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+let audioCtx = null, playing = null;
+const ctx = () => audioCtx || (audioCtx = new AudioContext());
+
+$("api").textContent = API;
+fetch(`${API}/healthz`).then(r => r.json()).then(h => {
+  $("engine").textContent = `is up (${Object.values(h.channels)[0].toLocaleString()} songs).`;
+}).catch(() => { $("engine").innerHTML = '<span class="warn">is not reachable: start it first (see TRY_IT.md).</span>'; });
+
+for (const b of document.querySelectorAll("nav button")) b.onclick = () => {
+  stopPlaying();
+  for (const o of document.querySelectorAll("nav button")) o.classList.toggle("on", o === b);
+  for (const s of document.querySelectorAll("section")) s.classList.toggle("on", s.id === b.dataset.tab);
+};
+
+async function api(path, init) {
+  const r = await fetch(API + path, init);
+  const body = await r.json().catch(() => ({ok: false, error: `HTTP ${r.status}`}));
+  if (!r.ok || body.ok === false) throw new Error(body.error || `HTTP ${r.status}`);
+  return body;
+}
+
+/* ---------- audio helpers ---------- */
+function stopPlaying() {
+  if (playing) { try { playing.node.stop(); } catch {} playing = null; }
+  if (previewAudio) previewAudio.pause();
+}
+function play(buffer, from, to, onTick) {
+  stopPlaying();
+  const node = ctx().createBufferSource();
+  node.buffer = buffer; node.connect(ctx().destination);
+  const started = ctx().currentTime;
+  const me = playing = {node};
+  node.onended = () => { if (playing === me) playing = null; onTick(null); };
+  node.start(0, from, to - from);
+  const tick = () => { if (playing !== me) return; onTick(from + ctx().currentTime - started); requestAnimationFrame(tick); };
+  tick();
+}
+/** The peaks of a buffer for drawing: [min, max] per pixel column. */
+function peaks(buffer, columns) {
+  const data = buffer.getChannelData(0), step = data.length / columns, out = new Float32Array(columns * 2);
+  for (let c = 0; c < columns; c++) {
+    let lo = 0, hi = 0;
+    const stride = Math.max(1, Math.floor(step / 400));
+    for (let i = Math.floor(c * step), end = Math.min(data.length, Math.floor((c + 1) * step)); i < end; i += stride) {
+      const v = data[i]; if (v < lo) lo = v; if (v > hi) hi = v;
+    }
+    out[c * 2] = lo; out[c * 2 + 1] = hi;
+  }
+  return out;
+}
+/** Seconds from..to of a buffer as a mono 16-bit WAV at UPLOAD_RATE. */
+async function wavOf(buffer, from, to) {
+  const frames = Math.max(1, Math.round((to - from) * UPLOAD_RATE));
+  const off = new OfflineAudioContext(1, frames, UPLOAD_RATE);
+  const src = off.createBufferSource();
+  src.buffer = buffer; src.connect(off.destination); src.start(0, from, to - from);
+  const mono = (await off.startRendering()).getChannelData(0);
+  const view = new DataView(new ArrayBuffer(44 + mono.length * 2));
+  const text = (at, s) => { for (let i = 0; i < s.length; i++) view.setUint8(at + i, s.charCodeAt(i)); };
+  text(0, "RIFF"); view.setUint32(4, 36 + mono.length * 2, true); text(8, "WAVEfmt ");
+  view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+  view.setUint32(24, UPLOAD_RATE, true); view.setUint32(28, UPLOAD_RATE * 2, true);
+  view.setUint16(32, 2, true); view.setUint16(34, 16, true); text(36, "data"); view.setUint32(40, mono.length * 2, true);
+  for (let i = 0; i < mono.length; i++) view.setInt16(44 + i * 2, Math.max(-1, Math.min(1, mono[i])) * 32767, true);
+  return new Blob([view], {type: "audio/wav"});
+}
+
+/* ---------- a waveform with a draggable span ---------- */
+class SpanView {
+  /** opts: snap (s, 0 = free), min, max (span length), label(seconds) -> text, onChange(span) */
+  constructor(canvas, opts) {
+    Object.assign(this, {canvas, total: 1, span: [0, 1], head: null, pk: null}, opts);
+    canvas.addEventListener("pointerdown", e => this.down(e));
+    canvas.addEventListener("pointermove", e => this.move(e));
+    canvas.addEventListener("pointerup", () => { this.drag = null; });
+  }
+  load(buffer, total, span) {
+    this.total = total; this.span = span; this.pk = peaks(buffer, this.canvas.width); this.draw();
+  }
+  at(e) { const r = this.canvas.getBoundingClientRect(); return (e.clientX - r.left) / r.width * this.total; }
+  down(e) {
+    const t = this.at(e), [a, b] = this.span, edge = this.total * 0.012;
+    const mode = Math.abs(t - a) < edge ? "a" : Math.abs(t - b) < edge ? "b" : t > a && t < b ? "move" : "jump";
+    this.drag = {mode, grab: t - a};
+    this.canvas.setPointerCapture(e.pointerId);
+    if (mode === "jump") { this.drag = {mode: "move", grab: (b - a) / 2}; this.move(e); }
+  }
+  move(e) {
+    if (!this.drag) return;
+    const q = v => this.snap ? Math.round(v / this.snap) * this.snap : v;
+    let [a, b] = this.span; const t = this.at(e), len = b - a;
+    if (this.drag.mode === "move") { a = Math.max(0, Math.min(this.total - len, q(t - this.drag.grab))); b = a + len; }
+    if (this.drag.mode === "a") a = Math.max(0, Math.max(b - this.max, Math.min(b - this.min, q(t))));
+    if (this.drag.mode === "b") b = Math.min(this.total, Math.min(a + this.max, Math.max(a + this.min, q(t))));
+    if (a !== this.span[0] || b !== this.span[1]) { this.span = [a, b]; this.draw(); this.onChange?.(this.span); }
+  }
+  setLength(len) {
+    const a = Math.max(0, Math.min(this.total - len, this.span[0]));
+    this.span = [a, Math.min(this.total, a + len)]; this.draw(); this.onChange?.(this.span);
+  }
+  draw() {
+    const c = this.canvas, g = c.getContext("2d"), w = c.width, h = c.height, x = t => t / this.total * w;
+    g.clearRect(0, 0, w, h);
+    const [a, b] = this.span;
+    g.fillStyle = "rgba(29,185,84,.18)"; g.fillRect(x(a), 0, x(b) - x(a), h);
+    if (this.pk) for (let i = 0; i < w; i++) {
+      const t = i / w * this.total;
+      g.fillStyle = t >= a && t < b ? "#1db954" : "#3a4658";
+      const lo = this.pk[i * 2], hi = this.pk[i * 2 + 1], mid = (h - 26) / 2;
+      g.fillRect(i, mid - hi * mid, 1, Math.max(1, (hi - lo) * mid));
+    }
+    g.fillStyle = "#1db954"; g.fillRect(x(a) - 2, 0, 4, h); g.fillRect(x(b) - 2, 0, 4, h);
+    g.fillStyle = "#9aa4b2"; g.font = "22px system-ui"; g.textBaseline = "bottom";
+    const every = this.snap || Math.max(5, Math.round(this.total / 12 / 5) * 5);
+    for (let t = 0; t <= this.total + 1e-6; t += every) {
+      const s = this.label(t), tw = g.measureText(s).width;
+      g.fillRect(x(t), h - 26, 1, 6);
+      g.fillText(s, Math.min(w - tw - 2, Math.max(2, x(t) - tw / 2)), h - 1);
+    }
+    if (this.head != null) { g.fillStyle = "#fff"; g.fillRect(x(this.head), 0, 2, h - 26); }
+  }
+  tick(t) { this.head = t; this.draw(); }
+}
+
+/* ---------- result lists ---------- */
+let previewAudio = null;
+function renderList(el, items, mark) {
+  el.innerHTML = "";
+  if (!items || !items.length) { el.innerHTML = '<li><span></span><span class="t dim">No songs in this list.</span></li>'; return; }
+  for (const x of items) {
+    const li = document.createElement("li");
+    if (mark && mark.has(x.id)) li.className = "same";
+    const pct = x.overall ?? x.match;
+    li.innerHTML = `<button title="Play this song's preview">▶</button><span class="t">${esc(x.artist)} <span class="dim">–</span> ${esc(x.title)}</span><span class="m">${pct != null ? pct + " %" : ""}</span>`;
+    li.querySelector("button").onclick = () => {
+      stopPlaying();
+      previewAudio = previewAudio || new Audio();
+      previewAudio.src = `/preview?id=${x.id}`; previewAudio.play();
+    };
+    el.appendChild(li);
+  }
+}
+const ids = items => new Set((items || []).map(x => x.id));
+
+/* ---------- 1. a part of the preview ---------- */
+let song = null, pbuf = null, whole = null, part = null;
+const songTime = t => song && song.offset != null ? fmt(song.offset + t) : `${Math.round(t)} s`;
+const pview = new SpanView($("pwave"), {snap: WINDOW, min: WINDOW, max: PREVIEW, label: t => songTime(t),
+                                        onChange: () => { part = null; showPreviewLists(); }});
+let searchTimer = null;
+$("q").oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeout(search, 300); };
+async function search() {
+  const q = $("q").value.trim();
+  if (!q) { $("hits").innerHTML = ""; return; }
+  try {
+    const r = await api(`/api/anysong/search?limit=8&q=${encodeURIComponent(q)}`);
+    $("hits").innerHTML = "";
+    for (const t of r.tracks.filter(t => t.has_preview)) {
+      const li = document.createElement("li");
+      li.innerHTML = `<img src="${esc(t.cover || "")}" alt=""><span>${esc(t.artist)} <span class="dim">–</span> ${esc(t.title)} <span class="dim small">${t.in_catalog ? "" : "(not in the catalog: heard live)"}</span></span>`;
+      li.onclick = () => openSong(t);
+      $("hits").appendChild(li);
+    }
+  } catch (e) { $("hits").innerHTML = `<li class="warn">${esc(e.message)}</li>`; }
+}
+async function openSong(t) {
+  stopPlaying();
+  song = {...t, offset: null}; whole = part = null; pbuf = null;
+  $("hits").innerHTML = ""; $("song").hidden = false;
+  $("songName").textContent = `${t.artist} – ${t.title}`;
+  $("songInfo").textContent = t.duration ? `${fmt(t.duration)} long` : "";
+  $("heard").textContent = "Loading the preview…"; $("pstatus").textContent = "";
+  renderList($("wholeList"), []); renderList($("partList"), []);
+  try {
+    const bytes = await (await fetch(`/preview?id=${t.id}`)).arrayBuffer();
+    pbuf = await ctx().decodeAudioData(bytes);
+  } catch { $("heard").innerHTML = '<span class="warn">Could not load this preview.</span>'; return; }
+  pview.load(pbuf, PREVIEW, [10, 20]);  // previews run 29.99 s: the timeline is the engine's 30 s all the same
+  loadWhole();
+}
+function describeHeard(q) {
+  const at = q.parts ? q.parts.song_offset_s : null, p = at == null ? null : {start: at, end: at + q.parts.preview_s};
+  song.offset = p ? p.start : null;
+  $("heard").innerHTML = p
+    ? `Soundalike hears only Deezer's 30-second preview of this song: about <strong>${fmt(p.start)} to ${fmt(p.end)}</strong> of it (where Deezer's previews usually sit; in a few songs it is elsewhere). The times under the waveform are song times.`
+    : `Soundalike hears only Deezer's 30-second preview of this song. Where it sits in the song is not known for this one, so the times below count from the start of the preview.`;
+  pview.draw();
+}
+async function loadWhole() {
+  const id = song.id;
+  $("pstatus").textContent = "Ranking the whole preview…";
+  try {
+    const r = await api(`/api/anysong/similar?id=${id}&k=20`);
+    if (!song || song.id !== id) return;
+    whole = r; describeHeard(r.query); $("pstatus").textContent = ""; showPreviewLists();
+  } catch (e) { $("pstatus").innerHTML = `<span class="warn">${esc(e.message)}</span>`; }
+}
+function showPreviewLists() {
+  const name = $("plist").value, [a, b] = pview.span;
+  $("wholeTitle").textContent = `Whole preview (${songTime(0)} – ${songTime(PREVIEW)})`;
+  $("partTitle").textContent = `Your part (${songTime(a)} – ${songTime(b)})`;
+  renderList($("wholeList"), whole ? whole.results[name] : [], part ? ids(part.results[name]) : null);
+  renderList($("partList"), part ? part.results[name] : [], whole ? ids(whole.results[name]) : null);
+  const h = part && part.query.part && part.query.part.heard;
+  $("partHeard").textContent = !part ? (b - a >= PREVIEW ? "The whole preview is selected." : "Press the green button.")
+    : h && b - a < PREVIEW ? `Heard: sound ${h.sonic[0]}–${h.sonic[1]} s, samples ${Math.round(h.samples[0])}–${Math.round(h.samples[1])} s, melody ${h.melody[0]}–${h.melody[1]} s of the preview (the melody model listens in 20-second pieces). Rows on a green ground are in both lists.`
+    : "This span is the whole preview.";
+}
+$("plist").onchange = showPreviewLists;
+$("pplay").onclick = () => pbuf && play(pbuf, pview.span[0], pview.span[1], t => pview.tick(t));
+$("pplayAll").onclick = () => pbuf && play(pbuf, 0, Math.min(PREVIEW, pbuf.duration), t => pview.tick(t));
+$("pgo").onclick = async () => {
+  if (!song) return;
+  const [a, b] = pview.span, id = song.id;
+  $("pstatus").textContent = "Ranking this part…";
+  try {
+    const r = await api(`/api/anysong/similar?id=${id}&k=20&part=${Math.round(a)}-${Math.round(b)}`);
+    if (!song || song.id !== id) return;
+    part = r; $("pstatus").textContent = `${Math.round(r.timings_ms.total)} ms${r.cached ? " (cached)" : ""}`; showPreviewLists();
+  } catch (e) { $("pstatus").innerHTML = `<span class="warn">${esc(e.message)}</span>`; }
+};
+
+/* ---------- excerpts: shared by "Use my audio" and "Listen" ---------- */
+async function sendExcerpt(blob, hints, box, status, what) {
+  status.textContent = `Sending ${(blob.size / 1e6).toFixed(1)} MB…`;
+  const p = new URLSearchParams({k: "20"});
+  if (hints?.artist) p.set("artist", hints.artist);
+  if (hints?.title) p.set("title", hints.title);
+  try {
+    const r = await api(`/api/anysong/excerpt?${p}`, {method: "POST", headers: {"Content-Type": "audio/wav"}, body: blob});
+    status.textContent = `${Math.round(r.timings_ms.total)} ms`;
+    const q = r.query, found = q.identified;
+    box.hidden = false;
+    box.innerHTML = `<h2>Songs like ${esc(what)}</h2>` +
+      (found ? `<p class="note">This holds a recording of <strong>${esc(found.artist)} – ${esc(found.title)}</strong>, which is in the catalog, so that song is left out below. The lists are for the part you sent; for the whole song, search it under "A part of the preview".</p>` : "") +
+      (q.id && !found ? `<p class="dim small">Named as ${esc(q.artist)} – ${esc(q.title)}: that song is left out.</p>` : "") +
+      `<p class="dim small">${q.seconds} s heard${q.language && q.language !== "unknown" ? `, language ${esc(q.language)}` : ""}. The clip was not kept.</p>` +
+      `<div class="cols"><div><h2>Best matches</h2><ol class="list" data-l="main"></ol></div><div><h2>Sounds like</h2><ol class="list" data-l="sounds"></ol></div></div>`;
+    for (const ol of box.querySelectorAll("ol")) renderList(ol, r.results[ol.dataset.l]);
+    return r;
+  } catch (e) { status.innerHTML = `<span class="warn">${esc(e.message)}</span>`; }
+}
+
+/* ---------- 2. use my audio ---------- */
+let fbuf = null;
+const fview = new SpanView($("fwave"), {snap: 0, min: 5, max: 30, label: t => fmt(t), onChange: showFileSpan});
+function showFileSpan() {
+  const [a, b] = fview.span;
+  $("fspan").textContent = `${fmt(a)} – ${fmt(b)} (${(b - a).toFixed(1)} s). Drag the span, or its edges for 5 to 30 s.`;
+}
+async function openFile(file) {
+  stopPlaying();
+  $("fstatus").textContent = "Decoding…"; $("fileBox").hidden = false; $("fres").hidden = true;
+  $("fileName").textContent = file.name;
+  try { fbuf = await ctx().decodeAudioData(await file.arrayBuffer()); }
+  catch { $("fstatus").innerHTML = '<span class="warn">This browser cannot decode that file.</span>'; return; }
+  $("fileInfo").textContent = `${fmt(fbuf.duration)} long, ${fbuf.sampleRate} Hz`;
+  const len = Math.min(+$("flen").value, fbuf.duration), start = Math.max(0, Math.min(fbuf.duration - len, fbuf.duration * 0.3));
+  fview.load(fbuf, fbuf.duration, [start, start + len]); showFileSpan(); $("fstatus").textContent = "";
+}
+$("pick").onclick = () => $("fileInput").click();
+$("fileInput").onchange = e => e.target.files[0] && openFile(e.target.files[0]);
+const drop = $("drop");
+drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
+drop.ondragleave = () => drop.classList.remove("over");
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); e.dataTransfer.files[0] && openFile(e.dataTransfer.files[0]); };
+$("flen").onchange = () => fbuf && fview.setLength(Math.min(+$("flen").value, fbuf.duration));
+$("fplay").onclick = () => fbuf && play(fbuf, fview.span[0], fview.span[1], t => fview.tick(t));
+$("fgo").onclick = async () => {
+  if (!fbuf) return;
+  const [a, b] = fview.span;
+  if (b - a < 5) { $("fstatus").innerHTML = '<span class="warn">Select at least 5 seconds.</span>'; return; }
+  await sendExcerpt(await wavOf(fbuf, a, b), {artist: $("fartist").value.trim(), title: $("ftitle").value.trim()},
+                    $("fres"), $("fstatus"), `${fmt(a)} – ${fmt(b)} of your file`);
+};
+
+/* ---------- 3. listen ---------- */
+const TAP = `registerProcessor("tap", class extends AudioWorkletProcessor {
+  process(inputs) { const c = inputs[0]; if (c.length) { const n = c[0].length, m = new Float32Array(n);
+    for (const ch of c) for (let i = 0; i < n; i++) m[i] += ch[i] / c.length; this.port.postMessage(m, [m.buffer]); } return true; } });`;
+let lbuf = null, listening = null;
+const lview = new SpanView($("lwave"), {snap: 0, min: 1, max: 1e9, label: t => fmt(t)});
+async function listen() {
+  stopPlaying();
+  const seconds = +$("lsec").value, tab = $("lsrc").value === "tab", status = $("lstatus");
+  let stream;
+  try {
+    // The browser's voice processing (echo cancelling, noise suppression, gain control) is made for speech and
+    // damages music: ask for the raw signal.
+    const raw = {echoCancellation: false, noiseSuppression: false, autoGainControl: false};
+    stream = tab ? await navigator.mediaDevices.getDisplayMedia({video: true, audio: raw, systemAudio: "include"})
+                 : await navigator.mediaDevices.getUserMedia({audio: raw});
+  } catch (e) { status.innerHTML = `<span class="warn">${tab ? "No tab was shared" : "The microphone is not available"} (${esc(e.name)}).</span>`; return; }
+  for (const v of stream.getVideoTracks()) v.stop();
+  if (!stream.getAudioTracks().length) {
+    for (const t of stream.getTracks()) t.stop();
+    status.innerHTML = '<span class="warn">That share has no sound: pick a tab and tick "Also share tab audio".</span>'; return;
+  }
+  const c = ctx();
+  await c.resume();
+  if (!c.tapReady) { await c.audioWorklet.addModule(URL.createObjectURL(new Blob([TAP], {type: "text/javascript"}))); c.tapReady = true; }
+  const source = c.createMediaStreamSource(stream), tap = new AudioWorkletNode(c, "tap"), chunks = [];
+  let got = 0;
+  const need = Math.round(seconds * c.sampleRate);
+  const done = new Promise(resolve => {
+    listening = {stop: resolve};
+    tap.port.onmessage = e => {
+      chunks.push(e.data); got += e.data.length;
+      let peak = 0; for (const v of e.data) peak = Math.max(peak, Math.abs(v));
+      $("lmeter").style.width = `${Math.min(100, peak * 140)}%`;
+      status.textContent = `Listening… ${(got / c.sampleRate).toFixed(0)} / ${seconds} s`;
+      if (got >= need) resolve();
+    };
+  });
+  source.connect(tap);
+  $("lgo").disabled = true; $("lstop").disabled = false;
+  await done;
+  listening = null; tap.port.onmessage = null; source.disconnect();
+  for (const t of stream.getTracks()) t.stop();
+  $("lgo").disabled = false; $("lstop").disabled = true; $("lmeter").style.width = "0";
+  const n = Math.min(got, need);
+  if (n < 5 * c.sampleRate) { status.innerHTML = '<span class="warn">Less than 5 seconds were heard.</span>'; return; }
+  lbuf = c.createBuffer(1, n, c.sampleRate);
+  const data = lbuf.getChannelData(0);
+  let at = 0, peak = 0;
+  for (const ch of chunks) { const take = Math.min(ch.length, n - at); data.set(ch.subarray(0, take), at); at += take; if (at >= n) break; }
+  for (const v of data) peak = Math.max(peak, Math.abs(v));
+  $("lwave").hidden = false; $("lafter").hidden = false;
+  lview.load(lbuf, lbuf.duration, [0, lbuf.duration]);
+  let energy = 0;
+  for (const v of data) energy += v * v;
+  // Quieter than -60 dBFS on average: nothing was playing, or the wrong source was shared.
+  if (Math.sqrt(energy / n) < 0.001) { $("lres").hidden = true; status.innerHTML = '<span class="warn">Almost nothing was heard. Is the right source selected, and is it playing?</span>'; return; }
+  await sendExcerpt(await wavOf(lbuf, 0, lbuf.duration), null, $("lres"), status,
+                    `the ${Math.round(lbuf.duration)} s ${tab ? "of tab sound" : "the microphone heard"}`);
+}
+$("lgo").onclick = listen;
+$("lstop").onclick = () => listening && listening.stop();
+$("lplay").onclick = () => lbuf && play(lbuf, 0, lbuf.duration, t => lview.tick(t));
+</script>
+</body>
+</html>

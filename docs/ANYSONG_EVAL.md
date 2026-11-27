@@ -2017,6 +2017,955 @@ Every shown song in Best, Same vibe and Sounds like carries a `match`, and Sound
 Deichkind, #2 in the feedback, is now #7 in the library version that Spotify opens and #16 for the album version
 answered live. Runtime 2.12.0 changes the cache policy to v8 and shows the sound match as a bar.
 
+## One main list and Listeners also play (pre-registered 2026-11-11, before any held-out result)
+
+**Why.** Feedback on 2026-11-11: the extension should show two tabs instead of Best matches, Same vibe
+and Sounds like. One main list with the best results, and Listeners also play on its own tab. On Yassin's examples
+(Childish Gambino "Heartbeat", KIRBS "Follow My Lead", trxy "icantbelieveiletyougetaway") Same vibe and Sounds like
+beat Best, whose listener blend lets in songs that sound unlike the seed.
+
+**Change under test.** The API adds two lists. Best, Same vibe, Sounds like and the channel lists stay byte-identical
+(`grow/qa/main_dev.py parity` over the 4,143 dev, sweep and bench_dev seeds).
+- `main`: Best's audio head (evidence only; `MAIN_HEAD_BARE` songs when none has evidence), then the sonic list by
+  z(sound score) + `MAIN_LISTENER_WEIGHT` z(listener logit), one song per artist. `MAIN_POOL = "all"` adds Best's
+  other candidates with a sound match of at least `MAIN_MATCH_FLOOR`. Without listener data: the head, then Sounds
+  like's order.
+- `listeners`: other artists' songs by z(listener logit) + `LISTENERS_SOUND_WEIGHT` z(sound score), one per artist,
+  never the seed's own artist. Omitted without listener data and with Audio only (`scene=0`).
+
+**Development rule**, fixed before the first development run (SL = served Sounds like, B = served Best, same seeds):
+- Main: match10 at least SL − 2.0; other-language rows, derivative uploads and far-genre rows each at most SL + 0.005;
+  HR@10 on the development covers, samples and samples reverse each at least B − 0.03. Pick the highest ListenBrainz
+  hit rate; within 0.002 of it, the higher match10.
+- Listeners: match10 at least B − 2.0; other-language rows, derivative uploads and far-genre rows each at most
+  B + 0.005. The same pick.
+- match10: the mean sound match (0 to 100, `api.sound_match`) of the first ten songs, one per artist.
+
+### Development result: no main list passed; Listeners also play at sound weight 0.25
+
+Out-of-fold lists for the 823 dev and sweep seeds; HR@10 on the 2,667 development benchmark queries with the all-dev
+ranker. Other-language rows were 0.000 for every list.
+
+| List | ListenBrainz | Far genre | match10 | Covers | Samples | Samples reverse |
+|---|---|---|---|---|---|---|
+| Best (served) | 0.526 | 0.098 | 38.6 | 0.588 | 0.077 | 0.089 |
+| Same vibe (served) | 0.486 | 0.098 | 55.2 | 0.231 | 0.036 | 0.039 |
+| Sounds like (served) | 0.465 | 0.096 | 68.9 | 0.097 | 0.010 | 0.006 |
+| Main, listener weight 0 | 0.221 | 0.209 | 75.6 | 0.432 | 0.056 | 0.062 |
+| Main, weight 1 | 0.398 | 0.121 | 70.6 | 0.432 | 0.057 | 0.061 |
+| Main, weight 2 | 0.452 | 0.104 | 66.3 | 0.432 | 0.058 | 0.057 |
+| Main, weight 3 | 0.470 | 0.100 | 64.4 | 0.433 | 0.058 | 0.057 |
+| Main, weight 2, one bare head song | 0.439 | 0.112 | 63.6 | 0.560 | 0.068 | 0.075 |
+| Main, weight 2, all pool, floor 40 | 0.471 | 0.102 | 64.8 | 0.432 | 0.062 | 0.060 |
+| Main's head, then Same vibe | 0.473 | 0.105 | 53.3 | 0.463 | 0.068 | 0.072 |
+| Listeners, sound weight 0 | 0.601 | 0.075 | 33.3 | 0.072 | 0.010 | 0.004 |
+| **Listeners, sound weight 0.25 (chosen)** | **0.601** | **0.077** | **40.9** | 0.069 | 0.007 | 0.004 |
+| Listeners, sound weight 0.5 | 0.597 | 0.076 | 46.2 | 0.075 | 0.009 | 0.003 |
+| Listeners, sound weight 1 | 0.582 | 0.077 | 52.3 | 0.085 | 0.009 | 0.001 |
+
+**Listeners also play.** Weight 0 failed match10 (−5.3 against Best). Weight 0.25 against Best, paired 95 %
+intervals: ListenBrainz +0.076 (+0.068 to +0.083), shared genre +0.034, match10 +2.3 (+1.8 to +2.7), far-genre rows
+−0.021 (−0.027 to −0.015).
+
+**Main.** No variant met both halves of the rule:
+- With an evidence-only head, covers HR@10 is 0.432, far below Best's 0.588 − 0.03.
+- One bare head song brings covers to 0.560, but costs 5.3 points of match10 against Sounds like
+  (−5.6 to −5.1), beyond the 2.0 allowed.
+- Main at weight 2 is Sounds like with the evidence head on top, because `SOUNDS_LISTENER_WEIGHT` is also 2.0.
+  45 % of seeds get a head, 1.34 songs when they do (0 songs 54.6 %, 1 song 31.1 %, 2 songs 13.4 %, 3 or more
+  1.0 %). Each head song displaces a Sounds like song that sounds far more alike: mean match 27.9 against 72.9 over the
+  360 seeds where it happens. Against Sounds like:
+  match10 −2.7 (−2.9 to −2.4), far-genre rows +0.008 (+0.005 to +0.011), ListenBrainz −0.013 (−0.016 to −0.010).
+
+The two halves conflict: a list cannot sound as alike as Sounds like and hold as many covers as Best. Choosing between
+them is a product decision, so the rule was not loosened after the fact.
+
+**Decision (2026-11-11).** Yassin chose main at listener weight 2 (option B) from the table above and the lists for four
+songs (`grow/qa/main_dev.py review`, served ranker):
+- Main is Best's evidence head, then Sounds like's order. Listener-led picks move to Listeners also play, at sound
+  weight 0.25.
+- On the development data main keeps most of Sounds like's sound (match10 −2.7) and adds what Sounds like misses:
+  covers HR@10 0.097 → 0.432, samples 0.010 → 0.058, samples reverse 0.006 → 0.057.
+- It gives up Best's listener blend (ListenBrainz 0.526 → 0.452) and about a quarter of Best's covers
+  (0.588 → 0.432).
+- The development rule was not changed.
+
+The four songs:
+- Childish Gambino "Heartbeat" and Ski Mask The Slump God "Get Geeked" get no head, so main is Sounds like.
+- Lil Wayne "She Will" gets Bryson Tiller "We Will" on top (sound match 91).
+- KIRBS "Follow My Lead" gets Rema "HOV" on top: first in the melody channel, sound match 6. The UK rap that Sounds like
+  finds follows (sound match 92 to 96). This is the head's cost.
+
+### Held-out gates (pre-registered 2026-11-11, before any held-out result)
+
+**Baseline.** The served code (b7c5d2c). **Candidate.** Main `w2` and Listeners also play `l025`, with the served
+ranker (`listener-v1.npz`). **Seeds.** The 799 held-out and 1,000 fresh seeds, all with listener inputs, and the
+benchmarks' held-out split. Run once (`grow/qa/main_dev.py held w2`); checked by `grow/qa/main_dev.py verdict`.
+
+**Must pass (all), else not deployed:**
+1. **Lists users see.** Best matches, Same vibe, Sounds like, the channel lists and the query are byte-identical to the
+   served code for every held-out, fresh and held-out benchmark seed (`main_dev.py parity`, run on both sources).
+2. **Listeners also play**, against served Best, on each seed set:
+   - The ListenBrainz hit rate rises: paired 95 % lower bound above 0.
+   - match10 at least Best − 2.0.
+   - Other-language rows, derivative uploads and far-genre rows each at most Best + 0.005.
+3. **Main**, against served Sounds like, on each seed set. The trade-off must stay near its development size:
+   - match10 at least Sounds like − 3.5 (development −2.7).
+   - ListenBrainz hit rate at least Sounds like − 0.025 (development −0.013).
+   - Far-genre rows at most Sounds like + 0.015 (development +0.008).
+   - Other-language rows and derivative uploads each at most Sounds like + 0.005.
+4. **Main keeps the relationships**, on the held-out benchmark queries, against served Sounds like:
+   - Covers HR@10 rises: paired 95 % lower bound above 0.
+   - Samples and samples reverse HR@10 do not fall (change at least 0).
+5. **Serving.** Rule 4 of the listener ranking, unchanged.
+
+**Reported, not gated:**
+- Main and Listeners also play against Best on the benchmarks.
+- SampleID, Gen Alpha and V4.
+- The share of seeds with a head and its mean length.
+- Shared genre.
+
+**No fallback.** If any rule fails, the two tabs are not deployed and the result goes back to Yassin. Nothing else is
+tried on held-out data.
+
+### Held-out result (2026-11-11): rules 1 to 4 passed
+
+Run once (`grow/qa/main_dev.py held w2`); `grow/qa/main_dev.py verdict` passed 25 of 25 checks. Evidence:
+`grow/qa/main_held.json`, `grow/qa/parity_held_old.json`, `grow/qa/parity_held_new.json` and `grow/qa/main_verdict.log`.
+
+**Rule 1.** For all 4,538 seeds (799 held-out, 1,000 fresh, 2,739 benchmark), Best matches, Same vibe, Sounds like,
+the channel lists and the query are byte-identical to the served code. The candidate adds Listeners also play to every
+seed and main to 4,528. The other 10 (1 fresh, 9 benchmark) have no Same vibe or Sounds like list either, so main is
+left out and the extension's main tab shows Best matches.
+
+**The lists**, held-out / fresh seeds. Other-language rows were 0.000 for every list.
+
+| List | ListenBrainz | Shared genre | Far genre | match10 |
+|---|---|---|---|---|
+| Best matches (served) | 0.522 / 0.518 | 0.569 / 0.574 | 0.116 / 0.130 | 36.7 / 38.2 |
+| Same vibe (served) | 0.462 / 0.477 | 0.565 / 0.575 | 0.107 / 0.125 | 54.3 / 55.8 |
+| Sounds like (served) | 0.456 / 0.454 | 0.566 / 0.565 | 0.108 / 0.126 | 67.1 / 69.8 |
+| **Main** | 0.447 / 0.443 | 0.557 / 0.564 | 0.117 / 0.129 | 64.8 / 67.5 |
+| **Listeners also play** | 0.595 / 0.586 | 0.597 / 0.585 | 0.094 / 0.109 | 38.0 / 39.3 |
+
+**Rules 2 and 3**, paired differences [95 % CI]:
+
+| Rule | Held-out seeds (799) | Fresh seeds (1,000) | Limit | Verdict |
+|---|---|---|---|---|
+| 2. Listeners also play − Best, ListenBrainz | +0.073 [+0.063, +0.082] | +0.068 [+0.058, +0.078] | lower bound > 0 | pass |
+| 2. match10 | +1.34 [+0.85, +1.78] | +1.15 [+0.67, +1.61] | ≥ −2.0 | pass |
+| 2. Far-genre rows | −0.023 [−0.030, −0.015] | −0.021 [−0.028, −0.013] | ≤ +0.005 | pass |
+| 2. Other-language rows | +0.0000 [+0.0000, +0.0000] | +0.0000 [+0.0000, +0.0000] | ≤ +0.005 | pass |
+| 2. Derivative uploads | −0.0003 [−0.0013, +0.0008] | −0.0007 [−0.0016, +0.0001] | ≤ +0.005 | pass |
+| 3. Main − Sounds like, match10 | −2.36 [−2.64, −2.08] | −2.29 [−2.52, −2.05] | ≥ −3.5 | pass |
+| 3. ListenBrainz | −0.009 [−0.013, −0.006] | −0.011 [−0.014, −0.008] | ≥ −0.025 | pass |
+| 3. Far-genre rows | +0.010 [+0.006, +0.014] | +0.003 [+0.001, +0.006] | ≤ +0.015 | pass |
+| 3. Other-language rows | +0.0000 [+0.0000, +0.0000] | +0.0000 [+0.0000, +0.0000] | ≤ +0.005 | pass |
+| 3. Derivative uploads | +0.0000 [+0.0000, +0.0000] | +0.0001 [−0.0002, +0.0004] | ≤ +0.005 | pass |
+
+**Rule 4**, HR@10 on the benchmarks' held-out split (queries):
+
+| List | Covers (1,170) | Samples (747) | Samples reverse (695) | Gen Alpha (59) | SampleID (43) | V4 (19) |
+|---|---|---|---|---|---|---|
+| Best matches (served) | 0.612 | 0.088 | 0.106 | 0.254 | 0.140 | 0.105 |
+| Same vibe (served) | 0.271 | 0.040 | 0.045 | 0.051 | 0.070 | 0.053 |
+| Sounds like (served) | 0.121 | 0.009 | 0.013 | 0.102 | 0.000 | 0.105 |
+| **Main** | 0.456 | 0.064 | 0.071 | 0.203 | 0.023 | 0.105 |
+| **Listeners also play** | 0.068 | 0.008 | 0.014 | 0.085 | 0.000 | 0.000 |
+
+Main against Sounds like: covers +0.335 [+0.309, +0.362], samples +0.055 [+0.040, +0.071], samples reverse
++0.058 [+0.040, +0.076]. Pass.
+
+**Reported, not gated**
+- Main against Best on the benchmarks: covers −0.156 [−0.178, −0.133], samples −0.024 [−0.035, −0.013], samples
+  reverse −0.036 [−0.050, −0.023]. Main keeps 75 % of Best's covers (development 73 %).
+- Listeners also play is not where covers are found: 0.068 against Best's 0.612.
+- SampleID, Gen Alpha and V4 are small (43, 59 and 19 queries). Main falls between Sounds like and Best on SampleID
+  and Gen Alpha and equals both on V4.
+- Head: 41.6 % of held-out and 43.0 % of fresh seeds get one, 1.29 and 1.31 songs when they do (development 45 %,
+  1.34).
+- Shared genre: Listeners also play against Best +0.028 [+0.017, +0.039] held-out and +0.011 [−0.000, +0.023]
+  fresh; main against Sounds like −0.009 [−0.013, −0.004] and −0.001 [−0.005, +0.003].
+- The costs match development. Main against Sounds like: match10 −2.4 and −2.3 (development −2.7), ListenBrainz
+  −0.009 and −0.011 (−0.013), far-genre rows +0.010 and +0.003 (+0.008).
+
+### Deployed (2026-11-11): rule 5 passed
+
+The guarded deploy (`deploy_two_tabs.sh`, backup `/opt/soundalike/deploy-backups/20261111-220846-twotabs`) changed
+only `anysong/api.py` and applied the serving checks of the listener ranking's rule 4:
+
+| Check | Result | Limit |
+|---|---|---|
+| serve_check parity, 64 songs per channel | rank agreement 1.0 on all three channels; one sonic song second, as stored | 1.0; at most 2 not first |
+| Startup | 54 s; catalog tiers, ranker and dissector active | under 120 s |
+| 40 unseen songs | paired median server time −17.9 ms; p95 1.068 → 1.044 s | +100 ms; 1.268 s |
+| 40 catalog songs | paired median server time −10.3 ms; p95 0.543 → 0.528 s | +100 ms; 0.743 s |
+| Peak VRAM, ranking | 7,051 MiB | 7,248 MiB |
+| Served lists | every list identical, row for row, for five fixed seeds with and without listener data, and for the six capture seeds | identical |
+
+Client side, through `soundalike.yassin.app`, for the four review songs:
+- Main, Listeners also play, Best, Same vibe and Sounds like are identical to the lab lists Yassin chose from
+  (`grow/qa/main_review.json`), 20 of 20 positions each.
+- With `scene=0` main is served and Listeners also play is left out.
+
+### A sound-heavier main list? (development, 2026-11-12)
+
+Yassin asked whether main with less listener weight would really lose scene matches such as UK rap. This was
+tested on development data only, with `grow/qa/sound_order.py`. Its docstring fixed the subsets, metrics and
+claim before each run. Serving is unchanged.
+
+Out-of-fold development lists, 823 seeds, against the served weight 2. Weight 2's means are ListenBrainz 0.452,
+same country 0.598, far genre 0.104 and match10 66.3. The table gives each weight's paired change against weight 2
+[95 % interval].
+
+| Main, listener weight | ListenBrainz | Same country | Far genre | match10 |
+|---|---|---|---|---|
+| 0 | −0.231 [−0.244, −0.219] | −0.125 [−0.141, −0.109] | +0.105 [+0.091, +0.117] | +9.3 [+8.8, +9.8] |
+| 0.5 | −0.136 [−0.147, −0.127] | −0.065 [−0.076, −0.054] | +0.061 [+0.051, +0.070] | +7.9 [+7.4, +8.3] |
+| 1 | −0.055 [−0.061, −0.049] | −0.020 [−0.026, −0.013] | +0.017 [+0.012, +0.022] | +4.3 [+4.1, +4.6] |
+| 3 | +0.017 [+0.013, +0.022] | +0.002 [−0.002, +0.006] | −0.004 [−0.007, −0.001] | −1.9 [−2.0, −1.7] |
+| 5 | +0.026 [+0.021, +0.032] | +0.003 [−0.002, +0.008] | −0.005 [−0.009, −0.001] | −4.0 [−4.3, −3.8] |
+
+Lowering the weight moves every genre family the same way on every metric, and further at each step:
+
+- Families: hip-hop (157 seeds), R&B and soul (177), pop (282), electronic (128), rock (239) and Latin (58).
+- At weight 0 and 0.5 no family's interval includes 0. At weight 1 three do: electronic's same country
+  (−0.014 [−0.032, +0.004]) and shared genre (−0.011 [−0.025, +0.003]), and Latin's far genre
+  (+0.011 [−0.004, +0.028]).
+- Above weight 2 the small changes are less uniform. For example, rock's same country and Latin's far genre move
+  against the overall direction.
+
+The development seeds include only three GB hip-hop artists (Gorillaz, Rex Orange County, The Chemical Brothers), none
+of them UK rap, so a separate UK rap set was drawn:
+
+- **Seeds:** 66 GB artists whose Wikidata genre is labelled UK rap, grime, UK drill, drill, British hip hop, UK hip
+  hop, road rap, afroswing or UK trap. Each gives one song: its highest-ranked Deezer track that is not junk or a
+  version and was not a seed of any earlier set.
+- **Lists:** computed live with the served ranker and Deezer's related artists.
+- **Check against serving:** for the four catalog songs below, the lab's weight-2 lists equal the live API's, 20 of
+  20 positions; the off-catalog fifth shares 8 of its top 10.
+- **Claim:** uk10 falls below weight 2. uk10 is the share of other-artist top-10 rows by such artists. The claim holds
+  for a weight if the paired 95 % interval lies below 0.
+
+Weight 2's means, then each lower weight's paired change against it [95 % interval]:
+
+| Main, listener weight | uk10 | Same country | ListenBrainz (22 seeds) | match10 |
+|---|---|---|---|---|
+| 2 (served), mean | 0.243 | 0.636 | 0.256 | 75.7 |
+| 1 | −0.021 [−0.035, −0.007] | −0.068 [−0.094, −0.045] | −0.050 [−0.105, 0.000] | +2.9 [+2.1, +3.7] |
+| 0.5 | −0.078 [−0.110, −0.051] | −0.189 [−0.233, −0.146] | −0.094 [−0.154, −0.040] | +5.3 [+4.1, +6.6] |
+| 0 | −0.156 [−0.201, −0.114] | −0.358 [−0.426, −0.293] | −0.111 [−0.180, −0.044] | +6.4 [+5.0, +7.9] |
+
+The claim holds at all three weights. uk10 undercounts, because artists without Wikidata count as not UK rap:
+Follow My Lead's weight-2 list scores 0, as none of its other nine artists (SL, Clavish, AntsLive and others) has a
+Wikidata country or genre.
+
+The five songs Yassin raised, top 10 (`grow/qa/sound_order_uk.json`), at weight 0 compared with weight 2:
+
+- **Follow My Lead:** UK rap at 92–96 % match (SL, Clavish, A1 x J1, AntsLive) gives way to US drill and trap at
+  95–96 % (K CAMP, Future, King Von, Polo G, Lil Durk, Gunna). The sound model scores the two alike.
+- **Heartbeat:** Ravyn Lenae, Doechii and Timbaland give way to electronic tracks and remixes (Flume, Justice,
+  ODESZA), and Gost's Skull moves from third to first.
+- **icantbelieveiletyougetaway:** loses Trxy!, glaive, brakence and Jane Remover.
+- **Get Geeked:** keeps 5 of its 10 artists; Lil Pump, Smokepurpp and Famous Dex give way to ONEFOUR, Big Scarr and
+  Gucci Mane.
+- **She Will:** keeps 5 of its 10 artists and stays US rap.
+
+None of these metrics is neutral:
+
+- The listener ranker learns from ListenBrainz and reads region and genre, so same country, genre and ListenBrainz
+  favour the listener side.
+- match10 is the sound model's own score, so it favours the sound side.
+- The song lists, and a listener's ears, are the neutral check.
+
+Nothing changed in serving; weight 2 stays.
+
+The evidence head, not the weight, puts the lowest matches first:
+
+- **How often:** it leads 45.4 % of development and 74 % of UK rap seeds.
+- **How weak:** its median match is 14 and 19. More than half its songs match under 20 %. Follow My Lead's first song,
+  Rema – HOV, at 6 %, is first in the raw melody channel.
+- **Cost:** without its head, main's top 10 equals Sounds like's for 63 of the 66 UK rap seeds (763 of 823
+  development seeds), so the gap between the two lists is the head. On the UK rap set, Sounds like beats main on uk10
+  (+0.012 [+0.001, +0.025]), same country (+0.038 [+0.024, +0.054]) and match10 (+5.0 [+4.0, +5.9]).
+
+### A stricter head for main (development, 2026-11-12)
+
+**Why.** The evidence head opens main for 45 % of development seeds, and more than half its songs match under 20 %
+(above). Follow My Lead opens with Rema – HOV at 6 %: first in the raw melody channel, with a standout z of 2.52.
+
+**Change under test** (`AnySong.main_head_standout` Z and `main_head_match` M, commit 357c2df, off by default). Only
+main's head changes. A head song stays when its standout z is at least Z or its sound match is at least M. The
+standout z is the one Best's head uses: the larger of its melody and samples z-scores among the first 20 songs of
+those lists. A dropped song is ranked like any other sound pick. Best matches, Same vibe, Sounds like and Listeners
+also play do not change.
+
+**Selection**, on development data only (`grow/qa/head_rule.py`). Its docstring fixed the grid, the metrics and the
+rule after an exploratory look at the head (`describe`, which decides nothing) and before the first scored run.
+- **Grid:** Z of 2.25, 2.5, 2.75 or 3.0 with no match exemption (M 101); M of 20 or 30 with Z of 2.5, 3.0 or 4.0.
+- **low1:** the share of seeds whose first row in main matches under 20 % (the match users see). **match1:** that
+  row's match.
+- **Lists:** out-of-fold for the 823 labelled development seeds; the benchmarks' development split (2,667 seeds)
+  with the ranker trained on every development seed.
+- **Eligible when:**
+  1. Covers, samples and samples reverse HR@10 are each at least Sounds like + 0.85 × (served main − Sounds like):
+     main keeps 85 % of its lead.
+  2. Against served main, the ListenBrainz change is at least −0.005 and match10 falls by at most 0.5. Far-genre
+     rows, other-language rows and derivative uploads each rise by at most 0.005.
+  3. low1 falls: its paired 95 % upper bound is below 0.
+- **Pick:** the lowest low1; within 0.005 of it, the higher covers HR@10; then the longer head.
+
+With both settings off, every list and the query were byte-identical to the served code for all 4,143 development
+seeds, with listener data and without.
+
+| Variant | Z | M | low1 | match1 | Covers | Samples | Samples reverse | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| Served | – | – | 0.259 | 53.0 | 0.432 | 0.058 | 0.057 | |
+| z2.25 | 2.25 | – | 0.222 | 56.2 | 0.424 | 0.056 | 0.057 | eligible |
+| z2.5 | 2.5 | – | 0.173 | 60.7 | 0.408 | 0.056 | 0.055 | eligible |
+| z2.75 | 2.75 | – | 0.139 | 64.5 | 0.388 | 0.051 | 0.054 | out: samples |
+| z3 | 3.0 | – | 0.098 | 67.9 | 0.366 | 0.051 | 0.053 | out: covers, samples |
+| m20z2.5 | 2.5 | 20 | 0.173 | 58.8 | 0.422 | 0.058 | 0.055 | eligible |
+| **m20z3** | **3.0** | **20** | **0.098** | **63.7** | **0.401** | **0.055** | **0.053** | **chosen** |
+| m20z4 | 4.0 | 20 | 0.023 | 68.7 | 0.325 | 0.046 | 0.044 | out: all three |
+| m30z2.5 | 2.5 | 30 | 0.173 | 59.7 | 0.417 | 0.057 | 0.055 | eligible |
+| m30z3 | 3.0 | 30 | 0.098 | 65.5 | 0.390 | 0.052 | 0.053 | eligible |
+| m30z4 | 4.0 | 30 | 0.023 | 71.1 | 0.295 | 0.043 | 0.042 | out: all three |
+
+The floors were covers 0.382, samples 0.051 and samples reverse 0.049. z2.75 and z3 missed the samples floor by one
+query (41 hits of 806, floor 41.2). m20z3 and m30z3 tie on low1; m20z3 keeps more covers (0.401 against 0.390).
+
+**m20z3 against served main**, out-of-fold development seeds (823), paired change [95 % CI]:
+
+| Measure | Served | m20z3 | Change | Seeds up / same / down |
+|---|---|---|---|---|
+| low1 | 0.259 | 0.098 | −0.160 [−0.187, −0.136] | 0 / 691 / 132 |
+| match1 | 53.0 | 63.7 | +10.8 [+9.1, +12.6] | 132 / 691 / 0 |
+| match3 | 63.3 | 68.7 | +5.4 [+4.6, +6.3] | 155 / 668 / 0 |
+| match10 | 66.3 | 67.7 | +1.47 [+1.25, +1.70] | 155 / 668 / 0 |
+| ListenBrainz | 0.452 | 0.459 | +0.006 [+0.004, +0.009] | 57 / 757 / 9 |
+| Far-genre rows | 0.104 | 0.100 | −0.004 [−0.006, −0.003] | 8 / 676 / 38 |
+| Other-language rows | 0.000 | 0.000 | 0.000 | 0 / 710 / 0 |
+| Derivative uploads | 0.0016 | 0.0015 | −0.0001 [−0.0004, 0.0000] | 0 / 822 / 1 |
+| Seeds with a head | 45.4 % | 30.5 % | −14.9 points [−17.6, −12.6] | |
+| First row changed | | 16.0 % | | |
+
+HR@10 on the benchmarks' development split (queries):
+
+| List | Covers (1,066) | Samples (806) | Samples reverse (721) |
+|---|---|---|---|
+| Best matches (served) | 0.588 | 0.077 | 0.089 |
+| Sounds like (served) | 0.097 | 0.010 | 0.006 |
+| Main (served) | 0.432 | 0.058 | 0.057 |
+| **Main, m20z3** | **0.401** | **0.055** | **0.053** |
+| m20z3 − served main | −0.032 [−0.043, −0.022] | −0.004 [−0.009, 0.000] | −0.004 [−0.010, 0.000] |
+
+That is 34 covers, 3 samples and 3 samples reverse hits fewer. On this split the head shrinks from 1,769 to 1,304
+songs:
+- Of the 465 it drops, 69 (15 %) are labelled covers or samples of their seed.
+- Of the 1,304 it keeps, 525 are (40.3 %, up from 33.6 %). The labels are incomplete, so these shares are lower bounds.
+- low1 falls from 0.265 to 0.152, and the share of seeds with a head from 51.7 % to 41.5 %.
+
+**His songs** (`grow/qa/head_rule_review.json`, the served ranker):
+- **Follow My Lead:** Rema – HOV (match 6, z 2.52) leaves the head. Main opens with Ashbeck – Juice (96), Damzz –
+  Silent Approach (95) and SL – Summertime Santa (95).
+- **She Will:** keeps Bryson Tiller – We Will first (match 91, z 4.04).
+- **Heartbeat** and **Get Geeked:** no head, no change.
+
+Serving is unchanged unless the held-out gates below pass.
+
+### Held-out gates for the stricter head (pre-registered 2026-11-12, before any held-out result)
+
+**Baseline.** The served code (b5b61a8; its `anysong/api.py` is byte-identical to the server's), with main as
+served. **Candidate.** m20z3: `main_head_standout` 3.0 and `main_head_match` 20 (357c2df). Everything else as
+served: main `w2`, Listeners also play `l025` and the served ranker (`listener-v1.npz`). **Seeds.** The 799
+held-out and 1,000 fresh seeds, all with listener inputs, and the benchmarks' held-out split. Run once
+(`grow/qa/head_rule.py held`); checked by `grow/qa/head_rule.py verdict` (32 checks).
+
+**Must pass (all), else not deployed:**
+1. **Only main changes**, for every held-out, fresh and held-out benchmark seed:
+   - Settings off: every list and the query are byte-identical to the served code (`head_rule.py parity`, run on
+     both sources).
+   - Candidate: every list but main, and the query, are identical to served main's run.
+2. **The weak first rows go.** On each seed set, low1 falls against served main: paired 95 % upper bound below 0.
+3. **Nothing else gets worse**, against served main on each seed set:
+   - The ListenBrainz change is at least −0.005, and match10 falls by at most 0.5.
+   - Far-genre rows, other-language rows and derivative uploads each rise by at most 0.005.
+4. **Main keeps 85 % of its lead** on the held-out benchmark queries: covers, samples and samples reverse HR@10 are
+   each at least Sounds like + 0.85 × (served main − Sounds like), all from the same run.
+5. **The two-tab gates still hold.** Rules 3 and 4 of the two-tab gates above, unchanged, for the candidate's main
+   against served Sounds like.
+6. **Serving.** Yassin's OK, then rule 4 of the listener ranking, unchanged. Client side, through
+   `soundalike.yassin.app`, for the four review songs: main equals the lab's list, 20 of 20 positions, and the other
+   lists do not change.
+
+**Reported, not gated:** match1 and match3; the share of seeds with a head and its length; seeds whose first row
+changes; head precision on the held-out benchmark queries (a lower bound); SampleID, Gen Alpha and V4.
+
+**Known before the run.** The served lists' held-out numbers are public (the two-tab result above); the
+candidate's are not. They put rule 4's floors at 476 of 1,170 covers queries (served main has 534), 42 of 747
+samples queries (48) and 43 of 695 samples reverse queries (49). On the development split the candidate lost 34
+covers, 3 samples and 3 samples reverse hits. The thresholds are the development rule's, unchanged. `held` and
+`verdict` were dry-run on development data only: the seed-set check failed, as it must, and the other 31 passed.
+
+**No fallback.** If any rule fails, main keeps its served head and the result goes back to Yassin. Nothing else is
+tried on held-out data.
+
+### Held-out result for the stricter head (2026-11-12)
+
+**All 32 checks passed** (`grow/qa/head_rule.py verdict` on the one held-out run, `grow/qa/head_held.json`).
+Serving (rule 6) waits for Yassin's OK.
+
+**Only main changes.** With both settings off, every list and the query were byte-identical to the served code
+for all 4,538 held-out seeds (799 held-out, 1,000 fresh and 2,739 benchmark seeds), with listener data and,
+as an extra check, without. With m20z3, no seed changed any list but main, or the query.
+
+**m20z3 against served main**, paired change [95 % CI]:
+
+| Measure | Held-out (799) | Change | Fresh (1,000) | Change |
+|---|---|---|---|---|
+| low1 | 0.265 → 0.095 | −0.170 [−0.196, −0.145] | 0.228 → 0.079 | −0.149 [−0.172, −0.126] |
+| match1 | 52.0 → 63.6 | +11.6 [+9.8, +13.5] | 56.4 → 66.5 | +10.1 [+8.5, +11.7] |
+| match3 | 62.4 → 67.4 | +5.0 [+4.2, +5.8] | 65.5 → 70.0 | +4.5 [+3.8, +5.2] |
+| match10 | 64.8 → 66.2 | +1.41 [+1.18, +1.64] | 67.5 → 68.7 | +1.27 [+1.09, +1.46] |
+| ListenBrainz | 0.447 → 0.451 | +0.0045 [+0.0022, +0.0068] | 0.443 → 0.447 | +0.0039 [+0.0022, +0.0058] |
+| Far-genre rows | 0.117 → 0.110 | −0.0071 [−0.0106, −0.0042] | 0.129 → 0.128 | −0.0016 [−0.0036, +0.0005] |
+| Other-language rows | 0.000 → 0.000 | 0.0000 | 0.000 → 0.000 | 0.0000 |
+| Derivative uploads | 0.0021 → 0.0021 | 0.0000 | 0.0025 → 0.0025 | 0.0000 [−0.0003, +0.0003] |
+| Seeds with a head | 41.6 % → 25.9 % | −15.6 points [−18.1, −13.3] | 43.0 % → 29.5 % | −13.5 points [−15.6, −11.4] |
+| First row changed |  | 17.5 % |  | 15.2 % |
+
+low1 fell on 136 held-out and 149 fresh seeds and rose on none. match1 rose on 139 and 151 seeds
+and fell on one in each set. Against served Sounds like (two-tab rule 3), the candidate's main is closer than served
+main was, held-out then fresh: match10 −0.95 and −1.02 (served main −2.36 and −2.29; limit −3.5),
+ListenBrainz −0.0045 and −0.0070 (−0.0089 and −0.0110; limit −0.025), far-genre rows +0.0026 and
++0.0016 (+0.0097 and +0.0032; limit +0.015).
+
+HR@10 on the benchmarks' held-out split (2,739 seeds), hits in brackets:
+
+| List | Covers (1,170) | Samples (747) | Samples reverse (695) |
+|---|---|---|---|
+| Best matches (served) | 0.612 (716) | 0.088 (66) | 0.106 (74) |
+| Sounds like (served) | 0.121 (142) | 0.009 (7) | 0.013 (9) |
+| Main (served) | 0.456 (534) | 0.064 (48) | 0.071 (49) |
+| **Main, m20z3** | **0.424 (496)** | **0.058 (43)** | **0.063 (44)** |
+| Rule 4 floor | 0.407 (476) | 0.056 (42) | 0.062 (43) |
+| m20z3 − served main | −0.032 [−0.043, −0.023] | −0.007 [−0.012, −0.001] | −0.007 [−0.014, −0.001] |
+| m20z3 − Sounds like | +0.303 [+0.277, +0.328] | +0.048 [+0.033, +0.064] | +0.050 [+0.035, +0.068] |
+
+- Main keeps 90 %, 88 % and 88 % of its lead over Sounds like: 20, 1 and 1 hits above the floors.
+- The cost is close to development's (34 covers, 3 samples and 3 samples reverse hits): 38, 5 and 5 hits.
+- Reported, not gated: Gen Alpha 12 → 10 of 59 (−0.034 [−0.102, +0.034]); SampleID 1 of 43 and V4 2 of 19,
+  both unchanged.
+- The head shrinks from 1,947 to 1,432 songs; no song enters it, here or on development
+  (`grow/qa/head_set_diff.json`). Of the 515 it drops, 82 (16 %) are labelled covers or samples of their seed;
+  of the 1,432 it keeps, 594 are (41.5 %, up from 34.7 %), lower bounds as before. low1 falls from 0.258 to 0.146,
+  and the share of seeds with a head from 54.3 % to 44.0 %.
+
+**Next: serving (rule 6).** With Yassin's OK, the defaults become Z 3.0 and M 20 and the website's and Spotify's
+cache policies move on. A guarded deploy keeps a backup, rule 4 of the listener ranking runs unchanged, and the
+four review songs are checked through `soundalike.yassin.app`.
+
+### Serving the stricter head (2026-11-12)
+
+Yassin approved the deploy. The guarded script (`deploy_head_rule.sh`) changes only `anysong/api.py` and applies rule
+6: rule 4 of the listener ranking, unchanged, then the client-side check.
+
+**Attempt 1: rolled back on latency.** Backup `/opt/soundalike/deploy-backups/20261112-044544-headrule`. Parity,
+startup (52 s), `healthz` and the smoke test passed, and only Follow My Lead's head changed. The unseen-song check
+failed: paired median server time +1,170.9 ms (limit +100 ms), p95 1.081 → 2.790 s (limit 1.281 s). The script
+restored the served src, byte-identical to the backup, and restarted the crawl. The added time was all in the
+preview download from Deezer's CDN:
+
+| 40 unseen songs, medians | Before | After | Paired change |
+|---|---|---|---|
+| Preview download | 122.9 ms | 1,356.4 ms | +1,232.9 ms |
+| Everything else: decode, tempo, three embeddings, three searches, listener step, vibe scores | 873.7 ms | 853.9 ms | −18.4 ms |
+| Server total | 996.5 ms | 2,211.4 ms | +1,170.9 ms |
+
+- Before the swap every download took 116–128 ms. After it, 16 of the 40 took 116–183 ms and 24 took 0.79–2.80 s.
+  The service logged no retry or rate-limit warning.
+- The script warmed the CDN for these songs only before the baseline, about ten minutes before the second
+  measurement.
+- The change cannot touch the download: the `api.py` diff is confined to main's head (`_audio_head`, `_sound_of`,
+  `_main_without_listeners` and the two settings).
+
+**Attempt 2: procedure fixed before it ran.** The CDN is warmed again right before the second unseen measurement, as
+it was before the baseline. The limits are unchanged. The script also reports, not gated, the paired median change of
+the download and of the rest of the server time; on attempt 1's data that reads +1,232.9 ms and −18.4 ms.
+
+**Attempt 2: deployed, 05:27:59 CST.** Backup `/opt/soundalike/deploy-backups/20261112-050924-headrule`.
+
+| Check | Result |
+|---|---|
+| Preflight | Only `anysong/api.py` differs; settings as served |
+| Parity with the new code (`serve_check`, 64 songs per index) | Melody and samples: ranks agree, self at 1 = 1.0. Sonic: ranks agree, self at 1 = 0.984, the one song at rank 2 as stored |
+| VRAM, `serve_check` loaded / peak | 5,737 / 7,141 MiB (limit 7,248) |
+| Startup and `healthz` | 56 s; ranker listener-v1, stems live |
+| Smoke: five fixed seeds, scene on and 0 | Every list but main identical; only Follow My Lead's main head changed: Rema (match 6) dropped |
+| 40 unseen songs | Paired median server time −60.9 ms (limit +100 ms); p95 2.854 → 1.330 s (limit 3.054 s); peak VRAM 7,051 MiB. Pass |
+| 40 catalog songs | Paired median +1.4 ms (limit +100 ms); p95 0.557 → 0.573 s (limit 0.757 s). Pass |
+| Captures: six seeds, scene on and 0 | Every list but main identical; main unchanged on all six |
+| Rule 6, client side (`rule6_check.py post`) | Main equals the lab's m20z3 at 20/20 positions on the four review songs; every other list unchanged. Pass |
+
+The old code's baseline was slow this time (p95 2.854 s against 1.081 s in attempt 1), so the p95 limit was loose.
+Without the download, the server time did not move in either attempt (each attempt's 40 unseen songs, paired before
+and after; server timings):
+
+| Server time without the download | p50 before → after | p95 before → after | Paired median change |
+|---|---|---|---|
+| Attempt 1 | 873.7 → 853.9 ms | 937.7 → 879.7 ms | −18.4 ms |
+| Attempt 2 | 876.2 → 888.8 ms | 991.8 → 1,006.3 ms | +8.7 ms |
+
+- In attempt 2 the download's paired median change was −52.1 ms.
+- Every restart checked from 2026-11-11 22:09 on, the old code's included, logs the same CUDA allocator OOM warnings
+  (4.76 GB and 1.23 GB requests) and the service still comes up. They are not from this change.
+- After the deploy the public site answered 200 in 0.10–0.13 s.
+
+### Blind listening check for the stricter head (pre-registered 2026-11-12, before any listening)
+
+Yassin asked to hear the change before the public release: the website's two tabs and the Spotify extension ship
+together only after this check.
+
+**Songs.** Twelve seeds whose main changes in its first ten rows between cur (main as served before the stricter
+head) and m20z3: from each of the held-out and fresh sets, the first six of a seeded shuffle
+(`random.Random(20261112)`) of its changed seeds whose own Deezer preview plays. Then those of the four review songs
+whose first ten rows change. `grow/qa/ab_listen.py build` draws them once, from lists rebuilt as in the held-out run.
+
+**Blind.** For each song the page shows its preview and the first ten rows of both lists as List A and List B:
+title, artist and a 30-second Deezer preview, with no match, labels or variant names. The songs come in a seeded
+order. Each song's sides are seeded and balanced: as many songs with cur as List A as with m20z3, cur once more for
+an odd count. The page (`ab_listen.py serve`, on 127.0.0.1 only) never loads the key.
+
+**Question.** "Which list fits the song better?": A, B or about the same, with an optional note. Yassin may listen
+to as much as he likes and change a pick until he says he is done.
+
+**Decision** (`ab_listen.py score`, after every song is answered):
+- m20z3 stays, and the public release ships it, unless cur is preferred on more songs than m20z3. "About the same"
+  counts for neither.
+- If cur is preferred on more songs, main goes back to cur on the server from the deploy's backup before the public
+  release, and the result goes back to Yassin.
+- With any song unanswered there is no decision.
+
+**Reported, not gated:** the counts, a two-sided sign test, whether each song's first row changed, and his notes.
+A dozen or so songs can only show a large difference; the held-out result above stays the main evidence.
+
+### A best-guess seed language (development, 2026-11-13)
+
+**Why.** The gate takes a seed's language from its own Whisper label (top probability ≥ 0.8, margin ≥ 0.5),
+else from its artist's majority. Without either, the seed is "unknown" and nothing is filtered. BoA's "Hypnotic
+Dancefloor" is one such seed: its preview's top language is English but under the bar, and BoA's labelled songs
+are 55 % English and 43 % Korean, so its lists mixed in songs in other languages. Yassin asked for a best guess at
+60 % or more.
+
+**The guess** (`LanguageTable.guess`, `api.LANGUAGE_GUESS`):
+- It applies to the seed only, and only when the gate cannot place it.
+- It is Whisper's top language when its probability is at least 0.6 (`languages.GUESS_MIN`).
+- It is skipped when the artist has labelled songs and fewer than half of them are in that language
+  (`GUESS_VETO` 0.5). An artist with no labelled songs has no veto.
+- Candidates keep the strict label, so a candidate without one stays visible.
+- The query says `language_guessed: true`, and the website and the extension add "(best guess)" after the language.
+- The table adds about 9 MiB to the server.
+
+**How often the guess is right.** There are no human labels, so the guess is checked against an independent signal:
+the language of the song's lyrics.
+- The lyrics are LRCLIB text embedded with bge-m3, classified by a logistic regression trained on songs Whisper is
+  sure about. It is 97.2 % accurate on its test split.
+- Held-out seeds (test, fresh) and the held-out benchmark queries are excluded.
+- Of 12,646 unsure catalog songs with lyrics, agreement is counted on those where the lyrics classifier is at least
+  90 % sure and the guess is one of its 12 languages.
+
+Results (`grow/qa/seedlang_dev.py precision`, `seedlang_precision_veto.json`):
+
+| Top probability | Artist veto | Coverage | Agreement (n) | English guesses | Other guesses |
+|---|---|---|---|---|---|
+| ≥ 0.5 | none | 75.1 % | 76.5 % (4,777) | 73.5 % | 83.5 % |
+| ≥ 0.5 | 0.3 | 59.4 % | 82.4 % (3,969) | 79.3 % | 90.2 % |
+| ≥ 0.6 | none | 55.5 % | 79.9 % (3,663) | 76.9 % | 87.1 % |
+| ≥ 0.6 | 0.3 | 44.9 % | 84.8 % (3,102) | 81.9 % | 92.5 % |
+| ≥ 0.6 | 0.4 | 41.2 % | 85.7 % (2,885) | 83.0 % | 93.1 % |
+| **≥ 0.6** | **0.5 (served)** | **38.7 %** | **86.5 % (2,683)** | **84.0 %** | **93.5 %** |
+| ≥ 0.7 | none | 32.8 % | 84.2 % (2,328) | 81.6 % | 90.7 % |
+| ≥ 0.7 | 0.3 | 27.3 % | 87.8 % (2,021) | 85.6 % | 93.8 % |
+
+- The served `LanguageTable.guess` reproduces the 0.5 row exactly.
+- The most common disagreements are English guesses on Spanish, French, Korean, Portuguese, German and Japanese
+  lyrics.
+- For 18.9 % of unsure songs the artist has no labelled song, so no veto applies.
+- These songs include the held-out unsure seeds below, which were drawn later. For the guess, only the list metrics
+  below are truly held out.
+
+**Lists on development seeds** (`seedlang_dev.py held --dry`, `seedlang_held_dry.log`):
+- Seeds: unsure_dev, which is 800 seeds the gate cannot place, one per artist, with listener data (`seedlang_dev.py
+  sample`, seed 20261113). The served ranker never trained on them. The dev, sweep and development benchmark seeds
+  were also run.
+- Comparison: the guess on against off, in the same code.
+- lyr_mis: among the top ten songs (one per artist) whose lyrics language is sure, the share in a different lyrics
+  language from the seed's. Only seeds whose own lyrics language is sure count.
+- Numbers are paired means over the seeds the guess reaches, with 95 % bootstrap intervals.
+
+| unsure_dev, guess reaches 350 of 800 | Main | Listeners also play |
+|---|---|---|
+| Other-language rows (lyr_mis, n 39) | 0.231 → 0.075 (−0.156 [−0.247, −0.068]) | 0.218 → 0.070 (−0.148 [−0.267, −0.039]) |
+| Lists under ten songs | 0 → 0.057 | 0 → 0 |
+| match10 | −1.13 [−1.61, −0.68] | +1.37 [+0.67, +2.16] |
+| Far-genre rows (n 35, 37) | +0.036 [+0.002, +0.084] | +0.022 [−0.016, +0.072] |
+| Derivative uploads | −0.001 | +0.000 |
+
+- The guess also reaches 12 of 800 dev seeds, 8 of 676 sweep seeds and 94 of 2,667 development benchmark seeds.
+- Guess against the sure lyrics language on reached seeds: unsure_dev 39/41, dev 2/2, sweep 4/5.
+- Development benchmarks: main's covers, samples and samples reverse hits are unchanged. Listeners also play covers
+  go from 74 to 76, and Best from 627 to 629.
+
+**ListenBrainz: what a correct guess costs.** ListenBrainz here means the share of other artists' songs in the top 20
+whose artist ListenBrainz listeners play with the seed's artist. Pooled over the reached seeds of unsure_dev, dev and
+sweep that have ListenBrainz data:
+
+| Veto | Seeds | Main | Listeners also play |
+|---|---|---|---|
+| 0.3 | 21 | −0.083 [−0.145, −0.029] | −0.095 [−0.157, −0.043] |
+| 0.5 | 14 | −0.050 [−0.100, −0.007] | −0.029 [−0.064, 0.000] |
+
+- At 0.5, averaged over all 21 seeds, the change is −0.033 and −0.019, because the 7 vetoed seeds no longer change.
+- The planned gate was a change of at least −0.03. At veto 0.3 it failed.
+- The diagnosis (development only, `seedlang_lb_diag.log`): the drop comes from correct English guesses on English
+  songs by K-pop and J-pop acts, such as BTS "Butter", aespa "LEMONADE" and YOASOBI "Haven't". Their listeners also
+  play Korean and Japanese artists, and an English gate hides those.
+- The gate does the same for labelled seeds, and there it costs almost nothing on this measure: main −0.000 over 797
+  seeds, −0.002 over the 109 seeds whose lists change.
+- One guess was wrong: Rvssian's "PONGO" was guessed English, but its lyrics are Spanish, and it lost 17 Spanish
+  songs.
+- Veto 0.5 leaves BTS (40 % English) unfiltered. It still filters BoA (55 % English), aespa (58 %) and YOASOBI
+  (68 %).
+- Yassin chose veto 0.5, so those acts' English songs get English-only lists, with ListenBrainz reported, not gated.
+  The choice was made after seeing these development numbers, before any held-out data was looked at, and the dry
+  run was redone at 0.5.
+
+### Overall match (development, 2026-11-13)
+
+**Why.** The bars showed the sound match, but main and Listeners also play are ordered by sound and listener
+evidence together. A list's first song could therefore show a lower percentage than songs below it.
+
+**What.** Each main and Listeners also play row gets `overall`, from 0 to 100:
+- It is the list's own ordering blend on a fixed scale (`api.OverallScale`):
+  - main: sound / 0.0138 + 2 × logit / 1.1893;
+  - Listeners also play: 0.25 × sound / 0.1768 + logit / 1.4899.
+- Each divisor is the median over seeds of that part's spread among the list's candidates.
+- The value is then turned into a percentile: the share of songs shown in that list's top 20 for the development
+  seeds that it beats.
+  - The scale uses 41 quantiles from dev + sweep: 825 seeds with listener data, out-of-fold listener probabilities
+    (`grow/qa/overall_dev.py calib`).
+- `api.overall_match` makes it non-increasing down the list:
+  - After the head, runs that are out of order share their mean (isotonic regression).
+  - Head songs, placed first on cover or sample evidence, show at least the song after them.
+- Without listener data, main's overall is its sound match, made non-increasing the same way.
+- A typical seed's first song shows 84 % (main) and 89 % (Listeners also play), and its tenth 50 %.
+- The other lists keep only `match`.
+
+**Display.**
+- The extension's bar shows `overall`. Its tooltip reads "Match N %: how strongly Soundalike ranks it for this song.
+  Sound match M %: …".
+- The website's bar takes the overall width and the same tooltip, with no number.
+- Lists without `overall` keep the sound match.
+- New cache policies (`anysong-main-listeners-v13` and `main-listeners-v3`) refetch older answers.
+
+**Checks** (`overall_dev.py check`):
+- Scope: the served ranker, with and without listener data, on unsure_dev, dev, sweep and the development benchmark
+  seeds (4,943 seeds).
+- Every id and every other field is unchanged. `overall` is on every main and Listeners also play row, between 0
+  and 100, and never rises down a list.
+- Top-1 overall, 10th, 50th and 90th percentiles over seeds:
+
+  | List | 10th | 50th | 90th |
+  |---|---|---|---|
+  | Main | 18 | 76 | 98 |
+  | Listeners also play | 16 | 82 | 98 |
+  | Main without listener data | 58 | 89 | 96 |
+
+- With the guess and overall both off (`SA_NEW_OFF=1`), every list and the query are byte-identical to the served
+  code (faf90d5) on the same 4,943 seeds, with and without listener data.
+
+### Held-out gates for the seed language guess and overall match (pre-registered 2026-11-13, before any held-out result)
+
+**Baseline.** The served code (faf90d5, main with the m20z3 head). For rules 1b to 5, the baseline is the new code
+with the guess off.
+
+**Candidate.** The guess on (top probability ≥ 0.6, veto 0.5), and `overall` on main and Listeners also play.
+
+**Seeds.**
+- unsure_held: 800 seeds the gate cannot place, drawn the same way as unsure_dev (seed 20261114) after the rule was
+  studied. No artist is shared with unsure_dev, any other seed set or a held-out benchmark song.
+- The 799 held-out seeds, the 1,000 fresh seeds and the 2,739 held-out benchmark seeds.
+
+**Run once:**
+- `head_rule.py parity` and `parity0` with `SA_NEW_OFF=1`, on the new code and on the served code;
+- `overall_dev.py check overall_check_held.json`;
+- `seedlang_dev.py held`.
+
+The result is checked by `seedlang_dev.py verdict` (28 checks).
+
+**Must pass (all), else the guess is not deployed:**
+1. **Nothing else changes.**
+   - a. With both settings off, every list and the query are byte-identical to the served code for every held-out
+     seed, with and without listener data.
+   - b. With the guess on, seeds it does not reach keep every list and the query. On seeds it reaches, the query
+     differs only in `language`, `language_guessed` and `hidden`, and the guess-off language was unknown.
+   - c. Overall, on all four sets, with and without listener data: ids and every other field are unchanged, and
+     `overall` is on every main and Listeners also play row, between 0 and 100, and never rises down a list.
+2. **Other-language rows fall.** On unsure_held, lyr_mis falls for main and for Listeners also play: the paired
+   95 % upper bound is below 0.
+3. **Nothing else gets much worse,** on the seeds of unsure_held the guess reaches. Missing data fails.
+   - Main lists under ten songs rise by at most 0.10.
+   - match10 falls by at most 2.5 for main and 1.0 for Listeners also play.
+   - Far-genre rows rise by at most 0.05, and derivative uploads by at most 0.005, each for main and for Listeners
+     also play.
+4. **ListenBrainz is reported, not gated.** It is pooled over the reached seeds of unsure_held, test and fresh, for
+   main and Listeners also play. See the development finding above.
+5. **Benchmarks.** On the held-out benchmark seeds, Best, main and Listeners also play each lose at most 3 hits on
+   covers, samples and samples reverse.
+6. **Serving.** Yassin's OK, then rule 4 of the listener ranking, unchanged. Client side, through
+   `soundalike.yassin.app`:
+   - BoA's "Hypnotic Dancefloor" gets English, marked as a guess, and its lists change.
+   - The four review songs have their own English labels, so the guess does not reach them. Each of their lists
+     keeps its ids and order.
+   - Main and Listeners also play carry `overall`.
+
+**Reported, not gated:**
+- the guess's coverage, its languages and its agreement with the lyrics;
+- Best, Same vibe and Sounds like metrics;
+- test and fresh list metrics;
+- SampleID, Gen Alpha and V4.
+
+**Known before the run.**
+- The thresholds were set on development data.
+- Veto 0.5 was chosen after the development ListenBrainz finding.
+- `held` and `verdict` were dry-run on development data only: the seed-set check failed, as it must, and the other
+  27 passed.
+- unsure_held's lists were cached but not scored.
+
+**No fallback.** If rule 1a or 1c fails, nothing is deployed. If any other rule fails, `LANGUAGE_GUESS` stays off,
+`overall` alone may still ship, and the result goes back to Yassin. Nothing else is tried on held-out data.
+
+### Held-out result for the seed language guess and overall match (2026-11-13)
+
+Run once, after the pre-registration (8cb542a), from 02:55 to 03:17 (`grow/qa/seedlang_held_run.log`). **27 of 28
+checks passed. Rule 2 failed for Listeners also play, so the guess is not deployed: `LANGUAGE_GUESS` stays off.**
+Rules 1a and 1c passed, so `overall` may ship alone.
+
+| Rule | Result | |
+|---|---|---|
+| 1a | 5,338 seeds with and 5,338 without listener data: 0 differ from the served code | pass |
+| 1b | the guess reaches 338 of 800 unsure_held, 18 of 799 test, 22 of 1,000 fresh and 105 of 2,739 benchmark seeds; 0 broken | pass |
+| 1c | 5,325 main and 5,338 Listeners also play lists with listener data, 5,325 main lists without: lists unchanged, `overall` present, 0 to 100, never rises | pass |
+| 2, main | lyr_mis 0.296 → 0.164, −0.132 [−0.240, −0.030], n 46 | pass |
+| 2, Listeners also play | lyr_mis 0.142 → 0.089, −0.052 [−0.143, +0.036], n 42 | **fail** |
+| 3 | main under ten songs +0.071 [+0.044, +0.101]; match10 main −1.49 [−2.14, −0.91], Listeners also play +1.52 [+0.81, +2.29]; far main −0.017, Listeners also play −0.028; derivative uploads +0.000 for both | pass |
+| 4 (reported) | ListenBrainz, n 15: main 0.395 → 0.348, −0.047 [−0.133, 0.000]; Listeners also play 0.547 → 0.560, +0.013 [−0.013, +0.047] | reported |
+| 5 | Best unchanged; main covers 496 → 494; Listeners also play covers 79 → 81; samples and samples reverse unchanged | pass |
+
+Reported, not gated:
+- The guess matches the sure lyrics language on 42 of 48 unsure_held seeds, 3 of 3 test and 0 of 1 fresh. On
+  unsure_held it guesses en 269, fr 23, es 12, it 5, de 4 and pt 4.
+- Top-1 `overall` percentiles 10/50/90: main 19/76/98, Listeners also play 15/82/98, main without listener data
+  58/89/96 (development: 18/76/98, 16/82/98, 58/89/96).
+
+What failed: Listeners also play lost other-language rows on average, but on 42 seeds the drop cannot be told apart
+from zero; on development it was −0.148 [−0.267, −0.039], n 39. It starts with half as many other-language rows as
+main (0.142 against 0.296), so there is less to remove. Main's drop held. As pre-registered, nothing else is tried on
+held-out data, and the result goes back to Yassin.
+
+**Decision (Yassin, 2026-11-13).** `overall` ships alone and `LANGUAGE_GUESS` is off in the served code. The guess
+gets a new, larger test on fresh seeds, pre-registered before it runs.
+
+### Retest of the seed language guess (pre-registered 2026-11-13, before any retest result)
+
+**Why.** The held-out run failed only rule 2 for Listeners also play (−0.052 [−0.143, +0.036], n 42). Yassin asked
+for a larger test on fresh seeds.
+
+**Candidate.** Unchanged: the guess at top probability ≥ 0.6 with veto 0.5 (`languages.py` as in 8cb542a; 3b67714
+only turns it off by default). The baseline is the same code with the guess off, which is what is served.
+
+**Seeds.** unsure_held2: 2,400 seeds drawn the same way as unsure_held (seed 20261115) after the held-out run, one
+song per artist. No artist is shared with unsure_dev, unsure_held, any other seed set or a held-out benchmark song
+(7,252 artists banned, 17,132 eligible). Its lists were not computed or scored before this section was committed.
+
+**Run once:** `seedlang_dev.py retest`, then `seedlang_dev.py retest_verdict` (17 checks).
+
+**Must pass (all), else the guess stays off:**
+1. The seed sets and the candidate are as above. With the guess on, seeds it does not reach keep every list and the
+   query, on unsure_held2 and on unsure_held (rule 1b as before).
+2. **Other-language rows fall.** lyr_mis falls for main and for Listeners also play, with the paired 95 % upper
+   bound below 0:
+   - a. on unsure_held2 alone;
+   - b. on unsure_held2 pooled with unsure_held.
+3. **Nothing else gets much worse,** on the seeds of unsure_held2 the guess reaches, with the limits of held-out
+   rule 3. Missing data fails.
+4. **ListenBrainz is reported, not gated,** on the seeds of unsure_held2 the guess reaches.
+
+Carried over, not rerun: rule 1a (with the guess off, the code is what is served), rule 1c (`overall`) and rule 5
+(the benchmarks passed with this candidate on the held-out benchmark seeds).
+
+**Power.** On unsure_held, 42 reached seeds had a lyr_mis value for Listeners also play, and the 95 % interval was
+about ±0.09. Three times the seeds should give about 125 such seeds and about ±0.05. If the true drop is as small as
+the held-out estimate (−0.05), the retest passes about half the time; at −0.10, about 97 % of the time.
+
+**Why the pooled check.** Testing again after a failure raises the chance of a false pass. Rule 2b keeps the
+decision tied to every held-out unsure seed, including those that failed.
+
+**Known before the run.** The dry run on development data (unsure_dev pooled with dev) passed 16 of 17: the
+seed-set check failed, as it must, and it reproduced the development numbers.
+
+**No fallback.** If any check fails, the guess stays off in this form and the result goes back to Yassin. Nothing
+else is tried on held-out data. If it passes, it deploys with Yassin's OK and the client checks of held-out rule 6.
+
+### Retest result for the seed language guess (2026-11-13)
+
+Run once, after the pre-registration (307a94f), from 03:55 to 03:58 (`grow/qa/seedlang_retest_run.log`). **15 of 17
+checks passed. Rule 2 failed for Listeners also play, on unsure_held2 alone and pooled, so the guess stays off.**
+
+| Rule | Result | |
+|---|---|---|
+| Seed sets, candidate | unsure_held2 pooled with unsure_held; top probability 0.6, veto 0.5 | pass |
+| 1b | the guess reaches 1,043 of 2,400 unsure_held2 and 338 of 800 unsure_held seeds; 0 broken | pass |
+| 2a, main | lyr_mis 0.266 → 0.175, −0.092 [−0.138, −0.050], n 124 | pass |
+| 2a, Listeners also play | lyr_mis 0.115 → 0.123, +0.008 [−0.037, +0.052], n 125 | **fail** |
+| 2b, main | 0.274 → 0.172, −0.102 [−0.145, −0.059], n 170 | pass |
+| 2b, Listeners also play | 0.122 → 0.115, −0.007 [−0.046, +0.036], n 167 | **fail** |
+| 3 | main under ten songs +0.058 [+0.045, +0.074]; match10 main −1.18 [−1.47, −0.90], Listeners also play +1.01 [+0.62, +1.42]; far main +0.009, Listeners also play +0.005; derivative uploads +0.000 for both | pass |
+| 4 (reported) | ListenBrainz, n 2: main 0.733 → 0.417, Listeners also play 0.800 → 0.750 | reported |
+
+Reported, not gated: the guess matches the sure lyrics language on 115 of 130 unsure_held2 seeds (88 %). It
+guesses en 891, fr 51, es 19, ru 11, pt 10 and ja 8.
+
+What it shows: the drop in other-language rows on main has now held three times (development −0.156, held-out
+−0.132, retest −0.092). On Listeners also play there is none: development's −0.148 did not hold (−0.052 held-out,
++0.008 retest). That list already has fewer other-language rows (0.115 against main's 0.266), and the guess does not
+change it. As pre-registered, the guess stays off in this form and the result goes back to Yassin.
+
+### Deployed: the overall match, guess off (2026-11-13)
+
+3b67714 went live on CT 409 at 04:20, using `deploy_overall.sh`. The script checks that only `api.py` and
+`languages.py` differ, with `LANGUAGE_GUESS` False. Backup and deploy log:
+`/opt/soundalike/deploy-backups/20261113-040138-overall/`.
+
+| Check | Result |
+|---|---|
+| serve_check | parity as stored (sonic self@1 0.9844, the same song as before) |
+| Smoke, 6 seeds × scene on/off | the same ids and query; `overall` on every main and Listeners also play row, never rising; no `language_guessed`; BoA unknown and unchanged |
+| Latency, unseen songs (40) | paired median −18.6 ms (limit +100); p95 1.023 → 0.996 s (limit 1.223) |
+| Latency, catalog songs (40) | paired median −1.9 ms; p95 0.529 → 0.535 s (limit 0.729) |
+| VRAM peak | 7,051 MiB (limit 7,248) |
+| Captures | unchanged |
+| Client side (soundalike.yassin.app, 6 seeds) | same main and Listeners also play ids as before the deploy; `overall` present, 0–100 and never rising |
+| Spotify, extension 2.13.0-local.6 (BoA rechecked on local.7, whose only change is the layout) | Heartbeat and BoA, both tabs: the bar shows `overall`, which equals the API's; the tooltip gives both matches; no "(best guess)" |
+
+### Held-out gates for the main-only seed language guess (pre-registered 2026-11-13, before any held-out result)
+
+**Why.** The guess cut other-language rows on main three times (development −0.156, held-out −0.132, retest
+−0.092) and never on Listeners also play. Yassin chose to test it on Best matches (main) alone.
+
+**Candidate.** e8f2e3f with `LANGUAGE_GUESS = "main"`: the same guess (top probability ≥ 0.6, veto 0.5), gating
+main only. Main is built exactly as with the guess on. Every other list, `query.language` and `hidden` stay as with
+the guess off, and the query adds `main_language_guess`. The baseline is the served code, with the guess off.
+
+**Seeds.**
+- unsure_held3: 2,400 seeds drawn the same way as unsure_held2 (seed 20261116) after the retest, one song per
+  artist. No artist is shared with any other seed set or a held-out benchmark song (9,652 artists banned, 14,732
+  eligible). Its search results and listener inputs were cached for this run; no list was built from them or scored
+  before this section was committed.
+- unsure_held and unsure_held2, pooled for rule 2b, and bench_held for rules 1 and 5. Main with the guess on is
+  already known to pass rule 2 on both unsure sets, so unsure_held3 is the new evidence.
+
+**Run once:** `seedlang_dev.py mainguess`, then `seedlang_dev.py mainguess_verdict` (16 checks).
+
+**Must pass (all), else the guess stays off:**
+1. The seed sets and the candidate are as above. On unsure_held3, unsure_held, unsure_held2 and bench_held, for
+   seeds the guess reaches, main equals the guess-on main, and every other list and the query, less
+   `main_language_guess`, equal guess-off. Seeds it does not reach keep every list and the query in all three modes.
+2. **Other-language rows fall on main.** lyr_mis falls, with the paired 95 % upper bound below 0:
+   - a. on unsure_held3 alone;
+   - b. on unsure_held3 pooled with unsure_held and unsure_held2.
+3. **Main does not get much worse** on the unsure_held3 seeds the guess reaches: the share under ten songs rises at most
+   0.10, match10 changes by at least −2.5, far rises at most 0.05 and derivative uploads rise at most 0.005.
+   Missing data fails.
+4. **ListenBrainz is reported, not gated,** on the same seeds.
+5. **Benchmarks.** On bench_held, main loses at most 3 hits on mb_covers, mb_samples and mb_samples_rev.
+
+Carried over, not rerun: rule 1a (e8f2e3f's default is the guess off, which is what is served) and rule 1c
+(`overall`).
+
+**Power.** The retest had 124 main seeds with a lyr_mis value and an interval of about ±0.045; unsure_held3
+should give about as many. At the retest's −0.092, rule 2a passes about 98 % of the time; at −0.05, about
+60 %.
+
+**Known before the run.** The dry run on development data (unsure_dev pooled with dev, and bench_dev) passed 14 of
+15: the seed-set check failed, as it must (the dry run has three sets for rule 1). Rule 1 held on all 4,267
+development seeds, and main's lyr_mis fell −0.156 [−0.247, −0.068], n 39, as in development.
+
+**No fallback.** If any check fails, the guess stays off and the result goes back to Yassin. If it passes, it
+deploys with Yassin's OK:
+- `LANGUAGE_GUESS = "main"`;
+- serve_check parity and the latency and VRAM limits of earlier deploys;
+- a smoke test: a seed the guess reaches (BoA) changes only main and gains `main_language_guess`, and other seeds
+  are unchanged;
+- client checks on the website and in Spotify.
+
+Published clients read neither main nor `main_language_guess`, so they see no change.
+
+### Held-out result for the main-only seed language guess (2026-11-13)
+
+Run once, after the pre-registration (7f8e0a5), from 05:01 to 05:11 (`grow/qa/seedlang_mainguess_run.log`).
+**All 16 checks passed.** The guess can gate Best matches (main) alone; it deploys only with Yassin's OK.
+
+| Rule | Result | |
+|---|---|---|
+| Seed sets, candidate | unsure_held3, pooled with unsure_held and unsure_held2; bench_held; top probability 0.6, veto 0.5 | pass |
+| 1 | the guess reaches 1,062 of 2,400 unsure_held3, 338 of 800 unsure_held, 1,043 of 2,400 unsure_held2 and 105 of 2,739 bench_held seeds; 0 broken on each | pass |
+| 2a | main lyr_mis 0.266 → 0.157, −0.109 [−0.156, −0.064], n 143 | pass |
+| 2b | pooled 0.271 → 0.165, −0.106 [−0.137, −0.075], n 313 | pass |
+| 3 | under ten songs 0.000 → 0.070, +0.070 [+0.055, +0.085] (limit +0.10); match10 59.27 → 58.03, −1.24 [−1.52, −0.96] (limit −2.5); far 0.197 → 0.223, +0.025 [−0.002, +0.056] (limit +0.05); derivative uploads 0.003 → 0.003, +0.000 [−0.001, +0.001] (limit +0.005) | pass |
+| 4 (reported) | ListenBrainz, n 3: 0.104 → 0.067, −0.037 [−0.111, +0.000] | reported |
+| 5 | bench_held main hits: mb_covers 496 → 494 of 1,170, mb_samples 43 → 43 of 747, mb_samples_rev 44 → 44 of 695 (limit −3) | pass |
+
+Reported, not gated:
+- On unsure_held3, the guess agrees with the sure lyrics language on 126 of 147 seeds (86 %); across all three unsure
+  sets, 283 of 325 (87 %). It guesses en 871, fr 62, es 19, it 14, de 12 and pt 12.
+- Main keeps 18.7 songs on average on the seeds the guess reaches (20 before).
+- Other bench_held hits on main: genalpha 10 → 11, sampleid 1 → 1, v4 2 → 2.
+
+What it shows: the drop in other-language rows on main has now held four times (development −0.156, held-out
+−0.132, retest −0.092, this run −0.109). Gating main alone leaves Listeners also play as served. The cost is
+smaller lists: 7 % of the reached seeds get fewer than ten songs on main, inside the pre-registered limit.
+
+### Deployed: the seed language guess on Best matches (2026-11-13)
+
+df81483 (`LANGUAGE_GUESS = "main"`) went live on CT 409 at 07:46, using `deploy_mainguess.sh`. The script checks that
+only `api.py` differs, with `LANGUAGE_GUESS` "main". Backup and deploy log:
+`/opt/soundalike/deploy-backups/20261113-072846-mainguess/`.
+
+| Check | Result |
+|---|---|
+| serve_check | parity as stored (sonic self@1 0.9844); startup 52 s |
+| Smoke, 5 seeds × scene on/off, plus BoA | the 5 seeds the guess does not reach: the same ids and query, no `main_language_guess`; BoA (scene on and off) gains `main_language_guess` en, keeps its query otherwise, and only main changes; BoA with lang=all keeps main |
+| Latency, unseen songs (40) | paired median −8.8 ms (limit +100); p95 1.164 → 1.032 s (limit 1.364) |
+| Latency, catalog songs (40) | paired median +14.9 ms; p95 0.547 → 0.548 s (limit 0.747) |
+| VRAM peak | 7,051 MiB (limit 7,248) |
+| Captures (12) | unchanged |
+| Client side (soundalike.yassin.app) | the same checks as the smoke test, against the deploy's before files: pass |
+| Spotify, extension 2.13.0-local.8 | BoA: Best matches reads "English (best guess) · other languages left out"; "Show all languages" brings back the earlier main (Girls' Generation, 86, first) and the toggle returns; Listeners also play reads "Language uncertain; showing all languages." Heartbeat: unchanged, "English · other languages left out" on both tabs |
+
+Seen after the deploy, not gated:
+- BoA's main now opens with Disclosure, "She's Gone, Dance On (Carlita Remix)", sound match 2, as an audio-head row
+  (melody #1), shown at overall 33 with the scene on and 87 with it off (a head row takes the next row's overall). The
+  head's standout test runs on the filtered lists, so filtering can make a weak melody match stand out.
+  `grow/qa/mainguess_head_diag.py` counts it: the guess adds a head row with a match under 20 on 10 of 1,062
+  reached unsure_held3 seeds (0.9 %) and 10 of 1,043 unsure_held2 seeds (1.0 %). Seeds whose main #1 has a match
+  under 20 go from 16.3 % to 16.0 % and from 15.4 % to 14.9 %. Testing the head on the unfiltered lists would need its
+  own development and held-out run.
+- The gate keeps songs whose language is unknown. On BoA, Stray Kids "Saiyan", BLACKPINK "Pretty Savage (Live)",
+  aespa "Rich Man" and Jay Park "Metronome" stay: none has a decided label, and Whisper's top language for them is
+  en 0.52, en 0.75, en 0.67 and ko 0.48.
+
 ## Stem dissection (pre-registered 2026-11-10, before any result)
 
 **What.** `soundalike.anysong.stems` splits a preview into six stems with htdemucs_6s (vocals, drums, bass, guitar,
@@ -2354,3 +3303,477 @@ holds the expected song for 5 of the 24 pairs, against 6 without the layer:
 - **Known pairs are demonstrations.** They were picked by hand to be recognisable, not sampled.
 - **Scene metrics are partly circular.** ListenBrainz and Deezer's related lists both come from listening data, so
   agreement partly re-measures the feature; see [Scene layer](#scene-layer-2026-11-04).
+
+## v8 ranker with track-level labels and a scene head (2026-11-16): local experiment, not served
+
+Lab: `anysong-lab/v8/` (`PREREG.md`, `ltr.py`, `rows.py`, `train_head.py`, `bench_build.py`). Code: `scenehead.py`,
+the optional `head` ranker feature (`listener.FEATURES_HEAD`), `--head`, `--main-pool`, `--main-match-floor`,
+`--main-listener-weight`. With the served ranker and defaults every list is unchanged.
+
+**Why.** The listener ranker's label is ListenBrainz *artist* similarity. New labels are track-level: 8,116 song
+pairs that people say sound alike (36,798 claims harvested from Sounds Just Like, Reddit, YouTube comments,
+Wikipedia, Same That Tune and others; resolved to index rows; 40 % train, 10 % val, 50 % held by pair) and
+co-occurrence in 32,098 public Deezer playlists (6.2 M edges over 108k indexed songs; a 20 % artist hold-out
+never enters the graph). The scene head is an MLP over the sonic windows trained on that graph.
+
+**Baseline on the claims.** Served lists rarely contain the song people name: on 700 seeds, top 10 of `main`
+2.4 %, `best` 3.6 %, sonic 1.1 %; any of the seven lists at depth 50: 12.4 %. Of 15,384 named songs that did not
+resolve to the index, 42 % of those looked up exist on Deezer but are not indexed (for example Queen
+"Bohemian Rhapsody", OneRepublic "Counting Stars").
+
+**Scene head alone.** Share of GB tracks among the 10 nearest rap neighbours of GB rap seeds by unseen artists
+(base rate 10.4 %): sound score 36.8 %, sound + head 50.9 %.
+
+**Pre-registered candidate** (`PREREG.md`): ranker `a17h` (17 served features + head; labels above),
+`main` pool = sonic list plus candidates with sound match >= 20, listener weight 2. Held split, 3,775 seeds,
+emulated `main` body, paired bootstrap:
+
+| metric | served | candidate | delta [95 % CI] |
+|---|---|---|---|
+| claimed song in top 10 | 0.0206 | 0.0304 | +0.0097 [+0.0059, +0.0138] |
+| claimed song in top 20 | 0.0279 | 0.0412 | +0.0133 [+0.0091, +0.0175] |
+| claimed song in top 50 | 0.0373 | 0.0526 | +0.0153 [+0.0108, +0.0201] |
+| mean sound match of top 10 | 67.6 | 64.9 | -2.8 [-3.0, -2.6] (limit -4) |
+
+All three rules pass. **Not promoted:** on the owner's own labels (12 liked and 4 disliked songs across 7 seeds,
+from his A/B notes and chat verdicts, through the built API) the candidate puts 5 of 12 liked songs in the top 10
+against 7 of 12 for the served list, lifts one disliked song to #3, and lowers mean sound match of the top 10 from
+71.8 to 64.8. Sound-heavier settings fit those labels better: `a17h`, sonic pool, listener weight 1 gives 8 of 12
+(match 78.3); the served ranker at weight 0.5 gives 8 of 12 (match 80.1). Sixteen labels cannot separate these.
+
+**Amendment 1 (pre-registered before its held run; the held split had been opened once).** Same ranker, sonic
+pool as served, body ordered on fixed scales: sound / 0.0130 + 2 * logit / 1.056 (`--main-scale 0.0130 1.056`)
+instead of per-seed z-scores, so sound decides where it separates a seed's candidates and the ranker where it
+does not. Held split, 3,775 seeds:
+
+| metric | served | amendment 1 | delta [95 % CI] |
+|---|---|---|---|
+| claimed song in top 10 | 0.0206 | 0.0279 | +0.0073 [+0.0042, +0.0104] |
+| claimed song in top 20 | 0.0279 | 0.0353 | +0.0074 [+0.0044, +0.0108] |
+| claimed song in top 50 | 0.0373 | 0.0436 | +0.0062 [+0.0033, +0.0095] |
+| mean sound match of top 10 | 67.6 | 71.4 | +3.8 [+3.6, +4.0] |
+
+All three rules pass (hit@10 above 0, hit@20 not lower, sound match not lower). Through the built API on the
+owner's labels: 9 of 12 liked songs in the top 10 (served 7 of 12), 1 of 4 disliked songs in the top 10 (served 0;
+Deichkind "Happy New Fear" at #6 for "Heartbeat"), mean sound match of the top 10 over 14 of his seeds 74.7
+(served 69.7); "8PM" stays all UK rap. This is the configuration of the local test build
+(`anysong-lab/v8/start_v8_api.ps1`); not deployed.
+
+**Negative results.** Loudness/harshness veto: MuQ-MuLan already encodes loudness (window-level R2 0.88), and
+the owner's complaint cases have unremarkable gaps. Mean instead of max window pooling: no gain. A fusion
+embedding trained on the claims memorises them and does not transfer to unseen pairs.
+
+## Blended main list (2026-11-17): local experiment, not served
+
+`anysong.blend.Blend` ranks the whole catalog for a seed by
+
+    blend = z(sonic) + wh * z(head) + wc * zcf        (wh = 2, wc = 1)
+
+- sonic: the sonic channel's stage-1 score less the hub penalty, for every row (before the exact re-scoring of the
+  candidates, which moves every other row below them);
+- head: best window-pair cosine between the seed's scene-head vectors and every row's (`h2.v8`; a live seed's
+  vectors come from its own sonic windows);
+- zcf: cosine between playlist co-occurrence vectors (`cf128.npy`, rows in `cooc.npz`), z-scored over the graph
+  songs; 0 for songs outside the graph and for seeds outside it (every live seed);
+- z: over every row of the index for that seed.
+
+In the lab benchmark at 1M songs (`anysong-lab/v8/retr/run_blend.py`) this ranking finds human-named soundalikes
+about 2.5 times as often as the served sonic search.
+
+Serving: `--blend-head <prefix> --blend-cf <dir> [--blend-weights WH WC]` loads it onto the index device, and the
+sonic search then also returns the top rows by blended score, each with its exact sonic score (timing
+`search_blend`). `--main-pool blend` makes them main's body in blended order after main's unchanged audio head:
+language gate, tiers (the sonic `allow` mask), version and re-upload dedupe and one song per artist as for the
+other lists, with or without listener data, and only songs whose sound match is at least `--main-match-floor`
+(default 50; the head is not asked). That main carries `match` (the sound match) and no `overall`; Best
+matches, Same vibe, Sounds like and Listeners also play do not change. Cost at 1,018,838 songs: 30 to 40 ms per
+seed on CUDA (about 0.8 GB more GPU memory), 0.7 to 1.3 s on CPU.
+
+`--main-pool blend` alone loses to the v8 main on 1,187 val seeds (named soundalike in the top 10: 1.4 % against
+2.1 %): the listener ranker carries more than the blended score. `--main-pool sonic+blend` therefore keeps the
+v8 order and widens its pool: the sonic list's songs plus the blended ranking's (same filters and floor), every
+one scored by the listener ranker (a blended-only song has no channel ranks and is no scene candidate; one
+without a probability gets the pool's median logit), ordered as `--main-pool sonic` orders them (z-scores, or
+`--main-scale`) plus `--main-blend-weight B` (default 0) times the song's blended score. `overall` is computed
+as for the sonic pool, without the blended term. Without listener data that main is the sonic one.
+
+## Same-language lists from in-language searches (2026-11-17): local experiment, not served
+
+The same-language gate used to filter each channel's top 200 of the whole catalog after the search. The catalog
+of 1,018,838 songs is 69 % English, so a seed in a small language kept few of those 200: on the world charts of
+31 countries, Russian, Arabic, Hindi and Ukrainian seeds showed 0 to 9 songs a list.
+
+With `--languages` the API now also searches among the seed's language alone. `languages.LanguageRows` holds the
+gate's language of every index row (the song's own label, else its artist's majority language, else unknown:
+`LanguageTable.effective_codes`, the rule `AnySong._item_language` applies to a listed song). For a seed whose
+gate language is known (its own, its artist's, or the main-only guess), `serve.Engine` returns, next to each
+list, the same list among the rows of that language or of unknown language, combined with the tier mask
+(`results["within"]`): melody, samples and sonic from the scores of the search (`top_within`: the best
+`candidates` rows of the mask, the search's exact candidates first and then by stage-1 score; only rows not yet
+scored exactly are read), and the blended ranking from the same blended scores. `lang=same` builds Best matches,
+Same vibe, Sounds like, main (every `--main-pool`, and the guessed-language main) and Listeners also play from
+those lists; the listener ranker scores their songs like the blended-only ones (no channel ranks). A masked list
+holds every song of its unmasked list that passes the mask, so the gate's old lists are subsets of the new
+ones, with one exception: of other artists' versions of the seed's own song still only `MAX_VERSIONS` are kept,
+now the best placed in the language. `query["language_pool"]` is the number of indexed songs the mask passes;
+`timings_ms["search_lang"]` is the added search time. With `--main-pool blend` the match floor still drops
+blended songs, and main then goes on with the in-language sonic list's other songs in its order.
+
+Unchanged: `lang=all`, seeds without a gate language, the channel lists (`melody`, `samples`, `sonic`) and
+`hidden`. Changed for every seed with a gate language, English ones included: each list's candidates are the
+language's best 200 a channel rather than what the gate left of the catalog's 200, so the listener orders
+(z-scores over the candidates) can place songs differently and new songs can enter. No held-out gate has been
+run on this.
+
+Cost measured on CPU only, on a synthetic two-stage sonic index (300,000 songs, 3 windows of 64 dimensions,
+16-dimension projection, 1,000 candidates, lists of 200): `search_lang` 2.5 to 3.3 ms a seed (median; at most
+4.9 ms) for masks passing 1 %, 10 % and 70 % of the rows, next to 9 to 10 ms for the search itself.
+`LanguageRows` for 1,000,000 rows and three channels (synthetic table, 150,000 artists) took 0.43 s and 2 MB.
+Not measured: the real index, CUDA.
+
+## Live seed language from the preview (2026-11-17): local experiment, not served
+
+A song outside the index had a language only when the table knew its artist, so 60 to 80 % of Hindi, Tamil,
+Punjabi, Mandarin and Vietnamese chart songs came back with language "unknown" and no gate. With
+`--language-model <local snapshot of openai/whisper-large-v3-turbo>` (the `--model-dir` the catalog was labelled
+with) the API labels a live seed's preview at request time exactly as the catalog was labelled
+(`languages.LanguageDetector`): `load_excerpt` (first 30 s at 16 kHz), `WhisperLanguageID` (fp16 on CUDA), then
+`decide` with the table's thresholds, top probability at least 0.8 and at least 0.5 above the second language.
+The no-speech probability is not used, as in `LanguageTable.load`. The catalog run set
+`--fp16-accumulation` (1 of 480 decisions differed in its test); the API does not, since the flag is global to
+the process.
+
+Order of a seed's language (`AnySong._seed_language`, named in `query["language_source"]`): its own table
+"label", the "detected" label, its "artist"'s majority, the table's "guess". A detected label passed the rule a
+catalog song's own label passes, and such a label already goes before the artist's majority for catalog seeds;
+a detection under the thresholds is no label, so the artist's majority (there for songs whose own clip does not
+say) decides. Detection runs inside the GPU section before the search, so the in-language lists use it; the
+result is cached with the seed. Songs with a label of their own and stored seeds are never detected; a failed
+detection leaves the seed as without the detector (`/healthz` `language_detector` counts detected, unsure,
+failed). Timings: `decode_language` (the excerpt, CPU) and `language` (the model). Not measured here: accuracy
+on live seeds, latency and GPU memory on CUDA.
+
+## Other-language songs in the audio head (2026-11-17): local experiment, not served
+
+On 2,937 fresh online claims, cross-language claims (a song said to cover, sample or copy a song in another
+language) were almost never shown, because the same-language gate removes the other song before the audio head
+is chosen, and evidence of a shared melody or sample does not depend on language. `--head-all-languages`
+(`AnySong(head_all_languages=True)`, default off) adds those songs to the audio head of main and, with the
+listener ranker, of Best matches when `lang=same` gates the lists (also the guessed-language main).
+
+`AnySong._cross_head`: the audio head of the catalog's ungated lists (the ones `lang=all` shows) is computed with
+the same evidence thresholds and standout rule (`melody_evidence`, `samples_evidence`, `best_head_standout`
+within `best_head_window`), evidence songs only and no bare head; for main also `main_head_standout` /
+`main_head_match`. Its songs that the gate removes are added to the gated head, each with
+`"other_language": true` and its channel ranks in the ungated lists, placed after the last gated head song that
+the ungated head has before it (a gated head song without evidence there comes after them). The gated head's
+own songs, every body (main's, Sounds like, Same vibe, Listeners also play), `hidden`, `lang=all` and seeds
+without a gate language do not change; an added song is in no body, since the gate keeps it out of every
+candidate list. Without the listener ranker Best is the fusion order, which has no separate head, so only main
+changes there. No held-out result yet.
+
+## Whitened sound channel (2026-11-19): local experiment, not served
+
+**Why.** The sonic channel compared raw MuQ-MuLan windows by cosine. About 30 of the 512 principal directions hold
+90 % of the variance, so they decide every cosine. Among 1,109,024 songs a song's window found its own other
+windows first 33 % of the time, and Apple's encode of a song found the Deezer copy first 16 % of the time.
+
+**What.** `index_whiten` derives a whitened channel from a built raw one without re-embedding:
+`y = l2((l2(x) - mean) @ M)`, PCA whitening of all 512 directions, fitted on 300,000 random catalog windows
+(seed 0, float64 on the CPU, so a rerun gives the same transform). The channel directory stores `mu.npy` and
+`whiten.npy`, and `meta.json` says prep `whiten`. `TwoStageIndex.prep_query` applies the transform to live raw
+windows, `index_append` to new tracks. Callers still pass raw windows: scores come from whitened vectors, while
+the scene head and the blend's head term read a live seed's raw windows and a stored seed's head table, as
+before. No hub penalty.
+
+**Stage 1.** Whitening spreads the variance over every direction, so a 128-dimension projection would keep
+about a quarter of it. Stage 1 holds all 512 dimensions as 8-bit integers (1.66 GB on the GPU for 1.1M songs)
+and the best 1,000 are re-scored exactly, as in every other channel.
+
+**Measured on the 1,109,024-song index** (lab `anysong-lab/v8/v11/WHITEN.md`), through `TwoStageIndex`:
+
+| Test | Raw (served, cos - 0.5 hub) | Whitened |
+| --- | --- | --- |
+| A song's window finds its own other windows first (3,000 songs) | 33 % | 63.7 % |
+| Apple's encode finds the Deezer copy first (512 songs, live path) | 16 % | 60.2 % |
+
+- Against brute force for 300 stored queries: every exact top-200 song is in the served top 200, and all 300
+  top-20 lists are identical in order. A search takes 16.6 ms (median, RTX 5080).
+- A hub penalty in the whitened space (0.5 h) put 85 instead of 74 of 6,000 human-named pairs in the top 10 and
+  made their median rank worse (66,043 against 55,708). That is no clear gain, so none is used.
+
+**Not done yet.** The ranker, `MATCH_QUANTILES`, the overall scales, `--main-scale` and Same vibe's sound gate
+were fitted to raw scores and must be refitted before this is served.
+
+## Popularity and custom match quantiles (2026-11-19): plumbing, no result yet
+
+- `--popularity <file.npz>` (`ids` ascending Deezer track ids, `rank` Deezer popularity): `listener.Popularity`.
+  The value used everywhere is `pop = log1p(rank)`, 0 for a song outside the table.
+- **Ranker feature.** `listener.FEATURES_POP = FEATURES_HEAD + ("pop",)`: the candidate's `pop`. The ranker
+  file's own feature list decides which columns `listener.features` builds. A ranker that names `pop` does not
+  start without `--popularity`.
+- **Blend term.** `--blend-weights WH WC [WP]` adds `WP * zpop` to the blended score, with `zpop` the z-score of
+  `pop` over every index row, computed once at load. It reaches the blended ranking, `blendz` and their
+  in-language variants and nothing else. With `WP` 0 or absent the ranking is unchanged bit for bit.
+- **Audio only stays pure sound.** Lists without the listener ranker (`scene=0`, an unknown artist, no ranker)
+  never read the ranker or, with `--main-pool sonic+blend`, the blended ranking: main is the audio head followed
+  by the sonic list in Sounds like's order. `--main-pool blend` shows the blended ranking in those lists too, so
+  it refuses a popularity weight at startup.
+- `--match-quantiles <file.json>` (21 ascending sonic-score quantiles) replaces `MATCH_QUANTILES` for one service
+  (`AnySong.sound_match`): `match`, the match floor and the head's match rule. The constant stays the default.
+- `/healthz` reports `popularity` (songs with a rank above 0) and `match_quantiles` (`custom` or `default`).
+
+## Consensus body of the main list (2026-11-20): served since 2026-11-22
+
+`anysong.consensus.Consensus` replaces the body of main (Best matches) with the songs several views of the seed
+agree on, ordered by a small model. It is the serving side of the v12 study harness (`anysong-lab/v8/v12/pool.py`,
+`fit2.py`) and follows it step by step, dtypes included, because the model's splits sit on those values.
+
+- **Signals.** Five scores of every catalog song against the seed, each on its own scale: `snd`, the best
+  window-pair cosine of the whitened sonic windows (`sonic/full.npy`, unit length again in fp16, multiplied in
+  fp16); `head`, the same between scene-head vectors (the blend's table; a live seed's come from its own
+  windows); `cf`, the cosine of playlist vectors when both songs are in the playlist graph, else no score; `mel`
+  and `smp`, the melody and samples indexes' stage-1 scores less the hub penalty.
+- **Ranks.** A song's rank under a signal is one plus the allowed songs that score higher. Allowed: the songs of
+  the seed's language or of unknown language (every song when the seed has no language or `lang=all` is asked),
+  without the seed's own artist. For this body an artist is the primary credited name (the text before the first
+  comma, lower-cased, stripped), as in the harness. The catalog tiers (`--core-ids`) do not narrow it.
+- **Pool.** The best 150 songs per signal plus the best 1,500 by consensus: the mean over the signals of
+  log10(rank), 6.3 where a signal has no score.
+- **Features** (`consensus.FEATURES`, 46). Per signal: score, z-score over the allowed songs, log10(rank), gap
+  to the best and to the tenth best score. Then how many signals rank the song in their top 10 / 50 / 200 /
+  1,000, the smallest, second smallest and mean log rank, the tempo gap (folded over an octave, and plain), the
+  language flags, the scene columns of the listener ranker (graph, region, genre, affinity, related either way,
+  neighbour) and whether the song and the seed are in the playlist graph. Missing values are NaN. No popularity.
+- **Score.** `body = prediction - L * min(log10(sound rank), 5)`; songs past sound rank `C` are left out; the
+  best song of each artist stays. The prediction is a `HistGradientBoostingRegressor` (0 to 2 rating) exported
+  to tree arrays (`python -m soundalike.anysong.consensus r3.pkl consensus-r3.npz`, `listener.Regressor`), which
+  gives scikit-learn's predictions bit for bit, NaN routing included.
+- **Live seeds.** Sound, melody and samples scores come from the live windows, head vectors from the scene head on
+  the live sonic windows; there is no playlist view (`cf_q` 0, the `cf` columns missing, rank 6.3), the scene
+  columns need an artist the scene table knows, the tempo is the live one.
+
+Serving: `--consensus-model <npz> --consensus-quantiles <json> [--consensus-sound-weight L]
+[--consensus-sound-cap C]` (defaults 0.1 and 5000; needs `--blend-head`, `--blend-cf` and the three built
+indexes). `results.main` is then today's audio head unchanged (evidence rule, `--head-all-languages`) followed by
+the consensus body: no song of the head again, one song per artist across head and body, never the seed's own
+song or artist, the seed song's versions limited as in the lists. Body rows carry `basis` `consensus`, the raw
+score as `consensus`, `match` (the score's percentile on the 21 `--consensus-quantiles`), `overall` (from `match`)
+and `ranks_all` (`sound`, `head`, `playlists`, `melody`, `samples`; 0 = no score). `lang=same` reads the body
+ranked among the seed's language (own label, live detection, artist majority or guess, as main is gated today);
+`lang=all` the body ranked among every song, which reads the seed as one of unknown language, the only case of
+an ungated search the model was fitted on. Every other list is unchanged, and so is main with `scene=0`.
+`/healthz` reports `consensus` (model note, sound weight and cap). Both bodies are computed once per seed and
+cached with its other results (200 songs each).
+
+What is reused and what is not (measured on `index_v11`, 1,109,024 songs, RTX 5080):
+
+- melody and samples: the searches' own stage-1 scores (`serve.Engine.keep_base`), no second pass;
+- sound: the served sonic stage 1 is an 8-bit projection, not the harness's fp16 product of the full windows,
+  so the body computes the harness's. The windows (3.2 GB) do not fit the card next to the engine; they stay in
+  page-locked host memory and cross to the card in blocks for each seed (about 50 ms);
+- head: the blend multiplies in fp32, the harness in fp16 after bringing the table to unit length again, which
+  ties scores and so moves ranks; the body repeats the harness's product on the blend's table (about 50 ms);
+- playlists: the harness brings every vector to unit length, the blend leaves the all-but-zero ones (45,235 of
+  291,810) near zero, so the body keeps its own unit copy (0.15 GB on the card).
+
+Parity with the harness (`anysong-lab/v8/v12/parity.py`, 60 stored seeds: 30 val, 30 world): the top 10 is
+identical for 59 seeds. Sound and head features are identical in every bit that reaches the model (scores, ranks,
+gaps: 0; z-scores within 2e-6). The harness scores 12 seeds at a time and the engine one, and the fp16 stage 1 of
+the samples index (and the fp32 one of melody) rounds differently with the batch shape: samples scores differ by
+up to 2.7e-4, melody by 4e-6, their log ranks by up to 0.005; the one differing top 10 (seed 925110) comes from
+that. Against the harness run one seed at a time those columns are identical and so are all 60 top 10s. What
+remains then is the playlist cosine, equal to 1e-6: 45,220 graph songs have an all-zero vector and tie at exactly
+0, so a song whose cosine is 1e-7 above or below 0 changes its playlist rank by that block (log rank by up to
+1.43); it changed no top 10.
+
+Cost, 20 stored seeds, warm file cache, `k=30`: 0.75 s median (p90 0.81) against 0.56 s (0.59) for the v11
+launcher, of which the body is about 0.19 s (signals 95 ms, the two bodies 2 x 27 ms); 4 live seeds 1.53 s
+against 1.33 s, Deezer download included. GPU memory: 10.7 GB allocated, 11.5 GB peak (v11: 10.5 and 11.1);
+3.2 GB more host memory, page-locked.
+
+## Consensus service on an 8 GB card (2026-11-20): local measurement, the served profile since 2026-11-22
+
+The v12 service (consensus body, previous section) allocates 10.7 GB of VRAM at 1,109,024 songs: three stage-1
+tables (melody 0.8, samples 1.7, sonic 1.7 GB), the blend's head table (1.6), two copies of the playlist vectors
+(0.3), and the models (MuQ-MuLan 1.3, CLEWS 0.8, SampleID 0.8, Whisper 1.5, Beat This! 0.1). The production card
+has 8 GB. Two flags keep tables off the card without changing a number (`docs/ANYSONG.md`, "Deployment"):
+
+- `--host-tables <melody|samples|sonic|head> ...`: those tables stay in the file cache and are read block by block
+  for each request (`serve.HostTable`). Stage 1 and the blend multiply the same stored values in the same blocks,
+  and with the head table in host memory one pass serves the blend's head term and the consensus body's head signal;
+- `--consensus-windows stream`: the consensus body's sonic windows are read from `sonic/full.npy` for each request
+  and brought to unit length on the card, instead of being prepared once into 3.2 GB of page-locked memory.
+
+Cheaper stand-ins were measured first and rejected (`anysong-lab/v8/v12/approx_study.py`, 260 seeds, body top 10
+against the exact one): the served 8-bit sonic stage-1 scores in place of the fp16 product of the windows give
+the same top 10 for 75.8 % of seeds (mean overlap 9.93 of 10); the blend's fp32 head scores in place of the
+fp16 product of the unit table, 80.0 % (9.94); both, 63.5 % (9.88). The model splits on ranks, and scores that
+differ in the fourth decimal move ranks. So the profile stays exact.
+
+Result with `--host-tables samples sonic head --consensus-windows stream`, the process capped at 8 GB
+(`--vram-cap-gb 8`), RTX 5080, in-process service (`anysong-lab/v8/v12/mains.py`):
+
+- **Same lists.** 260 stored seeds (the 60 parity seeds and 200 of the served v12 lists): every list of every
+  seed (`best`, `vibe`, `sounds`, `main`, `listeners`, `melody`, `samples`, `sonic`) and the query block are byte
+  for byte those of the full v12; main's top 20 equals the lists the full v12 served for all 200. Four live seeds:
+  the same main ids (their scores differ in the fourth decimal between any two runs, as live embeddings do).
+- **VRAM.** 5.8 GB allocated after start, 6.0 GB at peak for stored seeds, 6.4 GB with live seeds (embedding,
+  tempo, language detection); with the Stems view (`--stems-model`) 5.9 GB allocated and 7.1 GB at peak during a
+  live dissection. With `melody` in host memory too, 0.8 GB less throughout.
+- **Host memory.** 5.3 GB private (0.4 GB of it page-locked read buffers) against 9.2 GB (3.2 GB page-locked).
+- **Latency.** Stored seeds 0.92 to 1.02 s median over two runs (p90 1.13 to 1.27) against 0.67 s for the full v12
+  in the same harness: each
+  request reads 8.1 GB of tables from the file cache (about 22 GB/s here). On the RTX 2070 SUPER the samples stage
+  1 is documented at 196 ms per million songs against 57 ms here, a factor of 3.4 for the GEMM-bound parts, and
+  PCIe 3.0 with DDR4 moves the tables at roughly a third of the rate here; expect about 2.5 to 3.5 s for a stored
+  seed there (not measured).
+
+## v12: pre-registered checks and deployment (2026-11-22)
+
+**What changed.** "v12" is the consensus body above served as the body of `main` (Best matches in the web app and
+the Spotify extension), on the 1,109,024-song index with the whitened sound channel:
+
+- the audio head (rows with cover or sample evidence) is unchanged;
+- after it come the songs that five catalog-wide signals agree on (whitened sound, scene head, playlist vectors,
+  melody model, samples model), ordered by a gradient-boosted model. It was trained on 49,737 graded labels
+  (0 clunker, 1 related, 2 strong match) for 1,806 seeds, with covers left out of training;
+- popularity is not a feature, the seed's own artist is left out, and there is one song per artist;
+- Listeners also play, the other lists and `scene=0` (Audio only) are unchanged;
+- nothing about a listener is used: every listener gets the same list.
+
+**Rules** (written 2026-11-20, before the engine build existed and before any check was run; each check run once
+through the real API, v12 against v11, the build before it on the same index):
+
+1. *Blind lists, fresh seeds.* 240 seeds never rated or shown to a judge before (100 world-chart seeds across 31
+   scenes, 140 English-heavy claim seeds). Both builds' served top 8, sides shuffled, three judges. Pass: each judge
+   prefers v12 in at least 65 % of decided lists and v12's clunker share is lower for each judge.
+2. *Human claims, sealed set* (never fetched by any build): named song in the top 10, % of directed pairs. Pass:
+   v12 minus v11 at least -0.5 points.
+3. *Any song, any language.* World charts (1,199 songs, 31 scenes): at least 10 results for at least 99 % of
+   songs; share with a known language not below v11's.
+4. *Cost.* Median seconds per catalog song at most twice v11's on the same seeds; no request error in checks 1 to 3.
+
+**Results (2026-11-21)**, engine at 5f5c7eb, 59 of 60 top 10s identical to the study harness:
+
+| Check | v11 | v12 | Verdict |
+| --- | --- | --- | --- |
+| 1. Preferred in decided lists (three judges) | | 84 %, 88 %, 82 % | pass |
+| 1. Clunkers | 7 %, 14 %, 14 % | 2 %, 2 %, 3 % | pass |
+| 1. Strong matches (reported) | 43 %, 25 %, 27 % | 61 %, 37 %, 40 % | |
+| 2. Sealed claims in top 10 (5,041 directed pairs) | 2.38 % | 2.02 % (-0.36 [-0.75, +0.00]) | pass |
+| 3. At least 10 results / language known | 99.92 % / 88.0 % | 99.92 % / 88.0 % | pass |
+| 4. Median seconds per catalog song | 0.53 | 0.50 | pass |
+
+Check 1 on the world-chart seeds alone: 82 %, 81 %, 76 %. Songs outside the catalog took 3.0 s against 1.95 s.
+Reported, not gated: 67.8 % of the top 10 is inside the 200 closest by whitened sound (v11 76.4 %); the median
+Deezer rank of shown songs is 153,399 against 311,976, so v12 shows less famous songs; the top 10 shares 3.0 of 10
+songs with v11's. After the checks, and without changing any order, a row's `match` was set to map the body score
+linearly (0.2 to 0 %, 1.6 to 100 %), so that a list of weak matches reads 40 to 50 % rather than 5 %.
+
+**Deployed (2026-11-22).** 904f9c0 went live on the homelab GPU host with the unit in
+`deploy/homelab/soundalike-anysong.service` (`--host-tables samples sonic head --consensus-windows stream`); the
+container's memory went from 8 to 16 GB. The service was down for 61 s. The deploy gate compared the lists of 14
+songs with those of the tested build: 14 of 14 identical. Median time per song on the RTX 2070 SUPER: 2.72 s,
+inside the 2.5 to 3.5 s expected above.
+
+**Clients.** The web app and the Spotify extension (runtime 2.14.0) describe Best matches accordingly and show two
+tabs, Best matches and Listeners also play. The extension also reads the seed's ISRC from Spotify's metadata
+service again: on current Spotify clients the old lookup failed, every request went out without `isrc`, and songs
+titled in non-Latin scripts resolved to nothing.
+
+**Limits.**
+
+- The judges in check 1 and the labels the model was trained on come from AI models (Claude Opus, Claude Sonnet,
+  GPT; pairwise correlation 0.56 to 0.72) rating from what they know of the songs and artists. They did not listen
+  to the audio. No panel of people rated the lists.
+- Those judges and people's online claims measure different things: pairs that people name online get low ratings
+  from the judges (18 % strong, 33 to 37 % clunker), because the claims are mostly about a shared hook and the
+  judges rate the overall sound.
+- English online claims are found less often than before: 3.36 % to 2.39 % in the top 10 (-0.98 [-1.64, -0.33]),
+  a real loss. Non-English claims: 1.71 % to 1.77 %. Check 2 passed only by its stated margin.
+- The owner's 21 earlier verdicts on catalog songs, top 30 of v12: 1 of 6 liked songs shown, 2 of 15 rejected
+  songs shown.
+- A request takes about 2.7 s at the median on the production card; the 999k index before v12 measured 1.0 s there
+  (2026-11-09). That 2.7 s was measured minutes after the tables had been read into the host's file cache three
+  times; a day later the same build took 3.18 s per new song (median of 40, `timings_ms.total`, 2.9 to 3.6 s), and
+  engine update 1's deploy measured 3.06 s on the 14 gate songs. So the update did not slow production, and old
+  against new source says the same: the v12 source (904f9c0) and the update's (432ce01) on one PC in the
+  production profile, six engine starts each in alternation, 54 new songs per start (medians of the last 40):
+  0.99 to 1.09 s for v12 and 1.04 to 1.21 s for the update, overlapping. The stages on the card are the same
+  (sonic search 91 to 102 ms against 92 to 98 ms, blend 88 to 98 against 89 to 94, consensus 199 to 216 against
+  199 to 214); what moves from start to start, in both directions, is the stages that read the tables from the
+  file cache (samples search 263 to 310 ms against 288 to 360), in code a whole-song request runs unchanged. The
+  one repeatable cost of the update is in building an answer: 36 to 37 ms against 38 to 42 ms for a cached
+  answer, the own-song check folding the names of every listed row (8 ms for 2,000 rows when the seed's names are
+  not plain ASCII). Those keys are now remembered (`api._own_key`): 35 to 37 ms again.
+
+## A part of a song as the seed (2026-11-23)
+
+Code: `--parts` (in the production unit from engine update 1) and `--excerpts` (not served)
+([ANYSONG.md](ANYSONG.md#a-part-of-a-song)). Lab: `anysong-lab/partmatch/` (`REPORT.md`, scripts and raw results),
+index of 1,109,024 songs, v12 homelab profile on the RTX 5080. Quality here means the engine's own measures.
+**Nobody has listened to part lists yet: listening validation is pending**, and the numbers below say that the
+lists change and stay well-formed, not that they are better matches for the part.
+
+- **Sanity of the served form** (engine update 1 in the production profile, 30 catalog seeds in 28 languages, the
+  spans 0-10, 10-20, 20-30, 5-25 and 0-20, 150 answers, `anysong-lab/update1/parity.py parts`): every answer has
+  the eight lists of the whole-preview answer, none shorter; the same seed language, source and language pool; no
+  row outside the seed's language in main, Best, Sounds like, Same vibe or Listeners also play; never the seed's
+  own song; no song by the seed's artist in main's body or in Listeners also play. Main's top 10 shares with the
+  whole-preview list 5.2 (0-10), 6.6 (10-20), 5.8 (20-30), 6.8 (5-25) and 7.7 (0-20) songs on average; single
+  seeds range from 0 to 10, the lowest where one window is unlike the rest of the preview. A part answer took 0.7
+  to 0.9 s at the median on that PC. Whole-preview answers are untouched: main's top 10 and all eight lists' top
+  20 were identical to production's for 40 of 40 catalog seeds with `--parts` on, and peak VRAM under an 8 GB cap
+  with part requests, live seeds and Stems dissections running together was 7.2 GB allocated (7.1 GB before).
+- **Where the preview sits.** 17 Deezer previews aligned against the full recordings (Jamendo tracks that are also
+  on Deezer, raw cross-correlation): 16 begin 47.5 to 48.0 s into the song, one at 59.4 s. Not 0:30 to 1:00, as an
+  old answer on Stack Overflow says.
+- **One 10 s window against the whole preview** (300 seeds: 150 world charts, 150 held claims). Main's top 10 shares
+  5.2 songs with the whole-preview list and 3.2 with another window's; the sound list 4.6 and 1.8. The consensus
+  model's predicted rating of the body rows falls from 1.335 to 1.300, rows that two or more signals rank in their
+  top 200 from 62 % to 59 %. A sound weight of 0.3 instead of 0.1 for parts makes the windows differ more (2.3
+  shared) at a predicted rating of 1.17; dropping the playlist signal gives 1.25. So a part uses the served model
+  and weight, with playlists.
+- **A clip of the listener's audio** (50 catalog previews sent as 24 kHz mono WAV through `/excerpt`, own song not
+  named, no tiers; share of the clean clip's top 10 that a changed clip keeps). The sound model hears level: 6 dB
+  quieter keeps 0.44, 20 dB quieter 0.14; brought back to full scale 0.82 (a clean clip rescaled: 0.87), which is
+  why excerpts are peak-normalised. Re-encoded MP3 128k 0.84, Opus 96k 0.69, AAC 128k 0.56, AAC 64k 0.07. Through
+  a simulated phone microphone 0.3 m from a laptop speaker in a quiet room 0.04: the sound list does not survive a
+  microphone, and band-limiting both sides made it worse (own song best of a 97-song pool 100 % to 62 %). The
+  samples model still finds the recording: own song first for 100 % of file, tab and quiet-microphone clips of 5 to
+  30 s, 98 % at 2 m with noise 10 dB under the music; its score is 0.59 or more for file and tab clips against 0.48
+  at most for any other song (2,806 clips), hence `--identify-score 0.55`.
+- **Clip length.** Own song first in the sound model: 78 % at 5 s, 100 % at 10 s; in the melody model 42 % at 5 s,
+  92 % at 10 s, 100 % from 20 s (its windows are 20 s). Ask for 10 s at least, 20 s for the melody lists.
+- **Cost.** A part of a catalog song: 0.94 s against 1.27 s for the whole preview (medians, fresh seeds). An excerpt:
+  1.2 to 1.3 s without identification and 1.6 s with it (a second pass over the samples table, 0.43 s), against
+  2.3 s for a live Deezer seed; embedding is 0.08 to 0.11 s of that. Peak VRAM 6.2 GB allocated.
+
+## A clip of any part of the song (2026-11-24)
+
+Engine update 2 turns the excerpt endpoint on (`--excerpts`, [ANYSONG.md](ANYSONG.md#a-part-of-a-song)); the
+website's source for a clip is tab audio the listener shares, recorded for 10 to 20 s. Measured on one PC in the
+production profile under an 8 GB VRAM cap, through the real endpoint (`anysong-lab/update2/excerpt_study.py`); 39
+clips, each the middle 15 s of a catalog song's Deezer preview as a client sends it (mono, 24 kHz, 16-bit WAV).
+Nobody has listened to these lists; "rating" is the consensus model's own score of main's first ten body rows.
+
+- **With the song's id** (39 clips): all eight lists every time; the song itself never listed, no song by its
+  artist in main's body; the seed's language in 38 of 39. Main's top 10 shares 6.1 songs with the whole-preview
+  list (a 15 s part is another seed, as for `part=`).
+- **The song's playlist vector in the consensus body, or the clip's audio alone?** With the playlist vector the
+  rating is 1.168, without 1.131 (paired: higher for 26 of 39 clips, +0.037 on average, +0.058 over the 31 seeds
+  that have a playlist vector); 4.4 of the ten rows then carry a playlist rank, and the list shares 6.1 instead of
+  3.1 songs with the whole-preview list. So a clip that comes with its indexed song reads that song's playlist
+  vector (`api.EXCERPT_SEED_PLAYLISTS`), as a part of the preview does.
+- **A clip alone** (no id): the song's own recording is first in the samples and sound lists for 23 of 23
+  core-catalog songs and 0 of 16 songs the crawl added: a clip has no artist, so the catalog tiers leave it the
+  core catalog. Clients send the id; a clip alone is for audio that is in nobody's catalog.
+- **Cost.** 0.87 s at the median with the id and 0.83 s alone on this PC (a whole preview: about 1.0 s); the
+  production card is about three times slower.
+- **VRAM.** Twelve clips, twelve Stems dissections, a live song and part requests in flight together: 6.05 GB
+  allocated at rest, peak 7.21 GB (update 1: 7.24 GB). The clips use the models a live seed already uses.
+- **Not measured:** real tab captures (the report's simulation of a 128 kbit/s source at -12 dB kept 0.55 to 0.66
+  of the sound list once brought to full scale, which the engine does for every clip), clips from outside the
+  preview's 30 s (there the song's own preview is not in the audio, which is the point of the feature), and the
+  production card's timings.

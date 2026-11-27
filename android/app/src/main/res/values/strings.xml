@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Soundalike</string>
+    <string name="find_soundalikes">Find soundalikes</string>
+    <string name="tile_label">Soundalikes</string>
+    <string name="shortcut_search">Search a song</string>
+    <string name="widget_description">One tap to soundalikes for the song that is playing</string>
+    <string name="widget_hint">for the song that\'s playing</string>
+    <string name="channel_playing">While music plays</string>
+    <string name="channel_playing_description">A quiet notification that finds soundalikes for the playing song</string>
+</resources>

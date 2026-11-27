@@ -1,0 +1,99 @@
+{
+ "ok": true,
+ "query": {
+  "id": 630595142,
+  "artist": "Rammstein",
+  "title": "Du hast",
+  "source": "catalog",
+  "artist_id": 464,
+  "language": "de",
+  "language_mode": "same",
+  "hidden": 3,
+  "scene": "on",
+  "language_source": "label",
+  "language_pool": 115543,
+  "bpm": 125
+ },
+ "results": {
+  "main": [
+   {
+    "id": 567060,
+    "score": 0.16667,
+    "artist": "OOMPH!",
+    "title": "Gekreuzigt 2006",
+    "consensus": 1.5333,
+    "match": 95,
+    "ranks_all": {
+     "sound": 2,
+     "head": 1,
+     "playlists": 0,
+     "melody": 22198,
+     "samples": 859
+    },
+    "ranks": {
+     "samples": 119,
+     "sonic": 3
+    },
+    "basis": "consensus",
+    "bpm": 130.4,
+    "overall": 95
+   },
+   {
+    "id": 14944293,
+    "score": 0.14286,
+    "artist": "Eisbrecher",
+    "title": "1000 Flammen",
+    "consensus": 1.4017,
+    "match": 86,
+    "ranks_all": {
+     "sound": 44,
+     "head": 50,
+     "playlists": 0,
+     "melody": 872,
+     "samples": 13
+    },
+    "ranks": {
+     "samples": 14,
+     "sonic": 28
+    },
+    "basis": "consensus",
+    "bpm": 125,
+    "overall": 86
+   },
+   {
+    "id": 4270622242,
+    "score": 0.125,
+    "artist": "Unheilig",
+    "title": "Willkommen",
+    "consensus": 1.3506,
+    "match": 82,
+    "ranks_all": {
+     "sound": 1,
+     "head": 2,
+     "playlists": 0,
+     "melody": 52,
+     "samples": 5
+    },
+    "ranks": {},
+    "basis": "consensus",
+    "bpm": 130.4,
+    "overall": 82
+   }
+  ],
+  "best": [
+   {
+    "id": 1157017202,
+    "score": 0.16667,
+    "artist": "Rammstein",
+    "title": "Laichzeit",
+    "ranks": {
+     "melody": 4,
+     "samples": 2,
+     "sonic": 30
+    },
+    "basis": "audio",
+    "match": 8
+   }
+  ]
+ }
+}

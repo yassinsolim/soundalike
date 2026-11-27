@@ -14,24 +14,34 @@ and embedded live on a GPU; everything else is a lookup.
 Scores are only comparable within one channel and one query; the page shows relative bars, not percentages.
 Everything runs on 30-second Deezer previews, so a relationship outside the preview can be missed.
 
-The page opens on **Best matches**, one list that merges the melody and samples lists by reciprocal-rank fusion:
+The API's **Best matches** list (`best`) merges the melody and samples lists by reciprocal-rank fusion:
 a song scores `sum(1 / (5 + rank))` over the two channels' song lists, and is shown as the release found by the
 channel that ranked it higher. On held-out benchmarks it finds covers as well as the melody tab and samples better
-than the samples tab ([ANYSONG_EVAL.md](ANYSONG_EVAL.md#best-matches)). The channel tabs remain for browsing one
-relation. The same list is the default view in the
+than the samples tab ([ANYSONG_EVAL.md](ANYSONG_EVAL.md#best-matches)). The page and the
 [Spicetify extension](../integrations/spicetify/README.md), which names the song by title and artist instead of a
-Deezer id. Best matches hides confidently detected other-language songs by default (`--languages`, see
+Deezer id, show three tabs: **Best matches** (`main`: likely covers, samples and shared melodies first, then the songs
+that sound most alike), **Listeners also play** (`listeners`) and **Melody match** (`best`, the fused list above with
+its listener picks); all are described with the API below. Best
+matches hides confidently detected other-language songs by default (`--languages`, see
 [Language labels](#language-labels)); a **Show all languages** switch (`lang=all`) restores the unfiltered ranking,
-and the individual melody, samples and sounds tabs are never filtered. A song without a confident label takes its
+and the individual melody, samples and sonic lists are never filtered. A song without a confident label takes its
 artist's majority language, a conservative prior from that artist's indexed songs; songs with neither (often
 instrumentals) remain visible. A live seed outside the catalog uses the same prior; if it cannot establish a
 language, the filter fails open. The filter costs some cross-language matches; the measured trade-offs are in
 [ANYSONG_EVAL.md](ANYSONG_EVAL.md#language-gate-impact).
 
+The seed's own song never appears in a list (`dedupe=1`, the default): any release by the seed's artist whose title
+is the seed's without version tags, also when the names are spelled differently in accents, width forms or a
+leading "The". A seed outside the catalog is named by Deezer today and the catalog's releases as they were when
+indexed, so "Maria También" hides "Maria Tambien (Live at Sydney Opera House)". Another song by the seed's artist
+may still lead Best matches (`main`): its audio head is for likely covers, samples and shared melodies whoever made
+them (Khruangbin's dub version "Mary Always" for "Maria También"); the consensus body after the head and Listeners
+also play hold other artists only.
+
 Other artists' versions of the seed's own song (the same title) are limited in Best matches, Same vibe and Sounds
 like. One that scores 0.55 or more in the samples list reuses the seed's recording (a re-upload, a sped-up edit, the
 same song under another credit) and is dropped. At most three of the rest stay, the best placed first, so covers of
-a standard cannot fill the lists. The channel tabs keep them all.
+a standard cannot fill the lists. The channel lists keep them all.
 
 Best matches also weighs the **artist scene** ([`scene.py`](../src/soundalike/anysong/scene.py)). Audio still decides
 which songs can appear; the scene layer only arranges them. A candidate's affinity to the seed's artist combines the
@@ -65,7 +75,7 @@ way to a learned order whenever the seed's artist is known:
 The selection and results are in
 [ANYSONG_EVAL.md](ANYSONG_EVAL.md#listener-aware-ranking-pre-registered-2026-11-09-before-any-held-out-result).
 
-Next to Best matches, **Same vibe** ([`samevibe.py`](../src/soundalike/anysong/samevibe.py)) lists songs a listener
+**Same vibe** ([`samevibe.py`](../src/soundalike/anysong/samevibe.py)), served as `vibe`, lists songs a listener
 hears as belonging together. It keeps the Best candidates that share the seed's tempo (the same, double or half,
 within 6 %) and its overall sound, fills up from the sounds list, and takes one song per artist. Best stays the list
 for covers, samples and shared melodies, which often cross genres. On 1,000 fresh test artists, Same vibe had fewer
@@ -80,15 +90,22 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
 ```
 
 - The home page, [`webapp/index.html`](../webapp/index.html) with [`webapp/search.js`](../webapp/search.js), is the
-  any-song search: suggestions from `/api/anysong/search`, results from `/api/anysong/similar?id=` in five tabs
-  (Best matches, Same vibe, Same melody, Samples & loops, Sounds like). Share links are `/#id=<deezer id>&tab=<tab>`;
-  older `#s=<title — artist>` links still resolve by name. Previews are resolved through the existing `/api/preview`.
-  Best rows with `basis: "listeners"` are marked **Listeners also play**; the **Audio only** switch next to the
-  language switch asks with `scene=0` and is remembered in `localStorage` (`soundalike:audio-only:v1`).
+  any-song search: suggestions from `/api/anysong/search`, results from `/api/anysong/similar?id=` in the Spotify
+  extension's three tabs. **Best matches** reads `main`; from a server without it, the page shows `best` and marks its
+  rows with `basis: "listeners"` **Listeners also play**. **Listeners also play** reads `listeners`, and **Melody
+  match** reads `best`. Requests carry
+  `policy=main-listeners-v1`, which the API ignores, so HTTP-cached answers from the five-tab page are not reused.
+  Share links are `/#id=<deezer id>&tab=best|listeners|melody`; links to the old tabs (`vibe`, `samples`,
+  `sounds`, `sonic`) and unknown tabs open Best matches, old `tab=melody` links open Melody match, and older
+  `#s=<title — artist>` links still resolve by name. The tab chosen last is kept in `localStorage`
+  (`soundalike:tab:v1`) for the next visit; a link's tab wins for that visit.
+  Previews are resolved through the existing `/api/preview`. The **Audio only** switch next to the language switch
+  asks with `scene=0` and is remembered in `localStorage` (`soundalike:audio-only:v1`). With it on, or for an artist
+  without listener data, there is no `listeners` list, and Listeners also play says why.
 - `/anysong` redirects to `/` (`redirects` in [`site.json`](../webapp/site.json), temporary, query kept).
   [`webapp/anysong/index.html`](../webapp/anysong/index.html) is a stub for servers that ignore `redirects`: it
-  forwards the query and hash to `/`, where old `?id=` and `#id=` links (including `tab=sonic`, now Sounds like) open
-  the same song.
+  forwards the query and hash to `/`, where old `?id=` and `#id=` links (including `tab=sonic`) open the same song
+  on Best matches.
 - [`anysong/api.py`](../src/soundalike/anysong/api.py) serves `GET /api/anysong/search?q=&limit=` (Deezer search
   plus `in_catalog`), `GET /api/anysong/similar?id=&k=&lang=same|all&scene=1|0` and `GET /healthz`. With
   `--languages`, `lang=same` is the default and `lang=all` bypasses the Best-matches-only filter; without it, `lang`
@@ -108,7 +125,7 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   positional `score`, language-filtered like `best`), and `query.bpm` gives the seed's tempo (`null` when unknown).
   `--tempo-model` points to the Beat This! checkpoint that estimates the tempo of seeds outside the catalog; without
   it their tempo is unknown and only the sound gate applies. Whenever the sonic channel is served, `sounds` is the
-  Sounds like list that the main page and Spotify show: the sonic channel's songs, language-filtered like `best`,
+  Sounds like list: the sonic channel's songs, language-filtered like `best`,
   one song per artist (the scene table's Deezer artist, else the artist name), each with its sonic `score` and its
   catalog `bpm` (`null` when unknown or without `--tempo`). With the scene layer on, songs move up by their artist's
   scene affinity, `1 / (5 + rank) * (1 + 8 * affinity)`; with the listener ranker, they follow z(sound score) + 2
@@ -116,7 +133,19 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   Best item that came from the seed artist's neighbourhood rather than a channel list has empty `ranks`, each Best
   item has `basis`: `audio` for the audio head (likely covers, samples and shared melodies) and `listeners` for the
   songs placed after it by the listener blend, and `timings_ms.listener` gives the time the ranker took. Without the
-  ranker (or with `scene=0`) Best items have no `basis`; the list is audio only.
+  ranker (or with `scene=0`) Best items have no `basis`; the list is audio only. Whenever `sounds` is served, so is
+  `main`, the Best matches list the page and Spotify show: the audio head (only songs with cover or sample evidence;
+  `basis` `audio`), then the sonic channel's songs in Sounds like's order (`basis` `sound`), one song per artist, each
+  with `ranks` and a positional `score`. With the ranker and the scene layer on, `listeners` is the Listeners also
+  play list: Best's candidates by artists other than the seed's, ordered by z(listener estimate) + 0.25 z(sound
+  score) (`LISTENERS_SOUND_WEIGHT`), one song per artist, `basis` `listeners`. Without the ranker, with `scene=0` or
+  for an unknown artist there is no `listeners`. Items whose sound score is known carry `match`, the sound match from
+  0 to 100 (`api.sound_match`). [ANYSONG_EVAL.md](ANYSONG_EVAL.md#one-main-list-and-listeners-also-play-pre-registered-2026-11-11-before-any-held-out-result)
+  has the evaluation. With `--consensus-model` (the served configuration since 2026-11-22, "v12") the part of `main`
+  after the audio head is the consensus body instead: other artists' songs ordered by a small model on five
+  catalog-wide signals (`basis` `consensus`, `ranks_all` with each signal's rank, and a `match` that scores the
+  body's ranking rather than the sound); `scene=0` still gives the sound order
+  ([evaluation](ANYSONG_EVAL.md#consensus-body-of-the-main-list-2026-11-20-served-since-2026-11-22)).
 - `/similar?title=&artist=&k=` (used by Spotify, which has no Deezer id, and by old `#s=` home-page links) resolves
   the name first.
   Songs match by song key (primary artist plus title without bracketed, dashed or feat. tags), ignoring accents on
@@ -129,7 +158,36 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   and artist as given and, when that finds no release of the song, for the normalized song key, which finds
   symbol-named artists. The first of 10 hits with a preview, that version and those tags is ranked live. Failing
   that, an indexed release with that version, a hit with that version, the song's best indexed release (untagged
-  first, then lowest id) or else its first search hit stands in, and no release at all is a 404. With `isrc=` (the
+  first, then lowest id) or else its first search hit stands in. When neither the catalog nor those searches know
+  the song under the names as given, it is looked for under another credit or naming
+  ([`anysong/lookup.py`](../src/soundalike/anysong/lookup.py)), on evidence only:
+  - *the title* is the same key in any naming Deezer holds for the track: its default one, the one it gives with
+    `Accept-Language` set to the language of the request's script ("Zankyosanka" is 残響散歌 for `ja`), or a bracketed
+    part in another script ("Gangnam Style (강남스타일)"); Arabic letters written two ways are folded;
+  - *the artist* is the track's credited artist or one name of that credit, or one of its contributors (Deezer's
+    track details: "Ella Baila Sola" is credited to Eslabon Armado first and Peso Pluma second), or the Deezer
+    artist that the artist search finds for the name (周杰倫 is Jay Chou), or spelled almost like the credit ("Pink"
+    for "P!nk", "ACDC" for "AC/DC").
+
+  The steps, each only if the one before found nothing: the hits already returned, the same search in the request
+  script's language, the contributors of the three most popular hits with the title, Deezer's artist search, and,
+  for a title outside the Latin script, the top tracks of those artists in that language. Last, a title one typing
+  slip off (similarity 0.85 or more, at least six characters, the same numbers) counts when the artist evidence is
+  better than a close spelling. Among several, the same title wins, then the better artist evidence, then Deezer's
+  rank. The song found is then the catalog's release of it when there is one (under Deezer's own credit and
+  naming), chosen as above. Anything less is a 404 as before: a known title by an artist who is not on the track
+  is never answered with someone else's song. This costs up to about ten more Deezer requests (1 to 3 s) for a
+  name that would otherwise be a 404, none for a name that is found, and the answers are cached for an hour.
+  Those requests share the one Deezer limiter with every other lookup and the crawl, so each of them is paid from
+  the client's `/search` budget like the first search: a client out of budget gets a 429 part-way (what was read
+  stays cached, so asking again goes on from there), and no client can put more than its 60 requests a minute on
+  Deezer this way. A name that was not found is remembered for 15 minutes (`RESOLVE_MISS_TTL`): asked again it is
+  a 404 without any Deezer request and at no cost to the budget.
+  What Deezer alone cannot settle stays a 404: a title in a script for which Deezer holds no naming (BTS "봄날",
+  filed as "Spring Day" only) or an artist typed in another script than Deezer's without any shared naming
+  ("Kino" for Кино). On 2026-11-23, of 81 real requests in many scripts 45 resolved before and 72 after, none
+  changed, and 10 requests for songs that do not exist stayed 404 (`tests/test_anysong_lookup.py`, on recorded
+  Deezer answers). With `isrc=` (the
   Spotify extension reads the seed's ISRC from Spotify), an indexed release with the requested version answers
   first; then Deezer's ISRC lookup (cached), which also finds tracks that Deezer's search hides in the server's
   country; then the name lookup. `query.id`
@@ -140,8 +198,10 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
   A catalog song is queried with its stored windows (no audio work); an unseen song is downloaded, decoded and run
   through all three encoders, and the result is cached in memory.
 - Rate limits are token buckets per client: `/similar` 20/min (burst 5), `/search` 60/min (burst 15). Cached
-  `/similar` results are free, and a name lookup the catalog cannot answer spends one `/search` request (when that
-  budget is spent, a song with another catalog release uses it instead of failing). Clients are
+  `/similar` results are free, and a name lookup the catalog cannot answer spends one `/search` request, plus one
+  for each further Deezer request when the name is not found as given (when that budget is spent, a song with
+  another catalog release uses it instead of failing). A `POST` gets a 404 unless `--excerpts` is on; its body is
+  not read (up to 2 MiB is skimmed so the client sees the answer; after more the connection closes). Clients are
   keyed by `--client-ip-header` (`CF-Connecting-IP`) with IPv6 grouped per /64; only enable that flag while the
   port is reachable solely through the proxy chain. Excess concurrent live work returns 503 (`--max-pending`),
   which the page retries with backoff.
@@ -149,6 +209,414 @@ browser ── Cloudflare ── tunnel ── CT 408 Caddy :8080 ─┬─ /api
 Errors are `{ok:false, error}` with 400 (bad parameters), 404 (unknown track or song / no preview), 422
 (undecodable preview), 429 (rate limit), 502 (Deezer), 503 (busy) or 504 (timed out waiting for an identical
 request).
+
+## Mobile API
+
+For phone clients (the iOS share extension and Shortcut, the Android share target, the phone page `/find`): give it
+the link a listener shared from Spotify or Apple Music and get soundalikes back with links that open in the same
+app. No login and no key. Both endpoints are public `GET`s with `Access-Control-Allow-Origin: *`, served by the
+website's functions ([`webapp/server/mobile.js`](../webapp/server/mobile.js), routed in
+[`site.json`](../webapp/site.json)); the ranking is the engine's `results.main` above.
+
+### `GET /api/mobile/similar`
+
+Name the song in one of these ways. A client that knows more may send several: `url`, then `spotify_id`, then
+`apple_id` wins. An extra `isrc` is passed to the engine when the link itself has none, and an extra `title` +
+`artist` is used when the link or id cannot be read (Spotify or Apple did not answer, or do not know it). `isrc`
+together with `title` + `artist` uses the name as given and passes the ISRC to the engine.
+
+| Parameter | Value |
+|---|---|
+| `url` | The shared link, or share-sheet text containing it: `https://open.spotify.com/track/<id>` (also `/intl-xx/track/`, any `?si=` query), `spotify:track:<id>`, `https://spotify.link/…` and `https://spotify.app.link/…` short links, `https://music.apple.com/<storefront>/album/<slug>/<albumId>?i=<songId>`, `https://music.apple.com/<storefront>/song/<slug>/<songId>` |
+| `spotify_id` | A 22-character Spotify track id |
+| `apple_id` | An Apple Music song id (pass `storefront` with it) |
+| `isrc` | An ISRC, with or without hyphens |
+| `title` + `artist` | Both, 1 to 300 characters each |
+
+Optional: `platform=spotify\|apple\|both` (default: the platform of the link, otherwise `both`), `k` (1 to 50,
+default 20), `lang=same\|all` (default `same`: Best matches in the seed's language), `list=main\|best\|listeners`
+(default `main`; `best` is the fused melody and samples list the site calls Melody match, `listeners` is Listeners
+also play; a list the answer lacks falls back to `main`, and `engine.list` names the one served; `/find` passes
+`?list=` on), `part=<start>-<end>` (seconds of the song's 30-second preview, at least 10 apart, at most 30: match
+that part instead of the whole preview; see [A part of a song](#a-part-of-a-song)), `storefront` (two-letter Apple
+Music country; default: the link's storefront, then the listener's country, then `us`).
+
+```json
+{
+  "ok": true,
+  "query": {
+    "title": "Du hast", "artist": "Rammstein", "isrc": "DED579704010",
+    "artwork": "https://image-cdn-ak.spotifycdn.com/image/…", "platform": "spotify",
+    "source_url": "https://open.spotify.com/track/5awDvzxWfd53SSrsRZ8pXO",
+    "spotify_id": "5awDvzxWfd53SSrsRZ8pXO", "language": "de", "storefront": "us", "deezer_id": 630595142,
+    "part": null, "parts": { "min_s": 10, "max_s": 30, "preview_s": 30, "song_offset_s": 48.0 }
+  },
+  "results": [
+    {
+      "title": "Gekreuzigt 2006", "artist": "OOMPH!", "match": 95, "deezer_id": 567060,
+      "isrc": "DEC760600298", "artwork": "https://cdn-images.dzcdn.net/…/250x250-000000-80-0-0.jpg",
+      "preview_url": "https://cdnt-preview.dzcdn.net/….mp3?hdnea=…",
+      "spotify_url": "https://open.spotify.com/track/4dpWUmLyYPo4vMk5FTMnMv", "spotify_exact": true,
+      "spotify_kind": "track", "spotify_id": "4dpWUmLyYPo4vMk5FTMnMv",
+      "apple_music_url": "https://music.apple.com/us/search?term=OOMPH!%20Gekreuzigt%202006", "apple_exact": false
+    }
+  ],
+  "engine": { "list": "main", "k": 20, "lang": "same", "source": "catalog",
+              "matched_title": "Du hast", "matched_artist": "Rammstein", "hidden": 0 },
+  "links": { "spotify_exact": 13, "spotify_isrc": 7, "apple_exact": 0, "spotify_lookup": true,
+             "spotify_source": "metadata", "apple_eager_rows": 5 }
+}
+```
+
+- `query`: the shared song. `artist` lists every artist; `isrc` and `artwork` are `null` when unknown; `platform`
+  is the app the result links are meant for; `spotify_id` is the seed's Spotify track (from the link, otherwise
+  looked up like a result's; `null` when unknown or when `platform` is `apple`); `source_url` is the song's own
+  page (`null` for `isrc` and
+  `title`+`artist` seeds); `language` is the engine's label (`unknown` possible); `deezer_id` is the recording the
+  engine ranked from (`engine.matched_title` / `matched_artist` name it, and may be another release of the song).
+  `parts` is `null` from an engine that cannot match a part of the preview; otherwise it gives the shortest and
+  longest part and the preview's length in seconds, and `song_offset_s`, where the preview starts in the song
+  (`null` when unknown). `part` is `{"start", "end"}` when the lists are for a part, and `null` otherwise: also
+  when `part=` was sent to an engine without parts, which answers for the whole preview. A client shows its part
+  control only when `parts` is not `null`.
+- `results`: in rank order. `match` is the sound match from 0 to 100 (`null` when the engine has none). `isrc`,
+  `artwork` and `preview_url` come from Deezer and are `null` when Deezer did not answer in time. `preview_url` is a
+  30-second MP3 whose address **expires about 15 minutes after the answer was built**: play it soon, and on a
+  playback error get a new one from `GET /api/preview?id=<deezer_id>` (from a browser, the website's own origin
+  only) or by asking again.
+- Every result has both links, and both always open something. `spotify_exact` / `apple_exact` are `true` only
+  when the link is the song's own page (`open.spotify.com/track/<id>`, `music.apple.com/…?i=<id>`); `false` means
+  a search link. A client with a better lookup of its own (MusicKit by ISRC, for example) should use it instead of
+  a link marked `false`.
+  - **Spotify**: `spotify_kind` says which of three links `spotify_url` is, and `spotify_id` is the track id or
+    `null`.
+    - `track`: `https://open.spotify.com/track/<spotify_id>`. On a phone with Spotify this opens the song and
+      starts playing it (as does `spotify:track:<spotify_id>`). The id comes from one of two places
+      (`links.spotify_source`): `credentials`, Spotify's own search by ISRC, then by title and artist, when
+      `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` are set on the server (client-credentials flow, no user);
+      otherwise `metadata`, described under [Spotify tracks without credentials](#spotify-tracks-without-credentials).
+      A `metadata` id is matched on artist and title, so it **can be another release of the same song** (the
+      album cut instead of the single, a remaster) than the recording the engine ranked; `isrc` still names that
+      one.
+    - `isrc_search`: `https://open.spotify.com/search/isrc%3A<ISRC>`, a search that lists exactly that recording,
+      used when no track id was found but the ISRC is known. The listener taps once more to play it.
+    - `search`: a search for artist and title, only when Deezer gave no ISRC in time.
+
+    `links.spotify_exact` and `links.spotify_isrc` count the first two kinds.
+  - **Apple Music**: matched through the iTunes Search API, which allows about 20 calls a minute for the whole
+    server. So only the first `links.apple_eager_rows` results (5) are matched up front, and only when `platform`
+    is `apple` or `both`; results matched earlier come from memory for free. The rest carry search links: call
+    `/api/mobile/link` for a result when the listener taps it or it scrolls into view.
+- `engine`: where the list came from (`list` is `main`, or `best` from an engine without it; `hidden` counts
+  songs left out for their language).
+- Caching: `Cache-Control: public, max-age=300` (`private` when the storefront was guessed from the listener's
+  country). The server remembers seeds for a day, engine answers for 10 minutes and link matches for a week, so a
+  repeated request is answered in a few milliseconds. A first request takes the engine's time (about 0.1 s for a
+  cached song to several seconds for a song it has to download) plus at most 2 seconds for the lookups; whatever
+  has not arrived by then is `null` or a search link, never an error.
+- Deezer allows the server 50 lookups in 5 seconds, and a new 20-row answer needs 21. Under a burst of new
+  songs the later answers therefore come back with fewer covers, previews and ISRCs (so plain search links), marked
+  `max-age=20` so that asking again shortly afterwards fills them in. ISRCs and covers seen before are remembered
+  for a week; previews never are.
+
+Errors are `{"ok": false, "error": {"code", "message"}}`; `message` is fit to show to a listener.
+
+| Status | `code` | Meaning |
+|---|---|---|
+| 400 | `missing_seed`, `invalid_parameter` | No song named, or a bad value |
+| 400 | `invalid_link`, `not_a_track`, `unsupported_link` | Not a Spotify or Apple Music link; an album link without a song; a playlist, artist, podcast or a short link that leads elsewhere |
+| 404 | `track_not_found` | Spotify, Apple Music or Deezer does not know the linked song |
+| 404 | `song_not_found` | The engine found no recording of it with a preview, by name or by the fallback below |
+| 429 | `rate_limited` | The engine's per-listener limit; honour `Retry-After` |
+| 502 | `resolver_unavailable`, `engine_unavailable` | Spotify / iTunes / Deezer, or the engine, did not answer |
+| 503 | `engine_busy` | The engine is busy; retry after `Retry-After` seconds |
+
+### `GET /api/mobile/link`
+
+`?deezer_id=<result's deezer_id>&platform=spotify|apple`, optionally `storefront=` (Apple) and the result's
+`title=` and `artist=` (so a link can still be built if Deezer is down). Returns the best link for one result:
+
+```json
+{ "ok": true, "deezer_id": 567060, "platform": "apple", "exact": true, "kind": "track", "storefront": "de",
+  "url": "https://music.apple.com/de/album/gekreuzigt-2006/…?i=…", "retry_after": null }
+```
+
+`kind` is `track`, `isrc_search` (Spotify only) or `search`, as for `spotify_kind` above; `exact` is `true` only
+for `track`. With `platform=spotify` the answer also has `spotify_id` (the track id or `null`), and the server
+tries harder than for a whole list: it checks up to five of the candidates it knows instead of the first, and
+takes the one closest in length to Deezer's recording.
+`exact: false` with `retry_after: null` means the store has no clear match (the search link is the answer; this
+is remembered for a day). `retry_after: <seconds>` means the iTunes budget is spent: `url` is still a usable search
+link, and asking again after that many seconds may return the song's page. Ask for at most a screenful of rows,
+one at a time, and stop at the first `retry_after`. Errors: 400 `invalid_parameter`, 404 `track_not_found`,
+502 `lookup_unavailable`.
+
+### Spotify tracks without credentials
+
+Opening `open.spotify.com/track/<id>` on a phone plays the song at once; an ISRC search needs one more tap, and
+nothing on a phone can turn an ISRC into a track id without Spotify credentials. The website has none (only a
+public PKCE client id), so the server finds track ids like this:
+
+1. **One call per answer** to ListenBrainz Labs, `POST https://labs.api.listenbrainz.org/spotify-id-from-metadata/json`,
+   with every result (and the seed, when it did not come as a Spotify link) as `{artist_name, release_name,
+   track_name}`. It matches names as written, so each song is asked in up to four spellings in that same call:
+   Deezer's full artist credit or the result's artist, with the title as given or without its bracketed and
+   dashed tags. Deezer's album name is passed as `release_name`; in the sample below it changed nothing.
+2. **Each first candidate is checked** on Spotify's public page `open.spotify.com/embed/track/<id>`: the title must
+   be the same song and the same kind of version (live, remix, acoustic, ...), and the track must be playable.
+   Artist names are not compared, because Spotify romanises them (Кино is "Kino" there). An answer waits 0.3 s
+   for these checks; a candidate not yet checked is served as it is, the answer is marked `max-age=20`, and the
+   check finishes for the next answer.
+3. Candidates, misses and checked picks are remembered like the other link matches (a week for a hit, a day for a
+   miss), so a repeated answer asks nobody. On 429 or a 5xx, ListenBrainz (or Spotify's embed pages) is left alone
+   for `Retry-After`, else a minute, and rows fall back to ISRC search links. Embed checks are capped at 40 per
+   10 seconds.
+
+Measured on 2026-11-23 with the production engine's top 20 for 12 seeds in 12 languages (240 results):
+
+| | Results with a track id |
+|---|---|
+| All 240 | 157 served on a first request (65%), 152 after the checks (63%) |
+| By seed language | ko 16, ja 16, es 16, fr 15, de 14, tr 14, en 12, ru 12, hi 12, it 11, ar 9, pt 5 (of 20, after checks) |
+| The result's own artist and title only | 123 (51%); Deezer's full credit adds the rest |
+
+- **Right song:** all 154 ids of an earlier run of the same lists were compared with Spotify's page: 154 the same
+  title, 147 the same artist text and the other 7 the same artist romanised or respelled; no wrong song. Two were
+  another version (a studio cut for a live recording and the reverse), which the version rule now drops, and 3
+  differed from Deezer's length by more than 5 seconds (another release). The checks also drop about 2% that
+  Spotify marks unplayable, and a few right songs whose titles are written differently (`Ijazat From "One Night
+  Stand"`); those keep their ISRC search link.
+- **Time:** a first answer took a median 1.5 s after the engine (maximum 1.7 s), against 0.3 s before: 0.7 s is the
+  ListenBrainz call, which can only start once Deezer has named the artists, and 0.3 s the wait for the checks. A
+  repeated answer took 0 ms (maximum 0.3 s while checks were still running).
+- **Not used:** MusicBrainz `GET /ws/2/isrc/<ISRC>?inc=url-rels`. Of 30 results ListenBrainz missed, it knew 8
+  ISRCs and had a Spotify link for 1, at one request a second and with 503s at that pace.
+
+ListenBrainz Labs is an experimental service without a stated limit or guarantee, and Spotify's embed page is
+not a documented API; when either fails the links are what they were before, never an error.
+
+### Where the song's identity comes from
+
+- **Spotify link**: the public embed page `open.spotify.com/embed/track/<id>` gives title, artists, duration and
+  cover, but no ISRC (oEmbed gives only the title). With the Spotify credentials above, the ISRC is read from the
+  Web API and passed to the engine. Short links are expanded by following redirects on Spotify's short-link hosts
+  only.
+- **Apple Music link**: the iTunes Lookup API gives title, artist, duration and artwork; it never has an ISRC.
+- In both cases `query.isrc` is then filled from Deezer's entry for the recording the engine matched, and every
+  result's ISRC from Deezer's track API (50 requests per 5 seconds; the server stays under it and returns `null`
+  rather than wait).
+- **A shared link the engine does not find by name.** Spotify and Apple Music name a song as its market does;
+  Deezer may hold another title or artist spelling (Jay Chou's 晴天 is "Sunny Day" there; Кино is "Kino" on Spotify).
+  Only after the engine's 404 for the names, and only for links (they have a length), the server looks for the
+  recording itself:
+  1. the artist's name in the title's script, from Spotify's embed page asked in that script's language (`ru` for
+     Cyrillic, `zh-TW` and `ja` for Han, `ar`, `ko`, ...);
+  2. on Deezer, the first two artists its artist search gives for each name (it knows other spellings: 周杰倫 finds
+     Jay Chou), their top 100 tracks in Deezer's default naming and in that language, and a title search;
+  3. a track is accepted only when its length is within 2 seconds of the link's **and** its title in one of those
+     namings is the link's title (same kind of version), or, for Apple Music links, it is the one recording of
+     that length on the album the link names. Of several releases of the song, the recording (ISRC) most of them
+     are wins, then the most played. The length alone is never enough, even for the only track that has it
+     (three of Jay Chou's 63 tracks are within 2 seconds of 晴天). The engine is then asked with `id=`;
+  4. failing that, the engine is asked once more by name with the artist from step 1; this is a match by name, as
+     on the normal path, and may be another release (Spotify's 5:46 Кукушка answered from Deezer's 6:41 one).
+
+  What worked is remembered for the link for 30 days (a miss for a day), so later requests go straight to it.
+  Measured on 2026-11-23: 晴天 (Spotify and Apple Music links) → Deezer 2602471112 "Sunny Day"; Земфира's ХОЧЕШЬ? →
+  1520555492; Кино's Группа крови and Кукушка by step 4. The lookups took 1.1 to 1.3 s (9 to 14 requests, 13 to
+  Deezer at most) on top of the engine's two calls; songs found by name (アイドル, Wegz's البخت, Despacito, bad guy)
+  made no extra request. A title that Deezer holds only in translation in every language asked stays a 404, and
+  so do typed `title`+`artist` seeds. No credential-free way from a Spotify track id to an ISRC was found:
+  ListenBrainz Labs maps names or MusicBrainz ids to Spotify ids, not back; MusicBrainz knows no URL for this
+  track and lists its recording without an ISRC.
+- The engine is reached at `SOUNDALIKE_ENGINE_URL` (default `https://soundalike.yassin.app/api/anysong`). Through
+  the public address every phone request shares the web host's engine rate limit (cached answers are free). When
+  the variable is a plain `http://` LAN address, the listener's `CF-Connecting-IP` is forwarded so the engine's
+  per-listener limit applies; the engine host's firewall must admit the web host for that.
+
+### The phone page
+
+`/find?url=<shared link>` ([`webapp/find/index.html`](../webapp/find/index.html)) is the same thing as a page: it
+accepts every `/api/mobile/similar` parameter (and `text=` for share-sheet text), or a link pasted into its box,
+and lists the seed and its soundalikes with cover, match and a preview button. Tapping a row opens the song in
+Spotify or Apple Music, by default the app the link came from, with a switch for the other. Rows navigate in the
+same tab, without `target="_blank"`, so the phone's app links hand over to the installed app from an in-app
+browser as well; coming back shows the saved list without a new request. Under the seed it has
+[Match a part](#match-a-part-in-the-clients), and `part=<start>-<end>` in the page's address opens a part. For
+local work, `node webapp/tools/mobile-dev-server.js` serves the home page, this page and their endpoints against
+the engine named by `SOUNDALIKE_ENGINE_URL`.
+
+So that a `/find` link opens the installed app instead of the page, the site serves
+`/.well-known/apple-app-site-association` (iPhone app `FJH4UWVC4K.app.yassin.soundalike`, paths `/find*`) and
+`/.well-known/assetlinks.json` (Android package `app.yassin.soundalike` with its release key's SHA-256). Both are
+plain JSON files in [`webapp/well-known/`](../webapp/well-known), reached through `rewrites` in `site.json` so they
+are served as `application/json` without a redirect, which both platforms require. A new signing key or app id
+means editing those files.
+
+## A part of a song
+
+A listener can say which part of a song the matches should follow. Measurements: `anysong-lab/partmatch/REPORT.md`
+(2026-11-23) and [ANYSONG_EVAL.md](ANYSONG_EVAL.md#a-part-of-a-song-as-the-seed-2026-11-23); local demo page:
+[`demo/part-match/`](../demo/part-match) (`python demo/part-match/serve.py`, not deployed). Served: a part of the
+preview (`--parts`) and, from engine update 2, a clip of the listener's own audio, which reaches any part of a
+song (`--excerpts`; needs `--parts`). Not served: naming a clip's song from the samples index
+(`--identify-score`, which refuses to start without `--excerpts`); clients send the song's id instead.
+`tests/test_anysong_api.py` checks the unit file for exactly this.
+
+**`--parts`: a part of the preview.** `GET /api/anysong/similar?...&part=<start>-<end>` takes seconds of the song's
+30 s preview, decimals allowed, `0 <= start < end <= 30` and at least 10 apart (the sound model's window); every
+other parameter (`id` or `title` + `artist` or `isrc`, `k`, `lang`, `scene`, `dedupe`) works as without it.
+
+| Request | Answer |
+|---|---|
+| `part=10-20` | 200, the lists of `similar` for that span |
+| `part=` that is malformed, outside 0 to 30, or shorter than 10 s | 400, before the song is looked up |
+| `part=` on an engine without `--parts` | 404 `choosing a part of the preview is not enabled`, before any lookup |
+
+The seed is then only the windows of that span (`audio.part_windows`): the 10 s sound windows (and their scene-head
+vectors) and the 6 s samples chunks it covers by 70 % or more, and the 20 s melody shingle around it, so a 10 s part
+still hears 5 s either side in the melody model. A catalog song uses its stored windows (no download, no
+embedding); a song outside the catalog is downloaded and embedded as before and cut to the span. Playlist vectors,
+tempo, language (and so the language gate) and the artist's scene stay the song's own, the seed's own song and the
+other lists' rules are as for the whole preview, and every list is returned. Stems (`/dissect`) do not take a
+part.
+
+- **Detection.** `/healthz` has `parts: true` (and `excerpts: false`), and every `similar` answer of such an engine
+  carries `query.parts`: `{"min_s": 10.0, "max_s": 30.0, "preview_s": 30.0, "song_offset_s": 48.0}`.
+  `song_offset_s` is where the preview starts in the song, `null` when the engine does not know the song's length
+  or the song is shorter than 90 s. The length is always known for a song outside the catalog (its Deezer track
+  object). For a catalog song, which is ranked without asking Deezer, it comes from the catalog's length table
+  (`--durations`, [Song lengths](#song-lengths)) or from any Deezer track object a search or lookup has brought
+  in since the service started; no request is made for it. 16 of 17 previews measured against full recordings
+  begin 47.5 to 48.0 s into the song and one at 59.4 s, so clients should word it as the usual place; a client
+  that knows the song's length itself may assume 48 s for songs of 90 s or more.
+- **Echo.** An answer for a span carries `query.part`: `{"start": 10.0, "end": 20.0, "heard": {"sonic": [10.0,
+  20.0], "samples": [9.19, 21.44], "melody": [5.0, 25.0]}}`, the span asked for and the seconds of the preview each
+  model heard. Without `part=` there is no `query.part`.
+- **Cache and rate limit.** Results are cached per window choice, apart from the whole preview's: spans that pick
+  the same windows share one result (each answer echoes its own span), and a span that picks every window (such as
+  `0-30`) is the whole-preview result, never the other way round. A span whose windows were not ranked yet costs
+  one `/similar` request of the client's budget, like any new ranking; cached ones are free.
+- Parts add no model and no table: measured under an 8 GB cap with part requests, a live seed and a Stems
+  dissection, see [ANYSONG_EVAL.md](ANYSONG_EVAL.md#a-part-of-a-song-as-the-seed-2026-11-23).
+
+**`--excerpts`: a clip of the listener's own audio.** `POST /api/anysong/excerpt` takes one clip of 10 to 30 s as
+the request body, with a `Content-Length`, and the query parameters `k`, `dedupe`, `lang`, `scene` of `similar`.
+The answer has the shape of `similar` with `query.source` `excerpt`, `query.seconds` and `Cache-Control: no-store`.
+
+- **The song the clip is from.** `id=<deezer id>` names it (404 `unknown track` if neither the catalog nor Deezer
+  has it); `isrc=` or `title=` + `artist=` name it as for `similar` (a name that nothing knows is not an error: the
+  clip is then ranked alone; a spent search budget or a Deezer failure is returned as 429 or 502, never hidden by
+  ranking alone). The song keeps the seed's identity: it and its other releases are left out of the
+  lists, its language gates them, its artist gives the scene, the catalog tiers and Listeners also play, and an
+  indexed song's playlist vector goes into the consensus body (`api.EXCERPT_SEED_PLAYLISTS`, chosen by the model's
+  own rating: [ANYSONG_EVAL.md](ANYSONG_EVAL.md#a-clip-of-any-part-of-the-song-2026-11-24)). Every audio signal
+  (sound, scene head, melody, samples, tempo) is the clip's.
+- **A clip alone** has no artist: with the catalog tiers it is ranked against the core catalog only, its language
+  is detected from the clip, and there is no `listeners` list. Its own song comes first when that song is a core
+  song.
+- **Detection.** `query.parts.excerpt` on every `similar` and `excerpt` answer:
+  `{"min_s": 10.0, "max_s": 30.0, "max_bytes": 6291456}`; `/healthz` has `excerpts: true` and `excerpt` (limits,
+  formats, refusals by status).
+- **What is checked, in this order, before the body is read:** the route is on (404, body unread), a
+  `Content-Length` and no chunked encoding (411), at most `--excerpt-max-mb` (413; 6 MB in production), the
+  parameters (400), the client's own excerpt budget (429 with `Retry-After`; `--excerpt-per-min`, 6 a minute and a
+  burst of 2 in production), and that no other clip is being read or ranked (503 with `Retry-After: 2`: one clip at
+  a time, never queued). The body is then read against a 20 s deadline (408, connection closed).
+- **What decodes.** The container is told by its first bytes, not by `Content-Type`. Production takes WAV only
+  (`--excerpt-formats`, default `wav`): `audio.decode_wav` reads PCM of 8 to 32 bits and IEEE float with numpy, in
+  this process, with no decoder library and no other program, never trusting a chunk size beyond the bytes that
+  arrived. `flac`, `ogg` and `mp3` can be allowed and then go to libsndfile (a C library) with the header checked
+  first and at most 31 s decoded. Anything else is 415; a clip that cannot be decoded, is outside 10 to 30 s, has
+  more than 2 channels or a rate outside 8 to 96 kHz, or is silent is 422. Nothing runs ffmpeg.
+- **What is kept: nothing.** No file, no cache entry, no learn-queue line, no catalog row. The access log has the
+  path and the status of an excerpt request, not its query string, so not the song's names either.
+- **Bounds.** One clip in memory at a time (6 MB and its decoded 30 s). The engine is waited for at most 20 s per
+  step (503); the models are the ones a live seed already uses, so nothing is loaded
+  ([VRAM under an 8 GB cap](ANYSONG_EVAL.md#a-clip-of-any-part-of-the-song-2026-11-24)).
+- The clip is brought to full scale before it is embedded, because the sound model hears level. A CORS preflight
+  (`OPTIONS`) answers 204 for `--cors-origin` with `POST` and `Content-Type` allowed.
+- **The public path.** `https://soundalike.yassin.app/api/anysong/*` reaches the engine through Cloudflare and
+  the web container's Caddy; that rule is not in this repository (`webapp/site.json` has no `/api/anysong`
+  rewrite). Measured on 2026-11-24: a `POST` with a body of 1 KB to 13 MB and an `OPTIONS` reach the engine.
+
+With `--identify-score S` a clip without a name is first looked up in the whole samples index, and a best match
+scoring at least `S` (0.55: the same recording) stands in for the name and is reported as `query.identified`; not
+set in production. `--part-sound-weight` sets the consensus body's sound weight for part and excerpt seeds
+(default: the body's own; not set in production).
+
+### Match a part in the clients
+
+The clients show a **Match a part** control (marked beta) only when the `similar` answer on screen has
+`query.parts`, so it costs no request of its own and nothing changes with an engine without `--parts`. They keep
+spans on a 5-second grid, 10, 15 or 20 seconds long. An answer to `part=` without `query.part` is for the whole
+preview (an older engine ignores the parameter), so the client drops the part; an engine that refuses the
+parameter (400 or 404) is asked once more without it.
+
+- **Website** ([`webapp/search.js`](../webapp/search.js)): "Match a part" follows the seed's preview button. It
+  opens a timeline of the preview (its waveform, read from Deezer's CDN with WebAudio, or a plain bar) with a span
+  to drag, resize by its edges or by the length buttons, and move with the arrow keys (Shift changes the length).
+  Times are song times when the place of the preview is known (`song_offset_s`, or the usual 0:48 for a song the
+  search listed as 90 seconds or longer), else preview times. "Play this part" plays just the span, and Apply
+  reloads the lists. A chip ("Matching 0:58–1:13 of the song · whole preview") leads back. The part is in the
+  share link (`#id=<id>&tab=<tab>&part=<start>-<end>`, also as `/?id=…&part=…`) and in the request, so each part
+  has its own cached answer. A newly picked song always starts from its whole preview.
+  - **Any part of the song (website only).** The preview is all Soundalike holds, so any other part has to come
+    from audio the listener is playing or has. When the answer on screen also has `query.parts.excerpt`
+    (`{min_s, max_s, max_bytes}`: an engine with `--excerpts`), the panel gets a row of sources after "The
+    30-second preview":
+    - **Any part, from YouTube or another tab** (experimental; Chromium browsers on a computer). The listener
+      opens the song in another tab at the part they want (a YouTube link and a time can be pasted and are opened
+      as `youtube.com/watch?v=…&t=…s`; with a seed there is also a YouTube search link), presses Capture and
+      picks that tab in the browser's own dialog with "Also share tab audio" on. The page takes the tab's sound
+      with `getDisplayMedia` (voice processing off, the picture's track stopped at once, plain samples through the
+      worklet [`webapp/clip-tap.js`](../webapp/clip-tap.js)) for 10, 20 or 30 seconds, and stops every track when
+      it is done, cancelled, or the share has no sound. Soundalike asks YouTube for nothing: no server-side fetch,
+      no player embed. It hears only what was captured, so there is no slider over the whole video, and the panel
+      says that sharing a tab does not make copying allowed. Checked on 2026-11-23 in Chrome 156 with a CC BY
+      video on YouTube and the page served with production's response headers (`Permissions-Policy` blocks the
+      microphone, not tab sharing): three 20-second captures shared 8, 9 and 6 of their Best matches top 10 with
+      the same seconds of the artist's own file.
+    - **A file of the song** (chosen or dropped; decoded in the page with WebAudio, never uploaded).
+
+    Either gives a timeline of the whole capture or file with the same span (10, 15 or 20 seconds, moved by the
+    second) and "Play this part". Apply renders only the span to one channel at 24 kHz, brings it to full scale
+    (the sound model hears level), and sends it as a 16-bit WAV (0.5 to 1 MB) with
+    `POST /api/anysong/excerpt?id=<seed>`: the clip replaces the preview as the audio, while the song, its artist,
+    language and links stay the seed's. The chip reads "Matching your clip (0:00–0:20 of your capture) · whole
+    preview"; the language and Audio only switches send the same clip again. A clip is never in a link (the
+    address stays the song's) and nothing of it is kept, by the page beyond the open result or by the server.
+    Without a seed, "Match any part of a song, from YouTube or a file" under the search bar (shown once an answer
+    has advertised clips; the advert is remembered in `localStorage`) matches the clip by sound alone: no
+    Listeners also play, no share link, and a clip the server names as a catalog song takes that song as its
+    seed. Firefox and Safari share no tab audio, so they get the file source only; a browser without WebAudio
+    gets neither.
+- **Spotify extension** (runtime 2.16.0): the same control in the page's header, drawn with the theme's colours.
+  The page plays no previews, so "Play this part" plays the song in Spotify from about where the part starts and
+  pauses when it is over. Saved lists are kept per part (`…:part:<start>-<end>` in the cache id), and nothing is
+  remembered from one search to the next.
+- **Phones**: `/api/mobile/similar` takes `part=` and reports `query.part` and `query.parts`
+  ([Mobile API](#mobile-api)).
+  - **`/find` page** ([`webapp/find/index.html`](../webapp/find/index.html)): it has the control in its own inline
+    script, because its Content-Security-Policy admits no script file: "Match a part" under the seed opens a plain
+    bar of the preview (no waveform, so nothing is fetched) with a span to drag by finger, move with the arrow
+    keys, or place by tapping the bar, and 10 s, 15 s and 20 s buttons for its length. "Play this part" plays the
+    span from the seed's preview (`/api/preview`), Apply reloads the list, and a chip ("Matching 0:58–1:13 of the
+    song · whole preview") leads back. Times are song times only when the answer has `song_offset_s`; the page
+    does not know the song's length, so it never assumes 0:48. The part is in the page's address
+    (`/find?url=…&part=<start>-<end>`), so a shared link and the Back button keep it; a part that is not one
+    (shorter than 10 s, past 30 s) is ignored and taken out of the address, and a newly pasted link starts from
+    its whole preview.
+  - **Android app** (2.1.0, [`android/`](../android/README.md#match-a-part)): "Match a part" sits under the song in
+    the results sheet and in the app. It opens a bar of the preview with the part on it: drag the part, drag an
+    edge, tap elsewhere, or use the −5 s / +5 s and 10 / 15 / 20 s buttons. "Play this part" plays the span from the
+    preview and Apply reloads the list; a chip ("Matching 0:58–1:08 of the song", then "Whole preview") leads back.
+    Song times are used when the server gives the preview's place or the song is known to be 90 s or longer. The
+    part stays while the player moves on to other songs and ends when another song's list is loaded.
+  - The iPhone app has no control yet.
+- **Which lists follow.** Best matches, Listeners also play and Melody match are read from the one answer, so all
+  three follow the part; Listeners also play still starts from the whole song's listeners. The extension's Sounds
+  like list (local companion or the older hosted library) always uses the whole song.
 
 ## Growing the catalog
 
@@ -282,6 +750,25 @@ runs a channel's stage 1 as an fp16 GEMM against the query projection scaled to 
 made the 4-bit samples stage 1 23 % faster (196 against 256 ms per million tracks) but the 8-bit melody and sound
 stages 6 % and 14 % slower, so the service enables it for samples only. Candidates are still re-scored exactly.
 
+**Adding a few songs to a built index.** `index_build` fits the samples mean and every stage-1 basis on the rows it
+is given, so a rebuild changes all stored rows a little and needs every old shard.
+[`index_append`](../src/soundalike/anysong/index_append.py) instead copies an index and appends new tracks prepared
+with its `mu.npy` and `basis.npy` and the same quantizer, so scores between old tracks stay bit-identical:
+
+```sh
+python -m soundalike.anysong.previews --ids new_ids.txt --out previews --save-meta tracks.jsonl --adaptive
+python -m soundalike.anysong.embed_run --model muq_mulan --ids new_ids.txt --previews previews --out emb_new
+python -m soundalike.anysong.index_append --base index_1m --emb emb_new --ids new_ids.txt --out index_new
+python -m soundalike.anysong.hub_build --index index_new --meta catalog_meta.npz
+```
+
+`previews --save-meta` keeps each track's Deezer metadata (title, artist, ISRC, rank, duration) from the request
+that signs its preview link, and `--adaptive` paces downloads like the crawl. `embed_run` and `languages` take
+`--device cpu` when the GPU is busy (per song on 12 threads: CLEWS 0.4 s, SampleID 1.3 s, MuQ-MuLan 3.7 s, Whisper
+5.4 s; the vectors match the GPU's to cosine 0.99998). `hub.npy` is not copied, because new songs change their
+neighbours' hub scores; rerun `hub_build`. Songs that should reach every seed, such as well-known songs the crawl
+missed, also go into `core_ids.npy`. Refit with `index_build` once additions stop being small against the catalog.
+
 ## Language labels
 
 `python -m soundalike.anysong.languages` labels cached catalog previews with the pinned Whisper large-v3-turbo
@@ -305,9 +792,10 @@ python -m soundalike.anysong.languages `
 
 Catalog seeds use their own label. A live seed outside the catalog uses a conservative artist-majority prior
 (≥2 confidently labelled recordings and ≥80% agreement); if no prior is available, the filter fails open. Listed
-songs without a confident label take the same prior, and stay when it is unknown. The lists users see (Best
-matches, Same vibe, Sounds like) are filtered; the three channel lists are unchanged. `lang=all` returns the same
-unfiltered Best ranking and still reports the other-language count in `query.hidden`.
+songs without a confident label take the same prior, and stay when it is unknown. The ranked lists (Best matches,
+Same vibe, Sounds like, and `main` and `listeners`, which the page and the Spotify extension show) are filtered; the
+three channel lists are unchanged. `lang=all` returns the same unfiltered Best ranking and still reports the
+other-language count in `query.hidden`.
 
 ## Scene table
 
@@ -351,6 +839,23 @@ python -m soundalike.anysong.tempo --ids index_full/samples/ids.npy --previews p
 The full catalog took 0.7 GPU-hours on the RTX 5080; 266,945 of 269,278 tracks have a tempo. The API runs the same
 model on the previews of seeds outside the catalog (`--tempo-model`).
 
+## Song lengths
+
+`durations.npz` (`ids` sorted, `seconds` as uint16; 10 bytes a song) holds the length Deezer gave for the catalog's
+songs when they were collected. The API reads it with `--durations` only to say where a preview sits in its song
+(`query.parts.song_offset_s`); nothing is ranked with it. [`anysong.durations`](../src/soundalike/anysong/durations.py)
+builds it from the track files the catalog was collected with, without any request:
+
+```sh
+python -m soundalike.anysong.durations --ids index/sonic/ids.npy --out index/durations.npz \
+  --tracks crawl/export/deezer_tracks.jsonl previews/tracks.jsonl
+```
+
+`--tracks` are JSON-lines files with a Deezer track per line (`track_id` or `id`, and `duration` in seconds): what
+`crawl export` and `previews --save-meta` write; earlier files win. A song the files do not have stays without a
+length, and its answers say `song_offset_s: null` until a search returns it. `/healthz` reports
+`durations.songs`, and `index_check` the number of indexed songs with a length (`with_length`).
+
 ## Listener ranker
 
 `ranker.npz` holds the listener model as plain arrays: 100 trees of depth at most 6, about 120 KB. Serving
@@ -378,20 +883,54 @@ for Same vibe (`--tempo`, `--tempo-model`; about 160 MiB of VRAM, and 30 ms of G
 symlink swap therefore switches the index and its tables together. Grown indexes live on
 `/opt/soundalike/index-store`, a 96 GB NVMe volume (`mp1`, `backup=0`). The nightly vzdump to the bulk HDD skips it,
 because each index is about 40 GB and can be rebuilt from its embeddings. The first full index stays at
-`index/full-20261101` on the root disk, with its own `core_ids.npy`, as the rollback. Since 2026-11-09,
-`index/current` → `index-store/grown-20261109`: 999,293 songs, the 269,278 core songs plus 730,015 crawled ones,
-served with the catalog tiers and samples' stage 1 in fp16 (`--half-stage1 samples`). The previous grown index,
-`index-store/grown-20261108` (889,277 songs), stays as the rollback. The service is
+`index/full-20261101` on the root disk, with its own `core_ids.npy`, as the rollback. From 2026-11-09 to
+2026-11-22 `index/current` was `index-store/grown-20261109`: 999,293 songs, the 269,278 core songs plus 730,015
+crawled ones, served with the catalog tiers and samples' stage 1 in fp16 (`--half-stage1 samples`). Since
+2026-11-22 (v12) `index/current` is the 1,109,024-song index with the whitened sonic channel and the v12 tables
+listed below. The service is
 [`deploy/homelab/soundalike-anysong.service`](../deploy/homelab/soundalike-anysong.service) (user `anysong`,
-`MemoryMax=6G`, enabled at boot; startup loads and warms the models and index). The process itself uses about
-1.5 GB of RAM; the rest of the cap is page cache for the memory-mapped windows, which the kernel trims.
+`MemoryMax=14G` since v12, 6G before; enabled at boot; startup loads and warms the models and index). Before v12
+the process itself used about 4 GB of RAM; the rest of the cap is page cache for the memory-mapped windows, which
+the kernel trims.
+
+**v12 (consensus body) on the 8 GB card.** At 1,109,024 songs the tables of the v12 service take 6.2 GB of VRAM and
+its models 4.4 GB, so they cannot all live on the card. The unit therefore runs the service with
+
+- `--host-tables samples sonic head`: the samples and sonic stage-1 projections and the blend's head table stay in
+  host memory, in the file cache, and are read block by block for each request (`serve.HostTable`: reader threads
+  fill small page-locked buffers ahead of the GPU). The numbers are the stored ones, so every list is byte for byte
+  what the tables on the card give. `melody` can be added for 0.8 GB more room on the card;
+- `--consensus-windows stream`: the consensus body's sonic windows (`sonic/full.npy`) are read the same way instead
+  of being held page-locked (3.2 GB of host memory).
+
+Measured on the RTX 5080 with the process capped at 8 GB (`--vram-cap-gb 8`), Stems view on: 5.9 GB allocated,
+7.1 GB at peak (a live dissection; 6.4 GB for live seeds), against 10.7 and 11.5 GB without the flags; the process
+holds about 5.3 GB of host memory (0.4 GB of it page-locked buffers). Every request reads 8.1 GB from the file
+cache (`samples/proj.npy`, `sonic/proj.npy`, `sonic/full.npy`, `heads/h4.emb.npy`), so the container needs room
+to keep those cached: 16 GB with `MemoryMax=14G`. If they fall out of the cache every request waits for the disk.
+
+One directory holds everything of an index, with fixed names (the unit's flags point into `index/current`):
+`melody/`, `samples/`, `sonic/` (index_build / index_whiten output), `heads/h2.*` and `heads/h4.*`,
+`playlists/cooc.npz` and `cf128.npy`, `catalog_meta.npz`, `languages.npz`, `scene.npz`, `core_ids.npy`,
+`tempo.npz`, `durations.npz`, `ranker.npz`, `popularity.npz`, `match_quantiles.json`, `overall.json`, `consensus.npz` and
+`consensus_quantiles.json`. Before the symlink swap,
+
+```sh
+/opt/soundalike/venv/bin/python -m soundalike.anysong.index_check /opt/soundalike/index-store/NAME
+```
+
+checks, without the GPU, that every file is there and that they fit each other (rows, dimensions, track ids across
+the channels and tables, the models load); it prints one `PROBLEM` line per fault and exits 1. After the restart,
+`/healthz` shows v12 is live: `channels` with 1,109,024 songs each, a `consensus` block (model note, `sound_cap`
+5011, `windows` `stream`), `blend.head_table` `host` and `host_tables` `["samples", "sonic", "head"]`. The
+Whisper language model (`--language-model`) lives in `ckpt/whisper-large-v3-turbo`.
 
 Swapping the index:
 
 ```sh
 scp -r index_new root@ct409:/opt/soundalike/index-store/NAME          # parallel scp per file is fastest
 cd /opt/soundalike/index-store/NAME && sha256sum -c ../NAME.sha256 && chmod -R go-w .
-cp catalog_meta.npz languages.npz scene.npz tempo.npz core_ids.npy ranker.npz /opt/soundalike/index-store/NAME/   # its tables
+cp catalog_meta.npz languages.npz scene.npz tempo.npz durations.npz core_ids.npy ranker.npz /opt/soundalike/index-store/NAME/   # its tables
 systemctl stop soundalike-anysong
 ln -sfn /opt/soundalike/index-store/NAME /opt/soundalike/index/current
 systemctl start soundalike-anysong && journalctl -u soundalike-anysong -f   # wait for "ready in ..."
@@ -416,8 +955,8 @@ reads it with `--keep-learning`, so it keeps running after the bulk target.
 
 ## Limitations
 
-- Coverage is limited to the indexed catalog: 999,293 songs since 2026-11-09 (269,278 core tracks plus the crawl's
-  songs, which only reach seeds in their artist's scene). Famous sources missing from it cannot be returned, however
-  good the match.
+- Coverage is limited to the indexed catalog: 1,109,024 songs since 2026-11-22 (the core catalog plus the crawl's
+  songs, which outside the consensus body only reach seeds in their artist's scene). Famous sources missing from it
+  cannot be returned, however good the match.
 - Preview-only audio: shared material outside the 30-second clip is invisible.
 - Benchmarks are small for some relations (see the held-out notes in the README); treat the channels as beta.

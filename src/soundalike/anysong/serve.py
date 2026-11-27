@@ -5,7 +5,9 @@ benchmarks only (see ``evaluate``):
 
 - ``melody``  CLEWS DVI, 3x20 s shingles, normalised squared-Euclidean best pairs (covers, same melody)
 - ``samples`` SampleID, 8x6.125 s chunks, centred cosine MaxSim (shared samples)
-- ``sonic``   MuQ-MuLan, 3x10 s windows, cosine MaxSim (general sound-alike; weakest evidence)
+- ``sonic``   MuQ-MuLan, 3x10 s windows, cosine MaxSim (general sound-alike; weakest evidence). An index built
+  by ``index_whiten`` scores it in the PCA-whitened space instead (prep ``whiten``): the index stores the
+  transform and ``prep_query`` applies it to live windows, so callers pass raw windows either way.
 
     python -m soundalike.anysong.serve --index /opt/soundalike/index/research --audio song.mp3 \
         --meta /data/catalog_meta.npz
@@ -18,15 +20,16 @@ import json
 import os
 import sys
 import time
-from collections.abc import Iterable, Mapping
+from collections import deque
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import numpy as np
 import torch
 
-from .audio import load_clips
+from .audio import excerpt_clips, load_clips
 from .embedders import REGISTRY, Embedder
 from .evaluate import l2, load_keys, score_block, window_scores
 
@@ -35,7 +38,7 @@ from .evaluate import l2, load_keys, score_block, window_scores
 class Channel:
     name: str
     model: str
-    prep: str  # none | raw | center, as in evaluate.prep_features
+    prep: str  # none | raw | center as in evaluate.prep_features; whiten: see prep_windows
     mode: str  # window scoring mode understood by evaluate.score_block
 
 
@@ -46,7 +49,10 @@ CHANNELS: dict[str, Channel] = {c.name: c for c in (
 )}
 
 
-def prep_windows(x: torch.Tensor, prep: str, mu: torch.Tensor | None = None) -> torch.Tensor:
+def prep_windows(x: torch.Tensor, prep: str, mu: torch.Tensor | None = None,
+                 whiten: torch.Tensor | None = None) -> torch.Tensor:
+    """Raw windows [..., D] -> the vectors a channel scores. ``whiten``: unit windows less the index mean ``mu``,
+    times the whitening matrix [D, D] (``index_whiten``), then unit length again."""
     if prep == "none":
         return x
     if prep == "raw":
@@ -55,7 +61,23 @@ def prep_windows(x: torch.Tensor, prep: str, mu: torch.Tensor | None = None) -> 
         if mu is None:
             raise ValueError("center prep needs the index mean")
         return l2(x - mu)
+    if prep == "whiten":
+        if mu is None or whiten is None:
+            raise ValueError("whiten prep needs the index mean and whitening matrix")
+        return l2((l2(x) - mu) @ whiten)
     raise ValueError(prep)
+
+
+def built_channel(channel: Channel, meta: Mapping) -> Channel | None:
+    """``channel`` as the index with this ``meta.json`` holds it: itself, or its whitened form when a ``raw``
+    channel's index was whitened (same model, windows and scoring); None for an index of another channel."""
+    if (meta["model"], meta["mode"]) != (channel.model, channel.mode):
+        return None
+    if meta["prep"] == channel.prep:
+        return channel
+    if (channel.prep, meta["prep"]) == ("raw", "whiten"):
+        return replace(channel, prep="whiten")
+    return None
 
 
 class _Ranked:
@@ -156,14 +178,34 @@ class ChannelIndex(_Ranked):
     def scores(self, q: torch.Tensor, chunk: int = 2048, allow: torch.Tensor | None = None) -> torch.Tensor:
         """Prepared queries [W, D] or [B, W, D] -> similarities [N] or [B, N] (higher is closer). Rows outside a
         boolean ``allow`` mask ([N] or [B, N]) score -inf."""
+        return self.scores_with_base(q, chunk, allow, base=False)[0]
+
+    @torch.inference_mode()
+    def scores_with_base(self, q: torch.Tensor, chunk: int = 2048, allow: torch.Tensor | None = None,
+                         base: bool = True) -> tuple[torch.Tensor, torch.Tensor | None]:
+        """``scores`` plus (with ``base``) every row's score before the ``allow`` mask."""
         single = q.dim() == 2
         q = q[None] if single else q
         out = torch.empty(len(q), len(self), device=self.feats.device)
         for s in range(0, len(self), chunk):
             out[:, s:s + chunk] = score_block(q, self.feats[s:s + chunk].float(), self.channel.mode)
+        kept = None
+        if base:
+            kept = out.clone() if allow is not None else out
         if allow is not None:
             out.masked_fill_(~allow, -torch.inf)
-        return out[0] if single else out
+        return (out[0], kept[0] if base else None) if single else (out, kept)
+
+    def search(self, q: torch.Tensor, allow: torch.Tensor | None = None, base: bool = False
+               ) -> tuple[torch.Tensor, torch.Tensor | None, torch.Tensor | None]:
+        """One prepared query [W, D] -> its ``scores_with_base`` pair and which rows are scored exactly (None: every
+        row)."""
+        return (*self.scores_with_base(q, allow=allow, base=base), None)
+
+    def top_within(self, q: torch.Tensor, scores: torch.Tensor, exact: torch.Tensor | None, within: torch.Tensor,
+                   k: int, exclude: Iterable[int] = ()) -> list[tuple[int, float]]:
+        """Best ``k`` (track_id, score) among the rows of the boolean mask ``within``, from ``search``'s scores."""
+        return self.top(scores.masked_fill(~within, -torch.inf), k, exclude)
 
 
 def _to_device(arr: np.ndarray, device: str, rows: int = 16384) -> torch.Tensor:
@@ -172,6 +214,81 @@ def _to_device(arr: np.ndarray, device: str, rows: int = 16384) -> torch.Tensor:
     for s in range(0, len(arr), rows):
         out[s:s + rows] = torch.from_numpy(np.array(arr[s:s + rows]))
     return out
+
+
+class HostTable:
+    """A C-order ``.npy`` array [N, ...] that stays in host memory, in the file cache rather than in the process, and
+    crosses to the device in row blocks each time it is used (``blocks``): for tables a small card has no room to
+    hold. The numbers are the stored ones, so whatever is computed from the blocks is what the table on the device
+    would give.
+
+    With ``threads`` (default: 3 for a CUDA device, none otherwise), reader threads fill a few buffers of ``rows``
+    rows, page-locked for CUDA, ahead of the consumer (with ``os.preadv`` where it exists, see ``RowFile``; else from
+    a memory map), so the copy to the card is not held up by the file reads. One consumer at a time."""
+
+    def __init__(self, path: Path | str, device: torch.device | str, rows: int = 16384, threads: int | None = None):
+        self.mm = np.load(path, mmap_mode="r")
+        self.shape, self.dtype = tuple(self.mm.shape), getattr(torch, self.mm.dtype.name)
+        self.device, self.rows = torch.device(device), int(rows)
+        self.threads = (3 if self.device.type == "cuda" else 0) if threads is None else int(threads)
+        self.row_bytes = int(np.prod(self.shape[1:], dtype=np.int64)) * self.mm.dtype.itemsize
+        self.fd = os.open(path, os.O_RDONLY | getattr(os, "O_BINARY", 0)) if hasattr(os, "preadv") else None
+        self._buffers: list[torch.Tensor] | None = None
+        self._pool: ThreadPoolExecutor | None = None
+
+    def __len__(self) -> int:
+        return self.shape[0]
+
+    def __getitem__(self, rows) -> torch.Tensor:
+        """A row or a few rows on the device, as stored."""
+        return torch.from_numpy(np.array(self.mm[rows])).to(self.device)
+
+    def _fill(self, buffer: torch.Tensor, start: int) -> int:
+        n = min(self.rows, len(self) - start)
+        view = buffer.numpy()[:n]
+        if self.fd is None:
+            np.copyto(view, self.mm[start:start + n])
+            return n
+        raw, off, got = memoryview(view.reshape(-1).view(np.uint8)), self.mm.offset + start * self.row_bytes, 0
+        while got < n * self.row_bytes:
+            read = os.preadv(self.fd, [raw[got:]], off + got)
+            if read <= 0:
+                raise OSError(f"short read at row {start}")
+            got += read
+        return n
+
+    def blocks(self) -> Iterator[tuple[int, torch.Tensor]]:
+        """(first row, the next ``rows`` rows on the device) over the whole table, in row order."""
+        cuda = self.device.type == "cuda"
+        if not self.threads:
+            for s in range(0, len(self), self.rows):
+                yield s, torch.from_numpy(np.array(self.mm[s:s + self.rows])).to(self.device)
+            return
+        if self._buffers is None:
+            self._buffers = [torch.empty((self.rows, *self.shape[1:]), dtype=self.dtype, pin_memory=cuda)
+                             for _ in range(self.threads + 1)]
+            self._pool = ThreadPoolExecutor(self.threads, thread_name_prefix="hosttable")
+        free, pending, starts = list(self._buffers), deque(), iter(range(0, len(self), self.rows))
+
+        def read_ahead() -> None:
+            s = next(starts, None)
+            if s is not None:
+                buffer = free.pop()
+                pending.append((s, buffer, self._pool.submit(self._fill, buffer, s)))
+
+        try:
+            for _ in range(self.threads):
+                read_ahead()
+            while pending:
+                s, buffer, job = pending.popleft()
+                # A finished copy, so the buffer is free again.
+                block = buffer[:job.result()].to(self.device) if cuda else buffer[:job.result()].clone()
+                free.append(buffer)
+                read_ahead()
+                yield s, block
+        finally:  # a consumer that stops early must not leave readers writing into the buffers
+            for _, _, job in pending:
+                job.exception()
 
 
 class RowFile:
@@ -214,13 +331,20 @@ class RowFile:
         return out
 
 
+STAGE1_CHUNK = 8192  # rows per stage-1 product
+
+
 class TwoStageIndex(_Ranked):
-    """Catalog-scale channel index written by ``index_build``.
+    """Catalog-scale channel index written by ``index_build`` (or ``index_whiten``, whose stage 1 holds every
+    dimension as 8-bit integers and whose ``whiten`` matrix and mean ``mu`` turn raw query windows into its space).
 
     Stage 1 scores every track from low-dimensional window projections held on the device (distance
     modes use exact squared norms, so only the dot product is approximated). Stage 2 re-scores the best
     ``candidates`` exactly from memory-mapped full windows. Tracks outside the candidate set keep their
     stage-1 estimate shifted below every exact score, so ranks past ``candidates`` are approximate.
+
+    ``proj`` may be a ``HostTable`` (``load`` with ``host_proj``): the projections then stay in host memory and stage
+    1 reads them block by block, with the same result.
 
     Projections are fp16, or integers with one scale per window (``proj_scale``): int8, or uint8 holding two
     4-bit values per byte (``index_build.quantize_windows``). Integers are exact in fp16, so with ``half_stage1``
@@ -231,10 +355,10 @@ class TwoStageIndex(_Ranked):
     picked, where ``h`` is the track's mean top-k song similarity: CSLS, which demotes tracks close to everything.
     """
 
-    def __init__(self, channel: Channel, ids: np.ndarray, proj: torch.Tensor, basis: torch.Tensor,
+    def __init__(self, channel: Channel, ids: np.ndarray, proj: torch.Tensor | HostTable, basis: torch.Tensor,
                  norms: torch.Tensor, full: np.ndarray, mu: torch.Tensor | None, candidates: int = 1000,
                  hub: torch.Tensor | None = None, hub_alpha: float = 0.0, proj_scale: torch.Tensor | None = None,
-                 half_stage1: bool = False):
+                 half_stage1: bool = False, whiten: torch.Tensor | None = None):
         n, w = len(ids), full.shape[1]
         self.proj_bits = {torch.int8: 8, torch.uint8: 4}.get(proj.dtype, 16)
         stored_dim = proj.shape[2] * 2 if self.proj_bits == 4 else proj.shape[2]
@@ -244,13 +368,17 @@ class TwoStageIndex(_Ranked):
         if (self.proj_bits < 16) != (proj_scale is not None) or \
                 (proj_scale is not None and tuple(proj_scale.shape) != (n, w)):
             raise ValueError("quantized projections need one scale per window (and fp16 ones none)")
-        if channel.prep == "center" and mu is None:
-            raise ValueError("center prep needs the index mean")
+        if channel.prep in ("center", "whiten") and mu is None:
+            raise ValueError(f"{channel.prep} prep needs the index mean")
+        if (channel.prep == "whiten") != (whiten is not None) or \
+                (whiten is not None and tuple(whiten.shape) != (full.shape[2], full.shape[2])):
+            raise ValueError("a whitened index needs its [D, D] whitening matrix (and no other index has one)")
         if candidates < 1:
             raise ValueError("candidates must be positive")
         if hub_alpha and (hub is None or tuple(hub.shape) != (n,)):
             raise ValueError("a hub penalty needs one value per track")
         self.channel, self.proj, self.basis, self.norms, self.full, self.mu = channel, proj, basis, norms, full, mu
+        self.whiten = whiten
         self.proj_scale = proj_scale.to(proj.device).float() if proj_scale is not None else None
         self.candidates, self.device = candidates, proj.device
         self.half_stage1 = bool(half_stage1) and self.proj_bits < 16
@@ -260,29 +388,35 @@ class TwoStageIndex(_Ranked):
 
     @classmethod
     def load(cls, path: Path, channel: Channel, device: str = "cpu", candidates: int | None = None,
-             read_threads: int = 8, hub_alpha: float | None = None, half_stage1: bool = False) -> TwoStageIndex:
+             read_threads: int = 8, hub_alpha: float | None = None, half_stage1: bool = False,
+             host_proj: bool = False) -> TwoStageIndex:
         """``candidates`` defaults to the depth recorded at build time and ``hub_alpha`` to the alpha recorded
-        by ``hub_build`` (0 when absent; pass 0 to disable the penalty)."""
+        by ``hub_build`` (0 when absent; pass 0 to disable the penalty). ``host_proj``: the stage-1 projections
+        stay in host memory (``HostTable``) instead of on the device."""
         path = Path(path)
         meta = json.loads((path / "meta.json").read_text())
-        built = (meta["model"], meta["prep"], meta["mode"])
-        if built != (channel.model, channel.prep, channel.mode):
-            raise ValueError(f"{path} was built for {built}, not {channel}")
+        built = built_channel(channel, meta)
+        if built is None:
+            raise ValueError(f"{path} was built for {(meta['model'], meta['prep'], meta['mode'])}, not {channel}")
+        channel = built
         mu = torch.from_numpy(np.load(path / "mu.npy")).to(device) if (path / "mu.npy").exists() else None
         alpha = float(meta.get("hub", {}).get("alpha", 0.0) if hub_alpha is None else hub_alpha)
         if alpha and not (path / "hub.npy").exists():
             raise FileNotFoundError(f"{path / 'hub.npy'} is missing; run hub_build or use hub_alpha=0")
         hub = torch.from_numpy(np.load(path / "hub.npy").astype(np.float32)) if alpha else None
         scale = torch.from_numpy(np.load(path / "proj_scale.npy")) if (path / "proj_scale.npy").exists() else None
-        return cls(channel, np.load(path / "ids.npy"), _to_device(np.load(path / "proj.npy", mmap_mode="r"), device),
+        whiten = torch.from_numpy(np.load(path / "whiten.npy")).to(device) if channel.prep == "whiten" else None
+        proj = HostTable(path / "proj.npy", device, STAGE1_CHUNK) if host_proj else \
+            _to_device(np.load(path / "proj.npy", mmap_mode="r"), device)
+        return cls(channel, np.load(path / "ids.npy"), proj,
                    torch.from_numpy(np.load(path / "basis.npy")).to(device),
                    torch.from_numpy(np.load(path / "norms.npy")).to(device),
                    RowFile(path / "full.npy", read_threads), mu, candidates or meta.get("candidates", 1000),
-                   hub, alpha, scale, half_stage1)
+                   hub, alpha, scale, half_stage1, whiten)
 
     def prep_query(self, win: np.ndarray | torch.Tensor) -> torch.Tensor:
         x = torch.as_tensor(win).to(self.device).float()
-        return prep_windows(x, self.channel.prep, self.mu)
+        return prep_windows(x, self.channel.prep, self.mu, self.whiten)
 
     def _full(self, rows: np.ndarray) -> torch.Tensor:
         return torch.from_numpy(np.asarray(self.full[rows])).to(self.device).float()
@@ -300,29 +434,40 @@ class TwoStageIndex(_Ranked):
             exact -= self.penalty[torch.as_tensor(rows, device=self.device)]
         return exact
 
+    def _proj_blocks(self, chunk: int) -> Iterator[tuple[int, torch.Tensor]]:
+        """(first row, stage-1 projections of the next rows) over the index: ``chunk`` rows from the device, or a
+        ``HostTable``'s own blocks; as fp32, or fp16 with ``half_stage1`` (quantized integers before their per-window
+        scale)."""
+        blocks = self.proj.blocks() if isinstance(self.proj, HostTable) else \
+            ((s, self.proj[s:s + chunk]) for s in range(0, len(self), chunk))
+        for s, p in blocks:
+            yield s, self._unpacked(p)
+
     def _proj_rows(self, a: int, b: int) -> torch.Tensor:
-        """Stage-1 projections of rows a..b as fp32, or fp16 with ``half_stage1`` (quantized integers before their
-        per-window scale)."""
-        p = self.proj[a:b]
+        """Stage-1 projections of rows a..b, as ``_proj_blocks`` gives them."""
+        return self._unpacked(self.proj[a:b])
+
+    def _unpacked(self, p: torch.Tensor) -> torch.Tensor:
         if self.proj_bits == 4:
             p = torch.stack(((p & 15).to(torch.int8) - 8, (p >> 4).to(torch.int8) - 8), -1).flatten(-2)
         return p.half() if self.half_stage1 else p.float()
 
     @torch.inference_mode()
-    def stage1(self, q: torch.Tensor, chunk: int = 8192) -> torch.Tensor:
+    def stage1(self, q: torch.Tensor, chunk: int = STAGE1_CHUNK) -> torch.Tensor:
         """Prepared queries [B, W, D] -> approximate scores [B, N]."""
         qp, qn, dim = q @ self.basis, (q ** 2).sum(-1), q.shape[-1]
         if self.half_stage1:
             qs = qp.abs().amax(dim=(1, 2)).clamp_min(1e-12)[:, None, None, None]
             qp = (qp / qs[..., 0]).half()
         out = torch.empty(len(q), len(self), device=self.device)
-        for s in range(0, len(self), chunk):
-            sims = torch.einsum("bwd,nvd->bnwv", qp, self._proj_rows(s, s + chunk))
+        for s, p in self._proj_blocks(chunk):
+            e = s + len(p)
+            sims = torch.einsum("bwd,nvd->bnwv", qp, p)
             if self.half_stage1:
                 sims = sims.float() * qs
             if self.proj_scale is not None:
-                sims *= self.proj_scale[s:s + chunk][None, :, None, :]
-            out[:, s:s + chunk] = window_scores(sims, self.channel.mode, qn, self.norms[s:s + chunk], dim)
+                sims *= self.proj_scale[s:e][None, :, None, :]
+            out[:, s:e] = window_scores(sims, self.channel.mode, qn, self.norms[s:e], dim)
         return out
 
     @torch.inference_mode()
@@ -331,14 +476,28 @@ class TwoStageIndex(_Ranked):
 
         Rows outside a boolean ``allow`` mask ([N] or [B, N]) score -inf and are skipped when candidates are
         picked, so the exact re-scoring covers the best allowed rows."""
+        return self.scores_with_base(q, chunk, allow, base=False)[0]
+
+    @torch.inference_mode()
+    def scores_with_base(self, q: torch.Tensor, chunk: int = 8192, allow: torch.Tensor | None = None,
+                         base: bool = True) -> tuple[torch.Tensor, torch.Tensor | None]:
+        """``scores`` plus (with ``base``) every row's stage-1 score less its hub penalty: before the ``allow`` mask
+        and the exact re-scoring, which moves the other rows below the candidates, so on one scale for all rows."""
         single = q.dim() == 2
-        q = q[None] if single else q
+        out, kept, _ = self._scored(q[None] if single else q, chunk, allow, base)
+        return (out[0], kept[0] if base else None) if single else (out, kept)
+
+    def _scored(self, q: torch.Tensor, chunk: int, allow: torch.Tensor | None, base: bool
+                ) -> tuple[torch.Tensor, torch.Tensor | None, list[torch.Tensor]]:
+        """``scores_with_base`` for queries [B, W, D], plus each query's exactly re-scored rows."""
         out = self.stage1(q, chunk)
         if self.penalty is not None:
             out -= self.penalty
+        kept = out.clone() if base else None
         if allow is not None:
             out.masked_fill_(~allow, -torch.inf)
         c = min(self.candidates, len(self))
+        cands = []
         for b, row in enumerate(out):
             # Sorted rows keep memory-mapped reads sequential.
             cand = row.topk(c).indices.sort().values
@@ -349,9 +508,39 @@ class TwoStageIndex(_Ranked):
                 exact -= self.penalty[cand]
             row -= (row.max() - exact.min()).clamp_min(0) + 1
             row[cand] = exact
+            cands.append(cand)
         if allow is not None:  # with fewer allowed rows than candidates, some re-scored rows were not allowed
             out.masked_fill_(~allow, -torch.inf)
-        return out[0] if single else out
+        return out, kept, cands
+
+    @torch.inference_mode()
+    def search(self, q: torch.Tensor, allow: torch.Tensor | None = None, base: bool = False
+               ) -> tuple[torch.Tensor, torch.Tensor | None, torch.Tensor | None]:
+        """One prepared query [W, D] -> its ``scores_with_base`` pair and a boolean mask of the rows that were
+        re-scored exactly (the candidates)."""
+        out, kept, cands = self._scored(q[None], 8192, allow, base)
+        exact = torch.zeros(len(self), dtype=torch.bool, device=self.device)
+        exact[cands[0]] = True
+        return out[0], kept[0] if base else None, exact
+
+    @torch.inference_mode()
+    def top_within(self, q: torch.Tensor, scores: torch.Tensor, exact: torch.Tensor, within: torch.Tensor, k: int,
+                   exclude: Iterable[int] = ()) -> list[tuple[int, float]]:
+        """Best ``k`` (track_id, score) among the rows of the boolean mask ``within``, from ``search``'s scores and
+        exact mask, without a second pass over the index: the best ``candidates`` of those rows (the search's own
+        candidates first, then by stage-1 score) are the pool, the ones the search did not re-score are scored exactly
+        now, and the pool is ranked by exact score."""
+        row = scores.masked_fill(~within, -torch.inf)
+        c = min(self.candidates, int((row > -torch.inf).sum()))
+        if c <= 0:
+            return []
+        cand = row.topk(c).indices
+        out = torch.full_like(row, -torch.inf)
+        out[cand] = row[cand]
+        new = cand[~exact[cand]].sort().values
+        if len(new):
+            out[new] = self.score_rows(q, new.cpu().numpy())
+        return self.top(out, k, exclude)
 
 
 def _sync(device: str) -> None:
@@ -366,21 +555,30 @@ class Engine:
     channel is brute-forced from ``index_dir/<model>/part-*.npz`` shards.
     """
 
+    # Optional ``blend.Blend`` over the sonic index: the searches then also return ``results["blend"]``.
+    blend = None
+    # With ``keep_base`` the searches also return ``results["base"]``: channel -> the score of every row of its index
+    # before the ``allow`` mask and the exact re-scoring (``scores_with_base``), as a tensor on the index device.
+    keep_base = False
+
     def __init__(self, index_dir: Path | str, channels: Iterable[str] = tuple(CHANNELS), device: str = "cuda",
                  index_device: str | None = None, drop_text_tower: bool = True, candidates: int | None = None,
-                 hub_alpha: float | None = None, half_stage1: Iterable[str] = ()):
+                 hub_alpha: float | None = None, half_stage1: Iterable[str] = (), host_proj: Iterable[str] = ()):
+        """``host_proj``: channels whose stage-1 projections stay in host memory (``TwoStageIndex.load``)."""
         self.device = device
         self.drop_text_tower = drop_text_tower
         self.channels = [CHANNELS[c] for c in channels]
         self.load_secs: dict[str, float] = {}
         self.indexes: dict[str, ChannelIndex | TwoStageIndex] = {}
-        half = set(half_stage1)
+        half, host = set(half_stage1), set(host_proj)
+        self.host_tables = sorted(host)  # what stays in host memory (``blend`` adds "head")
         for ch in self.channels:
             t = time.perf_counter()
             built = Path(index_dir) / ch.name
             if (built / "meta.json").exists():
                 self.indexes[ch.name] = TwoStageIndex.load(built, ch, index_device or device, candidates,
-                                                           hub_alpha=hub_alpha, half_stage1=ch.name in half)
+                                                           hub_alpha=hub_alpha, half_stage1=ch.name in half,
+                                                           host_proj=ch.name in host)
             else:
                 self.indexes[ch.name] = ChannelIndex.load(Path(index_dir), ch, index_device or device)
             self.load_secs[f"index:{ch.name}"] = round(time.perf_counter() - t, 2)
@@ -410,15 +608,27 @@ class Engine:
         clips = load_clips(path, sorted({REGISTRY[ch.model].sr for ch in self.channels}))
         return clips, {"decode": (time.perf_counter() - t) * 1000}
 
+    def excerpt_clips(self, mono: np.ndarray, native_sr: int) -> tuple[dict[str, np.ndarray], dict[str, float]]:
+        """One clip per channel for a decoded excerpt of 5 to 30 s (``audio.excerpt_clips``; CPU only), for
+        ``embed_channel_clips``."""
+        t = time.perf_counter()
+        clips = excerpt_clips(mono, native_sr, {ch.name: REGISTRY[ch.model].sr for ch in self.channels})
+        return clips, {"resample": (time.perf_counter() - t) * 1000}
+
     def embed_clips(self, clips: dict[int, np.ndarray]) -> tuple[dict[str, np.ndarray], dict[str, float]]:
-        """Raw window embeddings per channel for decoded clips, plus GPU timings in ms."""
+        """Raw window embeddings per channel for decoded clips (one per sample rate), plus GPU timings in ms."""
+        return self.embed_channel_clips({ch.name: clips[REGISTRY[ch.model].sr] for ch in self.channels})
+
+    def embed_channel_clips(self, clips: Mapping[str, np.ndarray]) -> tuple[dict[str, np.ndarray], dict[str, float]]:
+        """``embed_clips`` for one clip per channel, each at its model's rate and of any length the model windows
+        (``excerpt_clips``)."""
         timings: dict[str, float] = {}
         out: dict[str, np.ndarray] = {}
         for ch in self.channels:
             emb = self.embedder(ch.model)
             _sync(self.device)
             t = time.perf_counter()
-            win = emb.embed(clips[emb.sr][None])["win"][0]
+            win = emb.embed(np.asarray(clips[ch.name])[None])["win"][0]
             _sync(self.device)
             timings[f"embed_{ch.model}"] = (time.perf_counter() - t) * 1000
             if not np.isfinite(win.astype(np.float32)).all():
@@ -431,20 +641,96 @@ class Engine:
         wins, t_embed = self.embed_clips(clips)
         return wins, t_decode | t_embed
 
+    def _search(self, ch: Channel, q: torch.Tensor, k: int, exclude: list[int], allow, row: int | None,
+                windows: np.ndarray | None, results: dict, timings: dict[str, float], within=None,
+                part: Sequence[int] | None = None) -> None:
+        """One channel's top ``k`` for a prepared query. With a ``blend``, the sonic channel also gives
+        ``results["blend"]``: the top ``k`` rows by blended score (``blend.Blend.scores``; the same ``allow`` mask
+        and ``exclude``) in that order, each with its exact sonic score; and ``results["blendz"]``: the blended score
+        of every song of those two lists, as (track id, score). ``row``: the seed's row in the sonic index (None for
+        a live seed, whose raw sonic ``windows`` then give its head vectors).
+
+        With ``within`` (channel -> boolean row mask), ``results["within"]`` holds the same lists among the rows of
+        that mask alone (``top_within``): one per channel and ``"blend"``, each holding every song of its unmasked
+        list that passes the mask (so at times a few more than ``k``); ``blendz`` covers their songs too. The scores
+        of the search are reused; the time goes to ``timings["search_lang"]``."""
+        idx = self.indexes[ch.name]
+        mask = allow.get(ch.name) if allow else None
+        inside = within.get(ch.name) if within else None
+        blend = self.blend if ch.name == "sonic" else None
+        _sync(self.device)
+        t = time.perf_counter()
+        scores, base, exact_rows = idx.search(q, allow=mask, base=blend is not None or self.keep_base)
+        results[ch.name] = idx.top(scores, k, exclude)
+        if self.keep_base:
+            results.setdefault("base", {})[ch.name] = base
+        _sync(self.device)
+        timings[f"search_{ch.name}"] = (time.perf_counter() - t) * 1000
+        if inside is not None:
+            t = time.perf_counter()
+            top = idx.top_within(q, scores, exact_rows, inside, k, exclude)
+            if results[ch.name]:
+                # Exact scores can place newly scored rows above songs of the unmasked list: those stay listed.
+                have = {tid for tid, _ in top}
+                at = torch.as_tensor([idx.pos[tid] for tid, _ in results[ch.name]], dtype=torch.long,
+                                     device=inside.device)
+                more = [pair for pair, ok in zip(results[ch.name], inside[at].tolist()) if ok and pair[0] not in have]
+                if more:
+                    top = sorted(top + more, key=lambda pair: (-pair[1], pair[0]))
+            results.setdefault("within", {})[ch.name] = top
+            _sync(self.device)
+            timings["search_lang"] = timings.get("search_lang", 0.0) + (time.perf_counter() - t) * 1000
+        if blend is None:
+            return
+        t = time.perf_counter()
+        # ``part``: the stored seed's sonic windows the query is made of (``search_stored``).
+        seed_head, head = blend.seed_head(row, windows, part), None
+        if self.keep_base and blend.streamed:
+            # One pass over a head table in host memory gives the blend's term and ``results["base"]["head"]``, the
+            # head scores as ``consensus.Consensus`` reads them (``Blend.head_views``).
+            head, results["base"]["head"] = blend.head_views(seed_head, blend.unit_seed(row, seed_head, part))
+        blended = blend.scores(base, seed_head, row, head)
+        if mask is not None:
+            blended = blended.masked_fill(~mask, -torch.inf)
+        tids = [tid for tid, _ in idx.top(blended, k, exclude)]
+        rows = np.array(sorted(idx.pos[tid] for tid in tids), dtype=np.int64)
+        exact = dict(zip(idx.ids[rows].tolist(), idx.score_rows(q, rows).tolist()))
+        results["blend"] = [(tid, float(exact[tid])) for tid in tids]
+        both = list(dict.fromkeys([tid for tid, _ in results[ch.name]] + tids))
+        at = torch.as_tensor([idx.pos[tid] for tid in both], dtype=torch.long, device=blended.device)
+        results["blendz"] = list(zip(both, blended[at].tolist()))
+        _sync(self.device)
+        timings["search_blend"] = (time.perf_counter() - t) * 1000
+        if inside is None:
+            return
+        t = time.perf_counter()
+        # The masked blended ranking; exact sonic scores come from the lists that hold them, else are computed.
+        tids = [tid for tid, _ in idx.top(blended.masked_fill(~inside, -torch.inf), k, exclude)]
+        exact |= dict(results["within"][ch.name])
+        rows = np.array(sorted(idx.pos[tid] for tid in tids if tid not in exact), dtype=np.int64)
+        exact |= dict(zip(idx.ids[rows].tolist(), idx.score_rows(q, rows).tolist()))
+        results["within"]["blend"] = [(tid, float(exact[tid])) for tid in tids]
+        seen = set(both)
+        more = [tid for tid in dict.fromkeys([tid for tid, _ in results["within"][ch.name]] + tids)
+                if tid not in seen]
+        if more:
+            at = torch.as_tensor([idx.pos[tid] for tid in more], dtype=torch.long, device=blended.device)
+            results["blendz"] += list(zip(more, blended[at].tolist()))
+        _sync(self.device)
+        timings["search_lang"] += (time.perf_counter() - t) * 1000
+
     def search_windows(self, wins: dict[str, np.ndarray], k: int = 20, exclude: Iterable[int] = (),
-                       allow: Mapping[str, torch.Tensor] | None = None
+                       allow: Mapping[str, torch.Tensor] | None = None,
+                       within: Mapping[str, torch.Tensor] | None = None
                        ) -> tuple[dict[str, list[tuple[int, float]]], dict[str, float]]:
-        """Top ``k`` per channel for raw windows; ``allow`` maps channels to row masks (``TwoStageIndex.scores``)."""
+        """Top ``k`` per channel for raw windows; ``allow`` maps channels to row masks (``TwoStageIndex.scores``).
+        With a ``blend``, also ``results["blend"]``; with ``within`` (channel -> row mask), also
+        ``results["within"]``: the lists among those rows alone (``_search``)."""
         results, timings = {}, {}
         exclude = list(exclude)
         for ch in self.channels:
-            idx = self.indexes[ch.name]
-            _sync(self.device)
-            t = time.perf_counter()
-            mask = allow.get(ch.name) if allow else None
-            results[ch.name] = idx.top(idx.scores(idx.prep_query(wins[ch.name]), allow=mask), k, exclude)
-            _sync(self.device)
-            timings[f"search_{ch.name}"] = (time.perf_counter() - t) * 1000
+            q = self.indexes[ch.name].prep_query(wins[ch.name])
+            self._search(ch, q, k, exclude, allow, None, wins[ch.name], results, timings, within)
         return results, timings
 
     def search(self, path: str | Path, k: int = 20, exclude: Iterable[int] = ()) -> dict:
@@ -457,31 +743,41 @@ class Engine:
         return all(int(track_id) in ix.pos for ix in self.indexes.values())
 
     def score_tracks(self, channel: str, track_ids: Iterable[int], windows: np.ndarray | None = None,
-                     query_track: int | None = None) -> dict[int, float]:
+                     query_track: int | None = None, part: Sequence[int] | None = None) -> dict[int, float]:
         """Exact scores of the indexed ``track_ids`` in one channel, against live ``windows`` (raw, as embedded) or
-        the stored windows of ``query_track``; ids outside the index are left out."""
+        the stored windows of ``query_track`` (``part``: only those of them); ids outside the index are left out."""
         idx = self.indexes[channel]
         q = idx.prep_query(windows) if windows is not None else idx.stored_query(int(query_track))
+        if part is not None and windows is None:
+            q = q[list(part)]
         rows = np.array(sorted({idx.pos[int(t)] for t in track_ids if int(t) in idx.pos}), dtype=np.int64)
         values = idx.score_rows(q, rows).tolist()
         return {int(idx.ids[r]): float(v) for r, v in zip(rows, values)}
 
+    def top_match(self, channel: str, windows: np.ndarray) -> tuple[int, float] | None:
+        """The best song of one channel's whole index (no row mask) for raw windows: (track id, score)."""
+        idx = self.indexes[channel]
+        rows = idx.top(idx.search(idx.prep_query(windows))[0], 1)
+        return rows[0] if rows else None
+
     def search_stored(self, track_id: int, k: int = 20, exclude: Iterable[int] = (),
-                      allow: Mapping[str, torch.Tensor] | None = None
+                      allow: Mapping[str, torch.Tensor] | None = None,
+                      within: Mapping[str, torch.Tensor] | None = None,
+                      part: Mapping[str, Sequence[int]] | None = None
                       ) -> tuple[dict[str, list[tuple[int, float]]], dict[str, float]]:
         """Rank an indexed track from its stored fp16 windows instead of re-embedding its preview (live
         embeddings match the stored ones up to fp16 rounding; see ``serve_check``). The track itself is
-        excluded; ``allow`` as in ``search_windows``."""
+        excluded; ``allow`` and ``within`` as in ``search_windows``. ``part`` (channel -> window numbers,
+        ``part_windows``): the query is those stored windows alone, one part of the preview."""
         results, timings = {}, {}
         exclude = [int(track_id), *exclude]
         for ch in self.channels:
             idx = self.indexes[ch.name]
-            _sync(self.device)
-            t = time.perf_counter()
-            mask = allow.get(ch.name) if allow else None
-            results[ch.name] = idx.top(idx.scores(idx.stored_query(track_id), allow=mask), k, exclude)
-            _sync(self.device)
-            timings[f"search_{ch.name}"] = (time.perf_counter() - t) * 1000
+            q = idx.stored_query(track_id)
+            if part is not None:
+                q = q[list(part[ch.name])]
+            self._search(ch, q, k, exclude, allow, idx.pos[int(track_id)], None, results, timings, within,
+                         part["sonic"] if part is not None else None)
         return results, timings
 
 

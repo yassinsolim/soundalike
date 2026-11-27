@@ -113,58 +113,51 @@ def test_homepage_search_accessibility_and_wiring_remain_present():
     assert "/api/recommend" not in HTML and "/api/recommend" not in script
 
 
-def test_homepage_language_switch_is_accessible_and_covers_best_and_same_vibe():
+def test_homepage_language_switch_is_accessible_and_covers_both_tabs():
     script = (ROOT / "webapp" / "search.js").read_text(encoding="utf-8")
     assert ".language-filter[hidden]{display:none}" in HTML
     assert 'params.set("lang", lang);' in script
-    assert "fetchBestMatches(picked.target, isCurrent, picked.lang, picked.audioOnly)" in script
-    assert '<div class="language-filter" id="language" role="status" hidden>' in script
+    # The reload keeps the language, Audio only and the part of the preview being matched.
+    assert "fetchBestMatches(picked.target, isCurrent, picked.lang, picked.audioOnly, picked.part)" in script
+    assert '<div class="language-filter" id="language" role="status">' in script
     assert (
         '<button id="language-toggle" type="button" aria-pressed="false" hidden>'
     ) in script
-    # Audio only sits with the language switch and stays usable after a failed reload.
+    # Audio only sits with the language switch and stays usable after a failed
+    # reload and on an empty Listeners also play.
     assert '<button id="audio-only" type="button" aria-pressed="false"' in script
     assert 'if (audioOnly) params.set("scene", "0");' in script
     assert 'const audioOnlyKey = "soundalike:audio-only:v1";' in script
-    assert "box.hidden = !languageFiltered(picked);" in script
-    assert re.search(r'if \(tab === "best" \|\| tab === "vibe"\) return true;', script)
+    assert 'if (picked.best.status === "failed" || noListeners) {' in script
     assert '"all languages" : "other languages left out"' in script
     assert "hidden_sounds" not in script
 
 
-def test_homepage_offers_every_any_song_tab_from_one_response():
+def test_homepage_offers_three_any_song_tabs_from_one_response():
     script = (ROOT / "webapp" / "search.js").read_text(encoding="utf-8")
     keys = re.findall(r'key: "(\w+)",\s*label: "([^"]+)"', script)
-    assert keys == [
-        ("best", "Best matches"),
-        ("vibe", "Same vibe"),
-        ("melody", "Same melody"),
-        ("samples", "Samples & loops"),
-        ("sounds", "Sounds like"),
-    ]
+    assert keys == [("best", "Best matches"), ("listeners", "Listeners also play"), ("melody", "Melody match")]
     assert (
-        "\"Songs from these matches that share this song's tempo and overall sound, "
-        'one per artist."'
+        "\"Songs by other artists that this song's listeners also play, one per artist. "
+        "The likelier its listeners are to play a song, and the closer it sounds, "
+        'the higher it ranks."'
     ) in script
-    # Old any-song links name Sounds like "sonic".
-    assert 'const name = key === "sonic" ? "sounds" : key;' in script
-    # Servers without Same vibe send no vibe list; the tab stays hidden.
-    assert "picked.hasVibe = Array.isArray(vibe) && vibe.length > 0;" in script
-    assert "if (button) button.hidden = !picked.hasVibe;" in script
-    # Sounds like reads the fused list and falls back to the raw sound channel.
-    assert (
-        'Array.isArray(results.sounds) && results.sounds.length ? "sounds" : "sonic"'
-    ) in script
+    # Best matches read the main list and fall back to Best matches from older servers; Melody match reads "best".
+    assert 'Array.isArray(results.main) && results.main.length ? "main" : "best"' in script
+    assert 'if (key === "melody") return "best";' in script
+    # Old links name Same vibe, Samples & loops or Sounds like ("sonic" on older any-song links); they open
+    # Best matches. Old Same melody links open Melody match.
+    assert 'resultTabs.some(entry => entry.key === key) ? key : "best"' in script
 
 
 def test_marketplace_description_pins_the_immutable_update_bootstrap():
     manifest = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["description"] == (
-        "Find songs that sound alike in Spotify: best matches by melody and "
-        "samples, plus same-language sound matches with native playback."
+        "Find songs that sound alike in Spotify: Best matches, Listeners also "
+        "play and Melody match, with native playback."
     )
     assert manifest["main"] == "integrations/spicetify/bootstrap.js"
-    assert manifest["branch"] == "38ca29ca9ec760dc40e58a567ca6aaff632ae306"
+    assert manifest["branch"] == "7a834dc4abe33d2ae0d0272181c0de7e1507929b"
 
 
 def test_marketplace_card_tracks_current_docs_on_main():

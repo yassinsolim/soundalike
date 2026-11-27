@@ -26,7 +26,8 @@ before opening a new one.
 src/soundalike/          Python package, CLI, audio tools and ranking code
 webapp/                  Hosted app, API handlers, evaluator and Node tests
 integrations/spicetify/  Spotify extension, signed updater and setup guides
-mobile/                  iOS and Android companion app
+mobile/                  Cross-platform (Expo) companion app
+ios/                     Native iPhone app, share extension and controls
 deploy/homelab/          Always-on service, monitoring, deployment and rollback
 benchmarks/              Frozen evaluation inputs
 docs/                    Research notes, results and the case study
@@ -94,7 +95,7 @@ Do not change these in a pull request; the maintainer handles them when
 publishing a signed release:
 
 - `RUNTIME_SEMANTIC_VERSION` in `soundalike.js`;
-- `integrations/spicetify/releases/stable.json`;
+- the signed feeds in `integrations/spicetify/releases/`;
 - `integrations/spicetify/bootstrap.js` and the commit pinned in `manifest.json`.
 
 Merged extension changes reach users with the next signed release. The process
