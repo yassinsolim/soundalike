@@ -1,0 +1,2 @@
+{"ok":true,"query":{"id":908604612,"artist":"The Weeknd","title":"Blinding Lights","source":"excerpt","seconds":15.0,"language":"en","parts":{"min_s":10.0,"max_s":30.0,"preview_s":30.0,"song_offset_s":48.0,"excerpt":{"min_s":10.0,"max_s":30.0,"max_bytes":6291456}}},
+ "results":{"main":[{"id":4115973961,"artist":"Justin Bieber","title":"STAY","match":70},{"id":1875302107,"artist":"The Naked And Famous","title":"Blinding Lights","match":17}]}}

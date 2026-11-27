@@ -79,17 +79,25 @@ public struct ResultsView: View {
     /// The Spotify / Apple Music switch; hidden when the user has only one app to play in.
     let showsTargetPicker: Bool
     @Binding var target: MusicSource
+    /// Loads the lists for a part of the song, or the whole preview again (nil); see `ResultsModel.match`.
+    let matchPart: ((PartChoice?) async throws -> Void)?
+    /// Offer a clip from the microphone or a file when the server takes one (the app; not the share extension).
+    let allowsClips: Bool
+    @StateObject private var player = PreviewPlayer()
     @State private var toast: String?
 
     public init(
         state: ResultsState, target: Binding<MusicSource>, actions: ResultActions, live: LiveSong? = nil,
-        showsTargetPicker: Bool = true, retry: (() -> Void)? = nil
+        showsTargetPicker: Bool = true, matchPart: ((PartChoice?) async throws -> Void)? = nil, allowsClips: Bool = false,
+        retry: (() -> Void)? = nil
     ) {
         self.state = state
         self._target = target
         self.actions = actions
         self.live = live
         self.showsTargetPicker = showsTargetPicker
+        self.matchPart = matchPart
+        self.allowsClips = allowsClips
         self.retry = retry
     }
 
@@ -114,6 +122,10 @@ public struct ResultsView: View {
                 .listRowSeparator(.hidden)
             case .loaded(let results):
                 SeedHeader(seed: results.seed).listRowSeparator(.hidden)
+                if let matchPart, let parts = results.parts {
+                    PartRow(results: results, parts: parts, player: player, allowsClips: allowsClips, match: matchPart)
+                        .listRowSeparator(.hidden)
+                }
                 if showsTargetPicker {
                     targetPicker
                         .listRowSeparator(.hidden)
@@ -122,7 +134,7 @@ public struct ResultsView: View {
                 let liveRow = live?.row(in: results.matches)
                 ForEach(results.matches) { match in
                     ResultRow(
-                        match: match, live: liveRow == match.id ? live : nil,
+                        match: match, player: player, live: liveRow == match.id ? live : nil,
                         symbol: actions.openSymbol, label: actions.openLabel(target),
                         playFull: actions.play.map { play in { run(actions.playMessage) { try await play(match) } } }
                     ) {
@@ -138,7 +150,7 @@ public struct ResultsView: View {
                         }
                     }
                 }
-                Text((actions.play == nil ? "Tap a song to open it in your music app." : "Tap a song to play it.") + (actions.queue == nil ? "" : " Swipe right to queue it."))
+                Text((actions.play == nil ? "Tap a cover for a 30-second preview, or a song to open it in your music app." : "Tap a song to play it. Touch and hold for its 30-second preview.") + (actions.queue == nil ? "" : " Swipe right to queue it."))
                     .font(.footnote).foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity).listRowSeparator(.hidden)
             }
@@ -154,6 +166,10 @@ public struct ResultsView: View {
             }
         }
         .animation(.spring(duration: 0.3), value: toast)
+        .onDisappear { player.stop() }
+        .onChange(of: player.failure) { _, failure in
+            if let failure { show(failure); player.failure = nil }
+        }
     }
 
     private var targetPicker: some View {
@@ -193,6 +209,11 @@ public struct ResultsView: View {
         if let queue = actions.queue {
             Button { run("Added to your queue") { try await queue(match) } } label: {
                 Label(actions.queueLabel, systemImage: "text.line.first.and.arrowtriangle.forward")
+            }
+        }
+        if actions.play != nil {
+            Button { player.toggle(match) } label: {
+                Label(player.isActive(match.id) ? "Stop preview" : "Play 30-second preview", systemImage: player.isActive(match.id) ? "stop.circle" : "play.circle")
             }
         }
         ShareLink(item: Destinations.spotify(match)) { Label("Share", systemImage: "square.and.arrow.up") }
@@ -238,39 +259,70 @@ struct SeedHeader: View {
 
 struct ResultRow: View {
     let match: Match
+    @ObservedObject var player: PreviewPlayer
     /// Set when this result is the song the music app is playing.
     let live: LiveSong?
     let symbol: String
     let label: String
-    /// Plays the whole song in the music app; when nil, tapping opens the song there.
+    /// Plays the whole song in the music app; when nil, the cover plays the 30-second preview here and
+    /// tapping the song opens it in the music app.
     let playFull: (() -> Void)?
     let open: () -> Void
 
     private func tap() {
-        if let playFull { playFull() } else { open() }
+        if let playFull {
+            player.stop()
+            playFull()
+        } else {
+            open()
+        }
     }
+
+    private func tapCover() {
+        if playFull != nil { tap() } else { player.toggle(match) }
+    }
+
+    private var previewPlaying: Bool { player.playingID == match.id }
+    private var previewLoading: Bool { player.loadingID == match.id }
+    /// Green like Spotify's playing row: the music app's song, or this row's preview.
+    private var isLive: Bool { live != nil || previewPlaying }
 
     var body: some View {
         HStack(spacing: 12) {
-            Button(action: tap) {
+            Button(action: tapCover) {
                 ZStack {
                     Artwork(url: match.artworkURL, size: 52)
-                    if let live {
+                    if previewLoading {
+                        Circle().fill(.black.opacity(0.45)).frame(width: 30, height: 30)
+                        ProgressView().tint(.white)
+                    } else if previewPlaying {
+                        Circle().fill(.black.opacity(0.45)).frame(width: 30, height: 30)
+                        Image(systemName: "stop.fill").font(.system(size: 12, weight: .bold)).foregroundStyle(.white)
+                    } else if let live {
                         Circle().fill(.black.opacity(0.45)).frame(width: 30, height: 30)
                         Image(systemName: "waveform").font(.system(size: 14, weight: .bold)).foregroundStyle(Color.green)
                             .symbolEffect(.variableColor.iterative.dimInactiveLayers, options: .repeating, isActive: live.isPlaying)
-                    } else if playFull != nil {
+                    } else {
                         Circle().fill(.black.opacity(0.25)).frame(width: 30, height: 30)
                         Image(systemName: "play.fill").font(.system(size: 13, weight: .bold)).foregroundStyle(.white)
                     }
                 }
+                .overlay {
+                    if previewPlaying {
+                        Circle().trim(from: 0, to: player.progress)
+                            .stroke(Color.green, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                            .frame(width: 34, height: 34)
+                            .animation(.linear(duration: 0.1), value: player.progress)
+                    }
+                }
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(playFull != nil ? "Play" : label)
+            .accessibilityLabel(playFull != nil ? "Play" : previewPlaying || previewLoading ? "Stop preview" : "Play 30-second preview")
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(match.title).font(.body.weight(.semibold)).lineLimit(1)
-                    .foregroundStyle(live != nil ? Color.green : .primary)
+                    .foregroundStyle(isLive ? Color.green : .primary)
                 Text(match.artist).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)

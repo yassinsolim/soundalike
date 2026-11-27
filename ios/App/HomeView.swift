@@ -375,6 +375,7 @@ struct ResultsScreen: View {
             // One app to play in (Spotify connected, or an Apple Music subscription): no switch.
             // It's offered only to people who can play in both, or in neither.
             showsTargetPicker: checkedAppleMusic && spotify.isConnected == canUseAppleMusic,
+            matchPart: { try await model.match($0) }, allowsClips: true,
             retry: { model.retry() }
         )
             .navigationTitle("Soundalikes")
