@@ -61,6 +61,9 @@ public struct SpotifyAccount: Sendable {
             "grant_type": "authorization_code", "code": code, "redirect_uri": Self.redirectURI,
             "client_id": Self.clientID, "code_verifier": authorization.verifier,
         ])
+        // A new account: find out now whether Spotify lets it use the Web API.
+        Self.webAPIRefused = false
+        _ = try? await api("GET", "me")
     }
 
     public var isConnected: Bool { loadToken() != nil }
@@ -102,10 +105,14 @@ public struct SpotifyAccount: Sendable {
     }
 
     /// Spotify's own id for a result, by ISRC.
+    /// Cached, so the player bar can look up the next song ahead of time and Next plays at once.
     public func trackID(isrc: String) async throws -> String? {
+        if let cached = TrackIDCache.shared.id(for: isrc) { return cached }
         let (data, status) = try await api("GET", "search?type=track&limit=1&q=" + ("isrc:" + isrc).addingPercentEncoding(withAllowedCharacters: .alphanumerics)!)
         guard status == 200, let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
-        return (((object["tracks"] as? [String: Any])?["items"] as? [[String: Any]])?.first?["id"] as? String)
+        let id = (((object["tracks"] as? [String: Any])?["items"] as? [[String: Any]])?.first?["id"] as? String)
+        if let id { TrackIDCache.shared.store(id, for: isrc) }
+        return id
     }
 
     /// Spotify's id for a result: from the server's link when there is one, else by ISRC.
@@ -115,16 +122,111 @@ public struct SpotifyAccount: Sendable {
         return try await trackID(isrc: isrc)
     }
 
-    /// Plays a track in Spotify on the device the user is listening on (Premium only).
-    public func play(trackID: String) async throws {
-        let body = try JSONSerialization.data(withJSONObject: ["uris": ["spotify:track:\(trackID)"]])
-        let (_, status) = try await api("PUT", "me/player/play", body: body)
+    /// Spotify's ids for a whole list, looked up side by side; nil where a song isn't on Spotify.
+    public func trackIDs(for matches: [Match]) async -> [String?] {
+        await withTaskGroup(of: (Int, String?).self) { group in
+            for (index, match) in matches.enumerated() {
+                group.addTask { (index, try? await trackID(for: match)) }
+            }
+            var ids = [String?](repeating: nil, count: matches.count)
+            for await (index, id) in group { ids[index] = id }
+            return ids
+        }
+    }
+
+    /// Plays a list of tracks in Spotify, starting at one of them (Premium only). The list
+    /// becomes what Spotify is playing, so its own skip buttons (lock screen, headphones,
+    /// CarPlay) walk it, and choosing anything else in Spotify replaces it. Unlike the queue,
+    /// nothing is left behind.
+    public func play(trackIDs: [String], startingAt start: String) async throws {
+        let body = try JSONSerialization.data(withJSONObject: [
+            "uris": trackIDs.map { "spotify:track:\($0)" },
+            "offset": ["uri": "spotify:track:\(start)"],
+        ])
+        try await onDevice("PUT", "me/player/play", body: body)
+    }
+
+    /// Sends a player request. Spotify answers 404 "no active device" when its app is open on
+    /// the phone but hasn't played yet (right after Connect Spotify, say); the request then
+    /// goes to the phone's Spotify by device id instead of sending the user to Spotify.
+    private func onDevice(_ method: String, _ path: String, body: Data? = nil) async throws {
+        var (_, status) = try await api(method, path, body: body)
+        if status == 404, let device = try await phoneDevice() {
+            (_, status) = try await api(method, path + (path.contains("?") ? "&" : "?") + "device_id=" + device, body: body)
+        }
         guard (200..<300).contains(status) else { throw status == 404 ? SpotifyError.noActiveDevice : SpotifyError.requestFailed(status) }
+    }
+
+    /// The phone's Spotify among the user's devices, percent-encoded; nil when it isn't running.
+    /// Other devices are left alone, so music never starts on a computer across the room.
+    private func phoneDevice() async throws -> String? {
+        let (data, status) = try await api("GET", "me/player/devices")
+        guard status == 200, let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let devices = object["devices"] as? [[String: Any]] else { return nil }
+        let phone = devices.first { ($0["type"] as? String)?.lowercased() == "smartphone" && $0["is_restricted"] as? Bool != true }
+        return (phone?["id"] as? String)?.addingPercentEncoding(withAllowedCharacters: .alphanumerics)
     }
 
     /// Adds a track to the user's Spotify queue (Premium only).
     public func queue(trackID: String) async throws {
-        let (_, status) = try await api("POST", "me/player/queue?uri=spotify%3Atrack%3A\(trackID)")
+        try await onDevice("POST", "me/player/queue?uri=spotify%3Atrack%3A\(trackID)")
+    }
+
+    /// What the Spotify player is doing, for a remote control.
+    public struct PlaybackState: Equatable, Sendable {
+        public var seed: Seed
+        public var isPlaying: Bool
+        /// Seconds into the song.
+        public var position: TimeInterval
+        public var duration: TimeInterval
+        /// The device Spotify is playing on. Commands name it, because a backgrounded
+        /// Spotify app doesn't count as the active device and would get a 404.
+        public var deviceID: String?
+    }
+
+    /// The Spotify player on any of the user's devices, playing or paused; nil when there is none.
+    public func playbackState() async throws -> PlaybackState? {
+        let (data, status) = try await api("GET", "me/player?additional_types=track")
+        guard status == 200, let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let item = object["item"] as? [String: Any], let title = item["name"] as? String else { return nil }
+        let artist = ((item["artists"] as? [[String: Any]])?.map { $0["name"] as? String ?? "" } ?? []).joined(separator: ", ")
+        let images = ((item["album"] as? [String: Any])?["images"] as? [[String: Any]]) ?? []
+        let id = item["id"] as? String
+        let seed = Seed(
+            title: title, artist: artist,
+            isrc: (item["external_ids"] as? [String: Any])?["isrc"] as? String,
+            artworkURL: (images.first?["url"] as? String).flatMap(URL.init(string:)),
+            source: .spotify,
+            sharedURL: id.map { URL(string: "https://open.spotify.com/track/\($0)")! },
+            spotifyID: id
+        )
+        return PlaybackState(
+            seed: seed,
+            isPlaying: object["is_playing"] as? Bool ?? false,
+            position: TimeInterval(object["progress_ms"] as? Int ?? 0) / 1000,
+            duration: TimeInterval(item["duration_ms"] as? Int ?? 0) / 1000,
+            deviceID: (object["device"] as? [String: Any])?["id"] as? String
+        )
+    }
+
+    public enum Command: Sendable {
+        case play, pause, next, previous
+        case seek(TimeInterval)
+    }
+
+    /// Sends a player command to the device Spotify is playing on (Premium only).
+    public func send(_ command: Command, deviceID: String? = nil) async throws {
+        var (method, path): (String, String) = switch command {
+        case .play: ("PUT", "me/player/play")
+        case .pause: ("PUT", "me/player/pause")
+        case .next: ("POST", "me/player/next")
+        case .previous: ("POST", "me/player/previous")
+        case .seek(let seconds): ("PUT", "me/player/seek?position_ms=\(Int(seconds * 1000))")
+        }
+        if let deviceID, let encoded = deviceID.addingPercentEncoding(withAllowedCharacters: .alphanumerics) {
+            path += (path.contains("?") ? "&" : "?") + "device_id=" + encoded
+        }
+        let (_, status) = try await api(method, path)
         guard (200..<300).contains(status) else { throw status == 404 ? SpotifyError.noActiveDevice : SpotifyError.requestFailed(status) }
     }
 
@@ -152,11 +254,36 @@ public struct SpotifyAccount: Sendable {
         }
         do {
             let (data, response) = try await http.session.data(for: request)
-            return (data, (response as? HTTPURLResponse)?.statusCode ?? 0)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            if status == 403, Self.isAllowListRefusal(data) {
+                Self.webAPIRefused = true
+            } else if (200..<300).contains(status) {
+                Self.webAPIRefused = false
+            }
+            return (data, status)
         } catch {
             throw SoundalikeError.offline
         }
     }
+
+    /// Spotify answers every Web API request with 403 for accounts outside the development-mode
+    /// allow list ("User not registered in the Developer Dashboard", "User not approved for app").
+    /// Reading and controlling Spotify still work for them through App Remote; playing and
+    /// queueing results don't, so the app opens the song in Spotify instead.
+    public static var webAPIRefused: Bool {
+        get { sharedDefaults.bool(forKey: "spotifyWebAPIRefused") }
+        set { sharedDefaults.set(newValue, forKey: "spotifyWebAPIRefused") }
+    }
+
+    /// Connected, and Spotify lets this account use the Web API.
+    public var playsResults: Bool { isConnected && !Self.webAPIRefused }
+
+    static func isAllowListRefusal(_ body: Data) -> Bool {
+        let text = String(decoding: body, as: UTF8.self).lowercased()
+        return text.contains("not registered") || text.contains("not approved")
+    }
+
+    private static var sharedDefaults: UserDefaults { UserDefaults(suiteName: "group.app.yassin.soundalike") ?? .standard }
 
     func requestToken(_ form: [String: String]) async throws {
         var request = URLRequest(url: URL(string: "https://accounts.spotify.com/api/token")!, timeoutInterval: 15)
@@ -230,5 +357,20 @@ public enum SpotifyError: LocalizedError, Equatable {
 extension Data {
     var base64URLEncoded: String {
         base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
+    }
+}
+
+/// Spotify track ids by ISRC for this run of the app.
+final class TrackIDCache: @unchecked Sendable {
+    static let shared = TrackIDCache()
+    private let lock = NSLock()
+    private var ids: [String: String] = [:]
+
+    func id(for isrc: String) -> String? {
+        lock.withLock { ids[isrc] }
+    }
+
+    func store(_ id: String, for isrc: String) {
+        lock.withLock { ids[isrc] = id }
     }
 }

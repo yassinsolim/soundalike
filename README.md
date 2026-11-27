@@ -129,9 +129,13 @@ not ask you to sign in and it has no Spotify credentials in it. It reads the
 public page for the track you shared and searches the same catalog as the
 website.
 
-None of the apps is on the App Store or Google Play yet. To build and run them
-now, see the [iPhone guide](ios/README.md), the [Android guide](android/README.md)
-and the [mobile guide](mobile/README.md).
+To install the iPhone app, open
+[testflight.apple.com/join/ug22f7Jg](https://testflight.apple.com/join/ug22f7Jg)
+on the iPhone: it installs Apple's TestFlight app and then Soundalike, with no
+sign-up. It has also been sent to the App Store for review. The Android apps are
+not on Google Play yet. To build and run any of them yourself, see the
+[iPhone guide](ios/README.md), the [Android guide](android/README.md) and the
+[mobile guide](mobile/README.md).
 
 ### As a local app or command-line tool
 

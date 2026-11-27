@@ -54,6 +54,13 @@ public enum TextMatch {
         return String(scalars).split(separator: " ").joined(separator: " ")
     }
 
+    /// Equal after normalising, or one starts with the other ("Song" / "Song - Remastered",
+    /// "Artist" / "Artist, Guest").
+    public static func similar(_ a: String, _ b: String) -> Bool {
+        let a = normalize(a), b = normalize(b)
+        return !a.isEmpty && !b.isEmpty && (a == b || a.hasPrefix(b) || b.hasPrefix(a))
+    }
+
     public static func coreTitle(_ value: String) -> String {
         var working = value
         if let range = working.range(of: #"\s*[\(\[]?\s*(feat\.?|ft\.?|featuring|with)\s+.*$"#, options: [.regularExpression, .caseInsensitive]) {

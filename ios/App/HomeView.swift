@@ -14,6 +14,28 @@ struct ResultsRequest: Identifiable, Hashable {
     let kind: Kind
 }
 
+/// Screens pushed on the home navigation stack.
+enum Screen: Hashable {
+    case results(ResultsRequest)
+    case history
+}
+
+/// The songs on the results screen showing now: the one searched for and its soundalikes.
+/// Coming back to the app follows a newly playing song, but not one played from this list.
+@MainActor
+final class ResultsOnScreen {
+    static let shared = ResultsOnScreen()
+    private var songs: [(title: String, artist: String)] = []
+
+    func show(seed: Seed?, matches: [Match] = []) {
+        songs = (seed.map { [($0.title, $0.artist)] } ?? []) + matches.map { ($0.title, $0.artist) }
+    }
+
+    func contains(_ seed: Seed) -> Bool {
+        songs.contains { TextMatch.similar($0.title, seed.title) && TextMatch.similar($0.artist, seed.artist) }
+    }
+}
+
 struct HomeView: View {
     @EnvironmentObject private var router: Router
     @Environment(\.scenePhase) private var scenePhase
@@ -23,14 +45,19 @@ struct HomeView: View {
     @AppStorage("autoDetect") private var autoDetect = true
     @State private var query = ""
     @State private var suggestions: [Seed] = []
-    @State private var path: [ResultsRequest] = []
+    @State private var path: [Screen] = []
     @State private var showGuide = false
+    @State private var showSettings = false
     @State private var error: String?
     @State private var hint: Hint?
     @State private var lastAuto = Date.distantPast
+    /// True at launch and after the app was in the background; Control Center or a
+    /// notification only make it inactive, which shouldn't re-run auto-detect.
+    @State private var returning = true
     /// The song behind results that auto-detect opened, so returning to the app can follow a song change.
     @State private var autoSeedKey: String?
     @ObservedObject private var spotify = SpotifyConnector.shared
+    @ObservedObject private var history = HistoryStore.shared
 
     enum Hint {
         case headphones
@@ -41,21 +68,16 @@ struct HomeView: View {
         NavigationStack(path: $path) {
             List {
                 if query.isEmpty {
-                    hero
                     if let hint { HintCard(hint: hint) { self.hint = nil } }
                     quickActions
-                    Section {
-                        Toggle("Find what's playing when I open Soundalike", isOn: $autoDetect)
-                    }
-                    spotifySection
-                    Section {
-                        Button { showGuide = true } label: {
-                            Label("Use it from Spotify and Apple Music", systemImage: "square.and.arrow.up")
-                        }
+                    recent
+                } else if SharedLink.find(in: query) != nil {
+                    Button { path.append(.results(ResultsRequest(kind: .shared(query)))) } label: {
+                        ActionRow(title: "Find soundalikes for this link", detail: "Spotify or Apple Music song", symbol: "link", tint: .indigo)
                     }
                 } else {
                     ForEach(suggestions, id: \.self) { seed in
-                        Button { path.append(ResultsRequest(kind: .seed(seed))) } label: {
+                        Button { path.append(.results(ResultsRequest(kind: .seed(seed)))) } label: {
                             HStack(spacing: 12) {
                                 Artwork(url: seed.artworkURL, size: 44)
                                 VStack(alignment: .leading) {
@@ -67,16 +89,30 @@ struct HomeView: View {
                     }
                 }
             }
+            .tint(.primary)
             .navigationTitle("Soundalike")
-            .searchable(text: $query, prompt: "Song or artist")
+            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Song, artist or link")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showSettings = true } label: { Image(systemName: "gearshape") }
+                        .accessibilityLabel("Settings")
+                }
+            }
+            .sheet(isPresented: $showSettings) { SettingsView(autoDetect: $autoDetect) }
             .onSubmit(of: .search) {
-                if SharedLink.find(in: query) != nil { path.append(ResultsRequest(kind: .shared(query))) }
+                if SharedLink.find(in: query) != nil { path.append(.results(ResultsRequest(kind: .shared(query)))) }
             }
             .task(id: query) { await suggest() }
-            .navigationDestination(for: ResultsRequest.self) { ResultsScreen(request: $0) }
+            .navigationDestination(for: Screen.self) { screen in
+                switch screen {
+                // A new id per request: a replaced results screen starts fresh instead of keeping the old list.
+                case .results(let request): ResultsScreen(request: request).id(request.id)
+                case .history: HistoryView { path.append(.results(ResultsRequest(kind: .seed($0)))) }
+                }
+            }
             .overlay { if listener.isListening { ListeningOverlay { listener.cancel() } } }
             .onChange(of: spotify.failure) { _, failure in
-                if let failure { error = failure; spotify.failure = nil }
+                if let failure, !showSettings { error = failure; spotify.failure = nil }
             }
             .alert("Soundalike", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
                 Button("OK", role: .cancel) {}
@@ -93,7 +129,14 @@ struct HomeView: View {
                 handle(route, explicit: true)
             }
             .onChange(of: scenePhase, initial: true) { _, phase in
-                guard phase == .active else { return }
+                if phase == .background {
+                    returning = true
+                    PlayerController.shared.deactivate()
+                }
+                guard phase == .active, returning else { return }
+                returning = false
+                PlayerController.shared.activate()
+                history.reload()
                 router.takePending()
                 // Opening the app finds what's playing, unless a link or intent already asked for something.
                 Task {
@@ -101,44 +144,19 @@ struct HomeView: View {
                     guard autoDetect, onboarded, !showGuide, router.pending == nil, query.isEmpty, !listener.isListening else { return }
                     if path.isEmpty {
                         if Date().timeIntervalSince(lastAuto) > 30 { handle(.auto, explicit: false) }
-                    } else if autoSeedKey != nil {
-                        // Back from the music app: follow the song if it changed.
+                    } else if case .results? = path.last {
+                        // Back from the music app: follow a new song, but not one played from these results.
                         if let seed = await NowPlaying.read() {
-                            if key(seed) != autoSeedKey { show(seed) }
-                        } else if Date().timeIntervalSince(lastAuto) > 30, await PlaybackProbe.detect() == .speaker {
+                            if key(seed) != autoSeedKey, !ResultsOnScreen.shared.contains(seed) { show(seed) }
+                        } else if autoSeedKey != nil, Date().timeIntervalSince(lastAuto) > 30, await PlaybackProbe.detect() == .speaker {
                             handle(.auto, explicit: false)
                         }
                     }
                 }
             }
         }
-    }
-
-    private var hero: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Find songs that sound like the ones you love.")
-                .font(.title2.weight(.bold))
-            Text("Search for a song, recognise one that's playing, or share one from your music app.")
-                .foregroundStyle(.secondary)
-        }
-        .padding(.vertical, 8)
-        .listRowSeparator(.hidden)
-    }
-
-    private var spotifySection: some View {
-        Section {
-            if spotify.isConnected {
-                Label("Spotify connected", systemImage: "checkmark.circle.fill")
-                Button("Disconnect Spotify", role: .destructive) { spotify.disconnect() }
-            } else {
-                Button { Task { await spotify.connect(using: webAuthenticationSession) } } label: {
-                    Label("Connect Spotify", systemImage: "link")
-                }
-            }
-        } footer: {
-            Text(spotify.isConnected
-                 ? "Soundalike reads what Spotify is playing, plays results there and adds them to your queue."
-                 : "One tap in the Spotify app, no password. Soundalike can then read what Spotify is playing, even in headphones, and play results in Spotify.")
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            PlayerBar(findSoundalikes: findForPlayer)
         }
     }
 
@@ -150,19 +168,28 @@ struct HomeView: View {
             Button { handle(.listen, explicit: true) } label: {
                 ActionRow(title: "Listen with the microphone", detail: "For music playing around you", symbol: "mic.fill", tint: .orange)
             }
-            PasteButton(payloadType: String.self) { strings in
-                guard let text = strings.first else { return }
-                Task { @MainActor in
-                    if SharedLink.find(in: text) != nil {
-                        path.append(ResultsRequest(kind: .shared(text)))
-                    } else {
-                        error = SoundalikeError.unsupportedLink.localizedDescription
-                    }
+            if !spotify.isConnected {
+                Button { Task { await spotify.connect(using: webAuthenticationSession) } } label: {
+                    ActionRow(title: "Connect Spotify", detail: "Read Spotify songs, even in headphones", symbol: "link", tint: .green)
                 }
             }
-            .labelStyle(.titleAndIcon)
-        } footer: {
-            Text("Paste a Spotify or Apple Music song link.")
+        }
+    }
+
+    @ViewBuilder
+    private var recent: some View {
+        if !history.entries.isEmpty {
+            Section {
+                ForEach(history.entries.prefix(4)) { entry in
+                    Button { path.append(.results(ResultsRequest(kind: .seed(entry.seed)))) } label: { HistoryRow(entry: entry) }
+                }
+            } header: {
+                HStack {
+                    Text("Recent")
+                    Spacer()
+                    Button("See All") { path.append(.history) }.font(.subheadline).textCase(nil).foregroundStyle(Color.accentColor)
+                }
+            }
         }
     }
 
@@ -187,7 +214,7 @@ struct HomeView: View {
                 }
             }
         case .find(let shared):
-            path = [ResultsRequest(kind: .shared(shared))]
+            path = [.results(ResultsRequest(kind: .shared(shared)))]
         case .search(let text):
             path = []
             query = text
@@ -210,7 +237,7 @@ struct HomeView: View {
                 do {
                     let seed = try await listener.identify()
                     EventLog.record("listen", ["ms": EventLog.ms(since: started), "ok": true, "seed": "\(seed.title) — \(seed.artist)"])
-                    path = [ResultsRequest(kind: .seed(seed))]
+                    path = [.results(ResultsRequest(kind: .seed(seed)))]
                 } catch is CancellationError {
                 } catch {
                     EventLog.record("listen", ["ms": EventLog.ms(since: started), "ok": false, "error": "\(error)", "privateOutput": privateOutput])
@@ -231,7 +258,19 @@ struct HomeView: View {
     /// Results for a song that was read or heard rather than picked.
     private func show(_ seed: Seed) {
         autoSeedKey = key(seed)
-        path = [ResultsRequest(kind: .seed(seed))]
+        path = [.results(ResultsRequest(kind: .seed(seed)))]
+    }
+
+    /// Soundalikes for the song in the player bar.
+    private func findForPlayer() {
+        guard let player = PlayerController.shared.now else { return }
+        Task {
+            if PlayerController.shared.source == .appleMusic, let seed = await NowPlaying.appleMusic(requireAuthorization: true) {
+                show(seed)
+            } else if let seed = player.track.seed {
+                show(seed)
+            }
+        }
     }
 
     private func suggest() async {
@@ -322,25 +361,86 @@ struct ResultsScreen: View {
     let request: ResultsRequest
     @StateObject private var model = ResultsModel()
     @ObservedObject private var spotify = SpotifyConnector.shared
+    @ObservedObject private var playing = PlayerController.shared
     /// Queue and playlist actions need an Apple Music subscription; without one they stay hidden.
     @State private var canUseAppleMusic = false
+    @State private var checkedAppleMusic = false
+    /// Spotify lets this account play results (it's on the app's allow list). Everyone else
+    /// gets previews here and Open in Spotify.
+    @State private var spotifyPlays = SpotifyAccount().playsResults
 
     var body: some View {
-        ResultsView(state: model.state, target: $model.target, actions: actions, retry: { model.retry() })
+        ResultsView(
+            state: model.state, target: $model.target, actions: actions, live: playing.live,
+            // One app to play in (Spotify connected, or an Apple Music subscription): no switch.
+            // It's offered only to people who can play in both, or in neither.
+            showsTargetPicker: checkedAppleMusic && spotify.isConnected == canUseAppleMusic,
+            retry: { model.retry() }
+        )
             .navigationTitle("Soundalikes")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear { reportOnScreen() }
+            .onChange(of: model.state) { reportOnScreen() }
             .task {
                 if MusicAuthorization.currentStatus == .authorized {
                     canUseAppleMusic = (try? await MusicSubscription.current.canPlayCatalogContent) ?? false
                 }
+                checkedAppleMusic = true
+                applyPreferredApp()
+            }
+            // Connect Spotify can finish after these results opened (on Apple Music, say).
+            .onChange(of: spotify.isConnected) {
+                applyPreferredApp()
+                spotifyPlays = SpotifyAccount().playsResults
             }
             .task {
                 guard case .loading(nil) = model.state else { return }
+                applyPreferredApp()
                 switch request.kind {
                 case .shared(let text): model.load(shared: text)
                 case .seed(let seed): model.load(seed: seed)
                 }
             }
+            .task(id: PrefetchKey(ids: matches.map(\.id), target: model.target, spotify: spotifyPlays, music: canUseAppleMusic)) {
+                // Look the list up in the music app now, so tapping a result starts it at once.
+                switch model.target {
+                case .spotify where spotifyPlays:
+                    _ = await SpotifyAccount().trackIDs(for: matches)
+                    spotifyPlays = SpotifyAccount().playsResults
+                case .appleMusic where canUseAppleMusic: _ = await AppleMusicService.shared.songs(for: matches)
+                default: break
+                }
+            }
+    }
+
+    /// Results open in the app the user plays in, whatever app the song came from: Spotify once
+    /// it's connected, else Apple Music for a subscriber. With neither, the song's own app.
+    private func applyPreferredApp() {
+        model.preferred = spotify.isConnected ? .spotify : canUseAppleMusic ? .appleMusic : nil
+    }
+
+    /// Tells the home screen which songs this screen covers, so coming back to the app with one
+    /// of them playing (a result played from this list, say) keeps these results.
+    private func reportOnScreen() {
+        switch model.state {
+        case .loaded(let results): ResultsOnScreen.shared.show(seed: results.seed, matches: results.matches)
+        case .loading(let seed):
+            if let seed { ResultsOnScreen.shared.show(seed: seed) }
+            else if case .seed(let seed) = request.kind { ResultsOnScreen.shared.show(seed: seed) }
+            else { ResultsOnScreen.shared.show(seed: nil) }
+        case .failed: ResultsOnScreen.shared.show(seed: nil)
+        }
+    }
+
+    private struct PrefetchKey: Equatable {
+        var ids: [String]
+        var target: MusicSource
+        var spotify: Bool
+        var music: Bool
+    }
+
+    private var matches: [Match] {
+        if case .loaded(let results) = model.state { results.matches } else { [] }
     }
 
     private var actions: ResultActions {
@@ -358,19 +458,28 @@ struct ResultsScreen: View {
             await Opener.open(url)
         }
         switch model.target {
-        case .spotify where spotify.isConnected:
+        case .spotify where spotifyPlays:
             return ResultActions(
                 open: open,
+                // The whole list goes to Spotify, so skipping anywhere walks it.
                 play: { match in
-                    try await logged("spotify-play") {
-                        guard let id = try await SpotifyAccount().trackID(for: match) else { throw SoundalikeError.notInCatalog }
+                    try await shownInBar(match, .spotify) { try await logged("spotify-play") {
+                        guard let id = try await SpotifyAccount().trackID(for: match) else {
+                            // Spotify only just refused this account: open the song there instead.
+                            guard SpotifyAccount.webAPIRefused else { throw SoundalikeError.notInCatalog }
+                            spotifyPlays = false
+                            await open(match, .spotify)
+                            return
+                        }
+                        var seen = Set<String>()
+                        let list = await SpotifyAccount().trackIDs(for: matches).compactMap { $0 }.filter { seen.insert($0).inserted }
                         do {
-                            try await SpotifyAccount().play(trackID: id)
+                            try await SpotifyAccount().play(trackIDs: list.contains(id) ? list : [id], startingAt: id)
                         } catch SpotifyError.noActiveDevice {
                             // Spotify isn't running anywhere: open the song there instead.
                             await Opener.open(URL(string: "https://open.spotify.com/track/\(id)")!)
                         }
-                    }
+                    } }
                 },
                 playMessage: "Playing in Spotify",
                 queue: { match in
@@ -384,7 +493,7 @@ struct ResultsScreen: View {
         case .appleMusic where canUseAppleMusic:
             return ResultActions(
                 open: open,
-                play: { match in try await logged("apple-play") { try await music.playNow(match) } },
+                play: { match in try await shownInBar(match, .appleMusic) { try await logged("apple-play") { try await music.play(match, in: matches) } } },
                 playMessage: "Playing in Apple Music",
                 queue: { match in try await logged("play-next") { try await music.playNext(match) } },
                 queueLabel: "Play Next",
@@ -394,6 +503,19 @@ struct ResultsScreen: View {
         default:
             return ResultActions(open: open)
         }
+    }
+}
+
+/// Puts a tapped result in the player bar straight away, then has the bar read the music app
+/// back as soon as the song has started.
+private func shownInBar(_ match: Match, _ source: PlayerController.Source, _ play: () async throws -> Void) async throws {
+    let request = await PlayerController.shared.starting(match, in: source)
+    do {
+        try await play()
+        await PlayerController.shared.started(request, ok: true)
+    } catch {
+        await PlayerController.shared.started(request, ok: false)
+        throw error
     }
 }
 

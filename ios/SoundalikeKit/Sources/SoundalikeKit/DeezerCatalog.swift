@@ -1,6 +1,6 @@
 import Foundation
 
-/// Deezer's public, key-free API: cover art, ISRC and 30-second previews for the
+/// Deezer's public, key-free API: cover art and ISRC for the
 /// Deezer track ids the recommender returns, plus song search for the search box.
 public struct DeezerCatalog: Sendable {
     public var http: HTTP
@@ -12,7 +12,6 @@ public struct DeezerCatalog: Sendable {
     public struct Track: Sendable {
         public var isrc: String?
         public var artwork: URL?
-        public var preview: URL?
     }
 
     public func track(_ id: Int) async -> Track? {
@@ -21,12 +20,11 @@ public struct DeezerCatalog: Sendable {
         let album = object["album"] as? [String: Any]
         return Track(
             isrc: object["isrc"] as? String,
-            artwork: SoundalikeClient.url(album?["cover_big"] ?? album?["cover_medium"]),
-            preview: SoundalikeClient.url(object["preview"])
+            artwork: SoundalikeClient.url(album?["cover_big"] ?? album?["cover_medium"])
         )
     }
 
-    /// Fills missing art, ISRC and preview, a few requests at a time. Order is kept.
+    /// Fills missing art and ISRC, a few requests at a time. Order is kept.
     public func enrich(_ matches: [Match], concurrency: Int = 6) async -> [Match] {
         var enriched = matches
         await withTaskGroup(of: (Int, Track?).self) { group in
@@ -36,7 +34,7 @@ public struct DeezerCatalog: Sendable {
                     let index = next
                     next += 1
                     let match = matches[index]
-                    guard let id = match.deezerID, match.artworkURL == nil || match.previewURL == nil || match.isrc == nil else { continue }
+                    guard let id = match.deezerID, match.artworkURL == nil || match.isrc == nil else { continue }
                     group.addTask { (index, await track(id)) }
                     return
                 }
@@ -46,7 +44,6 @@ public struct DeezerCatalog: Sendable {
                 if let track {
                     enriched[index].isrc = enriched[index].isrc ?? track.isrc
                     enriched[index].artworkURL = enriched[index].artworkURL ?? track.artwork
-                    enriched[index].previewURL = enriched[index].previewURL ?? track.preview
                 }
                 schedule()
             }

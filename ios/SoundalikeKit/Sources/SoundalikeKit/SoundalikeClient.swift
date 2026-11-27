@@ -94,7 +94,7 @@ public struct SoundalikeClient: Sendable {
                 title: title, artist: artist, match: int(row["match"]) ?? 0,
                 isrc: row["isrc"] as? String, deezerID: int(row["deezer_id"]),
                 spotifyURL: url(row["spotify_url"]), appleMusicURL: appleExact ? url(row["apple_music_url"]) : nil,
-                artworkURL: url(row["artwork"]), previewURL: url(row["preview_url"])
+                artworkURL: url(row["artwork"])
             )
         }
         guard !matches.isEmpty else { throw SoundalikeError.notInCatalog }

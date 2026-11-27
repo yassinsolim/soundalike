@@ -104,3 +104,12 @@ import Testing
         #expect(Destinations.spotifySearch("Été x").absoluteString == "https://open.spotify.com/search/%C3%89t%C3%A9%20x")
     }
 }
+
+@Test func spotifyAllowListRefusalIsToldApartFromOther403s() {
+    let notRegistered = Data(#"{"error":{"status":403,"message":"User not registered in the Developer Dashboard"}}"#.utf8)
+    let notApproved = Data(#"{"error":{"status":403,"message":"User not approved for app"}}"#.utf8)
+    let premium = Data(#"{"error":{"status":403,"message":"Player command failed: Premium required","reason":"PREMIUM_REQUIRED"}}"#.utf8)
+    #expect(SpotifyAccount.isAllowListRefusal(notRegistered))
+    #expect(SpotifyAccount.isAllowListRefusal(notApproved))
+    #expect(!SpotifyAccount.isAllowListRefusal(premium))
+}

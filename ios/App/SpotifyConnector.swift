@@ -15,6 +15,16 @@ final class SpotifyConnector: ObservableObject {
     @Published var failure: String?
     private var pending: SpotifyAccount.Authorization?
 
+    /// Runs the Spotify app's authorization again without the web fallback. Spotify starts
+    /// accepting App Remote connections after it handles an authorization, which it doesn't
+    /// after a restart; already-authorized accounts go straight back to Soundalike.
+    func wakeSpotifyApp() async {
+        let authorization = SpotifyAccount.authorization()
+        let opened = await UIApplication.shared.open(authorization.appURL)
+        EventLog.record("app-remote", ["stage": "wake", "opened": opened])
+        if opened { pending = authorization }
+    }
+
     func connect(using web: WebAuthenticationSession) async {
         let authorization = SpotifyAccount.authorization()
         if await UIApplication.shared.open(authorization.appURL) {
@@ -49,6 +59,7 @@ final class SpotifyConnector: ObservableObject {
         try await SpotifyAccount().complete(authorization, callback: callback)
         isConnected = true
         EventLog.record("spotify-connect", ["ok": true])
+        await PlayerController.shared.reconnectSpotify()
     }
 
     private func report(_ error: Error) {
