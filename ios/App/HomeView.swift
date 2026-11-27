@@ -366,7 +366,7 @@ struct ResultsScreen: View {
     @State private var canUseAppleMusic = false
     @State private var checkedAppleMusic = false
     /// Spotify lets this account play results (it's on the app's allow list). Everyone else
-    /// gets previews here and Open in Spotify.
+    /// gets Open in Spotify.
     @State private var spotifyPlays = SpotifyAccount().playsResults
 
     var body: some View {

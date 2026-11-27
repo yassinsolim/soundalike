@@ -10,10 +10,7 @@ let package = Package(
     ],
     targets: [
         .target(name: "SoundalikeKit", swiftSettings: [.swiftLanguageMode(.v5)]),
-        .target(
-            name: "SoundalikeUI", dependencies: ["SoundalikeKit"],
-            resources: [.process("Resources")], swiftSettings: [.swiftLanguageMode(.v5)]
-        ),
+        .target(name: "SoundalikeUI", dependencies: ["SoundalikeKit"], swiftSettings: [.swiftLanguageMode(.v5)]),
         .testTarget(
             name: "SoundalikeKitTests",
             dependencies: ["SoundalikeKit", "SoundalikeUI"],

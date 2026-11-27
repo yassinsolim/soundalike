@@ -6,11 +6,11 @@ App Store Connect record and app group.
 
 | Target | Bundle id | What it does |
 |---|---|---|
-| `Soundalike` | `app.yassin.soundalike` | Search, recognise a song (ShazamKit), current Apple Music song, results with previews, Apple Music Play Next / Play all / Save playlist, App Intents and Siri phrases |
+| `Soundalike` | `app.yassin.soundalike` | Search, recognise a song (ShazamKit), current Apple Music song, results, Apple Music Play Next / Play all / Save playlist, App Intents and Siri phrases |
 | `ShareExtension` | `app.yassin.soundalike.share` | "Soundalike" in the share sheet. Takes a Spotify or Apple Music song link and shows results over the music app |
 | `Controls` | `app.yassin.soundalike.controls` | The *Soundalike* control for Control Center, the Lock Screen and the Action Button |
 | `SoundalikeKit` (package) | – | Link parsing, link-to-song lookup, API client, Deezer enrichment, open-in-app links. Unit tested on macOS |
-| `SoundalikeUI` (package) | – | Results list, preview player, shared settings, on-device event log |
+| `SoundalikeUI` (package) | – | Results list, shared settings, on-device event log |
 
 ## How a request flows
 
@@ -26,7 +26,7 @@ App Store Connect record and app group.
      without sign-in.
    - Apple Music links are named from the iTunes lookup API.
    - Results are filled in from Deezer: cover and ISRC.
-   - Tapping a result without a music app to play it in plays Apple's 30-second preview, found with the iTunes Search API (`Destinations.applePreview`). Apple allows its previews only to promote the song on Apple Music, next to a link to it, so the playing row shows the official Apple Music icon linking to the song. Deezer's terms allow its previews only inside the Deezer widget, so the app doesn't play them.
+   - The app plays no previews itself. Deezer's terms allow its previews only inside the Deezer widget, and Apple's iTunes Search API allows its previews only to promote a purchase, next to an iTunes badge and a "provided courtesy of iTunes" credit. So tapping a result plays the full song in the music app (Spotify when connected, Apple Music with a subscription) or opens it there.
 3. "Open" sends the user back to the app they came from:
    - Spotify: `https://open.spotify.com/search/isrc:<ISRC>`, which returns exactly that recording.
    - Apple Music: a MusicKit catalog match by ISRC, or the iTunes Search API when MusicKit isn't authorised.
@@ -37,7 +37,7 @@ Not possible on iOS 26.6, all tried on the device:
 - **A result card over the current app.** Controls never show snippets or dialogs: the intent returned a snippet every time and nothing appeared.
 - **A Live Activity.** Apple caps it at 160 points tall and collapses it after a few seconds, which was too small to use.
 
-Queueing and playing the full song in Spotify use the Web API, so they only work for allow-listed accounts. Spotify answers everyone else with 403 "User not registered in the Developer Dashboard" (or "not approved"); the app remembers that (`SpotifyAccount.webAPIRefused`, checked right after Connect Spotify), and their results play 30-second previews and open the song in Spotify instead. Reading and controlling Spotify still work for them through App Remote. App Remote could do both for everyone once results carry Spotify track ids.
+Queueing and playing the full song in Spotify use the Web API, so they only work for allow-listed accounts. Spotify answers everyone else with 403 "User not registered in the Developer Dashboard" (or "not approved"); the app remembers that (`SpotifyAccount.webAPIRefused`, checked right after Connect Spotify), and tapping their results opens the song in Spotify instead. Reading and controlling Spotify still work for them through App Remote. App Remote could do both for everyone once results carry Spotify track ids.
 
 Links and in-app routes go through one URL scheme handled in `App/SoundalikeApp.swift`:
 
@@ -65,7 +65,7 @@ The bar at the bottom of every screen (`App/PlayerBar.swift`, `App/PlayerControl
 - **Spotify:** App Remote when the Spotify app accepts the connection. Otherwise the Web API: it polls the player every 4 s and sends commands with the device id, because a backgrounded Spotify app doesn't count as the active device. The Web API part works only for allow-listed accounts and Premium.
 - When both apps have a song, it shows the one that is playing; when neither plays, the one that changed most recently.
 - **A played result brings its whole list.** Tapping a result hands the music app the whole soundalike list, starting at that song: the Web API's `uris` + `offset` for Spotify (`SpotifyAccount.play(trackIDs:startingAt:)`), a `SystemMusicPlayer` queue for Music (`AppleMusicService.play(_:in:)`). The list becomes what the app is playing, so its own skips (lock screen, Control Center, headphones, CarPlay, this bar) walk it, and when the user picks something else in Spotify or Music it replaces the list; nothing is put in the user's queue to linger. The list's Spotify ids or Music songs are looked up side by side as soon as results load, so a tap starts at once. The bar shows the tapped song straight away and ignores reports of the previous song for up to 4 s, until the app reports the new one. After 3 seconds Previous restarts the song, like Control Center.
-- **The playing result is green.** The results list marks the song in the bar like Spotify does: a green title and a moving waveform on the cover (still while paused). It's the result just tapped, or else the first result with the same title and artist (`LiveSong` in `SoundalikeUI/ResultsView.swift`). A preview playing in the app turns its row green too.
+- **The playing result is green.** The results list marks the song in the bar like Spotify does: a green title and a moving waveform on the cover (still while paused). It's the result just tapped, or else the first result with the same title and artist (`LiveSong` in `SoundalikeUI/ResultsView.swift`).
 - **No trip to Spotify on the first tap.** Right after Connect Spotify, the Spotify app is running but isn't the "active device", and the Web API answers 404. Play and queue requests then go to the phone's Spotify by device id (`me/player/devices`, type `Smartphone`; never a computer). Spotify is opened only when it isn't running on the phone at all.
 - **Show Spotify controls.** After a restart the Spotify app refuses App Remote connections until it handles an authorization. When App Remote refuses and the Web API can't see the player (accounts not on the allow list), the bar offers this row. It runs the Spotify app's authorization again: Spotify opens for a moment, the user confirms if asked, and Spotify returns to Soundalike, after which App Remote connects. Spotify's SDK call `authorizeAndPlayURI` reported "Spotify not installed" on iOS 26.6, so the app opens the authorize URL itself.
 
