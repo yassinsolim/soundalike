@@ -16,7 +16,7 @@ public struct ResultActions {
     public var openSymbol: String
     public var openLabel: (MusicSource) -> String
     /// Plays the full song in the music app without leaving Soundalike (Spotify
-    /// connected, or an Apple Music subscription). Without it, tapping plays a preview.
+    /// connected, or an Apple Music subscription). Without it, tapping a song opens it.
     public var play: ((Match) async throws -> Void)?
     public var playMessage: String
     /// Adds a song to the music app's queue; offered on a right swipe and in the menu.
@@ -79,7 +79,6 @@ public struct ResultsView: View {
     /// The Spotify / Apple Music switch; hidden when the user has only one app to play in.
     let showsTargetPicker: Bool
     @Binding var target: MusicSource
-    @StateObject private var player = PreviewPlayer()
     @State private var toast: String?
 
     public init(
@@ -123,7 +122,7 @@ public struct ResultsView: View {
                 let liveRow = live?.row(in: results.matches)
                 ForEach(results.matches) { match in
                     ResultRow(
-                        match: match, player: player, live: liveRow == match.id ? live : nil,
+                        match: match, live: liveRow == match.id ? live : nil,
                         symbol: actions.openSymbol, label: actions.openLabel(target),
                         playFull: actions.play.map { play in { run(actions.playMessage) { try await play(match) } } }
                     ) {
@@ -139,7 +138,7 @@ public struct ResultsView: View {
                         }
                     }
                 }
-                Text((actions.play == nil ? "Tap a song for a 30-second preview." : "Tap a song to play it.") + (actions.queue == nil ? "" : " Swipe right to queue it."))
+                Text((actions.play == nil ? "Tap a song to open it in your music app." : "Tap a song to play it.") + (actions.queue == nil ? "" : " Swipe right to queue it."))
                     .font(.footnote).foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity).listRowSeparator(.hidden)
             }
@@ -155,7 +154,6 @@ public struct ResultsView: View {
             }
         }
         .animation(.spring(duration: 0.3), value: toast)
-        .onDisappear { player.stop() }
     }
 
     private var targetPicker: some View {
@@ -196,9 +194,6 @@ public struct ResultsView: View {
             Button { run("Added to your queue") { try await queue(match) } } label: {
                 Label(actions.queueLabel, systemImage: "text.line.first.and.arrowtriangle.forward")
             }
-        }
-        if actions.play != nil {
-            Button { player.toggle(match) } label: { Label("Play 30-second preview", systemImage: "play.circle") }
         }
         ShareLink(item: Destinations.spotify(match)) { Label("Share", systemImage: "square.and.arrow.up") }
     }
@@ -243,75 +238,46 @@ struct SeedHeader: View {
 
 struct ResultRow: View {
     let match: Match
-    @ObservedObject var player: PreviewPlayer
     /// Set when this result is the song the music app is playing.
     let live: LiveSong?
     let symbol: String
     let label: String
-    /// Plays the whole song in the music app; when nil, tapping plays the preview here.
+    /// Plays the whole song in the music app; when nil, tapping opens the song there.
     let playFull: (() -> Void)?
     let open: () -> Void
 
     private func tap() {
-        if let playFull {
-            player.stop()
-            playFull()
-        } else {
-            player.toggle(match)
-        }
+        if let playFull { playFull() } else { open() }
     }
-
-    private var isPlaying: Bool { player.playingID == match.id }
-    private var isLoading: Bool { player.loadingID == match.id }
-    /// Green like Spotify's playing row: the music app's song, or this row's preview.
-    private var isLive: Bool { live != nil || isPlaying }
 
     var body: some View {
         HStack(spacing: 12) {
             Button(action: tap) {
                 ZStack {
                     Artwork(url: match.artworkURL, size: 52)
-                    Circle().fill(.black.opacity(isPlaying || isLoading || live != nil ? 0.45 : 0.25)).frame(width: 30, height: 30)
-                    if isLoading {
-                        ProgressView().tint(.white)
-                    } else if let live, !isPlaying {
+                    if let live {
+                        Circle().fill(.black.opacity(0.45)).frame(width: 30, height: 30)
                         Image(systemName: "waveform").font(.system(size: 14, weight: .bold)).foregroundStyle(Color.green)
                             .symbolEffect(.variableColor.iterative.dimInactiveLayers, options: .repeating, isActive: live.isPlaying)
-                    } else {
-                        Image(systemName: isPlaying ? "pause.fill" : "play.fill").font(.system(size: 13, weight: .bold)).foregroundStyle(.white)
-                    }
-                }
-                .overlay(alignment: .bottom) {
-                    if isPlaying {
-                        GeometryReader { geo in
-                            Capsule().fill(.white).frame(width: geo.size.width * player.progress, height: 3)
-                        }
-                        .frame(height: 3).padding(.horizontal, 4).padding(.bottom, 3)
+                    } else if playFull != nil {
+                        Circle().fill(.black.opacity(0.25)).frame(width: 30, height: 30)
+                        Image(systemName: "play.fill").font(.system(size: 13, weight: .bold)).foregroundStyle(.white)
                     }
                 }
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(playFull != nil ? "Play" : isPlaying ? "Stop preview" : "Play preview")
+            .accessibilityLabel(playFull != nil ? "Play" : label)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(match.title).font(.body.weight(.semibold)).lineLimit(1)
-                    .foregroundStyle(isLive ? Color.green : .primary)
+                    .foregroundStyle(live != nil ? Color.green : .primary)
                 Text(match.artist).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             .onTapGesture(perform: tap)
 
-            if isPlaying, let appleMusicURL = player.appleMusicURL {
-                // Apple's previews have to sit next to a link to the song on Apple Music.
-                Link(destination: appleMusicURL) {
-                    Image("AppleMusicIcon", bundle: .module).resizable().frame(width: 28, height: 28)
-                }
-                .padding(3)
-                .accessibilityLabel("Listen on Apple Music")
-            } else {
-                MatchBadge(value: match.match)
-            }
+            MatchBadge(value: match.match)
 
             Button(action: open) {
                 Image(systemName: symbol).font(.title2)

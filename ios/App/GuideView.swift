@@ -23,7 +23,7 @@ struct GuideView: View {
                     Text("Handy with headphones on if you haven't connected Spotify.")
                 }
                 Section {
-                    Text("Tap a cover for a 30-second preview. Tap the arrow to play the song in your music app.")
+                    Text("Tap a song to play it in your music app. The arrow opens it there.")
                         .foregroundStyle(.secondary)
                 }
             }

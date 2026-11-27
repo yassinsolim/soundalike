@@ -4,7 +4,7 @@ import Foundation
 ///
 /// Prefers `/api/mobile/similar`, which resolves links server-side and returns
 /// per-platform URLs. Until that route is live (404) or if it fails, falls back to
-/// `/api/anysong/similar` and fills art, ISRC and previews from Deezer's public API.
+/// `/api/anysong/similar` and fills art and ISRC from Deezer's public API.
 public struct SoundalikeClient: Sendable {
     public static let defaultBase = URL(string: "https://soundalike.yassin.app")!
 
