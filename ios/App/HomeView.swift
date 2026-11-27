@@ -478,6 +478,10 @@ struct ResultsScreen: View {
                         } catch SpotifyError.noActiveDevice {
                             // Spotify isn't running anywhere: open the song there instead.
                             await Opener.open(URL(string: "https://open.spotify.com/track/\(id)")!)
+                        } catch where SpotifyAccount.webAPIRefused {
+                            // Spotify refused this account (a known id skips the search that notices first).
+                            spotifyPlays = false
+                            await Opener.open(URL(string: "https://open.spotify.com/track/\(id)")!)
                         }
                     } }
                 },
