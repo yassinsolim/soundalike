@@ -70,7 +70,7 @@ def test_home_page_search_uses_same_origin_any_song_api():
 def test_main_page_no_longer_links_to_anysong():
     assert 'href="/anysong"' not in HOME
     assert "<strong>Try any song</strong>" not in HOME
-    assert ".promos{display:grid;grid-template-columns:repeat(2," in HOME
+    assert ".promos{display:grid;grid-template-columns:repeat(3," in HOME
 
 
 def test_home_page_footer_links_evaluation_in_new_tab_safely():

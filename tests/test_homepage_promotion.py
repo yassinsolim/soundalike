@@ -57,12 +57,12 @@ class _ActionParser(HTMLParser):
             self.current_link["text"].append(data)
 
 
-def test_homepage_promotes_spicetify_and_evaluator_with_native_links():
+def test_homepage_promotes_spicetify_iphone_app_and_evaluator():
     parser = _ActionParser()
     parser.feed(HTML)
 
     assert parser.navigation_label == "Soundalike actions"
-    assert len(parser.links) == 2
+    assert len(parser.links) == 3
     links = {
         " ".join(link["text"]).strip(): link["attrs"] for link in parser.links
     }
@@ -72,6 +72,10 @@ def test_homepage_promotes_spicetify_and_evaluator_with_native_links():
     evaluator = next(
         attrs for text, attrs in links.items() if "Help improve the model" in text
     )
+    iphone = next(attrs for text, attrs in links.items() if "Get the iPhone app" in text)
+    assert iphone["href"] == "https://testflight.apple.com/join/ug22f7Jg"
+    assert iphone["target"] == "_blank"
+    assert "noopener" in iphone["rel"].split()
     assert "Spicetify extension" in next(
         text for text in links if "Use inside Spotify" in text
     )
@@ -82,7 +86,7 @@ def test_homepage_promotes_spicetify_and_evaluator_with_native_links():
     # The home page search already finds any song, so it no longer points at /anysong.
     assert not any("Try any song" in text for text in links)
     assert 'href="/anysong"' not in HTML
-    assert ".promos{display:grid;grid-template-columns:repeat(2," in HTML
+    assert ".promos{display:grid;grid-template-columns:repeat(3," in HTML
 
 
 def test_homepage_drops_the_library_size_line():
