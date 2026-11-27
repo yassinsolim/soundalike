@@ -20,6 +20,22 @@ enum Screen: Hashable {
     case history
 }
 
+/// The songs on the results screen showing now: the one searched for and its soundalikes.
+/// Coming back to the app follows a newly playing song, but not one played from this list.
+@MainActor
+final class ResultsOnScreen {
+    static let shared = ResultsOnScreen()
+    private var songs: [(title: String, artist: String)] = []
+
+    func show(seed: Seed?, matches: [Match] = []) {
+        songs = (seed.map { [($0.title, $0.artist)] } ?? []) + matches.map { ($0.title, $0.artist) }
+    }
+
+    func contains(_ seed: Seed) -> Bool {
+        songs.contains { TextMatch.similar($0.title, seed.title) && TextMatch.similar($0.artist, seed.artist) }
+    }
+}
+
 struct HomeView: View {
     @EnvironmentObject private var router: Router
     @Environment(\.scenePhase) private var scenePhase
@@ -89,7 +105,8 @@ struct HomeView: View {
             .task(id: query) { await suggest() }
             .navigationDestination(for: Screen.self) { screen in
                 switch screen {
-                case .results(let request): ResultsScreen(request: request)
+                // A new id per request: a replaced results screen starts fresh instead of keeping the old list.
+                case .results(let request): ResultsScreen(request: request).id(request.id)
                 case .history: HistoryView { path.append(.results(ResultsRequest(kind: .seed($0)))) }
                 }
             }
@@ -127,11 +144,11 @@ struct HomeView: View {
                     guard autoDetect, onboarded, !showGuide, router.pending == nil, query.isEmpty, !listener.isListening else { return }
                     if path.isEmpty {
                         if Date().timeIntervalSince(lastAuto) > 30 { handle(.auto, explicit: false) }
-                    } else if autoSeedKey != nil {
-                        // Back from the music app: follow the song if it changed.
+                    } else if case .results? = path.last {
+                        // Back from the music app: follow a new song, but not one played from these results.
                         if let seed = await NowPlaying.read() {
-                            if key(seed) != autoSeedKey { show(seed) }
-                        } else if Date().timeIntervalSince(lastAuto) > 30, await PlaybackProbe.detect() == .speaker {
+                            if key(seed) != autoSeedKey, !ResultsOnScreen.shared.contains(seed) { show(seed) }
+                        } else if autoSeedKey != nil, Date().timeIntervalSince(lastAuto) > 30, await PlaybackProbe.detect() == .speaker {
                             handle(.auto, explicit: false)
                         }
                     }
@@ -359,6 +376,8 @@ struct ResultsScreen: View {
         )
             .navigationTitle("Soundalikes")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear { reportOnScreen() }
+            .onChange(of: model.state) { reportOnScreen() }
             .task {
                 if MusicAuthorization.currentStatus == .authorized {
                     canUseAppleMusic = (try? await MusicSubscription.current.canPlayCatalogContent) ?? false
@@ -390,6 +409,19 @@ struct ResultsScreen: View {
     /// it's connected, else Apple Music for a subscriber. With neither, the song's own app.
     private func applyPreferredApp() {
         model.preferred = spotify.isConnected ? .spotify : canUseAppleMusic ? .appleMusic : nil
+    }
+
+    /// Tells the home screen which songs this screen covers, so coming back to the app with one
+    /// of them playing (a result played from this list, say) keeps these results.
+    private func reportOnScreen() {
+        switch model.state {
+        case .loaded(let results): ResultsOnScreen.shared.show(seed: results.seed, matches: results.matches)
+        case .loading(let seed):
+            if let seed { ResultsOnScreen.shared.show(seed: seed) }
+            else if case .seed(let seed) = request.kind { ResultsOnScreen.shared.show(seed: seed) }
+            else { ResultsOnScreen.shared.show(seed: nil) }
+        case .failed: ResultsOnScreen.shared.show(seed: nil)
+        }
     }
 
     private struct PrefetchKey: Equatable {
