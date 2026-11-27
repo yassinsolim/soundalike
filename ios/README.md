@@ -6,11 +6,11 @@ App Store Connect record and app group.
 
 | Target | Bundle id | What it does |
 |---|---|---|
-| `Soundalike` | `app.yassin.soundalike` | Search, recognise a song (ShazamKit), current Apple Music song, results, Apple Music Play Next / Play all / Save playlist, App Intents and Siri phrases |
+| `Soundalike` | `app.yassin.soundalike` | Search, recognise a song (ShazamKit), current Apple Music song, results with 30-second Deezer previews and Match a part, Apple Music Play Next / Play all / Save playlist, App Intents and Siri phrases |
 | `ShareExtension` | `app.yassin.soundalike.share` | "Soundalike" in the share sheet. Takes a Spotify or Apple Music song link and shows results over the music app |
 | `Controls` | `app.yassin.soundalike.controls` | The *Soundalike* control for Control Center, the Lock Screen and the Action Button |
-| `SoundalikeKit` (package) | – | Link parsing, link-to-song lookup, API client, Deezer enrichment, open-in-app links. Unit tested on macOS |
-| `SoundalikeUI` (package) | – | Results list, shared settings, on-device event log |
+| `SoundalikeKit` (package) | – | Link parsing, link-to-song lookup, API client, Deezer enrichment, open-in-app links, WAV encoding of clips. Unit tested on macOS |
+| `SoundalikeUI` (package) | – | Results list, preview player, Match a part, shared settings, on-device event log |
 
 ## How a request flows
 
@@ -26,7 +26,16 @@ App Store Connect record and app group.
      without sign-in.
    - Apple Music links are named from the iTunes lookup API.
    - Results are filled in from Deezer: cover and ISRC.
-   - The app plays no previews itself. Deezer's terms allow its previews only inside the Deezer widget, and Apple's iTunes Search API allows its previews only to promote a purchase, next to an iTunes badge and a "provided courtesy of iTunes" credit. So tapping a result plays the full song in the music app (Spotify when connected, Apple Music with a subscription) or opens it there.
+   - Previews are Deezer's 30-second MP3s (played with Deezer's permission), from each result's `preview_url` in the
+     mobile answer, streamed by `SoundalikeUI/PreviewPlayer.swift` and never saved. Their addresses expire about
+     15 minutes after the answer, so on a playback error the player gets a new one from
+     `GET /api/preview?id=<deezer_id>` (`{"ok": true, "preview": "<mp3>", "cover": "<jpg>"}`) and tries once more.
+     A preview pauses Spotify or Music and, when it ends or stops, releases the audio session with
+     `notifyOthersOnDeactivation` so they can resume. When the app can't play the full song (Spotify not connected
+     or not on the allow list, no Apple Music subscription), tapping a cover plays or stops the preview with a
+     progress ring, and tapping the song opens it in the music app. When it can, tapping a result plays the full
+     song in the music app as before, and the context menu offers **Play 30-second preview**. The share extension
+     plays previews the same way.
 3. "Open" sends the user back to the app they came from:
    - Spotify: `https://open.spotify.com/search/isrc:<ISRC>`, which returns exactly that recording.
    - Apple Music: a MusicKit catalog match by ISRC, or the iTunes Search API when MusicKit isn't authorised.
@@ -52,6 +61,40 @@ Links and in-app routes go through one URL scheme handled in `App/SoundalikeApp.
 `https://soundalike.yassin.app/find?url=…` opens the app once the site serves
 `/.well-known/apple-app-site-association` for `FJH4UWVC4K.app.yassin.soundalike` with the `/find*` path
 (`webapp/well-known/apple-app-site-association.json`, routed in `webapp/site.json`).
+
+## Match a part
+
+"Match a part" (beta) sits under the song on the results screen, in the app and in the share extension, and only
+when the answer on screen has `query.parts` ([docs/ANYSONG.md › Match a part in the clients](../docs/ANYSONG.md#match-a-part-in-the-clients)),
+so it costs no request of its own. It opens a sheet (`SoundalikeUI/MatchAPart.swift`):
+
+- **The 30-second preview.** A bar of the preview with the part on it: drag the part, drag an edge, tap elsewhere to
+  move it there, or use −5 s / +5 s and the 10 / 15 / 20 s buttons (clamped to `parts.min_s`–`max_s`); it stays on a
+  5-second grid. Times are song times when the answer has `song_offset_s`, else preview times; the app doesn't
+  know the song's length, so it never assumes 0:48. **Play this part** plays just the span from the seed's preview
+  (`/api/preview`), and **Apply** reloads the lists with `part=<start>-<end>`. A chip ("Matching 0:58–1:13 of the
+  song", or "of the preview") with **Whole preview** leads back. An answer to `part=` without `query.part` is for
+  the whole preview (the server ignored the part), so no chip shows; a 400 or 404 to `part=` is asked once more
+  without it (`SoundalikeClient.mobile`). Each new song starts from its whole preview.
+- **Any part of the song (app only).** Only when the answer also has `query.parts.excerpt` (an engine with
+  `--excerpts`), the sheet gets two more sources. Both send a WAV to `POST /api/anysong/excerpt?id=<the seed's
+  Deezer id>` (`SoundalikeClient.similar(toClip:seed:)`), and the chip reads "Matching your clip (0:00–0:15 of your
+  recording)" or "… of your file":
+  - **Listen**: the listener plays the song out loud in their music app at the part they want; the microphone
+    records 10, 15 or 20 seconds (within `excerpt.min_s`–`max_s` and `max_bytes`) with a countdown and a level
+    meter, and can cancel. The audio session mixes with the music app (`.playAndRecord`, `.mixWithOthers`,
+    `.measurement`), so the music keeps playing. It refuses before recording when the output is headphones,
+    Bluetooth, AirPlay or a car (the microphone can't hear those), and after recording when it heard almost nothing.
+  - **File**: an audio file picked with the document picker, decoded on the phone with `AVAudioFile`; a bar of
+    the whole file with the same span control (on a 1-second grid) and **Play this part**. Apply decodes just the
+    span.
+  - The clip is mixed to one channel at 22,050 Hz, brought to full scale and encoded as 16-bit PCM WAV
+    (`SoundalikeKit/AudioClip.swift`; 20 s is 882 KB). 429 and 503 are shown with their `Retry-After`, and 404,
+    408, 413, 415 and 422 with what they mean. The clip lives in memory only and is sent once.
+  - The share extension offers the preview only: it has no microphone permission and little memory.
+- Lists for a part or a clip replace the list on screen; history keeps the song alone, never a part or a clip.
+  The event log records each request (`part`: kind, span or clip length and bytes, route, ms, ok or error) and
+  never any audio.
 
 ## History
 

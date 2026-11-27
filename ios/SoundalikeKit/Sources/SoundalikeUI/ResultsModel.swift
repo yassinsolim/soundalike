@@ -13,6 +13,14 @@ public enum SharedSettings {
     }
 }
 
+/// What the lists should follow instead of the whole preview.
+public enum PartChoice: Sendable {
+    /// Seconds of the 30-second preview.
+    case preview(PartSpan)
+    /// A clip of the listener's own audio as a WAV, sent once and not kept.
+    case clip(wav: Data, info: ClipInfo)
+}
+
 /// Loads soundalikes for shared text or a known seed and exposes a `ResultsState`.
 @MainActor
 public final class ResultsModel: ObservableObject {
@@ -31,6 +39,8 @@ public final class ResultsModel: ObservableObject {
     private let client: SoundalikeClient
     private var task: Task<Void, Never>?
     private var lastRequest: (() async throws -> SoundalikeResults)?
+    /// The request for the song on screen, for another part of it.
+    private var base: ((PartSpan?) async throws -> SoundalikeResults)?
 
     public init(client: SoundalikeClient = SoundalikeClient()) {
         self.client = client
@@ -43,13 +53,60 @@ public final class ResultsModel: ObservableObject {
         }
         if preferred == nil { target = link.source }
         let client = self.client
-        start(seed: nil) { try await client.similar(to: link) }
+        let base: (PartSpan?) async throws -> SoundalikeResults = { part in try await client.similar(to: link, part: part) }
+        self.base = base
+        start(seed: nil) { try await base(nil) }
     }
 
     public func load(seed: Seed) {
         if preferred == nil, seed.source != .search { target = seed.source }
         let client = self.client
-        start(seed: seed) { try await client.similar(to: seed) }
+        let base: (PartSpan?) async throws -> SoundalikeResults = { part in try await client.similar(to: seed, part: part) }
+        self.base = base
+        start(seed: seed) { try await base(nil) }
+    }
+
+    /// Lists for a part of the song on screen, or for the whole preview again (`nil`). The lists on screen
+    /// stay until the new ones arrive; a failure is thrown to the caller and leaves them. History keeps the
+    /// song as it is: only the song is remembered, never a part or a clip.
+    public func match(_ choice: PartChoice?) async throws {
+        guard case .loaded(let current) = state, let base else { return }
+        let client = self.client
+        let started = Date()
+        var fields: [String: Any] = [:]
+        switch choice {
+        case nil: fields["kind"] = "whole"
+        case .preview(let span): fields["kind"] = "preview"; fields["part"] = span.query
+        case .clip(let wav, let info):
+            fields["kind"] = info.source.rawValue
+            fields["seconds"] = Int((info.end - info.start).rounded())
+            fields["bytes"] = wav.count
+        }
+        do {
+            var results: SoundalikeResults
+            switch choice {
+            case nil: results = try await base(nil)
+            case .preview(let span): results = try await base(span)
+            case .clip(let wav, let info):
+                results = try await client.similar(toClip: wav, seed: current.seed)
+                results.clip = info
+            }
+            // Keep the control even if an answer lacks the limits.
+            if results.parts == nil { results.parts = current.parts }
+            fields["ms"] = EventLog.ms(since: started)
+            fields["route"] = results.route
+            fields["ok"] = true
+            // An answer to part= without query.part is for the whole preview: the server ignored the part.
+            if case .preview = choice { fields["echoed"] = results.part != nil }
+            EventLog.record("part", fields)
+            state = .loaded(results)
+        } catch {
+            fields["ms"] = EventLog.ms(since: started)
+            fields["ok"] = false
+            fields["error"] = "\(error)"
+            EventLog.record("part", fields)
+            throw error
+        }
     }
 
     public func retry() {

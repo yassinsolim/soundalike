@@ -613,7 +613,18 @@ parameter (400 or 404) is asked once more without it.
     preview and Apply reloads the list; a chip ("Matching 0:58–1:08 of the song", then "Whole preview") leads back.
     Song times are used when the server gives the preview's place or the song is known to be 90 s or longer. The
     part stays while the player moves on to other songs and ends when another song's list is loaded.
-  - The iPhone app has no control yet.
+  - **iPhone app** ([`ios/`](../ios/README.md#match-a-part)): "Match a part" (beta) sits under the song in the
+    results, in the app and in the share extension. It opens a bar of the preview with the part on it: drag the
+    part, drag an edge, tap elsewhere, or use the −5 s / +5 s and 10 / 15 / 20 s buttons. "Play this part" plays
+    the span from the preview (`/api/preview`) and Apply reloads the list; a chip ("Matching 0:58–1:13 of the
+    song", then "Whole preview") leads back. Song times are used only when the answer has `song_offset_s`; the app
+    does not know the song's length, so it never assumes 0:48. A newly loaded song starts from its whole preview.
+    When the answer also has `query.parts.excerpt`, the app (not the share extension) adds two sources that reach
+    any part of the song: **Listen** records 10, 15 or 20 s with the microphone while the song plays out loud in
+    the music app (refused with headphones, Bluetooth, AirPlay or a car as the output, and when it heard almost
+    nothing), and **File** decodes an audio file on the phone and sends only the chosen span. Both send a 16-bit
+    mono WAV at 22,050 Hz to `POST /api/anysong/excerpt?id=<seed>`, and the chip reads "Matching your clip
+    (0:00–0:15 of your recording)" or "… of your file". Nothing of the clip is kept.
 - **Which lists follow.** Best matches, Listeners also play and Melody match are read from the one answer, so all
   three follow the part; Listeners also play still starts from the whole song's listeners. The extension's Sounds
   like list (local companion or the older hosted library) always uses the whole song.

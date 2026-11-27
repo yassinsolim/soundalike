@@ -23,7 +23,9 @@ struct GuideView: View {
                     Text("Handy with headphones on if you haven't connected Spotify.")
                 }
                 Section {
-                    Text("Tap a song to play it in your music app. The arrow opens it there.")
+                    Text("Tap a song to play it in your music app, or tap its cover for a 30-second preview. The arrow opens it there.")
+                        .foregroundStyle(.secondary)
+                    Text("Match a part (beta), under the song, finds soundalikes for just the part you pick of its preview, or of a part you play out loud or pick from a file.")
                         .foregroundStyle(.secondary)
                 }
             }

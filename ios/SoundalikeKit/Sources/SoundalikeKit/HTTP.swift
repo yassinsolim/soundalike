@@ -11,6 +11,20 @@ public struct HTTP: Sendable {
     public func get(_ url: URL, timeout: TimeInterval = 15, headers: [String: String] = [:]) async throws -> (Data, HTTPURLResponse) {
         var request = URLRequest(url: url, timeoutInterval: timeout)
         for (name, value) in headers { request.setValue(value, forHTTPHeaderField: name) }
+        return try await send(request)
+    }
+
+    /// POSTs `body` with its `Content-Length`.
+    public func post(_ url: URL, body: Data, timeout: TimeInterval = 15, headers: [String: String] = [:]) async throws -> (Data, HTTPURLResponse) {
+        var request = URLRequest(url: url, timeoutInterval: timeout)
+        request.httpMethod = "POST"
+        for (name, value) in headers { request.setValue(value, forHTTPHeaderField: name) }
+        request.setValue(String(body.count), forHTTPHeaderField: "Content-Length")
+        request.httpBody = body
+        return try await send(request)
+    }
+
+    private func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         do {
             let (data, response) = try await session.data(for: request)
             guard let http = response as? HTTPURLResponse else { throw SoundalikeError.offline }

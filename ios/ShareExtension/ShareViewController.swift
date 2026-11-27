@@ -82,7 +82,7 @@ private struct ShareRoot: View {
 
     var body: some View {
         NavigationStack {
-            ResultsView(state: model.state, target: $model.target, actions: actions, retry: { model.retry() })
+            ResultsView(state: model.state, target: $model.target, actions: actions, matchPart: { try await model.match($0) }, retry: { model.retry() })
                 .navigationTitle("Soundalikes")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done", action: close) } }

@@ -51,7 +51,7 @@ targets:
           - CFBundleURLName: app.yassin.soundalike
             CFBundleURLSchemes: [soundalike]
         NSAppleMusicUsageDescription: Soundalike reads the song playing in the Music app and can add songs you pick to your queue or a playlist.
-        NSMicrophoneUsageDescription: Soundalike listens briefly to recognise the song that's playing. Audio is matched with ShazamKit and not saved.
+        NSMicrophoneUsageDescription: Soundalike listens briefly to recognise the song that's playing, or records a part of a song when you ask it to match that part. Audio is not saved.
         ITSAppUsesNonExemptEncryption: false
         UILaunchScreen:
           UIColorName: ""

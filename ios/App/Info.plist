@@ -42,7 +42,7 @@
 	<key>NSAppleMusicUsageDescription</key>
 	<string>Soundalike reads the song playing in the Music app and can add songs you pick to your queue or a playlist.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Soundalike listens briefly to recognise the song that's playing. Audio is matched with ShazamKit and not saved.</string>
+	<string>Soundalike listens briefly to recognise the song that's playing, or records a part of a song when you ask it to match that part. Audio is not saved.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
