@@ -617,7 +617,11 @@ test("home page has one any-song search bar and no library promo or size line", 
   );
   assert.deepEqual(
     page.document.querySelectorAll(".promos a").map((link) => link.getAttribute("href")),
-    ["https://github.com/yassinsolim/soundalike/tree/main/integrations/spicetify", "/evaluate"],
+    [
+      "https://github.com/yassinsolim/soundalike/tree/main/integrations/spicetify",
+      "https://testflight.apple.com/join/ug22f7Jg",
+      "/evaluate",
+    ],
   );
   assert.equal(
     page.text("#hint"),
