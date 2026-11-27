@@ -2,7 +2,7 @@ import AVFoundation
 import Foundation
 import SoundalikeKit
 
-/// Plays 30-second previews one at a time. Streams only; nothing is saved.
+/// Plays Apple's 30-second previews one at a time. Streams only; nothing is saved.
 ///
 /// Starting a preview pauses whatever else is playing (Spotify, Music). Ending or
 /// stopping it releases the audio session with `notifyOthersOnDeactivation`, so the
@@ -12,11 +12,14 @@ public final class PreviewPlayer: ObservableObject {
     @Published public private(set) var playingID: String?
     @Published public private(set) var loadingID: String?
     @Published public private(set) var progress: Double = 0
+    /// The playing preview's song on Apple Music. Apple's previews may only be played next
+    /// to a link to the song there, so the playing row shows one.
+    @Published public private(set) var appleMusicURL: URL?
 
     private var player: AVPlayer?
     private var timeObserver: Any?
     private var endObserver: NSObjectProtocol?
-    private let deezer = DeezerCatalog()
+    private let destinations = Destinations()
 
     public init() {}
 
@@ -31,10 +34,8 @@ public final class PreviewPlayer: ObservableObject {
     public func play(_ match: Match) async {
         stop()
         loadingID = match.id
-        var url = match.previewURL
-        // Deezer preview URLs are signed and expire; fetch a fresh one when we can.
-        if let id = match.deezerID, let fresh = await deezer.track(id)?.preview { url = fresh }
-        guard loadingID == match.id, let url else {
+        let song = await destinations.applePreview(match)
+        guard loadingID == match.id, let song, let url = song.preview else {
             if loadingID == match.id { loadingID = nil }
             return
         }
@@ -42,6 +43,7 @@ public final class PreviewPlayer: ObservableObject {
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
         try? AVAudioSession.sharedInstance().setActive(true)
         #endif
+        appleMusicURL = song.url
         let item = AVPlayerItem(url: url)
         let player = AVPlayer(playerItem: item)
         self.player = player
@@ -72,6 +74,7 @@ public final class PreviewPlayer: ObservableObject {
         playingID = nil
         loadingID = nil
         progress = 0
+        appleMusicURL = nil
         #if os(iOS)
         if wasActive {
             try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)

@@ -292,7 +292,6 @@ struct ResultRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(playFull != nil ? "Play" : isPlaying ? "Stop preview" : "Play preview")
-            .disabled(playFull == nil && match.previewURL == nil && match.deezerID == nil)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(match.title).font(.body.weight(.semibold)).lineLimit(1)
@@ -303,7 +302,16 @@ struct ResultRow: View {
             .contentShape(Rectangle())
             .onTapGesture(perform: tap)
 
-            MatchBadge(value: match.match)
+            if isPlaying, let appleMusicURL = player.appleMusicURL {
+                // Apple's previews have to sit next to a link to the song on Apple Music.
+                Link(destination: appleMusicURL) {
+                    Image("AppleMusicIcon", bundle: .module).resizable().frame(width: 28, height: 28)
+                }
+                .padding(3)
+                .accessibilityLabel("Listen on Apple Music")
+            } else {
+                MatchBadge(value: match.match)
+            }
 
             Button(action: open) {
                 Image(systemName: symbol).font(.title2)

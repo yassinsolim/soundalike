@@ -25,7 +25,8 @@ App Store Connect record and app group.
    - Spotify links are named from the public embed page (`open.spotify.com/embed/track/<id>`),
      without sign-in.
    - Apple Music links are named from the iTunes lookup API.
-   - Results are filled in from Deezer: cover, ISRC and a 30-second preview.
+   - Results are filled in from Deezer: cover and ISRC.
+   - Tapping a result without a music app to play it in plays Apple's 30-second preview, found with the iTunes Search API (`Destinations.applePreview`). Apple allows its previews only to promote the song on Apple Music, next to a link to it, so the playing row shows the official Apple Music icon linking to the song. Deezer's terms allow its previews only inside the Deezer widget, so the app doesn't play them.
 3. "Open" sends the user back to the app they came from:
    - Spotify: `https://open.spotify.com/search/isrc:<ISRC>`, which returns exactly that recording.
    - Apple Music: a MusicKit catalog match by ISRC, or the iTunes Search API when MusicKit isn't authorised.

@@ -62,7 +62,6 @@ public struct Match: Codable, Hashable, Sendable, Identifiable {
     public var spotifyURL: URL?
     public var appleMusicURL: URL?
     public var artworkURL: URL?
-    public var previewURL: URL?
 
     public var id: String { deezerID.map(String.init) ?? isrc ?? "\(artist)|\(title)" }
 
@@ -74,8 +73,7 @@ public struct Match: Codable, Hashable, Sendable, Identifiable {
         deezerID: Int? = nil,
         spotifyURL: URL? = nil,
         appleMusicURL: URL? = nil,
-        artworkURL: URL? = nil,
-        previewURL: URL? = nil
+        artworkURL: URL? = nil
     ) {
         self.title = title
         self.artist = artist
@@ -85,7 +83,6 @@ public struct Match: Codable, Hashable, Sendable, Identifiable {
         self.spotifyURL = spotifyURL
         self.appleMusicURL = appleMusicURL
         self.artworkURL = artworkURL
-        self.previewURL = previewURL
     }
 }
 
